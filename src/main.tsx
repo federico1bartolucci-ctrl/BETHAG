@@ -2250,22 +2250,47 @@ function App() {
     memberIds?: number[],
     communicationId?: number,
     emailSubject?: string,
-    emailBody?: string
+    emailBody?: string,
+    audience?: CommunicationAudience
   ) => {
-    const recipients = condominiumMembers.filter(
-      (member) =>
-        member.condominiumId === condominiumId &&
-        member.active &&
-        member.email.trim() &&
-        (!memberIds || memberIds.includes(member.id))
-    );
+    /*
+      Destinatari:
+      - Tutti: condòmini attivi dell'anagrafica;
+      - Selezionati: esclusivamente gli ID selezionati nell'anagrafica condòmini;
+      - Consiglio: consiglieri attivi del portale associati al condominio.
+    */
+    const recipients = audience === "Consiglio"
+      ? portalMembers
+          .filter(
+            (member) =>
+              member.condominiumId === condominiumId &&
+              member.role === "council" &&
+              member.active &&
+              member.email.trim()
+          )
+          .map((member) => member.email.trim())
+      : condominiumMembers
+          .filter(
+            (member) =>
+              member.condominiumId === condominiumId &&
+              member.active &&
+              member.email.trim() &&
+              (!memberIds || memberIds.includes(member.id))
+          )
+          .map((member) => member.email.trim());
 
-    if (!recipients.length) {
-      alert("Non ci sono condòmini attivi con un indirizzo e-mail disponibile.");
+    const uniqueRecipients = Array.from(new Set(recipients));
+
+    if (!uniqueRecipients.length) {
+      alert(
+        audience === "Consiglio"
+          ? "Non ci sono consiglieri attivi del portale con un indirizzo e-mail disponibile."
+          : "Non ci sono condòmini attivi con un indirizzo e-mail disponibile."
+      );
       return;
     }
 
-    const bcc = recipients.map((member) => member.email.trim()).join(",");
+    const bcc = uniqueRecipients.join(",");
     const condominium = condominiums.find((item) => item.id === condominiumId);
     const subject =
       emailSubject?.trim() ||
@@ -2608,7 +2633,7 @@ function App() {
         c.publishedToPortal
     ).length;
 
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = new Date().toLocaleDateString("en-CA");
   const overdueDeadlines = deadlines.filter(
     (d) => d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
   ).length;
@@ -5722,7 +5747,7 @@ function DeadlinesPage({
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = new Date().toLocaleDateString("en-CA");
   const filtered = deadlines
       .filter((d: Deadline) => {
         const textMatch = `${d.title} ${d.category} ${condominiumName(d.condominiumId)} ${d.notes}`.toLowerCase().includes(search.toLowerCase());
@@ -9501,7 +9526,7 @@ function CommunicationForm({
       </div>
 
       {value.condominiumId && (
-        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
+        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body, value.audience)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
       )}
 
       <Actions
@@ -11516,8 +11541,4 @@ ReactDOM.createRoot(
   document.getElementById(
     "root"
   )!
-).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+).r
