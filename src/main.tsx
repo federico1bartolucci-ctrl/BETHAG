@@ -3,8 +3,18 @@ import ReactDOM from "react-dom/client";
 
 /* =========================================================
    BETHAG
-   Gestione completa amministrazione condominiale
-   Single-file React / TypeScript
+   Gestionale amministrazione condominiale
+   Versione modulare Free / Plus / Professional / Portal
+
+   NOTA:
+   Questa versione prepara l'architettura frontend.
+   AI, autenticazione reale, pagamenti, database cloud,
+   trascrizione audio e portale reale richiederanno
+   successivamente un backend.
+   ========================================================= */
+
+/* =========================================================
+   TIPI
    ========================================================= */
 
 type Page =
@@ -15,12 +25,68 @@ type Page =
   | "assemblee"
   | "fornitori"
   | "attivita"
+  | "ai"
+  | "portale"
+  | "abbonamento"
   | "amministratore";
 
-type DeadlineStatus = "Da fare" | "In scadenza" | "Completata";
-type AssemblyStatus = "Programmato" | "Svolto" | "Annullato";
-type ActivityPriority = "Bassa" | "Media" | "Alta";
-type ActivityStatus = "Aperta" | "In corso" | "Completata";
+type PlanId =
+  | "free"
+  | "plus"
+  | "professional"
+  | "portal";
+
+type UserRole =
+  | "admin"
+  | "collaborator"
+  | "resident"
+  | "council";
+
+type DeadlineStatus =
+  | "Da fare"
+  | "In scadenza"
+  | "Completata";
+
+type AssemblyStatus =
+  | "Programmato"
+  | "Svolto"
+  | "Annullato";
+
+type ActivityPriority =
+  | "Bassa"
+  | "Media"
+  | "Alta";
+
+type ActivityStatus =
+  | "Aperta"
+  | "In corso"
+  | "Completata";
+
+type AIStatus =
+  | "Non elaborato"
+  | "In elaborazione"
+  | "Da verificare"
+  | "Confermato";
+
+type DocumentSource =
+  | "Manuale"
+  | "PDF"
+  | "Word"
+  | "Excel"
+  | "Immagine"
+  | "Audio"
+  | "AI";
+
+type PublicationStatus =
+  | "Privato"
+  | "Condiviso";
+
+type PortalPermission =
+  | "documenti"
+  | "verbali"
+  | "regolamento"
+  | "pagamenti"
+  | "assemblee";
 
 type Condominium = {
   id: number;
@@ -58,6 +124,12 @@ type DocumentItem = {
   date: string;
   size: string;
   notes: string;
+  source: DocumentSource;
+  mimeType: string;
+  aiStatus: AIStatus;
+  publication: PublicationStatus;
+  aiSummary: string;
+  extractedData: string;
 };
 
 type Assembly = {
@@ -69,6 +141,11 @@ type Assembly = {
   place: string;
   status: AssemblyStatus;
   notes: string;
+  audioName: string;
+  transcriptionStatus: AIStatus;
+  minutesStatus: AIStatus;
+  minutesDraft: string;
+  publishedToPortal: boolean;
 };
 
 type Supplier = {
@@ -101,18 +178,64 @@ type AdminProfile = {
   vat: string;
 };
 
+type PortalMember = {
+  id: number;
+  name: string;
+  email: string;
+  condominiumId: number;
+  role: UserRole;
+  apartment: string;
+  permissions: PortalPermission[];
+  active: boolean;
+};
+
+type Subscription = {
+  plan: PlanId;
+  status: "Attivo" | "Demo";
+  renewalDate: string;
+};
+
+/* =========================================================
+   PIANI
+   ========================================================= */
+
+const PLAN_NAMES: Record<PlanId, string> = {
+  free: "BETHAG Free",
+  plus: "BETHAG Plus",
+  professional: "BETHAG Professional",
+  portal: "BETHAG Portal",
+};
+
+const PLAN_DESCRIPTIONS: Record<PlanId, string> = {
+  free: "Gestionale essenziale per l'amministrazione.",
+  plus: "Gestionale con strumenti di acquisizione AI.",
+  professional:
+    "Automazioni, generazione documenti e gestione assemblee avanzata.",
+  portal:
+    "Professional con portale dedicato ai condomini.",
+};
+
+const PLAN_LEVEL: Record<PlanId, number> = {
+  free: 0,
+  plus: 1,
+  professional: 2,
+  portal: 3,
+};
+
 /* =========================================================
    STORAGE
    ========================================================= */
 
 const KEYS = {
-  condominiums: "bethag-condominiums",
-  deadlines: "bethag-deadlines-v3",
-  documents: "bethag-documents-v3",
-  assemblies: "bethag-assemblies-v3",
-  suppliers: "bethag-suppliers-v3",
-  activities: "bethag-activities-v3",
-  profile: "bethag-profile-v3",
+  condominiums: "bethag-condominiums-v4",
+  deadlines: "bethag-deadlines-v4",
+  documents: "bethag-documents-v4",
+  assemblies: "bethag-assemblies-v4",
+  suppliers: "bethag-suppliers-v4",
+  activities: "bethag-activities-v4",
+  profile: "bethag-profile-v4",
+  portalMembers: "bethag-portal-members-v1",
+  subscription: "bethag-subscription-v1",
 };
 
 /* =========================================================
@@ -262,6 +385,12 @@ const initialDocuments: DocumentItem[] = [
     date: "2026-09-01",
     size: "1.2 MB",
     notes: "",
+    source: "PDF",
+    mimeType: "application/pdf",
+    aiStatus: "Confermato",
+    publication: "Condiviso",
+    aiSummary: "Regolamento condominiale.",
+    extractedData: "",
   },
   {
     id: 2,
@@ -271,6 +400,12 @@ const initialDocuments: DocumentItem[] = [
     date: "2026-09-05",
     size: "840 KB",
     notes: "",
+    source: "PDF",
+    mimeType: "application/pdf",
+    aiStatus: "Confermato",
+    publication: "Privato",
+    aiSummary: "",
+    extractedData: "",
   },
   {
     id: 3,
@@ -280,6 +415,12 @@ const initialDocuments: DocumentItem[] = [
     date: "2026-09-10",
     size: "560 KB",
     notes: "",
+    source: "PDF",
+    mimeType: "application/pdf",
+    aiStatus: "Confermato",
+    publication: "Condiviso",
+    aiSummary: "Verbale assembleare.",
+    extractedData: "",
   },
   {
     id: 4,
@@ -289,24 +430,12 @@ const initialDocuments: DocumentItem[] = [
     date: "2026-09-12",
     size: "920 KB",
     notes: "",
-  },
-  {
-    id: 5,
-    name: "Preventivo lavori.pdf",
-    condominiumId: 1,
-    category: "Preventivi",
-    date: "2026-09-15",
-    size: "430 KB",
-    notes: "",
-  },
-  {
-    id: 6,
-    name: "Fattura fornitore.pdf",
-    condominiumId: 2,
-    category: "Fatture",
-    date: "2026-09-18",
-    size: "210 KB",
-    notes: "",
+    source: "PDF",
+    mimeType: "application/pdf",
+    aiStatus: "Non elaborato",
+    publication: "Privato",
+    aiSummary: "",
+    extractedData: "",
   },
 ];
 
@@ -320,6 +449,11 @@ const initialAssemblies: Assembly[] = [
     place: "Sala condominiale",
     status: "Programmato",
     notes: "",
+    audioName: "",
+    transcriptionStatus: "Non elaborato",
+    minutesStatus: "Non elaborato",
+    minutesDraft: "",
+    publishedToPortal: false,
   },
   {
     id: 2,
@@ -330,6 +464,11 @@ const initialAssemblies: Assembly[] = [
     place: "Videoconferenza",
     status: "Programmato",
     notes: "",
+    audioName: "",
+    transcriptionStatus: "Non elaborato",
+    minutesStatus: "Non elaborato",
+    minutesDraft: "",
+    publishedToPortal: false,
   },
   {
     id: 3,
@@ -340,6 +479,11 @@ const initialAssemblies: Assembly[] = [
     place: "Sala riunioni",
     status: "Svolto",
     notes: "",
+    audioName: "",
+    transcriptionStatus: "Non elaborato",
+    minutesStatus: "Non elaborato",
+    minutesDraft: "",
+    publishedToPortal: false,
   },
 ];
 
@@ -403,8 +547,32 @@ const initialActivities: Activity[] = [
   },
 ];
 
+const initialPortalMembers: PortalMember[] = [
+  {
+    id: 1,
+    name: "Mario Rossi",
+    email: "mario@example.com",
+    condominiumId: 1,
+    role: "resident",
+    apartment: "Interno 4",
+    permissions: [
+      "documenti",
+      "verbali",
+      "regolamento",
+      "assemblee",
+    ],
+    active: true,
+  },
+];
+
+const initialSubscription: Subscription = {
+  plan: "free",
+  status: "Demo",
+  renewalDate: "",
+};
+
 /* =========================================================
-   EMPTY MODELS
+   EMPTY
    ========================================================= */
 
 const emptyCondominium: Condominium = {
@@ -443,6 +611,12 @@ const emptyDocument: DocumentItem = {
   date: new Date().toISOString().slice(0, 10),
   size: "",
   notes: "",
+  source: "Manuale",
+  mimeType: "",
+  aiStatus: "Non elaborato",
+  publication: "Privato",
+  aiSummary: "",
+  extractedData: "",
 };
 
 const emptyAssembly: Assembly = {
@@ -454,6 +628,11 @@ const emptyAssembly: Assembly = {
   place: "",
   status: "Programmato",
   notes: "",
+  audioName: "",
+  transcriptionStatus: "Non elaborato",
+  minutesStatus: "Non elaborato",
+  minutesDraft: "",
+  publishedToPortal: false,
 };
 
 const emptySupplier: Supplier = {
@@ -493,14 +672,20 @@ const emptyProfile: AdminProfile = {
 function load<T>(key: string, fallback: T): T {
   try {
     const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
+
+    return value
+      ? JSON.parse(value)
+      : fallback;
   } catch {
     return fallback;
   }
 }
 
 function makeId() {
-  return Date.now() + Math.floor(Math.random() * 1000);
+  return (
+    Date.now() +
+    Math.floor(Math.random() * 1000)
+  );
 }
 
 function formatDate(value: string) {
@@ -530,7 +715,59 @@ function currency(value: string) {
 
 function validateEmail(value: string) {
   if (!value) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    value
+  );
+}
+
+function fileSource(
+  fileName: string,
+  mimeType: string
+): DocumentSource {
+  const name = fileName.toLowerCase();
+
+  if (
+    mimeType.includes("pdf") ||
+    name.endsWith(".pdf")
+  )
+    return "PDF";
+
+  if (
+    name.endsWith(".doc") ||
+    name.endsWith(".docx") ||
+    mimeType.includes("word")
+  )
+    return "Word";
+
+  if (
+    name.endsWith(".xls") ||
+    name.endsWith(".xlsx") ||
+    name.endsWith(".csv") ||
+    mimeType.includes("spreadsheet")
+  )
+    return "Excel";
+
+  if (
+    mimeType.startsWith("image/") ||
+    /\.(jpg|jpeg|png|heic|webp)$/i.test(name)
+  )
+    return "Immagine";
+
+  if (
+    mimeType.startsWith("audio/") ||
+    /\.(mp3|wav|m4a|aac|ogg)$/i.test(name)
+  )
+    return "Audio";
+
+  return "Manuale";
+}
+
+function hasFeature(
+  plan: PlanId,
+  required: PlanId
+) {
+  return PLAN_LEVEL[plan] >= PLAN_LEVEL[required];
 }
 
 /* =========================================================
@@ -538,66 +775,143 @@ function validateEmail(value: string) {
    ========================================================= */
 
 function App() {
-  const [page, setPage] = useState<Page>("dashboard");
+  const [page, setPage] =
+    useState<Page>("dashboard");
 
-  const [condominiums, setCondominiums] = useState<Condominium[]>(
-    () => load(KEYS.condominiums, initialCondominiums)
+  const [condominiums, setCondominiums] =
+    useState<Condominium[]>(
+      () =>
+        load(
+          KEYS.condominiums,
+          initialCondominiums
+        )
+    );
+
+  const [deadlines, setDeadlines] =
+    useState<Deadline[]>(
+      () =>
+        load(
+          KEYS.deadlines,
+          initialDeadlines
+        )
+    );
+
+  const [documents, setDocuments] =
+    useState<DocumentItem[]>(
+      () =>
+        load(
+          KEYS.documents,
+          initialDocuments
+        )
+    );
+
+  const [assemblies, setAssemblies] =
+    useState<Assembly[]>(
+      () =>
+        load(
+          KEYS.assemblies,
+          initialAssemblies
+        )
+    );
+
+  const [suppliers, setSuppliers] =
+    useState<Supplier[]>(
+      () =>
+        load(
+          KEYS.suppliers,
+          initialSuppliers
+        )
+    );
+
+  const [activities, setActivities] =
+    useState<Activity[]>(
+      () =>
+        load(
+          KEYS.activities,
+          initialActivities
+        )
+    );
+
+  const [profile, setProfile] =
+    useState<AdminProfile>(
+      () =>
+        load(
+          KEYS.profile,
+          emptyProfile
+        )
+    );
+
+  const [portalMembers, setPortalMembers] =
+    useState<PortalMember[]>(
+      () =>
+        load(
+          KEYS.portalMembers,
+          initialPortalMembers
+        )
+    );
+
+  const [subscription, setSubscription] =
+    useState<Subscription>(
+      () =>
+        load(
+          KEYS.subscription,
+          initialSubscription
+        )
+    );
+
+  const [search, setSearch] =
+    useState("");
+
+  const [mobileMenuOpen, setMobileMenuOpen] =
+    useState(false);
+
+  const [
+    selectedCondominium,
+    setSelectedCondominium,
+  ] = useState<Condominium | null>(null);
+
+  const [
+    editingCondominium,
+    setEditingCondominium,
+  ] = useState<Condominium | null>(
+    null
   );
-
-  const [deadlines, setDeadlines] = useState<Deadline[]>(
-    () => load(KEYS.deadlines, initialDeadlines)
-  );
-
-  const [documents, setDocuments] = useState<DocumentItem[]>(
-    () => load(KEYS.documents, initialDocuments)
-  );
-
-  const [assemblies, setAssemblies] = useState<Assembly[]>(
-    () => load(KEYS.assemblies, initialAssemblies)
-  );
-
-  const [suppliers, setSuppliers] = useState<Supplier[]>(
-    () => load(KEYS.suppliers, initialSuppliers)
-  );
-
-  const [activities, setActivities] = useState<Activity[]>(
-    () => load(KEYS.activities, initialActivities)
-  );
-
-  const [profile, setProfile] = useState<AdminProfile>(
-    () => load(KEYS.profile, emptyProfile)
-  );
-
-  const [search, setSearch] = useState("");
-
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const [selectedCondominium, setSelectedCondominium] =
-    useState<Condominium | null>(null);
-
-  const [editingCondominium, setEditingCondominium] =
-    useState<Condominium | null>(null);
 
   const [selectedDeadline, setSelectedDeadline] =
     useState<Deadline | null>(null);
 
-  const [selectedDocument, setSelectedDocument] =
-    useState<DocumentItem | null>(null);
+  const [
+    selectedDocument,
+    setSelectedDocument,
+  ] = useState<DocumentItem | null>(
+    null
+  );
 
-  const [selectedAssembly, setSelectedAssembly] =
-    useState<Assembly | null>(null);
+  const [
+    selectedAssembly,
+    setSelectedAssembly,
+  ] = useState<Assembly | null>(null);
 
-  const [selectedSupplier, setSelectedSupplier] =
-    useState<Supplier | null>(null);
+  const [
+    selectedSupplier,
+    setSelectedSupplier,
+  ] = useState<Supplier | null>(null);
 
-  const [selectedActivity, setSelectedActivity] =
-    useState<Activity | null>(null);
+  const [
+    selectedActivity,
+    setSelectedActivity,
+  ] = useState<Activity | null>(null);
 
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] =
+    useState(false);
 
-  const [modalType, setModalType] = useState("");
+  const [modalType, setModalType] =
+    useState("");
 
-  const [selectedFileName, setSelectedFileName] = useState("");
+  const [
+    selectedFileName,
+    setSelectedFileName,
+  ] = useState("");
 
   const [deadlineForm, setDeadlineForm] =
     useState<Deadline>(emptyDeadline);
@@ -667,13 +981,30 @@ function App() {
     );
   }, [profile]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.portalMembers,
+      JSON.stringify(portalMembers)
+    );
+  }, [portalMembers]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.subscription,
+      JSON.stringify(subscription)
+    );
+  }, [subscription]);
+
   /* =======================================================
-     HELPERS APP
+     HELPERS
      ======================================================= */
 
-  const condominiumName = (id: number | null) =>
-    condominiums.find((c) => c.id === id)?.name ||
-    "Tutti i condomini";
+  const condominiumName = (
+    id: number | null
+  ) =>
+    condominiums.find(
+      (c) => c.id === id
+    )?.name || "Tutti i condomini";
 
   const navigate = (target: Page) => {
     setPage(target);
@@ -698,26 +1029,56 @@ function App() {
     setSelectedFileName("");
   };
 
-  const filteredCondominiums = useMemo(() => {
-    const q = search.trim().toLowerCase();
+  const filteredCondominiums =
+    useMemo(() => {
+      const q =
+        search.trim().toLowerCase();
 
-    if (!q) return condominiums;
+      if (!q) return condominiums;
 
-    return condominiums.filter((c) =>
-      [
-        c.name,
-        c.address,
-        c.city,
-        c.province,
-        c.fiscalCode,
-        c.contact,
-        c.email,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(q)
+      return condominiums.filter((c) =>
+        [
+          c.name,
+          c.address,
+          c.city,
+          c.province,
+          c.fiscalCode,
+          c.contact,
+          c.email,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }, [condominiums, search]);
+
+  /* =======================================================
+     GESTIONE PIANO
+     ======================================================= */
+
+  const requirePlan = (
+    required: PlanId,
+    feature: string
+  ) => {
+    if (
+      hasFeature(
+        subscription.plan,
+        required
+      )
+    ) {
+      return true;
+    }
+
+    const answer = confirm(
+      `${feature} richiede ${PLAN_NAMES[required]}.\n\nVuoi vedere i piani disponibili?`
     );
-  }, [condominiums, search]);
+
+    if (answer) {
+      navigate("abbonamento");
+    }
+
+    return false;
+  };
 
   /* =======================================================
      CONDOMINI
@@ -728,7 +1089,9 @@ function App() {
   ) => {
     event.preventDefault();
 
-    const data = editingCondominium || emptyCondominium;
+    const data =
+      editingCondominium ||
+      emptyCondominium;
 
     if (
       !data.name.trim() ||
@@ -743,7 +1106,10 @@ function App() {
 
     const units = Number(data.units);
 
-    if (!Number.isInteger(units) || units <= 0) {
+    if (
+      !Number.isInteger(units) ||
+      units <= 0
+    ) {
       alert(
         "Il numero di unità immobiliari deve essere un numero intero positivo."
       );
@@ -763,7 +1129,9 @@ function App() {
 
       setCondominiums((current) =>
         current.map((item) =>
-          item.id === updated.id ? updated : item
+          item.id === updated.id
+            ? updated
+            : item
         )
       );
 
@@ -786,13 +1154,30 @@ function App() {
     closeModal();
   };
 
-  const deleteCondominium = (item: Condominium) => {
+  const deleteCondominium = (
+    item: Condominium
+  ) => {
     const related =
-      deadlines.filter((x) => x.condominiumId === item.id).length +
-      documents.filter((x) => x.condominiumId === item.id).length +
-      assemblies.filter((x) => x.condominiumId === item.id).length +
-      suppliers.filter((x) => x.condominiumId === item.id).length +
-      activities.filter((x) => x.condominiumId === item.id).length;
+      deadlines.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      documents.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      assemblies.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      suppliers.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      activities.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length;
 
     const message =
       related > 0
@@ -802,27 +1187,51 @@ function App() {
     if (!confirm(message)) return;
 
     setCondominiums((current) =>
-      current.filter((c) => c.id !== item.id)
+      current.filter(
+        (c) => c.id !== item.id
+      )
     );
 
     setDeadlines((current) =>
-      current.filter((x) => x.condominiumId !== item.id)
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
     );
 
     setDocuments((current) =>
-      current.filter((x) => x.condominiumId !== item.id)
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
     );
 
     setAssemblies((current) =>
-      current.filter((x) => x.condominiumId !== item.id)
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
     );
 
     setSuppliers((current) =>
-      current.filter((x) => x.condominiumId !== item.id)
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
     );
 
     setActivities((current) =>
-      current.filter((x) => x.condominiumId !== item.id)
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
+    );
+
+    setPortalMembers((current) =>
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
     );
 
     setSelectedCondominium(null);
@@ -873,24 +1282,36 @@ function App() {
 
     setDeadlineForm({
       ...emptyDeadline,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     setSelectedDeadline(null);
     closeModal();
   };
 
-  const editDeadline = (item: Deadline) => {
+  const editDeadline = (
+    item: Deadline
+  ) => {
     setSelectedDeadline(item);
     setDeadlineForm(item);
     openModal("deadline");
   };
 
-  const deleteDeadline = (id: number) => {
-    if (!confirm("Eliminare questa scadenza?")) return;
+  const deleteDeadline = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questa scadenza?"
+      )
+    )
+      return;
 
     setDeadlines((current) =>
-      current.filter((item) => item.id !== id)
+      current.filter(
+        (item) => item.id !== id
+      )
     );
   };
 
@@ -920,7 +1341,9 @@ function App() {
     event.preventDefault();
 
     if (!documentForm.name.trim()) {
-      alert("Inserisci il nome del documento.");
+      alert(
+        "Inserisci il nome del documento."
+      );
       return;
     }
 
@@ -933,7 +1356,8 @@ function App() {
       ...documentForm,
       name: documentForm.name.trim(),
       size: selectedFileName
-        ? documentForm.size || "File locale"
+        ? documentForm.size ||
+          "File locale"
         : documentForm.size,
     };
 
@@ -960,7 +1384,8 @@ function App() {
 
     setDocumentForm({
       ...emptyDocument,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     setSelectedDocument(null);
@@ -968,18 +1393,113 @@ function App() {
     closeModal();
   };
 
-  const editDocument = (item: DocumentItem) => {
+  const editDocument = (
+    item: DocumentItem
+  ) => {
     setSelectedDocument(item);
     setDocumentForm(item);
     setSelectedFileName("");
     openModal("document");
   };
 
-  const deleteDocument = (id: number) => {
-    if (!confirm("Eliminare questo documento?")) return;
+  const deleteDocument = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questo documento?"
+      )
+    )
+      return;
 
     setDocuments((current) =>
-      current.filter((item) => item.id !== id)
+      current.filter(
+        (item) => item.id !== id
+      )
+    );
+  };
+
+  const toggleDocumentPublication = (
+    id: number
+  ) => {
+    if (
+      !requirePlan(
+        "portal",
+        "La condivisione con i condomini"
+      )
+    )
+      return;
+
+    setDocuments((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              publication:
+                item.publication ===
+                "Condiviso"
+                  ? "Privato"
+                  : "Condiviso",
+            }
+          : item
+      )
+    );
+  };
+
+  const processDocumentAI = (
+    item: DocumentItem
+  ) => {
+    if (
+      !requirePlan(
+        "plus",
+        "L'elaborazione automatica AI dei documenti"
+      )
+    )
+      return;
+
+    setDocuments((current) =>
+      current.map((doc) =>
+        doc.id === item.id
+          ? {
+              ...doc,
+              aiStatus:
+                "In elaborazione",
+            }
+          : doc
+      )
+    );
+
+    setTimeout(() => {
+      setDocuments((current) =>
+        current.map((doc) =>
+          doc.id === item.id
+            ? {
+                ...doc,
+                aiStatus:
+                  "Da verificare",
+                aiSummary:
+                  "Analisi automatica predisposta. Il contenuto dovrà essere verificato dall'amministratore prima della conferma.",
+                extractedData:
+                  "Dati strutturati predisposti per la successiva integrazione con il servizio AI.",
+              }
+            : doc
+        )
+      );
+    }, 1200);
+  };
+
+  const confirmDocumentAI = (
+    id: number
+  ) => {
+    setDocuments((current) =>
+      current.map((doc) =>
+        doc.id === id
+          ? {
+              ...doc,
+              aiStatus: "Confermato",
+            }
+          : doc
+      )
     );
   };
 
@@ -996,7 +1516,9 @@ function App() {
       !assemblyForm.title.trim() ||
       !assemblyForm.date
     ) {
-      alert("Inserisci titolo e data.");
+      alert(
+        "Inserisci titolo e data."
+      );
       return;
     }
 
@@ -1028,24 +1550,36 @@ function App() {
 
     setAssemblyForm({
       ...emptyAssembly,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     setSelectedAssembly(null);
     closeModal();
   };
 
-  const editAssembly = (item: Assembly) => {
+  const editAssembly = (
+    item: Assembly
+  ) => {
     setSelectedAssembly(item);
     setAssemblyForm(item);
     openModal("assembly");
   };
 
-  const deleteAssembly = (id: number) => {
-    if (!confirm("Eliminare questa assemblea?")) return;
+  const deleteAssembly = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questa assemblea?"
+      )
+    )
+      return;
 
     setAssemblies((current) =>
-      current.filter((item) => item.id !== id)
+      current.filter(
+        (item) => item.id !== id
+      )
     );
   };
 
@@ -1065,6 +1599,146 @@ function App() {
     );
   };
 
+  const attachAssemblyAudio = (
+    assembly: Assembly,
+    file: File
+  ) => {
+    if (
+      !requirePlan(
+        "professional",
+        "La gestione dell'audio delle assemblee"
+      )
+    )
+      return;
+
+    setAssemblies((current) =>
+      current.map((item) =>
+        item.id === assembly.id
+          ? {
+              ...item,
+              audioName: file.name,
+              transcriptionStatus:
+                "In elaborazione",
+              minutesStatus:
+                "Non elaborato",
+            }
+          : item
+      )
+    );
+
+    setTimeout(() => {
+      setAssemblies((current) =>
+        current.map((item) =>
+          item.id === assembly.id
+            ? {
+                ...item,
+                transcriptionStatus:
+                  "Da verificare",
+              }
+            : item
+        )
+      );
+    }, 1300);
+  };
+
+  const generateMinutes = (
+    assembly: Assembly
+  ) => {
+    if (
+      !requirePlan(
+        "professional",
+        "La generazione automatica dei verbali"
+      )
+    )
+      return;
+
+    if (
+      assembly.transcriptionStatus ===
+      "Non elaborato"
+    ) {
+      alert(
+        "Prima devi acquisire e trascrivere l'audio dell'assemblea."
+      );
+      return;
+    }
+
+    setAssemblies((current) =>
+      current.map((item) =>
+        item.id === assembly.id
+          ? {
+              ...item,
+              minutesStatus:
+                "In elaborazione",
+            }
+          : item
+      )
+    );
+
+    setTimeout(() => {
+      setAssemblies((current) =>
+        current.map((item) =>
+          item.id === assembly.id
+            ? {
+                ...item,
+                minutesStatus:
+                  "Da verificare",
+                minutesDraft:
+                  `BOZZA DI VERBALE\n\n${item.title}\nData: ${formatDate(
+                    item.date
+                  )}\nOra: ${
+                    item.time ||
+                    "da definire"
+                  }\nLuogo: ${
+                    item.place ||
+                    "da definire"
+                  }\n\nLa presente bozza è stata predisposta a partire dalla trascrizione dell'audio. Deve essere verificata e approvata dall'amministratore prima della pubblicazione.`,
+              }
+            : item
+        )
+      );
+    }, 1300);
+  };
+
+  const confirmMinutes = (
+    id: number
+  ) => {
+    setAssemblies((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              minutesStatus:
+                "Confermato",
+            }
+          : item
+      )
+    );
+  };
+
+  const toggleAssemblyPublication = (
+    id: number
+  ) => {
+    if (
+      !requirePlan(
+        "portal",
+        "La pubblicazione dei verbali nel portale"
+      )
+    )
+      return;
+
+    setAssemblies((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              publishedToPortal:
+                !item.publishedToPortal,
+            }
+          : item
+      )
+    );
+  };
+
   /* =======================================================
      FORNITORI
      ======================================================= */
@@ -1078,7 +1752,9 @@ function App() {
       !supplierForm.name.trim() ||
       !supplierForm.service.trim()
     ) {
-      alert("Inserisci fornitore e servizio.");
+      alert(
+        "Inserisci fornitore e servizio."
+      );
       return;
     }
 
@@ -1113,17 +1789,28 @@ function App() {
     closeModal();
   };
 
-  const editSupplier = (item: Supplier) => {
+  const editSupplier = (
+    item: Supplier
+  ) => {
     setSelectedSupplier(item);
     setSupplierForm(item);
     openModal("supplier");
   };
 
-  const deleteSupplier = (id: number) => {
-    if (!confirm("Eliminare questo fornitore?")) return;
+  const deleteSupplier = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questo fornitore?"
+      )
+    )
+      return;
 
     setSuppliers((current) =>
-      current.filter((item) => item.id !== id)
+      current.filter(
+        (item) => item.id !== id
+      )
     );
   };
 
@@ -1137,7 +1824,9 @@ function App() {
     event.preventDefault();
 
     if (!activityForm.title.trim()) {
-      alert("Inserisci il titolo dell'attività.");
+      alert(
+        "Inserisci il titolo dell'attività."
+      );
       return;
     }
 
@@ -1167,17 +1856,28 @@ function App() {
     closeModal();
   };
 
-  const editActivity = (item: Activity) => {
+  const editActivity = (
+    item: Activity
+  ) => {
     setSelectedActivity(item);
     setActivityForm(item);
     openModal("activity");
   };
 
-  const deleteActivity = (id: number) => {
-    if (!confirm("Eliminare questa attività?")) return;
+  const deleteActivity = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questa attività?"
+      )
+    )
+      return;
 
     setActivities((current) =>
-      current.filter((item) => item.id !== id)
+      current.filter(
+        (item) => item.id !== id
+      )
     );
   };
 
@@ -1198,6 +1898,62 @@ function App() {
   };
 
   /* =======================================================
+     PORTALE
+     ======================================================= */
+
+  const addPortalMember = (
+    member: PortalMember
+  ) => {
+    if (
+      !requirePlan(
+        "portal",
+        "Il portale condomini"
+      )
+    )
+      return;
+
+    setPortalMembers((current) => [
+      ...current,
+      {
+        ...member,
+        id: makeId(),
+      },
+    ]);
+  };
+
+  const togglePortalMember = (
+    id: number
+  ) => {
+    setPortalMembers((current) =>
+      current.map((member) =>
+        member.id === id
+          ? {
+              ...member,
+              active: !member.active,
+            }
+          : member
+      )
+    );
+  };
+
+  const deletePortalMember = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare l'accesso del condomino?"
+      )
+    )
+      return;
+
+    setPortalMembers((current) =>
+      current.filter(
+        (member) => member.id !== id
+      )
+    );
+  };
+
+  /* =======================================================
      NUOVI ELEMENTI
      ======================================================= */
 
@@ -1206,7 +1962,8 @@ function App() {
 
     setDeadlineForm({
       ...emptyDeadline,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     openModal("deadline");
@@ -1217,7 +1974,8 @@ function App() {
 
     setDocumentForm({
       ...emptyDocument,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     setSelectedFileName("");
@@ -1230,7 +1988,8 @@ function App() {
 
     setAssemblyForm({
       ...emptyAssembly,
-      condominiumId: condominiums[0]?.id || 0,
+      condominiumId:
+        condominiums[0]?.id || 0,
     });
 
     openModal("assembly");
@@ -1253,94 +2012,189 @@ function App() {
      ======================================================= */
 
   const upcoming = [...deadlines]
-    .filter((d) => d.status !== "Completata")
+    .filter(
+      (d) =>
+        d.status !==
+        "Completata"
+    )
     .sort((a, b) =>
-      a.dueDate.localeCompare(b.dueDate)
+      a.dueDate.localeCompare(
+        b.dueDate
+      )
     )
     .slice(0, 5);
 
-  const openActivities = activities.filter(
-    (a) => a.status !== "Completata"
-  ).length;
+  const openActivities =
+    activities.filter(
+      (a) =>
+        a.status !==
+        "Completata"
+    ).length;
 
-  const urgentDeadlines = deadlines.filter(
-    (d) => d.status === "In scadenza"
-  ).length;
+  const urgentDeadlines =
+    deadlines.filter(
+      (d) =>
+        d.status ===
+        "In scadenza"
+    ).length;
 
-  const completedDeadlines = deadlines.filter(
-    (d) => d.status === "Completata"
-  ).length;
+  const completedDeadlines =
+    deadlines.filter(
+      (d) =>
+        d.status ===
+        "Completata"
+    ).length;
 
-  const completedActivities = activities.filter(
-    (a) => a.status === "Completata"
-  ).length;
+  const completedActivities =
+    activities.filter(
+      (a) =>
+        a.status ===
+        "Completata"
+    ).length;
 
   return (
     <>
       <style>{styles}</style>
 
       <div className="app">
-        {/* SIDEBAR DESKTOP */}
+        {/* =================================================
+            SIDEBAR
+           ================================================= */}
 
         <aside className="sidebar">
           <div className="logo">
             BET<span>H</span>AG
           </div>
 
+          <div className="plan-sidebar">
+            <span>
+              {PLAN_NAMES[
+                subscription.plan
+              ]}
+            </span>
+          </div>
+
           <nav className="nav">
             <NavButton
-              active={page === "dashboard"}
-              onClick={() => navigate("dashboard")}
+              active={
+                page === "dashboard"
+              }
+              onClick={() =>
+                navigate("dashboard")
+              }
             >
               ⌂ Dashboard
             </NavButton>
 
             <NavButton
-              active={page === "condomini"}
-              onClick={() => navigate("condomini")}
+              active={
+                page === "condomini"
+              }
+              onClick={() =>
+                navigate("condomini")
+              }
             >
               🏢 Condomini
             </NavButton>
 
             <NavButton
-              active={page === "documenti"}
-              onClick={() => navigate("documenti")}
+              active={
+                page === "documenti"
+              }
+              onClick={() =>
+                navigate("documenti")
+              }
             >
               📁 Documenti
             </NavButton>
 
             <NavButton
-              active={page === "scadenze"}
-              onClick={() => navigate("scadenze")}
+              active={
+                page === "scadenze"
+              }
+              onClick={() =>
+                navigate("scadenze")
+              }
             >
               📅 Scadenze
             </NavButton>
 
             <NavButton
-              active={page === "assemblee"}
-              onClick={() => navigate("assemblee")}
+              active={
+                page === "assemblee"
+              }
+              onClick={() =>
+                navigate("assemblee")
+              }
             >
               👥 Assemblee
             </NavButton>
 
             <NavButton
-              active={page === "fornitori"}
-              onClick={() => navigate("fornitori")}
+              active={
+                page === "fornitori"
+              }
+              onClick={() =>
+                navigate("fornitori")
+              }
             >
               🔧 Fornitori
             </NavButton>
 
             <NavButton
-              active={page === "attivita"}
-              onClick={() => navigate("attivita")}
+              active={
+                page === "attivita"
+              }
+              onClick={() =>
+                navigate("attivita")
+              }
             >
               ✓ Attività
             </NavButton>
 
             <NavButton
-              active={page === "amministratore"}
+              active={page === "ai"}
               onClick={() =>
-                navigate("amministratore")
+                navigate("ai")
+              }
+            >
+              ✨ BETHAG AI
+            </NavButton>
+
+            <NavButton
+              active={
+                page === "portale"
+              }
+              onClick={() =>
+                navigate("portale")
+              }
+            >
+              👥 Portale condomini
+            </NavButton>
+
+            <NavButton
+              active={
+                page ===
+                "abbonamento"
+              }
+              onClick={() =>
+                navigate(
+                  "abbonamento"
+                )
+              }
+            >
+              ⭐ Piano e upgrade
+            </NavButton>
+
+            <NavButton
+              active={
+                page ===
+                "amministratore"
+              }
+              onClick={() =>
+                navigate(
+                  "amministratore"
+                )
               }
             >
               👤 Amministratore
@@ -1348,17 +2202,21 @@ function App() {
           </nav>
 
           <div className="sidebar-bottom">
-            <b>BETHAG AI</b>
+            <b>BETHAG</b>
             <br />
             <small>
-              Assistente intelligente
+              Gestione intelligente
+              dell'amministrazione
+              condominiale
             </small>
           </div>
         </aside>
 
-        <main className="content">
-          {/* HEADER MOBILE */}
+        {/* =================================================
+            CONTENUTO
+           ================================================= */}
 
+        <main className="content">
           <header className="mobile-header">
             <button
               className="icon-button"
@@ -1375,159 +2233,387 @@ function App() {
             <button
               className="icon-button"
               onClick={() =>
-                navigate("amministratore")
+                navigate(
+                  "amministratore"
+                )
               }
             >
               ⚙
             </button>
           </header>
 
-          {/* DASHBOARD */}
-
           {page === "dashboard" && (
             <Dashboard
-              condominiums={condominiums}
+              condominiums={
+                condominiums
+              }
               deadlines={deadlines}
               documents={documents}
               activities={activities}
               upcoming={upcoming}
-              openActivities={openActivities}
-              urgentDeadlines={urgentDeadlines}
-              completedDeadlines={completedDeadlines}
-              completedActivities={completedActivities}
-              onNavigate={navigate}
-              condominiumName={condominiumName}
+              openActivities={
+                openActivities
+              }
+              urgentDeadlines={
+                urgentDeadlines
+              }
+              completedDeadlines={
+                completedDeadlines
+              }
+              completedActivities={
+                completedActivities
+              }
+              onNavigate={
+                navigate
+              }
+              condominiumName={
+                condominiumName
+              }
+              subscription={
+                subscription
+              }
             />
           )}
-
-          {/* CONDOMINI */}
 
           {page === "condomini" && (
             <CondominiumsPage
-              condominiums={filteredCondominiums}
-              allCount={condominiums.length}
+              condominiums={
+                filteredCondominiums
+              }
+              allCount={
+                condominiums.length
+              }
               search={search}
-              setSearch={setSearch}
-              selected={selectedCondominium}
-              setSelected={setSelectedCondominium}
+              setSearch={
+                setSearch
+              }
+              selected={
+                selectedCondominium
+              }
+              setSelected={
+                setSelectedCondominium
+              }
               onNew={() => {
-                setEditingCondominium(null);
-                openModal("condominium");
+                setEditingCondominium(
+                  null
+                );
+
+                openModal(
+                  "condominium"
+                );
               }}
-              onEdit={(item: Condominium) => {
-                setEditingCondominium(item);
-                openModal("condominium");
+              onEdit={(
+                item: Condominium
+              ) => {
+                setEditingCondominium(
+                  item
+                );
+
+                openModal(
+                  "condominium"
+                );
               }}
-              onDelete={deleteCondominium}
-              deadlines={deadlines}
-              documents={documents}
-              assemblies={assemblies}
-              suppliers={suppliers}
-              activities={activities}
-              condominiumName={condominiumName}
-              onEditDeadline={editDeadline}
-              onEditDocument={editDocument}
-              onEditAssembly={editAssembly}
-              onEditSupplier={editSupplier}
-              onEditActivity={editActivity}
-              onDeleteDeadline={deleteDeadline}
-              onDeleteDocument={deleteDocument}
-              onDeleteAssembly={deleteAssembly}
-              onDeleteSupplier={deleteSupplier}
-              onDeleteActivity={deleteActivity}
-              onStatusDeadline={updateDeadlineStatus}
-              onStatusAssembly={updateAssemblyStatus}
-              onStatusActivity={updateActivityStatus}
+              onDelete={
+                deleteCondominium
+              }
+              deadlines={
+                deadlines
+              }
+              documents={
+                documents
+              }
+              assemblies={
+                assemblies
+              }
+              suppliers={
+                suppliers
+              }
+              activities={
+                activities
+              }
+              condominiumName={
+                condominiumName
+              }
+              onEditDeadline={
+                editDeadline
+              }
+              onEditDocument={
+                editDocument
+              }
+              onEditAssembly={
+                editAssembly
+              }
+              onEditSupplier={
+                editSupplier
+              }
+              onEditActivity={
+                editActivity
+              }
+              onDeleteDeadline={
+                deleteDeadline
+              }
+              onDeleteDocument={
+                deleteDocument
+              }
+              onDeleteAssembly={
+                deleteAssembly
+              }
+              onDeleteSupplier={
+                deleteSupplier
+              }
+              onDeleteActivity={
+                deleteActivity
+              }
+              onStatusDeadline={
+                updateDeadlineStatus
+              }
+              onStatusAssembly={
+                updateAssemblyStatus
+              }
+              onStatusActivity={
+                updateActivityStatus
+              }
             />
           )}
-
-          {/* DOCUMENTI */}
 
           {page === "documenti" && (
             <DocumentsPage
-              documents={documents}
+              documents={
+                documents
+              }
               search={search}
-              setSearch={setSearch}
-              onNew={newDocument}
-              onEdit={editDocument}
-              onDelete={deleteDocument}
-              condominiumName={condominiumName}
+              setSearch={
+                setSearch
+              }
+              onNew={
+                newDocument
+              }
+              onEdit={
+                editDocument
+              }
+              onDelete={
+                deleteDocument
+              }
+              condominiumName={
+                condominiumName
+              }
+              onAI={
+                processDocumentAI
+              }
+              onConfirmAI={
+                confirmDocumentAI
+              }
+              onPublication={
+                toggleDocumentPublication
+              }
+              plan={
+                subscription.plan
+              }
             />
           )}
-
-          {/* SCADENZE */}
 
           {page === "scadenze" && (
             <DeadlinesPage
-              deadlines={deadlines}
+              deadlines={
+                deadlines
+              }
               search={search}
-              setSearch={setSearch}
-              onNew={newDeadline}
-              onEdit={editDeadline}
-              onDelete={deleteDeadline}
-              onStatus={updateDeadlineStatus}
-              condominiumName={condominiumName}
+              setSearch={
+                setSearch
+              }
+              onNew={
+                newDeadline
+              }
+              onEdit={
+                editDeadline
+              }
+              onDelete={
+                deleteDeadline
+              }
+              onStatus={
+                updateDeadlineStatus
+              }
+              condominiumName={
+                condominiumName
+              }
             />
           )}
-
-          {/* ASSEMBLEE */}
 
           {page === "assemblee" && (
             <AssembliesPage
-              assemblies={assemblies}
+              assemblies={
+                assemblies
+              }
               search={search}
-              setSearch={setSearch}
-              onNew={newAssembly}
-              onEdit={editAssembly}
-              onDelete={deleteAssembly}
-              onStatus={updateAssemblyStatus}
-              condominiumName={condominiumName}
+              setSearch={
+                setSearch
+              }
+              onNew={
+                newAssembly
+              }
+              onEdit={
+                editAssembly
+              }
+              onDelete={
+                deleteAssembly
+              }
+              onStatus={
+                updateAssemblyStatus
+              }
+              condominiumName={
+                condominiumName
+              }
+              onAudio={
+                attachAssemblyAudio
+              }
+              onGenerateMinutes={
+                generateMinutes
+              }
+              onConfirmMinutes={
+                confirmMinutes
+              }
+              onPublication={
+                toggleAssemblyPublication
+              }
             />
           )}
-
-          {/* FORNITORI */}
 
           {page === "fornitori" && (
             <SuppliersPage
-              suppliers={suppliers}
+              suppliers={
+                suppliers
+              }
               search={search}
-              setSearch={setSearch}
-              onNew={newSupplier}
-              onEdit={editSupplier}
-              onDelete={deleteSupplier}
-              condominiumName={condominiumName}
+              setSearch={
+                setSearch
+              }
+              onNew={
+                newSupplier
+              }
+              onEdit={
+                editSupplier
+              }
+              onDelete={
+                deleteSupplier
+              }
+              condominiumName={
+                condominiumName
+              }
             />
           )}
-
-          {/* ATTIVITÀ */}
 
           {page === "attivita" && (
             <ActivitiesPage
-              activities={activities}
+              activities={
+                activities
+              }
               search={search}
-              setSearch={setSearch}
-              onNew={newActivity}
-              onEdit={editActivity}
-              onDelete={deleteActivity}
-              onStatus={updateActivityStatus}
-              condominiumName={condominiumName}
+              setSearch={
+                setSearch
+              }
+              onNew={
+                newActivity
+              }
+              onEdit={
+                editActivity
+              }
+              onDelete={
+                deleteActivity
+              }
+              onStatus={
+                updateActivityStatus
+              }
+              condominiumName={
+                condominiumName
+              }
             />
           )}
 
-          {/* AMMINISTRATORE */}
+          {page === "ai" && (
+            <AIPage
+              documents={
+                documents
+              }
+              assemblies={
+                assemblies
+              }
+              plan={
+                subscription.plan
+              }
+              onNavigate={
+                navigate
+              }
+              onAI={
+                processDocumentAI
+              }
+              onAudio={
+                attachAssemblyAudio
+              }
+            />
+          )}
 
-          {page === "amministratore" && (
+          {page === "portale" && (
+            <PortalPage
+              members={
+                portalMembers
+              }
+              condominiums={
+                condominiums
+              }
+              documents={
+                documents
+              }
+              assemblies={
+                assemblies
+              }
+              plan={
+                subscription.plan
+              }
+              onAdd={
+                addPortalMember
+              }
+              onToggle={
+                togglePortalMember
+              }
+              onDelete={
+                deletePortalMember
+              }
+              onNavigate={
+                navigate
+              }
+            />
+          )}
+
+          {page ===
+            "abbonamento" && (
+            <SubscriptionPage
+              subscription={
+                subscription
+              }
+              setSubscription={
+                setSubscription
+              }
+            />
+          )}
+
+          {page ===
+            "amministratore" && (
             <ProfilePage
               profile={profile}
-              setProfile={setProfile}
+              setProfile={
+                setProfile
+              }
+              subscription={
+                subscription
+              }
             />
           )}
         </main>
       </div>
 
-      {/* =====================================================
+      {/* =================================================
           MENU MOBILE
-         ===================================================== */}
+         ================================================= */}
 
       {mobileMenuOpen && (
         <div
@@ -1550,83 +2636,104 @@ function App() {
               <button
                 className="modal-close"
                 onClick={() =>
-                  setMobileMenuOpen(false)
+                  setMobileMenuOpen(
+                    false
+                  )
                 }
               >
                 ×
               </button>
             </div>
 
+            <div className="mobile-plan">
+              {PLAN_NAMES[
+                subscription.plan
+              ]}
+            </div>
+
             <div className="mobile-nav">
-              <NavButton
-                active={page === "dashboard"}
-                onClick={() => navigate("dashboard")}
-              >
-                ⌂ Dashboard
-              </NavButton>
-
-              <NavButton
-                active={page === "condomini"}
-                onClick={() => navigate("condomini")}
-              >
-                🏢 Condomini
-              </NavButton>
-
-              <NavButton
-                active={page === "documenti"}
-                onClick={() => navigate("documenti")}
-              >
-                📁 Documenti
-              </NavButton>
-
-              <NavButton
-                active={page === "scadenze"}
-                onClick={() => navigate("scadenze")}
-              >
-                📅 Scadenze
-              </NavButton>
-
-              <NavButton
-                active={page === "assemblee"}
-                onClick={() => navigate("assemblee")}
-              >
-                👥 Assemblee
-              </NavButton>
-
-              <NavButton
-                active={page === "fornitori"}
-                onClick={() => navigate("fornitori")}
-              >
-                🔧 Fornitori
-              </NavButton>
-
-              <NavButton
-                active={page === "attivita"}
-                onClick={() => navigate("attivita")}
-              >
-                ✓ Attività
-              </NavButton>
-
-              <NavButton
-                active={page === "amministratore"}
-                onClick={() =>
-                  navigate("amministratore")
-                }
-              >
-                👤 Amministratore
-              </NavButton>
+              {(
+                [
+                  [
+                    "dashboard",
+                    "⌂ Dashboard",
+                  ],
+                  [
+                    "condomini",
+                    "🏢 Condomini",
+                  ],
+                  [
+                    "documenti",
+                    "📁 Documenti",
+                  ],
+                  [
+                    "scadenze",
+                    "📅 Scadenze",
+                  ],
+                  [
+                    "assemblee",
+                    "👥 Assemblee",
+                  ],
+                  [
+                    "fornitori",
+                    "🔧 Fornitori",
+                  ],
+                  [
+                    "attivita",
+                    "✓ Attività",
+                  ],
+                  [
+                    "ai",
+                    "✨ BETHAG AI",
+                  ],
+                  [
+                    "portale",
+                    "👥 Portale condomini",
+                  ],
+                  [
+                    "abbonamento",
+                    "⭐ Piano e upgrade",
+                  ],
+                  [
+                    "amministratore",
+                    "👤 Amministratore",
+                  ],
+                ] as [
+                  Page,
+                  string
+                ][]
+              ).map(
+                ([target, label]) => (
+                  <NavButton
+                    key={target}
+                    active={
+                      page === target
+                    }
+                    onClick={() =>
+                      navigate(
+                        target
+                      )
+                    }
+                  >
+                    {label}
+                  </NavButton>
+                )
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* =====================================================
+      {/* =================================================
           MODALI
-         ===================================================== */}
+         ================================================= */}
 
       {showModal && (
-        <Modal onClose={closeModal}>
-          {modalType === "condominium" && (
+        <Modal
+          onClose={closeModal}
+        >
+          {modalType ===
+            "condominium" && (
             <CondominiumForm
               value={
                 editingCondominium ||
@@ -1635,69 +2742,144 @@ function App() {
                   id: 0,
                 }
               }
-              onChange={setEditingCondominium}
-              onSubmit={saveCondominium}
-              onCancel={closeModal}
-              editing={!!editingCondominium}
+              onChange={
+                setEditingCondominium
+              }
+              onSubmit={
+                saveCondominium
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!editingCondominium
+              }
             />
           )}
 
-          {modalType === "deadline" && (
+          {modalType ===
+            "deadline" && (
             <DeadlineForm
-              value={deadlineForm}
-              setValue={setDeadlineForm}
-              condominiums={condominiums}
-              onSubmit={saveDeadline}
-              onCancel={closeModal}
-              editing={!!selectedDeadline}
+              value={
+                deadlineForm
+              }
+              setValue={
+                setDeadlineForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveDeadline
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!selectedDeadline
+              }
             />
           )}
 
-          {modalType === "document" && (
+          {modalType ===
+            "document" && (
             <DocumentForm
-              value={documentForm}
-              setValue={setDocumentForm}
-              condominiums={condominiums}
-              onSubmit={saveDocument}
-              onCancel={closeModal}
-              selectedFileName={selectedFileName}
+              value={
+                documentForm
+              }
+              setValue={
+                setDocumentForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveDocument
+              }
+              onCancel={
+                closeModal
+              }
+              selectedFileName={
+                selectedFileName
+              }
               setSelectedFileName={
                 setSelectedFileName
               }
-              editing={!!selectedDocument}
+              editing={
+                !!selectedDocument
+              }
             />
           )}
 
-          {modalType === "assembly" && (
+          {modalType ===
+            "assembly" && (
             <AssemblyForm
-              value={assemblyForm}
-              setValue={setAssemblyForm}
-              condominiums={condominiums}
-              onSubmit={saveAssembly}
-              onCancel={closeModal}
-              editing={!!selectedAssembly}
+              value={
+                assemblyForm
+              }
+              setValue={
+                setAssemblyForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveAssembly
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!selectedAssembly
+              }
             />
           )}
 
-          {modalType === "supplier" && (
+          {modalType ===
+            "supplier" && (
             <SupplierForm
-              value={supplierForm}
-              setValue={setSupplierForm}
-              condominiums={condominiums}
-              onSubmit={saveSupplier}
-              onCancel={closeModal}
-              editing={!!selectedSupplier}
+              value={
+                supplierForm
+              }
+              setValue={
+                setSupplierForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveSupplier
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!selectedSupplier
+              }
             />
           )}
 
-          {modalType === "activity" && (
+          {modalType ===
+            "activity" && (
             <ActivityForm
-              value={activityForm}
-              setValue={setActivityForm}
-              condominiums={condominiums}
-              onSubmit={saveActivity}
-              onCancel={closeModal}
-              editing={!!selectedActivity}
+              value={
+                activityForm
+              }
+              setValue={
+                setActivityForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveActivity
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!selectedActivity
+              }
             />
           )}
         </Modal>
@@ -1707,7 +2889,7 @@ function App() {
 }
 
 /* =========================================================
-   NAVIGATION
+   NAV BUTTON
    ========================================================= */
 
 function NavButton({
@@ -1735,35 +2917,41 @@ function NavButton({
    DASHBOARD
    ========================================================= */
 
-function Dashboard(props: any) {
-  const {
-    condominiums,
-    deadlines,
-    documents,
-    activities,
-    upcoming,
-    openActivities,
-    urgentDeadlines,
-    completedDeadlines,
-    completedActivities,
-    onNavigate,
-    condominiumName,
-  } = props;
-
+function Dashboard({
+  condominiums,
+  deadlines,
+  documents,
+  activities,
+  upcoming,
+  openActivities,
+  urgentDeadlines,
+  completedDeadlines,
+  completedActivities,
+  onNavigate,
+  condominiumName,
+  subscription,
+}: any) {
   return (
     <>
       <header className="topbar">
         <div>
           <div className="eyebrow">
-            Area amministratore
+            {PLAN_NAMES[
+              subscription.plan
+            ]}
           </div>
-          <h1>Buongiorno 👋</h1>
+
+          <h1>
+            Buongiorno 👋
+          </h1>
         </div>
 
         <button
           className="profile"
           onClick={() =>
-            onNavigate("amministratore")
+            onNavigate(
+              "amministratore"
+            )
           }
         >
           Amministratore
@@ -1774,62 +2962,109 @@ function Dashboard(props: any) {
         <button
           className="stat-card"
           onClick={() =>
-            onNavigate("condomini")
+            onNavigate(
+              "condomini"
+            )
           }
         >
           <span>🏢</span>
-          <strong>{condominiums.length}</strong>
-          <small>Condomini</small>
+
+          <strong>
+            {condominiums.length}
+          </strong>
+
+          <small>
+            Condomini
+          </small>
         </button>
 
         <button
           className="stat-card"
           onClick={() =>
-            onNavigate("scadenze")
+            onNavigate(
+              "scadenze"
+            )
           }
         >
           <span>📅</span>
-          <strong>{deadlines.length}</strong>
-          <small>Scadenze</small>
+
+          <strong>
+            {deadlines.length}
+          </strong>
+
+          <small>
+            Scadenze
+          </small>
         </button>
 
         <button
           className="stat-card"
           onClick={() =>
-            onNavigate("documenti")
+            onNavigate(
+              "documenti"
+            )
           }
         >
           <span>📁</span>
-          <strong>{documents.length}</strong>
-          <small>Documenti</small>
+
+          <strong>
+            {documents.length}
+          </strong>
+
+          <small>
+            Documenti
+          </small>
         </button>
 
         <button
           className="stat-card"
           onClick={() =>
-            onNavigate("attivita")
+            onNavigate(
+              "attivita"
+            )
           }
         >
           <span>✓</span>
-          <strong>{openActivities}</strong>
-          <small>Attività aperte</small>
+
+          <strong>
+            {openActivities}
+          </strong>
+
+          <small>
+            Attività aperte
+          </small>
         </button>
       </section>
 
       <section className="mini-stats">
         <div className="mini-stat">
-          <b>{urgentDeadlines}</b>
-          <span>Scadenze urgenti</span>
+          <b>
+            {urgentDeadlines}
+          </b>
+
+          <span>
+            Scadenze urgenti
+          </span>
         </div>
 
         <div className="mini-stat">
-          <b>{completedDeadlines}</b>
-          <span>Scadenze completate</span>
+          <b>
+            {completedDeadlines}
+          </b>
+
+          <span>
+            Scadenze completate
+          </span>
         </div>
 
         <div className="mini-stat">
-          <b>{completedActivities}</b>
-          <span>Attività completate</span>
+          <b>
+            {completedActivities}
+          </b>
+
+          <span>
+            Attività completate
+          </span>
         </div>
       </section>
 
@@ -1839,41 +3074,59 @@ function Dashboard(props: any) {
             title="Prossime scadenze"
             action="Vedi tutte"
             onClick={() =>
-              onNavigate("scadenze")
+              onNavigate(
+                "scadenze"
+              )
             }
           />
 
-          {upcoming.length === 0 ? (
+          {upcoming.length ===
+          0 ? (
             <Empty text="Nessuna scadenza aperta." />
           ) : (
-            upcoming.map((item: Deadline) => (
-              <div
-                className="list-row"
-                key={item.id}
-              >
-                <div>
-                  <b>{item.title}</b>
+            upcoming.map(
+              (item: Deadline) => (
+                <div
+                  className="list-row"
+                  key={item.id}
+                >
+                  <div>
+                    <b>
+                      {item.title}
+                    </b>
 
-                  <small>
-                    {condominiumName(
-                      item.condominiumId
+                    <small>
+                      {condominiumName(
+                        item.condominiumId
+                      )}
+                    </small>
+
+                    <Badge
+                      value={
+                        item.status
+                      }
+                    />
+                  </div>
+
+                  <strong>
+                    {formatDate(
+                      item.dueDate
                     )}
-                  </small>
-
-                  <Badge value={item.status} />
+                  </strong>
                 </div>
-
-                <strong>
-                  {formatDate(item.dueDate)}
-                </strong>
-              </div>
-            ))
+              )
+            )
           )}
 
-          {urgentDeadlines > 0 && (
+          {urgentDeadlines >
+            0 && (
             <div className="notice">
-              ⚠️ {urgentDeadlines} scadenza/e
-              richiedono attenzione.
+              ⚠️{" "}
+              {
+                urgentDeadlines
+              }{" "}
+              scadenza/e richiedono
+              attenzione.
             </div>
           )}
         </div>
@@ -1883,31 +3136,39 @@ function Dashboard(props: any) {
             title="Attività recenti"
             action="Vedi tutte"
             onClick={() =>
-              onNavigate("attivita")
+              onNavigate(
+                "attivita"
+              )
             }
           />
 
-          {activities.length === 0 ? (
+          {activities.length ===
+          0 ? (
             <Empty text="Nessuna attività." />
           ) : (
             activities
               .slice(-5)
               .reverse()
-              .map((a: Activity) => (
-                <div
-                  className="activity"
-                  key={a.id}
-                >
-                  <b>{a.title}</b>
+              .map(
+                (a: Activity) => (
+                  <div
+                    className="activity"
+                    key={a.id}
+                  >
+                    <b>
+                      {a.title}
+                    </b>
 
-                  <small>
-                    {condominiumName(
-                      a.condominiumId
-                    )}{" "}
-                    · {a.status}
-                  </small>
-                </div>
-              ))
+                    <small>
+                      {condominiumName(
+                        a.condominiumId
+                      )}{" "}
+                      ·{" "}
+                      {a.status}
+                    </small>
+                  </div>
+                )
+              )
           )}
         </div>
       </section>
@@ -1924,20 +3185,21 @@ function Dashboard(props: any) {
           </h2>
 
           <p>
-            Condomini, scadenze, documenti,
-            assemblee, fornitori e attività
-            sono collegati in un'unica
-            interfaccia.
+            Documenti, scadenze,
+            assemblee, attività e
+            automazioni possono
+            essere collegati in un
+            unico sistema.
           </p>
         </div>
 
         <button
           className="ai-button"
           onClick={() =>
-            onNavigate("condomini")
+            onNavigate("ai")
           }
         >
-          Gestisci condomini
+          Apri BETHAG AI
         </button>
       </section>
     </>
@@ -1973,14 +3235,21 @@ function SectionTitle({
   );
 }
 
-function Badge({ value }: { value: string }) {
+function Badge({
+  value,
+}: {
+  value: string;
+}) {
   const urgent =
-    value === "In scadenza" ||
+    value ===
+      "In scadenza" ||
     value === "Alta";
 
   const done =
-    value === "Completata" ||
-    value === "Svolto";
+    value ===
+      "Completata" ||
+    value === "Svolto" ||
+    value === "Confermato";
 
   return (
     <span
@@ -1997,7 +3266,11 @@ function Badge({ value }: { value: string }) {
   );
 }
 
-function Empty({ text }: { text: string }) {
+function Empty({
+  text,
+}: {
+  text: string;
+}) {
   return (
     <div className="empty">
       {text}
@@ -2053,9 +3326,13 @@ function SearchBox({
         className="search-input"
         value={value}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
-        placeholder={placeholder}
+        placeholder={
+          placeholder
+        }
       />
     </div>
   );
@@ -2065,7 +3342,9 @@ function SearchBox({
    CONDOMINI
    ========================================================= */
 
-function CondominiumsPage(props: any) {
+function CondominiumsPage(
+  props: any
+) {
   const {
     condominiums,
     allCount,
@@ -2097,11 +3376,6 @@ function CondominiumsPage(props: any) {
     onStatusActivity,
   } = props;
 
-  /*
-   * Quando viene aperto un condominio,
-   * la schermata viene riportata automaticamente
-   * all'inizio della pagina.
-   */
   useEffect(() => {
     if (selected) {
       window.scrollTo({
@@ -2111,18 +3385,10 @@ function CondominiumsPage(props: any) {
     }
   }, [selected]);
 
-  /*
-   * =======================================================
-   * SCHERMATA DETTAGLIO CONDOMINIO
-   * =======================================================
-   */
-
   if (selected) {
     return (
       <div className="condominium-detail-page">
-
         <div className="detail-page-header">
-
           <button
             type="button"
             className="back-button"
@@ -2139,7 +3405,6 @@ function CondominiumsPage(props: any) {
           </button>
 
           <div className="detail-page-heading">
-
             <div className="detail-page-icon">
               🏢
             </div>
@@ -2149,7 +3414,9 @@ function CondominiumsPage(props: any) {
                 Scheda condominio
               </div>
 
-              <h1>{selected.name}</h1>
+              <h1>
+                {selected.name}
+              </h1>
 
               <p>
                 {selected.address}
@@ -2164,13 +3431,10 @@ function CondominiumsPage(props: any) {
                   : ""}
               </p>
             </div>
-
           </div>
 
           <div className="detail-page-actions">
-
             <button
-              type="button"
               className="secondary-button"
               onClick={() =>
                 onEdit(selected)
@@ -2180,7 +3444,6 @@ function CondominiumsPage(props: any) {
             </button>
 
             <button
-              type="button"
               className="danger-button"
               onClick={() =>
                 onDelete(selected)
@@ -2188,122 +3451,91 @@ function CondominiumsPage(props: any) {
             >
               🗑 Elimina
             </button>
-
           </div>
-
         </div>
 
         <CondominiumDetails
           item={selected}
-
-          onClose={() => {
-            setSelected(null);
-
-            window.scrollTo({
-              top: 0,
-              behavior: "smooth",
-            });
-          }}
-
+          onClose={() =>
+            setSelected(null)
+          }
           onEdit={() =>
             onEdit(selected)
           }
-
           onDelete={() =>
             onDelete(selected)
           }
-
           deadlines={deadlines.filter(
             (x: Deadline) =>
-              x.condominiumId === selected.id
+              x.condominiumId ===
+              selected.id
           )}
-
           documents={documents.filter(
             (x: DocumentItem) =>
-              x.condominiumId === selected.id
+              x.condominiumId ===
+              selected.id
           )}
-
           assemblies={assemblies.filter(
             (x: Assembly) =>
-              x.condominiumId === selected.id
+              x.condominiumId ===
+              selected.id
           )}
-
           suppliers={suppliers.filter(
             (x: Supplier) =>
-              x.condominiumId === selected.id
+              x.condominiumId ===
+              selected.id
           )}
-
           activities={activities.filter(
             (x: Activity) =>
-              x.condominiumId === selected.id
+              x.condominiumId ===
+              selected.id
           )}
-
           condominiumName={
             condominiumName
           }
-
           onEditDeadline={
             onEditDeadline
           }
-
           onEditDocument={
             onEditDocument
           }
-
           onEditAssembly={
             onEditAssembly
           }
-
           onEditSupplier={
             onEditSupplier
           }
-
           onEditActivity={
             onEditActivity
           }
-
           onDeleteDeadline={
             onDeleteDeadline
           }
-
           onDeleteDocument={
             onDeleteDocument
           }
-
           onDeleteAssembly={
             onDeleteAssembly
           }
-
           onDeleteSupplier={
             onDeleteSupplier
           }
-
           onDeleteActivity={
             onDeleteActivity
           }
-
           onStatusDeadline={
             onStatusDeadline
           }
-
           onStatusAssembly={
             onStatusAssembly
           }
-
           onStatusActivity={
             onStatusActivity
           }
         />
-
       </div>
     );
   }
-
-  /*
-   * =======================================================
-   * ELENCO CONDOMINI
-   * =======================================================
-   */
 
   return (
     <>
@@ -2321,12 +3553,14 @@ function CondominiumsPage(props: any) {
       />
 
       <div className="results-info">
-        {condominiums.length} di {allCount}{" "}
-        condomini visualizzati
+        {condominiums.length} di{" "}
+        {allCount} condomini
+        visualizzati
       </div>
 
       <section className="cards-grid">
-        {condominiums.length === 0 ? (
+        {condominiums.length ===
+        0 ? (
           <Empty text="Nessun condominio trovato." />
         ) : (
           condominiums.map(
@@ -2339,12 +3573,15 @@ function CondominiumsPage(props: any) {
                   🏢
                 </div>
 
-                <h2>{c.name}</h2>
+                <h2>
+                  {c.name}
+                </h2>
 
                 <p>
                   {c.address}
                   <br />
-                  {c.cap} {c.city}{" "}
+                  {c.cap}{" "}
+                  {c.city}{" "}
                   {c.province &&
                     `(${c.province})`}
                 </p>
@@ -2381,7 +3618,13 @@ function CondominiumsPage(props: any) {
   );
 }
 
-function CondominiumDetails(props: any) {
+/* =========================================================
+   DETTAGLIO CONDOMINIO
+   ========================================================= */
+
+function CondominiumDetails(
+  props: any
+) {
   const {
     item,
     onClose,
@@ -2409,14 +3652,15 @@ function CondominiumDetails(props: any) {
 
   return (
     <section className="detail-card">
-
       <div className="section-title">
         <div>
           <div className="eyebrow">
             Dati del condominio
           </div>
 
-          <h2>{item.name}</h2>
+          <h2>
+            {item.name}
+          </h2>
         </div>
 
         <button
@@ -2428,7 +3672,6 @@ function CondominiumDetails(props: any) {
       </div>
 
       <div className="detail-grid">
-
         <Detail
           label="Indirizzo"
           value={`${item.address}, ${item.cap} ${item.city}${
@@ -2490,7 +3733,6 @@ function CondominiumDetails(props: any) {
             "Non inserito"
           }
         />
-
       </div>
 
       <div className="notes">
@@ -2520,13 +3762,12 @@ function CondominiumDetails(props: any) {
         </button>
       </div>
 
-      {/* SCADENZE COLLEGATE */}
-
       <RelatedSection
         title="Scadenze"
         count={deadlines.length}
       >
-        {deadlines.length === 0 ? (
+        {deadlines.length ===
+        0 ? (
           <Empty text="Nessuna scadenza collegata." />
         ) : (
           deadlines.map(
@@ -2540,15 +3781,21 @@ function CondominiumDetails(props: any) {
                   d.category
                 } · ${
                   d.amount
-                    ? currency(d.amount)
+                    ? currency(
+                        d.amount
+                      )
                     : "Nessun importo"
                 }`}
                 badge={d.status}
                 onEdit={() =>
-                  onEditDeadline(d)
+                  onEditDeadline(
+                    d
+                  )
                 }
                 onDelete={() =>
-                  onDeleteDeadline(d.id)
+                  onDeleteDeadline(
+                    d.id
+                  )
                 }
               >
                 <select
@@ -2564,11 +3811,9 @@ function CondominiumDetails(props: any) {
                   <option>
                     Da fare
                   </option>
-
                   <option>
                     In scadenza
                   </option>
-
                   <option>
                     Completata
                   </option>
@@ -2579,13 +3824,12 @@ function CondominiumDetails(props: any) {
         )}
       </RelatedSection>
 
-      {/* DOCUMENTI COLLEGATI */}
-
       <RelatedSection
         title="Documenti"
         count={documents.length}
       >
-        {documents.length === 0 ? (
+        {documents.length ===
+        0 ? (
           <Empty text="Nessun documento collegato." />
         ) : (
           documents.map(
@@ -2595,12 +3839,22 @@ function CondominiumDetails(props: any) {
                 title={d.name}
                 subtitle={`${d.category} · ${formatDate(
                   d.date
-                )} · ${d.size || "Dimensione non disponibile"}`}
+                )} · ${
+                  d.size ||
+                  "Dimensione non disponibile"
+                }`}
+                badge={
+                  d.publication
+                }
                 onEdit={() =>
-                  onEditDocument(d)
+                  onEditDocument(
+                    d
+                  )
                 }
                 onDelete={() =>
-                  onDeleteDocument(d.id)
+                  onDeleteDocument(
+                    d.id
+                  )
                 }
               />
             )
@@ -2608,13 +3862,12 @@ function CondominiumDetails(props: any) {
         )}
       </RelatedSection>
 
-      {/* ASSEMBLEE COLLEGATE */}
-
       <RelatedSection
         title="Assemblee"
         count={assemblies.length}
       >
-        {assemblies.length === 0 ? (
+        {assemblies.length ===
+        0 ? (
           <Empty text="Nessuna assemblea collegata." />
         ) : (
           assemblies.map(
@@ -2625,54 +3878,35 @@ function CondominiumDetails(props: any) {
                 subtitle={`${formatDate(
                   a.date
                 )} · ${
-                  a.time || "Ora non definita"
+                  a.time ||
+                  "Ora non definita"
                 } · ${
                   a.place ||
                   "Luogo non definito"
                 }`}
                 badge={a.status}
                 onEdit={() =>
-                  onEditAssembly(a)
+                  onEditAssembly(
+                    a
+                  )
                 }
                 onDelete={() =>
-                  onDeleteAssembly(a.id)
+                  onDeleteAssembly(
+                    a.id
+                  )
                 }
-              >
-                <select
-                  value={a.status}
-                  onChange={(e) =>
-                    onStatusAssembly(
-                      a.id,
-                      e.target
-                        .value as AssemblyStatus
-                    )
-                  }
-                >
-                  <option>
-                    Programmato
-                  </option>
-
-                  <option>
-                    Svolto
-                  </option>
-
-                  <option>
-                    Annullato
-                  </option>
-                </select>
-              </RelatedRow>
+              />
             )
           )
         )}
       </RelatedSection>
 
-      {/* FORNITORI COLLEGATI */}
-
       <RelatedSection
         title="Fornitori"
         count={suppliers.length}
       >
-        {suppliers.length === 0 ? (
+        {suppliers.length ===
+        0 ? (
           <Empty text="Nessun fornitore collegato." />
         ) : (
           suppliers.map(
@@ -2685,10 +3919,14 @@ function CondominiumDetails(props: any) {
                   "Telefono non inserito"
                 }`}
                 onEdit={() =>
-                  onEditSupplier(s)
+                  onEditSupplier(
+                    s
+                  )
                 }
                 onDelete={() =>
-                  onDeleteSupplier(s.id)
+                  onDeleteSupplier(
+                    s.id
+                  )
                 }
               />
             )
@@ -2696,13 +3934,12 @@ function CondominiumDetails(props: any) {
         )}
       </RelatedSection>
 
-      {/* ATTIVITÀ COLLEGATE */}
-
       <RelatedSection
         title="Attività"
         count={activities.length}
       >
-        {activities.length === 0 ? (
+        {activities.length ===
+        0 ? (
           <Empty text="Nessuna attività collegata." />
         ) : (
           activities.map(
@@ -2710,15 +3947,21 @@ function CondominiumDetails(props: any) {
               <RelatedRow
                 key={a.id}
                 title={a.title}
-                subtitle={`Scadenza ${
-                  formatDate(a.dueDate)
-                }`}
-                badge={a.priority}
+                subtitle={`Scadenza ${formatDate(
+                  a.dueDate
+                )}`}
+                badge={
+                  a.priority
+                }
                 onEdit={() =>
-                  onEditActivity(a)
+                  onEditActivity(
+                    a
+                  )
                 }
                 onDelete={() =>
-                  onDeleteActivity(a.id)
+                  onDeleteActivity(
+                    a.id
+                  )
                 }
               >
                 <select
@@ -2734,11 +3977,9 @@ function CondominiumDetails(props: any) {
                   <option>
                     Aperta
                   </option>
-
                   <option>
                     In corso
                   </option>
-
                   <option>
                     Completata
                   </option>
@@ -2765,7 +4006,9 @@ function RelatedSection({
     <div className="related-section">
       <div className="related-title">
         <h3>{title}</h3>
-        <span>{count}</span>
+        <span>
+          {count}
+        </span>
       </div>
 
       <div className="related-list">
@@ -2795,10 +4038,14 @@ function RelatedRow({
       <div className="related-main">
         <b>{title}</b>
 
-        <small>{subtitle}</small>
+        <small>
+          {subtitle}
+        </small>
 
         {badge && (
-          <Badge value={badge} />
+          <Badge
+            value={badge}
+          />
         )}
       </div>
 
@@ -2855,17 +4102,26 @@ function DocumentsPage({
   onEdit,
   onDelete,
   condominiumName,
+  onAI,
+  onConfirmAI,
+  onPublication,
+  plan,
 }: any) {
-  const filtered = documents.filter(
-    (d: DocumentItem) =>
-      `${d.name} ${d.category} ${condominiumName(
-        d.condominiumId
-      )} ${d.notes}`
-        .toLowerCase()
-        .includes(
-          search.toLowerCase()
-        )
-  );
+  const filtered =
+    documents.filter(
+      (d: DocumentItem) =>
+        `${d.name} ${
+          d.category
+        } ${condominiumName(
+          d.condominiumId
+        )} ${
+          d.notes
+        } ${d.source}`
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          )
+    );
 
   return (
     <>
@@ -2876,63 +4132,156 @@ function DocumentsPage({
         onAction={onNew}
       />
 
+      <div className="feature-banner">
+        <div>
+          <b>
+            ✨ Acquisizione intelligente
+          </b>
+
+          <span>
+            PDF · Word · Excel · immagini
+            · altri formati
+          </span>
+        </div>
+
+        <span className="feature-plan">
+          {hasFeature(
+            plan,
+            "plus"
+          )
+            ? "AI disponibile"
+            : "Da Plus"}
+        </span>
+      </div>
+
       <SearchBox
         value={search}
         onChange={setSearch}
         placeholder="Cerca documento, categoria o condominio..."
       />
 
-      <div className="table-card">
-        <div className="table-head">
-          <b>Documento</b>
-          <b>Condominio</b>
-          <b>Categoria</b>
-          <b>Data</b>
-          <b>Azioni</b>
-        </div>
-
+      <div className="document-grid">
         {filtered.map(
           (d: DocumentItem) => (
-            <div
-              className="table-row"
+            <article
+              className="document-card"
               key={d.id}
             >
-              <div>
-                📄 <b>{d.name}</b>
-
-                <small>
-                  {d.size || "Dimensione non disponibile"}
-                </small>
-
-                {d.notes && (
-                  <small>
-                    {d.notes}
-                  </small>
-                )}
+              <div className="document-icon">
+                {d.source ===
+                "Immagine"
+                  ? "🖼️"
+                  : d.source ===
+                    "Word"
+                  ? "📝"
+                  : d.source ===
+                    "Excel"
+                  ? "📊"
+                  : d.source ===
+                    "PDF"
+                  ? "📕"
+                  : "📄"}
               </div>
 
-              <span>
+              <h3>
+                {d.name}
+              </h3>
+
+              <p>
                 {condominiumName(
                   d.condominiumId
                 )}
-              </span>
+              </p>
 
-              <span>
-                {d.category}
-              </span>
+              <div className="document-meta">
+                <span>
+                  {d.category}
+                </span>
 
-              <span>
-                {formatDate(d.date)}
-              </span>
+                <span>
+                  {d.source}
+                </span>
 
-              <div className="table-actions">
+                <span>
+                  {formatDate(
+                    d.date
+                  )}
+                </span>
+              </div>
+
+              <div className="document-status">
+                <Badge
+                  value={
+                    d.aiStatus
+                  }
+                />
+
+                <Badge
+                  value={
+                    d.publication
+                  }
+                />
+              </div>
+
+              {d.aiSummary && (
+                <div className="ai-summary">
+                  <b>
+                    Analisi AI
+                  </b>
+
+                  <p>
+                    {d.aiSummary}
+                  </p>
+                </div>
+              )}
+
+              <div className="button-row">
                 <button
-                  className="mini-edit"
+                  className="secondary-button"
                   onClick={() =>
                     onEdit(d)
                   }
                 >
                   Modifica
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    onAI(d)
+                  }
+                >
+                  ✨ AI
+                </button>
+              </div>
+
+              {d.aiStatus ===
+                "Da verificare" && (
+                <button
+                  className="primary-button full-button"
+                  onClick={() =>
+                    onConfirmAI(
+                      d.id
+                    )
+                  }
+                >
+                  Conferma dati AI
+                </button>
+              )}
+
+              <div className="document-bottom">
+                <button
+                  className="link"
+                  onClick={() =>
+                    onPublication(
+                      d.id
+                    )
+                  }
+                >
+                  {d.publication ===
+                  "Condiviso"
+                    ? "🔒 Rendi privato"
+                    : "👥 Condividi con condomini"}
                 </button>
 
                 <button
@@ -2944,14 +4293,17 @@ function DocumentsPage({
                   Elimina
                 </button>
               </div>
-            </div>
+            </article>
           )
         )}
-
-        {filtered.length === 0 && (
-          <Empty text="Nessun documento trovato." />
-        )}
       </div>
+
+      {filtered.length ===
+        0 && (
+        <div className="card">
+          <Empty text="Nessun documento trovato." />
+        </div>
+      )}
     </>
   );
 }
@@ -2970,22 +4322,31 @@ function DeadlinesPage({
   onStatus,
   condominiumName,
 }: any) {
-  const filtered = deadlines
-    .filter(
-      (d: Deadline) =>
-        `${d.title} ${d.category} ${condominiumName(
-          d.condominiumId
-        )} ${d.notes}`
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    )
-    .sort((a: Deadline, b: Deadline) =>
-      a.dueDate.localeCompare(
-        b.dueDate
+  const filtered =
+    deadlines
+      .filter(
+        (d: Deadline) =>
+          `${d.title} ${
+            d.category
+          } ${condominiumName(
+            d.condominiumId
+          )} ${
+            d.notes
+          }`
+            .toLowerCase()
+            .includes(
+              search.toLowerCase()
+            )
       )
-    );
+      .sort(
+        (
+          a: Deadline,
+          b: Deadline
+        ) =>
+          a.dueDate.localeCompare(
+            b.dueDate
+          )
+      );
 
   return (
     <>
@@ -3010,21 +4371,28 @@ function DeadlinesPage({
               key={d.id}
             >
               <div>
-                <b>{d.title}</b>
+                <b>
+                  {d.title}
+                </b>
 
                 <small>
                   {condominiumName(
                     d.condominiumId
                   )}{" "}
-                  · {d.category}
+                  ·{" "}
+                  {d.category}
                 </small>
 
                 <span>
                   {d.amount
-                    ? currency(d.amount)
+                    ? currency(
+                        d.amount
+                      )
                     : "Nessun importo"}{" "}
                   ·{" "}
-                  {formatDate(d.dueDate)}
+                  {formatDate(
+                    d.dueDate
+                  )}
                 </span>
 
                 {d.notes && (
@@ -3035,7 +4403,11 @@ function DeadlinesPage({
               </div>
 
               <div className="row-actions">
-                <Badge value={d.status} />
+                <Badge
+                  value={
+                    d.status
+                  }
+                />
 
                 <select
                   value={d.status}
@@ -3050,11 +4422,9 @@ function DeadlinesPage({
                   <option>
                     Da fare
                   </option>
-
                   <option>
                     In scadenza
                   </option>
-
                   <option>
                     Completata
                   </option>
@@ -3082,7 +4452,8 @@ function DeadlinesPage({
           )
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length ===
+          0 && (
           <Empty text="Nessuna scadenza trovata." />
         )}
       </div>
@@ -3103,23 +4474,38 @@ function AssembliesPage({
   onDelete,
   onStatus,
   condominiumName,
+  onAudio,
+  onGenerateMinutes,
+  onConfirmMinutes,
+  onPublication,
 }: any) {
-  const filtered = assemblies
-    .filter(
-      (a: Assembly) =>
-        `${a.title} ${a.place} ${a.status} ${condominiumName(
-          a.condominiumId
-        )} ${a.notes}`
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    )
-    .sort((a: Assembly, b: Assembly) =>
-      a.date.localeCompare(
-        b.date
+  const filtered =
+    assemblies
+      .filter(
+        (a: Assembly) =>
+          `${a.title} ${
+            a.place
+          } ${a.status} ${
+            condominiumName(
+              a.condominiumId
+            )
+          } ${
+            a.notes
+          }`
+            .toLowerCase()
+            .includes(
+              search.toLowerCase()
+            )
       )
-    );
+      .sort(
+        (
+          a: Assembly,
+          b: Assembly
+        ) =>
+          a.date.localeCompare(
+            b.date
+          )
+      );
 
   return (
     <>
@@ -3129,6 +4515,23 @@ function AssembliesPage({
         action="+ Nuova assemblea"
         onAction={onNew}
       />
+
+      <div className="feature-banner">
+        <div>
+          <b>
+            🎙️ Assemblee intelligenti
+          </b>
+
+          <span>
+            Audio → trascrizione → bozza
+            verbale → verifica → pubblicazione
+          </span>
+        </div>
+
+        <span className="feature-plan">
+          Professional
+        </span>
+      </div>
 
       <SearchBox
         value={search}
@@ -3140,11 +4543,13 @@ function AssembliesPage({
         {filtered.map(
           (a: Assembly) => (
             <article
-              className="row-card"
+              className="row-card assembly-card"
               key={a.id}
             >
-              <div>
-                <b>{a.title}</b>
+              <div className="assembly-main">
+                <b>
+                  {a.title}
+                </b>
 
                 <small>
                   {condominiumName(
@@ -3154,23 +4559,60 @@ function AssembliesPage({
 
                 <span>
                   📅{" "}
-                  {formatDate(a.date)} ·{" "}
-                  {a.time || "Ora non definita"}{" "}
+                  {formatDate(
+                    a.date
+                  )}{" "}
+                  ·{" "}
+                  {a.time ||
+                    "Ora non definita"}{" "}
                   ·{" "}
                   {a.place ||
                     "Luogo da definire"}
                 </span>
 
-                {a.notes && (
+                <div className="assembly-statuses">
+                  <Badge
+                    value={
+                      a.status
+                    }
+                  />
+
+                  <Badge
+                    value={
+                      a.transcriptionStatus
+                    }
+                  />
+
+                  <Badge
+                    value={
+                      a.minutesStatus
+                    }
+                  />
+                </div>
+
+                {a.audioName && (
                   <small>
-                    {a.notes}
+                    🎙️{" "}
+                    {a.audioName}
                   </small>
+                )}
+
+                {a.minutesDraft && (
+                  <div className="minutes-preview">
+                    <b>
+                      Bozza verbale
+                    </b>
+
+                    <p>
+                      {
+                        a.minutesDraft
+                      }
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="row-actions">
-                <Badge value={a.status} />
-
+              <div className="assembly-actions">
                 <select
                   value={a.status}
                   onChange={(e) =>
@@ -3184,15 +4626,74 @@ function AssembliesPage({
                   <option>
                     Programmato
                   </option>
-
                   <option>
                     Svolto
                   </option>
-
                   <option>
                     Annullato
                   </option>
                 </select>
+
+                <label className="file-button">
+                  🎙️ Acquisisci audio
+                  <input
+                    type="file"
+                    accept="audio/*,.m4a,.mp3,.wav"
+                    onChange={(e) => {
+                      const file =
+                        e.target
+                          .files?.[0];
+
+                      if (file) {
+                        onAudio(
+                          a,
+                          file
+                        );
+                      }
+
+                      e.currentTarget.value =
+                        "";
+                    }}
+                  />
+                </label>
+
+                <button
+                  className="secondary-button small"
+                  onClick={() =>
+                    onGenerateMinutes(
+                      a
+                    )
+                  }
+                >
+                  ✨ Genera verbale
+                </button>
+
+                {a.minutesStatus ===
+                  "Da verificare" && (
+                  <button
+                    className="primary-button small-button"
+                    onClick={() =>
+                      onConfirmMinutes(
+                        a.id
+                      )
+                    }
+                  >
+                    Conferma verbale
+                  </button>
+                )}
+
+                <button
+                  className="secondary-button small"
+                  onClick={() =>
+                    onPublication(
+                      a.id
+                    )
+                  }
+                >
+                  {a.publishedToPortal
+                    ? "🔒 Nascondi"
+                    : "👥 Pubblica"}
+                </button>
 
                 <button
                   className="secondary-button small"
@@ -3216,7 +4717,8 @@ function AssembliesPage({
           )
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length ===
+          0 && (
           <Empty text="Nessuna assemblea trovata." />
         )}
       </div>
@@ -3237,16 +4739,23 @@ function SuppliersPage({
   onDelete,
   condominiumName,
 }: any) {
-  const filtered = suppliers.filter(
-    (s: Supplier) =>
-      `${s.name} ${s.service} ${s.phone} ${s.email} ${condominiumName(
-        s.condominiumId
-      )} ${s.notes}`
-        .toLowerCase()
-        .includes(
-          search.toLowerCase()
-        )
-  );
+  const filtered =
+    suppliers.filter(
+      (s: Supplier) =>
+        `${s.name} ${
+          s.service
+        } ${s.phone} ${
+          s.email
+        } ${condominiumName(
+          s.condominiumId
+        )} ${
+          s.notes
+        }`
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          )
+    );
 
   return (
     <>
@@ -3274,9 +4783,13 @@ function SuppliersPage({
                 🔧
               </div>
 
-              <h2>{s.name}</h2>
+              <h2>
+                {s.name}
+              </h2>
 
-              <p>{s.service}</p>
+              <p>
+                {s.service}
+              </p>
 
               <div className="meta">
                 {s.phone ||
@@ -3324,7 +4837,8 @@ function SuppliersPage({
         )}
       </div>
 
-      {filtered.length === 0 && (
+      {filtered.length ===
+        0 && (
         <div className="card">
           <Empty text="Nessun fornitore trovato." />
         </div>
@@ -3347,22 +4861,37 @@ function ActivitiesPage({
   onStatus,
   condominiumName,
 }: any) {
-  const filtered = activities
-    .filter(
-      (a: Activity) =>
-        `${a.title} ${a.priority} ${a.status} ${condominiumName(
-          a.condominiumId
-        )} ${a.notes}`
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    )
-    .sort((a: Activity, b: Activity) =>
-      (a.dueDate || "9999").localeCompare(
-        b.dueDate || "9999"
+  const filtered =
+    activities
+      .filter(
+        (a: Activity) =>
+          `${a.title} ${
+            a.priority
+          } ${a.status} ${
+            condominiumName(
+              a.condominiumId
+            )
+          } ${
+            a.notes
+          }`
+            .toLowerCase()
+            .includes(
+              search.toLowerCase()
+            )
       )
-    );
+      .sort(
+        (
+          a: Activity,
+          b: Activity
+        ) =>
+          (
+            a.dueDate ||
+            "9999"
+          ).localeCompare(
+            b.dueDate ||
+              "9999"
+          )
+      );
 
   return (
     <>
@@ -3387,21 +4916,26 @@ function ActivitiesPage({
               key={a.id}
             >
               <div>
-                <b>{a.title}</b>
+                <b>
+                  {a.title}
+                </b>
 
                 <small>
                   {condominiumName(
                     a.condominiumId
                   )}{" "}
                   · Scadenza{" "}
-                  {formatDate(a.dueDate)}
+                  {formatDate(
+                    a.dueDate
+                  )}
                 </small>
 
                 <span>
                   <Badge
-                    value={a.priority}
+                    value={
+                      a.priority
+                    }
                   />{" "}
-                  &nbsp;
                   {a.notes ||
                     "Nessuna nota"}
                 </span>
@@ -3421,11 +4955,9 @@ function ActivitiesPage({
                   <option>
                     Aperta
                   </option>
-
                   <option>
                     In corso
                   </option>
-
                   <option>
                     Completata
                   </option>
@@ -3453,9 +4985,891 @@ function ActivitiesPage({
           )
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length ===
+          0 && (
           <Empty text="Nessuna attività trovata." />
         )}
+      </div>
+    </>
+  );
+}
+
+/* =========================================================
+   BETHAG AI
+   ========================================================= */
+
+function AIPage({
+  documents,
+  assemblies,
+  plan,
+  onNavigate,
+  onAI,
+  onAudio,
+}: any) {
+  const aiDocuments =
+    documents.filter(
+      (d: DocumentItem) =>
+        d.aiStatus !==
+        "Confermato"
+    );
+
+  const audioAssemblies =
+    assemblies.filter(
+      (a: Assembly) =>
+        a.audioName
+    );
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Automazione intelligente"
+        title="BETHAG AI"
+      />
+
+      <section className="ai-hero">
+        <div>
+          <span className="ai-kicker">
+            INTELLIGENZA ARTIFICIALE
+          </span>
+
+          <h2>
+            Trasforma i documenti
+            in dati organizzati.
+          </h2>
+
+          <p>
+            Carica un documento,
+            un'immagine o un file
+            compatibile. In futuro BETHAG
+            potrà estrarre automaticamente
+            informazioni, scadenze,
+            importi, fornitori e altri
+            dati utili alla gestione.
+          </p>
+        </div>
+
+        <div className="ai-plan-box">
+          <b>
+            {PLAN_NAMES[plan]}
+          </b>
+
+          <span>
+            {hasFeature(
+              plan,
+              "plus"
+            )
+              ? "Funzioni AI predisposte"
+              : "Upgrade necessario"}
+          </span>
+
+          <button
+            className="primary-button"
+            onClick={() =>
+              onNavigate(
+                "abbonamento"
+              )
+            }
+          >
+            Gestisci piano
+          </button>
+        </div>
+      </section>
+
+      <section className="ai-tools-grid">
+        <article className="ai-tool">
+          <div className="tool-icon">
+            📄
+          </div>
+
+          <h3>
+            Document Intelligence
+          </h3>
+
+          <p>
+            PDF, Word, Excel, immagini
+            e altri documenti possono
+            essere analizzati e
+            trasformati in dati
+            strutturati.
+          </p>
+
+          <span className="tool-flow">
+            File → OCR → AI → dati →
+            verifica
+          </span>
+        </article>
+
+        <article className="ai-tool">
+          <div className="tool-icon">
+            🎙️
+          </div>
+
+          <h3>
+            Assemblee Audio
+          </h3>
+
+          <p>
+            Acquisizione del file audio,
+            trascrizione e successiva
+            predisposizione della bozza
+            di verbale.
+          </p>
+
+          <span className="tool-flow">
+            Audio → trascrizione →
+            verbale → verifica
+          </span>
+        </article>
+
+        <article className="ai-tool">
+          <div className="tool-icon">
+            ✍️
+          </div>
+
+          <h3>
+            Generazione documenti
+          </h3>
+
+          <p>
+            In una fase successiva
+            BETHAG potrà predisporre
+            convocazioni, comunicazioni,
+            lettere e altri documenti.
+          </p>
+
+          <span className="tool-flow">
+            Dati → modello → documento
+          </span>
+        </article>
+      </section>
+
+      <section className="dashboard-grid">
+        <div className="card">
+          <SectionTitle
+            title="Documenti da verificare"
+            action="Apri archivio"
+            onClick={() =>
+              onNavigate(
+                "documenti"
+              )
+            }
+          />
+
+          {aiDocuments.length ===
+          0 ? (
+            <Empty text="Non ci sono documenti da verificare." />
+          ) : (
+            aiDocuments
+              .slice(0, 5)
+              .map(
+                (
+                  d: DocumentItem
+                ) => (
+                  <div
+                    className="list-row"
+                    key={d.id}
+                  >
+                    <div>
+                      <b>
+                        {d.name}
+                      </b>
+
+                      <small>
+                        {
+                          d.aiStatus
+                        }
+                      </small>
+                    </div>
+
+                    <button
+                      className="secondary-button small"
+                      onClick={() =>
+                        onAI(d)
+                      }
+                    >
+                      Analizza
+                    </button>
+                  </div>
+                )
+              )
+          )}
+        </div>
+
+        <div className="card">
+          <SectionTitle
+            title="Assemblee con audio"
+            action="Apri assemblee"
+            onClick={() =>
+              onNavigate(
+                "assemblee"
+              )
+            }
+          />
+
+          {audioAssemblies.length ===
+          0 ? (
+            <Empty text="Nessun audio acquisito." />
+          ) : (
+            audioAssemblies
+              .slice(0, 5)
+              .map(
+                (
+                  a: Assembly
+                ) => (
+                  <div
+                    className="activity"
+                    key={a.id}
+                  >
+                    <b>
+                      {a.title}
+                    </b>
+
+                    <small>
+                      {
+                        a.audioName
+                      }
+                    </small>
+                  </div>
+                )
+              )
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* =========================================================
+   PORTALE CONDOMINI
+   ========================================================= */
+
+function PortalPage({
+  members,
+  condominiums,
+  documents,
+  assemblies,
+  plan,
+  onAdd,
+  onToggle,
+  onDelete,
+  onNavigate,
+}: any) {
+  const [showAdd, setShowAdd] =
+    useState(false);
+
+  const [form, setForm] =
+    useState<PortalMember>({
+      id: 0,
+      name: "",
+      email: "",
+      condominiumId:
+        condominiums[0]?.id ||
+        0,
+      role: "resident",
+      apartment: "",
+      permissions: [
+        "documenti",
+        "verbali",
+        "regolamento",
+        "assemblee",
+      ],
+      active: true,
+    });
+
+  const publishedDocuments =
+    documents.filter(
+      (d: DocumentItem) =>
+        d.publication ===
+        "Condiviso"
+    );
+
+  const publishedMinutes =
+    assemblies.filter(
+      (a: Assembly) =>
+        a.publishedToPortal
+    );
+
+  const save = (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (
+      !form.name.trim() ||
+      !form.email.trim() ||
+      !form.condominiumId
+    ) {
+      alert(
+        "Inserisci nome, email e condominio."
+      );
+      return;
+    }
+
+    if (!validateEmail(form.email)) {
+      alert(
+        "Controlla l'indirizzo email."
+      );
+      return;
+    }
+
+    onAdd(form);
+
+    setForm({
+      ...form,
+      id: 0,
+      name: "",
+      email: "",
+      apartment: "",
+    });
+
+    setShowAdd(false);
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Accesso esterno"
+        title="Portale condomini"
+        action="+ Nuovo accesso"
+        onAction={() => {
+          if (
+            !hasFeature(
+              plan,
+              "portal"
+            )
+          ) {
+            onNavigate(
+              "abbonamento"
+            );
+
+            return;
+          }
+
+          setShowAdd(true);
+        }}
+      />
+
+      <section className="portal-hero">
+        <div>
+          <span className="ai-kicker">
+            BETHAG PORTAL
+          </span>
+
+          <h2>
+            Un'area riservata per i
+            condomini.
+          </h2>
+
+          <p>
+            L'amministratore decide
+            quali informazioni rendere
+            disponibili. Il sistema è
+            progettato per separare i
+            dati del singolo utente da
+            quelli degli altri condomini.
+          </p>
+        </div>
+
+        <div className="portal-stats">
+          <div>
+            <b>
+              {members.length}
+            </b>
+            <span>
+              utenti
+            </span>
+          </div>
+
+          <div>
+            <b>
+              {
+                publishedDocuments.length
+              }
+            </b>
+            <span>
+              documenti condivisi
+            </span>
+          </div>
+
+          <div>
+            <b>
+              {
+                publishedMinutes.length
+              }
+            </b>
+            <span>
+              verbali pubblicati
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {showAdd && (
+        <form
+          className="form-card"
+          onSubmit={save}
+        >
+          <ModalTitle
+            title="Nuovo accesso condomino"
+          />
+
+          <div className="form-grid">
+            <Field
+              label="Nome e cognome *"
+              value={form.name}
+              onChange={(
+                v: string
+              ) =>
+                setForm({
+                  ...form,
+                  name: v,
+                })
+              }
+            />
+
+            <Field
+              label="Email *"
+              type="email"
+              value={form.email}
+              onChange={(
+                v: string
+              ) =>
+                setForm({
+                  ...form,
+                  email: v,
+                })
+              }
+            />
+
+            <SelectField
+              label="Condominio"
+              value={
+                form.condominiumId
+              }
+              onChange={(
+                v: string
+              ) =>
+                setForm({
+                  ...form,
+                  condominiumId:
+                    Number(v),
+                })
+              }
+              options={condominiums.map(
+                (
+                  c: Condominium
+                ) => [
+                  c.id,
+                  c.name,
+                ]
+              )}
+            />
+
+            <Field
+              label="Interno"
+              value={
+                form.apartment
+              }
+              onChange={(
+                v: string
+              ) =>
+                setForm({
+                  ...form,
+                  apartment: v,
+                })
+              }
+            />
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() =>
+                setShowAdd(false)
+              }
+            >
+              Annulla
+            </button>
+
+            <button
+              className="primary-button"
+              type="submit"
+            >
+              Crea accesso
+            </button>
+          </div>
+        </form>
+      )}
+
+      <section className="portal-grid">
+        <div className="card">
+          <SectionTitle
+            title="Accessi autorizzati"
+          />
+
+          {members.length ===
+          0 ? (
+            <Empty text="Nessun utente configurato." />
+          ) : (
+            members.map(
+              (
+                member: PortalMember
+              ) => (
+                <div
+                  className="portal-member"
+                  key={member.id}
+                >
+                  <div>
+                    <b>
+                      {member.name}
+                    </b>
+
+                    <small>
+                      {
+                        member.email
+                      }
+                    </small>
+
+                    <small>
+                      {
+                        condominiums.find(
+                          (
+                            c: Condominium
+                          ) =>
+                            c.id ===
+                            member.condominiumId
+                        )
+                          ?.name
+                      }{" "}
+                      ·{" "}
+                      {
+                        member.apartment
+                      }
+                    </small>
+                  </div>
+
+                  <div className="row-actions">
+                    <Badge
+                      value={
+                        member.active
+                          ? "Attivo"
+                          : "Disattivato"
+                      }
+                    />
+
+                    <button
+                      className="secondary-button small"
+                      onClick={() =>
+                        onToggle(
+                          member.id
+                        )
+                      }
+                    >
+                      {member.active
+                        ? "Disattiva"
+                        : "Attiva"}
+                    </button>
+
+                    <button
+                      className="mini-danger"
+                      onClick={() =>
+                        onDelete(
+                          member.id
+                        )
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )
+            )
+          )}
+        </div>
+
+        <div className="card">
+          <SectionTitle
+            title="Contenuti condivisibili"
+          />
+
+          <div className="permission-box">
+            <b>
+              📁 Documenti
+            </b>
+
+            <span>
+              Regolamenti, verbali e
+              documenti autorizzati
+            </span>
+          </div>
+
+          <div className="permission-box">
+            <b>
+              💶 Pagamenti
+            </b>
+
+            <span>
+              In futuro ogni condomino
+              potrà visualizzare
+              esclusivamente i propri
+              dati personali e
+              contabili.
+            </span>
+          </div>
+
+          <div className="permission-box">
+            <b>
+              👥 Assemblee
+            </b>
+
+            <span>
+              Convocazioni e verbali
+              pubblicati
+              dall'amministratore.
+            </span>
+          </div>
+
+          <div className="permission-box">
+            <b>
+              📜 Regolamento
+            </b>
+
+            <span>
+              Accesso ai documenti
+              autorizzati.
+            </span>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* =========================================================
+   ABBONAMENTO
+   ========================================================= */
+
+function SubscriptionPage({
+  subscription,
+  setSubscription,
+}: any) {
+  const plans: {
+    id: PlanId;
+    title: string;
+    description: string;
+    features: string[];
+  }[] = [
+    {
+      id: "free",
+      title: "BETHAG Free",
+      description:
+        "Il gestionale essenziale.",
+      features: [
+        "Condomini",
+        "Inserimento manuale",
+        "Archivio documenti",
+        "Scadenze",
+        "Promemoria",
+        "Attività",
+        "Fornitori",
+        "Assemblee",
+      ],
+    },
+    {
+      id: "plus",
+      title: "BETHAG Plus",
+      description:
+        "Automazione documentale.",
+      features: [
+        "Tutto Free",
+        "Acquisizione documenti",
+        "PDF",
+        "Word",
+        "Excel",
+        "Immagini",
+        "Analisi AI",
+        "Estrazione dati",
+      ],
+    },
+    {
+      id: "professional",
+      title:
+        "BETHAG Professional",
+      description:
+        "Automazione avanzata.",
+      features: [
+        "Tutto Plus",
+        "Generazione documenti",
+        "Acquisizione audio",
+        "Trascrizione assemblee",
+        "Bozza automatica verbale",
+        "Workflow di verifica",
+        "Automazioni avanzate",
+      ],
+    },
+    {
+      id: "portal",
+      title: "BETHAG Portal",
+      description:
+        "Amministratore + condomini.",
+      features: [
+        "Tutto Professional",
+        "Portale condomini",
+        "Utenti e ruoli",
+        "Permessi granulari",
+        "Documenti condivisi",
+        "Verbali pubblicabili",
+        "Accesso riservato",
+      ],
+    },
+  ];
+
+  const activateDemo = (
+    id: PlanId
+  ) => {
+    setSubscription({
+      plan: id,
+      status: "Demo",
+      renewalDate: "",
+    });
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Modello di servizio"
+        title="Piano BETHAG"
+      />
+
+      <section className="subscription-current">
+        <div>
+          <span className="eyebrow">
+            Piano attuale
+          </span>
+
+          <h2>
+            {
+              PLAN_NAMES[
+                subscription.plan
+              ]
+            }
+          </h2>
+
+          <p>
+            {
+              PLAN_DESCRIPTIONS[
+                subscription.plan
+              ]
+            }
+          </p>
+        </div>
+
+        <Badge
+          value={
+            subscription.status
+          }
+        />
+      </section>
+
+      <section className="pricing-grid">
+        {plans.map(
+          (plan) => (
+            <article
+              className={`pricing-card ${
+                subscription.plan ===
+                plan.id
+                  ? "current"
+                  : ""
+              }`}
+              key={plan.id}
+            >
+              {subscription.plan ===
+                plan.id && (
+                <div className="current-plan">
+                  Piano attuale
+                </div>
+              )}
+
+              <div className="pricing-icon">
+                {plan.id ===
+                "free"
+                  ? "🆓"
+                  : plan.id ===
+                    "plus"
+                  ? "✨"
+                  : plan.id ===
+                    "professional"
+                  ? "🚀"
+                  : "👥"}
+              </div>
+
+              <h2>
+                {plan.title}
+              </h2>
+
+              <p>
+                {plan.description}
+              </p>
+
+              <ul>
+                {plan.features.map(
+                  (
+                    feature
+                  ) => (
+                    <li
+                      key={
+                        feature
+                      }
+                    >
+                      ✓{" "}
+                      {
+                        feature
+                      }
+                    </li>
+                  )
+                )}
+              </ul>
+
+              <button
+                className={
+                  subscription.plan ===
+                  plan.id
+                    ? "secondary-button"
+                    : "primary-button"
+                }
+                onClick={() =>
+                  activateDemo(
+                    plan.id
+                  )
+                }
+              >
+                {subscription.plan ===
+                plan.id
+                  ? "Piano attivo"
+                  : "Prova struttura"}
+              </button>
+            </article>
+          )
+        )}
+      </section>
+
+      <div className="info-card">
+        <b>
+          Struttura predisposta per
+          gli abbonamenti
+        </b>
+
+        <p>
+          I pulsanti presenti in questa
+          versione servono per testare
+          localmente i diversi livelli.
+          Il pagamento reale verrà
+          collegato successivamente a un
+          sistema di abbonamento e il
+          controllo del piano dovrà essere
+          effettuato anche dal backend.
+        </p>
       </div>
     </>
   );
@@ -3468,6 +5882,7 @@ function ActivitiesPage({
 function ProfilePage({
   profile,
   setProfile,
+  subscription,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -3479,16 +5894,21 @@ function ProfilePage({
 
     if (
       profile.email &&
-      !validateEmail(profile.email)
+      !validateEmail(
+        profile.email
+      )
     ) {
-      alert("Controlla l'indirizzo email.");
+      alert(
+        "Controlla l'indirizzo email."
+      );
       return;
     }
 
     setSaved(true);
 
     setTimeout(
-      () => setSaved(false),
+      () =>
+        setSaved(false),
       1800
     );
   };
@@ -3500,6 +5920,35 @@ function ProfilePage({
         title="Amministratore"
       />
 
+      <div className="profile-plan-card">
+        <div>
+          <span className="eyebrow">
+            Piano BETHAG
+          </span>
+
+          <h2>
+            {
+              PLAN_NAMES[
+                subscription.plan
+              ]
+            }
+          </h2>
+        </div>
+
+        <button
+          className="secondary-button"
+          onClick={() =>
+            window.scrollTo({
+              top: 0,
+              behavior:
+                "smooth",
+            })
+          }
+        >
+          Piano attivo
+        </button>
+      </div>
+
       <form
         className="form-card"
         onSubmit={save}
@@ -3509,7 +5958,9 @@ function ProfilePage({
             full
             label="Nome e cognome"
             value={profile.name}
-            onChange={(v: string) =>
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 name: v,
@@ -3520,8 +5971,12 @@ function ProfilePage({
           <Field
             full
             label="Studio / società"
-            value={profile.company}
-            onChange={(v: string) =>
+            value={
+              profile.company
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 company: v,
@@ -3532,8 +5987,12 @@ function ProfilePage({
           <Field
             label="Email"
             type="email"
-            value={profile.email}
-            onChange={(v: string) =>
+            value={
+              profile.email
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 email: v,
@@ -3544,8 +6003,12 @@ function ProfilePage({
           <Field
             label="Telefono"
             type="tel"
-            value={profile.phone}
-            onChange={(v: string) =>
+            value={
+              profile.phone
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 phone: v,
@@ -3556,8 +6019,12 @@ function ProfilePage({
           <Field
             full
             label="Indirizzo"
-            value={profile.address}
-            onChange={(v: string) =>
+            value={
+              profile.address
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 address: v,
@@ -3567,8 +6034,12 @@ function ProfilePage({
 
           <Field
             label="Codice fiscale"
-            value={profile.fiscalCode}
-            onChange={(v: string) =>
+            value={
+              profile.fiscalCode
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 fiscalCode: v,
@@ -3578,8 +6049,12 @@ function ProfilePage({
 
           <Field
             label="Partita IVA"
-            value={profile.vat}
-            onChange={(v: string) =>
+            value={
+              profile.vat
+            }
+            onChange={(
+              v: string
+            ) =>
               setProfile({
                 ...profile,
                 vat: v,
@@ -3601,22 +6076,27 @@ function ProfilePage({
       </form>
 
       <div className="info-card">
-        <b>Memorizzazione locale</b>
+        <b>
+          Architettura futura
+        </b>
 
         <p>
-          I dati di questa versione
-          vengono salvati nel browser
-          del dispositivo tramite
-          localStorage.
+          La versione attuale salva
+          ancora i dati localmente sul
+          dispositivo. La struttura è
+          stata però preparata per il
+          successivo passaggio a account,
+          database cloud, ruoli,
+          autorizzazioni e accesso
+          multi-dispositivo.
         </p>
 
         <p>
-          Per rendere BETHAG
-          realmente multi-dispositivo,
-          con utenti, database cloud e
-          documenti accessibili da più
-          dispositivi, servirà in seguito
-          collegare un backend.
+          Per la versione pubblica sarà
+          necessario spostare
+          autenticazione, autorizzazioni
+          e controllo degli abbonamenti
+          sul backend.
         </p>
       </div>
     </>
@@ -3697,7 +6177,9 @@ function CondominiumForm({
           full
           label="Nome del condominio *"
           value={value.name}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             set("name", v)
           }
           placeholder="Es. Condominio Magnolia"
@@ -3706,9 +6188,16 @@ function CondominiumForm({
         <Field
           full
           label="Indirizzo *"
-          value={value.address}
-          onChange={(v: string) =>
-            set("address", v)
+          value={
+            value.address
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "address",
+              v
+            )
           }
           placeholder="Via e numero civico"
         />
@@ -3716,7 +6205,9 @@ function CondominiumForm({
         <Field
           label="CAP"
           value={value.cap}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             set("cap", v)
           }
         />
@@ -3724,26 +6215,43 @@ function CondominiumForm({
         <Field
           label="Comune"
           value={value.city}
-          onChange={(v: string) =>
-            set("city", v)
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "city",
+              v
+            )
           }
         />
 
         <Field
           label="Provincia"
-          value={value.province}
-          onChange={(v: string) =>
-            set("province", v)
+          value={
+            value.province
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "province",
+              v
+            )
           }
         />
 
         <Field
           label="Unità immobiliari *"
           value={value.units}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             set(
               "units",
-              v.replace(/\D/g, "")
+              v.replace(
+                /\D/g,
+                ""
+              )
             )
           }
           type="number"
@@ -3752,25 +6260,46 @@ function CondominiumForm({
         <Field
           full
           label="Codice fiscale del condominio"
-          value={value.fiscalCode}
-          onChange={(v: string) =>
-            set("fiscalCode", v)
+          value={
+            value.fiscalCode
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "fiscalCode",
+              v
+            )
           }
         />
 
         <Field
           label="Referente"
-          value={value.contact}
-          onChange={(v: string) =>
-            set("contact", v)
+          value={
+            value.contact
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "contact",
+              v
+            )
           }
         />
 
         <Field
           label="Telefono"
-          value={value.phone}
-          onChange={(v: string) =>
-            set("phone", v)
+          value={
+            value.phone
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "phone",
+              v
+            )
           }
           type="tel"
         />
@@ -3778,9 +6307,16 @@ function CondominiumForm({
         <Field
           full
           label="Email"
-          value={value.email}
-          onChange={(v: string) =>
-            set("email", v)
+          value={
+            value.email
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "email",
+              v
+            )
           }
           type="email"
         />
@@ -3788,25 +6324,42 @@ function CondominiumForm({
         <Field
           label="Banca"
           value={value.bank}
-          onChange={(v: string) =>
-            set("bank", v)
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "bank",
+              v
+            )
           }
         />
 
         <Field
           label="IBAN"
           value={value.iban}
-          onChange={(v: string) =>
-            set("iban", v)
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "iban",
+              v
+            )
           }
         />
 
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
-            set("notes", v)
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "notes",
+              v
+            )
           }
           textarea
         />
@@ -3861,7 +6414,9 @@ function DeadlineForm({
           full
           label="Titolo *"
           value={value.title}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               title: v,
@@ -3871,8 +6426,12 @@ function DeadlineForm({
 
         <SelectField
           label="Condominio"
-          value={value.condominiumId}
-          onChange={(v: string) =>
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               condominiumId:
@@ -3880,7 +6439,9 @@ function DeadlineForm({
             })
           }
           options={condominiums.map(
-            (c: Condominium) => [
+            (
+              c: Condominium
+            ) => [
               c.id,
               c.name,
             ]
@@ -3889,8 +6450,12 @@ function DeadlineForm({
 
         <Field
           label="Data *"
-          value={value.dueDate}
-          onChange={(v: string) =>
+          value={
+            value.dueDate
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               dueDate: v,
@@ -3901,8 +6466,12 @@ function DeadlineForm({
 
         <Field
           label="Importo (€)"
-          value={value.amount}
-          onChange={(v: string) =>
+          value={
+            value.amount
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               amount: v,
@@ -3913,8 +6482,12 @@ function DeadlineForm({
 
         <Field
           label="Categoria"
-          value={value.category}
-          onChange={(v: string) =>
+          value={
+            value.category
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               category: v,
@@ -3924,8 +6497,12 @@ function DeadlineForm({
 
         <SelectField
           label="Stato"
-          value={value.status}
-          onChange={(v: string) =>
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               status:
@@ -3936,17 +6513,23 @@ function DeadlineForm({
             "Da fare",
             "In scadenza",
             "Completata",
-          ].map((x) => [
-            x,
-            x,
-          ])}
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
         />
 
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               notes: v,
@@ -3990,35 +6573,57 @@ function DocumentForm({
       <div className="form-grid">
         <div className="field full">
           <label>
-            File
+            Carica file
           </label>
 
           <input
             type="file"
-            onChange={(e: any) => {
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.odt,image/*"
+            onChange={(
+              e: React.ChangeEvent<HTMLInputElement>
+            ) => {
               const file =
                 e.target.files?.[0];
 
-              if (file) {
-                setSelectedFileName(
-                  file.name
+              if (!file)
+                return;
+
+              const source =
+                fileSource(
+                  file.name,
+                  file.type
                 );
 
-                setValue({
-                  ...value,
-                  name: file.name,
-                  size: `${Math.round(
-                    file.size / 1024
-                  )} KB`,
-                });
-              }
+              setSelectedFileName(
+                file.name
+              );
+
+              setValue({
+                ...value,
+                name: file.name,
+                size: `${Math.round(
+                  file.size / 1024
+                )} KB`,
+                source,
+                mimeType:
+                  file.type,
+              });
             }}
           />
+
+          <small>
+            Formati predisposti:
+            PDF, Word, Excel, CSV,
+            TXT, RTF, ODT,
+            immagini.
+          </small>
 
           {selectedFileName && (
             <small>
               Selezionato:{" "}
-              {selectedFileName}
+              {
+                selectedFileName
+              }
             </small>
           )}
         </div>
@@ -4027,7 +6632,9 @@ function DocumentForm({
           full
           label="Nome documento *"
           value={value.name}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               name: v,
@@ -4037,8 +6644,12 @@ function DocumentForm({
 
         <SelectField
           label="Condominio"
-          value={value.condominiumId}
-          onChange={(v: string) =>
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               condominiumId:
@@ -4046,7 +6657,9 @@ function DocumentForm({
             })
           }
           options={condominiums.map(
-            (c: Condominium) => [
+            (
+              c: Condominium
+            ) => [
               c.id,
               c.name,
             ]
@@ -4055,8 +6668,12 @@ function DocumentForm({
 
         <Field
           label="Categoria"
-          value={value.category}
-          onChange={(v: string) =>
+          value={
+            value.category
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               category: v,
@@ -4067,7 +6684,9 @@ function DocumentForm({
         <Field
           label="Data"
           value={value.date}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               date: v,
@@ -4076,11 +6695,41 @@ function DocumentForm({
           type="date"
         />
 
+        <SelectField
+          label="Visibilità"
+          value={
+            value.publication
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              publication:
+                v as PublicationStatus,
+            })
+          }
+          options={[
+            [
+              "Privato",
+              "Privato",
+            ],
+            [
+              "Condiviso",
+              "Condiviso",
+            ],
+          ]}
+        />
+
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               notes: v,
@@ -4123,8 +6772,12 @@ function AssemblyForm({
         <Field
           full
           label="Titolo *"
-          value={value.title}
-          onChange={(v: string) =>
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               title: v,
@@ -4134,8 +6787,12 @@ function AssemblyForm({
 
         <SelectField
           label="Condominio"
-          value={value.condominiumId}
-          onChange={(v: string) =>
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               condominiumId:
@@ -4143,7 +6800,9 @@ function AssemblyForm({
             })
           }
           options={condominiums.map(
-            (c: Condominium) => [
+            (
+              c: Condominium
+            ) => [
               c.id,
               c.name,
             ]
@@ -4152,8 +6811,12 @@ function AssemblyForm({
 
         <Field
           label="Data *"
-          value={value.date}
-          onChange={(v: string) =>
+          value={
+            value.date
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               date: v,
@@ -4164,8 +6827,12 @@ function AssemblyForm({
 
         <Field
           label="Ora"
-          value={value.time}
-          onChange={(v: string) =>
+          value={
+            value.time
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               time: v,
@@ -4176,8 +6843,12 @@ function AssemblyForm({
 
         <Field
           label="Luogo"
-          value={value.place}
-          onChange={(v: string) =>
+          value={
+            value.place
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               place: v,
@@ -4187,8 +6858,12 @@ function AssemblyForm({
 
         <SelectField
           label="Stato"
-          value={value.status}
-          onChange={(v: string) =>
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               status:
@@ -4199,17 +6874,23 @@ function AssemblyForm({
             "Programmato",
             "Svolto",
             "Annullato",
-          ].map((x) => [
-            x,
-            x,
-          ])}
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
         />
 
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               notes: v,
@@ -4252,7 +6933,9 @@ function SupplierForm({
         <Field
           label="Nome *"
           value={value.name}
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               name: v,
@@ -4262,8 +6945,12 @@ function SupplierForm({
 
         <Field
           label="Servizio *"
-          value={value.service}
-          onChange={(v: string) =>
+          value={
+            value.service
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               service: v,
@@ -4273,8 +6960,12 @@ function SupplierForm({
 
         <Field
           label="Telefono"
-          value={value.phone}
-          onChange={(v: string) =>
+          value={
+            value.phone
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               phone: v,
@@ -4285,8 +6976,12 @@ function SupplierForm({
 
         <Field
           label="Email"
-          value={value.email}
-          onChange={(v: string) =>
+          value={
+            value.email
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               email: v,
@@ -4302,18 +6997,26 @@ function SupplierForm({
             value.condominiumId ??
             ""
           }
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
-              condominiumId: v
-                ? Number(v)
-                : null,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
             })
           }
           options={[
-            ["", "Tutti i condomini"],
+            [
+              "",
+              "Tutti i condomini",
+            ],
             ...condominiums.map(
-              (c: Condominium) => [
+              (
+                c: Condominium
+              ) => [
                 c.id,
                 c.name,
               ]
@@ -4324,8 +7027,12 @@ function SupplierForm({
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               notes: v,
@@ -4368,8 +7075,12 @@ function ActivityForm({
         <Field
           full
           label="Titolo *"
-          value={value.title}
-          onChange={(v: string) =>
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               title: v,
@@ -4384,18 +7095,26 @@ function ActivityForm({
             value.condominiumId ??
             ""
           }
-          onChange={(v: string) =>
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
-              condominiumId: v
-                ? Number(v)
-                : null,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
             })
           }
           options={[
-            ["", "Tutti i condomini"],
+            [
+              "",
+              "Tutti i condomini",
+            ],
             ...condominiums.map(
-              (c: Condominium) => [
+              (
+                c: Condominium
+              ) => [
                 c.id,
                 c.name,
               ]
@@ -4405,8 +7124,12 @@ function ActivityForm({
 
         <Field
           label="Scadenza"
-          value={value.dueDate}
-          onChange={(v: string) =>
+          value={
+            value.dueDate
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               dueDate: v,
@@ -4417,8 +7140,12 @@ function ActivityForm({
 
         <SelectField
           label="Priorità"
-          value={value.priority}
-          onChange={(v: string) =>
+          value={
+            value.priority
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               priority:
@@ -4429,16 +7156,22 @@ function ActivityForm({
             "Bassa",
             "Media",
             "Alta",
-          ].map((x) => [
-            x,
-            x,
-          ])}
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
         />
 
         <SelectField
           label="Stato"
-          value={value.status}
-          onChange={(v: string) =>
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               status:
@@ -4449,17 +7182,23 @@ function ActivityForm({
             "Aperta",
             "In corso",
             "Completata",
-          ].map((x) => [
-            x,
-            x,
-          ])}
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
         />
 
         <Field
           full
           label="Note"
-          value={value.notes}
-          onChange={(v: string) =>
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
             setValue({
               ...value,
               notes: v,
@@ -4536,24 +7275,34 @@ function Field({
         full ? "full" : ""
       }`}
     >
-      <label>{label}</label>
+      <label>
+        {label}
+      </label>
 
       {textarea ? (
         <textarea
           value={value}
           onChange={(e) =>
-            onChange(e.target.value)
+            onChange(
+              e.target.value
+            )
           }
-          placeholder={placeholder}
+          placeholder={
+            placeholder
+          }
         />
       ) : (
         <input
           type={type}
           value={value}
           onChange={(e) =>
-            onChange(e.target.value)
+            onChange(
+              e.target.value
+            )
           }
-          placeholder={placeholder}
+          placeholder={
+            placeholder
+          }
         />
       )}
     </div>
@@ -4573,18 +7322,24 @@ function SelectField({
         full ? "full" : ""
       }`}
     >
-      <label>{label}</label>
+      <label>
+        {label}
+      </label>
 
       <select
         value={value ?? ""}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
       >
         {options.map(
           (x: any) => (
             <option
-              key={String(x[0])}
+              key={String(
+                x[0]
+              )}
               value={x[0]}
             >
               {x[1]}
@@ -4635,11 +7390,11 @@ button{
 }
 
 .sidebar{
-  width:250px;
+  width:260px;
   flex-shrink:0;
   background:#111827;
   color:#fff;
-  padding:28px 18px;
+  padding:26px 16px;
   display:flex;
   flex-direction:column;
 }
@@ -4648,17 +7403,27 @@ button{
   font-size:28px;
   font-weight:800;
   letter-spacing:1px;
-  padding:0 12px 34px;
+  padding:0 12px 22px;
 }
 
 .logo span{
   color:#7c9cff;
 }
 
+.plan-sidebar{
+  margin:0 10px 18px;
+  padding:9px 11px;
+  background:#1f2937;
+  border:1px solid #334155;
+  border-radius:10px;
+  font-size:12px;
+  color:#c7d2fe;
+}
+
 .nav{
   display:flex;
   flex-direction:column;
-  gap:7px;
+  gap:6px;
 }
 
 .nav-item{
@@ -4666,9 +7431,9 @@ button{
   background:transparent;
   color:#cbd5e1;
   text-align:left;
-  padding:13px 14px;
+  padding:12px 13px;
   border-radius:10px;
-  font-size:15px;
+  font-size:14px;
   width:100%;
 }
 
@@ -4709,7 +7474,7 @@ button{
 
 .eyebrow{
   color:#64748b;
-  font-size:14px;
+  font-size:13px;
   margin-bottom:5px;
 }
 
@@ -4794,7 +7559,9 @@ h1{
 .detail-card,
 .search-card,
 .table-card,
-.info-card{
+.info-card,
+.subscription-current,
+.profile-plan-card{
   background:#fff;
   border:1px solid #e2e8f0;
   border-radius:16px;
@@ -4960,16 +7727,6 @@ h1{
   padding:6px 10px;
 }
 
-.mini-edit{
-  border:1px solid #dbe2ea;
-  background:#fff;
-  color:#334155;
-  padding:6px 10px;
-  border-radius:8px;
-  font-size:12px;
-  font-weight:600;
-}
-
 .search-card{
   margin-bottom:8px;
   padding:14px;
@@ -5125,43 +7882,6 @@ select:focus{
   padding:10px;
 }
 
-.table-card{
-  padding:0;
-  overflow:hidden;
-}
-
-.table-head,
-.table-row{
-  display:grid;
-  grid-template-columns:2fr 1.3fr 1fr 1fr 1.2fr;
-  gap:12px;
-  align-items:center;
-  padding:15px 18px;
-}
-
-.table-head{
-  background:#f8fafc;
-  color:#64748b;
-  font-size:12px;
-}
-
-.table-row{
-  border-top:1px solid #eef2f7;
-  font-size:13px;
-}
-
-.table-row small{
-  display:block;
-  color:#64748b;
-  margin-top:3px;
-}
-
-.table-actions{
-  display:flex;
-  gap:5px;
-  flex-wrap:wrap;
-}
-
 .form-grid{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -5223,53 +7943,7 @@ select:focus{
   color:#64748b;
 }
 
-.modal-backdrop{
-  position:fixed;
-  inset:0;
-  background:rgba(15,23,42,.48);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-  z-index:100;
-}
-
-.modal{
-  position:relative;
-  background:#fff;
-  border-radius:18px;
-  max-width:760px;
-  width:100%;
-  max-height:92vh;
-  overflow:auto;
-  padding:25px;
-  box-shadow:0 25px 70px rgba(15,23,42,.25);
-}
-
-.modal-close{
-  position:absolute;
-  right:15px;
-  top:12px;
-  border:0;
-  background:#f1f5f9;
-  border-radius:50%;
-  width:34px;
-  height:34px;
-  font-size:22px;
-}
-
-.modal-title{
-  margin-bottom:22px;
-}
-
-.modal-title h2{
-  margin:0;
-  font-size:24px;
-}
-
-/* =========================================================
-   PAGINA DETTAGLIO CONDOMINIO
-   ========================================================= */
+/* DETTAGLIO CONDOMINIO */
 
 .condominium-detail-page{
   width:100%;
@@ -5289,13 +7963,9 @@ select:focus{
   background:transparent;
   color:#526dfe;
   padding:0;
-  margin:0 0 22px 0;
+  margin:0 0 22px;
   font-weight:700;
   font-size:14px;
-}
-
-.back-button:hover{
-  text-decoration:underline;
 }
 
 .detail-page-heading{
@@ -5347,13 +8017,7 @@ select:focus{
   margin-top:0;
 }
 
-.condominium-detail-page .detail-card > .section-title{
-  margin-bottom:20px;
-}
-
-/* =========================================================
-   SEZIONI COLLEGATE
-   ========================================================= */
+/* RELATED */
 
 .related-section{
   border-top:1px solid #eef2f7;
@@ -5428,15 +8092,495 @@ select:focus{
   background:#fff;
 }
 
-/* =========================================================
-   MENU MOBILE
-   ========================================================= */
+/* DOCUMENTI */
+
+.document-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+
+.document-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.document-icon{
+  font-size:28px;
+}
+
+.document-card h3{
+  margin:12px 0 5px;
+  font-size:16px;
+  word-break:break-word;
+}
+
+.document-card>p{
+  color:#64748b;
+  font-size:13px;
+}
+
+.document-meta{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin:12px 0;
+}
+
+.document-meta span{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  padding:5px 7px;
+  border-radius:7px;
+  font-size:11px;
+  color:#475569;
+}
+
+.document-status{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+}
+
+.ai-summary{
+  margin-top:12px;
+  padding:10px;
+  background:#f5f3ff;
+  border-radius:10px;
+  color:#4c1d95;
+  font-size:12px;
+}
+
+.ai-summary p{
+  margin:5px 0 0;
+  line-height:1.4;
+}
+
+.full-button{
+  width:100%;
+  margin-top:8px;
+}
+
+.document-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:12px;
+  border-top:1px solid #eef2f7;
+  padding-top:10px;
+}
+
+/* BANNER */
+
+.feature-banner{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  background:#eef2ff;
+  border:1px solid #c7d2fe;
+  border-radius:14px;
+  padding:14px 17px;
+  margin-bottom:15px;
+}
+
+.feature-banner div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.feature-banner span{
+  font-size:12px;
+  color:#4f46e5;
+}
+
+.feature-plan{
+  background:#fff;
+  border-radius:999px;
+  padding:7px 10px;
+  font-weight:700;
+}
+
+/* AI */
+
+.ai-hero{
+  background:linear-gradient(135deg,#111827,#263454);
+  color:#fff;
+  border-radius:20px;
+  padding:28px;
+  display:flex;
+  justify-content:space-between;
+  gap:25px;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.ai-hero h2{
+  margin:8px 0;
+  font-size:27px;
+}
+
+.ai-hero p{
+  color:#cbd5e1;
+  max-width:760px;
+  line-height:1.55;
+}
+
+.ai-plan-box{
+  min-width:210px;
+  padding:18px;
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.ai-plan-box span{
+  color:#cbd5e1;
+  font-size:12px;
+}
+
+.ai-tools-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  margin-bottom:20px;
+}
+
+.ai-tool{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:20px;
+}
+
+.tool-icon{
+  font-size:28px;
+}
+
+.ai-tool h3{
+  margin:12px 0 8px;
+}
+
+.ai-tool p{
+  color:#64748b;
+  line-height:1.5;
+  font-size:13px;
+}
+
+.tool-flow{
+  display:block;
+  background:#f8fafc;
+  border-radius:8px;
+  padding:8px;
+  color:#475569;
+  font-size:11px;
+}
+
+/* ASSEMBLEE */
+
+.assembly-card{
+  align-items:flex-start;
+}
+
+.assembly-main{
+  min-width:0;
+  flex:1;
+}
+
+.assembly-statuses{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.assembly-actions{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-width:190px;
+}
+
+.file-button{
+  border:1px solid #dbe2ea;
+  background:#fff;
+  color:#334155;
+  padding:10px;
+  border-radius:9px;
+  font-weight:600;
+  font-size:12px;
+  text-align:center;
+}
+
+.file-button input{
+  display:none;
+}
+
+.minutes-preview{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:10px;
+  padding:10px;
+  margin-top:10px;
+  max-width:700px;
+}
+
+.minutes-preview p{
+  white-space:pre-wrap;
+  font-size:12px;
+  color:#475569;
+  max-height:150px;
+  overflow:auto;
+}
+
+/* PORTALE */
+
+.portal-hero{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:25px;
+  display:flex;
+  justify-content:space-between;
+  gap:25px;
+  margin-bottom:20px;
+}
+
+.portal-hero h2{
+  margin:5px 0;
+  font-size:25px;
+}
+
+.portal-hero p{
+  max-width:700px;
+  color:#64748b;
+  line-height:1.5;
+}
+
+.portal-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.portal-stats div{
+  min-width:100px;
+  padding:15px;
+  background:#f8fafc;
+  border-radius:12px;
+  text-align:center;
+}
+
+.portal-stats b{
+  display:block;
+  font-size:22px;
+}
+
+.portal-stats span{
+  color:#64748b;
+  font-size:11px;
+}
+
+.portal-grid{
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:20px;
+  margin-top:20px;
+}
+
+.portal-member{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:13px 0;
+  border-bottom:1px solid #eef2f7;
+}
+
+.portal-member small{
+  display:block;
+  color:#64748b;
+  margin-top:4px;
+}
+
+.permission-box{
+  padding:13px;
+  border:1px solid #eef2f7;
+  border-radius:11px;
+  margin-bottom:9px;
+}
+
+.permission-box b,
+.permission-box span{
+  display:block;
+}
+
+.permission-box span{
+  color:#64748b;
+  font-size:12px;
+  margin-top:4px;
+  line-height:1.4;
+}
+
+/* PRICING */
+
+.subscription-current{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.subscription-current h2{
+  margin:3px 0;
+}
+
+.subscription-current p{
+  color:#64748b;
+  margin:5px 0 0;
+}
+
+.pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+}
+
+.pricing-card{
+  position:relative;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:17px;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  min-height:430px;
+}
+
+.pricing-card.current{
+  border:2px solid #526dfe;
+}
+
+.current-plan{
+  position:absolute;
+  top:12px;
+  right:12px;
+  background:#eef2ff;
+  color:#4f46e5;
+  border-radius:999px;
+  padding:5px 8px;
+  font-size:10px;
+  font-weight:700;
+}
+
+.pricing-icon{
+  font-size:28px;
+}
+
+.pricing-card h2{
+  margin:12px 0 6px;
+}
+
+.pricing-card>p{
+  color:#64748b;
+  font-size:13px;
+  min-height:38px;
+}
+
+.pricing-card ul{
+  list-style:none;
+  padding:0;
+  margin:12px 0 20px;
+  flex:1;
+}
+
+.pricing-card li{
+  padding:6px 0;
+  color:#475569;
+  font-size:12px;
+}
+
+/* PROFILO */
+
+.profile-plan-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.profile-plan-card h2{
+  margin:2px 0 0;
+}
+
+/* MODAL */
+
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.48);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:100;
+}
+
+.modal{
+  position:relative;
+  background:#fff;
+  border-radius:18px;
+  max-width:760px;
+  width:100%;
+  max-height:92vh;
+  overflow:auto;
+  padding:25px;
+  box-shadow:0 25px 70px rgba(15,23,42,.25);
+}
+
+.modal-close{
+  position:absolute;
+  right:15px;
+  top:12px;
+  border:0;
+  background:#f1f5f9;
+  border-radius:50%;
+  width:34px;
+  height:34px;
+  font-size:22px;
+}
+
+.modal-title{
+  margin-bottom:22px;
+}
+
+.modal-title h2{
+  margin:0;
+  font-size:24px;
+}
+
+/* MOBILE */
 
 .mobile-menu-backdrop{
   display:none;
 }
 
-@media(max-width:1050px){
+.mobile-plan{
+  margin:10px 0 15px;
+  background:#1f2937;
+  color:#c7d2fe;
+  padding:9px;
+  border-radius:8px;
+  font-size:12px;
+}
+
+@media(max-width:1100px){
 
   .cards-grid{
     grid-template-columns:repeat(2,1fr);
@@ -5444,6 +8588,18 @@ select:focus{
 
   .stats{
     grid-template-columns:repeat(2,1fr);
+  }
+
+  .pricing-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .document-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .ai-tools-grid{
+    grid-template-columns:1fr 1fr;
   }
 }
 
@@ -5482,7 +8638,7 @@ select:focus{
   }
 
   .mobile-menu{
-    width:min(310px,88vw);
+    width:min(320px,88vw);
     height:100%;
     background:#111827;
     color:#fff;
@@ -5511,21 +8667,32 @@ select:focus{
     display:flex;
     flex-direction:column;
     gap:7px;
-    margin-top:28px;
+    margin-top:15px;
   }
 
   .mobile-nav .nav-item{
-    padding:15px;
-    font-size:16px;
+    padding:14px;
+    font-size:15px;
   }
 
-  .dashboard-grid{
+  .dashboard-grid,
+  .portal-grid{
     grid-template-columns:1fr;
   }
 
-  .ai-card{
+  .ai-card,
+  .ai-hero,
+  .portal-hero{
     align-items:flex-start;
     flex-direction:column;
+  }
+
+  .ai-plan-box{
+    width:100%;
+  }
+
+  .portal-stats{
+    width:100%;
   }
 
   .topbar,
@@ -5536,6 +8703,18 @@ select:focus{
   h1{
     font-size:26px;
   }
+
+  .assembly-card{
+    flex-direction:column;
+  }
+
+  .assembly-actions{
+    width:100%;
+  }
+
+  .assembly-actions>*{
+    width:100%;
+  }
 }
 
 @media(max-width:650px){
@@ -5544,7 +8723,10 @@ select:focus{
   .cards-grid,
   .form-grid,
   .detail-grid,
-  .mini-stats{
+  .mini-stats,
+  .document-grid,
+  .pricing-grid,
+  .ai-tools-grid{
     grid-template-columns:1fr;
   }
 
@@ -5554,6 +8736,11 @@ select:focus{
 
   .page-header .primary-button{
     width:100%;
+  }
+
+  .feature-banner{
+    align-items:flex-start;
+    flex-direction:column;
   }
 
   .row-card{
@@ -5568,23 +8755,6 @@ select:focus{
 
   .row-actions select{
     flex:1;
-  }
-
-  .table-head{
-    display:none;
-  }
-
-  .table-row{
-    grid-template-columns:1fr 1fr;
-    padding:15px;
-  }
-
-  .table-row>*:nth-child(1){
-    grid-column:1/-1;
-  }
-
-  .table-actions{
-    grid-column:1/-1;
   }
 
   .form-actions{
@@ -5621,8 +8791,6 @@ select:focus{
     flex:1;
   }
 
-  /* PAGINA DETTAGLIO MOBILE */
-
   .detail-page-header{
     padding:18px;
   }
@@ -5656,6 +8824,36 @@ select:focus{
   .back-button{
     margin-bottom:18px;
   }
+
+  .portal-stats{
+    grid-template-columns:1fr;
+  }
+
+  .portal-member{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .subscription-current,
+  .profile-plan-card{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .pricing-card{
+    min-height:auto;
+  }
+
+  .document-bottom{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .document-bottom>*{
+    width:100%;
+    text-align:left;
+  }
 }
 `;
 
@@ -5664,7 +8862,9 @@ select:focus{
    ========================================================= */
 
 ReactDOM.createRoot(
-  document.getElementById("root")!
+  document.getElementById(
+    "root"
+  )!
 ).render(
   <React.StrictMode>
     <App />
