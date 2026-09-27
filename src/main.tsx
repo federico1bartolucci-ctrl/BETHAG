@@ -117,6 +117,7 @@ type CommunicationStatus =
 
 type CommunicationAudience =
   | "Tutti"
+  | "Selezionati"
   | "Condomino"
   | "Consiglio";
 
@@ -135,6 +136,39 @@ type Condominium = {
   iban: string;
   bank: string;
   notes: string;
+};
+
+type CondominiumMember = {
+  id: number;
+  condominiumId: number;
+  firstName: string;
+  lastName: string;
+  fiscalCode: string;
+  phone: string;
+  email: string;
+  apartment: string;
+  role: "Proprietario" | "Inquilino";
+  millesimi: string;
+  notes: string;
+  active: boolean;
+};
+
+type RequestStatus = "Nuova" | "In lavorazione" | "Risolta" | "Chiusa";
+type RequestPriority = "Bassa" | "Media" | "Alta";
+
+type CondominiumRequest = {
+  id: number;
+  condominiumId: number;
+  memberId: number | null;
+  category: string;
+  description: string;
+  priority: RequestPriority;
+  date: string;
+  status: RequestStatus;
+  response: string;
+  attachmentName: string;
+  supplierId: number | null;
+  activityId: number | null;
 };
 
 type Deadline = {
@@ -233,10 +267,13 @@ type Communication = {
   title: string;
   condominiumId: number | null;
   audience: CommunicationAudience;
+  recipientIds?: number[];
   date: string;
   status: CommunicationStatus;
   body: string;
   publishedToPortal: boolean;
+  emailStatus?: "Non inviata" | "Predisposta";
+  emailPreparedAt?: string;
 };
 
 type WorkspaceSummary = {
@@ -286,6 +323,8 @@ const KEYS = {
   suppliers: "bethag-suppliers-v5",
   activities: "bethag-activities-v5",
   communications: "bethag-communications-v1",
+  condominiumMembers: "bethag-condominium-members-v1",
+  condominiumRequests: "bethag-condominium-requests-v1",
   profile: "bethag-profile-v5",
   portalMembers: "bethag-portal-members-v2",
   subscription: "bethag-subscription-v2",
@@ -601,6 +640,25 @@ const initialActivities: Activity[] = [
   },
 ];
 
+const initialCondominiumMembers: CondominiumMember[] = [
+  {
+    id: 1,
+    condominiumId: 1,
+    firstName: "Mario",
+    lastName: "Rossi",
+    fiscalCode: "",
+    phone: "",
+    email: "mario@example.com",
+    apartment: "Interno 4",
+    role: "Proprietario",
+    millesimi: "42,50",
+    notes: "",
+    active: true,
+  },
+];
+
+const initialCondominiumRequests: CondominiumRequest[] = [];
+
 const initialCommunications: Communication[] = [
   {
     id: 1,
@@ -736,15 +794,26 @@ const emptyActivity: Activity = {
   notes: "",
 };
 
+const emptyCondominiumMember: CondominiumMember = {
+  id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", millesimi: "", notes: "", active: true,
+};
+
+const emptyCondominiumRequest: CondominiumRequest = {
+  id: 0, condominiumId: 1, memberId: null, category: "Informazioni", description: "", priority: "Media", date: new Date().toISOString().slice(0, 10), status: "Nuova", response: "", attachmentName: "", supplierId: null, activityId: null,
+};
+
 const emptyCommunication: Communication = {
   id: 0,
   title: "",
   condominiumId: null,
   audience: "Tutti",
+  recipientIds: [],
   date: new Date().toISOString().slice(0, 10),
   status: "Bozza",
   body: "",
   publishedToPortal: false,
+  emailStatus: "Non inviata",
+  emailPreparedAt: "",
 };
 
 const emptyProfile: AdminProfile = {
@@ -975,6 +1044,9 @@ function App() {
         )
     );
 
+  const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
+  const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
+
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
       const stored = load(
@@ -1086,9 +1158,11 @@ function App() {
   const [
     communicationForm,
     setCommunicationForm,
-  ] = useState<Communication>(
-    emptyCommunication
-  );
+  ] = useState<Communication>(emptyCommunication);
+  const [selectedCondominiumMember, setSelectedCondominiumMember] = useState<CondominiumMember | null>(null);
+  const [condominiumMemberForm, setCondominiumMemberForm] = useState<CondominiumMember>(emptyCondominiumMember);
+  const [selectedCondominiumRequest, setSelectedCondominiumRequest] = useState<CondominiumRequest | null>(null);
+  const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
 
   /* =======================================================
@@ -1143,6 +1217,14 @@ function App() {
       JSON.stringify(communications)
     );
   }, [communications]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
+  }, [condominiumMembers]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
+  }, [condominiumRequests]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -1419,6 +1501,8 @@ function App() {
       )
     );
 
+    setCondominiumMembers((current) => current.filter((member) => member.condominiumId !== item.id));
+    setCondominiumRequests((current) => current.filter((request) => request.condominiumId !== item.id));
     setSelectedCondominium(null);
   };
 
@@ -2089,6 +2173,46 @@ function App() {
 
 
   /* =======================================================
+     CONDOMINI - ANAGRAFICA E RICHIESTE
+     ======================================================= */
+
+  const saveCondominiumMember = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) { alert("Inserisci nome, cognome e interno/appartamento del condòmino."); return; }
+    if (!validateEmail(condominiumMemberForm.email)) { alert("Controlla l'indirizzo email del condòmino."); return; }
+    const data = { ...condominiumMemberForm, firstName: condominiumMemberForm.firstName.trim(), lastName: condominiumMemberForm.lastName.trim(), apartment: condominiumMemberForm.apartment.trim() };
+    if (selectedCondominiumMember) setCondominiumMembers((current) => current.map((member) => member.id === selectedCondominiumMember.id ? { ...data, id: selectedCondominiumMember.id } : member));
+    else setCondominiumMembers((current) => [...current, { ...data, id: makeId() }]);
+    setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId: condominiumMemberForm.condominiumId }); setSelectedCondominiumMember(null); closeModal();
+  };
+
+  const editCondominiumMember = (member: CondominiumMember) => { setSelectedCondominiumMember(member); setCondominiumMemberForm(member); openModal("condominium-member"); };
+  const deleteCondominiumMember = (id: number) => { if (!confirm("Eliminare questo condòmino dall'anagrafica?")) return; setCondominiumMembers((current) => current.filter((member) => member.id !== id)); };
+
+  const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
+    const data = { ...condominiumRequestForm, description: condominiumRequestForm.description.trim(), response: condominiumRequestForm.response.trim() };
+    if (selectedCondominiumRequest) setCondominiumRequests((current) => current.map((request) => request.id === selectedCondominiumRequest.id ? { ...data, id: selectedCondominiumRequest.id } : request));
+    else setCondominiumRequests((current) => [{ ...data, id: makeId() }, ...current]);
+    setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId }); setSelectedCondominiumRequest(null); closeModal();
+  };
+
+  const editCondominiumRequest = (request: CondominiumRequest) => { setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request"); };
+  const deleteCondominiumRequest = (id: number) => { if (!confirm("Eliminare questa segnalazione o richiesta?")) return; setCondominiumRequests((current) => current.filter((request) => request.id !== id)); };
+  const updateCondominiumRequestStatus = (id: number, status: RequestStatus) => { setCondominiumRequests((current) => current.map((request) => request.id === id ? { ...request, status } : request)); };
+
+  const prepareCondominiumEmail = (condominiumId: number, memberIds?: number[], communicationId?: number) => {
+    const recipients = condominiumMembers.filter((member) => member.condominiumId === condominiumId && member.active && member.email.trim() && (!memberIds || memberIds.includes(member.id)));
+    if (!recipients.length) { alert("Non ci sono condòmini attivi con un indirizzo e-mail disponibile."); return; }
+    const bcc = recipients.map((member) => member.email.trim()).join(",");
+    const condominium = condominiums.find((item) => item.id === condominiumId);
+    const subject = `Comunicazione - ${condominium?.name || "Condominio"}`;
+    window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Inserisci qui il testo della comunicazione.")}`;
+    if (communicationId) setCommunications((current) => current.map((communication) => communication.id === communicationId ? { ...communication, emailStatus: "Predisposta", emailPreparedAt: new Date().toISOString() } : communication));
+  };
+
+  /* =======================================================
      COMUNICAZIONI
      ======================================================= */
 
@@ -2119,10 +2243,11 @@ function App() {
 
     const data = {
       ...communicationForm,
-      title:
-        communicationForm.title.trim(),
-      body:
-        communicationForm.body.trim(),
+      title: communicationForm.title.trim(),
+      body: communicationForm.body.trim(),
+      recipientIds: communicationForm.recipientIds || [],
+      emailStatus: communicationForm.emailStatus || "Non inviata",
+      emailPreparedAt: communicationForm.emailPreparedAt || "",
     };
 
     if (selectedCommunication) {
@@ -2320,7 +2445,10 @@ function App() {
     openModal("activity");
   };
 
-  const newCommunication = () => {
+  const newCondominiumMember = (condominiumId: number) => { setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
+  const newCondominiumRequest = (condominiumId: number) => { setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request"); };
+
+  const newCommunication = (condominiumId?: number) => {
     if (
       !requirePlan(
         "portal",
@@ -2334,7 +2462,10 @@ function App() {
     setCommunicationForm({
       ...emptyCommunication,
       condominiumId:
-        condominiums[0]?.id || null,
+        condominiumId ?? (condominiums[0]?.id || null),
+      recipientIds: [],
+      emailStatus: "Non inviata",
+      emailPreparedAt: "",
     });
 
     openModal("communication");
@@ -2763,9 +2894,18 @@ function App() {
               onStatusAssembly={
                 updateAssemblyStatus
               }
-              onStatusActivity={
-                updateActivityStatus
-              }
+              onStatusActivity={updateActivityStatus}
+              condominiumMembers={condominiumMembers}
+              condominiumRequests={condominiumRequests}
+              onNewMember={newCondominiumMember}
+              onEditMember={editCondominiumMember}
+              onDeleteMember={deleteCondominiumMember}
+              onNewRequest={newCondominiumRequest}
+              onEditRequest={editCondominiumRequest}
+              onDeleteRequest={deleteCondominiumRequest}
+              onStatusRequest={updateCondominiumRequestStatus}
+              onNewCommunication={newCommunication}
+              onPrepareEmail={prepareCondominiumEmail}
             />
           )}
 
@@ -3430,6 +3570,14 @@ function App() {
             />
           )}
 
+          {modalType === "condominium-member" && (
+            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
+          )}
+
+          {modalType === "condominium-request" && (
+            <CondominiumRequestForm value={condominiumRequestForm} setValue={setCondominiumRequestForm} condominiums={condominiums} members={condominiumMembers} suppliers={suppliers} activities={activities} onSubmit={saveCondominiumRequest} onCancel={closeModal} editing={!!selectedCondominiumRequest} />
+          )}
+
           {modalType ===
             "communication" && (
             <CommunicationForm
@@ -3442,6 +3590,8 @@ function App() {
               condominiums={
                 condominiums
               }
+              members={condominiumMembers}
+              onPrepareEmail={prepareCondominiumEmail}
               onSubmit={
                 saveCommunication
               }
@@ -4146,6 +4296,17 @@ function CondominiumsPage(
     onStatusDeadline,
     onStatusAssembly,
     onStatusActivity,
+    condominiumMembers,
+    condominiumRequests,
+    onNewMember,
+    onEditMember,
+    onDeleteMember,
+    onNewRequest,
+    onEditRequest,
+    onDeleteRequest,
+    onStatusRequest,
+    onNewCommunication,
+    onPrepareEmail,
   } = props;
 
   useEffect(() => {
@@ -4279,6 +4440,17 @@ function CondominiumsPage(
               x.condominiumId ===
               selected.id
           )}
+          condominiumMembers={condominiumMembers.filter((x: CondominiumMember) => x.condominiumId === selected.id)}
+          condominiumRequests={condominiumRequests.filter((x: CondominiumRequest) => x.condominiumId === selected.id)}
+          onNewMember={onNewMember}
+          onEditMember={onEditMember}
+          onDeleteMember={onDeleteMember}
+          onNewRequest={onNewRequest}
+          onEditRequest={onEditRequest}
+          onDeleteRequest={onDeleteRequest}
+          onStatusRequest={onStatusRequest}
+          onNewCommunication={onNewCommunication}
+          onPrepareEmail={onPrepareEmail}
           condominiumName={
             condominiumName
           }
@@ -4440,6 +4612,17 @@ function CondominiumDetails(
     suppliers,
     activities,
     communications,
+    condominiumMembers,
+    condominiumRequests,
+    onNewMember,
+    onEditMember,
+    onDeleteMember,
+    onNewRequest,
+    onEditRequest,
+    onDeleteRequest,
+    onStatusRequest,
+    onNewCommunication,
+    onPrepareEmail,
     onEditDeadline,
     onEditDocument,
     onEditAssembly,
@@ -4483,6 +4666,9 @@ function CondominiumDetails(
       (x: Communication) =>
         x.publishedToPortal
     ).length;
+
+  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active);
+  const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
   return (
     <section className="detail-card">
@@ -4547,6 +4733,16 @@ function CondominiumDetails(
           <span>
             Attività aperte
           </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>{activeMembers.length}</b>
+          <span>Condòmini attivi</span>
+        </div>
+
+        <div className="overview-stat">
+          <b>{openRequests}</b>
+          <span>Segnalazioni aperte</span>
         </div>
 
         <div className="overview-stat">
@@ -4669,6 +4865,42 @@ function CondominiumDetails(
 
       </div>
 
+
+      <section className="condominium-section-card">
+        <div className="section-title">
+          <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
+          <div className="button-row compact">
+            <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
+            <button className="primary-button" onClick={() => onPrepareEmail(item.id)}>✉️ Scrivi a tutti</button>
+            <button className="secondary-button" onClick={() => onNewMember(item.id)}>+ Aggiungi condòmino</button>
+          </div>
+        </div>
+        <div className="condominium-member-list">
+          {activeMembers.length === 0 ? <Empty text="Nessun condòmino presente nell'anagrafica." /> : activeMembers.map((member: CondominiumMember) => (
+            <div className="condominium-member-card" key={member.id}>
+              <div className="member-main"><b>{member.firstName} {member.lastName}</b><span>{member.apartment} · {member.role} · {member.millesimi || "Millesimi non inseriti"}</span><small>{member.phone || "Telefono non inserito"}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</small></div>
+              <div className="related-actions">
+                {member.email && <button className="secondary-button small" onClick={() => onPrepareEmail(item.id, [member.id])}>Scrivi</button>}
+                <button className="secondary-button small" onClick={() => onEditMember(member)}>Modifica</button><button className="mini-danger" onClick={() => onDeleteMember(member.id)}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="condominium-section-card">
+        <div className="section-title"><div><div className="eyebrow">Assistenza</div><h2>Segnalazioni e richieste</h2><p className="section-subtitle">Raccogli le richieste dei condòmini e gestiscine lo stato fino alla chiusura.</p></div><button className="primary-button" onClick={() => onNewRequest(item.id)}>+ Nuova segnalazione</button></div>
+        <div className="request-summary"><span><b>{openRequests}</b> aperte</span><span><b>{condominiumRequests.length}</b> totali</span></div>
+        <div className="related-list">
+          {condominiumRequests.length === 0 ? <Empty text="Nessuna segnalazione o richiesta ricevuta." /> : condominiumRequests.map((request: CondominiumRequest) => {
+            const member = condominiumMembers.find((x: CondominiumMember) => x.id === request.memberId);
+            return <div className="request-card" key={request.id}>
+              <div className="request-main"><b>{request.category}</b><span>{member ? `${member.firstName} ${member.lastName}` : "Richiedente non indicato"}{` · ${formatDate(request.date)}`}</span><p>{request.description}</p>{request.response && <div className="request-response"><strong>Risposta amministratore:</strong> {request.response}</div>}</div>
+              <div className="request-actions"><Badge value={request.status} /><Badge value={`Priorità ${request.priority}`} /><select value={request.status} onChange={(e) => onStatusRequest(request.id, e.target.value as RequestStatus)}><option>Nuova</option><option>In lavorazione</option><option>Risolta</option><option>Chiusa</option></select><button className="secondary-button small" onClick={() => onEditRequest(request)}>Dettagli / modifica</button><button className="mini-danger" onClick={() => onDeleteRequest(request.id)}>×</button></div>
+            </div>;
+          })}
+        </div>
+      </section>
 
       <RelatedSection
         title="Scadenze"
@@ -8869,10 +9101,38 @@ function ActivityForm({
    FORM COMUNICAZIONE
    ========================================================= */
 
+function CondominiumMemberForm({ value, setValue, condominiums, onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumMember, val: any) => setValue({ ...value, [key]: val });
+  return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} /><div className="form-grid">
+    <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => set("condominiumId", Number(v))} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
+    <Field label="Nome *" value={value.firstName} onChange={(v: string) => set("firstName", v)} /><Field label="Cognome *" value={value.lastName} onChange={(v: string) => set("lastName", v)} />
+    <Field label="Interno / appartamento *" value={value.apartment} onChange={(v: string) => set("apartment", v)} /><SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
+    <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} /><Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} /><Field label="Telefono" value={value.phone} onChange={(v: string) => set("phone", v)} /><Field label="E-mail" value={value.email} onChange={(v: string) => set("email", v)} />
+    <div className="field checkbox-field"><label>Stato</label><label className="switch-row"><input type="checkbox" checked={value.active} onChange={(e) => set("active", e.target.checked)} /><span>Condòmino attivo</span></label></div>
+    <Field full label="Note" value={value.notes} onChange={(v: string) => set("notes", v)} textarea />
+  </div><Actions onCancel={onCancel} /></form>;
+}
+
+function CondominiumRequestForm({ value, setValue, condominiums, members, suppliers, activities, onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumRequest, val: any) => setValue({ ...value, [key]: val });
+  return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica segnalazione / richiesta" : "Nuova segnalazione / richiesta"} /><div className="form-grid">
+    <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => set("condominiumId", Number(v))} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
+    <SelectField label="Condòmino" value={value.memberId ?? ""} onChange={(v: string) => set("memberId", v ? Number(v) : null)} options={[["","Non indicato"],...members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId).map((m: CondominiumMember) => [m.id,`${m.firstName} ${m.lastName} · ${m.apartment}`])]} />
+    <SelectField label="Categoria" value={value.category} onChange={(v: string) => set("category", v)} options={[["Informazioni","Informazioni"],["Manutenzione","Manutenzione"],["Guasto","Guasto"],["Amministrazione","Amministrazione"],["Pagamento","Pagamento"],["Segnalazione","Segnalazione"],["Altro","Altro"]]} />
+    <SelectField label="Priorità" value={value.priority} onChange={(v: string) => set("priority", v)} options={[["Bassa","Bassa"],["Media","Media"],["Alta","Alta"]]} /><Field label="Data" type="date" value={value.date} onChange={(v: string) => set("date", v)} />
+    <SelectField label="Stato" value={value.status} onChange={(v: string) => set("status", v)} options={[["Nuova","Nuova"],["In lavorazione","In lavorazione"],["Risolta","Risolta"],["Chiusa","Chiusa"]]} />
+    <Field full label="Descrizione *" value={value.description} onChange={(v: string) => set("description", v)} textarea /><Field full label="Risposta amministratore" value={value.response} onChange={(v: string) => set("response", v)} textarea /><Field label="Allegato" value={value.attachmentName} onChange={(v: string) => set("attachmentName", v)} />
+    <SelectField label="Fornitore collegato" value={value.supplierId ?? ""} onChange={(v: string) => set("supplierId", v ? Number(v) : null)} options={[["","Nessun fornitore"],...suppliers.map((s: Supplier) => [s.id,s.name])]} />
+    <SelectField label="Attività collegata" value={value.activityId ?? ""} onChange={(v: string) => set("activityId", v ? Number(v) : null)} options={[["","Nessuna attività"],...activities.filter((a: Activity) => a.condominiumId === value.condominiumId).map((a: Activity) => [a.id,a.title])]} />
+  </div><Actions onCancel={onCancel} /></form>;
+}
+
 function CommunicationForm({
   value,
   setValue,
   condominiums,
+  members = [],
+  onPrepareEmail,
   onSubmit,
   onCancel,
   editing,
@@ -8925,18 +9185,9 @@ function CommunicationForm({
             })
           }
           options={[
-            [
-              "",
-              "Tutti i condomini",
-            ],
-            ...condominiums.map(
-              (
-                c: Condominium
-              ) => [
-                c.id,
-                c.name,
-              ]
-            ),
+            ["Tutti", "Tutti i condòmini"],
+            ["Selezionati", "Condòmini selezionati"],
+            ["Consiglio", "Consiglio"],
           ]}
         />
 
@@ -8969,6 +9220,14 @@ function CommunicationForm({
             ],
           ]}
         />
+
+        {value.audience === "Selezionati" && (
+          <div className="field full recipient-picker"><label>Condòmini destinatari</label><div className="recipient-list">
+            {members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId && m.active).map((member: CondominiumMember) => (
+              <label className="recipient-option" key={member.id}><input type="checkbox" checked={(value.recipientIds || []).includes(member.id)} onChange={(e) => setValue({ ...value, recipientIds: e.target.checked ? [...(value.recipientIds || []), member.id] : (value.recipientIds || []).filter((id: number) => id !== member.id) })} /><span>{member.firstName} {member.lastName}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</span></label>
+            ))}
+          </div></div>
+        )}
 
         <Field
           label="Data"
@@ -9066,6 +9325,10 @@ function CommunicationForm({
         </div>
 
       </div>
+
+      {value.condominiumId && (
+        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
+      )}
 
       <Actions
         onCancel={onCancel}
@@ -11024,6 +11287,13 @@ select:focus{
   }
 
 }
+.condominium-section-card{margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 4px 18px rgba(15,23,42,.04)}
+.section-subtitle{margin:5px 0 0;color:#64748b;font-size:13px;line-height:1.5}.button-row.compact{margin-top:0}.button-row.compact>*{flex:0 0 auto}
+.condominium-member-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}.condominium-member-card{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;border:1px solid #eef2f7;border-radius:12px;background:#f8fafc}.member-main{min-width:0}.member-main b,.member-main span,.member-main small{display:block}.member-main span{margin-top:5px;color:#475569;font-size:13px}.member-main small{margin-top:4px;color:#64748b;font-size:12px;word-break:break-word}
+.request-summary{display:flex;gap:20px;margin:14px 0;color:#64748b;font-size:13px}.request-summary b{color:#111827;font-size:18px}.request-card{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid #eef2f7}.request-card:last-child{border-bottom:0}.request-main{min-width:0;flex:1}.request-main>b,.request-main>span{display:block}.request-main>span{margin-top:4px;color:#64748b;font-size:12px}.request-main p{margin:8px 0 0;color:#475569;line-height:1.5;white-space:pre-wrap}.request-response{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.request-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:230px}
+.recipient-picker{padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px}.recipient-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.recipient-option{display:flex;align-items:center;gap:8px;font-size:13px}.communication-email-actions{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px;background:#f8fafc;border-radius:10px}.communication-email-actions span{color:#64748b;font-size:12px}
+@media (max-width:760px){.condominium-member-card,.request-card{align-items:flex-start;flex-direction:column}.request-actions{width:100%;justify-content:flex-start;min-width:0}.button-row.compact{width:100%;flex-direction:column}.button-row.compact>*{width:100%}.communication-email-actions{align-items:flex-start;flex-direction:column}}
+
 `;
 
 /* =========================================================
