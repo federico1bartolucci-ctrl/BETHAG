@@ -2097,6 +2097,214 @@ function CondominiumsPage(props: any) {
     onStatusActivity,
   } = props;
 
+  /*
+   * Quando viene aperto un condominio,
+   * la schermata viene riportata automaticamente
+   * all'inizio della pagina.
+   */
+  useEffect(() => {
+    if (selected) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  }, [selected]);
+
+  /*
+   * =======================================================
+   * SCHERMATA DETTAGLIO CONDOMINIO
+   * =======================================================
+   */
+
+  if (selected) {
+    return (
+      <div className="condominium-detail-page">
+
+        <div className="detail-page-header">
+
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => {
+              setSelected(null);
+
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
+          >
+            ← Torna ai condomini
+          </button>
+
+          <div className="detail-page-heading">
+
+            <div className="detail-page-icon">
+              🏢
+            </div>
+
+            <div className="detail-page-heading-text">
+              <div className="eyebrow">
+                Scheda condominio
+              </div>
+
+              <h1>{selected.name}</h1>
+
+              <p>
+                {selected.address}
+                {selected.cap
+                  ? `, ${selected.cap}`
+                  : ""}
+                {selected.city
+                  ? ` ${selected.city}`
+                  : ""}
+                {selected.province
+                  ? ` (${selected.province})`
+                  : ""}
+              </p>
+            </div>
+
+          </div>
+
+          <div className="detail-page-actions">
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() =>
+                onEdit(selected)
+              }
+            >
+              ✏️ Modifica
+            </button>
+
+            <button
+              type="button"
+              className="danger-button"
+              onClick={() =>
+                onDelete(selected)
+              }
+            >
+              🗑 Elimina
+            </button>
+
+          </div>
+
+        </div>
+
+        <CondominiumDetails
+          item={selected}
+
+          onClose={() => {
+            setSelected(null);
+
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+          }}
+
+          onEdit={() =>
+            onEdit(selected)
+          }
+
+          onDelete={() =>
+            onDelete(selected)
+          }
+
+          deadlines={deadlines.filter(
+            (x: Deadline) =>
+              x.condominiumId === selected.id
+          )}
+
+          documents={documents.filter(
+            (x: DocumentItem) =>
+              x.condominiumId === selected.id
+          )}
+
+          assemblies={assemblies.filter(
+            (x: Assembly) =>
+              x.condominiumId === selected.id
+          )}
+
+          suppliers={suppliers.filter(
+            (x: Supplier) =>
+              x.condominiumId === selected.id
+          )}
+
+          activities={activities.filter(
+            (x: Activity) =>
+              x.condominiumId === selected.id
+          )}
+
+          condominiumName={
+            condominiumName
+          }
+
+          onEditDeadline={
+            onEditDeadline
+          }
+
+          onEditDocument={
+            onEditDocument
+          }
+
+          onEditAssembly={
+            onEditAssembly
+          }
+
+          onEditSupplier={
+            onEditSupplier
+          }
+
+          onEditActivity={
+            onEditActivity
+          }
+
+          onDeleteDeadline={
+            onDeleteDeadline
+          }
+
+          onDeleteDocument={
+            onDeleteDocument
+          }
+
+          onDeleteAssembly={
+            onDeleteAssembly
+          }
+
+          onDeleteSupplier={
+            onDeleteSupplier
+          }
+
+          onDeleteActivity={
+            onDeleteActivity
+          }
+
+          onStatusDeadline={
+            onStatusDeadline
+          }
+
+          onStatusAssembly={
+            onStatusAssembly
+          }
+
+          onStatusActivity={
+            onStatusActivity
+          }
+        />
+
+      </div>
+    );
+  }
+
+  /*
+   * =======================================================
+   * ELENCO CONDOMINI
+   * =======================================================
+   */
+
   return (
     <>
       <PageHeader
@@ -2147,7 +2355,7 @@ function CondominiumsPage(props: any) {
 
                 <div className="button-row">
                   <button
-                    className="secondary-button"
+                    className="primary-button"
                     onClick={() =>
                       setSelected(c)
                     }
@@ -2169,68 +2377,6 @@ function CondominiumsPage(props: any) {
           )
         )}
       </section>
-
-      {selected && (
-        <CondominiumDetails
-          item={selected}
-          onClose={() =>
-            setSelected(null)
-          }
-          onEdit={() =>
-            onEdit(selected)
-          }
-          onDelete={() =>
-            onDelete(selected)
-          }
-          deadlines={deadlines.filter(
-            (x: Deadline) =>
-              x.condominiumId ===
-              selected.id
-          )}
-          documents={documents.filter(
-            (x: DocumentItem) =>
-              x.condominiumId ===
-              selected.id
-          )}
-          assemblies={assemblies.filter(
-            (x: Assembly) =>
-              x.condominiumId ===
-              selected.id
-          )}
-          suppliers={suppliers.filter(
-            (x: Supplier) =>
-              x.condominiumId ===
-              selected.id
-          )}
-          activities={activities.filter(
-            (x: Activity) =>
-              x.condominiumId ===
-              selected.id
-          )}
-          condominiumName={
-            condominiumName
-          }
-          onEditDeadline={onEditDeadline}
-          onEditDocument={onEditDocument}
-          onEditAssembly={onEditAssembly}
-          onEditSupplier={onEditSupplier}
-          onEditActivity={onEditActivity}
-          onDeleteDeadline={onDeleteDeadline}
-          onDeleteDocument={onDeleteDocument}
-          onDeleteAssembly={onDeleteAssembly}
-          onDeleteSupplier={onDeleteSupplier}
-          onDeleteActivity={onDeleteActivity}
-          onStatusDeadline={
-            onStatusDeadline
-          }
-          onStatusAssembly={
-            onStatusAssembly
-          }
-          onStatusActivity={
-            onStatusActivity
-          }
-        />
-      )}
     </>
   );
 }
@@ -2263,10 +2409,11 @@ function CondominiumDetails(props: any) {
 
   return (
     <section className="detail-card">
+
       <div className="section-title">
         <div>
           <div className="eyebrow">
-            Scheda condominio
+            Dati del condominio
           </div>
 
           <h2>{item.name}</h2>
@@ -2276,11 +2423,12 @@ function CondominiumDetails(props: any) {
           className="link"
           onClick={onClose}
         >
-          Chiudi
+          Torna all'elenco
         </button>
       </div>
 
       <div className="detail-grid">
+
         <Detail
           label="Indirizzo"
           value={`${item.address}, ${item.cap} ${item.city}${
@@ -2342,6 +2490,7 @@ function CondominiumDetails(props: any) {
             "Non inserito"
           }
         />
+
       </div>
 
       <div className="notes">
@@ -2415,9 +2564,11 @@ function CondominiumDetails(props: any) {
                   <option>
                     Da fare
                   </option>
+
                   <option>
                     In scadenza
                   </option>
+
                   <option>
                     Completata
                   </option>
@@ -2500,9 +2651,11 @@ function CondominiumDetails(props: any) {
                   <option>
                     Programmato
                   </option>
+
                   <option>
                     Svolto
                   </option>
+
                   <option>
                     Annullato
                   </option>
@@ -2581,9 +2734,11 @@ function CondominiumDetails(props: any) {
                   <option>
                     Aperta
                   </option>
+
                   <option>
                     In corso
                   </option>
+
                   <option>
                     Completata
                   </option>
@@ -2639,6 +2794,7 @@ function RelatedRow({
     <div className="related-row">
       <div className="related-main">
         <b>{title}</b>
+
         <small>{subtitle}</small>
 
         {badge && (
@@ -2894,9 +3050,11 @@ function DeadlinesPage({
                   <option>
                     Da fare
                   </option>
+
                   <option>
                     In scadenza
                   </option>
+
                   <option>
                     Completata
                   </option>
@@ -3026,9 +3184,11 @@ function AssembliesPage({
                   <option>
                     Programmato
                   </option>
+
                   <option>
                     Svolto
                   </option>
+
                   <option>
                     Annullato
                   </option>
@@ -3261,9 +3421,11 @@ function ActivitiesPage({
                   <option>
                     Aperta
                   </option>
+
                   <option>
                     In corso
                   </option>
+
                   <option>
                     Completata
                   </option>
@@ -4445,6 +4607,7 @@ const styles = `
 
 html{
   -webkit-text-size-adjust:100%;
+  scroll-behavior:smooth;
 }
 
 body{
@@ -5105,6 +5268,90 @@ select:focus{
 }
 
 /* =========================================================
+   PAGINA DETTAGLIO CONDOMINIO
+   ========================================================= */
+
+.condominium-detail-page{
+  width:100%;
+}
+
+.detail-page-header{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:22px;
+  margin-bottom:20px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.back-button{
+  border:0;
+  background:transparent;
+  color:#526dfe;
+  padding:0;
+  margin:0 0 22px 0;
+  font-weight:700;
+  font-size:14px;
+}
+
+.back-button:hover{
+  text-decoration:underline;
+}
+
+.detail-page-heading{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.detail-page-icon{
+  width:60px;
+  height:60px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef2ff;
+  border-radius:15px;
+  font-size:29px;
+}
+
+.detail-page-heading-text{
+  min-width:0;
+}
+
+.detail-page-heading h1{
+  margin:0;
+  font-size:28px;
+  line-height:1.2;
+}
+
+.detail-page-heading p{
+  margin:7px 0 0;
+  color:#64748b;
+  font-size:14px;
+  line-height:1.5;
+}
+
+.detail-page-actions{
+  display:flex;
+  gap:10px;
+  margin-top:22px;
+}
+
+.detail-page-actions button{
+  min-width:120px;
+}
+
+.condominium-detail-page .detail-card{
+  margin-top:0;
+}
+
+.condominium-detail-page .detail-card > .section-title{
+  margin-bottom:20px;
+}
+
+/* =========================================================
    SEZIONI COLLEGATE
    ========================================================= */
 
@@ -5372,6 +5619,42 @@ select:focus{
 
   .related-actions>*{
     flex:1;
+  }
+
+  /* PAGINA DETTAGLIO MOBILE */
+
+  .detail-page-header{
+    padding:18px;
+  }
+
+  .detail-page-heading{
+    align-items:flex-start;
+  }
+
+  .detail-page-icon{
+    width:52px;
+    height:52px;
+    font-size:24px;
+  }
+
+  .detail-page-heading h1{
+    font-size:23px;
+  }
+
+  .detail-page-heading p{
+    font-size:13px;
+  }
+
+  .detail-page-actions{
+    flex-direction:column;
+  }
+
+  .detail-page-actions button{
+    width:100%;
+  }
+
+  .back-button{
+    margin-bottom:18px;
   }
 }
 `;
