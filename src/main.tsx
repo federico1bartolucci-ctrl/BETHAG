@@ -711,6 +711,18 @@ const initialSubscription: Subscription = {
 
 
 /* =========================================================
+   LOCAL DATE HELPERS
+   ========================================================= */
+
+function localISODate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+
+/* =========================================================
    EMPTY
    ========================================================= */
 
@@ -747,7 +759,7 @@ const emptyDocument: DocumentItem = {
   name: "",
   condominiumId: 1,
   category: "Altro",
-  date: new Date().toISOString().slice(0, 10),
+  date: localISODate(),
   size: "",
   notes: "",
   source: "Manuale",
@@ -799,7 +811,7 @@ const emptyCondominiumMember: CondominiumMember = {
 };
 
 const emptyCondominiumRequest: CondominiumRequest = {
-  id: 0, condominiumId: 1, memberId: null, category: "Informazioni", description: "", priority: "Media", date: new Date().toISOString().slice(0, 10), status: "Nuova", response: "", attachmentName: "", supplierId: null, activityId: null,
+  id: 0, condominiumId: 1, memberId: null, category: "Informazioni", description: "", priority: "Media", date: localISODate(), status: "Nuova", response: "", attachmentName: "", supplierId: null, activityId: null,
 };
 
 const emptyCommunication: Communication = {
@@ -808,7 +820,7 @@ const emptyCommunication: Communication = {
   condominiumId: null,
   audience: "Tutti",
   recipientIds: [],
-  date: new Date().toISOString().slice(0, 10),
+  date: localISODate(),
   status: "Bozza",
   body: "",
   publishedToPortal: false,
@@ -2234,6 +2246,7 @@ function App() {
 
   const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!condominiumRequestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
     if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
     const data = { ...condominiumRequestForm, description: condominiumRequestForm.description.trim(), response: condominiumRequestForm.response.trim() };
     if (selectedCondominiumRequest) setCondominiumRequests((current) => current.map((request) => request.id === selectedCondominiumRequest.id ? { ...data, id: selectedCondominiumRequest.id } : request));
@@ -2251,47 +2264,48 @@ function App() {
     communicationId?: number,
     emailSubject?: string,
     emailBody?: string,
-    audience?: CommunicationAudience
+    audience: CommunicationAudience = "Tutti"
   ) => {
-    /*
-      Destinatari:
-      - Tutti: condòmini attivi dell'anagrafica;
-      - Selezionati: esclusivamente gli ID selezionati nell'anagrafica condòmini;
-      - Consiglio: consiglieri attivi del portale associati al condominio.
-    */
-    const recipients = audience === "Consiglio"
-      ? portalMembers
-          .filter(
-            (member) =>
-              member.condominiumId === condominiumId &&
-              member.role === "council" &&
-              member.active &&
-              member.email.trim()
-          )
-          .map((member) => member.email.trim())
-      : condominiumMembers
-          .filter(
-            (member) =>
-              member.condominiumId === condominiumId &&
-              member.active &&
-              member.email.trim() &&
-              (!memberIds || memberIds.includes(member.id))
-          )
-          .map((member) => member.email.trim());
+    const condominium = condominiums.find((item) => item.id === condominiumId);
 
-    const uniqueRecipients = Array.from(new Set(recipients));
+    const recipientEmails =
+      audience === "Consiglio"
+        ? portalMembers
+            .filter(
+              (member) =>
+                member.condominiumId === condominiumId &&
+                member.role === "council" &&
+                member.active &&
+                member.email.trim()
+            )
+            .map((member) => member.email.trim())
+        : condominiumMembers
+            .filter(
+              (member) =>
+                member.condominiumId === condominiumId &&
+                member.active &&
+                member.email.trim() &&
+                (!memberIds || memberIds.includes(member.id))
+            )
+            .map((member) => member.email.trim());
+
+    // Evita destinatari duplicati, mantenendo il primo indirizzo inserito.
+    const uniqueRecipients = Array.from(
+      new Map(
+        recipientEmails.map((email) => [email.toLowerCase(), email])
+      ).values()
+    );
 
     if (!uniqueRecipients.length) {
       alert(
         audience === "Consiglio"
-          ? "Non ci sono consiglieri attivi del portale con un indirizzo e-mail disponibile."
+          ? "Non ci sono consiglieri attivi con un indirizzo e-mail disponibile per questo condominio."
           : "Non ci sono condòmini attivi con un indirizzo e-mail disponibile."
       );
       return;
     }
 
     const bcc = uniqueRecipients.join(",");
-    const condominium = condominiums.find((item) => item.id === condominiumId);
     const subject =
       emailSubject?.trim() ||
       `Comunicazione - ${condominium?.name || "Condominio"}`;
@@ -2633,7 +2647,7 @@ function App() {
         c.publishedToPortal
     ).length;
 
-  const todayISO = new Date().toLocaleDateString("en-CA");
+  const todayISO = localISODate();
   const overdueDeadlines = deadlines.filter(
     (d) => d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
   ).length;
@@ -5747,7 +5761,7 @@ function DeadlinesPage({
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
-  const todayISO = new Date().toLocaleDateString("en-CA");
+  const todayISO = localISODate();
   const filtered = deadlines
       .filter((d: Deadline) => {
         const textMatch = `${d.title} ${d.category} ${condominiumName(d.condominiumId)} ${d.notes}`.toLowerCase().includes(search.toLowerCase());
@@ -9428,6 +9442,15 @@ function CommunicationForm({
           </div></div>
         )}
 
+        {value.audience === "Consiglio" && (
+          <div className="field full recipient-picker">
+            <label>Destinatari del Consiglio</label>
+            <div className="recipient-help">
+              Verranno utilizzati gli indirizzi e-mail dei membri attivi con ruolo <b>Consigliere</b> nel Portale condomini per il condominio selezionato.
+            </div>
+          </div>
+        )}
+
         <Field
           label="Data"
           type="date"
@@ -11541,4 +11564,8 @@ ReactDOM.createRoot(
   document.getElementById(
     "root"
   )!
-).r
+).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
