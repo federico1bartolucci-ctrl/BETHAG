@@ -1437,6 +1437,18 @@ function App() {
       communications.filter(
         (x) =>
           x.condominiumId === item.id
+      ).length +
+      condominiumMembers.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      condominiumRequests.filter(
+        (x) =>
+          x.condominiumId === item.id
+      ).length +
+      portalMembers.filter(
+        (x) =>
+          x.condominiumId === item.id
       ).length;
 
     const message =
@@ -2202,14 +2214,51 @@ function App() {
   const deleteCondominiumRequest = (id: number) => { if (!confirm("Eliminare questa segnalazione o richiesta?")) return; setCondominiumRequests((current) => current.filter((request) => request.id !== id)); };
   const updateCondominiumRequestStatus = (id: number, status: RequestStatus) => { setCondominiumRequests((current) => current.map((request) => request.id === id ? { ...request, status } : request)); };
 
-  const prepareCondominiumEmail = (condominiumId: number, memberIds?: number[], communicationId?: number) => {
-    const recipients = condominiumMembers.filter((member) => member.condominiumId === condominiumId && member.active && member.email.trim() && (!memberIds || memberIds.includes(member.id)));
-    if (!recipients.length) { alert("Non ci sono condòmini attivi con un indirizzo e-mail disponibile."); return; }
+  const prepareCondominiumEmail = (
+    condominiumId: number,
+    memberIds?: number[],
+    communicationId?: number,
+    emailSubject?: string,
+    emailBody?: string
+  ) => {
+    const recipients = condominiumMembers.filter(
+      (member) =>
+        member.condominiumId === condominiumId &&
+        member.active &&
+        member.email.trim() &&
+        (!memberIds || memberIds.includes(member.id))
+    );
+
+    if (!recipients.length) {
+      alert("Non ci sono condòmini attivi con un indirizzo e-mail disponibile.");
+      return;
+    }
+
     const bcc = recipients.map((member) => member.email.trim()).join(",");
     const condominium = condominiums.find((item) => item.id === condominiumId);
-    const subject = `Comunicazione - ${condominium?.name || "Condominio"}`;
-    window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("Inserisci qui il testo della comunicazione.")}`;
-    if (communicationId) setCommunications((current) => current.map((communication) => communication.id === communicationId ? { ...communication, emailStatus: "Predisposta", emailPreparedAt: new Date().toISOString() } : communication));
+    const subject =
+      emailSubject?.trim() ||
+      `Comunicazione - ${condominium?.name || "Condominio"}`;
+    const body =
+      emailBody?.trim() ||
+      "Inserisci qui il testo della comunicazione.";
+
+    window.location.href =
+      `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    if (communicationId) {
+      setCommunications((current) =>
+        current.map((communication) =>
+          communication.id === communicationId
+            ? {
+                ...communication,
+                emailStatus: "Predisposta",
+                emailPreparedAt: new Date().toISOString(),
+              }
+            : communication
+        )
+      );
+    }
   };
 
   /* =======================================================
@@ -2449,14 +2498,6 @@ function App() {
   const newCondominiumRequest = (condominiumId: number) => { setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request"); };
 
   const newCommunication = (condominiumId?: number) => {
-    if (
-      !requirePlan(
-        "portal",
-        "Le comunicazioni pubblicabili nel portale"
-      )
-    )
-      return;
-
     setSelectedCommunication(null);
 
     setCommunicationForm({
@@ -9182,12 +9223,15 @@ function CommunicationForm({
                 v
                   ? Number(v)
                   : null,
+              recipientIds: [],
             })
           }
           options={[
-            ["Tutti", "Tutti i condòmini"],
-            ["Selezionati", "Condòmini selezionati"],
-            ["Consiglio", "Consiglio"],
+            ["", "Seleziona un condominio"],
+            ...condominiums.map((item: Condominium) => [
+              String(item.id),
+              item.name,
+            ]),
           ]}
         />
 
@@ -9208,11 +9252,11 @@ function CommunicationForm({
           options={[
             [
               "Tutti",
-              "Tutti",
+              "Tutti i condòmini",
             ],
             [
-              "Condomino",
-              "Condomino",
+              "Selezionati",
+              "Condòmini selezionati",
             ],
             [
               "Consiglio",
@@ -9327,7 +9371,7 @@ function CommunicationForm({
       </div>
 
       {value.condominiumId && (
-        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
+        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
       )}
 
       <Actions
