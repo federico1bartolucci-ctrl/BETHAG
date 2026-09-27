@@ -4,14 +4,35 @@ import ReactDOM from "react-dom/client";
 /* =========================================================
    BETHAG
    Gestionale amministrazione condominiale
-   Versione modulare Free / Plus / Professional / Portal
+
+   VERSIONE:
+   Free / Plus / Professional / Portal
+
+   ARCHITETTURA FRONTEND:
+   - Dashboard
+   - Condomini
+   - Scheda condominio
+   - Documenti
+   - Scadenze
+   - Assemblee
+   - Fornitori
+   - Attività
+   - Comunicazioni
+   - BETHAG AI
+   - Portale condomini
+   - Collaboratori e ruoli
+   - Piano / abbonamento
+   - Profilo amministratore
+   - Workspace
 
    NOTA:
    Questa versione prepara l'architettura frontend.
-   AI, autenticazione reale, pagamenti, database cloud,
-   trascrizione audio e portale reale richiederanno
-   successivamente un backend.
+   Autenticazione reale, isolamento reale degli account,
+   database cloud, pagamenti, AI reale, OCR reale,
+   trascrizione audio reale e portale online reale
+   richiederanno successivamente un backend.
    ========================================================= */
+
 
 /* =========================================================
    TIPI
@@ -25,6 +46,7 @@ type Page =
   | "assemblee"
   | "fornitori"
   | "attivita"
+  | "comunicazioni"
   | "ai"
   | "portale"
   | "abbonamento"
@@ -86,7 +108,17 @@ type PortalPermission =
   | "verbali"
   | "regolamento"
   | "pagamenti"
-  | "assemblee";
+  | "assemblee"
+  | "comunicazioni";
+
+type CommunicationStatus =
+  | "Bozza"
+  | "Pubblicata";
+
+type CommunicationAudience =
+  | "Tutti"
+  | "Condomino"
+  | "Consiglio";
 
 type Condominium = {
   id: number;
@@ -176,6 +208,7 @@ type AdminProfile = {
   address: string;
   fiscalCode: string;
   vat: string;
+  workspaceId: string;
 };
 
 type PortalMember = {
@@ -194,6 +227,24 @@ type Subscription = {
   status: "Attivo" | "Demo";
   renewalDate: string;
 };
+
+type Communication = {
+  id: number;
+  title: string;
+  condominiumId: number | null;
+  audience: CommunicationAudience;
+  date: string;
+  status: CommunicationStatus;
+  body: string;
+  publishedToPortal: boolean;
+};
+
+type WorkspaceSummary = {
+  id: string;
+  name: string;
+  owner: string;
+};
+
 
 /* =========================================================
    PIANI
@@ -222,21 +273,24 @@ const PLAN_LEVEL: Record<PlanId, number> = {
   portal: 3,
 };
 
+
 /* =========================================================
    STORAGE
    ========================================================= */
 
 const KEYS = {
-  condominiums: "bethag-condominiums-v4",
-  deadlines: "bethag-deadlines-v4",
-  documents: "bethag-documents-v4",
-  assemblies: "bethag-assemblies-v4",
-  suppliers: "bethag-suppliers-v4",
-  activities: "bethag-activities-v4",
-  profile: "bethag-profile-v4",
-  portalMembers: "bethag-portal-members-v1",
-  subscription: "bethag-subscription-v1",
+  condominiums: "bethag-condominiums-v5",
+  deadlines: "bethag-deadlines-v5",
+  documents: "bethag-documents-v5",
+  assemblies: "bethag-assemblies-v5",
+  suppliers: "bethag-suppliers-v5",
+  activities: "bethag-activities-v5",
+  communications: "bethag-communications-v1",
+  profile: "bethag-profile-v5",
+  portalMembers: "bethag-portal-members-v2",
+  subscription: "bethag-subscription-v2",
 };
+
 
 /* =========================================================
    DATI INIZIALI
@@ -547,6 +601,31 @@ const initialActivities: Activity[] = [
   },
 ];
 
+const initialCommunications: Communication[] = [
+  {
+    id: 1,
+    title: "Avviso manutenzione parti comuni",
+    condominiumId: 1,
+    audience: "Tutti",
+    date: "2026-09-25",
+    status: "Pubblicata",
+    body:
+      "Si informa che nei prossimi giorni verranno effettuati interventi di manutenzione nelle parti comuni.",
+    publishedToPortal: true,
+  },
+  {
+    id: 2,
+    title: "Convocazione assemblea",
+    condominiumId: 2,
+    audience: "Tutti",
+    date: "2026-09-26",
+    status: "Bozza",
+    body:
+      "Convocazione dell'assemblea condominiale.",
+    publishedToPortal: false,
+  },
+];
+
 const initialPortalMembers: PortalMember[] = [
   {
     id: 1,
@@ -560,6 +639,7 @@ const initialPortalMembers: PortalMember[] = [
       "verbali",
       "regolamento",
       "assemblee",
+      "comunicazioni",
     ],
     active: true,
   },
@@ -570,6 +650,7 @@ const initialSubscription: Subscription = {
   status: "Demo",
   renewalDate: "",
 };
+
 
 /* =========================================================
    EMPTY
@@ -655,6 +736,17 @@ const emptyActivity: Activity = {
   notes: "",
 };
 
+const emptyCommunication: Communication = {
+  id: 0,
+  title: "",
+  condominiumId: null,
+  audience: "Tutti",
+  date: new Date().toISOString().slice(0, 10),
+  status: "Bozza",
+  body: "",
+  publishedToPortal: false,
+};
+
 const emptyProfile: AdminProfile = {
   name: "",
   company: "",
@@ -663,7 +755,9 @@ const emptyProfile: AdminProfile = {
   address: "",
   fiscalCode: "",
   vat: "",
+  workspaceId: "",
 };
+
 
 /* =========================================================
    HELPERS
@@ -686,6 +780,16 @@ function makeId() {
     Date.now() +
     Math.floor(Math.random() * 1000)
   );
+}
+
+function makeWorkspaceId() {
+  return `WS-${Date.now()
+    .toString(36)
+    .toUpperCase()}-${Math.floor(
+    Math.random() * 9999
+  )
+    .toString()
+    .padStart(4, "0")}`;
 }
 
 function formatDate(value: string) {
@@ -770,6 +874,36 @@ function hasFeature(
   return PLAN_LEVEL[plan] >= PLAN_LEVEL[required];
 }
 
+function roleName(role: UserRole) {
+  const labels: Record<UserRole, string> = {
+    admin: "Amministratore",
+    collaborator: "Collaboratore",
+    resident: "Condomino",
+    council: "Consigliere",
+  };
+
+  return labels[role];
+}
+
+function permissionName(
+  permission: PortalPermission
+) {
+  const labels: Record<
+    PortalPermission,
+    string
+  > = {
+    documenti: "Documenti",
+    verbali: "Verbali",
+    regolamento: "Regolamento",
+    pagamenti: "Pagamenti",
+    assemblee: "Assemblee",
+    comunicazioni: "Comunicazioni",
+  };
+
+  return labels[permission];
+}
+
+
 /* =========================================================
    APP
    ========================================================= */
@@ -832,14 +966,30 @@ function App() {
         )
     );
 
-  const [profile, setProfile] =
-    useState<AdminProfile>(
+  const [communications, setCommunications] =
+    useState<Communication[]>(
       () =>
         load(
-          KEYS.profile,
-          emptyProfile
+          KEYS.communications,
+          initialCommunications
         )
     );
+
+  const [profile, setProfile] =
+    useState<AdminProfile>(() => {
+      const stored = load(
+        KEYS.profile,
+        emptyProfile
+      );
+
+      return {
+        ...emptyProfile,
+        ...stored,
+        workspaceId:
+          stored.workspaceId ||
+          makeWorkspaceId(),
+      };
+    });
 
   const [portalMembers, setPortalMembers] =
     useState<PortalMember[]>(
@@ -902,6 +1052,11 @@ function App() {
     setSelectedActivity,
   ] = useState<Activity | null>(null);
 
+  const [
+    selectedCommunication,
+    setSelectedCommunication,
+  ] = useState<Communication | null>(null);
+
   const [showModal, setShowModal] =
     useState(false);
 
@@ -927,6 +1082,14 @@ function App() {
 
   const [activityForm, setActivityForm] =
     useState<Activity>(emptyActivity);
+
+  const [
+    communicationForm,
+    setCommunicationForm,
+  ] = useState<Communication>(
+    emptyCommunication
+  );
+
 
   /* =======================================================
      PERSISTENZA
@@ -976,6 +1139,13 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem(
+      KEYS.communications,
+      JSON.stringify(communications)
+    );
+  }, [communications]);
+
+  useEffect(() => {
+    localStorage.setItem(
       KEYS.profile,
       JSON.stringify(profile)
     );
@@ -994,6 +1164,7 @@ function App() {
       JSON.stringify(subscription)
     );
   }, [subscription]);
+
 
   /* =======================================================
      HELPERS
@@ -1016,6 +1187,7 @@ function App() {
     setSelectedAssembly(null);
     setSelectedSupplier(null);
     setSelectedActivity(null);
+    setSelectedCommunication(null);
   };
 
   const openModal = (type: string) => {
@@ -1052,6 +1224,7 @@ function App() {
       );
     }, [condominiums, search]);
 
+
   /* =======================================================
      GESTIONE PIANO
      ======================================================= */
@@ -1079,6 +1252,7 @@ function App() {
 
     return false;
   };
+
 
   /* =======================================================
      CONDOMINI
@@ -1177,6 +1351,10 @@ function App() {
       activities.filter(
         (x) =>
           x.condominiumId === item.id
+      ).length +
+      communications.filter(
+        (x) =>
+          x.condominiumId === item.id
       ).length;
 
     const message =
@@ -1227,6 +1405,13 @@ function App() {
       )
     );
 
+    setCommunications((current) =>
+      current.filter(
+        (x) =>
+          x.condominiumId !== item.id
+      )
+    );
+
     setPortalMembers((current) =>
       current.filter(
         (x) =>
@@ -1236,6 +1421,7 @@ function App() {
 
     setSelectedCondominium(null);
   };
+
 
   /* =======================================================
      SCADENZE
@@ -1330,6 +1516,7 @@ function App() {
       )
     );
   };
+
 
   /* =======================================================
      DOCUMENTI
@@ -1502,6 +1689,7 @@ function App() {
       )
     );
   };
+
 
   /* =======================================================
      ASSEMBLEE
@@ -1739,6 +1927,7 @@ function App() {
     );
   };
 
+
   /* =======================================================
      FORNITORI
      ======================================================= */
@@ -1813,6 +2002,7 @@ function App() {
       )
     );
   };
+
 
   /* =======================================================
      ATTIVITÀ
@@ -1897,6 +2087,128 @@ function App() {
     );
   };
 
+
+  /* =======================================================
+     COMUNICAZIONI
+     ======================================================= */
+
+  const saveCommunication = (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (
+      !communicationForm.title.trim() ||
+      !communicationForm.body.trim()
+    ) {
+      alert(
+        "Inserisci titolo e contenuto della comunicazione."
+      );
+      return;
+    }
+
+    if (
+      communicationForm.publishedToPortal &&
+      !requirePlan(
+        "portal",
+        "La pubblicazione delle comunicazioni nel portale"
+      )
+    ) {
+      return;
+    }
+
+    const data = {
+      ...communicationForm,
+      title:
+        communicationForm.title.trim(),
+      body:
+        communicationForm.body.trim(),
+    };
+
+    if (selectedCommunication) {
+      setCommunications((current) =>
+        current.map((item) =>
+          item.id ===
+          selectedCommunication.id
+            ? {
+                ...data,
+                id:
+                  selectedCommunication.id,
+              }
+            : item
+        )
+      );
+    } else {
+      setCommunications((current) => [
+        {
+          ...data,
+          id: makeId(),
+        },
+        ...current,
+      ]);
+    }
+
+    setCommunicationForm(
+      emptyCommunication
+    );
+    setSelectedCommunication(null);
+    closeModal();
+  };
+
+  const editCommunication = (
+    item: Communication
+  ) => {
+    setSelectedCommunication(item);
+    setCommunicationForm(item);
+    openModal("communication");
+  };
+
+  const deleteCommunication = (
+    id: number
+  ) => {
+    if (
+      !confirm(
+        "Eliminare questa comunicazione?"
+      )
+    )
+      return;
+
+    setCommunications((current) =>
+      current.filter(
+        (item) => item.id !== id
+      )
+    );
+  };
+
+  const toggleCommunicationPublication = (
+    id: number
+  ) => {
+    if (
+      !requirePlan(
+        "portal",
+        "La pubblicazione delle comunicazioni"
+      )
+    )
+      return;
+
+    setCommunications((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              publishedToPortal:
+                !item.publishedToPortal,
+              status:
+                item.publishedToPortal
+                  ? "Bozza"
+                  : "Pubblicata",
+            }
+          : item
+      )
+    );
+  };
+
+
   /* =======================================================
      PORTALE
      ======================================================= */
@@ -1953,6 +2265,7 @@ function App() {
     );
   };
 
+
   /* =======================================================
      NUOVI ELEMENTI
      ======================================================= */
@@ -2007,6 +2320,27 @@ function App() {
     openModal("activity");
   };
 
+  const newCommunication = () => {
+    if (
+      !requirePlan(
+        "portal",
+        "Le comunicazioni pubblicabili nel portale"
+      )
+    )
+      return;
+
+    setSelectedCommunication(null);
+
+    setCommunicationForm({
+      ...emptyCommunication,
+      condominiumId:
+        condominiums[0]?.id || null,
+    });
+
+    openModal("communication");
+  };
+
+
   /* =======================================================
      DASHBOARD
      ======================================================= */
@@ -2052,16 +2386,25 @@ function App() {
         "Completata"
     ).length;
 
+  const publishedCommunications =
+    communications.filter(
+      (c) =>
+        c.publishedToPortal
+    ).length;
+
+
   return (
     <>
       <style>{styles}</style>
 
       <div className="app">
+
         {/* =================================================
             SIDEBAR
            ================================================= */}
 
         <aside className="sidebar">
+
           <div className="logo">
             BET<span>H</span>AG
           </div>
@@ -2072,9 +2415,14 @@ function App() {
                 subscription.plan
               ]}
             </span>
+
+            <small>
+              {profile.workspaceId}
+            </small>
           </div>
 
           <nav className="nav">
+
             <NavButton
               active={
                 page === "dashboard"
@@ -2153,7 +2501,20 @@ function App() {
             </NavButton>
 
             <NavButton
-              active={page === "ai"}
+              active={
+                page === "comunicazioni"
+              }
+              onClick={() =>
+                navigate("comunicazioni")
+              }
+            >
+              📢 Comunicazioni
+            </NavButton>
+
+            <NavButton
+              active={
+                page === "ai"
+              }
               onClick={() =>
                 navigate("ai")
               }
@@ -2174,8 +2535,7 @@ function App() {
 
             <NavButton
               active={
-                page ===
-                "abbonamento"
+                page === "abbonamento"
               }
               onClick={() =>
                 navigate(
@@ -2199,6 +2559,7 @@ function App() {
             >
               👤 Amministratore
             </NavButton>
+
           </nav>
 
           <div className="sidebar-bottom">
@@ -2210,14 +2571,18 @@ function App() {
               condominiale
             </small>
           </div>
+
         </aside>
+
 
         {/* =================================================
             CONTENUTO
            ================================================= */}
 
         <main className="content">
+
           <header className="mobile-header">
+
             <button
               className="icon-button"
               onClick={() =>
@@ -2240,17 +2605,30 @@ function App() {
             >
               ⚙
             </button>
+
           </header>
+
 
           {page === "dashboard" && (
             <Dashboard
               condominiums={
                 condominiums
               }
-              deadlines={deadlines}
-              documents={documents}
-              activities={activities}
-              upcoming={upcoming}
+              deadlines={
+                deadlines
+              }
+              documents={
+                documents
+              }
+              activities={
+                activities
+              }
+              communications={
+                communications
+              }
+              upcoming={
+                upcoming
+              }
               openActivities={
                 openActivities
               }
@@ -2262,6 +2640,9 @@ function App() {
               }
               completedActivities={
                 completedActivities
+              }
+              publishedCommunications={
+                publishedCommunications
               }
               onNavigate={
                 navigate
@@ -2275,6 +2656,7 @@ function App() {
             />
           )}
 
+
           {page === "condomini" && (
             <CondominiumsPage
               condominiums={
@@ -2283,7 +2665,9 @@ function App() {
               allCount={
                 condominiums.length
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2331,6 +2715,9 @@ function App() {
               activities={
                 activities
               }
+              communications={
+                communications
+              }
               condominiumName={
                 condominiumName
               }
@@ -2349,6 +2736,9 @@ function App() {
               onEditActivity={
                 editActivity
               }
+              onEditCommunication={
+                editCommunication
+              }
               onDeleteDeadline={
                 deleteDeadline
               }
@@ -2364,6 +2754,9 @@ function App() {
               onDeleteActivity={
                 deleteActivity
               }
+              onDeleteCommunication={
+                deleteCommunication
+              }
               onStatusDeadline={
                 updateDeadlineStatus
               }
@@ -2376,12 +2769,15 @@ function App() {
             />
           )}
 
+
           {page === "documenti" && (
             <DocumentsPage
               documents={
                 documents
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2412,12 +2808,15 @@ function App() {
             />
           )}
 
+
           {page === "scadenze" && (
             <DeadlinesPage
               deadlines={
                 deadlines
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2439,12 +2838,15 @@ function App() {
             />
           )}
 
+
           {page === "assemblee" && (
             <AssembliesPage
               assemblies={
                 assemblies
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2478,12 +2880,15 @@ function App() {
             />
           )}
 
+
           {page === "fornitori" && (
             <SuppliersPage
               suppliers={
                 suppliers
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2502,12 +2907,15 @@ function App() {
             />
           )}
 
+
           {page === "attivita" && (
             <ActivitiesPage
               activities={
                 activities
               }
-              search={search}
+              search={
+                search
+              }
               setSearch={
                 setSearch
               }
@@ -2528,6 +2936,37 @@ function App() {
               }
             />
           )}
+
+
+          {page === "comunicazioni" && (
+            <CommunicationsPage
+              communications={
+                communications
+              }
+              search={
+                search
+              }
+              setSearch={
+                setSearch
+              }
+              condominiumName={
+                condominiumName
+              }
+              onNew={
+                newCommunication
+              }
+              onEdit={
+                editCommunication
+              }
+              onDelete={
+                deleteCommunication
+              }
+              onPublication={
+                toggleCommunicationPublication
+              }
+            />
+          )}
+
 
           {page === "ai" && (
             <AIPage
@@ -2552,6 +2991,7 @@ function App() {
             />
           )}
 
+
           {page === "portale" && (
             <PortalPage
               members={
@@ -2565,6 +3005,9 @@ function App() {
               }
               assemblies={
                 assemblies
+              }
+              communications={
+                communications
               }
               plan={
                 subscription.plan
@@ -2584,8 +3027,8 @@ function App() {
             />
           )}
 
-          {page ===
-            "abbonamento" && (
+
+          {page === "abbonamento" && (
             <SubscriptionPage
               subscription={
                 subscription
@@ -2596,20 +3039,103 @@ function App() {
             />
           )}
 
-          {page ===
-            "amministratore" && (
+
+          {page === "amministratore" && (
             <ProfilePage
-              profile={profile}
+              profile={
+                profile
+              }
               setProfile={
                 setProfile
               }
               subscription={
                 subscription
               }
+              portalMembers={
+                portalMembers
+              }
             />
           )}
+
         </main>
       </div>
+
+
+      {/* =================================================
+          MOBILE BOTTOM NAV
+         ================================================= */}
+
+      <div className="mobile-bottom-nav">
+
+        <button
+          className={
+            page === "dashboard"
+              ? "mobile-bottom-active"
+              : ""
+          }
+          onClick={() =>
+            navigate("dashboard")
+          }
+        >
+          <span>⌂</span>
+          <small>Home</small>
+        </button>
+
+        <button
+          className={
+            page === "condomini"
+              ? "mobile-bottom-active"
+              : ""
+          }
+          onClick={() =>
+            navigate("condomini")
+          }
+        >
+          <span>🏢</span>
+          <small>Condomini</small>
+        </button>
+
+        <button
+          className="mobile-ai-button"
+          onClick={() =>
+            navigate("ai")
+          }
+        >
+          ✨
+        </button>
+
+        <button
+          className={
+            page === "scadenze"
+              ? "mobile-bottom-active"
+              : ""
+          }
+          onClick={() =>
+            navigate("scadenze")
+          }
+        >
+          <span>📅</span>
+          <small>Scadenze</small>
+        </button>
+
+        <button
+          className={
+            page === "amministratore"
+              ? "mobile-bottom-active"
+              : ""
+          }
+          onClick={() =>
+            navigate(
+              "amministratore"
+            )
+          }
+        >
+          <span>👤</span>
+          <small>Profilo</small>
+        </button>
+
+      </div>
+
 
       {/* =================================================
           MENU MOBILE
@@ -2628,7 +3154,9 @@ function App() {
               e.stopPropagation()
             }
           >
+
             <div className="mobile-menu-header">
+
               <div className="logo">
                 BET<span>H</span>AG
               </div>
@@ -2643,15 +3171,27 @@ function App() {
               >
                 ×
               </button>
+
             </div>
 
             <div className="mobile-plan">
-              {PLAN_NAMES[
-                subscription.plan
-              ]}
+
+              <b>
+                {
+                  PLAN_NAMES[
+                    subscription.plan
+                  ]
+                }
+              </b>
+
+              <small>
+                {profile.workspaceId}
+              </small>
+
             </div>
 
             <div className="mobile-nav">
+
               {(
                 [
                   [
@@ -2681,6 +3221,10 @@ function App() {
                   [
                     "attivita",
                     "✓ Attività",
+                  ],
+                  [
+                    "comunicazioni",
+                    "📢 Comunicazioni",
                   ],
                   [
                     "ai",
@@ -2719,10 +3263,12 @@ function App() {
                   </NavButton>
                 )
               )}
+
             </div>
           </div>
         </div>
       )}
+
 
       {/* =================================================
           MODALI
@@ -2732,6 +3278,7 @@ function App() {
         <Modal
           onClose={closeModal}
         >
+
           {modalType ===
             "condominium" && (
             <CondominiumForm
@@ -2882,11 +3429,38 @@ function App() {
               }
             />
           )}
+
+          {modalType ===
+            "communication" && (
+            <CommunicationForm
+              value={
+                communicationForm
+              }
+              setValue={
+                setCommunicationForm
+              }
+              condominiums={
+                condominiums
+              }
+              onSubmit={
+                saveCommunication
+              }
+              onCancel={
+                closeModal
+              }
+              editing={
+                !!selectedCommunication
+              }
+            />
+          )}
+
         </Modal>
       )}
+
     </>
   );
 }
+
 
 /* =========================================================
    NAV BUTTON
@@ -2913,6 +3487,7 @@ function NavButton({
   );
 }
 
+
 /* =========================================================
    DASHBOARD
    ========================================================= */
@@ -2922,11 +3497,13 @@ function Dashboard({
   deadlines,
   documents,
   activities,
+  communications,
   upcoming,
   openActivities,
   urgentDeadlines,
   completedDeadlines,
   completedActivities,
+  publishedCommunications,
   onNavigate,
   condominiumName,
   subscription,
@@ -2934,7 +3511,9 @@ function Dashboard({
   return (
     <>
       <header className="topbar">
+
         <div>
+
           <div className="eyebrow">
             {PLAN_NAMES[
               subscription.plan
@@ -2944,6 +3523,12 @@ function Dashboard({
           <h1>
             Buongiorno 👋
           </h1>
+
+          <p className="dashboard-subtitle">
+            Il centro operativo di BETHAG
+            per la gestione dei tuoi condomini.
+          </p>
+
         </div>
 
         <button
@@ -2956,9 +3541,12 @@ function Dashboard({
         >
           Amministratore
         </button>
+
       </header>
 
+
       <section className="stats">
+
         <button
           className="stat-card"
           onClick={() =>
@@ -3034,9 +3622,12 @@ function Dashboard({
             Attività aperte
           </small>
         </button>
+
       </section>
 
+
       <section className="mini-stats">
+
         <div className="mini-stat">
           <b>
             {urgentDeadlines}
@@ -3066,10 +3657,24 @@ function Dashboard({
             Attività completate
           </span>
         </div>
+
+        <div className="mini-stat">
+          <b>
+            {publishedCommunications}
+          </b>
+
+          <span>
+            Comunicazioni pubblicate
+          </span>
+        </div>
+
       </section>
 
+
       <section className="dashboard-grid">
+
         <div className="card">
+
           <SectionTitle
             title="Prossime scadenze"
             action="Vedi tutte"
@@ -3090,6 +3695,7 @@ function Dashboard({
                   className="list-row"
                   key={item.id}
                 >
+
                   <div>
                     <b>
                       {item.title}
@@ -3113,6 +3719,7 @@ function Dashboard({
                       item.dueDate
                     )}
                   </strong>
+
                 </div>
               )
             )
@@ -3129,9 +3736,12 @@ function Dashboard({
               attenzione.
             </div>
           )}
+
         </div>
 
+
         <div className="card">
+
           <SectionTitle
             title="Attività recenti"
             action="Vedi tutte"
@@ -3150,11 +3760,14 @@ function Dashboard({
               .slice(-5)
               .reverse()
               .map(
-                (a: Activity) => (
+                (
+                  a: Activity
+                ) => (
                   <div
                     className="activity"
                     key={a.id}
                   >
+
                     <b>
                       {a.title}
                     </b>
@@ -3166,15 +3779,153 @@ function Dashboard({
                       ·{" "}
                       {a.status}
                     </small>
+
                   </div>
                 )
               )
           )}
+
         </div>
+
       </section>
 
+
+      <section className="dashboard-grid dashboard-secondary">
+
+        <div className="card">
+
+          <SectionTitle
+            title="Comunicazioni"
+            action="Apri"
+            onClick={() =>
+              onNavigate(
+                "comunicazioni"
+              )
+            }
+          />
+
+          {communications.length ===
+          0 ? (
+            <Empty text="Nessuna comunicazione." />
+          ) : (
+            communications
+              .slice(0, 4)
+              .map(
+                (
+                  c: Communication
+                ) => (
+                  <div
+                    className="list-row"
+                    key={c.id}
+                  >
+                    <div>
+                      <b>
+                        {c.title}
+                      </b>
+
+                      <small>
+                        {c.condominiumId
+                          ? condominiumName(
+                              c.condominiumId
+                            )
+                          : "Tutti i condomini"}
+                      </small>
+
+                      <Badge
+                        value={
+                          c.status
+                        }
+                      />
+                    </div>
+
+                    <strong>
+                      {formatDate(
+                        c.date
+                      )}
+                    </strong>
+                  </div>
+                )
+              )
+          )}
+
+        </div>
+
+
+        <div className="card">
+
+          <SectionTitle
+            title="Accessi rapidi"
+          />
+
+          <div className="quick-grid">
+
+            <button
+              className="quick-action"
+              onClick={() =>
+                onNavigate(
+                  "condomini"
+                )
+              }
+            >
+              🏢
+              <span>
+                Schede condominio
+              </span>
+            </button>
+
+            <button
+              className="quick-action"
+              onClick={() =>
+                onNavigate(
+                  "documenti"
+                )
+              }
+            >
+              📁
+              <span>
+                Archivio
+              </span>
+            </button>
+
+            <button
+              className="quick-action"
+              onClick={() =>
+                onNavigate(
+                  "assemblee"
+                )
+              }
+            >
+              👥
+              <span>
+                Assemblee
+              </span>
+            </button>
+
+            <button
+              className="quick-action"
+              onClick={() =>
+                onNavigate(
+                  "ai"
+                )
+              }
+            >
+              ✨
+              <span>
+                BETHAG AI
+              </span>
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
       <section className="ai-card">
+
         <div>
+
           <span className="ai-kicker">
             BETHAG AI
           </span>
@@ -3186,11 +3937,12 @@ function Dashboard({
 
           <p>
             Documenti, scadenze,
-            assemblee, attività e
-            automazioni possono
-            essere collegati in un
+            assemblee, attività,
+            comunicazioni e automazioni
+            possono essere collegati in un
             unico sistema.
           </p>
+
         </div>
 
         <button
@@ -3201,10 +3953,12 @@ function Dashboard({
         >
           Apri BETHAG AI
         </button>
+
       </section>
     </>
   );
 }
+
 
 /* =========================================================
    COMPONENTI GENERALI
@@ -3221,7 +3975,10 @@ function SectionTitle({
 }) {
   return (
     <div className="section-title">
-      <h2>{title}</h2>
+
+      <h2>
+        {title}
+      </h2>
 
       {action && (
         <button
@@ -3231,6 +3988,7 @@ function SectionTitle({
           {action}
         </button>
       )}
+
     </div>
   );
 }
@@ -3249,7 +4007,9 @@ function Badge({
     value ===
       "Completata" ||
     value === "Svolto" ||
-    value === "Confermato";
+    value === "Confermato" ||
+    value === "Pubblicata" ||
+    value === "Attivo";
 
   return (
     <span
@@ -3291,12 +4051,17 @@ function PageHeader({
 }) {
   return (
     <div className="page-header">
+
       <div>
+
         <div className="eyebrow">
           {eyebrow}
         </div>
 
-        <h1>{title}</h1>
+        <h1>
+          {title}
+        </h1>
+
       </div>
 
       {action && (
@@ -3307,6 +4072,7 @@ function PageHeader({
           {action}
         </button>
       )}
+
     </div>
   );
 }
@@ -3322,6 +4088,7 @@ function SearchBox({
 }) {
   return (
     <div className="search-card">
+
       <input
         className="search-input"
         value={value}
@@ -3334,9 +4101,11 @@ function SearchBox({
           placeholder
         }
       />
+
     </div>
   );
 }
+
 
 /* =========================================================
    CONDOMINI
@@ -3360,17 +4129,20 @@ function CondominiumsPage(
     assemblies,
     suppliers,
     activities,
+    communications,
     condominiumName,
     onEditDeadline,
     onEditDocument,
     onEditAssembly,
     onEditSupplier,
     onEditActivity,
+    onEditCommunication,
     onDeleteDeadline,
     onDeleteDocument,
     onDeleteAssembly,
     onDeleteSupplier,
     onDeleteActivity,
+    onDeleteCommunication,
     onStatusDeadline,
     onStatusAssembly,
     onStatusActivity,
@@ -3388,7 +4160,9 @@ function CondominiumsPage(
   if (selected) {
     return (
       <div className="condominium-detail-page">
+
         <div className="detail-page-header">
+
           <button
             type="button"
             className="back-button"
@@ -3404,12 +4178,15 @@ function CondominiumsPage(
             ← Torna ai condomini
           </button>
 
+
           <div className="detail-page-heading">
+
             <div className="detail-page-icon">
               🏢
             </div>
 
             <div className="detail-page-heading-text">
+
               <div className="eyebrow">
                 Scheda condominio
               </div>
@@ -3430,10 +4207,14 @@ function CondominiumsPage(
                   ? ` (${selected.province})`
                   : ""}
               </p>
+
             </div>
+
           </div>
 
+
           <div className="detail-page-actions">
+
             <button
               className="secondary-button"
               onClick={() =>
@@ -3451,8 +4232,11 @@ function CondominiumsPage(
             >
               🗑 Elimina
             </button>
+
           </div>
+
         </div>
+
 
         <CondominiumDetails
           item={selected}
@@ -3490,6 +4274,11 @@ function CondominiumsPage(
               x.condominiumId ===
               selected.id
           )}
+          communications={communications.filter(
+            (x: Communication) =>
+              x.condominiumId ===
+              selected.id
+          )}
           condominiumName={
             condominiumName
           }
@@ -3508,6 +4297,9 @@ function CondominiumsPage(
           onEditActivity={
             onEditActivity
           }
+          onEditCommunication={
+            onEditCommunication
+          }
           onDeleteDeadline={
             onDeleteDeadline
           }
@@ -3523,6 +4315,9 @@ function CondominiumsPage(
           onDeleteActivity={
             onDeleteActivity
           }
+          onDeleteCommunication={
+            onDeleteCommunication
+          }
           onStatusDeadline={
             onStatusDeadline
           }
@@ -3533,12 +4328,14 @@ function CondominiumsPage(
             onStatusActivity
           }
         />
+
       </div>
     );
   }
 
   return (
     <>
+
       <PageHeader
         eyebrow="Gestione patrimonio"
         title="Condomìni"
@@ -3559,6 +4356,7 @@ function CondominiumsPage(
       </div>
 
       <section className="cards-grid">
+
         {condominiums.length ===
         0 ? (
           <Empty text="Nessun condominio trovato." />
@@ -3569,6 +4367,7 @@ function CondominiumsPage(
                 className="entity-card"
                 key={c.id}
               >
+
                 <div className="entity-icon">
                   🏢
                 </div>
@@ -3591,6 +4390,7 @@ function CondominiumsPage(
                 </div>
 
                 <div className="button-row">
+
                   <button
                     className="primary-button"
                     onClick={() =>
@@ -3608,15 +4408,19 @@ function CondominiumsPage(
                   >
                     Modifica
                   </button>
+
                 </div>
+
               </article>
             )
           )
         )}
+
       </section>
     </>
   );
 }
+
 
 /* =========================================================
    DETTAGLIO CONDOMINIO
@@ -3635,25 +4439,58 @@ function CondominiumDetails(
     assemblies,
     suppliers,
     activities,
+    communications,
     onEditDeadline,
     onEditDocument,
     onEditAssembly,
     onEditSupplier,
     onEditActivity,
+    onEditCommunication,
     onDeleteDeadline,
     onDeleteDocument,
     onDeleteAssembly,
     onDeleteSupplier,
     onDeleteActivity,
+    onDeleteCommunication,
     onStatusDeadline,
     onStatusAssembly,
     onStatusActivity,
   } = props;
 
+  const openDeadlines =
+    deadlines.filter(
+      (x: Deadline) =>
+        x.status !==
+        "Completata"
+    ).length;
+
+  const openActivities =
+    activities.filter(
+      (x: Activity) =>
+        x.status !==
+        "Completata"
+    ).length;
+
+  const publishedDocuments =
+    documents.filter(
+      (x: DocumentItem) =>
+        x.publication ===
+        "Condiviso"
+    ).length;
+
+  const publishedCommunications =
+    communications.filter(
+      (x: Communication) =>
+        x.publishedToPortal
+    ).length;
+
   return (
     <section className="detail-card">
+
       <div className="section-title">
+
         <div>
+
           <div className="eyebrow">
             Dati del condominio
           </div>
@@ -3661,6 +4498,7 @@ function CondominiumDetails(
           <h2>
             {item.name}
           </h2>
+
         </div>
 
         <button
@@ -3669,9 +4507,71 @@ function CondominiumDetails(
         >
           Torna all'elenco
         </button>
+
       </div>
 
+
+      <div className="condominium-overview">
+
+        <div className="overview-stat">
+          <b>
+            {openDeadlines}
+          </b>
+          <span>
+            Scadenze aperte
+          </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>
+            {documents.length}
+          </b>
+          <span>
+            Documenti
+          </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>
+            {assemblies.length}
+          </b>
+          <span>
+            Assemblee
+          </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>
+            {openActivities}
+          </b>
+          <span>
+            Attività aperte
+          </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>
+            {publishedDocuments}
+          </b>
+          <span>
+            Documenti condivisi
+          </span>
+        </div>
+
+        <div className="overview-stat">
+          <b>
+            {publishedCommunications}
+          </b>
+          <span>
+            Comunicazioni pubblicate
+          </span>
+        </div>
+
+      </div>
+
+
       <div className="detail-grid">
+
         <Detail
           label="Indirizzo"
           value={`${item.address}, ${item.cap} ${item.city}${
@@ -3733,9 +4633,12 @@ function CondominiumDetails(
             "Non inserito"
           }
         />
+
       </div>
 
+
       <div className="notes">
+
         <div className="detail-label">
           Note
         </div>
@@ -3744,9 +4647,12 @@ function CondominiumDetails(
           {item.notes ||
             "Nessuna nota inserita."}
         </p>
+
       </div>
 
+
       <div className="button-row">
+
         <button
           className="primary-button"
           onClick={onEdit}
@@ -3760,12 +4666,15 @@ function CondominiumDetails(
         >
           Elimina
         </button>
+
       </div>
+
 
       <RelatedSection
         title="Scadenze"
         count={deadlines.length}
       >
+
         {deadlines.length ===
         0 ? (
           <Empty text="Nessuna scadenza collegata." />
@@ -3798,6 +4707,7 @@ function CondominiumDetails(
                   )
                 }
               >
+
                 <select
                   value={d.status}
                   onChange={(e) =>
@@ -3811,23 +4721,30 @@ function CondominiumDetails(
                   <option>
                     Da fare
                   </option>
+
                   <option>
                     In scadenza
                   </option>
+
                   <option>
                     Completata
                   </option>
+
                 </select>
+
               </RelatedRow>
             )
           )
         )}
+
       </RelatedSection>
+
 
       <RelatedSection
         title="Documenti"
         count={documents.length}
       >
+
         {documents.length ===
         0 ? (
           <Empty text="Nessun documento collegato." />
@@ -3860,12 +4777,15 @@ function CondominiumDetails(
             )
           )
         )}
+
       </RelatedSection>
+
 
       <RelatedSection
         title="Assemblee"
         count={assemblies.length}
       >
+
         {assemblies.length ===
         0 ? (
           <Empty text="Nessuna assemblea collegata." />
@@ -3899,12 +4819,15 @@ function CondominiumDetails(
             )
           )
         )}
+
       </RelatedSection>
+
 
       <RelatedSection
         title="Fornitori"
         count={suppliers.length}
       >
+
         {suppliers.length ===
         0 ? (
           <Empty text="Nessun fornitore collegato." />
@@ -3932,12 +4855,15 @@ function CondominiumDetails(
             )
           )
         )}
+
       </RelatedSection>
+
 
       <RelatedSection
         title="Attività"
         count={activities.length}
       >
+
         {activities.length ===
         0 ? (
           <Empty text="Nessuna attività collegata." />
@@ -3964,6 +4890,7 @@ function CondominiumDetails(
                   )
                 }
               >
+
                 <select
                   value={a.status}
                   onChange={(e) =>
@@ -3977,21 +4904,70 @@ function CondominiumDetails(
                   <option>
                     Aperta
                   </option>
+
                   <option>
                     In corso
                   </option>
+
                   <option>
                     Completata
                   </option>
+
                 </select>
+
               </RelatedRow>
             )
           )
         )}
+
       </RelatedSection>
+
+
+      <RelatedSection
+        title="Comunicazioni"
+        count={communications.length}
+      >
+
+        {communications.length ===
+        0 ? (
+          <Empty text="Nessuna comunicazione collegata." />
+        ) : (
+          communications.map(
+            (
+              c: Communication
+            ) => (
+              <RelatedRow
+                key={c.id}
+                title={c.title}
+                subtitle={`${formatDate(
+                  c.date
+                )} · ${
+                  c.audience
+                }`}
+                badge={
+                  c.status
+                }
+                onEdit={() =>
+                  onEditCommunication(
+                    c
+                  )
+                }
+                onDelete={() =>
+                  onDeleteCommunication(
+                    c.id
+                  )
+                }
+              />
+            )
+          )
+        )}
+
+      </RelatedSection>
+
     </section>
   );
 }
+
 
 function RelatedSection({
   title,
@@ -4004,19 +4980,27 @@ function RelatedSection({
 }) {
   return (
     <div className="related-section">
+
       <div className="related-title">
-        <h3>{title}</h3>
+
+        <h3>
+          {title}
+        </h3>
+
         <span>
           {count}
         </span>
+
       </div>
 
       <div className="related-list">
         {children}
       </div>
+
     </div>
   );
 }
+
 
 function RelatedRow({
   title,
@@ -4035,8 +5019,12 @@ function RelatedRow({
 }) {
   return (
     <div className="related-row">
+
       <div className="related-main">
-        <b>{title}</b>
+
+        <b>
+          {title}
+        </b>
 
         <small>
           {subtitle}
@@ -4047,9 +5035,11 @@ function RelatedRow({
             value={badge}
           />
         )}
+
       </div>
 
       <div className="related-actions">
+
         {children}
 
         <button
@@ -4065,10 +5055,13 @@ function RelatedRow({
         >
           ×
         </button>
+
       </div>
+
     </div>
   );
 }
+
 
 function Detail({
   label,
@@ -4079,6 +5072,7 @@ function Detail({
 }) {
   return (
     <div>
+
       <div className="detail-label">
         {label}
       </div>
@@ -4086,9 +5080,11 @@ function Detail({
       <div className="detail-value">
         {value}
       </div>
+
     </div>
   );
 }
+
 
 /* =========================================================
    DOCUMENTI
@@ -4125,6 +5121,7 @@ function DocumentsPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Archivio digitale"
         title="Documenti"
@@ -4133,7 +5130,9 @@ function DocumentsPage({
       />
 
       <div className="feature-banner">
+
         <div>
+
           <b>
             ✨ Acquisizione intelligente
           </b>
@@ -4142,6 +5141,7 @@ function DocumentsPage({
             PDF · Word · Excel · immagini
             · altri formati
           </span>
+
         </div>
 
         <span className="feature-plan">
@@ -4152,7 +5152,9 @@ function DocumentsPage({
             ? "AI disponibile"
             : "Da Plus"}
         </span>
+
       </div>
+
 
       <SearchBox
         value={search}
@@ -4160,13 +5162,16 @@ function DocumentsPage({
         placeholder="Cerca documento, categoria o condominio..."
       />
 
+
       <div className="document-grid">
+
         {filtered.map(
           (d: DocumentItem) => (
             <article
               className="document-card"
               key={d.id}
             >
+
               <div className="document-icon">
                 {d.source ===
                 "Immagine"
@@ -4194,6 +5199,7 @@ function DocumentsPage({
               </p>
 
               <div className="document-meta">
+
                 <span>
                   {d.category}
                 </span>
@@ -4207,9 +5213,12 @@ function DocumentsPage({
                     d.date
                   )}
                 </span>
+
               </div>
 
+
               <div className="document-status">
+
                 <Badge
                   value={
                     d.aiStatus
@@ -4221,10 +5230,13 @@ function DocumentsPage({
                     d.publication
                   }
                 />
+
               </div>
+
 
               {d.aiSummary && (
                 <div className="ai-summary">
+
                   <b>
                     Analisi AI
                   </b>
@@ -4232,10 +5244,13 @@ function DocumentsPage({
                   <p>
                     {d.aiSummary}
                   </p>
+
                 </div>
               )}
 
+
               <div className="button-row">
+
                 <button
                   className="secondary-button"
                   onClick={() =>
@@ -4253,7 +5268,9 @@ function DocumentsPage({
                 >
                   ✨ AI
                 </button>
+
               </div>
+
 
               {d.aiStatus ===
                 "Da verificare" && (
@@ -4269,7 +5286,9 @@ function DocumentsPage({
                 </button>
               )}
 
+
               <div className="document-bottom">
+
                 <button
                   className="link"
                   onClick={() =>
@@ -4292,11 +5311,15 @@ function DocumentsPage({
                 >
                   Elimina
                 </button>
+
               </div>
+
             </article>
           )
         )}
+
       </div>
+
 
       {filtered.length ===
         0 && (
@@ -4304,9 +5327,11 @@ function DocumentsPage({
           <Empty text="Nessun documento trovato." />
         </div>
       )}
+
     </>
   );
 }
+
 
 /* =========================================================
    SCADENZE
@@ -4350,6 +5375,7 @@ function DeadlinesPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Pianificazione"
         title="Scadenze"
@@ -4364,13 +5390,16 @@ function DeadlinesPage({
       />
 
       <div className="cards-list">
+
         {filtered.map(
           (d: Deadline) => (
             <article
               className="row-card"
               key={d.id}
             >
+
               <div>
+
                 <b>
                   {d.title}
                 </b>
@@ -4400,9 +5429,12 @@ function DeadlinesPage({
                     {d.notes}
                   </small>
                 )}
+
               </div>
 
+
               <div className="row-actions">
+
                 <Badge
                   value={
                     d.status
@@ -4447,7 +5479,9 @@ function DeadlinesPage({
                 >
                   ×
                 </button>
+
               </div>
+
             </article>
           )
         )}
@@ -4456,10 +5490,13 @@ function DeadlinesPage({
           0 && (
           <Empty text="Nessuna scadenza trovata." />
         )}
+
       </div>
+
     </>
   );
 }
+
 
 /* =========================================================
    ASSEMBLEE
@@ -4509,6 +5546,7 @@ function AssembliesPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Riunioni"
         title="Assemblee"
@@ -4517,7 +5555,9 @@ function AssembliesPage({
       />
 
       <div className="feature-banner">
+
         <div>
+
           <b>
             🎙️ Assemblee intelligenti
           </b>
@@ -4526,12 +5566,15 @@ function AssembliesPage({
             Audio → trascrizione → bozza
             verbale → verifica → pubblicazione
           </span>
+
         </div>
 
         <span className="feature-plan">
           Professional
         </span>
+
       </div>
+
 
       <SearchBox
         value={search}
@@ -4539,14 +5582,18 @@ function AssembliesPage({
         placeholder="Cerca assemblea, luogo o condominio..."
       />
 
+
       <div className="cards-list">
+
         {filtered.map(
           (a: Assembly) => (
             <article
               className="row-card assembly-card"
               key={a.id}
             >
+
               <div className="assembly-main">
+
                 <b>
                   {a.title}
                 </b>
@@ -4570,7 +5617,9 @@ function AssembliesPage({
                     "Luogo da definire"}
                 </span>
 
+
                 <div className="assembly-statuses">
+
                   <Badge
                     value={
                       a.status
@@ -4588,7 +5637,9 @@ function AssembliesPage({
                       a.minutesStatus
                     }
                   />
+
                 </div>
+
 
                 {a.audioName && (
                   <small>
@@ -4597,8 +5648,10 @@ function AssembliesPage({
                   </small>
                 )}
 
+
                 {a.minutesDraft && (
                   <div className="minutes-preview">
+
                     <b>
                       Bozza verbale
                     </b>
@@ -4608,11 +5661,15 @@ function AssembliesPage({
                         a.minutesDraft
                       }
                     </p>
+
                   </div>
                 )}
+
               </div>
 
+
               <div className="assembly-actions">
+
                 <select
                   value={a.status}
                   onChange={(e) =>
@@ -4626,20 +5683,26 @@ function AssembliesPage({
                   <option>
                     Programmato
                   </option>
+
                   <option>
                     Svolto
                   </option>
+
                   <option>
                     Annullato
                   </option>
                 </select>
 
+
                 <label className="file-button">
+
                   🎙️ Acquisisci audio
+
                   <input
                     type="file"
                     accept="audio/*,.m4a,.mp3,.wav"
                     onChange={(e) => {
+
                       const file =
                         e.target
                           .files?.[0];
@@ -4653,9 +5716,12 @@ function AssembliesPage({
 
                       e.currentTarget.value =
                         "";
+
                     }}
                   />
+
                 </label>
+
 
                 <button
                   className="secondary-button small"
@@ -4667,6 +5733,7 @@ function AssembliesPage({
                 >
                   ✨ Genera verbale
                 </button>
+
 
                 {a.minutesStatus ===
                   "Da verificare" && (
@@ -4682,6 +5749,7 @@ function AssembliesPage({
                   </button>
                 )}
 
+
                 <button
                   className="secondary-button small"
                   onClick={() =>
@@ -4695,6 +5763,7 @@ function AssembliesPage({
                     : "👥 Pubblica"}
                 </button>
 
+
                 <button
                   className="secondary-button small"
                   onClick={() =>
@@ -4704,6 +5773,7 @@ function AssembliesPage({
                   Modifica
                 </button>
 
+
                 <button
                   className="mini-danger"
                   onClick={() =>
@@ -4712,19 +5782,25 @@ function AssembliesPage({
                 >
                   ×
                 </button>
+
               </div>
+
             </article>
           )
         )}
+
 
         {filtered.length ===
           0 && (
           <Empty text="Nessuna assemblea trovata." />
         )}
+
       </div>
+
     </>
   );
 }
+
 
 /* =========================================================
    FORNITORI
@@ -4759,6 +5835,7 @@ function SuppliersPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Gestione fornitori"
         title="Fornitori"
@@ -4773,12 +5850,14 @@ function SuppliersPage({
       />
 
       <div className="cards-grid">
+
         {filtered.map(
           (s: Supplier) => (
             <article
               className="entity-card"
               key={s.id}
             >
+
               <div className="entity-icon">
                 🔧
               </div>
@@ -4814,6 +5893,7 @@ function SuppliersPage({
               )}
 
               <div className="button-row">
+
                 <button
                   className="secondary-button"
                   onClick={() =>
@@ -4831,11 +5911,15 @@ function SuppliersPage({
                 >
                   Elimina
                 </button>
+
               </div>
+
             </article>
           )
         )}
+
       </div>
+
 
       {filtered.length ===
         0 && (
@@ -4843,9 +5927,11 @@ function SuppliersPage({
           <Empty text="Nessun fornitore trovato." />
         </div>
       )}
+
     </>
   );
 }
+
 
 /* =========================================================
    ATTIVITÀ
@@ -4895,6 +5981,7 @@ function ActivitiesPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Organizzazione"
         title="Attività"
@@ -4909,13 +5996,16 @@ function ActivitiesPage({
       />
 
       <div className="cards-list">
+
         {filtered.map(
           (a: Activity) => (
             <article
               className="row-card"
               key={a.id}
             >
+
               <div>
+
                 <b>
                   {a.title}
                 </b>
@@ -4939,9 +6029,12 @@ function ActivitiesPage({
                   {a.notes ||
                     "Nessuna nota"}
                 </span>
+
               </div>
 
+
               <div className="row-actions">
+
                 <select
                   value={a.status}
                   onChange={(e) =>
@@ -4955,13 +6048,16 @@ function ActivitiesPage({
                   <option>
                     Aperta
                   </option>
+
                   <option>
                     In corso
                   </option>
+
                   <option>
                     Completata
                   </option>
                 </select>
+
 
                 <button
                   className="secondary-button small"
@@ -4972,6 +6068,7 @@ function ActivitiesPage({
                   Modifica
                 </button>
 
+
                 <button
                   className="mini-danger"
                   onClick={() =>
@@ -4980,19 +6077,205 @@ function ActivitiesPage({
                 >
                   ×
                 </button>
+
               </div>
+
             </article>
           )
         )}
+
 
         {filtered.length ===
           0 && (
           <Empty text="Nessuna attività trovata." />
         )}
+
       </div>
+
     </>
   );
 }
+
+
+/* =========================================================
+   COMUNICAZIONI
+   ========================================================= */
+
+function CommunicationsPage({
+  communications,
+  search,
+  setSearch,
+  condominiumName,
+  onNew,
+  onEdit,
+  onDelete,
+  onPublication,
+}: any) {
+  const filtered =
+    communications.filter(
+      (c: Communication) =>
+        `${c.title} ${
+          c.body
+        } ${
+          c.audience
+        } ${
+          c.status
+        } ${
+          c.condominiumId
+            ? condominiumName(
+                c.condominiumId
+              )
+            : "Tutti"
+        }`
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          )
+    );
+
+  return (
+    <>
+
+      <PageHeader
+        eyebrow="Comunicazioni"
+        title="Comunicazioni"
+        action="+ Nuova comunicazione"
+        onAction={onNew}
+      />
+
+
+      <div className="feature-banner">
+
+        <div>
+
+          <b>
+            📢 Comunicazioni ai condomini
+          </b>
+
+          <span>
+            Crea, verifica e pubblica
+            comunicazioni dal gestionale.
+          </span>
+
+        </div>
+
+        <span className="feature-plan">
+          Portal
+        </span>
+
+      </div>
+
+
+      <SearchBox
+        value={search}
+        onChange={setSearch}
+        placeholder="Cerca comunicazione, condominio o contenuto..."
+      />
+
+
+      <div className="cards-list">
+
+        {filtered.map(
+          (c: Communication) => (
+            <article
+              className="row-card communication-card"
+              key={c.id}
+            >
+
+              <div className="communication-main">
+
+                <b>
+                  {c.title}
+                </b>
+
+                <small>
+                  {c.condominiumId
+                    ? condominiumName(
+                        c.condominiumId
+                      )
+                    : "Tutti i condomini"}{" "}
+                  ·{" "}
+                  {c.audience}{" "}
+                  ·{" "}
+                  {formatDate(
+                    c.date
+                  )}
+                </small>
+
+                <p>
+                  {c.body}
+                </p>
+
+                <div className="assembly-statuses">
+
+                  <Badge
+                    value={
+                      c.status
+                    }
+                  />
+
+                  {c.publishedToPortal && (
+                    <Badge
+                      value="Condiviso"
+                    />
+                  )}
+
+                </div>
+
+              </div>
+
+
+              <div className="row-actions">
+
+                <button
+                  className="secondary-button small"
+                  onClick={() =>
+                    onEdit(c)
+                  }
+                >
+                  Modifica
+                </button>
+
+                <button
+                  className="secondary-button small"
+                  onClick={() =>
+                    onPublication(
+                      c.id
+                    )
+                  }
+                >
+                  {c.publishedToPortal
+                    ? "🔒 Ritira"
+                    : "👥 Pubblica"}
+                </button>
+
+                <button
+                  className="mini-danger"
+                  onClick={() =>
+                    onDelete(c.id)
+                  }
+                >
+                  ×
+                </button>
+
+              </div>
+
+            </article>
+          )
+        )}
+
+
+        {filtered.length ===
+          0 && (
+          <Empty text="Nessuna comunicazione trovata." />
+        )}
+
+      </div>
+
+    </>
+  );
+}
+
 
 /* =========================================================
    BETHAG AI
@@ -5021,13 +6304,17 @@ function AIPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Automazione intelligente"
         title="BETHAG AI"
       />
 
+
       <section className="ai-hero">
+
         <div>
+
           <span className="ai-kicker">
             INTELLIGENZA ARTIFICIALE
           </span>
@@ -5046,9 +6333,12 @@ function AIPage({
             importi, fornitori e altri
             dati utili alla gestione.
           </p>
+
         </div>
 
+
         <div className="ai-plan-box">
+
           <b>
             {PLAN_NAMES[plan]}
           </b>
@@ -5072,11 +6362,16 @@ function AIPage({
           >
             Gestisci piano
           </button>
+
         </div>
+
       </section>
 
+
       <section className="ai-tools-grid">
+
         <article className="ai-tool">
+
           <div className="tool-icon">
             📄
           </div>
@@ -5097,9 +6392,12 @@ function AIPage({
             File → OCR → AI → dati →
             verifica
           </span>
+
         </article>
 
+
         <article className="ai-tool">
+
           <div className="tool-icon">
             🎙️
           </div>
@@ -5119,9 +6417,12 @@ function AIPage({
             Audio → trascrizione →
             verbale → verifica
           </span>
+
         </article>
 
+
         <article className="ai-tool">
+
           <div className="tool-icon">
             ✍️
           </div>
@@ -5140,11 +6441,16 @@ function AIPage({
           <span className="tool-flow">
             Dati → modello → documento
           </span>
+
         </article>
+
       </section>
 
+
       <section className="dashboard-grid">
+
         <div className="card">
+
           <SectionTitle
             title="Documenti da verificare"
             action="Apri archivio"
@@ -5169,7 +6475,9 @@ function AIPage({
                     className="list-row"
                     key={d.id}
                   >
+
                     <div>
+
                       <b>
                         {d.name}
                       </b>
@@ -5179,6 +6487,7 @@ function AIPage({
                           d.aiStatus
                         }
                       </small>
+
                     </div>
 
                     <button
@@ -5189,13 +6498,17 @@ function AIPage({
                     >
                       Analizza
                     </button>
+
                   </div>
                 )
               )
           )}
+
         </div>
 
+
         <div className="card">
+
           <SectionTitle
             title="Assemblee con audio"
             action="Apri assemblee"
@@ -5220,6 +6533,7 @@ function AIPage({
                     className="activity"
                     key={a.id}
                   >
+
                     <b>
                       {a.title}
                     </b>
@@ -5229,15 +6543,20 @@ function AIPage({
                         a.audioName
                       }
                     </small>
+
                   </div>
                 )
               )
           )}
+
         </div>
+
       </section>
+
     </>
   );
 }
+
 
 /* =========================================================
    PORTALE CONDOMINI
@@ -5248,6 +6567,7 @@ function PortalPage({
   condominiums,
   documents,
   assemblies,
+  communications,
   plan,
   onAdd,
   onToggle,
@@ -5272,6 +6592,7 @@ function PortalPage({
         "verbali",
         "regolamento",
         "assemblee",
+        "comunicazioni",
       ],
       active: true,
     });
@@ -5287,6 +6608,12 @@ function PortalPage({
     assemblies.filter(
       (a: Assembly) =>
         a.publishedToPortal
+    );
+
+  const publishedCommunications =
+    communications.filter(
+      (c: Communication) =>
+        c.publishedToPortal
     );
 
   const save = (
@@ -5327,11 +6654,13 @@ function PortalPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Accesso esterno"
         title="Portale condomini"
         action="+ Nuovo accesso"
         onAction={() => {
+
           if (
             !hasFeature(
               plan,
@@ -5346,11 +6675,15 @@ function PortalPage({
           }
 
           setShowAdd(true);
+
         }}
       />
 
+
       <section className="portal-hero">
+
         <div>
+
           <span className="ai-kicker">
             BETHAG PORTAL
           </span>
@@ -5368,9 +6701,12 @@ function PortalPage({
             dati del singolo utente da
             quelli degli altri condomini.
           </p>
+
         </div>
 
+
         <div className="portal-stats">
+
           <div>
             <b>
               {members.length}
@@ -5401,19 +6737,35 @@ function PortalPage({
               verbali pubblicati
             </span>
           </div>
+
+          <div>
+            <b>
+              {
+                publishedCommunications.length
+              }
+            </b>
+            <span>
+              comunicazioni
+            </span>
+          </div>
+
         </div>
+
       </section>
+
 
       {showAdd && (
         <form
           className="form-card"
           onSubmit={save}
         >
+
           <ModalTitle
             title="Nuovo accesso condomino"
           />
 
           <div className="form-grid">
+
             <Field
               label="Nome e cognome *"
               value={form.name}
@@ -5479,9 +6831,113 @@ function PortalPage({
                 })
               }
             />
+
+            <SelectField
+              label="Ruolo"
+              value={
+                form.role
+              }
+              onChange={(
+                v: string
+              ) =>
+                setForm({
+                  ...form,
+                  role:
+                    v as UserRole,
+                })
+              }
+              options={[
+                [
+                  "resident",
+                  "Condomino",
+                ],
+                [
+                  "council",
+                  "Consigliere",
+                ],
+              ]}
+            />
+
           </div>
 
+
+          <div className="permission-editor">
+
+            <b>
+              Permessi iniziali
+            </b>
+
+            <div className="permission-checks">
+
+              {(
+                [
+                  "documenti",
+                  "verbali",
+                  "regolamento",
+                  "pagamenti",
+                  "assemblee",
+                  "comunicazioni",
+                ] as PortalPermission[]
+              ).map(
+                (
+                  permission
+                ) => (
+                  <label
+                    key={
+                      permission
+                    }
+                    className="check-row"
+                  >
+
+                    <input
+                      type="checkbox"
+                      checked={form.permissions.includes(
+                        permission
+                      )}
+                      onChange={() => {
+
+                        const exists =
+                          form.permissions.includes(
+                            permission
+                          );
+
+                        setForm({
+                          ...form,
+                          permissions:
+                            exists
+                              ? form.permissions.filter(
+                                  (
+                                    p
+                                  ) =>
+                                    p !==
+                                    permission
+                                )
+                              : [
+                                  ...form.permissions,
+                                  permission,
+                                ],
+                        });
+
+                      }}
+                    />
+
+                    {
+                      permissionName(
+                        permission
+                      )
+                    }
+
+                  </label>
+                )
+              )}
+
+            </div>
+
+          </div>
+
+
           <div className="form-actions">
+
             <button
               type="button"
               className="secondary-button"
@@ -5498,12 +6954,17 @@ function PortalPage({
             >
               Crea accesso
             </button>
+
           </div>
+
         </form>
       )}
 
+
       <section className="portal-grid">
+
         <div className="card">
+
           <SectionTitle
             title="Accessi autorizzati"
           />
@@ -5520,7 +6981,9 @@ function PortalPage({
                   className="portal-member"
                   key={member.id}
                 >
+
                   <div>
+
                     <b>
                       {member.name}
                     </b>
@@ -5547,9 +7010,43 @@ function PortalPage({
                         member.apartment
                       }
                     </small>
+
+                    <small>
+                      Ruolo:{" "}
+                      {
+                        roleName(
+                          member.role
+                        )
+                      }
+                    </small>
+
+                    <div className="permission-tags">
+
+                      {member.permissions.map(
+                        (
+                          permission
+                        ) => (
+                          <span
+                            key={
+                              permission
+                            }
+                          >
+                            {
+                              permissionName(
+                                permission
+                              )
+                            }
+                          </span>
+                        )
+                      )}
+
+                    </div>
+
                   </div>
 
+
                   <div className="row-actions">
+
                     <Badge
                       value={
                         member.active
@@ -5581,14 +7078,19 @@ function PortalPage({
                     >
                       ×
                     </button>
+
                   </div>
+
                 </div>
               )
             )
           )}
+
         </div>
 
+
         <div className="card">
+
           <SectionTitle
             title="Contenuti condivisibili"
           />
@@ -5600,7 +7102,7 @@ function PortalPage({
 
             <span>
               Regolamenti, verbali e
-              documenti autorizzati
+              documenti autorizzati.
             </span>
           </div>
 
@@ -5640,11 +7142,27 @@ function PortalPage({
               autorizzati.
             </span>
           </div>
+
+          <div className="permission-box">
+            <b>
+              📢 Comunicazioni
+            </b>
+
+            <span>
+              Avvisi e comunicazioni
+              pubblicate
+              dall'amministratore.
+            </span>
+          </div>
+
         </div>
+
       </section>
+
     </>
   );
 }
+
 
 /* =========================================================
    ABBONAMENTO
@@ -5720,6 +7238,7 @@ function SubscriptionPage({
         "Permessi granulari",
         "Documenti condivisi",
         "Verbali pubblicabili",
+        "Comunicazioni",
         "Accesso riservato",
       ],
     },
@@ -5737,13 +7256,17 @@ function SubscriptionPage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Modello di servizio"
         title="Piano BETHAG"
       />
 
+
       <section className="subscription-current">
+
         <div>
+
           <span className="eyebrow">
             Piano attuale
           </span>
@@ -5763,6 +7286,7 @@ function SubscriptionPage({
               ]
             }
           </p>
+
         </div>
 
         <Badge
@@ -5770,9 +7294,12 @@ function SubscriptionPage({
             subscription.status
           }
         />
+
       </section>
 
+
       <section className="pricing-grid">
+
         {plans.map(
           (plan) => (
             <article
@@ -5784,6 +7311,7 @@ function SubscriptionPage({
               }`}
               key={plan.id}
             >
+
               {subscription.plan ===
                 plan.id && (
                 <div className="current-plan">
@@ -5792,6 +7320,7 @@ function SubscriptionPage({
               )}
 
               <div className="pricing-icon">
+
                 {plan.id ===
                 "free"
                   ? "🆓"
@@ -5802,6 +7331,7 @@ function SubscriptionPage({
                     "professional"
                   ? "🚀"
                   : "👥"}
+
               </div>
 
               <h2>
@@ -5813,6 +7343,7 @@ function SubscriptionPage({
               </p>
 
               <ul>
+
                 {plan.features.map(
                   (
                     feature
@@ -5829,6 +7360,7 @@ function SubscriptionPage({
                     </li>
                   )
                 )}
+
               </ul>
 
               <button
@@ -5849,12 +7381,16 @@ function SubscriptionPage({
                   ? "Piano attivo"
                   : "Prova struttura"}
               </button>
+
             </article>
           )
         )}
+
       </section>
 
+
       <div className="info-card">
+
         <b>
           Struttura predisposta per
           gli abbonamenti
@@ -5870,19 +7406,23 @@ function SubscriptionPage({
           controllo del piano dovrà essere
           effettuato anche dal backend.
         </p>
+
       </div>
+
     </>
   );
 }
 
+
 /* =========================================================
-   PROFILO
+   PROFILO / WORKSPACE
    ========================================================= */
 
 function ProfilePage({
   profile,
   setProfile,
   subscription,
+  portalMembers,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -5915,13 +7455,17 @@ function ProfilePage({
 
   return (
     <>
+
       <PageHeader
         eyebrow="Impostazioni"
         title="Amministratore"
       />
 
+
       <div className="profile-plan-card">
+
         <div>
+
           <span className="eyebrow">
             Piano BETHAG
           </span>
@@ -5933,27 +7477,54 @@ function ProfilePage({
               ]
             }
           </h2>
+
         </div>
 
         <button
           className="secondary-button"
-          onClick={() =>
-            window.scrollTo({
-              top: 0,
-              behavior:
-                "smooth",
-            })
-          }
+          type="button"
         >
           Piano attivo
         </button>
+
       </div>
+
+
+      <section className="workspace-card">
+
+        <div>
+
+          <span className="eyebrow">
+            Workspace amministratore
+          </span>
+
+          <h2>
+            Workspace BETHAG
+          </h2>
+
+          <p>
+            Questo identificativo è
+            predisposto per il futuro
+            isolamento dei dati tra
+            amministratori.
+          </p>
+
+        </div>
+
+        <div className="workspace-id">
+          {profile.workspaceId}
+        </div>
+
+      </section>
+
 
       <form
         className="form-card"
         onSubmit={save}
       >
+
         <div className="form-grid">
+
           <Field
             full
             label="Nome e cognome"
@@ -6061,9 +7632,12 @@ function ProfilePage({
               })
             }
           />
+
         </div>
 
+
         <div className="form-actions">
+
           <button
             className="primary-button"
             type="submit"
@@ -6072,36 +7646,66 @@ function ProfilePage({
               ? "Salvato ✓"
               : "Salva dati"}
           </button>
+
         </div>
+
       </form>
 
-      <div className="info-card">
-        <b>
-          Architettura futura
-        </b>
 
-        <p>
-          La versione attuale salva
-          ancora i dati localmente sul
-          dispositivo. La struttura è
-          stata però preparata per il
-          successivo passaggio a account,
-          database cloud, ruoli,
-          autorizzazioni e accesso
-          multi-dispositivo.
-        </p>
+      <section className="workspace-grid">
 
-        <p>
-          Per la versione pubblica sarà
-          necessario spostare
-          autenticazione, autorizzazioni
-          e controllo degli abbonamenti
-          sul backend.
-        </p>
-      </div>
+        <div className="info-card">
+
+          <b>
+            👥 Collaboratori e utenti
+          </b>
+
+          <p>
+            Utenti configurati nel
+            workspace:
+            {" "}
+            <strong>
+              {portalMembers.length}
+            </strong>
+          </p>
+
+          <p>
+            Nella versione backend sarà
+            possibile associare utenti,
+            ruoli, permessi e accessi a
+            specifici condomini.
+          </p>
+
+        </div>
+
+
+        <div className="info-card">
+
+          <b>
+            🔐 Sicurezza e isolamento
+          </b>
+
+          <p>
+            L'attuale frontend utilizza
+            localStorage esclusivamente
+            per la demo.
+          </p>
+
+          <p>
+            Nella versione pubblica
+            autenticazione, autorizzazioni,
+            workspace e dati dovranno
+            essere gestiti dal backend.
+          </p>
+
+        </div>
+
+      </section>
+
     </>
   );
 }
+
 
 /* =========================================================
    MODALE
@@ -6119,12 +7723,14 @@ function Modal({
       className="modal-backdrop"
       onMouseDown={onClose}
     >
+
       <div
         className="modal"
         onMouseDown={(e) =>
           e.stopPropagation()
         }
       >
+
         <button
           className="modal-close"
           onClick={onClose}
@@ -6133,10 +7739,13 @@ function Modal({
         </button>
 
         {children}
+
       </div>
+
     </div>
   );
 }
+
 
 /* =========================================================
    FORM CONDOMINIO
@@ -6160,7 +7769,9 @@ function CondominiumForm({
 
   return (
     <form onSubmit={onSubmit}>
+
       <div className="modal-title">
+
         <div className="eyebrow">
           Gestione patrimonio
         </div>
@@ -6170,9 +7781,12 @@ function CondominiumForm({
             ? "Modifica condominio"
             : "Nuovo condominio"}
         </h2>
+
       </div>
 
+
       <div className="form-grid">
+
         <Field
           full
           label="Nome del condominio *"
@@ -6363,9 +7977,12 @@ function CondominiumForm({
           }
           textarea
         />
+
       </div>
 
+
       <div className="form-actions">
+
         <button
           type="button"
           className="secondary-button"
@@ -6382,10 +7999,13 @@ function CondominiumForm({
             ? "Salva modifiche"
             : "Salva condominio"}
         </button>
+
       </div>
+
     </form>
   );
 }
+
 
 /* =========================================================
    FORM SCADENZA
@@ -6401,6 +8021,7 @@ function DeadlineForm({
 }: any) {
   return (
     <form onSubmit={onSubmit}>
+
       <ModalTitle
         title={
           editing
@@ -6410,6 +8031,7 @@ function DeadlineForm({
       />
 
       <div className="form-grid">
+
         <Field
           full
           label="Titolo *"
@@ -6537,14 +8159,17 @@ function DeadlineForm({
           }
           textarea
         />
+
       </div>
 
       <Actions
         onCancel={onCancel}
       />
+
     </form>
   );
 }
+
 
 /* =========================================================
    FORM DOCUMENTO
@@ -6562,6 +8187,7 @@ function DocumentForm({
 }: any) {
   return (
     <form onSubmit={onSubmit}>
+
       <ModalTitle
         title={
           editing
@@ -6571,7 +8197,9 @@ function DocumentForm({
       />
 
       <div className="form-grid">
+
         <div className="field full">
+
           <label>
             Carica file
           </label>
@@ -6582,6 +8210,7 @@ function DocumentForm({
             onChange={(
               e: React.ChangeEvent<HTMLInputElement>
             ) => {
+
               const file =
                 e.target.files?.[0];
 
@@ -6608,6 +8237,7 @@ function DocumentForm({
                 mimeType:
                   file.type,
               });
+
             }}
           />
 
@@ -6626,7 +8256,9 @@ function DocumentForm({
               }
             </small>
           )}
+
         </div>
+
 
         <Field
           full
@@ -6737,14 +8369,17 @@ function DocumentForm({
           }
           textarea
         />
+
       </div>
 
       <Actions
         onCancel={onCancel}
       />
+
     </form>
   );
 }
+
 
 /* =========================================================
    FORM ASSEMBLEA
@@ -6760,6 +8395,7 @@ function AssemblyForm({
 }: any) {
   return (
     <form onSubmit={onSubmit}>
+
       <ModalTitle
         title={
           editing
@@ -6769,6 +8405,7 @@ function AssemblyForm({
       />
 
       <div className="form-grid">
+
         <Field
           full
           label="Titolo *"
@@ -6898,14 +8535,17 @@ function AssemblyForm({
           }
           textarea
         />
+
       </div>
 
       <Actions
         onCancel={onCancel}
       />
+
     </form>
   );
 }
+
 
 /* =========================================================
    FORM FORNITORE
@@ -6921,6 +8561,7 @@ function SupplierForm({
 }: any) {
   return (
     <form onSubmit={onSubmit}>
+
       <ModalTitle
         title={
           editing
@@ -6930,6 +8571,7 @@ function SupplierForm({
       />
 
       <div className="form-grid">
+
         <Field
           label="Nome *"
           value={value.name}
@@ -7040,14 +8682,17 @@ function SupplierForm({
           }
           textarea
         />
+
       </div>
 
       <Actions
         onCancel={onCancel}
       />
+
     </form>
   );
 }
+
 
 /* =========================================================
    FORM ATTIVITÀ
@@ -7063,6 +8708,7 @@ function ActivityForm({
 }: any) {
   return (
     <form onSubmit={onSubmit}>
+
       <ModalTitle
         title={
           editing
@@ -7072,6 +8718,7 @@ function ActivityForm({
       />
 
       <div className="form-grid">
+
         <Field
           full
           label="Titolo *"
@@ -7206,14 +8853,228 @@ function ActivityForm({
           }
           textarea
         />
+
       </div>
 
       <Actions
         onCancel={onCancel}
       />
+
     </form>
   );
 }
+
+
+/* =========================================================
+   FORM COMUNICAZIONE
+   ========================================================= */
+
+function CommunicationForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica comunicazione"
+            : "Nuova comunicazione"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Titolo *"
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              title: v,
+            })
+          }
+          placeholder="Es. Avviso manutenzione"
+        />
+
+        <SelectField
+          label="Condominio"
+          value={
+            value.condominiumId ??
+            ""
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
+            })
+          }
+          options={[
+            [
+              "",
+              "Tutti i condomini",
+            ],
+            ...condominiums.map(
+              (
+                c: Condominium
+              ) => [
+                c.id,
+                c.name,
+              ]
+            ),
+          ]}
+        />
+
+        <SelectField
+          label="Destinatari"
+          value={
+            value.audience
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              audience:
+                v as CommunicationAudience,
+            })
+          }
+          options={[
+            [
+              "Tutti",
+              "Tutti",
+            ],
+            [
+              "Condomino",
+              "Condomino",
+            ],
+            [
+              "Consiglio",
+              "Consiglio",
+            ],
+          ]}
+        />
+
+        <Field
+          label="Data"
+          type="date"
+          value={
+            value.date
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              date: v,
+            })
+          }
+        />
+
+        <Field
+          full
+          label="Contenuto *"
+          value={
+            value.body
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              body: v,
+            })
+          }
+          textarea
+          placeholder="Scrivi il contenuto della comunicazione..."
+        />
+
+        <SelectField
+          label="Stato"
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              status:
+                v as CommunicationStatus,
+            })
+          }
+          options={[
+            [
+              "Bozza",
+              "Bozza",
+            ],
+            [
+              "Pubblicata",
+              "Pubblicata",
+            ],
+          ]}
+        />
+
+        <div className="field checkbox-field">
+
+          <label>
+            Pubblica nel portale
+          </label>
+
+          <label className="switch-row">
+
+            <input
+              type="checkbox"
+              checked={
+                value.publishedToPortal
+              }
+              onChange={(e) =>
+                setValue({
+                  ...value,
+                  publishedToPortal:
+                    e.target.checked,
+                  status:
+                    e.target.checked
+                      ? "Pubblicata"
+                      : "Bozza",
+                })
+              }
+            />
+
+            <span>
+              Rendi visibile ai
+              destinatari autorizzati
+            </span>
+
+          </label>
+
+        </div>
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
 
 /* =========================================================
    FORM HELPERS
@@ -7226,14 +9087,19 @@ function ModalTitle({
 }) {
   return (
     <div className="modal-title">
+
       <div className="eyebrow">
         BETHAG
       </div>
 
-      <h2>{title}</h2>
+      <h2>
+        {title}
+      </h2>
+
     </div>
   );
 }
+
 
 function Actions({
   onCancel,
@@ -7242,6 +9108,7 @@ function Actions({
 }) {
   return (
     <div className="form-actions">
+
       <button
         type="button"
         className="secondary-button"
@@ -7256,9 +9123,11 @@ function Actions({
       >
         Salva
       </button>
+
     </div>
   );
 }
+
 
 function Field({
   label,
@@ -7275,6 +9144,7 @@ function Field({
         full ? "full" : ""
       }`}
     >
+
       <label>
         {label}
       </label>
@@ -7305,9 +9175,11 @@ function Field({
           }
         />
       )}
+
     </div>
   );
 }
+
 
 function SelectField({
   label,
@@ -7322,6 +9194,7 @@ function SelectField({
         full ? "full" : ""
       }`}
     >
+
       <label>
         {label}
       </label>
@@ -7334,6 +9207,7 @@ function SelectField({
           )
         }
       >
+
         {options.map(
           (x: any) => (
             <option
@@ -7346,10 +9220,13 @@ function SelectField({
             </option>
           )
         )}
+
       </select>
+
     </div>
   );
 }
+
 
 /* =========================================================
    CSS
@@ -7420,6 +9297,14 @@ button{
   color:#c7d2fe;
 }
 
+.plan-sidebar small{
+  display:block;
+  margin-top:4px;
+  color:#94a3b8;
+  font-size:9px;
+  word-break:break-all;
+}
+
 .nav{
   display:flex;
   flex-direction:column;
@@ -7470,6 +9355,12 @@ button{
   align-items:center;
   gap:20px;
   margin-bottom:28px;
+}
+
+.dashboard-subtitle{
+  margin:7px 0 0;
+  color:#64748b;
+  font-size:13px;
 }
 
 .eyebrow{
@@ -7526,7 +9417,7 @@ h1{
 
 .mini-stats{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:14px;
   margin-bottom:24px;
 }
@@ -7554,6 +9445,10 @@ h1{
   gap:20px;
 }
 
+.dashboard-secondary{
+  margin-top:20px;
+}
+
 .card,
 .form-card,
 .detail-card,
@@ -7561,7 +9456,8 @@ h1{
 .table-card,
 .info-card,
 .subscription-current,
-.profile-plan-card{
+.profile-plan-card,
+.workspace-card{
   background:#fff;
   border:1px solid #e2e8f0;
   border-radius:16px;
@@ -7710,6 +9606,11 @@ h1{
 
 .secondary-button.small{
   padding:7px 10px;
+  font-size:12px;
+}
+
+.small-button{
+  padding:8px 11px;
   font-size:12px;
 }
 
@@ -7867,6 +9768,13 @@ select:focus{
   margin-top:7px;
 }
 
+.row-card p{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+
 .row-actions{
   display:flex;
   align-items:center;
@@ -7943,6 +9851,31 @@ select:focus{
   color:#64748b;
 }
 
+.quick-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.quick-action{
+  border:1px solid #e2e8f0;
+  background:#f8fafc;
+  border-radius:12px;
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:100px;
+  color:#334155;
+}
+
+.quick-action span{
+  font-size:12px;
+  font-weight:600;
+}
+
 /* DETTAGLIO CONDOMINIO */
 
 .condominium-detail-page{
@@ -8015,6 +9948,33 @@ select:focus{
 
 .condominium-detail-page .detail-card{
   margin-top:0;
+}
+
+.condominium-overview{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;
+  margin-bottom:22px;
+}
+
+.overview-stat{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:11px;
+  padding:13px;
+  text-align:center;
+}
+
+.overview-stat b{
+  display:block;
+  font-size:21px;
+}
+
+.overview-stat span{
+  display:block;
+  margin-top:3px;
+  color:#64748b;
+  font-size:10px;
 }
 
 /* RELATED */
@@ -8340,6 +10300,18 @@ select:focus{
   overflow:auto;
 }
 
+/* COMUNICAZIONI */
+
+.communication-main{
+  min-width:0;
+  flex:1;
+}
+
+.communication-main p{
+  max-width:750px;
+  margin-bottom:0;
+}
+
 /* PORTALE */
 
 .portal-hero{
@@ -8366,7 +10338,7 @@ select:focus{
 
 .portal-stats{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:10px;
 }
 
@@ -8426,6 +10398,68 @@ select:focus{
   font-size:12px;
   margin-top:4px;
   line-height:1.4;
+}
+
+.permission-tags{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.permission-tags span{
+  display:inline-block;
+  padding:4px 7px;
+  background:#eef2ff;
+  color:#4f46e5;
+  border-radius:999px;
+  font-size:10px;
+}
+
+/* PERMISSION EDITOR */
+
+.permission-editor{
+  margin-top:18px;
+  padding:14px;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+}
+
+.permission-checks{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:9px;
+  margin-top:10px;
+}
+
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#475569;
+  font-size:13px;
+}
+
+.check-row input{
+  width:17px;
+  height:17px;
+}
+
+.switch-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#475569;
+  font-size:13px;
+}
+
+.switch-row input{
+  width:18px;
+  height:18px;
+}
+
+.checkbox-field{
+  justify-content:flex-end;
 }
 
 /* PRICING */
@@ -8519,6 +10553,41 @@ select:focus{
   margin:2px 0 0;
 }
 
+.workspace-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  margin-bottom:18px;
+}
+
+.workspace-card h2{
+  margin:3px 0;
+}
+
+.workspace-card p{
+  color:#64748b;
+  max-width:700px;
+  margin-bottom:0;
+  line-height:1.5;
+}
+
+.workspace-id{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:13px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  padding:10px 12px;
+  border-radius:9px;
+  word-break:break-all;
+}
+
+.workspace-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+
 /* MODAL */
 
 .modal-backdrop{
@@ -8580,6 +10649,17 @@ select:focus{
   font-size:12px;
 }
 
+.mobile-plan small{
+  display:block;
+  color:#94a3b8;
+  margin-top:4px;
+  font-size:9px;
+}
+
+.mobile-bottom-nav{
+  display:none;
+}
+
 @media(max-width:1100px){
 
   .cards-grid{
@@ -8587,6 +10667,10 @@ select:focus{
   }
 
   .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .mini-stats{
     grid-template-columns:repeat(2,1fr);
   }
 
@@ -8601,6 +10685,11 @@ select:focus{
   .ai-tools-grid{
     grid-template-columns:1fr 1fr;
   }
+
+  .condominium-overview{
+    grid-template-columns:repeat(3,1fr);
+  }
+
 }
 
 @media(max-width:850px){
@@ -8610,7 +10699,7 @@ select:focus{
   }
 
   .content{
-    padding:12px 15px 35px;
+    padding:12px 15px 100px;
   }
 
   .mobile-header{
@@ -8675,8 +10764,67 @@ select:focus{
     font-size:15px;
   }
 
+  .mobile-bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    gap:3px;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(16px);
+    border-top:1px solid #e2e8f0;
+    z-index:150;
+    padding:7px 6px;
+  }
+
+  .mobile-bottom-nav button{
+    border:0;
+    background:transparent;
+    color:#64748b;
+    min-width:52px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    padding:4px;
+  }
+
+  .mobile-bottom-nav button span{
+    font-size:18px;
+  }
+
+  .mobile-bottom-nav button small{
+    font-size:9px;
+  }
+
+  .mobile-bottom-nav .mobile-bottom-active{
+    color:#526dfe;
+    font-weight:700;
+  }
+
+  .mobile-bottom-nav .mobile-ai-button{
+    width:48px;
+    height:48px;
+    min-width:48px;
+    border-radius:50%;
+    background:#526dfe;
+    color:#fff;
+    font-size:20px;
+    margin-top:-20px;
+    box-shadow:0 7px 20px rgba(82,109,254,.35);
+  }
+
+  .mobile-bottom-nav .mobile-ai-button small{
+    display:none;
+  }
+
   .dashboard-grid,
-  .portal-grid{
+  .portal-grid,
+  .workspace-grid{
     grid-template-columns:1fr;
   }
 
@@ -8715,6 +10863,12 @@ select:focus{
   .assembly-actions>*{
     width:100%;
   }
+
+  .workspace-card{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
 }
 
 @media(max-width:650px){
@@ -8726,7 +10880,9 @@ select:focus{
   .mini-stats,
   .document-grid,
   .pricing-grid,
-  .ai-tools-grid{
+  .ai-tools-grid,
+  .workspace-grid,
+  .permission-checks{
     grid-template-columns:1fr;
   }
 
@@ -8826,7 +10982,7 @@ select:focus{
   }
 
   .portal-stats{
-    grid-template-columns:1fr;
+    grid-template-columns:1fr 1fr;
   }
 
   .portal-member{
@@ -8854,8 +11010,21 @@ select:focus{
     width:100%;
     text-align:left;
   }
+
+  .condominium-overview{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .quick-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .workspace-id{
+    width:100%;
+  }
+
 }
-`;
+
 
 /* =========================================================
    RENDER
