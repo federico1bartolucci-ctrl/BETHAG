@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 
 type Condominium = {
@@ -14,6 +14,24 @@ type Condominium = {
   email: string;
   phone: string;
   notes: string;
+};
+
+type CondominiumForm = Omit<Condominium, "id">;
+
+const STORAGE_KEY = "bethag-condominiums";
+
+const emptyForm: CondominiumForm = {
+  name: "",
+  address: "",
+  cap: "",
+  city: "",
+  province: "",
+  fiscalCode: "",
+  units: "",
+  contact: "",
+  email: "",
+  phone: "",
+  notes: "",
 };
 
 const initialCondominiums: Condominium[] = [
@@ -90,28 +108,73 @@ const activities = [
 
 function App() {
   const [page, setPage] = useState("dashboard");
+
   const [condominiums, setCondominiums] =
-    useState<Condominium[]>(initialCondominiums);
+    useState<Condominium[]>(() => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (saved) {
+          const parsed = JSON.parse(saved);
+
+          if (Array.isArray(parsed)) {
+            return parsed;
+          }
+        }
+      } catch {
+        // In caso di errore vengono utilizzati i dati iniziali.
+      }
+
+      return initialCondominiums;
+    });
 
   const [showForm, setShowForm] = useState(false);
-  const [selected, setSelected] = useState<Condominium | null>(null);
+  const [selected, setSelected] =
+    useState<Condominium | null>(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    address: "",
-    cap: "",
-    city: "",
-    province: "",
-    fiscalCode: "",
-    units: "",
-    contact: "",
-    email: "",
-    phone: "",
-    notes: "",
-  });
+  const [editingId, setEditingId] =
+    useState<number | null>(null);
+
+  const [search, setSearch] = useState("");
+
+  const [form, setForm] =
+    useState<CondominiumForm>(emptyForm);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(condominiums)
+      );
+    } catch {
+      // Evita che un errore di storage blocchi l'app.
+    }
+  }, [condominiums]);
+
+  const filteredCondominiums = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return condominiums;
+    }
+
+    return condominiums.filter((condominium) =>
+      [
+        condominium.name,
+        condominium.address,
+        condominium.city,
+        condominium.province,
+        condominium.fiscalCode,
+        condominium.contact,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [condominiums, search]);
 
   function updateForm(
-    field: keyof typeof form,
+    field: keyof CondominiumForm,
     value: string
   ) {
     setForm((current) => ({
@@ -120,52 +183,131 @@ function App() {
     }));
   }
 
-  function saveCondominium(event: React.FormEvent) {
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+  }
+
+  function openNewCondominium() {
+    resetForm();
+    setSelected(null);
+    setShowForm(true);
+  }
+
+  function openEditCondominium(
+    condominium: Condominium
+  ) {
+    setForm({
+      name: condominium.name,
+      address: condominium.address,
+      cap: condominium.cap,
+      city: condominium.city,
+      province: condominium.province,
+      fiscalCode: condominium.fiscalCode,
+      units: condominium.units,
+      contact: condominium.contact,
+      email: condominium.email,
+      phone: condominium.phone,
+      notes: condominium.notes,
+    });
+
+    setEditingId(condominium.id);
+    setSelected(null);
+    setShowForm(true);
+  }
+
+  function saveCondominium(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
-    if (!form.name.trim() || !form.address.trim()) {
-      alert("Inserisci almeno il nome e l'indirizzo del condominio.");
+    if (!form.name.trim()) {
+      alert("Inserisci il nome del condominio.");
       return;
     }
 
-    const newCondominium: Condominium = {
-      id: Date.now(),
-      ...form,
-    };
+    if (!form.address.trim()) {
+      alert("Inserisci l'indirizzo del condominio.");
+      return;
+    }
 
-    setCondominiums((current) => [
-      ...current,
-      newCondominium,
-    ]);
+    if (editingId !== null) {
+      setCondominiums((current) =>
+        current.map((condominium) =>
+          condominium.id === editingId
+            ? {
+                ...condominium,
+                ...form,
+                name: form.name.trim(),
+                address: form.address.trim(),
+              }
+            : condominium
+        )
+      );
 
-    setForm({
-      name: "",
-      address: "",
-      cap: "",
-      city: "",
-      province: "",
-      fiscalCode: "",
-      units: "",
-      contact: "",
-      email: "",
-      phone: "",
-      notes: "",
-    });
+      const updated = {
+        id: editingId,
+        ...form,
+        name: form.name.trim(),
+        address: form.address.trim(),
+      };
 
+      setSelected(updated);
+    } else {
+      const newCondominium: Condominium = {
+        id: Date.now(),
+        ...form,
+        name: form.name.trim(),
+        address: form.address.trim(),
+      };
+
+      setCondominiums((current) => [
+        ...current,
+        newCondominium,
+      ]);
+
+      setSelected(newCondominium);
+    }
+
+    resetForm();
     setShowForm(false);
-    setSelected(newCondominium);
+    setPage("condomini");
+  }
+
+  function deleteCondominium(
+    condominium: Condominium
+  ) {
+    const confirmed = window.confirm(
+      `Vuoi eliminare "${condominium.name}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setCondominiums((current) =>
+      current.filter(
+        (item) => item.id !== condominium.id
+      )
+    );
+
+    if (selected?.id === condominium.id) {
+      setSelected(null);
+    }
   }
 
   function openCondominiums() {
     setPage("condomini");
     setShowForm(false);
     setSelected(null);
+    resetForm();
   }
 
   function openDashboard() {
     setPage("dashboard");
     setShowForm(false);
     setSelected(null);
+    resetForm();
   }
 
   return (
@@ -173,6 +315,10 @@ function App() {
       <style>{`
         * {
           box-sizing: border-box;
+        }
+
+        html {
+          -webkit-text-size-adjust: 100%;
         }
 
         body {
@@ -194,6 +340,12 @@ function App() {
 
         button {
           cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        input,
+        textarea {
+          font-size: 16px;
         }
 
         .app {
@@ -203,6 +355,7 @@ function App() {
 
         .sidebar {
           width: 250px;
+          flex-shrink: 0;
           background: #111827;
           color: white;
           padding: 28px 18px;
@@ -298,7 +451,8 @@ function App() {
           border: 1px solid #e2e8f0;
           border-radius: 16px;
           padding: 20px;
-          box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+          box-shadow:
+            0 4px 18px rgba(15, 23, 42, 0.04);
         }
 
         .stat-icon {
@@ -341,6 +495,7 @@ function App() {
           background: transparent;
           color: #526dfe;
           font-size: 13px;
+          padding: 5px;
         }
 
         .deadline {
@@ -401,11 +556,12 @@ function App() {
 
         .ai-card {
           margin-top: 20px;
-          background: linear-gradient(
-            135deg,
-            #111827,
-            #263454
-          );
+          background:
+            linear-gradient(
+              135deg,
+              #111827,
+              #263454
+            );
           color: white;
           border-radius: 18px;
           padding: 24px;
@@ -453,6 +609,10 @@ function App() {
           font-weight: 700;
         }
 
+        .primary-button:hover {
+          background: #4359dc;
+        }
+
         .secondary-button {
           border: 1px solid #dbe2ea;
           background: white;
@@ -460,6 +620,23 @@ function App() {
           padding: 11px 16px;
           border-radius: 10px;
           font-weight: 600;
+        }
+
+        .secondary-button:hover {
+          background: #f8fafc;
+        }
+
+        .danger-button {
+          border: 1px solid #fecdd3;
+          background: #fff1f2;
+          color: #be123c;
+          padding: 11px 16px;
+          border-radius: 10px;
+          font-weight: 600;
+        }
+
+        .danger-button:hover {
+          background: #ffe4e6;
         }
 
         .condominiums {
@@ -473,7 +650,8 @@ function App() {
           border: 1px solid #e2e8f0;
           border-radius: 16px;
           padding: 20px;
-          box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+          box-shadow:
+            0 4px 18px rgba(15, 23, 42, 0.04);
         }
 
         .condominium-card h2 {
@@ -497,6 +675,46 @@ function App() {
           display: flex;
           gap: 8px;
           margin-top: 18px;
+          flex-wrap: wrap;
+        }
+
+        .search-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 14px;
+          margin-bottom: 18px;
+        }
+
+        .search-input {
+          width: 100%;
+          border: 1px solid #dbe2ea;
+          border-radius: 10px;
+          padding: 12px 14px;
+          outline: none;
+          background: white;
+        }
+
+        .search-input:focus {
+          border-color: #526dfe;
+          box-shadow:
+            0 0 0 3px rgba(82, 109, 254, 0.12);
+        }
+
+        .results-info {
+          color: #64748b;
+          font-size: 13px;
+          margin-top: 10px;
+        }
+
+        .empty-state {
+          background: white;
+          border: 1px dashed #cbd5e1;
+          border-radius: 16px;
+          padding: 40px 20px;
+          text-align: center;
+          color: #64748b;
+          grid-column: 1 / -1;
         }
 
         .form-card {
@@ -542,7 +760,8 @@ function App() {
         .field input:focus,
         .field textarea:focus {
           border-color: #526dfe;
-          box-shadow: 0 0 0 3px rgba(82, 109, 254, 0.12);
+          box-shadow:
+            0 0 0 3px rgba(82, 109, 254, 0.12);
         }
 
         .field textarea {
@@ -568,7 +787,7 @@ function App() {
         .detail-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          gap: 18px;
         }
 
         .detail-label {
@@ -579,9 +798,32 @@ function App() {
 
         .detail-value {
           font-weight: 600;
+          word-break: break-word;
         }
 
-        @media (max-width: 1000px) {
+        .detail-notes {
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #eef2f7;
+        }
+
+        .detail-notes-text {
+          color: #475569;
+          line-height: 1.6;
+          white-space: pre-wrap;
+        }
+
+        .detail-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .mobile-back {
+          display: none;
+        }
+
+        @media (max-width: 1100px) {
           .condominiums {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -612,6 +854,18 @@ function App() {
           h1 {
             font-size: 25px;
           }
+
+          .mobile-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+            border: 0;
+            background: transparent;
+            color: #526dfe;
+            padding: 0;
+            font-weight: 600;
+          }
         }
 
         @media (max-width: 600px) {
@@ -631,11 +885,33 @@ function App() {
           }
 
           .form-actions {
-            flex-direction: column;
+            flex-direction: column-reverse;
           }
 
           .form-actions button {
             width: 100%;
+          }
+
+          .card-actions button,
+          .detail-actions button {
+            flex: 1;
+          }
+
+          .topbar {
+            margin-bottom: 20px;
+          }
+
+          .profile {
+            padding: 8px 11px;
+            font-size: 13px;
+          }
+
+          .deadline {
+            align-items: flex-start;
+          }
+
+          .deadline-date {
+            font-size: 12px;
           }
         }
       `}</style>
@@ -649,7 +925,9 @@ function App() {
           <nav className="nav">
             <button
               className={`nav-item ${
-                page === "dashboard" ? "active" : ""
+                page === "dashboard"
+                  ? "active"
+                  : ""
               }`}
               onClick={openDashboard}
             >
@@ -658,7 +936,9 @@ function App() {
 
             <button
               className={`nav-item ${
-                page === "condomini" ? "active" : ""
+                page === "condomini"
+                  ? "active"
+                  : ""
               }`}
               onClick={openCondominiums}
             >
@@ -712,46 +992,89 @@ function App() {
               </header>
 
               <section className="stats">
-                <div className="card">
-                  <div className="stat-icon">🏢</div>
+
+                <button
+                  className="card"
+                  onClick={openCondominiums}
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    textAlign: "left",
+                    width: "100%",
+                  }}
+                >
+                  <div className="stat-icon">
+                    🏢
+                  </div>
+
                   <div className="stat-value">
                     {condominiums.length}
                   </div>
+
                   <div className="stat-label">
                     Condomini
                   </div>
-                </div>
+                </button>
 
                 <div className="card">
-                  <div className="stat-icon">📅</div>
-                  <div className="stat-value">8</div>
+                  <div className="stat-icon">
+                    📅
+                  </div>
+
+                  <div className="stat-value">
+                    8
+                  </div>
+
                   <div className="stat-label">
                     Scadenze
                   </div>
                 </div>
 
                 <div className="card">
-                  <div className="stat-icon">📁</div>
-                  <div className="stat-value">246</div>
+                  <div className="stat-icon">
+                    📁
+                  </div>
+
+                  <div className="stat-value">
+                    246
+                  </div>
+
                   <div className="stat-label">
                     Documenti
                   </div>
                 </div>
 
                 <div className="card">
-                  <div className="stat-icon">✓</div>
-                  <div className="stat-value">14</div>
+                  <div className="stat-icon">
+                    ✓
+                  </div>
+
+                  <div className="stat-value">
+                    14
+                  </div>
+
                   <div className="stat-label">
                     Attività aperte
                   </div>
                 </div>
+
               </section>
 
               <section className="grid">
+
                 <div className="card">
                   <div className="section-title">
-                    <h2>Prossime scadenze</h2>
-                    <button className="link">
+                    <h2>
+                      Prossime scadenze
+                    </h2>
+
+                    <button
+                      className="link"
+                      onClick={() =>
+                        alert(
+                          "Il modulo Scadenze sarà collegato in un prossimo aggiornamento."
+                        )
+                      }
+                    >
                       Vedi tutte
                     </button>
                   </div>
@@ -790,18 +1113,23 @@ function App() {
 
                 <div className="card">
                   <div className="section-title">
-                    <h2>Attività recenti</h2>
+                    <h2>
+                      Attività recenti
+                    </h2>
                   </div>
 
-                  {activities.map((activity) => (
-                    <div
-                      className="activity"
-                      key={activity}
-                    >
-                      {activity}
-                    </div>
-                  ))}
+                  {activities.map(
+                    (activity) => (
+                      <div
+                        className="activity"
+                        key={activity}
+                      >
+                        {activity}
+                      </div>
+                    )
+                  )}
                 </div>
+
               </section>
 
               <section className="ai-card">
@@ -820,344 +1148,560 @@ function App() {
             </>
           )}
 
-          {page === "condomini" && !showForm && (
-            <>
-              <div className="page-header">
-                <div>
-                  <div className="eyebrow">
-                    Gestione patrimonio
+          {page === "condomini" &&
+            !showForm && (
+              <>
+                <button
+                  className="mobile-back"
+                  onClick={openDashboard}
+                >
+                  ← Dashboard
+                </button>
+
+                <div className="page-header">
+                  <div>
+                    <div className="eyebrow">
+                      Gestione patrimonio
+                    </div>
+
+                    <h1>
+                      Condominì
+                    </h1>
                   </div>
 
-                  <h1>Condomìni</h1>
+                  <button
+                    className="primary-button"
+                    onClick={openNewCondominium}
+                  >
+                    + Nuovo condominio
+                  </button>
                 </div>
 
-                <button
-                  className="primary-button"
-                  onClick={() => setShowForm(true)}
-                >
-                  + Nuovo condominio
-                </button>
-              </div>
+                <section className="search-card">
+                  <input
+                    className="search-input"
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Cerca per nome, indirizzo, comune o referente..."
+                  />
 
-              <section className="condominiums">
-                {condominiums.map((condominium) => (
-                  <article
-                    className="condominium-card"
-                    key={condominium.id}
-                  >
-                    <h2>{condominium.name}</h2>
-
-                    <div className="address">
-                      {condominium.address}
-                      <br />
-                      {condominium.cap}{" "}
-                      {condominium.city}
-                      {condominium.province
-                        ? ` (${condominium.province})`
-                        : ""}
-                    </div>
-
-                    <div className="units">
-                      🏠 {condominium.units || "—"} unità
-                    </div>
-
-                    <div className="card-actions">
-                      <button
-                        className="secondary-button"
-                        onClick={() =>
-                          setSelected(condominium)
-                        }
-                      >
-                        Dettagli
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </section>
-
-              {selected && (
-                <section className="detail-card">
-                  <div className="section-title">
-                    <h2>{selected.name}</h2>
-
-                    <button
-                      className="link"
-                      onClick={() => setSelected(null)}
-                    >
-                      Chiudi
-                    </button>
-                  </div>
-
-                  <div className="detail-grid">
-                    <div>
-                      <div className="detail-label">
-                        Indirizzo
-                      </div>
-                      <div className="detail-value">
-                        {selected.address}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="detail-label">
-                        Codice fiscale
-                      </div>
-                      <div className="detail-value">
-                        {selected.fiscalCode || "Non inserito"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="detail-label">
-                        Referente
-                      </div>
-                      <div className="detail-value">
-                        {selected.contact || "Non inserito"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="detail-label">
-                        Email
-                      </div>
-                      <div className="detail-value">
-                        {selected.email || "Non inserita"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="detail-label">
-                        Telefono
-                      </div>
-                      <div className="detail-value">
-                        {selected.phone || "Non inserito"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="detail-label">
-                        Unità immobiliari
-                      </div>
-                      <div className="detail-value">
-                        {selected.units || "Non inserito"}
-                      </div>
-                    </div>
+                  <div className="results-info">
+                    {filteredCondominiums.length}{" "}
+                    {filteredCondominiums.length === 1
+                      ? "condominio"
+                      : "condomini"}{" "}
+                    visualizzati
                   </div>
                 </section>
-              )}
-            </>
-          )}
 
-          {page === "condomini" && showForm && (
-            <>
-              <div className="page-header">
-                <div>
-                  <div className="eyebrow">
-                    Gestione patrimonio
+                <section className="condominiums">
+
+                  {filteredCondominiums.length ===
+                    0 && (
+                    <div className="empty-state">
+                      <div
+                        style={{
+                          fontSize: 34,
+                          marginBottom: 10,
+                        }}
+                      >
+                        🏢
+                      </div>
+
+                      <strong>
+                        Nessun condominio trovato
+                      </strong>
+
+                      <div
+                        style={{
+                          marginTop: 8,
+                        }}
+                      >
+                        Prova a modificare la ricerca
+                        oppure aggiungi un nuovo
+                        condominio.
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredCondominiums.map(
+                    (condominium) => (
+                      <article
+                        className="condominium-card"
+                        key={condominium.id}
+                      >
+                        <h2>
+                          {condominium.name}
+                        </h2>
+
+                        <div className="address">
+                          {condominium.address}
+
+                          <br />
+
+                          {condominium.cap}{" "}
+                          {condominium.city}
+
+                          {condominium.province
+                            ? ` (${condominium.province})`
+                            : ""}
+                        </div>
+
+                        <div className="units">
+                          🏠{" "}
+                          {condominium.units ||
+                            "—"}{" "}
+                          unità
+                        </div>
+
+                        <div className="card-actions">
+
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              setSelected(
+                                condominium
+                              )
+                            }
+                          >
+                            Dettagli
+                          </button>
+
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              openEditCondominium(
+                                condominium
+                              )
+                            }
+                          >
+                            Modifica
+                          </button>
+
+                        </div>
+                      </article>
+                    )
+                  )}
+
+                </section>
+
+                {selected && (
+                  <section className="detail-card">
+
+                    <div className="section-title">
+
+                      <div>
+                        <div className="eyebrow">
+                          Scheda condominio
+                        </div>
+
+                        <h2>
+                          {selected.name}
+                        </h2>
+                      </div>
+
+                      <button
+                        className="link"
+                        onClick={() =>
+                          setSelected(null)
+                        }
+                      >
+                        Chiudi
+                      </button>
+
+                    </div>
+
+                    <div className="detail-grid">
+
+                      <div>
+                        <div className="detail-label">
+                          Indirizzo
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.address}
+                          <br />
+                          {selected.cap}{" "}
+                          {selected.city}{" "}
+                          {selected.province
+                            ? `(${selected.province})`
+                            : ""}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="detail-label">
+                          Codice fiscale
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.fiscalCode ||
+                            "Non inserito"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="detail-label">
+                          Referente
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.contact ||
+                            "Non inserito"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="detail-label">
+                          Email
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.email ||
+                            "Non inserita"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="detail-label">
+                          Telefono
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.phone ||
+                            "Non inserito"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="detail-label">
+                          Unità immobiliari
+                        </div>
+
+                        <div className="detail-value">
+                          {selected.units ||
+                            "Non inserito"}
+                        </div>
+                      </div>
+
+                    </div>
+
+                    <div className="detail-notes">
+
+                      <div className="detail-label">
+                        Note
+                      </div>
+
+                      <div className="detail-notes-text">
+                        {selected.notes ||
+                          "Nessuna nota inserita."}
+                      </div>
+
+                    </div>
+
+                    <div
+                      className="detail-actions"
+                      style={{
+                        marginTop: 20,
+                      }}
+                    >
+                      <button
+                        className="primary-button"
+                        onClick={() =>
+                          openEditCondominium(
+                            selected
+                          )
+                        }
+                      >
+                        Modifica condominio
+                      </button>
+
+                      <button
+                        className="danger-button"
+                        onClick={() =>
+                          deleteCondominium(
+                            selected
+                          )
+                        }
+                      >
+                        Elimina
+                      </button>
+                    </div>
+
+                  </section>
+                )}
+
+              </>
+            )}
+
+          {page === "condomini" &&
+            showForm && (
+              <>
+                <button
+                  className="mobile-back"
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                >
+                  ← Torna ai condomini
+                </button>
+
+                <div className="page-header">
+
+                  <div>
+                    <div className="eyebrow">
+                      Gestione patrimonio
+                    </div>
+
+                    <h1>
+                      {editingId !== null
+                        ? "Modifica condominio"
+                        : "Nuovo condominio"}
+                    </h1>
                   </div>
 
-                  <h1>Nuovo condominio</h1>
                 </div>
-              </div>
 
-              <form
-                className="form-card"
-                onSubmit={saveCondominium}
-              >
-                <div className="form-grid">
+                <form
+                  className="form-card"
+                  onSubmit={saveCondominium}
+                >
 
-                  <div className="field full">
-                    <label>
-                      Nome del condominio *
-                    </label>
+                  <div className="form-grid">
 
-                    <input
-                      value={form.name}
-                      onChange={(event) =>
-                        updateForm(
-                          "name",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Es. Condominio Magnolia"
-                    />
+                    <div className="field full">
+                      <label>
+                        Nome del condominio *
+                      </label>
+
+                      <input
+                        value={form.name}
+                        onChange={(event) =>
+                          updateForm(
+                            "name",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Es. Condominio Magnolia"
+                        autoComplete="organization"
+                      />
+                    </div>
+
+                    <div className="field full">
+                      <label>
+                        Indirizzo *
+                      </label>
+
+                      <input
+                        value={form.address}
+                        onChange={(event) =>
+                          updateForm(
+                            "address",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Via e numero civico"
+                        autoComplete="street-address"
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        CAP
+                      </label>
+
+                      <input
+                        inputMode="numeric"
+                        value={form.cap}
+                        onChange={(event) =>
+                          updateForm(
+                            "cap",
+                            event.target.value
+                          )
+                        }
+                        placeholder="40100"
+                        autoComplete="postal-code"
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        Comune
+                      </label>
+
+                      <input
+                        value={form.city}
+                        onChange={(event) =>
+                          updateForm(
+                            "city",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Bologna"
+                        autoComplete="address-level2"
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        Provincia
+                      </label>
+
+                      <input
+                        value={form.province}
+                        onChange={(event) =>
+                          updateForm(
+                            "province",
+                            event.target.value
+                          )
+                        }
+                        placeholder="BO"
+                        maxLength={2}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        Unità immobiliari
+                      </label>
+
+                      <input
+                        inputMode="numeric"
+                        value={form.units}
+                        onChange={(event) =>
+                          updateForm(
+                            "units",
+                            event.target.value
+                          )
+                        }
+                        placeholder="24"
+                      />
+                    </div>
+
+                    <div className="field full">
+                      <label>
+                        Codice fiscale del condominio
+                      </label>
+
+                      <input
+                        value={form.fiscalCode}
+                        onChange={(event) =>
+                          updateForm(
+                            "fiscalCode",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Codice fiscale"
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        Referente
+                      </label>
+
+                      <input
+                        value={form.contact}
+                        onChange={(event) =>
+                          updateForm(
+                            "contact",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Nome e cognome"
+                        autoComplete="name"
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>
+                        Telefono
+                      </label>
+
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(event) =>
+                          updateForm(
+                            "phone",
+                            event.target.value
+                          )
+                        }
+                        placeholder="+39 ..."
+                        autoComplete="tel"
+                      />
+                    </div>
+
+                    <div className="field full">
+                      <label>
+                        Email
+                      </label>
+
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(event) =>
+                          updateForm(
+                            "email",
+                            event.target.value
+                          )
+                        }
+                        placeholder="email@esempio.it"
+                        autoComplete="email"
+                      />
+                    </div>
+
+                    <div className="field full">
+                      <label>
+                        Note
+                      </label>
+
+                      <textarea
+                        value={form.notes}
+                        onChange={(event) =>
+                          updateForm(
+                            "notes",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Note operative..."
+                      />
+                    </div>
+
                   </div>
 
-                  <div className="field full">
-                    <label>Indirizzo *</label>
+                  <div className="form-actions">
 
-                    <input
-                      value={form.address}
-                      onChange={(event) =>
-                        updateForm(
-                          "address",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Via e numero civico"
-                    />
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        setShowForm(false);
+                        resetForm();
+                      }}
+                    >
+                      Annulla
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="primary-button"
+                    >
+                      {editingId !== null
+                        ? "Salva modifiche"
+                        : "Salva condominio"}
+                    </button>
+
                   </div>
 
-                  <div className="field">
-                    <label>CAP</label>
-
-                    <input
-                      inputMode="numeric"
-                      value={form.cap}
-                      onChange={(event) =>
-                        updateForm(
-                          "cap",
-                          event.target.value
-                        )
-                      }
-                      placeholder="40100"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label>Comune</label>
-
-                    <input
-                      value={form.city}
-                      onChange={(event) =>
-                        updateForm(
-                          "city",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Bologna"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label>Provincia</label>
-
-                    <input
-                      value={form.province}
-                      onChange={(event) =>
-                        updateForm(
-                          "province",
-                          event.target.value
-                        )
-                      }
-                      placeholder="BO"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label>Unità immobiliari</label>
-
-                    <input
-                      inputMode="numeric"
-                      value={form.units}
-                      onChange={(event) =>
-                        updateForm(
-                          "units",
-                          event.target.value
-                        )
-                      }
-                      placeholder="24"
-                    />
-                  </div>
-
-                  <div className="field full">
-                    <label>Codice fiscale del condominio</label>
-
-                    <input
-                      value={form.fiscalCode}
-                      onChange={(event) =>
-                        updateForm(
-                          "fiscalCode",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Codice fiscale"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label>Referente</label>
-
-                    <input
-                      value={form.contact}
-                      onChange={(event) =>
-                        updateForm(
-                          "contact",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Nome e cognome"
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label>Telefono</label>
-
-                    <input
-                      type="tel"
-                      value={form.phone}
-                      onChange={(event) =>
-                        updateForm(
-                          "phone",
-                          event.target.value
-                        )
-                      }
-                      placeholder="+39 ..."
-                    />
-                  </div>
-
-                  <div className="field full">
-                    <label>Email</label>
-
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(event) =>
-                        updateForm(
-                          "email",
-                          event.target.value
-                        )
-                      }
-                      placeholder="email@esempio.it"
-                    />
-                  </div>
-
-                  <div className="field full">
-                    <label>Note</label>
-
-                    <textarea
-                      value={form.notes}
-                      onChange={(event) =>
-                        updateForm(
-                          "notes",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Note operative..."
-                    />
-                  </div>
-
-                </div>
-
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => setShowForm(false)}
-                  >
-                    Annulla
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="primary-button"
-                  >
-                    Salva condominio
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
+                </form>
+              </>
+            )}
 
         </main>
       </div>
