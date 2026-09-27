@@ -2048,12 +2048,21 @@ function App() {
       return;
     }
 
+    const normalizedSupplier = {
+      ...supplierForm,
+      name: supplierForm.name.trim(),
+      service: supplierForm.service.trim(),
+      phone: supplierForm.phone.trim(),
+      email: supplierForm.email.trim(),
+      notes: supplierForm.notes.trim(),
+    };
+
     if (selectedSupplier) {
       setSuppliers((current) =>
         current.map((item) =>
           item.id === selectedSupplier.id
             ? {
-                ...supplierForm,
+                ...normalizedSupplier,
                 id: selectedSupplier.id,
               }
             : item
@@ -2063,7 +2072,7 @@ function App() {
       setSuppliers((current) => [
         ...current,
         {
-          ...supplierForm,
+          ...normalizedSupplier,
           id: makeId(),
         },
       ]);
@@ -2097,6 +2106,14 @@ function App() {
         (item) => item.id !== id
       )
     );
+
+    setCondominiumRequests((current) =>
+      current.map((request) =>
+        request.supplierId === id
+          ? { ...request, supplierId: null }
+          : request
+      )
+    );
   };
 
 
@@ -2116,12 +2133,18 @@ function App() {
       return;
     }
 
+    const normalizedActivity = {
+      ...activityForm,
+      title: activityForm.title.trim(),
+      notes: activityForm.notes.trim(),
+    };
+
     if (selectedActivity) {
       setActivities((current) =>
         current.map((item) =>
           item.id === selectedActivity.id
             ? {
-                ...activityForm,
+                ...normalizedActivity,
                 id: selectedActivity.id,
               }
             : item
@@ -2131,7 +2154,7 @@ function App() {
       setActivities((current) => [
         ...current,
         {
-          ...activityForm,
+          ...normalizedActivity,
           id: makeId(),
         },
       ]);
@@ -2163,6 +2186,14 @@ function App() {
     setActivities((current) =>
       current.filter(
         (item) => item.id !== id
+      )
+    );
+
+    setCondominiumRequests((current) =>
+      current.map((request) =>
+        request.activityId === id
+          ? { ...request, activityId: null }
+          : request
       )
     );
   };
@@ -2277,6 +2308,19 @@ function App() {
       alert(
         "Inserisci titolo e contenuto della comunicazione."
       );
+      return;
+    }
+
+    if (!communicationForm.condominiumId) {
+      alert("Seleziona il condominio destinatario della comunicazione.");
+      return;
+    }
+
+    if (
+      communicationForm.audience === "Selezionati" &&
+      !(communicationForm.recipientIds || []).length
+    ) {
+      alert("Seleziona almeno un condòmino destinatario.");
       return;
     }
 
@@ -2564,6 +2608,17 @@ function App() {
         c.publishedToPortal
     ).length;
 
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const overdueDeadlines = deadlines.filter(
+    (d) => d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
+  ).length;
+  const pendingRequests = condominiumRequests.filter(
+    (request) => request.status !== "Risolta" && request.status !== "Chiusa"
+  ).length;
+  const documentsToVerify = documents.filter(
+    (document) => document.aiStatus === "Da verificare"
+  ).length;
+
 
   return (
     <>
@@ -2816,6 +2871,9 @@ function App() {
               publishedCommunications={
                 publishedCommunications
               }
+              overdueDeadlines={overdueDeadlines}
+              pendingRequests={pendingRequests}
+              documentsToVerify={documentsToVerify}
               onNavigate={
                 navigate
               }
@@ -3857,6 +3915,21 @@ function Dashboard({
           <span>
             Comunicazioni pubblicate
           </span>
+        </div>
+
+        <div className="mini-stat">
+          <b>{overdueDeadlines}</b>
+          <span>Scadenze oltre termine</span>
+        </div>
+
+        <div className="mini-stat">
+          <b>{pendingRequests}</b>
+          <span>Richieste aperte</span>
+        </div>
+
+        <div className="mini-stat">
+          <b>{documentsToVerify}</b>
+          <span>Documenti da verificare</span>
         </div>
 
       </section>
@@ -5376,21 +5449,25 @@ function DocumentsPage({
   onPublication,
   plan,
 }: any) {
-  const filtered =
-    documents.filter(
-      (d: DocumentItem) =>
-        `${d.name} ${
-          d.category
-        } ${condominiumName(
-          d.condominiumId
-        )} ${
-          d.notes
-        } ${d.source}`
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-    );
+  const [categoryFilter, setCategoryFilter] = useState("Tutte");
+  const [sourceFilter, setSourceFilter] = useState("Tutti");
+  const [publicationFilter, setPublicationFilter] = useState("Tutte");
+  const [aiFilter, setAiFilter] = useState("Tutti");
+
+  const filtered = documents.filter((d: DocumentItem) => {
+    const textMatch = `${d.name} ${d.category} ${condominiumName(d.condominiumId)} ${d.notes} ${d.source}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    return textMatch &&
+      (categoryFilter === "Tutte" || d.category === categoryFilter) &&
+      (sourceFilter === "Tutti" || d.source === sourceFilter) &&
+      (publicationFilter === "Tutte" || d.publication === publicationFilter) &&
+      (aiFilter === "Tutti" || d.aiStatus === aiFilter);
+  });
+  const categories = Array.from(new Set(documents.map((d: DocumentItem) => d.category).filter(Boolean))).sort();
+  const totalShared = documents.filter((d: DocumentItem) => d.publication === "Condiviso").length;
+  const totalVerify = documents.filter((d: DocumentItem) => d.aiStatus === "Da verificare").length;
+  const totalAI = documents.filter((d: DocumentItem) => d.aiStatus !== "Non elaborato").length;
 
   return (
     <>
@@ -5435,6 +5512,29 @@ function DocumentsPage({
         placeholder="Cerca documento, categoria o condominio..."
       />
 
+      <div className="quick-stats">
+        <div className="quick-stat"><b>{documents.length}</b><span>Documenti</span></div>
+        <div className="quick-stat"><b>{totalShared}</b><span>Condivisi</span></div>
+        <div className="quick-stat"><b>{totalAI}</b><span>Analizzati AI</span></div>
+        <div className="quick-stat"><b>{totalVerify}</b><span>Da verificare</span></div>
+      </div>
+
+      <div className="filter-bar">
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <option>Tutte</option>
+          {categories.map((category) => <option key={category}>{category}</option>)}
+        </select>
+        <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+          <option>Tutti</option>
+          {(["Manuale", "PDF", "Word", "Excel", "Immagine", "Audio", "AI"] as DocumentSource[]).map((source) => <option key={source}>{source}</option>)}
+        </select>
+        <select value={publicationFilter} onChange={(e) => setPublicationFilter(e.target.value)}>
+          <option>Tutte</option><option>Privato</option><option>Condiviso</option>
+        </select>
+        <select value={aiFilter} onChange={(e) => setAiFilter(e.target.value)}>
+          <option>Tutti</option><option>Non elaborato</option><option>In elaborazione</option><option>Da verificare</option><option>Confermato</option>
+        </select>
+      </div>
 
       <div className="document-grid">
 
@@ -5620,22 +5720,15 @@ function DeadlinesPage({
   onStatus,
   condominiumName,
 }: any) {
-  const filtered =
-    deadlines
-      .filter(
-        (d: Deadline) =>
-          `${d.title} ${
-            d.category
-          } ${condominiumName(
-            d.condominiumId
-          )} ${
-            d.notes
-          }`
-            .toLowerCase()
-            .includes(
-              search.toLowerCase()
-            )
-      )
+  const [statusFilter, setStatusFilter] = useState("Tutti");
+  const [categoryFilter, setCategoryFilter] = useState("Tutte");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const filtered = deadlines
+      .filter((d: Deadline) => {
+        const textMatch = `${d.title} ${d.category} ${condominiumName(d.condominiumId)} ${d.notes}`.toLowerCase().includes(search.toLowerCase());
+        const effectiveStatus = d.status !== "Completata" && d.dueDate && d.dueDate < todayISO ? "Scaduta" : d.status;
+        return textMatch && (statusFilter === "Tutti" || effectiveStatus === statusFilter) && (categoryFilter === "Tutte" || d.category === categoryFilter);
+      })
       .sort(
         (
           a: Deadline,
@@ -5661,6 +5754,23 @@ function DeadlinesPage({
         onChange={setSearch}
         placeholder="Cerca scadenza, categoria o condominio..."
       />
+
+      <div className="quick-stats">
+        <div className="quick-stat"><b>{deadlines.length}</b><span>Totali</span></div>
+        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status === "Completata").length}</b><span>Completate</span></div>
+        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status !== "Completata" && d.dueDate < todayISO).length}</b><span>Scadute</span></div>
+        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status === "In scadenza").length}</b><span>In scadenza</span></div>
+      </div>
+
+      <div className="filter-bar">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option>Tutti</option><option>Da fare</option><option>In scadenza</option><option>Scaduta</option><option>Completata</option>
+        </select>
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <option>Tutte</option>
+          {Array.from(new Set(deadlines.map((d: Deadline) => d.category).filter(Boolean))).sort().map((category) => <option key={category}>{category}</option>)}
+        </select>
+      </div>
 
       <div className="cards-list">
 
@@ -5710,7 +5820,9 @@ function DeadlinesPage({
 
                 <Badge
                   value={
-                    d.status
+                    d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
+                      ? "Scaduta"
+                      : d.status
                   }
                 />
 
@@ -6122,6 +6234,13 @@ function SuppliersPage({
         placeholder="Cerca fornitore, servizio o condominio..."
       />
 
+      <div className="quick-stats">
+        <div className="quick-stat"><b>{suppliers.length}</b><span>Fornitori</span></div>
+        <div className="quick-stat"><b>{suppliers.filter((s: Supplier) => s.condominiumId).length}</b><span>Associati</span></div>
+        <div className="quick-stat"><b>{suppliers.filter((s: Supplier) => s.email.trim()).length}</b><span>Con e-mail</span></div>
+        <div className="quick-stat"><b>{suppliers.filter((s: Supplier) => s.phone.trim()).length}</b><span>Con telefono</span></div>
+      </div>
+
       <div className="cards-grid">
 
         {filtered.map(
@@ -6220,24 +6339,13 @@ function ActivitiesPage({
   onStatus,
   condominiumName,
 }: any) {
-  const filtered =
-    activities
-      .filter(
-        (a: Activity) =>
-          `${a.title} ${
-            a.priority
-          } ${a.status} ${
-            condominiumName(
-              a.condominiumId
-            )
-          } ${
-            a.notes
-          }`
-            .toLowerCase()
-            .includes(
-              search.toLowerCase()
-            )
-      )
+  const [statusFilter, setStatusFilter] = useState("Tutti");
+  const [priorityFilter, setPriorityFilter] = useState("Tutte");
+  const filtered = activities
+      .filter((a: Activity) => {
+        const textMatch = `${a.title} ${a.priority} ${a.status} ${condominiumName(a.condominiumId)} ${a.notes}`.toLowerCase().includes(search.toLowerCase());
+        return textMatch && (statusFilter === "Tutti" || a.status === statusFilter) && (priorityFilter === "Tutte" || a.priority === priorityFilter);
+      })
       .sort(
         (
           a: Activity,
@@ -6267,6 +6375,22 @@ function ActivitiesPage({
         onChange={setSearch}
         placeholder="Cerca attività, priorità o condominio..."
       />
+
+      <div className="quick-stats">
+        <div className="quick-stat"><b>{activities.length}</b><span>Totali</span></div>
+        <div className="quick-stat"><b>{activities.filter((a: Activity) => a.status === "Aperta").length}</b><span>Aperte</span></div>
+        <div className="quick-stat"><b>{activities.filter((a: Activity) => a.status === "In corso").length}</b><span>In corso</span></div>
+        <div className="quick-stat"><b>{activities.filter((a: Activity) => a.priority === "Alta" && a.status !== "Completata").length}</b><span>Alta priorità</span></div>
+      </div>
+
+      <div className="filter-bar">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option>Tutti</option><option>Aperta</option><option>In corso</option><option>Completata</option>
+        </select>
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+          <option>Tutte</option><option>Bassa</option><option>Media</option><option>Alta</option>
+        </select>
+      </div>
 
       <div className="cards-list">
 
@@ -6445,6 +6569,12 @@ function CommunicationsPage({
         placeholder="Cerca comunicazione, condominio o contenuto..."
       />
 
+      <div className="quick-stats">
+        <div className="quick-stat"><b>{communications.length}</b><span>Totali</span></div>
+        <div className="quick-stat"><b>{communications.filter((c: Communication) => c.status === "Bozza").length}</b><span>Bozze</span></div>
+        <div className="quick-stat"><b>{communications.filter((c: Communication) => c.publishedToPortal).length}</b><span>Nel portale</span></div>
+        <div className="quick-stat"><b>{communications.filter((c: Communication) => c.emailStatus === "Predisposta").length}</b><span>E-mail predisposte</span></div>
+      </div>
 
       <div className="cards-list">
 
@@ -6491,6 +6621,10 @@ function CommunicationsPage({
                     <Badge
                       value="Condiviso"
                     />
+                  )}
+
+                  {c.emailStatus === "Predisposta" && (
+                    <Badge value="E-mail predisposta" />
                   )}
 
                 </div>
@@ -6598,13 +6732,7 @@ function AIPage({
           </h2>
 
           <p>
-            Carica un documento,
-            un'immagine o un file
-            compatibile. In futuro BETHAG
-            potrà estrarre automaticamente
-            informazioni, scadenze,
-            importi, fornitori e altri
-            dati utili alla gestione.
+            BETHAG prepara oggi il flusso operativo per l'intelligenza artificiale: acquisizione, analisi, dati estratti e verifica dell'amministratore. Le funzioni AI reali richiederanno il collegamento a un servizio backend.
           </p>
 
         </div>
@@ -9247,6 +9375,8 @@ function CommunicationForm({
               ...value,
               audience:
                 v as CommunicationAudience,
+              recipientIds:
+                v === "Selezionati" ? (value.recipientIds || []) : [],
             })
           }
           options={[
@@ -11337,6 +11467,44 @@ select:focus{
 .request-summary{display:flex;gap:20px;margin:14px 0;color:#64748b;font-size:13px}.request-summary b{color:#111827;font-size:18px}.request-card{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid #eef2f7}.request-card:last-child{border-bottom:0}.request-main{min-width:0;flex:1}.request-main>b,.request-main>span{display:block}.request-main>span{margin-top:4px;color:#64748b;font-size:12px}.request-main p{margin:8px 0 0;color:#475569;line-height:1.5;white-space:pre-wrap}.request-response{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.request-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:230px}
 .recipient-picker{padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px}.recipient-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.recipient-option{display:flex;align-items:center;gap:8px;font-size:13px}.communication-email-actions{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px;background:#f8fafc;border-radius:10px}.communication-email-actions span{color:#64748b;font-size:12px}
 @media (max-width:760px){.condominium-member-card,.request-card{align-items:flex-start;flex-direction:column}.request-actions{width:100%;justify-content:flex-start;min-width:0}.button-row.compact{width:100%;flex-direction:column}.button-row.compact>*{width:100%}.communication-email-actions{align-items:flex-start;flex-direction:column}}
+
+/* =========================================================
+   BETHAG - KPI E FILTRI AVANZATI
+   ========================================================= */
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.quick-stat {
+  padding: 14px 16px;
+  border: 1px solid #e6e8ec;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.quick-stat b { font-size: 20px; }
+.quick-stat span { font-size: 12px; opacity: .7; }
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+.filter-bar select {
+  min-width: 150px;
+  padding: 9px 11px;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  background: #fff;
+}
+@media (max-width: 760px) {
+  .quick-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter-bar select { flex: 1 1 140px; min-width: 0; }
+}
 
 `;
 
