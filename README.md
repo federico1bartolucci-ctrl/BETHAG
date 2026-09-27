@@ -1,1 +1,1 @@
-# BETHAG---intelligent-Businnes-Management
+# BETHAG
