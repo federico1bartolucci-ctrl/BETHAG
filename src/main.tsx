@@ -4356,6 +4356,7 @@ function App() {
               setSubscription={
                 setSubscription
               }
+              isAdministrator={isAdministrator}
             />
           )}
 
