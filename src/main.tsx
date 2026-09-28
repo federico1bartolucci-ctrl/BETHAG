@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2786,111 +2786,50 @@ function App() {
     closeModal();
   };
 
-  const deleteCondominium = (
-    item: Condominium
-  ) => {
+  const deleteCondominium = async (item: Condominium) => {
     if (!requireAdministrator("L'eliminazione del condominio")) return;
 
     const related =
-      deadlines.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      documents.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      assemblies.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      suppliers.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      activities.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      communications.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      condominiumMembers.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      condominiumRequests.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length +
-      portalMembers.filter(
-        (x) =>
-          x.condominiumId === item.id
-      ).length;
+      deadlines.filter((x) => x.condominiumId === item.id).length +
+      documents.filter((x) => x.condominiumId === item.id).length +
+      assemblies.filter((x) => x.condominiumId === item.id).length +
+      suppliers.filter((x) => x.condominiumId === item.id).length +
+      activities.filter((x) => x.condominiumId === item.id).length +
+      communications.filter((x) => x.condominiumId === item.id).length +
+      condominiumMembers.filter((x) => x.condominiumId === item.id).length +
+      condominiumRequests.filter((x) => x.condominiumId === item.id).length +
+      portalMembers.filter((x) => x.condominiumId === item.id).length;
 
-    const message =
-      related > 0
-        ? `Sei sicuro di voler cancellare "${item.name}"? Il condominio ha ${related} elementi collegati e verranno rimossi anche i relativi collegamenti.`
-        : `Sei sicuro di voler cancellare "${item.name}"?`;
+    const message = related > 0
+      ? `Sei sicuro di voler cancellare "${item.name}"? Il condominio ha ${related} elementi collegati e verranno rimossi anche i relativi collegamenti.`
+      : `Sei sicuro di voler cancellare "${item.name}"?`;
 
     if (!window.confirm(message)) return;
 
-    setCondominiums((current) =>
-      current.filter(
-        (c) => c.id !== item.id
-      )
-    );
+    if (supabaseConfigured && supabase && sessionRole === "admin") {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
 
-    setDeadlines((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
+        const workspaceId = profile.workspaceId || await getActiveWorkspaceId(session.user.id, null);
+        if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
-    setDocuments((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
+        await deleteCondominium(workspaceId, item.id);
+      } catch (error) {
+        console.error("BETHAG condominium deletion failed", error);
+        alert(error instanceof Error ? "Il condominio non è stato cancellato dal server.\\n\\n" + error.message : "Il condominio non è stato cancellato dal server. Riprova.");
+        return;
+      }
+    }
 
-    setAssemblies((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
-
-    setSuppliers((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
-
-    setActivities((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
-
-    setCommunications((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
-
-    setPortalMembers((current) =>
-      current.filter(
-        (x) =>
-          x.condominiumId !== item.id
-      )
-    );
-
+    setCondominiums((current) => current.filter((c) => c.id !== item.id));
+    setDeadlines((current) => current.filter((x) => x.condominiumId !== item.id));
+    setDocuments((current) => current.filter((x) => x.condominiumId !== item.id));
+    setAssemblies((current) => current.filter((x) => x.condominiumId !== item.id));
+    setSuppliers((current) => current.filter((x) => x.condominiumId !== item.id));
+    setActivities((current) => current.filter((x) => x.condominiumId !== item.id));
+    setCommunications((current) => current.filter((x) => x.condominiumId !== item.id));
+    setPortalMembers((current) => current.filter((x) => x.condominiumId !== item.id));
     setCondominiumMembers((current) => current.filter((member) => member.condominiumId !== item.id));
     setCondominiumRequests((current) => current.filter((request) => request.condominiumId !== item.id));
     setSelectedCondominium(null);
