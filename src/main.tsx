@@ -2271,6 +2271,10 @@ function App() {
     id: number,
     status: DeadlineStatus
   ) => {
+    if (!isAdministrator) {
+      alert("L'aggiornamento delle scadenze è riservato all'Amministratore.");
+      return;
+    }
     setDeadlines((current) =>
       current.map((item) =>
         item.id === id
@@ -2377,6 +2381,10 @@ function App() {
   const toggleDocumentPublication = (
     id: number
   ) => {
+    if (!isAdministrator) {
+      alert("La condivisione dei documenti è riservata all'Amministratore.");
+      return;
+    }
     if (
       !requirePlan(
         "portal",
@@ -2547,6 +2555,10 @@ function App() {
     id: number,
     status: AssemblyStatus
   ) => {
+    if (!isAdministrator) {
+      alert("L'aggiornamento delle assemblee è riservato all'Amministratore.");
+      return;
+    }
     setAssemblies((current) =>
       current.map((item) =>
         item.id === id
@@ -2680,6 +2692,10 @@ function App() {
   const toggleAssemblyPublication = (
     id: number
   ) => {
+    if (!isAdministrator) {
+      alert("La pubblicazione dei verbali è riservata all'Amministratore.");
+      return;
+    }
     if (
       !requirePlan(
         "portal",
@@ -2885,6 +2901,10 @@ function App() {
     id: number,
     status: ActivityStatus
   ) => {
+    if (!isAdministrator) {
+      alert("L'aggiornamento delle attività è riservato all'Amministratore.");
+      return;
+    }
     setActivities((current) =>
       current.map((item) =>
         item.id === id
