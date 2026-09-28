@@ -52,6 +52,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities,
     communications,
     condominiumRequests,
+    portalAccess,
   ] = await Promise.all([
     condominiumIds.length
       ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
@@ -63,6 +64,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("activities").select("*").eq("workspace_id", workspaceId),
     supabase.from("communications").select("*").eq("workspace_id", workspaceId),
     supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
+    supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
   ]);
 
   const firstError = [
@@ -74,6 +76,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities,
     communications,
     condominiumRequests,
+    portalAccess,
   ].find((result) => result.error)?.error;
 
   if (firstError) throw firstError;
@@ -99,6 +102,17 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities: (activities.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     communications: (communications.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    portalMembers: (portalAccess.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      name: row.name,
+      email: row.email,
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      role: row.role === "council" ? "council" : "resident",
+      apartment: row.apartment ?? "",
+      permissions: row.permissions ?? [],
+      active: row.active ?? true,
+    })),
   };
 }
 
@@ -210,6 +224,23 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
   for (const [table, rows] of rowsByTable) {
     if (rows.length) await upsertRows(table, rows);
   }
+
+  const portalRows = (state.portalMembers ?? []).map((item: any) => ({
+    workspace_id: workspaceId,
+    legacy_id: item.id,
+    condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+    name: item.name,
+    email: item.email,
+    role: item.role === "council" ? "council" : "resident",
+    apartment: item.apartment ?? "",
+    permissions: item.permissions ?? [],
+    active: item.active ?? true,
+    user_id: item.userId ?? null,
+    data: item,
+  })).filter((row: any) => row.condominium_id);
+
+  if (portalRows.length) await upsertRows("portal_access", portalRows);
+  await reconcileWorkspaceRows("portal_access", workspaceId, portalRows);
 
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
