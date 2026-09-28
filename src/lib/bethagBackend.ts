@@ -45,6 +45,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   const [
     condominiumMembers,
+    condominiumUnits,
     documents,
     deadlines,
     assemblies,
@@ -57,6 +58,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   ] = await Promise.all([
     condominiumIds.length
       ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
+      : Promise.resolve({ data: [], error: null }),
+    condominiumIds.length
+      ? supabase.from("condominium_units").select("*").in("condominium_id", condominiumIds).order("created_at")
       : Promise.resolve({ data: [], error: null }),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
@@ -71,6 +75,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   const firstError = [
     condominiumMembers,
+    condominiumUnits,
     documents,
     deadlines,
     assemblies,
@@ -97,6 +102,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         condominiumLegacyByDbId.get(row.condominium_id) ??
         null,
+      unitId: row.unit_id ?? row.data?.unitId ?? "",
     })),
     documents: (documents.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     deadlines: (deadlines.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
@@ -293,8 +299,42 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     }
   }
 
+  const unitRowsByKey = new Map<string, any>();
+  const desiredUnits = (state.condominiumMembers ?? [])
+    .map((item: any) => ({
+      condominiumId: condominiumDbIdByLegacyId.get(item.condominiumId),
+      unitCode: String(item.apartment ?? "").trim(),
+    }))
+    .filter((unit: any) => unit.condominiumId && unit.unitCode)
+    .map((unit: any) => ({
+      workspace_id: workspaceId,
+      condominium_id: unit.condominiumId,
+      unit_code: unit.unitCode,
+      data: { unitCode: unit.unitCode },
+    }));
+  if (desiredUnits.length) {
+    await upsertRows("condominium_units", desiredUnits, "condominium_id,unit_code");
+    const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
+    const { data: persistedUnits, error: unitsError } = await supabase
+      .from("condominium_units")
+      .select("id, condominium_id, unit_code")
+      .in("condominium_id", unitCondominiums);
+    if (unitsError) throw unitsError;
+    (persistedUnits ?? []).forEach((unit: any) => {
+      unitRowsByKey.set(`${unit.condominium_id}::${String(unit.unit_code).trim().toLowerCase()}`, unit);
+    });
+  }
+
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
+
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+    unit_id: (() => {
+      const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId);
+      const unit = condominiumDbId
+        ? unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`)
+        : null;
+      return unit?.id ?? null;
+    })(),
     legacy_id: item.id,
     user_id: item.userId ?? null,
     name: [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name || "Condòmino",
