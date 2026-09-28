@@ -3602,9 +3602,63 @@ function App() {
       }
     }
     const data = { ...condominiumRequestForm, description: condominiumRequestForm.description.trim(), response: condominiumRequestForm.response.trim() };
-    if (selectedCondominiumRequest) setCondominiumRequests((current) => current.map((request) => request.id === selectedCondominiumRequest.id ? { ...data, id: selectedCondominiumRequest.id } : request));
-    else setCondominiumRequests((current) => [{ ...data, id: makeId() }, ...current]);
-    setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId }); setSelectedCondominiumRequest(null); closeModal();
+    const requestId = selectedCondominiumRequest?.id ?? makeId();
+    const savedRequest = { ...data, id: requestId };
+
+    setCondominiumRequests((current) =>
+      selectedCondominiumRequest
+        ? current.map((request) => request.id === requestId ? savedRequest : request)
+        : [savedRequest, ...current]
+    );
+
+    if (supabaseConfigured && supabase) {
+      try {
+        const condominium = condominiums.find((item) => item.id === savedRequest.condominiumId);
+        if (!condominium) throw new Error("Condominio non disponibile.");
+
+        const { data: condominiumRow, error: condominiumError } = await supabase
+          .from("condominiums")
+          .select("id")
+          .eq("workspace_id", profile.workspaceId)
+          .eq("legacy_id", savedRequest.condominiumId)
+          .maybeSingle();
+        if (condominiumError) throw condominiumError;
+        if (!condominiumRow) throw new Error("Condominio non disponibile nel workspace.");
+
+        const payload = {
+          workspace_id: profile.workspaceId,
+          legacy_id: savedRequest.id,
+          condominium_id: condominiumRow.id,
+          title: savedRequest.category,
+          description: savedRequest.description,
+          status: savedRequest.status,
+          data: savedRequest,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error: requestError } = await supabase
+          .from("condominium_requests")
+          .upsert(payload, { onConflict: "workspace_id,legacy_id" });
+        if (requestError) throw requestError;
+      } catch (error) {
+        console.error("BETHAG request persistence failed", error);
+        setCondominiumRequests((current) =>
+          selectedCondominiumRequest
+            ? current.map((request) => request.id === requestId ? selectedCondominiumRequest : request)
+            : current.filter((request) => request.id !== requestId)
+        );
+        alert(
+          error instanceof Error
+            ? `Impossibile salvare la richiesta: ${error.message}`
+            : "Impossibile salvare la richiesta."
+        );
+        return;
+      }
+    }
+
+    setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId });
+    setSelectedCondominiumRequest(null);
+    closeModal();
   };
 
   const editCondominiumRequest = (request: CondominiumRequest) => {
@@ -3617,13 +3671,46 @@ function App() {
     setCondominiumRequests((current) => current.filter((request) => request.id !== id));
   };
 
-  const updateCondominiumRequestStatus = (id: number, status: RequestStatus) => {
+  const updateCondominiumRequestStatus = async (id: number, status: RequestStatus) => {
     if (!requireAdministrator("La gestione dello stato della segnalazione o richiesta")) return;
+
+    const currentRequest = condominiumRequests.find((request) => request.id === id);
+    if (!currentRequest) return;
+
+    const updatedRequest = { ...currentRequest, status };
     setCondominiumRequests((current) =>
       current.map((request) =>
-        request.id === id ? { ...request, status } : request
+        request.id === id ? updatedRequest : request
       )
     );
+
+    if (!supabaseConfigured || !supabase) return;
+
+    try {
+      const { error } = await supabase
+        .from("condominium_requests")
+        .update({
+          status,
+          data: updatedRequest,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("workspace_id", profile.workspaceId)
+        .eq("legacy_id", id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("BETHAG request status persistence failed", error);
+      setCondominiumRequests((current) =>
+        current.map((request) =>
+          request.id === id ? currentRequest : request
+        )
+      );
+      alert(
+        error instanceof Error
+          ? `Impossibile aggiornare la richiesta: ${error.message}`
+          : "Impossibile aggiornare la richiesta."
+      );
+    }
   };
 
   const prepareCondominiumEmail = async (
