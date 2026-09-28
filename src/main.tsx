@@ -9867,9 +9867,35 @@ function CollaboratorsPage({
       return;
     }
 
-    setCollaborators((items) =>
-      items.filter((item) => item.id !== id)
-    );
+    try {
+      if (!supabaseConfigured || !supabase) {
+        throw new Error("Supabase non è configurato.");
+      }
+      const target = collaborators.find((item) => item.id === id);
+      if (!target?.userId) {
+        throw new Error("Il collaboratore non è collegato a un account Auth.");
+      }
+
+      const { error } = await supabase
+        .from("workspace_members")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", target.userId)
+        .eq("role", "collaborator");
+
+      if (error) throw error;
+
+      setCollaborators((items) =>
+        items.filter((item) => item.id !== id)
+      );
+    } catch (error) {
+      console.error("BETHAG collaborator removal failed", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Impossibile rimuovere il collaboratore."
+      );
+    }
   };
 
   const toggleStatus = (id: number) => {
@@ -9877,19 +9903,43 @@ function CollaboratorsPage({
       alert("La modifica dello stato dei collaboratori è riservata all'Amministratore.");
       return;
     }
-    setCollaborators((items) =>
-      items.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status:
-                item.status === "Attivo"
-                  ? "Disattivato"
-                  : "Attivo",
-            }
-          : item
-      )
-    );
+    try {
+      if (!supabaseConfigured || !supabase) {
+        throw new Error("Supabase non è configurato.");
+      }
+      const target = collaborators.find((item) => item.id === id);
+      if (!target?.userId) {
+        throw new Error("Il collaboratore non è collegato a un account Auth.");
+      }
+
+      const nextActive = target.status !== "Attivo";
+      const { error } = await supabase
+        .from("workspace_members")
+        .update({ active: nextActive })
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", target.userId)
+        .eq("role", "collaborator");
+
+      if (error) throw error;
+
+      setCollaborators((items) =>
+        items.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status: nextActive ? "Attivo" : "Disattivato",
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("BETHAG collaborator status update failed", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare lo stato del collaboratore."
+      );
+    }
   };
 
   const togglePermission = (
