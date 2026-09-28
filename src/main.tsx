@@ -2907,7 +2907,19 @@ function App() {
     event.preventDefault();
     if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) { alert("Inserisci nome, cognome e interno/appartamento del condòmino."); return; }
     if (!validateEmail(condominiumMemberForm.email)) { alert("Controlla l'indirizzo email del condòmino."); return; }
-    const data = { ...condominiumMemberForm, firstName: condominiumMemberForm.firstName.trim(), lastName: condominiumMemberForm.lastName.trim(), apartment: condominiumMemberForm.apartment.trim() };
+    const normalizedEmail = condominiumMemberForm.email.trim().toLowerCase();
+    if (normalizedEmail) {
+      const duplicate = condominiumMembers.some((member) =>
+        member.condominiumId === condominiumMemberForm.condominiumId &&
+        member.id !== selectedCondominiumMember?.id &&
+        member.email.trim().toLowerCase() === normalizedEmail
+      );
+      if (duplicate) {
+        alert("Esiste già un condòmino con questo indirizzo e-mail nello stesso condominio.");
+        return;
+      }
+    }
+    const data = { ...condominiumMemberForm, firstName: condominiumMemberForm.firstName.trim(), lastName: condominiumMemberForm.lastName.trim(), apartment: condominiumMemberForm.apartment.trim(), email: condominiumMemberForm.email.trim() };
     if (selectedCondominiumMember) setCondominiumMembers((current) => current.map((member) => member.id === selectedCondominiumMember.id ? { ...data, id: selectedCondominiumMember.id } : member));
     else setCondominiumMembers((current) => [...current, { ...data, id: makeId() }]);
     setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId: condominiumMemberForm.condominiumId }); setSelectedCondominiumMember(null); closeModal();
@@ -5371,7 +5383,7 @@ function CondominiumsPage(
           <div className="detail-page-heading">
 
             <div className="detail-page-icon">
-              🏢
+              <AppIcon name="building" size={28} />
             </div>
 
             <div className="detail-page-heading-text">
@@ -5410,7 +5422,7 @@ function CondominiumsPage(
                 onEdit(selected)
               }
             >
-              ✏️ Modifica
+              <><AppIcon name="settings" size={16} /> Modifica</>
             </button>
 
             <button
@@ -5419,7 +5431,7 @@ function CondominiumsPage(
                 onDelete(selected)
               }
             >
-              🗑 Elimina
+              <><AppIcon name="trash" size={16} /> Elimina</>
             </button>
 
           </div>
@@ -5569,7 +5581,7 @@ function CondominiumsPage(
               >
 
                 <div className="entity-icon">
-                  🏢
+                  <AppIcon name="building" size={26} />
                 </div>
 
                 <h2>
@@ -5586,7 +5598,7 @@ function CondominiumsPage(
                 </p>
 
                 <div className="meta">
-                  🏠 {c.units} unità
+                  <><AppIcon name="building" size={15} /> {c.units} unità</>
                 </div>
 
                 <div className="button-row">
