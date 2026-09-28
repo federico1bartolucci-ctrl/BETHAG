@@ -3865,6 +3865,7 @@ function App() {
               subscription={
                 subscription
               }
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4827,6 +4828,7 @@ function Dashboard({
   onNavigate,
   condominiumName,
   subscription,
+  isAdministrator,
 }: any) {
   return (
     <>
