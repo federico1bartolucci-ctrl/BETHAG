@@ -9854,7 +9854,7 @@ function CollaboratorsPage({
     });
   };
 
-  const remove = (id: number) => {
+  const remove = async (id: number) => {
     if (!isAdministrator) {
       alert("La rimozione dei collaboratori è riservata all'Amministratore.");
       return;
@@ -9898,7 +9898,7 @@ function CollaboratorsPage({
     }
   };
 
-  const toggleStatus = (id: number) => {
+  const toggleStatus = async (id: number) => {
     if (!isAdministrator) {
       alert("La modifica dello stato dei collaboratori è riservata all'Amministratore.");
       return;
