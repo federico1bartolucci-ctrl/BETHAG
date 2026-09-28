@@ -1430,8 +1430,18 @@ function ResidentPortalView({
     ? condominiums.find((item) => item.id === member.condominiumId)
     : null;
 
-  const hasPortalPermission = (permission: PortalPermission) =>
-    Boolean(member?.permissions?.includes(permission));
+  const hasPortalPermission = (permission: PortalPermission) => {
+    const permissions = member?.permissions ?? [];
+    if (permissions.includes(permission)) return true;
+    // Compatibilità con i vecchi accessi che usavano il permesso generico "pagamenti".
+    if (
+      permission === "pagamenti_ordinari" ||
+      permission === "pagamenti_straordinari"
+    ) {
+      return permissions.includes("pagamenti" as PortalPermission);
+    }
+    return false;
+  };
 
   const sharedDocuments = member && hasPortalPermission("documenti")
     ? documents.filter(
