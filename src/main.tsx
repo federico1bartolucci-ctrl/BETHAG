@@ -1298,36 +1298,39 @@ function ResidentPortalView({
       (item) =>
         item.active &&
         item.role === "resident" &&
-        item.email.toLowerCase() === email.toLowerCase()
-    ) ||
-    portalMembers.find(
-      (item) => item.active && item.role === "resident"
-    );
+        item.email.trim().toLowerCase() === email.trim().toLowerCase()
+    ) || null;
 
   const condominium = member
     ? condominiums.find((item) => item.id === member.condominiumId)
     : null;
 
-  const sharedDocuments = documents.filter(
-    (item) =>
-      item.publication === "Condiviso" &&
-      (!member || item.condominiumId === member.condominiumId)
-  );
+  const sharedDocuments = member
+    ? documents.filter(
+        (item) =>
+          item.publication === "Condiviso" &&
+          item.condominiumId === member.condominiumId
+      )
+    : [];
 
-  const publishedCommunications = communications.filter(
-    (item) =>
-      item.status === "Pubblicata" &&
-      item.publishedToPortal &&
-      (!member || item.condominiumId === member.condominiumId)
-  );
+  const publishedCommunications = member
+    ? communications.filter(
+        (item) =>
+          item.status === "Pubblicata" &&
+          item.publishedToPortal &&
+          item.condominiumId === member.condominiumId
+      )
+    : [];
 
-  const publishedAssemblies = assemblies
-    .filter(
-      (item) =>
-        item.publishedToPortal &&
-        (!member || item.condominiumId === member.condominiumId)
-    )
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const publishedAssemblies = member
+    ? assemblies
+        .filter(
+          (item) =>
+            item.publishedToPortal &&
+            item.condominiumId === member.condominiumId
+        )
+        .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
 
   return (
     <div className="resident-portal">
@@ -1347,10 +1350,11 @@ function ResidentPortalView({
       <main className="resident-main">
         <section className="resident-hero">
           <div className="eyebrow">Portale condòmino</div>
-          <h1>{condominium?.name || "La tua area condominiale"}</h1>
+          <h1>{condominium?.name || "Profilo non associato"}</h1>
           <p>
-            Consultazione di documenti, comunicazioni e assemblee
-            pubblicate dall'amministratore.
+            {member
+              ? "Consultazione di documenti, comunicazioni e assemblee pubblicate dall'amministratore."
+              : "Non è stato trovato un profilo condominiale attivo associato a questa e-mail."}
           </p>
         </section>
 
@@ -1655,6 +1659,21 @@ function App() {
     ) {
       alert(
         "Questo indirizzo non risulta ancora abilitato come Collaboratore attivo nel workspace BETHAG."
+      );
+      return;
+    }
+
+    if (
+      role === "resident" &&
+      !portalMembers.some(
+        (item) =>
+          item.active &&
+          item.role === "resident" &&
+          item.email.trim().toLowerCase() === normalizedEmail.toLowerCase()
+      )
+    ) {
+      alert(
+        "Questo indirizzo non risulta associato a un profilo condominiale attivo nel Portale BETHAG."
       );
       return;
     }
