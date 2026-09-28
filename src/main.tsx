@@ -1438,7 +1438,7 @@ function ResidentPortalView({
       permission === "pagamenti_ordinari" ||
       permission === "pagamenti_straordinari"
     ) {
-      return permissions.includes("pagamenti" as PortalPermission);
+      return (permissions as string[]).includes("pagamenti");
     }
     return false;
   };
