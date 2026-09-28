@@ -9022,14 +9022,20 @@ function PortalPage({
     (residentCondominiumId === null || residentCondominiumId === undefined || communication.condominiumId === residentCondominiumId) &&
     (isAdministrator || currentPortalMember?.permissions.includes("comunicazioni"))
   );
+  const currentCondominiumMember = currentPortalMember
+    ? condominiumMembers.find(
+        (member: CondominiumMember) =>
+          member.condominiumId === currentPortalMember.condominiumId &&
+          member.active &&
+          member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+      )
+    : null;
+
   const visibleRequests = condominiumRequests.filter((request: CondominiumRequest) =>
     !isAdministrator &&
     request.condominiumId === residentCondominiumId &&
-    (request.memberId === null || request.memberId === currentPortalMember?.id ||
-      condominiumMembers.some((member: CondominiumMember) =>
-        member.id === request.memberId &&
-        member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
-      ))
+    Boolean(currentCondominiumMember) &&
+    request.memberId === currentCondominiumMember?.id
   );
 
   const save = (
