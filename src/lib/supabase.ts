@@ -7,8 +7,10 @@ const supabasePublishableKey =
   (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
   "sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ";
 
+const configuredFlag = import.meta.env.VITE_SUPABASE_ENABLE as string | undefined;
+
 export const supabaseConfigured =
-  import.meta.env.VITE_SUPABASE_ENABLE === "true" &&
+  (configuredFlag === undefined || configuredFlag === "true") &&
   Boolean(supabaseUrl && supabasePublishableKey);
 
 export const supabase = supabaseConfigured
