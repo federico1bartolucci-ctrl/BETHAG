@@ -242,6 +242,10 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
       data: item,
     }))],
     ["condominium_requests", (state.condominiumRequests ?? []).map((item: any) => {
+      const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId) ?? null;
+      const memberDb = condominiumDbId
+        ? memberRowsByLegacyKey.get(`${condominiumDbId}::${item.memberId ?? ""}`)
+        : null;
       const requester = (state.condominiumMembers ?? []).find(
         (member: any) =>
           member.id === item.memberId &&
@@ -250,8 +254,9 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
       return {
         workspace_id: workspaceId,
         legacy_id: item.id,
-        condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-        requester_user_id: requester?.userId ?? null,
+        condominium_id: condominiumDbId,
+        member_id: memberDb?.id ?? null,
+        requester_user_id: item.requesterUserId ?? requester?.userId ?? null,
         title: item.category,
         description: item.description,
         status: item.status,
@@ -359,6 +364,19 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   })).filter((row: any) => row.condominium_id);
 
   if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+
+  const memberRowsByLegacyKey = new Map<string, any>();
+  if (memberRows.length) {
+    const memberCondominiumIds = Array.from(new Set(memberRows.map((row: any) => row.condominium_id)));
+    const { data: persistedMembers, error: persistedMembersError } = await supabase
+      .from("condominium_members")
+      .select("id, condominium_id, legacy_id")
+      .in("condominium_id", memberCondominiumIds);
+    if (persistedMembersError) throw persistedMembersError;
+    (persistedMembers ?? []).forEach((member: any) => {
+      memberRowsByLegacyKey.set(`${member.condominium_id}::${member.legacy_id}`, member);
+    });
+  }
 
   // I condomini vengono creati/modificati tramite RPC dedicato. Non riconciliamo
   // qui le cancellazioni, perché una sincronizzazione già accodata con uno stato
@@ -484,7 +502,10 @@ export async function updateCondominiumRequestStatus(
     const { error } = await supabase
       .from("condominium_requests")
       .update({
+        title: request.category,
+        description: request.description,
         status: request.status,
+        member_id: request.memberDbId ?? undefined,
         data: request,
         updated_at: new Date().toISOString(),
       })
