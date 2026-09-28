@@ -7752,22 +7752,19 @@ function CommunicationsPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Comunicazioni"
-        title="Comunicazioni"
-        {isAdministrator ? (
-          <PageHeader
-            eyebrow="Comunicazioni"
-            title="Comunicazioni"
-            action="+ Nuova comunicazione"
-            onAction={onNew}
-          />
-        ) : (
-          <PageHeader
-            eyebrow="Comunicazioni"
-            title="Comunicazioni"
-          />
-        )}
+      {isAdministrator ? (
+        <PageHeader
+          eyebrow="Comunicazioni"
+          title="Comunicazioni"
+          action="+ Nuova comunicazione"
+          onAction={onNew}
+        />
+      ) : (
+        <PageHeader
+          eyebrow="Comunicazioni"
+          title="Comunicazioni"
+        />
+      )}
 
 
       <div className="feature-banner">
