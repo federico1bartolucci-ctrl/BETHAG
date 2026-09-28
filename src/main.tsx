@@ -373,14 +373,14 @@ const ADDON_PRICES: Record<AddonId, string> = {
 };
 
 const ADDON_REQUIRED_PLAN: Record<AddonId, PlanId> = {
-  condomini: "free",
-  documenti: "free",
-  scadenze: "free",
+  condomini: "plus",
+  documenti: "plus",
+  scadenze: "plus",
   assemblee: "professional",
-  fornitori: "free",
-  attivita: "free",
-  comunicazioni: "free",
-  ai: "plus",
+  fornitori: "plus",
+  attivita: "plus",
+  comunicazioni: "plus",
+  ai: "professional",
   portale: "portal",
 };
 
@@ -1799,6 +1799,18 @@ function App() {
   const collaboratorPermissions =
     currentCollaborator?.permissions || [];
 
+  const pageAddon: Partial<Record<Page, AddonId>> = {
+    condomini: "condomini",
+    documenti: "documenti",
+    scadenze: "scadenze",
+    assemblee: "assemblee",
+    fornitori: "fornitori",
+    attivita: "attivita",
+    comunicazioni: "comunicazioni",
+    ai: "ai",
+    portale: "portale",
+  };
+
   const pagePermission: Partial<
     Record<Page, CollaboratorPermission>
   > = {
@@ -1814,7 +1826,14 @@ function App() {
   };
 
   const canAccessPage = (target: Page) => {
-    if (isAdministrator) return true;
+    if (isAdministrator) {
+      const addon = pageAddon[target];
+      return !addon || hasEntitlement(
+        subscription,
+        ADDON_REQUIRED_PLAN[addon],
+        addon
+      );
+    }
 
     if (isCollaborator) {
       if (
@@ -1825,15 +1844,21 @@ function App() {
         return false;
       }
 
-      const requiredPermission =
-        pagePermission[target];
-
-      return (
+      const requiredPermission = pagePermission[target];
+      const hasRolePermission =
         !requiredPermission ||
-        collaboratorPermissions.includes(
-          requiredPermission
-        )
-      );
+        collaboratorPermissions.includes(requiredPermission);
+
+      const addon = pageAddon[target];
+      const hasPlanAccess =
+        !addon ||
+        hasEntitlement(
+          subscription,
+          ADDON_REQUIRED_PLAN[addon],
+          addon
+        );
+
+      return hasRolePermission && hasPlanAccess;
     }
 
     return false;
@@ -1848,9 +1873,29 @@ function App() {
 
   const navigate = (target: Page) => {
     if (!canAccessPage(target)) {
-      alert(
-        "Questa sezione è riservata all'Amministratore."
-      );
+      const addon = pageAddon[target];
+      if (
+        isAdministrator &&
+        addon
+      ) {
+        const answer = confirm(
+          ADDON_NAMES[addon] +
+            " non è compreso nel tuo piano attuale. " +
+            "Puoi sbloccarlo singolarmente senza passare al piano superiore.\n\nVuoi aprire Piano e upgrade?"
+        );
+        if (answer) {
+          setPage("abbonamento");
+          setSearch("");
+          setMobileMenuOpen(false);
+        }
+      } else if (isCollaborator && addon) {
+        alert(
+          ADDON_NAMES[addon] +
+            " non è disponibile nel piano attuale oppure non è tra le tue autorizzazioni."
+        );
+      } else {
+        alert("Questa sezione è riservata all'Amministratore.");
+      }
       return;
     }
 
@@ -3350,15 +3395,12 @@ function App() {
             </NavButton>
 
             <NavButton
-              active={
-                page === "condomini"
-              }
-              onClick={() =>
-                navigate("condomini")
-              }
+              active={page === "condomini"}
+              onClick={() => navigate("condomini")}
             >
               <span className="nav-icon"><AppIcon name="building" size={18} /></span>
               <span>Condomini</span>
+              {!canAccessPage("condomini") && <span className="nav-lock">PRO</span>}
             </NavButton>
 
             <NavButton
@@ -8375,9 +8417,9 @@ function SubscriptionPage({
   setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
 }) {
   const plans = [
-    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Condomini","Inserimento manuale","Archivio documenti","Scadenze","Promemoria","Attività","Fornitori","Assemblee"] },
-    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Acquisizione documenti","PDF","Word","Excel","Immagini","Analisi AI","Estrazione dati"] },
-    { id: "professional" as PlanId, title: "BETHAG Professional", description: "Automazione avanzata.", features: ["Tutto Plus","Generazione documenti","Acquisizione audio","Trascrizione assemblee","Bozza automatica verbale","Workflow di verifica","Automazioni avanzate"] },
+    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Accesso alla struttura BETHAG"] },
+    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Condomini","Documenti","Scadenze","Fornitori","Attività","Comunicazioni"] },
+    { id: "professional" as PlanId, title: "BETHAG Professional", description: "Automazione avanzata.", features: ["Tutto Plus","Assemblee avanzate","BETHAG AI","Acquisizione audio","Trascrizione assemblee","Bozza automatica verbale","Workflow di verifica","Automazioni avanzate"] },
     { id: "portal" as PlanId, title: "BETHAG Portal", description: "Amministratore + condomini.", features: ["Tutto Professional","Portale condomini","Utenti e ruoli","Permessi granulari","Documenti condivisi","Verbali pubblicabili","Comunicazioni","Accesso riservato"] },
   ];
 
@@ -8460,7 +8502,13 @@ function SubscriptionPage({
 
       <div className="info-card">
         <b>Abbonamento e acquisti reali</b>
-        <p>In questa versione gli upgrade e gli sblocchi singoli sono simulati localmente per permettere di testare il modello commerciale. Il pagamento reale, la fatturazione e il controllo server-side degli entitlement verranno collegati successivamente.</p>
+        <p>
+          Il piano stabilisce quali moduli sono inclusi. Gli add-on permettono
+          di sbloccare singole funzionalità anche mantenendo il piano attuale.
+          In questa versione gli acquisti sono simulati localmente; pagamento,
+          fatturazione e controllo server-side degli entitlement verranno
+          collegati successivamente.
+        </p>
       </div>
     </>
   );
@@ -12936,6 +12984,8 @@ input:focus,textarea:focus,select:focus{
 .addon-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .addon-card-top h3{margin:8px 0 0;font-size:15px}.addon-card-top strong{font-size:12px;color:#3857d6;white-space:nowrap}.addon-card p{margin:0;color:#64748b;font-size:12px;line-height:1.5;min-height:38px}.addon-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eef2ff;color:#3857d6;font-weight:900}.addon-card button{margin-top:auto}.addon-card button:disabled{opacity:1;cursor:default}
 @media(max-width:900px){.addon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.addon-grid{grid-template-columns:1fr}.subscription-current-right{justify-content:flex-start}}
+
+.nav-lock{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 5px;border-radius:6px;background:#eef2ff;color:#3857d6}
 `;
 
 
