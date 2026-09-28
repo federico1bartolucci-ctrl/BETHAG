@@ -7475,6 +7475,30 @@ function CondominiumDetails(
 
       <section className="condominium-section-card">
         <div className="section-title">
+          <div><div className="eyebrow">Unità abitative</div><h2>Unità e persone associate</h2><p className="section-subtitle">Ogni unità può avere più proprietari e/o inquilini, mantenendo una sola identità abitativa.</p></div>
+          <span className="badge">{activeMembers.length} soggetti</span>
+        </div>
+        <div className="related-list">
+          {Array.from(new Set(activeMembers.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean))).map((apartment) => {
+            const unitMembers = activeMembers.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === apartment.toLowerCase());
+            const owners = unitMembers.filter((m: CondominiumMember) => m.role === "Proprietario");
+            const tenants = unitMembers.filter((m: CondominiumMember) => m.role === "Inquilino");
+            return <div className="request-card" key={apartment}>
+              <div className="request-main">
+                <b>🏠 {apartment}</b>
+                <span>{unitMembers.length} {unitMembers.length === 1 ? "persona associata" : "persone associate"} · {owners.length} proprietari · {tenants.length} inquilini</span>
+                <p>{unitMembers.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} · ${m.role}${m.email ? ` · ${m.email}` : ""}`).join("  |  ")}</p>
+              </div>
+              <div className="request-actions">
+                <Badge value={owners.length ? "Proprietà" : "Locazione"} />
+                <button className="secondary-button small" onClick={() => onEditMember(unitMembers[0])}>Gestisci unità</button>
+              </div>
+            </div>;
+          })}
+        </div>
+      </section>
+      <section className="condominium-section-card">
+        <div className="section-title">
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
           <div className="button-row compact">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
