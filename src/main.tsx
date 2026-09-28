@@ -7491,7 +7491,12 @@ function CondominiumDetails(
               </div>
               <div className="request-actions">
                 <Badge value={owners.length ? "Proprietà" : "Locazione"} />
-                <button className="secondary-button small" onClick={() => onEditMember(unitMembers[0])}>Gestisci unità</button>
+                <button className="secondary-button small" onClick={() => {
+                  const summary = unitMembers.map((m: CondominiumMember) =>
+                    `${m.firstName} ${m.lastName} — ${m.role} — Portale: ${m.userId ? "attivo" : "non attivo"}`
+                  ).join("\n");
+                  alert(`Unità ${apartment}\\n\\n${summary}\\n\\nPermessi inquilino: spese ordinarie, comunicazioni/avvisi e regolamento.\\nPermessi proprietario: accesso completo al Portale.`);
+                }}>Gestisci unità</button>
               </div>
             </div>;
           })}
