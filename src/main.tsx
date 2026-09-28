@@ -1842,12 +1842,16 @@ function App() {
   const [savedSelectedCondominiumId] = useState<number | null>(() =>
     load<number | null>(KEYS.selectedCondominium, null)
   );
+  const restoredSelectedCondominiumRef = useRef(false);
 
   useEffect(() => {
-    if (selectedCondominium || savedSelectedCondominiumId == null) return;
+    if (restoredSelectedCondominiumRef.current || savedSelectedCondominiumId == null) return;
     const restored = condominiums.find((item) => item.id === savedSelectedCondominiumId);
-    if (restored) setSelectedCondominium(restored);
-  }, [condominiums, savedSelectedCondominiumId, selectedCondominium]);
+    if (!restored) return;
+
+    restoredSelectedCondominiumRef.current = true;
+    setSelectedCondominium(restored);
+  }, [condominiums, savedSelectedCondominiumId]);
 
   useEffect(() => {
     if (selectedCondominium) {
