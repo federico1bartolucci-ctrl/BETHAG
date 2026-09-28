@@ -3807,11 +3807,12 @@ function App() {
               className="icon-button"
               onClick={() =>
                 navigate(
-                  "amministratore"
+                  isAdministrator ? "amministratore" : "aiuto"
                 )
               }
+              aria-label={isAdministrator ? "Apri profilo amministratore" : "Apri Aiuto"}
             >
-              <AppIcon name="settings" size={19} />
+              <AppIcon name={isAdministrator ? "settings" : "help"} size={19} />
             </button>
 
           </header>
@@ -4361,18 +4362,18 @@ function App() {
 
         <button
           className={
-            page === "amministratore"
+            page === (isAdministrator ? "amministratore" : "aiuto")
               ? "mobile-bottom-active"
               : ""
           }
           onClick={() =>
             navigate(
-              "amministratore"
+              isAdministrator ? "amministratore" : "aiuto"
             )
           }
         >
-          <span><AppIcon name="user" size={19} /></span>
-          <small>Profilo</small>
+          <span><AppIcon name={isAdministrator ? "user" : "help"} size={19} /></span>
+          <small>{isAdministrator ? "Profilo" : "Aiuto"}</small>
         </button>
 
       </div>
