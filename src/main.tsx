@@ -4365,6 +4365,7 @@ function App() {
               collaborators={collaborators}
               setCollaborators={setCollaborators}
               workspaceId={profile.workspaceId}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -9155,12 +9156,14 @@ function CollaboratorsPage({
   collaborators,
   setCollaborators,
   workspaceId,
+  isAdministrator = false,
 }: {
   collaborators: Collaborator[];
   setCollaborators: React.Dispatch<
     React.SetStateAction<Collaborator[]>
   >;
   workspaceId: string;
+  isAdministrator?: boolean;
 }) {
   const [form, setForm] = useState<Collaborator>({
     id: 0,
@@ -9202,6 +9205,10 @@ function CollaboratorsPage({
     });
 
   const save = (e: React.FormEvent) => {
+    if (!isAdministrator) {
+      alert("La gestione dei collaboratori è riservata all'Amministratore.");
+      return;
+    }
     e.preventDefault();
 
     const name = form.name.trim();
@@ -9251,13 +9258,22 @@ function CollaboratorsPage({
     reset();
   };
 
-  const edit = (item: Collaborator) =>
+  const edit = (item: Collaborator) => {
+    if (!isAdministrator) {
+      alert("La modifica dei collaboratori è riservata all'Amministratore.");
+      return;
+    }
     setForm({
       ...item,
       permissions: [...item.permissions],
     });
+  };
 
   const remove = (id: number) => {
+    if (!isAdministrator) {
+      alert("La rimozione dei collaboratori è riservata all'Amministratore.");
+      return;
+    }
     if (
       !window.confirm(
         "Vuoi rimuovere questo collaboratore dal workspace?"
@@ -9272,6 +9288,10 @@ function CollaboratorsPage({
   };
 
   const toggleStatus = (id: number) => {
+    if (!isAdministrator) {
+      alert("La modifica dello stato dei collaboratori è riservata all'Amministratore.");
+      return;
+    }
     setCollaborators((items) =>
       items.map((item) =>
         item.id === id
@@ -9290,6 +9310,10 @@ function CollaboratorsPage({
   const togglePermission = (
     permission: CollaboratorPermission
   ) => {
+    if (!isAdministrator) {
+      alert("La modifica dei permessi è riservata all'Amministratore.");
+      return;
+    }
     setForm((current) => ({
       ...current,
       permissions: current.permissions.includes(permission)
