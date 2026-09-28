@@ -246,7 +246,6 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
         workspace_id: workspaceId,
         legacy_id: item.id,
         condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-        member_id: requester?.id && typeof requester.id === "string" ? requester.id : null,
         requester_user_id: requester?.userId ?? null,
         title: item.category,
         description: item.description,
