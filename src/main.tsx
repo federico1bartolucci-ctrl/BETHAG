@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured } from "./lib/supabase";
-import { getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -1084,8 +1084,10 @@ type PublicRole = "admin" | "collaborator" | "resident";
 
 function PublicHome({
   onLogin,
+  onRegisterAdmin,
 }: {
   onLogin: (role: PublicRole, email: string, password: string) => void;
+  onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
 }) {
   const [showLogin, setShowLogin] = useState(false);
 
@@ -1094,6 +1096,7 @@ function PublicHome({
       <LoginPage
         onBack={() => setShowLogin(false)}
         onLogin={onLogin}
+        onRegisterAdmin={onRegisterAdmin}
       />
     );
   }
@@ -1155,13 +1158,17 @@ function PublicHome({
 function LoginPage({
   onBack,
   onLogin,
+  onRegisterAdmin,
 }: {
   onBack: () => void;
-  onLogin: (role: PublicRole, email: string) => void;
+  onLogin: (role: PublicRole, email: string, password: string) => Promise<void> | void;
+  onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
 }) {
   const [role, setRole] = useState<PublicRole>("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [registerMode, setRegisterMode] = useState(false);
   const [error, setError] = useState("");
 
   const roles: Array<{
@@ -1194,7 +1201,22 @@ function LoginPage({
       return;
     }
 
+    if (registerMode && !fullName.trim()) {
+      setError("Inserisci nome e cognome.");
+      return;
+    }
+
     setError("");
+
+    if (registerMode) {
+      if (role !== "admin") {
+        setError("La creazione del primo account è disponibile solo per l'Amministratore.");
+        return;
+      }
+      await onRegisterAdmin(fullName.trim(), email.trim(), password);
+      return;
+    }
+
     await onLogin(role, email.trim(), password);
   };
 
@@ -1238,6 +1260,19 @@ function LoginPage({
         </div>
 
         <form onSubmit={submit}>
+          {registerMode && (
+            <>
+              <label>Nome e cognome</label>
+              <input
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                type="text"
+                placeholder="Mario Rossi"
+                autoComplete="name"
+              />
+            </>
+          )}
+
           <label>E-mail</label>
           <input
             value={email}
@@ -1264,9 +1299,25 @@ function LoginPage({
           {error && <div className="login-error">{error}</div>}
 
           <button className="primary-button login-submit" type="submit">
-            Accedi
+            {registerMode ? "Crea account amministratore" : "Accedi"}
           </button>
         </form>
+
+        {supabaseConfigured && (
+          <button
+            type="button"
+            className="secondary-button login-register-toggle"
+            onClick={() => {
+              setRegisterMode((current) => !current);
+              setRole("admin");
+              setError("");
+            }}
+          >
+            {registerMode
+              ? "Ho già un account: accedi"
+              : "È il primo accesso? Crea account amministratore"}
+          </button>
+        )}
 
         <p className="login-disclaimer">
           Accesso attualmente predisposto lato frontend. L'autenticazione
@@ -1715,6 +1766,57 @@ function App() {
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
 
+  const handleRegisterAdmin = async (
+    fullName: string,
+    email: string,
+    password: string
+  ) => {
+    if (!supabaseConfigured || !supabase) {
+      alert("Il backend BETHAG non è configurato.");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: fullName.trim(),
+        },
+      },
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (!data.user) {
+      alert("Registrazione non completata. Riprova.");
+      return;
+    }
+
+    if (!data.session) {
+      alert(
+        "Account creato. Controlla la tua e-mail e conferma l'indirizzo; dopo la conferma potrai accedere a BETHAG."
+      );
+      return;
+    }
+
+    try {
+      await claimFirstWorkspaceAdmin();
+      await handleLogin("admin", email, password);
+    } catch (claimError) {
+      console.error("BETHAG first-admin bootstrap failed", claimError);
+      await supabase.auth.signOut();
+      alert(
+        claimError instanceof Error
+          ? claimError.message
+          : "Impossibile inizializzare il workspace BETHAG."
+      );
+    }
+  };
+
   const handleLogin = async (
     role: PublicRole,
     email: string,
@@ -1731,12 +1833,27 @@ function App() {
         return;
       }
 
-      const { data: membership } = await supabase
+      let { data: membership } = await supabase
         .from("workspace_members")
         .select("workspace_id, role, active")
         .eq("user_id", data.user.id)
         .eq("active", true)
         .maybeSingle();
+
+      if (!membership && role === "admin") {
+        try {
+          await claimFirstWorkspaceAdmin();
+          const membershipResult = await supabase
+            .from("workspace_members")
+            .select("workspace_id, role, active")
+            .eq("user_id", data.user.id)
+            .eq("active", true)
+            .maybeSingle();
+          membership = membershipResult.data;
+        } catch (claimError) {
+          console.error("BETHAG workspace claim failed", claimError);
+        }
+      }
 
       if (!membership) {
         await supabase.auth.signOut();
