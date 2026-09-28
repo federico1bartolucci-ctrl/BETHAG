@@ -1381,7 +1381,7 @@ function ResidentPortalView({
     portalMembers.find(
       (item) =>
         item.active &&
-        item.role === "resident" &&
+        (item.role === "resident" || item.role === "council") &&
         item.email.trim().toLowerCase() === email.trim().toLowerCase() &&
         condominiumMembers.some(
           (registryMember) =>
@@ -1463,7 +1463,7 @@ function ResidentPortalView({
         <div className="resident-header-right">
           <div className="resident-identity">
             <strong>{member?.name || "Condomino"}</strong>
-            <span>Area condòmino</span>
+            <span>{member?.role === "council" ? "Area consigliere" : "Area condòmino"}</span>
           </div>
           <button className="secondary-button" onClick={onLogout}>
             Esci
