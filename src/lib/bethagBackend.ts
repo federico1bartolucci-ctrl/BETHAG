@@ -267,18 +267,31 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   }
 
   const unitRowsByKey = new Map<string, any>();
-  const desiredUnits = (state.condominiumMembers ?? [])
-    .map((item: any) => ({
-      condominiumId: condominiumDbIdByLegacyId.get(item.condominiumId),
-      unitCode: String(item.apartment ?? "").trim(),
-    }))
-    .filter((unit: any) => unit.condominiumId && unit.unitCode)
-    .map((unit: any) => ({
-      workspace_id: workspaceId,
-      condominium_id: unit.condominiumId,
-      unit_code: unit.unitCode,
-      data: { unitCode: unit.unitCode },
-    }));
+
+  // Più condòmini possono appartenere alla stessa unità abitativa.
+  // Prima della sincronizzazione dobbiamo quindi eliminare i duplicati
+  // della coppia (condominio, codice unità). Senza questa deduplicazione
+  // PostgreSQL può rifiutare un singolo upsert che contiene due volte
+  // la stessa chiave di conflitto; in quel caso il secondo condòmino
+  // rimaneva solo nello stato locale e spariva al successivo refresh.
+  const desiredUnitMap = new Map<string, any>();
+  for (const item of state.condominiumMembers ?? []) {
+    const condominiumId = condominiumDbIdByLegacyId.get(item.condominiumId);
+    const unitCode = String(item.apartment ?? "").trim();
+    if (!condominiumId || !unitCode) continue;
+
+    const key = String(condominiumId) + "::" + unitCode.toLowerCase();
+    if (!desiredUnitMap.has(key)) {
+      desiredUnitMap.set(key, {
+        workspace_id: workspaceId,
+        condominium_id: condominiumId,
+        unit_code: unitCode,
+        data: { unitCode },
+      });
+    }
+  }
+
+  const desiredUnits = Array.from(desiredUnitMap.values());
   if (desiredUnits.length) {
     await upsertRows("condominium_units", desiredUnits, "condominium_id,unit_code");
     const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
