@@ -1305,7 +1305,10 @@ function ResidentPortalView({
     ? condominiums.find((item) => item.id === member.condominiumId)
     : null;
 
-  const sharedDocuments = member
+  const hasPortalPermission = (permission: PortalPermission) =>
+    Boolean(member?.permissions?.includes(permission));
+
+  const sharedDocuments = member && hasPortalPermission("documenti")
     ? documents.filter(
         (item) =>
           item.publication === "Condiviso" &&
@@ -1313,7 +1316,7 @@ function ResidentPortalView({
       )
     : [];
 
-  const publishedCommunications = member
+  const publishedCommunications = member && hasPortalPermission("comunicazioni")
     ? communications.filter(
         (item) =>
           item.status === "Pubblicata" &&
@@ -1322,7 +1325,8 @@ function ResidentPortalView({
       )
     : [];
 
-  const publishedAssemblies = member
+  const publishedAssemblies = member &&
+    (hasPortalPermission("assemblee") || hasPortalPermission("verbali"))
     ? assemblies
         .filter(
           (item) =>
