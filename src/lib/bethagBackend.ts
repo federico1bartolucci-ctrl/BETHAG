@@ -369,6 +369,29 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
   if (error) throw error;
 }
 
+export async function saveCondominium(
+  workspaceId: string,
+  item: any
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("save_condominium", {
+      p_workspace_id: workspaceId,
+      p_legacy_id: item.id,
+      p_name: item.name,
+      p_address: item.address,
+      p_city: item.city,
+      p_postal_code: item.cap,
+      p_province: item.province,
+      p_data: item,
+    });
+
+    if (error) throw error;
+    return data as string;
+  });
+}
+
 export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
