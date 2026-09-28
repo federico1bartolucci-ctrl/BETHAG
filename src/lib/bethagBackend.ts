@@ -209,6 +209,57 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
   })).filter((row: any) => row.condominium_id);
 
   if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+
+  await reconcileWorkspaceRows("condominiums", workspaceId, condominiumRows);
+  for (const [table, rows] of rowsByTable) {
+    await reconcileWorkspaceRows(table, workspaceId, rows);
+  }
+
+  const condominiumIds = Array.from(condominiumDbIdByLegacyId.values());
+  for (const condominiumId of condominiumIds) {
+    const membersForCondominium = memberRows.filter((row: any) => row.condominium_id === condominiumId);
+    await reconcileCondominiumMembers(condominiumId, membersForCondominium);
+  }
+}
+
+async function reconcileWorkspaceRows(table: string, workspaceId: string, desiredRows: any[]) {
+  if (!supabase) return;
+  const { data: existingRows, error } = await supabase
+    .from(table)
+    .select("id, legacy_id")
+    .eq("workspace_id", workspaceId);
+  if (error) throw error;
+
+  const desiredIds = new Set(desiredRows.map((row: any) => row.legacy_id));
+  const staleRows = (existingRows ?? []).filter((row: any) => !desiredIds.has(row.legacy_id));
+  for (const row of staleRows) {
+    const { error: deleteError } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", row.id)
+      .eq("workspace_id", workspaceId);
+    if (deleteError) throw deleteError;
+  }
+}
+
+async function reconcileCondominiumMembers(condominiumId: string, desiredRows: any[]) {
+  if (!supabase) return;
+  const { data: existingRows, error } = await supabase
+    .from("condominium_members")
+    .select("id, legacy_id")
+    .eq("condominium_id", condominiumId);
+  if (error) throw error;
+
+  const desiredIds = new Set(desiredRows.map((row: any) => row.legacy_id));
+  const staleRows = (existingRows ?? []).filter((row: any) => !desiredIds.has(row.legacy_id));
+  for (const row of staleRows) {
+    const { error: deleteError } = await supabase
+      .from("condominium_members")
+      .delete()
+      .eq("id", row.id)
+      .eq("condominium_id", condominiumId);
+    if (deleteError) throw deleteError;
+  }
 }
 
 async function upsertRows(table: string, rows: any[], onConflict = "workspace_id,legacy_id") {
