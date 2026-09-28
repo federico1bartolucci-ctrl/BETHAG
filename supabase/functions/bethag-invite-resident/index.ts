@@ -231,8 +231,32 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("bethag-invite-resident", error);
+
+    const authError = error as {
+      message?: string;
+      code?: string;
+      status?: number;
+    };
+
+    const errorCode = String(authError?.code || "");
+    const message =
+      authError?.message ||
+      "Invito condòmino non riuscito.";
+
+    // Gli errori di input provenienti da Supabase Auth restano 4xx,
+    // così il client può distinguere un dato non accettato da un errore server.
+    const status =
+      typeof authError?.status === "number" &&
+      authError.status >= 400 &&
+      authError.status < 500
+        ? authError.status
+        : errorCode === "email_address_invalid"
+          ? 400
+          : 500;
+
     return json({
-      error: error instanceof Error ? error.message : "Invito condòmino non riuscito.",
-    }, 500);
+      error: message,
+      code: errorCode || undefined,
+    }, status);
   }
 });
