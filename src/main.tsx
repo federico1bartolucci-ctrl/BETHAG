@@ -50,7 +50,8 @@ type Page =
   | "ai"
   | "portale"
   | "abbonamento"
-  | "amministratore";
+  | "amministratore"
+  | "collaboratori";
 
 type PlanId =
   | "free"
@@ -63,6 +64,31 @@ type UserRole =
   | "collaborator"
   | "resident"
   | "council";
+
+type CollaboratorPermission =
+  | "condomini"
+  | "documenti"
+  | "scadenze"
+  | "assemblee"
+  | "fornitori"
+  | "attivita"
+  | "comunicazioni"
+  | "ai"
+  | "portale";
+
+type CollaboratorStatus =
+  | "Invitato"
+  | "Attivo"
+  | "Disattivato";
+
+type Collaborator = {
+  id: number;
+  name: string;
+  email: string;
+  workspaceId: string;
+  status: CollaboratorStatus;
+  permissions: CollaboratorPermission[];
+};
 
 type DeadlineStatus =
   | "Da fare"
@@ -330,6 +356,7 @@ const KEYS = {
   profile: "bethag-profile-v5",
   portalMembers: "bethag-portal-members-v2",
   subscription: "bethag-subscription-v2",
+  collaborators: "bethag-collaborators-v1",
 };
 
 
@@ -710,6 +737,8 @@ const initialSubscription: Subscription = {
   status: "Demo",
   renewalDate: "",
 };
+
+const initialCollaborators: Collaborator[] = [];
 
 
 /* =========================================================
@@ -1447,6 +1476,15 @@ function App() {
         )
     );
 
+  const [collaborators, setCollaborators] =
+    useState<Collaborator[]>(
+      () =>
+        load(
+          KEYS.collaborators,
+          initialCollaborators
+        )
+    );
+
   const [subscription, setSubscription] =
     useState<Subscription>(
       () =>
@@ -1545,6 +1583,22 @@ function App() {
     email: string
   ) => {
     const normalizedEmail = email.trim();
+    const collaborator = collaborators.find(
+      (item) =>
+        item.email.trim().toLowerCase() ===
+          normalizedEmail.toLowerCase() &&
+        item.workspaceId === profile.workspaceId
+    );
+
+    if (
+      role === "collaborator" &&
+      (!collaborator || collaborator.status !== "Attivo")
+    ) {
+      alert(
+        "Questo indirizzo non risulta ancora abilitato come Collaboratore attivo nel workspace BETHAG."
+      );
+      return;
+    }
 
     setSessionRole(role);
     setSessionEmail(normalizedEmail);
@@ -1650,6 +1704,13 @@ function App() {
     );
   }, [subscription]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.collaborators,
+      JSON.stringify(collaborators)
+    );
+  }, [collaborators]);
+
 
   /* =======================================================
      HELPERS
@@ -1665,11 +1726,56 @@ function App() {
   const isAdministrator = sessionRole === "admin";
   const isCollaborator = sessionRole === "collaborator";
 
+  const currentCollaborator = useMemo(
+    () =>
+      collaborators.find(
+        (item) =>
+          item.email.trim().toLowerCase() ===
+            sessionEmail.trim().toLowerCase() &&
+          item.workspaceId === profile.workspaceId &&
+          item.status === "Attivo"
+      ) || null,
+    [collaborators, sessionEmail, profile.workspaceId]
+  );
+
+  const collaboratorPermissions =
+    currentCollaborator?.permissions || [];
+
+  const pagePermission: Partial<
+    Record<Page, CollaboratorPermission>
+  > = {
+    condomini: "condomini",
+    documenti: "documenti",
+    scadenze: "scadenze",
+    assemblee: "assemblee",
+    fornitori: "fornitori",
+    attivita: "attivita",
+    comunicazioni: "comunicazioni",
+    ai: "ai",
+    portale: "portale",
+  };
+
   const canAccessPage = (target: Page) => {
     if (isAdministrator) return true;
 
     if (isCollaborator) {
-      return target !== "abbonamento" && target !== "amministratore";
+      if (
+        target === "abbonamento" ||
+        target === "amministratore" ||
+        target === "collaboratori"
+      ) {
+        return false;
+      }
+
+      const requiredPermission =
+        pagePermission[target];
+
+      return (
+        !requiredPermission ||
+        collaboratorPermissions.includes(
+          requiredPermission
+        )
+      );
     }
 
     return false;
@@ -3300,6 +3406,16 @@ function App() {
               </NavButton>
             )}
 
+            {canAccessPage("collaboratori") && (
+              <NavButton
+                active={page === "collaboratori"}
+                onClick={() => navigate("collaboratori")}
+              >
+                <span className="nav-icon"><AppIcon name="users" size={18} /></span>
+                <span>Collaboratori</span>
+              </NavButton>
+            )}
+
             {canAccessPage("amministratore") && (
               <NavButton
                 active={
@@ -3808,6 +3924,14 @@ function App() {
             />
           )}
 
+
+          {page === "collaboratori" && (
+            <CollaboratorsPage
+              collaborators={collaborators}
+              setCollaborators={setCollaborators}
+              workspaceId={profile.workspaceId}
+            />
+          )}
 
           {page === "amministratore" && (
             <ProfilePage
@@ -8423,6 +8547,356 @@ function SubscriptionPage({
 
 
 /* =========================================================
+   GESTIONE COLLABORATORI
+   ========================================================= */
+
+const COLLABORATOR_PERMISSION_LABELS: Record<
+  CollaboratorPermission,
+  string
+> = {
+  condomini: "Condomini",
+  documenti: "Documenti",
+  scadenze: "Scadenze",
+  assemblee: "Assemblee",
+  fornitori: "Fornitori",
+  attivita: "Attività",
+  comunicazioni: "Comunicazioni",
+  ai: "BETHAG AI",
+  portale: "Portale condomini",
+};
+
+function CollaboratorsPage({
+  collaborators,
+  setCollaborators,
+  workspaceId,
+}: {
+  collaborators: Collaborator[];
+  setCollaborators: React.Dispatch<
+    React.SetStateAction<Collaborator[]>
+  >;
+  workspaceId: string;
+}) {
+  const [form, setForm] = useState<Collaborator>({
+    id: 0,
+    name: "",
+    email: "",
+    workspaceId,
+    status: "Invitato",
+    permissions: [
+      "condomini",
+      "documenti",
+      "scadenze",
+      "assemblee",
+      "fornitori",
+      "attivita",
+      "comunicazioni",
+      "ai",
+      "portale",
+    ],
+  });
+
+  const reset = () =>
+    setForm({
+      id: 0,
+      name: "",
+      email: "",
+      workspaceId,
+      status: "Invitato",
+      permissions: [
+        "condomini",
+        "documenti",
+        "scadenze",
+        "assemblee",
+        "fornitori",
+        "attivita",
+        "comunicazioni",
+        "ai",
+        "portale",
+      ],
+    });
+
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const name = form.name.trim();
+    const email = form.email.trim().toLowerCase();
+
+    if (!name || !email) {
+      alert("Inserisci nome e indirizzo email del collaboratore.");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      alert("Controlla l'indirizzo email.");
+      return;
+    }
+
+    if (form.permissions.length === 0) {
+      alert("Seleziona almeno una funzione per il collaboratore.");
+      return;
+    }
+
+    const duplicate = collaborators.some(
+      (item) =>
+        item.email.toLowerCase() === email &&
+        item.id !== form.id
+    );
+
+    if (duplicate) {
+      alert("Esiste già un collaboratore con questo indirizzo email.");
+      return;
+    }
+
+    const next: Collaborator = {
+      ...form,
+      name,
+      email,
+      workspaceId,
+    };
+
+    setCollaborators((items) =>
+      form.id
+        ? items.map((item) =>
+            item.id === form.id ? next : item
+          )
+        : [...items, { ...next, id: makeId() }]
+    );
+
+    reset();
+  };
+
+  const edit = (item: Collaborator) =>
+    setForm({
+      ...item,
+      permissions: [...item.permissions],
+    });
+
+  const remove = (id: number) => {
+    if (
+      !window.confirm(
+        "Vuoi rimuovere questo collaboratore dal workspace?"
+      )
+    ) {
+      return;
+    }
+
+    setCollaborators((items) =>
+      items.filter((item) => item.id !== id)
+    );
+  };
+
+  const toggleStatus = (id: number) => {
+    setCollaborators((items) =>
+      items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status:
+                item.status === "Attivo"
+                  ? "Disattivato"
+                  : "Attivo",
+            }
+          : item
+      )
+    );
+  };
+
+  const togglePermission = (
+    permission: CollaboratorPermission
+  ) => {
+    setForm((current) => ({
+      ...current,
+      permissions: current.permissions.includes(permission)
+        ? current.permissions.filter(
+            (item) => item !== permission
+          )
+        : [...current.permissions, permission],
+    }));
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Collaboratori"
+        description="Gestisci le persone che possono operare nel tuo workspace e definisci le funzioni a loro disposizione."
+      />
+
+      <section className="workspace-card">
+        <div>
+          <span className="eyebrow">Workspace amministratore</span>
+          <h2>Accessi operativi</h2>
+          <p>
+            I collaboratori appartengono a questo workspace.
+            Un collaboratore può accedere solo alle sezioni
+            autorizzate dall'Amministratore.
+          </p>
+        </div>
+        <div className="workspace-id">{workspaceId}</div>
+      </section>
+
+      <form className="form-card" onSubmit={save}>
+        <div className="form-grid">
+          <Field
+            full
+            label="Nome e cognome"
+            value={form.name}
+            onChange={(v: string) =>
+              setForm({ ...form, name: v })
+            }
+          />
+          <Field
+            full
+            label="Email di accesso"
+            type="email"
+            value={form.email}
+            onChange={(v: string) =>
+              setForm({ ...form, email: v })
+            }
+          />
+
+          <div className="field full">
+            <label>Stato</label>
+            <select
+              value={form.status}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  status:
+                    e.target.value as CollaboratorStatus,
+                })
+              }
+            >
+              <option value="Invitato">Invitato</option>
+              <option value="Attivo">Attivo</option>
+              <option value="Disattivato">Disattivato</option>
+            </select>
+            <small>
+              L'accesso frontend viene consentito solo quando
+              lo stato è "Attivo".
+            </small>
+          </div>
+        </div>
+
+        <div className="permission-checks">
+          {(
+            Object.keys(
+              COLLABORATOR_PERMISSION_LABELS
+            ) as CollaboratorPermission[]
+          ).map((permission) => (
+            <label
+              className="permission-check"
+              key={permission}
+            >
+              <input
+                type="checkbox"
+                checked={form.permissions.includes(permission)}
+                onChange={() =>
+                  togglePermission(permission)
+                }
+              />
+              <span>
+                {COLLABORATOR_PERMISSION_LABELS[permission]}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={reset}
+          >
+            Annulla
+          </button>
+          <button
+            type="submit"
+            className="primary-button"
+          >
+            {form.id
+              ? "Salva modifiche"
+              : "Invita collaboratore"}
+          </button>
+        </div>
+      </form>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Accessi</span>
+            <h2>Collaboratori del workspace</h2>
+          </div>
+          <span className="badge">
+            {collaborators.length}
+          </span>
+        </div>
+
+        {collaborators.length === 0 ? (
+          <div className="empty-state">
+            Nessun collaboratore configurato.
+          </div>
+        ) : (
+          <div className="collaborator-list">
+            {collaborators.map((item) => (
+              <article
+                className="row-card collaborator-card"
+                key={item.id}
+              >
+                <div className="row-main">
+                  <strong>{item.name}</strong>
+                  <span>{item.email}</span>
+                  <small>
+                    {item.permissions
+                      .map(
+                        (permission) =>
+                          COLLABORATOR_PERMISSION_LABELS[
+                            permission
+                          ]
+                      )
+                      .join(" · ")}
+                  </small>
+                </div>
+
+                <div className="row-actions">
+                  <span className="badge">
+                    {item.status}
+                  </span>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => edit(item)}
+                  >
+                    Modifica
+                  </button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => toggleStatus(item.id)}
+                  >
+                    {item.status === "Attivo"
+                      ? "Disattiva"
+                      : "Attiva"}
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => remove(item.id)}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+
+/* =========================================================
    PROFILO / WORKSPACE
    ========================================================= */
 
@@ -12096,6 +12570,17 @@ select:focus{
 .request-summary{display:flex;gap:20px;margin:14px 0;color:#64748b;font-size:13px}.request-summary b{color:#111827;font-size:18px}.request-card{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid #eef2f7}.request-card:last-child{border-bottom:0}.request-main{min-width:0;flex:1}.request-main>b,.request-main>span{display:block}.request-main>span{margin-top:4px;color:#64748b;font-size:12px}.request-main p{margin:8px 0 0;color:#475569;line-height:1.5;white-space:pre-wrap}.request-response{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.request-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:230px}
 .recipient-picker{padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px}.recipient-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.recipient-option{display:flex;align-items:center;gap:8px;font-size:13px}.communication-email-actions{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px;background:#f8fafc;border-radius:10px}.communication-email-actions span{color:#64748b;font-size:12px}
 @media (max-width:760px){.condominium-member-card,.request-card{align-items:flex-start;flex-direction:column}.request-actions{width:100%;justify-content:flex-start;min-width:0}.button-row.compact{width:100%;flex-direction:column}.button-row.compact>*{width:100%}.communication-email-actions{align-items:flex-start;flex-direction:column}}
+.collaborator-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.collaborator-card{align-items:flex-start}
+.collaborator-card .row-main{min-width:0}
+.collaborator-card .row-main strong,.collaborator-card .row-main span,.collaborator-card .row-main small{display:block}
+.collaborator-card .row-main span{margin-top:4px;color:#64748b;font-size:13px}
+.collaborator-card .row-main small{margin-top:6px;color:#94a3b8;font-size:11px;line-height:1.45}
+.collaborator-card .row-actions{align-items:center}
+.permission-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.permission-check{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;color:#475569;font-size:12px;font-weight:700}
+.permission-check input{width:auto;margin:0}
+@media(max-width:760px){.permission-checks{grid-template-columns:1fr}.collaborator-card .row-actions{width:100%}.collaborator-card .row-actions>*{flex:1}}
 
 /* =========================================================
    BETHAG - KPI E FILTRI AVANZATI
