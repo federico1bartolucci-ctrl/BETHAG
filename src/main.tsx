@@ -7718,9 +7718,9 @@ function CondominiumDetails(
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
           <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
-            {isAdministrator && (
-              <button className="primary-button" onClick={() => onPrepareEmail(item.id)}>✉️ Scrivi a tutti</button>
-            )}
+            <button className="primary-button" type="button" onClick={() => onPrepareEmail(item.id)}>
+              ✉️ Scrivi a tutti
+            </button>
             <button
               className="secondary-button condominium-add-member-button"
               type="button"
@@ -7745,11 +7745,9 @@ function CondominiumDetails(
               </button>
               <div className="related-actions">
                 <button className="secondary-button small" type="button" onClick={() => setSelectedMemberDetail(member)}>Dettagli</button>
-                {member.email && (
-                  <button className="secondary-button small" type="button" onClick={() => onPrepareEmail(item.id, [member.id])}>
-                    Scrivi
-                  </button>
-                )}
+                <button className="secondary-button small" type="button" onClick={() => onPrepareEmail(item.id, [member.id])}>
+                  ✉️ Scrivi
+                </button>
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
                   Modifica
                 </button>
@@ -7785,6 +7783,9 @@ function CondominiumDetails(
           </div>
           <div className="form-actions">
             <button className="secondary-button" type="button" onClick={() => setSelectedMemberDetail(null)}>Chiudi</button>
+            <button className="secondary-button" type="button" onClick={() => onPrepareEmail(item.id, [selectedMemberDetail.id])}>
+              ✉️ Scrivi
+            </button>
             <button
               className="primary-button"
               type="button"
