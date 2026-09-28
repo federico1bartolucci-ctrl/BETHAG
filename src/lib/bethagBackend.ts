@@ -130,9 +130,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
 let backendSyncQueue: Promise<void> = Promise.resolve();
 
-function enqueueBackendSync(task: () => Promise<void>) {
+function enqueueBackendSync<T>(task: () => Promise<T>): Promise<T> {
   const run = backendSyncQueue.then(task, task);
-  backendSyncQueue = run.catch(() => undefined);
+  backendSyncQueue = run.then(() => undefined, () => undefined);
   return run;
 }
 
@@ -387,10 +387,12 @@ export function syncBackendState(workspaceId: string, state: BackendState) {
 export async function deleteCondominium(workspaceId: string, legacyId: number) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const { error } = await supabase.rpc("delete_condominium", {
-    p_workspace_id: workspaceId,
-    p_legacy_id: legacyId,
-  });
+  return enqueueBackendSync(async () => {
+    const { error } = await supabase.rpc("delete_condominium", {
+      p_workspace_id: workspaceId,
+      p_legacy_id: legacyId,
+    });
 
-  if (error) throw error;
+    if (error) throw error;
+  });
 }
