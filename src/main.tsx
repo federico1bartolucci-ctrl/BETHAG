@@ -3150,6 +3150,10 @@ function App() {
     emailBody?: string,
     audience: CommunicationAudience = "Tutti"
   ) => {
+    if (!isAdministrator) {
+      alert("La preparazione dell'e-mail è riservata all'Amministratore.");
+      return;
+    }
     const condominium = condominiums.find((item) => item.id === condominiumId);
 
     const recipientEmails =
@@ -3329,6 +3333,10 @@ function App() {
   const editCommunication = (
     item: Communication
   ) => {
+    if (!isAdministrator) {
+      alert("La modifica delle comunicazioni è riservata all'Amministratore.");
+      return;
+    }
     setSelectedCommunication(item);
     setCommunicationForm(item);
     openModal("communication");
@@ -3509,6 +3517,10 @@ function App() {
   };
 
   const newCommunication = (condominiumId?: number) => {
+    if (!isAdministrator) {
+      alert("La creazione delle comunicazioni è riservata all'Amministratore.");
+      return;
+    }
     setSelectedCommunication(null);
 
     setCommunicationForm({
@@ -4251,6 +4263,7 @@ function App() {
               onPublication={
                 toggleCommunicationPublication
               }
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -7105,6 +7118,7 @@ function AssembliesPage({
   onGenerateMinutes,
   onConfirmMinutes,
   onPublication,
+  isAdministrator = false,
 }: any) {
   const filtered =
     assemblies
@@ -7741,9 +7755,19 @@ function CommunicationsPage({
       <PageHeader
         eyebrow="Comunicazioni"
         title="Comunicazioni"
-        action="+ Nuova comunicazione"
-        onAction={onNew}
-      />
+        {isAdministrator ? (
+          <PageHeader
+            eyebrow="Comunicazioni"
+            title="Comunicazioni"
+            action="+ Nuova comunicazione"
+            onAction={onNew}
+          />
+        ) : (
+          <PageHeader
+            eyebrow="Comunicazioni"
+            title="Comunicazioni"
+          />
+        )}
 
 
       <div className="feature-banner">
@@ -7838,40 +7862,42 @@ function CommunicationsPage({
               </div>
 
 
-              <div className="row-actions">
+              {isAdministrator && (
+                <div className="row-actions">
 
-                <button
-                  className="secondary-button small"
-                  onClick={() =>
-                    onEdit(c)
-                  }
-                >
-                  Modifica
-                </button>
+                  <button
+                    className="secondary-button small"
+                    onClick={() =>
+                      onEdit(c)
+                    }
+                  >
+                    Modifica
+                  </button>
 
-                <button
-                  className="secondary-button small"
-                  onClick={() =>
-                    onPublication(
-                      c.id
-                    )
-                  }
-                >
-                  {c.publishedToPortal
-                    ? <><AppIcon name="lock" size={16} /> Ritira</>
-                    : <><AppIcon name="users" size={16} /> Pubblica</>}
-                </button>
+                  <button
+                    className="secondary-button small"
+                    onClick={() =>
+                      onPublication(
+                        c.id
+                      )
+                    }
+                  >
+                    {c.publishedToPortal
+                      ? <><AppIcon name="lock" size={16} /> Ritira</>
+                      : <><AppIcon name="users" size={16} /> Pubblica</>}
+                  </button>
 
-                <button
-                  className="mini-danger"
-                  onClick={() =>
-                    onDelete(c.id)
-                  }
-                >
-                  ×
-                </button>
+                  <button
+                    className="mini-danger"
+                    onClick={() =>
+                      onDelete(c.id)
+                    }
+                  >
+                    ×
+                  </button>
 
-              </div>
+                </div>
+              )}
 
             </article>
           )
