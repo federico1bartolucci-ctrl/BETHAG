@@ -2744,19 +2744,21 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
-        await syncBackendState(workspaceId, {
-          condominiums: nextCondominiums,
-          condominiumMembers,
-          documents,
-          deadlines,
-          assemblies,
-          suppliers,
-          activities,
-          communications,
-          condominiumRequests,
-          portalMembers,
-          collaborators,
-        });
+        const { error: saveError } = await supabase.rpc(
+          "save_condominium",
+          {
+            p_workspace_id: workspaceId,
+            p_legacy_id: savedItem.id,
+            p_name: savedItem.name,
+            p_address: savedItem.address,
+            p_city: savedItem.city,
+            p_postal_code: savedItem.cap,
+            p_province: savedItem.province,
+            p_data: savedItem,
+          }
+        );
+
+        if (saveError) throw saveError;
 
         if (!profile.workspaceId) {
           setProfile((current) => ({
