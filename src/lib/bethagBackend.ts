@@ -292,29 +292,6 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     });
   }
 
-  // Riconciliazione delle unità: anche un'unità rimasta senza condòmini
-  // deve essere eliminata quando non è più presente nello stato locale.
-  const desiredUnitKeys = new Set(
-    desiredUnits.map((row: any) =>
-      String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
-    )
-  );
-  const { data: existingUnitsWorkspace, error: existingUnitsError } = await supabase
-    .from("condominium_units")
-    .select("id, condominium_id, unit_code")
-    .eq("workspace_id", workspaceId);
-  if (existingUnitsError) throw existingUnitsError;
-  for (const unit of existingUnitsWorkspace ?? []) {
-    const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
-    if (!desiredUnitKeys.has(key)) {
-      const { error: deleteUnitError } = await supabase
-        .from("condominium_units")
-        .delete()
-        .eq("id", unit.id)
-        .eq("workspace_id", workspaceId);
-      if (deleteUnitError) throw deleteUnitError;
-    }
-  }
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
 
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
@@ -379,6 +356,31 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   for (const condominiumId of condominiumIds) {
     const membersForCondominium = memberRows.filter((row: any) => row.condominium_id === condominiumId);
     await reconcileCondominiumMembers(condominiumId, membersForCondominium);
+  }
+
+  // Riconciliazione delle unità dopo quella dei condòmini: in questo modo
+  // un'unità rimasta senza condòmini può essere eliminata senza violare
+  // la foreign key condominium_members.unit_id.
+  const desiredUnitKeys = new Set(
+    desiredUnits.map((row: any) =>
+      String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
+    )
+  );
+  const { data: existingUnitsWorkspace, error: existingUnitsError } = await supabase
+    .from("condominium_units")
+    .select("id, condominium_id, unit_code")
+    .eq("workspace_id", workspaceId);
+  if (existingUnitsError) throw existingUnitsError;
+  for (const unit of existingUnitsWorkspace ?? []) {
+    const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
+    if (!desiredUnitKeys.has(key)) {
+      const { error: deleteUnitError } = await supabase
+        .from("condominium_units")
+        .delete()
+        .eq("id", unit.id)
+        .eq("workspace_id", workspaceId);
+      if (deleteUnitError) throw deleteUnitError;
+    }
   }
 }
 
