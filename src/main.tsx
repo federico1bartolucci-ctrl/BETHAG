@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { supabase, supabaseConfigured } from "./lib/supabase";
+import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { claimFirstWorkspaceAdmin, getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
@@ -1171,6 +1171,7 @@ function LoginPage({
   const [fullName, setFullName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const roles: Array<{
     id: PublicRole;
@@ -1197,6 +1198,8 @@ function LoginPage({
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (submitting) return;
+
     if (!email.trim() || !password.trim()) {
       setError("Inserisci e-mail e password per continuare.");
       return;
@@ -1208,17 +1211,30 @@ function LoginPage({
     }
 
     setError("");
+    setSubmitting(true);
 
-    if (registerMode) {
-      if (role !== "admin") {
-        setError("La creazione del primo account è disponibile solo per l'Amministratore.");
+    try {
+      if (registerMode) {
+        if (role !== "admin") {
+          setError("La creazione del primo account è disponibile solo per l'Amministratore.");
+          return;
+        }
+
+        await onRegisterAdmin(fullName.trim(), email.trim(), password);
         return;
       }
-      await onRegisterAdmin(fullName.trim(), email.trim(), password);
-      return;
-    }
 
-    await onLogin(role, email.trim(), password);
+      await onLogin(role, email.trim(), password);
+    } catch (submitError) {
+      console.error("BETHAG authentication action failed", submitError);
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Operazione non completata. Riprova."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1299,8 +1315,17 @@ function LoginPage({
 
           {error && <div className="login-error">{error}</div>}
 
-          <button className="primary-button login-submit" type="submit">
-            {registerMode ? "Crea account amministratore" : "Accedi"}
+          <button
+            className="primary-button login-submit"
+            type="submit"
+            disabled={submitting}
+            aria-busy={submitting}
+          >
+            {submitting
+              ? "Operazione in corso…"
+              : registerMode
+                ? "Crea account amministratore"
+                : "Accedi"}
           </button>
         </form>
 
@@ -1779,19 +1804,40 @@ function App() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
-        },
-      },
+    if (!supabasePublicAuth) {
+      throw new Error("Il servizio di autenticazione BETHAG non è disponibile.");
+    }
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      window.setTimeout(
+        () =>
+          reject(
+            new Error(
+              "Il servizio di registrazione non sta rispondendo. Verifica la connessione e riprova."
+            )
+          ),
+        15000
+      );
     });
 
+    const { data, error } = await Promise.race([
+      supabasePublicAuth.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+          },
+        },
+      }),
+      timeoutPromise,
+    ]);
+
     if (error) {
-      alert(error.message);
-      return;
+      throw new Error(
+        error.message ||
+          "Impossibile creare l'account BETHAG."
+      );
     }
 
     if (!data.user) {
@@ -1812,7 +1858,7 @@ function App() {
     } catch (claimError) {
       console.error("BETHAG first-admin bootstrap failed", claimError);
       await supabase.auth.signOut();
-      alert(
+      throw new Error(
         claimError instanceof Error
           ? claimError.message
           : "Impossibile inizializzare il workspace BETHAG."
