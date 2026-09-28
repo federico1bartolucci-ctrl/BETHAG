@@ -3123,7 +3123,10 @@ function App() {
     setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId }); setSelectedCondominiumRequest(null); closeModal();
   };
 
-  const editCondominiumRequest = (request: CondominiumRequest) => {\n    if (!requireAdministrator("La modifica di una segnalazione o richiesta")) return;\n    setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request");\n  };
+  const editCondominiumRequest = (request: CondominiumRequest) => {
+    if (!requireAdministrator("La modifica di una segnalazione o richiesta")) return;
+    setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request");
+  };
   const deleteCondominiumRequest = (id: number) => {
     if (!requireAdministrator("L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
@@ -3500,7 +3503,10 @@ function App() {
   };
 
   const newCondominiumMember = (condominiumId: number) => { setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
-  const newCondominiumRequest = (condominiumId: number) => {\n    if (!requireAdministrator("La creazione di una segnalazione o richiesta")) return;\n    setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");\n  };
+  const newCondominiumRequest = (condominiumId: number) => {
+    if (!requireAdministrator("La creazione di una segnalazione o richiesta")) return;
+    setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");
+  };
 
   const newCommunication = (condominiumId?: number) => {
     setSelectedCommunication(null);
