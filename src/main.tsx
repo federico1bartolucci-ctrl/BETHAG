@@ -3058,11 +3058,25 @@ function App() {
       return;
     }
 
+    const recipientIds = communicationForm.recipientIds || [];
+    if (communicationForm.audience === "Selezionati") {
+      const selectedMembers = condominiumMembers.filter(
+        (member) =>
+          member.condominiumId === communicationForm.condominiumId &&
+          member.active &&
+          recipientIds.includes(member.id)
+      );
+      if (selectedMembers.length !== recipientIds.length) {
+        alert("Alcuni destinatari selezionati non sono più disponibili o non appartengono al condominio indicato.");
+        return;
+      }
+    }
+
     const data = {
       ...communicationForm,
       title: communicationForm.title.trim(),
       body: communicationForm.body.trim(),
-      recipientIds: communicationForm.recipientIds || [],
+      recipientIds,
       emailStatus: communicationForm.emailStatus || "Non inviata",
       emailPreparedAt: communicationForm.emailPreparedAt || "",
     };
@@ -3127,6 +3141,10 @@ function App() {
   const toggleCommunicationPublication = (
     id: number
   ) => {
+    if (!isAdministrator) {
+      alert("La pubblicazione delle comunicazioni è riservata all'Amministratore.");
+      return;
+    }
     if (
       !requirePlan(
         "portal",
@@ -7472,7 +7490,7 @@ function CommunicationsPage({
         <div>
 
           <b>
-            📢 Comunicazioni ai condomini
+            <AppIcon name="megaphone" size={18} /> Comunicazioni ai condomini
           </b>
 
           <span>
@@ -7497,6 +7515,7 @@ function CommunicationsPage({
 
       <div className="quick-stats">
         <div className="quick-stat"><b>{communications.length}</b><span>Totali</span></div>
+        <div className="quick-stat"><b>{communications.filter((c: Communication) => c.status === "Pubblicata").length}</b><span>Pubblicate</span></div>
         <div className="quick-stat"><b>{communications.filter((c: Communication) => c.status === "Bozza").length}</b><span>Bozze</span></div>
         <div className="quick-stat"><b>{communications.filter((c: Communication) => c.publishedToPortal).length}</b><span>Nel portale</span></div>
         <div className="quick-stat"><b>{communications.filter((c: Communication) => c.emailStatus === "Predisposta").length}</b><span>E-mail predisposte</span></div>
