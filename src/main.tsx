@@ -3998,6 +3998,7 @@ function App() {
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
               workspaceId: profile.workspaceId,
+              condominiumId: newMember.condominiumId,
               legacyId: newMember.id,
             },
           });
