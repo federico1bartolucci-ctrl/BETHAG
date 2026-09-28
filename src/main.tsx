@@ -4573,6 +4573,8 @@ function AppIcon({
       return <svg {...common}><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>;
     case "settings":
       return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2A2 2 0 0 0 5.8 18l-.1.1a2 2 0 0 1-2.8-2.8L3 15a2 2 0 0 0-1.4-3.4h-.2a2 2 0 0 1 0-4h.2A2 2 0 0 0 3 4.2l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1A2 2 0 0 0 9.2 0h.2a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1A2 2 0 0 0 21 7.8v.2a2 2 0 0 1 0 4h-.2a2 2 0 0 0-1.4 3.4z" transform="scale(.8) translate(3 3)" /></svg>;
+    case "alert":
+      return <svg {...common}><path d="M12 4 3.8 19h16.4L12 4z" /><path d="M12 9v4M12 16h.01" /></svg>;
     case "menu":
       return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
     default:
@@ -4677,7 +4679,7 @@ function Dashboard({
             )
           }
         >
-          <span>🏢</span>
+          <span><AppIcon name="building" size={22} /></span>
 
           <strong>
             {condominiums.length}
@@ -4696,7 +4698,7 @@ function Dashboard({
             )
           }
         >
-          <span>📅</span>
+          <span><AppIcon name="calendar" size={22} /></span>
 
           <strong>
             {deadlines.length}
@@ -4715,7 +4717,7 @@ function Dashboard({
             )
           }
         >
-          <span>📁</span>
+          <span><AppIcon name="folder" size={22} /></span>
 
           <strong>
             {documents.length}
@@ -4865,7 +4867,7 @@ function Dashboard({
           {urgentDeadlines >
             0 && (
             <div className="notice">
-              ⚠️{" "}
+              <AppIcon name="alert" size={16} />{" "}
               {
                 urgentDeadlines
               }{" "}
@@ -5046,7 +5048,7 @@ function Dashboard({
                 )
               }
             >
-              🏢
+              <AppIcon name="building" size={21} />
               <span>
                 Schede condominio
               </span>
@@ -5060,7 +5062,7 @@ function Dashboard({
                 )
               }
             >
-              📁
+              <AppIcon name="folder" size={21} />
               <span>
                 Archivio
               </span>
@@ -5074,7 +5076,7 @@ function Dashboard({
                 )
               }
             >
-              👥
+              <AppIcon name="users" size={21} />
               <span>
                 Assemblee
               </span>
@@ -5088,7 +5090,7 @@ function Dashboard({
                 )
               }
             >
-              ✨
+              <AppIcon name="sparkles" size={21} />
               <span>
                 BETHAG AI
               </span>
