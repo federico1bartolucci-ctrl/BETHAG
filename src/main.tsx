@@ -5492,7 +5492,10 @@ function App() {
                 closeModal
               }
               editing={
-                !!editingCondominium
+                Boolean(
+                  editingCondominium &&
+                  editingCondominium.id !== 0
+                )
               }
             />
           )}
@@ -13805,7 +13808,7 @@ select:focus{
   align-items:center;
   justify-content:center;
   padding:18px;
-  z-index:100;
+  z-index:1000;
 }
 
 .modal{
