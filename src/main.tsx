@@ -4294,7 +4294,7 @@ function App() {
      NUOVI ELEMENTI
      ======================================================= */
 
-  const newDeadline = () => {
+  const newDeadline = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di una scadenza")) return;
     setSelectedDeadline(null);
 
@@ -4307,7 +4307,7 @@ function App() {
     openModal("deadline");
   };
 
-  const newDocument = () => {
+  const newDocument = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un documento")) return;
     setSelectedDocument(null);
 
@@ -4322,7 +4322,7 @@ function App() {
     openModal("document");
   };
 
-  const newAssembly = () => {
+  const newAssembly = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un'assemblea")) return;
     setSelectedAssembly(null);
 
@@ -4335,14 +4335,14 @@ function App() {
     openModal("assembly");
   };
 
-  const newSupplier = () => {
+  const newSupplier = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un fornitore")) return;
     setSelectedSupplier(null);
     setSupplierForm(emptySupplier);
     openModal("supplier");
   };
 
-  const newActivity = () => {
+  const newActivity = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un'attività")) return;
     setSelectedActivity(null);
     setActivityForm(emptyActivity);
