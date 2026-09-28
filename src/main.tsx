@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, saveCondominium, syncBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2744,21 +2744,7 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
-        const { error: saveError } = await supabase.rpc(
-          "save_condominium",
-          {
-            p_workspace_id: workspaceId,
-            p_legacy_id: savedItem.id,
-            p_name: savedItem.name,
-            p_address: savedItem.address,
-            p_city: savedItem.city,
-            p_postal_code: savedItem.cap,
-            p_province: savedItem.province,
-            p_data: savedItem,
-          }
-        );
-
-        if (saveError) throw saveError;
+        await saveCondominium(workspaceId, savedItem);
 
         if (!profile.workspaceId) {
           setProfile((current) => ({
