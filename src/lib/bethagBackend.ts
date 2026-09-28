@@ -236,15 +236,24 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
       email_prepared_at: item.emailPreparedAt || null,
       data: item,
     }))],
-    ["condominium_requests", (state.condominiumRequests ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.category,
-      description: item.description,
-      status: item.status,
-      data: item,
-    }))],
+    ["condominium_requests", (state.condominiumRequests ?? []).map((item: any) => {
+      const requester = (state.condominiumMembers ?? []).find(
+        (member: any) =>
+          member.id === item.memberId &&
+          member.condominiumId === item.condominiumId
+      );
+      return {
+        workspace_id: workspaceId,
+        legacy_id: item.id,
+        condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+        member_id: requester?.id && typeof requester.id === "string" ? requester.id : null,
+        requester_user_id: requester?.userId ?? null,
+        title: item.category,
+        description: item.description,
+        status: item.status,
+        data: item,
+      };
+    })],
   ];
 
   for (const [table, rows] of rowsByTable) {
