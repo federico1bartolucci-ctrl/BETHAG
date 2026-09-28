@@ -4002,6 +4002,46 @@ function App() {
             },
           });
           if (inviteError) throw inviteError;
+
+          // L'invito residente crea/aggiorna anche portal_access sul backend.
+          // Allineiamo subito lo stato locale al record appena creato, così il
+          // successivo sync debounced non lo considera "stale" e non lo rimuove.
+          if (inviteResult?.portalAccess) {
+            setPortalMembers((current) => {
+              const existing = current.find(
+                (portalMember) =>
+                  portalMember.condominiumId === newMember.condominiumId &&
+                  portalMember.email.trim().toLowerCase() === newMember.email.trim().toLowerCase()
+              );
+
+              const nextPortalMember: PortalMember = {
+                id: existing?.id ?? newMember.id,
+                userId: inviteResult.userId ?? existing?.userId,
+                name: `${newMember.firstName} ${newMember.lastName}`.trim(),
+                email: newMember.email,
+                condominiumId: newMember.condominiumId,
+                role: "resident",
+                apartment: newMember.apartment,
+                permissions: [
+                  "documenti",
+                  "verbali",
+                  "regolamento",
+                  "pagamenti_ordinari",
+                  "pagamenti_straordinari",
+                  "assemblee",
+                  "comunicazioni",
+                ],
+                active: true,
+              };
+
+              return existing
+                ? current.map((portalMember) =>
+                    portalMember.id === existing.id ? nextPortalMember : portalMember
+                  )
+                : [...current, nextPortalMember];
+            });
+          }
+
           if (inviteResult?.invited) {
             alert("Condòmino inserito. È stata inviata automaticamente una e-mail per attivare l'accesso al Portale BETHAG.");
           } else {
