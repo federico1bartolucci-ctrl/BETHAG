@@ -208,13 +208,13 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
     data: item,
   })).filter((row: any) => row.condominium_id);
 
-  if (memberRows.length) await upsertRows("condominium_members", memberRows);
+  if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
 }
 
-async function upsertRows(table: string, rows: any[]) {
+async function upsertRows(table: string, rows: any[], onConflict = "workspace_id,legacy_id") {
   if (!supabase || !rows.length) return;
   const { error } = await supabase.from(table).upsert(rows, {
-    onConflict: "workspace_id,legacy_id",
+    onConflict,
   });
   if (error) throw error;
 }
