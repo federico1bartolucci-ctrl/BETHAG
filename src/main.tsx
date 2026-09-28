@@ -3644,11 +3644,26 @@ function App() {
         )
       );
 
-      setPortalMembers((current) =>
-        current.map((portalMember) =>
-          portalMember.active &&
+      setPortalMembers((current) => {
+        const previousEmail = previousMember.email.trim().toLowerCase();
+        const nextEmail = data.email.trim().toLowerCase();
+
+        if (!data.active) {
+          return current.filter(
+            (portalMember) =>
+              !(
+                portalMember.condominiumId === previousMember.condominiumId &&
+                portalMember.email.trim().toLowerCase() === previousEmail
+              )
+          );
+        }
+
+        return current.map((portalMember) =>
           portalMember.condominiumId === previousMember.condominiumId &&
-          portalMember.email.trim().toLowerCase() === previousMember.email.trim().toLowerCase()
+          (
+            portalMember.email.trim().toLowerCase() === previousEmail ||
+            portalMember.email.trim().toLowerCase() === nextEmail
+          )
             ? {
                 ...portalMember,
                 name: `${data.firstName} ${data.lastName}`.trim(),
@@ -3657,8 +3672,8 @@ function App() {
                 apartment: data.apartment,
               }
             : portalMember
-        )
-      );
+        );
+      });
     } else {
       setCondominiumMembers((current) => [
         ...current,
@@ -4193,12 +4208,13 @@ function App() {
 
     const condominiumMember = condominiumMembers.find(
       (currentMember) =>
+        currentMember.active &&
         currentMember.condominiumId === member.condominiumId &&
         currentMember.email.trim().toLowerCase() === normalizedEmail
     );
 
     if (!condominiumMember) {
-      alert("Prima di abilitare il Portale, inserisci il condòmino nell'anagrafica del condominio con lo stesso indirizzo e-mail.");
+      alert("Prima di abilitare il Portale, inserisci un condòmino attivo nell'anagrafica del condominio con lo stesso indirizzo e-mail.");
       return;
     }
 
