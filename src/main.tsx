@@ -4488,6 +4488,23 @@ function App() {
               }
               onNavigate={navigate}
               isAdministrator={isAdministrator}
+              condominiumMembers={condominiumMembers}
+              condominiumRequests={condominiumRequests}
+              sessionEmail={sessionEmail}
+              onPortalRequest={(member: PortalMember) => {
+                const condominiumMember = condominiumMembers.find((item) =>
+                  item.condominiumId === member.condominiumId &&
+                  item.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+                );
+                setSelectedCondominiumRequest(null);
+                setCondominiumRequestForm({
+                  ...emptyCondominiumRequest,
+                  condominiumId: member.condominiumId,
+                  memberId: condominiumMember?.id ?? null,
+                  date: localISODate(),
+                });
+                openModal("condominium-request");
+              }}
             />
           )}
 
