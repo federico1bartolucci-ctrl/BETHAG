@@ -4179,11 +4179,38 @@ function App() {
     )
       return;
 
+    const normalizedEmail = member.email.trim().toLowerCase();
+    const duplicate = portalMembers.some(
+      (currentMember) =>
+        currentMember.condominiumId === member.condominiumId &&
+        currentMember.email.trim().toLowerCase() === normalizedEmail
+    );
+
+    if (duplicate) {
+      alert("Esiste già un accesso al Portale per questo indirizzo e-mail nello stesso condominio.");
+      return;
+    }
+
+    const condominiumMember = condominiumMembers.find(
+      (currentMember) =>
+        currentMember.condominiumId === member.condominiumId &&
+        currentMember.email.trim().toLowerCase() === normalizedEmail
+    );
+
+    if (!condominiumMember) {
+      alert("Prima di abilitare il Portale, inserisci il condòmino nell'anagrafica del condominio con lo stesso indirizzo e-mail.");
+      return;
+    }
+
     setPortalMembers((current) => [
       ...current,
       {
         ...member,
         id: makeId(),
+        name: member.name.trim(),
+        email: member.email.trim(),
+        condominiumId: member.condominiumId,
+        apartment: member.apartment.trim(),
       },
     ]);
   };
