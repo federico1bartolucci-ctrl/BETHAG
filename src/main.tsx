@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, saveCondominium, syncBackendState } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, saveCondominium, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3872,17 +3872,10 @@ function App() {
     if (!supabaseConfigured || !supabase) return;
 
     try {
-      const { error } = await supabase
-        .from("condominium_requests")
-        .update({
-          status,
-          data: updatedRequest,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("workspace_id", profile.workspaceId)
-        .eq("legacy_id", id);
-
-      if (error) throw error;
+      await updateCondominiumRequestStatus(
+        profile.workspaceId,
+        updatedRequest
+      );
     } catch (error) {
       console.error("BETHAG request status persistence failed", error);
       setCondominiumRequests((current) =>
