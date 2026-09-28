@@ -1776,6 +1776,54 @@ function App() {
      PERSISTENZA
      ======================================================= */
 
+  /* =======================================================
+     SESSIONE
+     ======================================================= */
+
+  useEffect(() => {
+    if (sessionRole === "collaborator") {
+      const activeCollaborator = collaborators.some(
+        (item) =>
+          item.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase() &&
+          item.workspaceId === profile.workspaceId &&
+          item.status === "Attivo"
+      );
+
+      if (!activeCollaborator) {
+        setSessionRole(null);
+        setSessionEmail("");
+        localStorage.removeItem(KEYS.session);
+        localStorage.removeItem(KEYS.sessionEmail);
+        setPage("homepage");
+        setMobileMenuOpen(false);
+      }
+    }
+
+    if (sessionRole === "resident") {
+      const activeResident = portalMembers.some(
+        (item) =>
+          item.active &&
+          item.role === "resident" &&
+          item.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+      );
+
+      if (!activeResident) {
+        setSessionRole(null);
+        setSessionEmail("");
+        localStorage.removeItem(KEYS.session);
+        localStorage.removeItem(KEYS.sessionEmail);
+        setPage("homepage");
+        setMobileMenuOpen(false);
+      }
+    }
+  }, [
+    sessionRole,
+    sessionEmail,
+    collaborators,
+    portalMembers,
+    profile.workspaceId,
+  ]);
+
   useEffect(() => {
     localStorage.setItem(
       KEYS.condominiums,
