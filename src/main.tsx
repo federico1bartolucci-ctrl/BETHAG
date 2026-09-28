@@ -6516,6 +6516,11 @@ function CondominiumsPage(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
+    onNewDeadline,
+    onNewDocument,
+    onNewAssembly,
+    onNewSupplier,
+    onNewActivity,
     isAdministrator,
   } = props;
 
@@ -6665,6 +6670,11 @@ function CondominiumsPage(
           onStatusRequest={onStatusRequest}
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
+          onNewDeadline={newDeadline}
+          onNewDocument={newDocument}
+          onNewAssembly={newAssembly}
+          onNewSupplier={newSupplier}
+          onNewActivity={newActivity}
           condominiumName={
             condominiumName
           }
@@ -7080,6 +7090,26 @@ function CondominiumDetails(
 
       </div>
 
+
+      {isAdministrator && (
+        <section className="condominium-section-card condominium-quick-actions">
+          <div className="section-title">
+            <div>
+              <div className="eyebrow">Azioni rapide</div>
+              <h2>Gestione del condominio</h2>
+              <p className="section-subtitle">Crea direttamente dalla scheda le attività collegate a item.name.</p>
+            </div>
+          </div>
+          <div className="quick-action-grid">
+            <button className="quick-action-card" onClick={onNewDeadline}>📅<strong>Nuova scadenza</strong><span>Gestisci gli adempimenti</span></button>
+            <button className="quick-action-card" onClick={onNewDocument}>📄<strong>Nuovo documento</strong><span>Archivia e condividi</span></button>
+            <button className="quick-action-card" onClick={onNewAssembly}>👥<strong>Nuova assemblea</strong><span>Programma una riunione</span></button>
+            <button className="quick-action-card" onClick={onNewSupplier}>🔧<strong>Nuovo fornitore</strong><span>Aggiungi un servizio</span></button>
+            <button className="quick-action-card" onClick={onNewActivity}>✓<strong>Nuova attività</strong><span>Organizza il lavoro</span></button>
+            <button className="quick-action-card" onClick={() => onNewCommunication(item.id)}>✉️<strong>Nuova comunicazione</strong><span>Comunica ai condòmini</span></button>
+          </div>
+        </section>
+      )}
 
       <section className="condominium-section-card">
         <div className="section-title">
@@ -13088,6 +13118,8 @@ select:focus{
 
 /* DETTAGLIO CONDOMINIO */
 
+.condominium-quick-actions{margin-top:20px}.quick-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.quick-action-card{border:1px solid #dbe4f3;background:#f8faff;border-radius:14px;padding:15px;text-align:left;display:flex;flex-direction:column;gap:5px;color:#172033;cursor:pointer;transition:.15s}.quick-action-card:hover{border-color:#b9c9ec;transform:translateY(-1px)}.quick-action-card strong{font-size:13px}.quick-action-card span{font-size:11px;color:#64748b}.quick-action-card:first-letter{font-size:18px}
+
 .condominium-detail-page{
   width:100%;
 }
@@ -14156,6 +14188,8 @@ select:focus{
   .related-actions>*{
     flex:1;
   }
+
+  .quick-action-grid{grid-template-columns:1fr 1fr}
 
   .detail-page-header{
     padding:18px;
