@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured } from "./lib/supabase";
+import { getActiveWorkspaceId, loadBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -1855,6 +1856,52 @@ function App() {
     portalMembers,
     profile.workspaceId,
   ]);
+
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase || !sessionRole) return;
+
+    let cancelled = false;
+
+    const hydrateFromBackend = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user || cancelled) return;
+
+        const workspaceId = await getActiveWorkspaceId(session.user.id);
+        if (!workspaceId || cancelled) return;
+
+        const backend = await loadBackendState(workspaceId);
+        if (cancelled) return;
+
+        if (backend.condominiums.length) setCondominiums(backend.condominiums);
+        if (backend.condominiumMembers.length) setCondominiumMembers(backend.condominiumMembers);
+        if (backend.documents.length) setDocuments(backend.documents);
+        if (backend.deadlines.length) setDeadlines(backend.deadlines);
+        if (backend.assemblies.length) setAssemblies(backend.assemblies);
+        if (backend.suppliers.length) setSuppliers(backend.suppliers);
+        if (backend.activities.length) setActivities(backend.activities);
+        if (backend.communications.length) setCommunications(backend.communications);
+        if (backend.condominiumRequests.length) setCondominiumRequests(backend.condominiumRequests);
+
+        setProfile((current) => ({
+          ...current,
+          workspaceId,
+          email: session.user.email || current.email,
+        }));
+      } catch (error) {
+        console.error("BETHAG backend hydration failed", error);
+      }
+    };
+
+    void hydrateFromBackend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionRole]);
 
   useEffect(() => {
     localStorage.setItem(
