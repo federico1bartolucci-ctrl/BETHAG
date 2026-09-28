@@ -4030,7 +4030,7 @@ function App() {
 
       if (supabaseConfigured && supabase && profile.workspaceId && newMember.email.trim()) {
         try {
-          await saveCondominiumMemberBackend(profile.workspaceId, data);
+          await saveCondominiumMemberBackend(profile.workspaceId, newMember);
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
               workspaceId: profile.workspaceId,
