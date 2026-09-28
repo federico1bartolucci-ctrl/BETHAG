@@ -299,7 +299,9 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
 
   if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
 
-  await reconcileWorkspaceRows("condominiums", workspaceId, condominiumRows);
+  // I condomini vengono creati/modificati tramite RPC dedicato. Non riconciliamo
+  // qui le cancellazioni, perché una sincronizzazione già accodata con uno stato
+  // precedente potrebbe eliminare subito un condominio appena salvato.
   for (const [table, rows] of rowsByTable) {
     await reconcileWorkspaceRows(table, workspaceId, rows);
   }
