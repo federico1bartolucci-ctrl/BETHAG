@@ -6251,6 +6251,17 @@ function App() {
             />
           )}
 
+          {modalType === "condominium-unit" && (
+            <CondominiumUnitForm
+              value={condominiumUnitForm}
+              setValue={setCondominiumUnitForm}
+              units={condominiumUnits.filter((u) => u.condominiumId === condominiumUnitForm.condominiumId)}
+              onSubmit={saveCondominiumUnit}
+              onCancel={closeModal}
+              editing={!!selectedCondominiumUnit}
+            />
+          )}
+
           {modalType === "condominium-member" && (
             <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} members={condominiumMembers} units={condominiumUnits} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
           )}
@@ -7232,6 +7243,9 @@ function CondominiumsPage(
     onStatusAssembly,
     onStatusActivity,
     condominiumMembers,
+    condominiumUnits = [],
+    onNewUnit,
+    onEditUnit,
     condominiumRequests,
     onNewMember,
     onEditMember,
@@ -7844,6 +7858,37 @@ function CondominiumDetails(
           </div>
         </section>
       )}
+
+      <section className="condominium-section-card">
+        <div className="section-title">
+          <div>
+            <div className="eyebrow">Patrimonio catastale</div>
+            <h2>Unità immobiliari</h2>
+            <p className="section-subtitle">Le abitazioni, i garage e le cantine sono gestiti come cespiti distinti. Le pertinenze catastalmente incorporate possono essere collegate all'abitazione senza creare un cespite autonomo.</p>
+          </div>
+          {isAdministrator && (
+            <div className="button-row compact">
+              <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Garage")}>+ Garage</button>
+              <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Cantina")}>+ Cantina</button>
+            </div>
+          )}
+        </div>
+        <div className="related-list">
+          {condominiumUnits.length === 0 ? <Empty text="Nessuna unità catastale disponibile." /> : condominiumUnits.map((unit: CondominiumUnit) => {
+            const linkedMembers = activeMembers.filter((member: CondominiumMember) => member.unitId === unit.id || member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase());
+            const incorporated = unit.incorporatedInUnitId ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId) : null;
+            return <div className="request-card" key={unit.id}>
+              <div className="request-main">
+                <b>{unit.unitType === "Garage" ? "🚗" : unit.unitType === "Cantina" ? "📦" : "🏠"} {unit.unitCode}</b>
+                <span>{unit.unitType} · {unit.cadastralCategory || "Categoria non inserita"} · {unit.millesimi ? unit.millesimi + " millesimi" : "Millesimi non inseriti"}</span>
+                <small>{unit.cadastralAutonomous ? "Unità catastalmente autonoma" : "Incorporata catastalmente"}{incorporated ? " · collegata a " + incorporated.unitCode : ""}</small>
+                {linkedMembers.length > 0 && <p>{linkedMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName + " · " + m.role).join(" | ")}</p>}
+              </div>
+              {isAdministrator && <div className="request-actions"><button className="secondary-button small" type="button" onClick={() => onEditUnit(unit)}>Modifica</button></div>}
+            </div>;
+          })}
+        </div>
+      </section>
 
       <section className="condominium-section-card">
         <div className="section-title">
@@ -11810,6 +11855,49 @@ function Modal({
   );
 }
 
+
+/* =========================================================
+   FORM UNITÀ IMMOBILIARE
+   ========================================================= */
+
+function CondominiumUnitForm({ value, setValue, units = [], onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumUnit, val: any) => setValue({ ...value, [key]: val });
+  const residentialUnits = units.filter((u: CondominiumUnit) => u.unitType === "Abitazione" && u.id !== value.id);
+
+  return (
+    <form onSubmit={onSubmit}>
+      <ModalTitle title={editing ? "Modifica unità immobiliare" : "Nuova unità immobiliare"} />
+      <div className="form-grid">
+        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Garage 1, Cantina 1, Interno 1" />
+        <SelectField label="Tipologia" value={value.unitType} onChange={(v: string) => set("unitType", v)} options={[
+          ["Abitazione","Abitazione"],
+          ["Garage","Garage / autorimessa"],
+          ["Cantina","Cantina / deposito"],
+          ["Altro","Altra unità"],
+        ]} />
+        <Field label="Categoria catastale" value={value.cadastralCategory} onChange={(v: string) => set("cadastralCategory", v)} placeholder="Es. A/2, C/2, C/6" />
+        <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} placeholder="Es. 102,35" />
+        <div className="field full">
+          <label className="switch-row">
+            <input type="checkbox" checked={value.cadastralAutonomous} onChange={(e) => set("cadastralAutonomous", e.target.checked)} />
+            <span>Unità catastalmente autonoma</span>
+          </label>
+          <div className="form-help">
+            Disattiva per una cantina o altro vano che risulta catastalmente incorporato nell'unità abitativa.
+          </div>
+        </div>
+        {!value.cadastralAutonomous && (
+          <SelectField full label="Unità abitativa incorporante" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
+            ["","Seleziona l'abitazione"],
+            ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
+          ]} />
+        )}
+        <Field full label="Note catastali / gestionali" value={value.notes} onChange={(v: string) => set("notes", v)} textarea placeholder="Annotazioni, riferimento catastale, collegamenti, ecc." />
+      </div>
+      <Actions onCancel={onCancel} />
+    </form>
+  );
+}
 
 /* =========================================================
    FORM CONDOMINIO
