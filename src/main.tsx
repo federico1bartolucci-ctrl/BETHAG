@@ -2128,9 +2128,24 @@ function App() {
 
   const approvePortalRegistration = async (requestId: string, memberId: string) => {
     if (!supabase) return;
+    const localMemberId = Number(memberId);
+    const member = condominiumMembers.find((item) => item.id === localMemberId);
+    if (!member) {
+      alert("Profilo condòmino non trovato.");
+      return;
+    }
+    const { data: dbMember, error: dbMemberError } = await supabase
+      .from("condominium_members")
+      .select("id")
+      .eq("legacy_id", localMemberId)
+      .maybeSingle();
+    if (dbMemberError || !dbMember?.id) {
+      alert(dbMemberError?.message || "Profilo condòmino non ancora sincronizzato. Riprova tra qualche secondo.");
+      return;
+    }
     const { error } = await supabase.rpc("admin_approve_portal_registration", {
       p_request_id: requestId,
-      p_member_id: memberId,
+      p_member_id: dbMember.id,
     });
     if (error) {
       alert(error.message);
@@ -3731,7 +3746,7 @@ function App() {
      CONDOMINI - ANAGRAFICA E RICHIESTE
      ======================================================= */
 
-  const saveCondominiumMember = (event: React.FormEvent<HTMLFormElement>) => {
+  const saveCondominiumMember = async (event: React.FormEvent<HTMLFormElement>) => {
     if (!requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
     if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) {
@@ -3805,10 +3820,46 @@ function App() {
         );
       });
     } else {
-      setCondominiumMembers((current) => [
-        ...current,
-        { ...data, id: makeId() },
-      ]);
+      const newMember = { ...data, id: makeId() };
+      const nextMembers = [...condominiumMembers, newMember];
+      setCondominiumMembers(nextMembers);
+
+      if (supabaseConfigured && supabase && profile.workspaceId && newMember.email.trim()) {
+        try {
+          await syncBackendState(profile.workspaceId, {
+            condominiums,
+            condominiumMembers: nextMembers,
+            documents,
+            deadlines,
+            assemblies,
+            suppliers,
+            activities,
+            communications,
+            condominiumRequests,
+            portalMembers,
+            collaborators,
+          });
+          const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
+            body: {
+              workspaceId: profile.workspaceId,
+              legacyId: newMember.id,
+            },
+          });
+          if (inviteError) throw inviteError;
+          if (inviteResult?.invited) {
+            alert("Condòmino inserito. È stata inviata automaticamente una e-mail per attivare l'accesso al Portale BETHAG.");
+          } else {
+            alert("Condòmino inserito. L'account BETHAG esistente è stato collegato al relativo profilo.");
+          }
+        } catch (inviteError) {
+          console.error("BETHAG resident invitation failed", inviteError);
+          alert(
+            inviteError instanceof Error
+              ? `Condòmino inserito, ma l'invio/collegamento dell'accesso non è riuscito: ${inviteError.message}`
+              : "Condòmino inserito, ma l'invio/collegamento dell'accesso non è riuscito."
+          );
+        }
+      }
     }
 
     setCondominiumMemberForm({
@@ -4553,7 +4604,7 @@ function App() {
     return (
       <>
         <style>{styles}</style>
-        <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} />
+        <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} onRegisterResident={handleRegisterResident} />
       </>
     );
   }
