@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(12);
 
 -- Nessuna policy pubblica: tutte le policy applicative devono richiedere autenticazione.
 select is(
