@@ -3052,6 +3052,12 @@ function App() {
 
   const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (selectedCondominiumRequest) {
+      if (!isAdministrator) {
+        alert("La modifica di una richiesta ricevuta è riservata all'Amministratore.");
+        return;
+      }
+    }
     if (!condominiumRequestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
     if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
     if (condominiumRequestForm.memberId) {
