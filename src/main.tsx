@@ -330,7 +330,7 @@ type PortalRegistrationRequest = {
   full_name: string;
   fiscal_code: string | null;
   condominium_name: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "email_mismatch" | "approved" | "rejected";
   note: string | null;
   created_at: string;
 };
@@ -2197,7 +2197,7 @@ function App() {
         .from("portal_registration_requests")
         .select("*")
         .eq("workspace_id", profile.workspaceId)
-        .eq("status", "pending")
+        .in("status", ["pending","email_mismatch"])
         .order("created_at", { ascending: false });
       if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
     };
@@ -6063,47 +6063,82 @@ function PortalRegistrationRequestsPanel({
     <section className="card" style={{marginBottom:18,borderColor:"#c7d2fe",background:"#f8faff"}}>
       <SectionTitle title="Richieste di accesso condòmini" action={`${requests.length} da gestire`} />
       <p className="section-subtitle">
-        Un utente ha richiesto l'accesso ma non è stato trovato automaticamente nell'anagrafica. Seleziona il profilo condòmino da collegare.
+        Verifica le richieste prima di collegare l'account al profilo condòmino.
       </p>
       {requests.map((request) => {
-        const candidates = condominiumMembers.filter((member) =>
+        const nameCandidates = condominiumMembers.filter((member) =>
           member.active &&
-          member.email.trim().toLowerCase() === request.email.trim().toLowerCase()
+          `${member.firstName} ${member.lastName}`.trim().toLowerCase() === request.full_name.trim().toLowerCase()
         );
+        const allMembers = condominiumMembers.filter((member) => member.active);
+        const candidates = request.status === "email_mismatch" && nameCandidates.length
+          ? nameCandidates
+          : request.status === "email_mismatch"
+            ? allMembers
+            : condominiumMembers.filter((member) =>
+                member.active &&
+                member.email.trim().toLowerCase() === request.email.trim().toLowerCase()
+              );
         const defaultId = candidates[0]?.id ? String(candidates[0].id) : "";
+        const mismatch = request.status === "email_mismatch";
+
         return (
-          <div key={request.id} className="list-row" style={{alignItems:"center",gap:14}}>
-            <div style={{flex:1,minWidth:0}}>
+          <div key={request.id} className="list-row" style={{display:"block",marginBottom:12,padding:"14px 0"}}>
+            <div style={{marginBottom:10}}>
               <b>{request.full_name}</b>
-              <small>{request.email}{request.condominium_name ? ` · ${request.condominium_name}` : ""}</small>
+              <small style={{display:"block"}}>E-mail registrata: {request.email}</small>
+              {mismatch && (
+                <div className="notice" style={{marginTop:8}}>
+                  ⚠️ <b>Incongruenza e-mail:</b> il profilo individuato nell'anagrafica contiene un indirizzo e-mail diverso. Verifica se vuoi procedere comunque oppure modificare l'associazione.
+                </div>
+              )}
+              {!mismatch && request.condominium_name && (
+                <small style={{display:"block"}}>Condominio indicato: {request.condominium_name}</small>
+              )}
             </div>
-            <select
-              defaultValue={defaultId}
-              disabled={candidates.length === 0}
-              style={{minWidth:220}}
-              id={`registration-member-${request.id}`}
-            >
-              {candidates.length === 0
-                ? <option value="">Nessun profilo compatibile</option>
-                : candidates.map((member) => <option key={member.id} value={String(member.id)}>{member.firstName} {member.lastName} · {member.apartment || "unità"}</option>)}
-            </select>
-            <button
-              className="primary-button"
-              disabled={candidates.length === 0}
-              onClick={() => {
-                const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
-                const memberId = select?.value || "";
-                if (memberId) void onApprove(request.id, memberId);
-              }}
-            >
-              Autorizza
-            </button>
+
+            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <select
+                defaultValue={defaultId}
+                style={{minWidth:280,maxWidth:"100%"}}
+                id={`registration-member-${request.id}`}
+              >
+                {candidates.length === 0
+                  ? <option value="">Nessun profilo compatibile</option>
+                  : candidates.map((member) => (
+                    <option key={member.id} value={String(member.id)}>
+                      {member.firstName} {member.lastName} · {member.apartment || "unità"} · {member.email || "senza e-mail"}
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                className="primary-button"
+                disabled={candidates.length === 0}
+                onClick={() => {
+                  const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
+                  const memberId = select?.value || "";
+                  if (!memberId) return;
+                  if (mismatch && !confirm("L'e-mail dell'account è diversa da quella presente nel profilo condòmino. Vuoi procedere comunque con questa associazione?")) return;
+                  void onApprove(request.id, memberId);
+                }}
+              >
+                {mismatch ? "Procedi comunque" : "Autorizza"}
+              </button>
+
+              {mismatch && (
+                <span className="muted-text">
+                  Per modificare l'associazione, seleziona un altro profilo dall'elenco.
+                </span>
+              )}
+            </div>
           </div>
         );
       })}
     </section>
   );
 }
+
 
 function Dashboard({
   condominiums,
