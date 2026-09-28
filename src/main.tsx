@@ -4037,7 +4037,30 @@ function App() {
               legacyId: newMember.id,
             },
           });
-          if (inviteError) throw inviteError;
+
+          if (inviteError) {
+            // Supabase restituisce una FunctionsHttpError per le risposte 4xx/5xx.
+            // Leggiamo il payload della Edge Function per mostrare all'utente
+            // la causa reale invece del generico "non-2xx status code".
+            let detail = inviteError.message || "Invito/collegamento non riuscito.";
+
+            try {
+              const errorContext = (inviteError as any).context;
+              if (errorContext?.json) {
+                const payload = await errorContext.json();
+                if (payload?.error) {
+                  detail = String(payload.error);
+                }
+                if (payload?.code === "email_address_invalid") {
+                  detail = "L'indirizzo e-mail non è accettato da Supabase Auth. Verifica l'indirizzo e utilizzane uno valido.";
+                }
+              }
+            } catch {
+              // Manteniamo il messaggio già disponibile se il payload non è leggibile.
+            }
+
+            throw new Error(detail);
+          }
 
           // L'invito residente crea/aggiorna anche portal_access sul backend.
           // Allineiamo subito lo stato locale al record appena creato, così il
