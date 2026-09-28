@@ -88,9 +88,25 @@ Deno.serve(async (req: Request) => {
     if (membershipError) throw membershipError;
     if (!membership) return json({ error: "Operazione riservata all'Amministratore del workspace." }, 403);
 
+    const condominiumLegacyId = Number(body.condominiumId || 0);
+    if (!condominiumLegacyId) {
+      return json({ error: "Condominio del condòmino non specificato." }, 400);
+    }
+
+    const { data: condominiumForMember, error: condominiumLookupError } = await adminClient
+      .from("condominiums")
+      .select("id, workspace_id, legacy_id, name")
+      .eq("legacy_id", condominiumLegacyId)
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+
+    if (condominiumLookupError) throw condominiumLookupError;
+    if (!condominiumForMember) return json({ error: "Condominio non trovato nel workspace indicato." }, 404);
+
     const { data: member, error: memberError } = await adminClient
       .from("condominium_members")
       .select("id, condominium_id, user_id, name, email, role, active, permissions, data, legacy_id, unit_id")
+      .eq("condominium_id", condominiumForMember.id)
       .eq("legacy_id", legacyId)
       .maybeSingle();
 
