@@ -3123,7 +3123,7 @@ function App() {
     setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId }); setSelectedCondominiumRequest(null); closeModal();
   };
 
-  const editCondominiumRequest = (request: CondominiumRequest) => { setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request"); };
+  const editCondominiumRequest = (request: CondominiumRequest) => {\n    if (!requireAdministrator("La modifica di una segnalazione o richiesta")) return;\n    setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request");\n  };
   const deleteCondominiumRequest = (id: number) => {
     if (!requireAdministrator("L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
@@ -3500,7 +3500,7 @@ function App() {
   };
 
   const newCondominiumMember = (condominiumId: number) => { setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
-  const newCondominiumRequest = (condominiumId: number) => { setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request"); };
+  const newCondominiumRequest = (condominiumId: number) => {\n    if (!requireAdministrator("La creazione di una segnalazione o richiesta")) return;\n    setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");\n  };
 
   const newCommunication = (condominiumId?: number) => {
     setSelectedCommunication(null);
@@ -6189,14 +6189,14 @@ function CondominiumDetails(
       </section>
 
       <section className="condominium-section-card">
-        <div className="section-title"><div><div className="eyebrow">Assistenza</div><h2>Segnalazioni e richieste</h2><p className="section-subtitle">Raccogli le richieste dei condòmini e gestiscine lo stato fino alla chiusura.</p></div><button className="primary-button" onClick={() => onNewRequest(item.id)}>+ Nuova segnalazione</button></div>
+        <div className="section-title"><div><div className="eyebrow">Assistenza</div><h2>Segnalazioni e richieste</h2><p className="section-subtitle">Raccogli le richieste dei condòmini e gestiscine lo stato fino alla chiusura.</p></div>{isAdministrator && <button className="primary-button" onClick={() => onNewRequest(item.id)}>+ Nuova segnalazione</button>}</div>
         <div className="request-summary"><span><b>{openRequests}</b> aperte</span><span><b>{condominiumRequests.length}</b> totali</span></div>
         <div className="related-list">
           {condominiumRequests.length === 0 ? <Empty text="Nessuna segnalazione o richiesta ricevuta." /> : condominiumRequests.map((request: CondominiumRequest) => {
             const member = condominiumMembers.find((x: CondominiumMember) => x.id === request.memberId);
             return <div className="request-card" key={request.id}>
               <div className="request-main"><b>{request.category}</b><span>{member ? `${member.firstName} ${member.lastName}` : "Richiedente non indicato"}{` · ${formatDate(request.date)}`}</span><p>{request.description}</p>{request.response && <div className="request-response"><strong>Risposta amministratore:</strong> {request.response}</div>}</div>
-              <div className="request-actions"><Badge value={request.status} /><Badge value={`Priorità ${request.priority}`} /><select value={request.status} onChange={(e) => onStatusRequest(request.id, e.target.value as RequestStatus)}><option>Nuova</option><option>In lavorazione</option><option>Risolta</option><option>Chiusa</option></select><button className="secondary-button small" onClick={() => onEditRequest(request)}>Dettagli / modifica</button><button className="mini-danger" onClick={() => onDeleteRequest(request.id)}>×</button></div>
+              <div className="request-actions"><Badge value={request.status} /><Badge value={`Priorità ${request.priority}`} />{isAdministrator && <><select value={request.status} onChange={(e) => onStatusRequest(request.id, e.target.value as RequestStatus)}><option>Nuova</option><option>In lavorazione</option><option>Risolta</option><option>Chiusa</option></select><button className="secondary-button small" onClick={() => onEditRequest(request)}>Dettagli / modifica</button><button className="mini-danger" onClick={() => onDeleteRequest(request.id)}>×</button></>}</div>
             </div>;
           })}
         </div>
