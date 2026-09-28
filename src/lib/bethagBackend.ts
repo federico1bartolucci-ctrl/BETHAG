@@ -110,7 +110,12 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     suppliers: (suppliers.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     activities: (activities.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     communications: (communications.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
-    condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      requesterUserId: row.requester_user_id ?? row.data?.requesterUserId ?? undefined,
+      memberId: row.data?.memberId ?? null,
+    })),
     collaborators: (workspaceMembers.data ?? []).map((row: any) => ({
       id: row.legacy_id,
       userId: row.user_id,
