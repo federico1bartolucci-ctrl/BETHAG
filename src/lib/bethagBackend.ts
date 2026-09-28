@@ -2,13 +2,28 @@ import { supabase } from "./supabase";
 
 export type BackendState = Record<string, any[]>;
 
-export async function getActiveWorkspaceId(userId: string) {
+export async function getActiveWorkspaceId(userId: string, preferredWorkspaceId?: string | null) {
   if (!supabase) return null;
+
+  if (preferredWorkspaceId) {
+    const { data: preferred, error: preferredError } = await supabase
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("user_id", userId)
+      .eq("workspace_id", preferredWorkspaceId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (preferredError) throw preferredError;
+    if (preferred?.workspace_id) return preferred.workspace_id;
+  }
+
   const { data, error } = await supabase
     .from("workspace_members")
-    .select("workspace_id, active")
+    .select("workspace_id")
     .eq("user_id", userId)
     .eq("active", true)
+    .order("workspace_id")
     .limit(1)
     .maybeSingle();
 
