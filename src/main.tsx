@@ -193,6 +193,7 @@ type CondominiumRequest = {
   id: number;
   condominiumId: number;
   memberId: number | null;
+  requesterUserId?: string;
   category: string;
   description: string;
   priority: RequestPriority;
@@ -4144,16 +4145,32 @@ function App() {
         if (authUserError) throw authUserError;
         if (!authUserData.user) throw new Error("Sessione utente non disponibile.");
 
+        let memberDbId: string | null = null;
+        if (savedRequest.memberId) {
+          const { data: memberRow, error: memberError } = await supabase
+            .from("condominium_members")
+            .select("id, user_id")
+            .eq("condominium_id", condominiumRow.id)
+            .eq("legacy_id", savedRequest.memberId)
+            .maybeSingle();
+          if (memberError) throw memberError;
+          memberDbId = memberRow?.id ?? null;
+        }
+
+        const requesterUserId =
+          selectedCondominiumRequest?.requesterUserId ??
+          (savedRequest.requesterUserId || authUserData.user.id);
+
         const payload = {
           workspace_id: profile.workspaceId,
           legacy_id: savedRequest.id,
           condominium_id: condominiumRow.id,
-          member_id: savedRequest.memberId ?? null,
-          requester_user_id: authUserData.user.id,
+          member_id: memberDbId,
+          requester_user_id: requesterUserId,
           title: savedRequest.category,
           description: savedRequest.description,
           status: savedRequest.status,
-          data: savedRequest,
+          data: { ...savedRequest, requesterUserId },
           updated_at: new Date().toISOString(),
         };
 
@@ -4186,10 +4203,31 @@ function App() {
     if (!requireModulePermission("condomini", "La modifica di una segnalazione o richiesta")) return;
     setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request");
   };
-  const deleteCondominiumRequest = (id: number) => {
+  const deleteCondominiumRequest = async (id: number) => {
     if (!requireModulePermission("condomini", "L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
+
+    const previousRequests = condominiumRequests;
     setCondominiumRequests((current) => current.filter((request) => request.id !== id));
+
+    if (!supabaseConfigured || !supabase) return;
+
+    try {
+      const { error } = await supabase
+        .from("condominium_requests")
+        .delete()
+        .eq("workspace_id", profile.workspaceId)
+        .eq("legacy_id", id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("BETHAG request deletion persistence failed", error);
+      setCondominiumRequests(previousRequests);
+      alert(
+        error instanceof Error
+          ? `Impossibile eliminare la richiesta: ${error.message}`
+          : "Impossibile eliminare la richiesta."
+      );
+    }
   };
 
   const updateCondominiumRequestStatus = async (id: number, status: RequestStatus) => {
