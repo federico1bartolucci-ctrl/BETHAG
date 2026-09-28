@@ -13423,6 +13423,14 @@ input:focus,textarea:focus,select:focus{
 .resident-list-row>span{color:#3857d6;font-size:11px;font-weight:800}
 .empty-state{color:#94a3b8;font-size:13px}
 .resident-readonly-note{margin-top:18px;padding:15px;border-radius:14px;background:#eef2ff;color:#475569;font-size:12px;line-height:1.5}
+.resident-request-card{margin-top:18px}
+.resident-request-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.resident-request-form select,.resident-request-form textarea{width:100%;box-sizing:border-box;border:1px solid #dbe2ee;border-radius:10px;padding:10px 12px;font:inherit;background:#fff;color:#1e293b}
+.resident-request-form textarea{grid-column:1/-1;resize:vertical;min-height:100px}
+.resident-request-form .primary-button{justify-self:start}
+.resident-request-history{margin-top:20px;padding-top:16px;border-top:1px solid #eef2f7}
+.resident-request-history>strong{display:block;margin-bottom:6px}
+
 
 @media(max-width:850px){
   .public-home{padding:18px}
