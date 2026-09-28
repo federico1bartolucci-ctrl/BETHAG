@@ -3744,10 +3744,16 @@ function App() {
         if (condominiumError) throw condominiumError;
         if (!condominiumRow) throw new Error("Condominio non disponibile nel workspace.");
 
+        const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+        if (authUserError) throw authUserError;
+        if (!authUserData.user) throw new Error("Sessione utente non disponibile.");
+
         const payload = {
           workspace_id: profile.workspaceId,
           legacy_id: savedRequest.id,
           condominium_id: condominiumRow.id,
+          member_id: savedRequest.memberId ?? null,
+          requester_user_id: authUserData.user.id,
           title: savedRequest.category,
           description: savedRequest.description,
           status: savedRequest.status,
