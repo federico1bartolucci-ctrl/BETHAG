@@ -51,7 +51,8 @@ type Page =
   | "portale"
   | "abbonamento"
   | "amministratore"
-  | "collaboratori";
+  | "collaboratori"
+  | "aiuto";
 
 type PlanId =
   | "free"
@@ -4022,6 +4023,13 @@ function App() {
           )}
 
 
+          {page === "aiuto" && (
+            <HelpPage
+              sessionRole={sessionRole}
+              onNavigate={navigate}
+            />
+          )}
+
           {page === "abbonamento" && (
             <SubscriptionPage
               subscription={
@@ -4522,6 +4530,8 @@ function AppIcon({
       return <svg {...common}><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" /><path d="M3.5 9h17" /></svg>;
     case "calendar":
       return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" /></svg>;
+    case "help":
+      return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.6 2.6 0 1 1 4.4 1.9c-.9.8-1.9 1.2-1.9 2.6" /><path d="M12 17h.01" /></svg>;
     case "users":
       return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0" /><path d="M16 5.5a3 3 0 0 1 0 5.8M17 14a4.5 4.5 0 0 1 3.5 4.4" /></svg>;
     case "wrench":
@@ -8442,6 +8452,246 @@ function PortalPage({
 
       </section>
 
+    </>
+  );
+}
+
+
+/* =========================================================
+   AIUTO E GUIDA BETHAG
+   ========================================================= */
+
+type HelpGuideItem = {
+  id: string;
+  title: string;
+  section: string;
+  content: string;
+  keywords: string[];
+};
+
+const BETHAG_GUIDE: HelpGuideItem[] = [
+  {
+    id: "home",
+    section: "Inizio",
+    title: "Come orientarsi in BETHAG",
+    content: "La Homepage è il centro operativo. Da qui puoi controllare il riepilogo dei condomini, le scadenze, le attività, le comunicazioni, le richieste e lo stato del piano.",
+    keywords: ["homepage", "dashboard", "inizio", "cruscotto"],
+  },
+  {
+    id: "condomini",
+    section: "Gestione",
+    title: "Gestione dei condomini",
+    content: "La sezione Condomini raccoglie le schede dei condomini e consente di gestire anagrafiche, componenti, richieste e informazioni operative.",
+    keywords: ["condomini", "anagrafica", "condomino", "richieste"],
+  },
+  {
+    id: "documenti",
+    section: "Gestione",
+    title: "Documenti e archivio",
+    content: "La sezione Documenti organizza l'archivio e, in base al piano e alle autorizzazioni, permette condivisione e funzioni di elaborazione assistita.",
+    keywords: ["documenti", "archivio", "pdf", "condivisione"],
+  },
+  {
+    id: "scadenze",
+    section: "Gestione",
+    title: "Scadenze",
+    content: "Le Scadenze consentono di registrare gli adempimenti, controllare le date, individuare le urgenze e seguire lo stato delle attività.",
+    keywords: ["scadenze", "date", "urgenze", "promemoria"],
+  },
+  {
+    id: "assemblee",
+    section: "Gestione",
+    title: "Assemblee e verbali",
+    content: "La sezione Assemblee permette di organizzare le riunioni e, nei moduli abilitati, utilizzare acquisizione audio, trascrizione e predisposizione assistita del verbale.",
+    keywords: ["assemblee", "verbale", "audio", "trascrizione"],
+  },
+  {
+    id: "comunicazioni",
+    section: "Comunicazioni",
+    title: "Comunicazioni ai condòmini",
+    content: "Le Comunicazioni permettono di preparare e gestire gli avvisi, selezionare i destinatari e, quando previsto, pubblicare i contenuti nel Portale.",
+    keywords: ["comunicazioni", "email", "destinatari", "avvisi", "portale"],
+  },
+  {
+    id: "collaboratori",
+    section: "Amministrazione",
+    title: "Collaboratori e autorizzazioni",
+    content: "L'amministratore può creare collaboratori, assegnare permessi per modulo e attivare o disattivare gli accessi. I permessi dei collaboratori si applicano insieme alle funzionalità disponibili nel piano.",
+    keywords: ["collaboratori", "permessi", "ruoli", "autorizzazioni"],
+  },
+  {
+    id: "piani",
+    section: "Amministrazione",
+    title: "Piani e add-on",
+    content: "Piano e upgrade mostra il piano attuale e gli eventuali moduli aggiuntivi. Nella versione attuale gli sblocchi sono simulati localmente; pagamento e controllo server-side saranno collegati successivamente.",
+    keywords: ["piano", "abbonamento", "plus", "professional", "portal", "addon"],
+  },
+  {
+    id: "portale",
+    section: "Portale",
+    title: "Portale Condomini",
+    content: "Il Portale è l'area riservata ai condòmini per consultare i contenuti pubblicati dall'amministratore, secondo i permessi configurati.",
+    keywords: ["portale", "condomini", "consultazione", "pubblicazione"],
+  },
+  {
+    id: "ai",
+    section: "BETHAG AI",
+    title: "BETHAG AI",
+    content: "BETHAG AI è pensata per assistere l'amministratore nell'analisi e nell'organizzazione dei contenuti. Le funzioni AI effettivamente collegate a servizi esterni richiederanno il backend previsto dall'architettura.",
+    keywords: ["ai", "intelligenza artificiale", "analisi", "assistente"],
+  },
+];
+
+function HelpPage({
+  sessionRole,
+  onNavigate,
+}: {
+  sessionRole: UserRole | null;
+  onNavigate: (page: Page) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<HelpGuideItem | null>(null);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+
+  const normalized = query.trim().toLowerCase();
+  const results = normalized
+    ? BETHAG_GUIDE.filter((item) =>
+        [item.title, item.section, item.content, ...item.keywords]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized)
+      )
+    : BETHAG_GUIDE;
+
+  const askGuide = () => {
+    const q = question.trim().toLowerCase();
+    if (!q) return;
+    const matches = BETHAG_GUIDE.filter((item) =>
+      [item.title, item.section, item.content, ...item.keywords]
+        .join(" ")
+        .toLowerCase()
+        .split(" ")
+        .some((word) => word.length > 3 && q.includes(word))
+    );
+    const best = matches[0];
+    setAnswer(
+      best
+        ? `Secondo la guida BETHAG: ${best.content} Consulta anche “${best.title}” per approfondire.`
+        : "Non ho trovato una risposta specifica nella guida disponibile. Al termine dello sviluppo questa area potrà essere collegata all'AI di BETHAG per consultare l'intera documentazione del sito."
+    );
+  };
+
+  return (
+    <>
+      <PageHeader eyebrow="Supporto" title="Aiuto e guida BETHAG" />
+      <section className="help-hero">
+        <div>
+          <span className="eyebrow">GUIDA INTEGRATA</span>
+          <h2>Trova rapidamente come utilizzare BETHAG.</h2>
+          <p>
+            Questa sezione è stata predisposta per contenere la guida completa
+            del gestionale. Potrà essere aggiornata insieme all'evoluzione del sito.
+          </p>
+        </div>
+        <div className="help-hero-badge">
+          <AppIcon name="help" size={28} />
+          <span>Supporto</span>
+        </div>
+      </section>
+
+      <section className="help-ai-panel">
+        <div className="help-ai-heading">
+          <div>
+            <span className="eyebrow">BETHAG AI</span>
+            <h2>Chiedi alla guida</h2>
+          </div>
+          <span className="help-ai-status">Predisposto per AI</span>
+        </div>
+        <p>
+          Scrivi una domanda. Per ora la risposta viene ricercata nella guida
+          integrata; in seguito questo spazio potrà essere collegato all'AI reale
+          per una consultazione conversazionale dell'intera documentazione.
+        </p>
+        <div className="help-question">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") askGuide();
+            }}
+            placeholder="Es. Come gestisco un nuovo condominio?"
+          />
+          <button className="primary-button" onClick={askGuide}>
+            Chiedi
+          </button>
+        </div>
+        {answer && <div className="help-answer"><strong>BETHAG AI</strong><span>{answer}</span></div>}
+      </section>
+
+      <section className="help-toolbar">
+        <div>
+          <h2>Guida del sito</h2>
+          <p>{BETHAG_GUIDE.length} argomenti predisposti</p>
+        </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cerca nella guida..."
+        />
+      </section>
+
+      <section className="help-grid">
+        {results.map((item) => (
+          <button
+            className="help-card"
+            key={item.id}
+            onClick={() => setSelected(item)}
+          >
+            <span className="help-card-section">{item.section}</span>
+            <h3>{item.title}</h3>
+            <p>{item.content}</p>
+            <span className="help-card-more">Leggi →</span>
+          </button>
+        ))}
+      </section>
+
+      {results.length === 0 && (
+        <Empty text="Nessun argomento trovato nella guida." />
+      )}
+
+      {selected && (
+        <div className="help-detail">
+          <div className="help-detail-top">
+            <div>
+              <span className="eyebrow">{selected.section}</span>
+              <h2>{selected.title}</h2>
+            </div>
+            <button className="secondary-button" onClick={() => setSelected(null)}>
+              Chiudi
+            </button>
+          </div>
+          <p>{selected.content}</p>
+        </div>
+      )}
+
+      <section className="help-roadmap">
+        <div>
+          <span className="eyebrow">SVILUPPO FUTURO</span>
+          <h2>Una guida che cresce insieme a BETHAG.</h2>
+          <p>
+            Al termine della realizzazione del sito potremo trasformare questa
+            sezione in una documentazione completa, organizzata per moduli,
+            ruoli e procedure, con consultazione assistita dall'AI.
+          </p>
+        </div>
+        <div className="help-roadmap-items">
+          <span>✓ Manuale completo</span>
+          <span>✓ Guide passo-passo</span>
+          <span>✓ FAQ contestuali</span>
+          <span>✓ Consultazione AI</span>
+        </div>
+      </section>
     </>
   );
 }
@@ -12976,6 +13226,7 @@ input:focus,textarea:focus,select:focus{
 @media(max-width:900px){.addon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.addon-grid{grid-template-columns:1fr}.subscription-current-right{justify-content:flex-start}}
 
 .nav-lock{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 5px;border-radius:6px;background:#eef2ff;color:#3857d6}.homepage-focus-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.focus-card{border:1px solid #e5e9f2;background:#fff;border-radius:18px;padding:17px;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 8px 24px rgba(20,31,55,.05);transition:transform .18s ease,box-shadow .18s ease}.focus-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(20,31,55,.09)}.focus-card>div{min-width:0;display:flex;flex-direction:column;gap:3px;flex:1}.focus-card strong{font-size:18px;color:#17233f}.focus-card span{font-size:12px;color:#667085}.focus-card small{font-weight:700;color:#3857d6;white-space:nowrap}.focus-icon{width:34px;height:34px;border-radius:11px;background:#eef2ff;display:grid;place-items:center;font-weight:900;color:#3857d6}.focus-card-warning .focus-icon{background:#fff2e8;color:#c65b18}.focus-card-plan{background:linear-gradient(135deg,#f8f9ff,#eef3ff)}@media(max-width:1000px){.homepage-focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.homepage-focus-grid{grid-template-columns:1fr}.focus-card{padding:15px}}
+.help-hero{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 28px;border-radius:22px;background:linear-gradient(135deg,#071b4d,#0a4fd8);color:#fff;box-shadow:0 18px 42px rgba(16,55,130,.18);margin-bottom:18px}.help-hero h2{margin:7px 0 8px;font-size:27px}.help-hero p{margin:0;max-width:700px;color:rgba(255,255,255,.78);line-height:1.6}.help-hero .eyebrow{color:#9fc5ff}.help-hero-badge{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:95px;font-weight:800}.help-ai-panel{padding:24px;border:1px solid #dce5f5;border-radius:20px;background:#fff;box-shadow:var(--bethag-shadow);margin-bottom:20px}.help-ai-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.help-ai-heading h2{margin:4px 0}.help-ai-panel p{color:#667085;line-height:1.55}.help-ai-status{font-size:11px;font-weight:800;padding:7px 10px;border-radius:999px;background:#eef3ff;color:#3857d6}.help-question{display:flex;gap:10px}.help-question input,.help-toolbar input{flex:1;min-width:0}.help-answer{display:flex;gap:10px;margin-top:14px;padding:14px;border-radius:14px;background:#f5f8ff;color:#334155;line-height:1.5}.help-answer strong{color:#3857d6;white-space:nowrap}.help-toolbar{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:24px 0 14px}.help-toolbar h2{margin:0}.help-toolbar p{margin:4px 0 0;color:#667085;font-size:13px}.help-toolbar input{max-width:330px}.help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.help-card{text-align:left;padding:20px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(20,31,55,.045);cursor:pointer}.help-card:hover{border-color:#b9c9ec;transform:translateY(-1px)}.help-card-section{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#3857d6}.help-card h3{margin:8px 0}.help-card p{margin:0;color:#667085;line-height:1.5;font-size:13px}.help-card-more{display:block;margin-top:15px;font-weight:800;color:#3857d6;font-size:12px}.help-detail{margin-top:18px;padding:24px;border-radius:18px;border:1px solid #dbe4f3;background:#f8faff}.help-detail-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.help-detail h2{margin:5px 0}.help-detail p{color:#475569;line-height:1.7}.help-roadmap{margin-top:20px;padding:24px;border-radius:20px;background:#f1f5ff;border:1px solid #dbe5fa;display:flex;justify-content:space-between;gap:24px}.help-roadmap h2{margin:5px 0}.help-roadmap p{max-width:720px;color:#64748b;line-height:1.6}.help-roadmap-items{display:flex;flex-direction:column;gap:9px;font-weight:700;color:#3857d6;white-space:nowrap}@media(max-width:900px){.help-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.help-roadmap{flex-direction:column}.help-roadmap-items{white-space:normal}}@media(max-width:650px){.help-hero{padding:22px;flex-direction:column;align-items:flex-start}.help-ai-heading,.help-toolbar{align-items:stretch;flex-direction:column}.help-question{flex-direction:column}.help-toolbar input{max-width:none}.help-grid{grid-template-columns:1fr}}
 `;
 
 
