@@ -7745,13 +7745,17 @@ function CondominiumDetails(
               </button>
               <div className="related-actions">
                 <button className="secondary-button small" type="button" onClick={() => setSelectedMemberDetail(member)}>Dettagli</button>
-                {isAdministrator && (
-                  <>
-                    {member.email && <button className="secondary-button small" type="button" onClick={() => onPrepareEmail(item.id, [member.id])}>Scrivi</button>}
-                    <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>Modifica</button>
-                    <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)}>×</button>
-                  </>
+                {member.email && (
+                  <button className="secondary-button small" type="button" onClick={() => onPrepareEmail(item.id, [member.id])}>
+                    Scrivi
+                  </button>
                 )}
+                <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
+                  Modifica
+                </button>
+                <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)} aria-label="Elimina condòmino">
+                  ×
+                </button>
               </div>
             </div>
           ))}
@@ -7781,19 +7785,17 @@ function CondominiumDetails(
           </div>
           <div className="form-actions">
             <button className="secondary-button" type="button" onClick={() => setSelectedMemberDetail(null)}>Chiudi</button>
-            {isAdministrator && (
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => {
-                  const member = selectedMemberDetail;
-                  setSelectedMemberDetail(null);
-                  onEditMember(member);
-                }}
-              >
-                Modifica condòmino
-              </button>
-            )}
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => {
+                const member = selectedMemberDetail;
+                setSelectedMemberDetail(null);
+                onEditMember(member);
+              }}
+            >
+              Modifica condòmino
+            </button>
           </div>
         </Modal>
       )}
