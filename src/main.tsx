@@ -91,6 +91,7 @@ type Collaborator = {
   workspaceId: string;
   status: CollaboratorStatus;
   permissions: CollaboratorPermission[];
+  userId?: string;
 };
 
 type DeadlineStatus =
@@ -2183,6 +2184,9 @@ function App() {
             ? backend.portalMembers
             : []
         );
+        setCollaborators(
+          Array.isArray(backend.collaborators) ? backend.collaborators : []
+        );
         backendHydrated.current = true;
 
         setProfile((current) => ({
@@ -2223,6 +2227,7 @@ function App() {
         communications,
         condominiumRequests,
         portalMembers,
+        collaborators,
       }).catch((error) => {
         console.error("BETHAG backend sync failed", error);
       });
@@ -2242,6 +2247,7 @@ function App() {
     communications,
     condominiumRequests,
     portalMembers,
+    collaborators,
   ]);
 
   useEffect(() => {
@@ -9785,58 +9791,56 @@ function CollaboratorsPage({
       ],
     });
 
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     if (!isAdministrator) {
       alert("La gestione dei collaboratori è riservata all'Amministratore.");
       return;
     }
     e.preventDefault();
-
     const name = form.name.trim();
     const email = form.email.trim().toLowerCase();
-
-    if (!name || !email) {
-      alert("Inserisci nome e indirizzo email del collaboratore.");
-      return;
+    if (!name || !email) { alert("Inserisci nome e indirizzo email del collaboratore."); return; }
+    if (!validateEmail(email)) { alert("Controlla l'indirizzo email."); return; }
+    if (form.permissions.length === 0) { alert("Seleziona almeno una funzione per il collaboratore."); return; }
+    if (collaborators.some((item) => item.email.toLowerCase() === email && item.id !== form.id)) {
+      alert("Esiste già un collaboratore con questo indirizzo email."); return;
     }
 
-    if (!validateEmail(email)) {
-      alert("Controlla l'indirizzo email.");
-      return;
+    try {
+      if (!supabaseConfigured || !supabase) throw new Error("Supabase non è configurato: impossibile creare un accesso reale.");
+
+      if (!form.id) {
+        const legacyId = makeId();
+        const { data, error } = await supabase.functions.invoke("bethag-invite-collaborator", {
+          body: { workspaceId, legacyId, name, email, permissions: form.permissions },
+        });
+        if (error) throw error;
+        if (!data?.success || !data?.userId) throw new Error(data?.error || "Invito collaboratore non riuscito.");
+
+        setCollaborators((items) => [...items, {
+          ...form, id: legacyId, userId: data.userId, name, email, workspaceId, status: "Attivo",
+        }]);
+        alert("Collaboratore creato e invito inviato via e-mail.");
+      } else {
+        const current = collaborators.find((item) => item.id === form.id);
+        if (!current?.userId) throw new Error("Questo collaboratore non è ancora collegato a un account Auth.");
+        if (current.email.toLowerCase() !== email) {
+          alert("Per cambiare l'e-mail di accesso è necessario rimuovere il collaboratore e invitarlo nuovamente.");
+          return;
+        }
+        const { error } = await supabase.from("workspace_members").update({
+          active: form.status !== "Disattivato", permissions: form.permissions,
+        }).eq("workspace_id", workspaceId).eq("user_id", current.userId);
+        if (error) throw error;
+        setCollaborators((items) => items.map((item) =>
+          item.id === form.id ? { ...form, userId: current.userId, name, email, workspaceId } : item
+        ));
+      }
+      reset();
+    } catch (error) {
+      console.error("BETHAG collaborator save failed", error);
+      alert(error instanceof Error ? error.message : "Impossibile salvare il collaboratore.");
     }
-
-    if (form.permissions.length === 0) {
-      alert("Seleziona almeno una funzione per il collaboratore.");
-      return;
-    }
-
-    const duplicate = collaborators.some(
-      (item) =>
-        item.email.toLowerCase() === email &&
-        item.id !== form.id
-    );
-
-    if (duplicate) {
-      alert("Esiste già un collaboratore con questo indirizzo email.");
-      return;
-    }
-
-    const next: Collaborator = {
-      ...form,
-      name,
-      email,
-      workspaceId,
-    };
-
-    setCollaborators((items) =>
-      form.id
-        ? items.map((item) =>
-            item.id === form.id ? next : item
-          )
-        : [...items, { ...next, id: makeId() }]
-    );
-
-    reset();
   };
 
   const edit = (item: Collaborator) => {
