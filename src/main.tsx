@@ -7715,12 +7715,18 @@ function CondominiumDetails(
       <section className="condominium-section-card">
         <div className="section-title">
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
-          <div className="button-row compact">
+          <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
             {isAdministrator && (
               <>
                 <button className="primary-button" onClick={() => onPrepareEmail(item.id)}>✉️ Scrivi a tutti</button>
-                <button className="secondary-button" onClick={() => onNewMember(item.id)}>+ Aggiungi condòmino</button>
+                <button
+                  className="secondary-button condominium-add-member-button"
+                  type="button"
+                  onClick={() => onNewMember(item.id)}
+                >
+                  + Aggiungi condòmino
+                </button>
               </>
             )}
           </div>
