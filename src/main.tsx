@@ -1861,7 +1861,12 @@ function App() {
         return;
       }
 
-      role = membership.role as PublicRole;
+      role =
+        membership.role === "admin"
+          ? "admin"
+          : membership.role === "collaborator"
+            ? "collaborator"
+            : "resident";
       email = data.user.email || email;
     }
     const normalizedEmail = email.trim();
@@ -1928,6 +1933,89 @@ function App() {
 
   /* =======================================================
      SESSIONE
+     ======================================================= */
+
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase) return;
+
+    let cancelled = false;
+
+    const applySupabaseSession = async (
+      session: { user: { id: string; email?: string | null } } | null
+    ) => {
+      if (!session?.user || cancelled) return;
+
+      try {
+        let { data: membership } = await supabase
+          .from("workspace_members")
+          .select("workspace_id, role, active")
+          .eq("user_id", session.user.id)
+          .eq("active", true)
+          .maybeSingle();
+
+        if (!membership) {
+          try {
+            await claimFirstWorkspaceAdmin();
+            const result = await supabase
+              .from("workspace_members")
+              .select("workspace_id, role, active")
+              .eq("user_id", session.user.id)
+              .eq("active", true)
+              .maybeSingle();
+            membership = result.data;
+          } catch {
+            // Un utente non ancora associato può essere un collaboratore
+            // o un condòmino invitato; in tal caso resta sulla schermata pubblica.
+          }
+        }
+
+        if (!membership || cancelled) return;
+
+        const mappedRole =
+          membership.role === "admin"
+            ? "admin"
+            : membership.role === "collaborator"
+              ? "collaborator"
+              : "resident";
+
+        const normalizedEmail = (session.user.email || "").trim();
+
+        setSessionRole(mappedRole);
+        setSessionEmail(normalizedEmail);
+        localStorage.setItem(KEYS.session, JSON.stringify(mappedRole));
+        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+
+        setProfile((current) => ({
+          ...current,
+          workspaceId: membership.workspace_id,
+          email: normalizedEmail || current.email,
+        }));
+        setPage("homepage");
+      } catch (error) {
+        console.error("BETHAG auth session hydration failed", error);
+      }
+    };
+
+    void supabase.auth.getSession().then(({ data }) => {
+      void applySupabaseSession(data.session);
+    });
+
+    const {
+      data: { subscription: authSubscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        void applySupabaseSession(session);
+      }, 0);
+    });
+
+    return () => {
+      cancelled = true;
+      authSubscription.unsubscribe();
+    };
+  }, []);
+
+  /* =======================================================
+     VALIDAZIONE SESSIONE BETHAG
      ======================================================= */
 
   useEffect(() => {
