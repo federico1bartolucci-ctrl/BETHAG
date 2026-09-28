@@ -3576,28 +3576,116 @@ function App() {
   const saveCondominiumMember = (event: React.FormEvent<HTMLFormElement>) => {
     if (!requireAdministrator("La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
-    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) { alert("Inserisci nome, cognome e interno/appartamento del condòmino."); return; }
-    if (!validateEmail(condominiumMemberForm.email)) { alert("Controlla l'indirizzo email del condòmino."); return; }
-    const normalizedEmail = condominiumMemberForm.email.trim().toLowerCase();
-    if (normalizedEmail) {
-      const duplicate = condominiumMembers.some((member) =>
-        member.condominiumId === condominiumMemberForm.condominiumId &&
-        member.id !== selectedCondominiumMember?.id &&
-        member.email.trim().toLowerCase() === normalizedEmail
-      );
-      if (duplicate) {
-        alert("Esiste già un condòmino con questo indirizzo e-mail nello stesso condominio.");
-        return;
-      }
+    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) {
+      alert("Inserisci nome, cognome e interno/appartamento del condòmino.");
+      return;
     }
-    const data = { ...condominiumMemberForm, firstName: condominiumMemberForm.firstName.trim(), lastName: condominiumMemberForm.lastName.trim(), apartment: condominiumMemberForm.apartment.trim(), email: condominiumMemberForm.email.trim() };
-    if (selectedCondominiumMember) setCondominiumMembers((current) => current.map((member) => member.id === selectedCondominiumMember.id ? { ...data, id: selectedCondominiumMember.id } : member));
-    else setCondominiumMembers((current) => [...current, { ...data, id: makeId() }]);
-    setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId: condominiumMemberForm.condominiumId }); setSelectedCondominiumMember(null); closeModal();
+    if (!validateEmail(condominiumMemberForm.email)) {
+      alert("Controlla l'indirizzo email del condòmino.");
+      return;
+    }
+
+    const normalizedEmail = condominiumMemberForm.email.trim().toLowerCase();
+    const duplicate = condominiumMembers.some((member) =>
+      member.condominiumId === condominiumMemberForm.condominiumId &&
+      member.id !== selectedCondominiumMember?.id &&
+      member.email.trim().toLowerCase() === normalizedEmail
+    );
+
+    if (duplicate) {
+      alert("Esiste già un condòmino con questo indirizzo e-mail nello stesso condominio.");
+      return;
+    }
+
+    const data = {
+      ...condominiumMemberForm,
+      firstName: condominiumMemberForm.firstName.trim(),
+      lastName: condominiumMemberForm.lastName.trim(),
+      apartment: condominiumMemberForm.apartment.trim(),
+      email: condominiumMemberForm.email.trim(),
+    };
+
+    if (selectedCondominiumMember) {
+      const previousMember = selectedCondominiumMember;
+
+      setCondominiumMembers((current) =>
+        current.map((member) =>
+          member.id === previousMember.id
+            ? { ...data, id: previousMember.id }
+            : member
+        )
+      );
+
+      setPortalMembers((current) =>
+        current.map((portalMember) =>
+          portalMember.active &&
+          portalMember.condominiumId === previousMember.condominiumId &&
+          portalMember.email.trim().toLowerCase() === previousMember.email.trim().toLowerCase()
+            ? {
+                ...portalMember,
+                name: `${data.firstName} ${data.lastName}`.trim(),
+                email: data.email,
+                condominiumId: data.condominiumId,
+                apartment: data.apartment,
+              }
+            : portalMember
+        )
+      );
+    } else {
+      setCondominiumMembers((current) => [
+        ...current,
+        { ...data, id: makeId() },
+      ]);
+    }
+
+    setCondominiumMemberForm({
+      ...emptyCondominiumMember,
+      condominiumId: condominiumMemberForm.condominiumId,
+    });
+    setSelectedCondominiumMember(null);
+    closeModal();
   };
 
-  const editCondominiumMember = (member: CondominiumMember) => { setSelectedCondominiumMember(member); setCondominiumMemberForm(member); openModal("condominium-member"); };
-  const deleteCondominiumMember = (id: number) => { if (!requireAdministrator("L'eliminazione del condòmino")) return; if (!confirm("Eliminare questo condòmino dall'anagrafica?")) return; setCondominiumMembers((current) => current.filter((member) => member.id !== id)); };
+  const editCondominiumMember = (member: CondominiumMember) => {
+    setSelectedCondominiumMember(member);
+    setCondominiumMemberForm(member);
+    openModal("condominium-member");
+  };
+
+  const deleteCondominiumMember = (id: number) => {
+    if (!requireAdministrator("L'eliminazione del condòmino")) return;
+
+    const member = condominiumMembers.find((item) => item.id === id);
+    if (!member) return;
+
+    const linkedPortalAccess = portalMembers.some(
+      (portalMember) =>
+        portalMember.condominiumId === member.condominiumId &&
+        portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+    );
+
+    const confirmationMessage = linkedPortalAccess
+      ? "Eliminare questo condòmino dall'anagrafica? L'eventuale accesso attivo al Portale associato verrà revocato."
+      : "Eliminare questo condòmino dall'anagrafica?";
+
+    if (!confirm(confirmationMessage)) return;
+
+    setCondominiumMembers((current) =>
+      current.filter((item) => item.id !== id)
+    );
+
+    if (linkedPortalAccess) {
+      setPortalMembers((current) =>
+        current.filter(
+          (portalMember) =>
+            !(
+              portalMember.condominiumId === member.condominiumId &&
+              portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+            )
+        )
+      );
+    }
+  };
 
   const saveCondominiumRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
