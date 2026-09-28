@@ -383,3 +383,14 @@ export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
 export function syncBackendState(workspaceId: string, state: BackendState) {
   return enqueueBackendSync(() => syncBackendStateNow(workspaceId, state));
 }
+
+export async function deleteCondominium(workspaceId: string, legacyId: number) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  const { error } = await supabase.rpc("delete_condominium", {
+    p_workspace_id: workspaceId,
+    p_legacy_id: legacyId,
+  });
+
+  if (error) throw error;
+}
