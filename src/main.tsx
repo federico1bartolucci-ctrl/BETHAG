@@ -1573,6 +1573,9 @@ function App() {
       load(KEYS.sessionEmail, "")
     );
 
+  const [serverCollaboratorPermissions, setServerCollaboratorPermissions] =
+    useState<CollaboratorPermission[]>([]);
+
   const [condominiums, setCondominiums] =
     useState<Condominium[]>(
       () =>
@@ -2079,7 +2082,7 @@ function App() {
         if (sessionRole === "collaborator") {
           const { data: membership, error } = await supabase
             .from("workspace_members")
-            .select("workspace_id, role, active")
+            .select("workspace_id, role, active, permissions")
             .eq("user_id", user.id)
             .eq("workspace_id", profile.workspaceId)
             .eq("role", "collaborator")
@@ -2089,6 +2092,20 @@ function App() {
 
           if (error) throw error;
           authorized = Boolean(membership);
+
+          if (authorized) {
+            const permissions = Array.isArray(membership?.permissions)
+              ? membership.permissions.filter((permission): permission is CollaboratorPermission =>
+                  Object.prototype.hasOwnProperty.call(
+                    COLLABORATOR_PERMISSION_LABELS,
+                    permission
+                  )
+                )
+              : [];
+            setServerCollaboratorPermissions(permissions);
+          } else {
+            setServerCollaboratorPermissions([]);
+          }
         }
 
         if (sessionRole === "resident") {
@@ -2363,7 +2380,9 @@ function App() {
   );
 
   const collaboratorPermissions =
-    currentCollaborator?.permissions || [];
+    isCollaborator && supabaseConfigured
+      ? serverCollaboratorPermissions
+      : currentCollaborator?.permissions || [];
 
   const pageAddon: Partial<Record<Page, AddonId>> = {
     condomini: "condomini",
