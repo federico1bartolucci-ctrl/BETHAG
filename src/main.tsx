@@ -1873,7 +1873,7 @@ function App() {
 
         if (!session?.user || cancelled) return;
 
-        const workspaceId = await getActiveWorkspaceId(session.user.id);
+        const workspaceId = await getActiveWorkspaceId(session.user.id, profile.workspaceId);
         if (!workspaceId || cancelled) return;
 
         const backend = await loadBackendState(workspaceId);
