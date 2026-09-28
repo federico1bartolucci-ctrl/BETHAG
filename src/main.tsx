@@ -3733,22 +3733,30 @@ function App() {
         return;
       }
     }
-    if (!isAdministrator) {
-      condominiumRequestForm.condominiumId = portalMember!.condominiumId;
-      condominiumRequestForm.memberId = portalCondominiumMember?.id ?? null;
-    }
-    if (!condominiumRequestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
-    if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
-    if (condominiumRequestForm.memberId) {
+    const requestForm = !isAdministrator
+      ? {
+          ...condominiumRequestForm,
+          condominiumId: portalMember!.condominiumId,
+          memberId: portalCondominiumMember?.id ?? null,
+        }
+      : condominiumRequestForm;
+
+    if (!requestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
+    if (!requestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
+    if (requestForm.memberId) {
       const member = condominiumMembers.find(
-        (item) => item.id === condominiumRequestForm.memberId
+        (item) => item.id === requestForm.memberId
       );
-      if (!member || member.condominiumId !== condominiumRequestForm.condominiumId) {
+      if (!member || member.condominiumId !== requestForm.condominiumId) {
         alert("Il condòmino indicato non appartiene al condominio selezionato.");
         return;
       }
     }
-    const data = { ...condominiumRequestForm, description: condominiumRequestForm.description.trim(), response: condominiumRequestForm.response.trim() };
+    const data = {
+      ...requestForm,
+      description: requestForm.description.trim(),
+      response: requestForm.response.trim(),
+    };
     const requestId = selectedCondominiumRequest?.id ?? makeId();
     const savedRequest = { ...data, id: requestId };
 
@@ -3809,7 +3817,7 @@ function App() {
       }
     }
 
-    setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: condominiumRequestForm.condominiumId });
+    setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId: requestForm.condominiumId });
     setSelectedCondominiumRequest(null);
     closeModal();
   };
