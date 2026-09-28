@@ -128,7 +128,15 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   };
 }
 
-export async function syncBackendState(workspaceId: string, state: BackendState) {
+let backendSyncQueue: Promise<void> = Promise.resolve();
+
+function enqueueBackendSync(task: () => Promise<void>) {
+  const run = backendSyncQueue.then(task, task);
+  backendSyncQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
   const condominiumRows = state.condominiums ?? [];
@@ -370,4 +378,8 @@ export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
 
   if (error) throw error;
   return data as string;
+}
+
+export function syncBackendState(workspaceId: string, state: BackendState) {
+  return enqueueBackendSync(() => syncBackendStateNow(workspaceId, state));
 }
