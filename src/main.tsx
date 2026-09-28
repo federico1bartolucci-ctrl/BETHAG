@@ -377,7 +377,7 @@ const ADDON_PRICES: Record<AddonId, string> = {
 };
 
 const ADDON_REQUIRED_PLAN: Record<AddonId, PlanId> = {
-  condomini: "plus",
+  condomini: "free",
   documenti: "plus",
   scadenze: "plus",
   assemblee: "professional",
