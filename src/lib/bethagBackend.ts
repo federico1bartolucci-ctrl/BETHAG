@@ -438,6 +438,73 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
   if (error) throw error;
 }
 
+export async function saveCondominiumMember(
+  workspaceId: string,
+  item: any
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", item.condominiumId)
+      .maybeSingle();
+
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+
+    const apartment = String(item.apartment ?? "").trim();
+    let unitId: string | null = null;
+
+    if (apartment) {
+      const { error: unitError } = await supabase
+        .from("condominium_units")
+        .upsert({
+          workspace_id: workspaceId,
+          condominium_id: condominium.id,
+          unit_code: apartment,
+          data: { unitCode: apartment },
+        }, { onConflict: "condominium_id,unit_code" });
+
+      if (unitError) throw unitError;
+
+      const { data: unit, error: unitReadError } = await supabase
+        .from("condominium_units")
+        .select("id")
+        .eq("condominium_id", condominium.id)
+        .eq("unit_code", apartment)
+        .maybeSingle();
+
+      if (unitReadError) throw unitReadError;
+      unitId = unit?.id ?? null;
+    }
+
+    const row = {
+      condominium_id: condominium.id,
+      unit_id: unitId,
+      legacy_id: item.id,
+      user_id: item.userId ?? null,
+      name: [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name || "Condòmino",
+      email: item.email ?? null,
+      role: item.role === "Inquilino" ? "resident" : "resident",
+      active: item.active ?? true,
+      permissions: item.permissions ?? {},
+      data: item,
+    };
+
+    const { data, error } = await supabase
+      .from("condominium_members")
+      .upsert(row, { onConflict: "condominium_id,legacy_id" })
+      .select("id, legacy_id, unit_id")
+      .single();
+
+    if (error) throw error;
+    return data;
+  });
+}
+
 export async function saveCondominium(
   workspaceId: string,
   item: any
