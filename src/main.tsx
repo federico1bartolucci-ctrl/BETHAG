@@ -8719,7 +8719,6 @@ function CollaboratorsPage({
       <PageHeader
         eyebrow="Workspace"
         title="Collaboratori"
-        description="Gestisci le persone che possono operare nel tuo workspace e definisci le funzioni a loro disposizione."
       />
 
       <section className="workspace-card">
