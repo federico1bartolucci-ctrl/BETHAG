@@ -605,7 +605,7 @@ export async function saveCondominium(
           data: {
             unitCode: code,
             unitType: "Abitazione",
-            cadastralCategory: "A/2",
+            cadastralCategory: "",
             cadastralAutonomous: true,
             millesimi: "",
             incorporatedInUnitId: null,
