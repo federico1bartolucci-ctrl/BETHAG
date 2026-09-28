@@ -182,6 +182,7 @@ type CondominiumMember = {
   millesimi: string;
   notes: string;
   active: boolean;
+  unitId?: string;
 };
 
 type RequestStatus = "Nuova" | "In lavorazione" | "Risolta" | "Chiusa";
@@ -908,7 +909,7 @@ const emptyActivity: Activity = {
 };
 
 const emptyCondominiumMember: CondominiumMember = {
-  id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", millesimi: "", notes: "", active: true,
+  id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", millesimi: "", notes: "", active: true, unitId: "",
 };
 
 const emptyCondominiumRequest: CondominiumRequest = {
@@ -5887,7 +5888,7 @@ function App() {
           )}
 
           {modalType === "condominium-member" && (
-            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
+            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} members={condominiumMembers} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
           )}
 
           {modalType === "condominium-request" && (
@@ -12444,18 +12445,50 @@ function ActivityForm({
    FORM COMUNICAZIONE
    ========================================================= */
 
-function CondominiumMemberForm({ value, setValue, condominiums, onSubmit, onCancel, editing }: any) {
+function CondominiumMemberForm({ value, setValue, condominiums, members, onSubmit, onCancel, editing }: any) {
   const set = (key: keyof CondominiumMember, val: any) => setValue({ ...value, [key]: val });
-  return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} /><div className="form-grid">
-    <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => set("condominiumId", Number(v))} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
-    <Field label="Nome *" value={value.firstName} onChange={(v: string) => set("firstName", v)} /><Field label="Cognome *" value={value.lastName} onChange={(v: string) => set("lastName", v)} />
-    <Field label="Interno / appartamento *" value={value.apartment} onChange={(v: string) => set("apartment", v)} /><SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
-    <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} /><Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} /><Field label="Telefono" value={value.phone} onChange={(v: string) => set("phone", v)} /><Field label="E-mail" value={value.email} onChange={(v: string) => set("email", v)} />
-    <div className="field checkbox-field"><label>Stato</label><label className="switch-row"><input type="checkbox" checked={value.active} onChange={(e) => set("active", e.target.checked)} /><span>Condòmino attivo</span></label></div>
-    <Field full label="Note" value={value.notes} onChange={(v: string) => set("notes", v)} textarea />
-  </div><Actions onCancel={onCancel} /></form>;
+  const sameCondominium = members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId && m.id !== value.id);
+  const existingApartments = Array.from(new Set(sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean)));
+  const selectedApartment = value.apartment.trim();
+  const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
+  return <form onSubmit={onSubmit}>
+    <ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} />
+    <div className="form-grid">
+      <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => setValue({ ...value, condominiumId: Number(v), apartment: "", unitId: "" })} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
+      <Field label="Nome *" value={value.firstName} onChange={(v: string) => set("firstName", v)} />
+      <Field label="Cognome *" value={value.lastName} onChange={(v: string) => set("lastName", v)} />
+      <div className="field full">
+        <label>Unità abitativa *</label>
+        <select value={existingApartments.includes(value.apartment) ? value.apartment : ""} onChange={(e) => {
+          if (e.target.value === "__new__") setValue({ ...value, apartment: "", unitId: "" });
+          else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\\s+/g, "-")}` });
+        }}>
+          <option value="">Seleziona un'unità esistente oppure creane una nuova</option>
+          {existingApartments.map((apartment) => <option key={apartment} value={apartment}>{apartment}</option>)}
+          <option value="__new__">+ Nuova unità…</option>
+        </select>
+        {!existingApartments.includes(value.apartment) && (
+          <input style={{ marginTop: 8 }} value={value.apartment} autoFocus={Boolean(value.apartment)} placeholder="Es. Interno 4" onChange={(e) => setValue({ ...value, apartment: e.target.value, unitId: "" })} />
+        )}
+        {apartmentAssociates.length > 0 && (
+          <div className="form-help" style={{ marginTop: 8 }}>
+            <strong>Già associati:</strong>{" "}
+            {apartmentAssociates.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} (${m.role})`).join(" · ")}
+            <br />Il nuovo soggetto sarà collegato alla stessa unità abitativa.
+          </div>
+        )}
+      </div>
+      <SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
+      <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} />
+      <Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} />
+      <Field label="Telefono" value={value.phone} onChange={(v: string) => set("phone", v)} />
+      <Field label="E-mail" value={value.email} onChange={(v: string) => set("email", v)} />
+      <div className="field checkbox-field"><label>Stato</label><label className="switch-row"><input type="checkbox" checked={value.active} onChange={(e) => set("active", e.target.checked)} /><span>Condòmino attivo</span></label></div>
+      <Field full label="Note" value={value.notes} onChange={(v: string) => set("notes", v)} textarea />
+    </div>
+    <Actions onCancel={onCancel} />
+  </form>;
 }
-
 function CondominiumRequestForm({ value, setValue, condominiums, members, suppliers, activities, onSubmit, onCancel, editing }: any) {
   const set = (key: keyof CondominiumRequest, val: any) => setValue({ ...value, [key]: val });
   return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica segnalazione / richiesta" : "Nuova segnalazione / richiesta"} /><div className="form-grid">
