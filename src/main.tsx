@@ -1888,6 +1888,9 @@ function App() {
         setActivities(backend.activities);
         setCommunications(backend.communications);
         setCondominiumRequests(backend.condominiumRequests);
+        if (Array.isArray(backend.portalMembers) && backend.portalMembers.length > 0) {
+          setPortalMembers(backend.portalMembers);
+        }
         backendHydrated.current = true;
 
         setProfile((current) => ({
@@ -1927,6 +1930,7 @@ function App() {
         activities,
         communications,
         condominiumRequests,
+        portalMembers,
       }).catch((error) => {
         console.error("BETHAG backend sync failed", error);
       });
@@ -1945,6 +1949,7 @@ function App() {
     activities,
     communications,
     condominiumRequests,
+    portalMembers,
   ]);
 
   useEffect(() => {
