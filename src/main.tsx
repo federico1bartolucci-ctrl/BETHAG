@@ -4101,9 +4101,8 @@ function App() {
               onPublication={
                 toggleDocumentPublication
               }
-              plan={
-                subscription.plan
-              }
+              plan={subscription.plan}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4131,9 +4130,8 @@ function App() {
               onStatus={
                 updateDeadlineStatus
               }
-              condominiumName={
-                condominiumName
-              }
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4173,9 +4171,8 @@ function App() {
               onConfirmMinutes={
                 confirmMinutes
               }
-              onPublication={
-                toggleAssemblyPublication
-              }
+              onPublication={toggleAssemblyPublication}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4200,9 +4197,8 @@ function App() {
               onDelete={
                 deleteSupplier
               }
-              condominiumName={
-                condominiumName
-              }
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4227,12 +4223,9 @@ function App() {
               onDelete={
                 deleteActivity
               }
-              onStatus={
-                updateActivityStatus
-              }
-              condominiumName={
-                condominiumName
-              }
+              onStatus={updateActivityStatus}
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4326,9 +4319,8 @@ function App() {
               onDelete={
                 deletePortalMember
               }
-              onNavigate={
-                navigate
-              }
+              onNavigate={navigate}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -6666,6 +6658,7 @@ function DocumentsPage({
   onConfirmAI,
   onPublication,
   plan,
+  isAdministrator = false,
 }: any) {
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
   const [sourceFilter, setSourceFilter] = useState("Tutti");
@@ -6690,12 +6683,11 @@ function DocumentsPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Archivio digitale"
-        title="Documenti"
-        action="+ Nuovo documento"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Archivio digitale" title="Documenti" action="+ Nuovo documento" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Archivio digitale" title="Documenti" />
+      )}
 
       <div className="feature-banner">
 
@@ -6840,31 +6832,15 @@ function DocumentsPage({
               )}
 
 
-              <div className="button-row">
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onEdit(d)
-                  }
-                >
-                  Modifica
-                </button>
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onAI(d)
-                  }
-                >
-                  ✨ AI
-                </button>
-
-              </div>
+              {isAdministrator && (
+                <div className="button-row">
+                  <button className="secondary-button" onClick={() => onEdit(d)}>Modifica</button>
+                  <button className="secondary-button" onClick={() => onAI(d)}>✨ AI</button>
+                </div>
+              )}
 
 
-              {d.aiStatus ===
-                "Da verificare" && (
+              {isAdministrator && d.aiStatus === "Da verificare" && (
                 <button
                   className="primary-button full-button"
                   onClick={() =>
@@ -6878,7 +6854,8 @@ function DocumentsPage({
               )}
 
 
-              <div className="document-bottom">
+              {isAdministrator && (
+                <div className="document-bottom">
 
                 <button
                   className="link"
@@ -6902,8 +6879,9 @@ function DocumentsPage({
                 >
                   Elimina
                 </button>
+                </div>
+              )}
 
-              </div>
 
             </article>
           )
@@ -6937,6 +6915,7 @@ function DeadlinesPage({
   onDelete,
   onStatus,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
@@ -6960,12 +6939,11 @@ function DeadlinesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Pianificazione"
-        title="Scadenze"
-        action="+ Nuova scadenza"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Pianificazione" title="Scadenze" action="+ Nuova scadenza" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Pianificazione" title="Scadenze" />
+      )}
 
       <SearchBox
         value={search}
@@ -7035,7 +7013,6 @@ function DeadlinesPage({
 
 
               <div className="row-actions">
-
                 <Badge
                   value={
                     d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
@@ -7043,8 +7020,9 @@ function DeadlinesPage({
                       : d.status
                   }
                 />
-
-                <select
+                {isAdministrator && (
+                  <>
+                    <select
                   value={d.status}
                   onChange={(e) =>
                     onStatus(
@@ -7081,8 +7059,9 @@ function DeadlinesPage({
                   }
                 >
                   ×
-                </button>
-
+                    </button>
+                  </>
+                )}
               </div>
 
             </article>
@@ -7151,12 +7130,11 @@ function AssembliesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Riunioni"
-        title="Assemblee"
-        action="+ Nuova assemblea"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Riunioni" title="Assemblee" action="+ Nuova assemblea" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Riunioni" title="Assemblee" />
+      )}
 
       <div className="feature-banner">
 
@@ -7272,7 +7250,8 @@ function AssembliesPage({
               </div>
 
 
-              <div className="assembly-actions">
+              {isAdministrator && (
+                <div className="assembly-actions">
 
                 <select
                   value={a.status}
@@ -7388,6 +7367,7 @@ function AssembliesPage({
                 </button>
 
               </div>
+              )}
 
             </article>
           )
@@ -7418,6 +7398,7 @@ function SuppliersPage({
   onEdit,
   onDelete,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const filtered =
     suppliers.filter(
@@ -7440,12 +7421,11 @@ function SuppliersPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Gestione fornitori"
-        title="Fornitori"
-        action="+ Nuovo fornitore"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" action="+ Nuovo fornitore" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" />
+      )}
 
       <SearchBox
         value={search}
@@ -7503,27 +7483,12 @@ function SuppliersPage({
                 </p>
               )}
 
-              <div className="button-row">
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onEdit(s)
-                  }
-                >
-                  Modifica
-                </button>
-
-                <button
-                  className="danger-button"
-                  onClick={() =>
-                    onDelete(s.id)
-                  }
-                >
-                  Elimina
-                </button>
-
-              </div>
+              {isAdministrator && (
+                <div className="button-row">
+                  <button className="secondary-button" onClick={() => onEdit(s)}>Modifica</button>
+                  <button className="danger-button" onClick={() => onDelete(s.id)}>Elimina</button>
+                </div>
+              )}
 
             </article>
           )
@@ -7557,6 +7522,7 @@ function ActivitiesPage({
   onDelete,
   onStatus,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [priorityFilter, setPriorityFilter] = useState("Tutte");
@@ -7582,12 +7548,11 @@ function ActivitiesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Organizzazione"
-        title="Attività"
-        action="+ Nuova attività"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Organizzazione" title="Attività" action="+ Nuova attività" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Organizzazione" title="Attività" />
+      )}
 
       <SearchBox
         value={search}
@@ -7649,8 +7614,8 @@ function ActivitiesPage({
               </div>
 
 
-              <div className="row-actions">
-
+              {isAdministrator && (
+                <div className="row-actions">
                 <select
                   value={a.status}
                   onChange={(e) =>
@@ -7687,14 +7652,13 @@ function ActivitiesPage({
 
                 <button
                   className="mini-danger"
-                  onClick={() =>
-                    onDelete(a.id)
-                  }
+                  onClick={() => onDelete(a.id)}
                 >
                   ×
                 </button>
+                </div>
+              )}
 
-              </div>
 
             </article>
           )
@@ -8204,6 +8168,7 @@ function PortalPage({
   onToggle,
   onDelete,
   onNavigate,
+  isAdministrator = false,
 }: any) {
   const [showAdd, setShowAdd] =
     useState(false);
@@ -8286,11 +8251,12 @@ function PortalPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Accesso esterno"
-        title="Portale condomini"
-        action="+ Nuovo accesso"
-        onAction={() => {
+      {isAdministrator ? (
+        <PageHeader
+          eyebrow="Accesso esterno"
+          title="Portale condomini"
+          action="+ Nuovo accesso"
+          onAction={() => {
 
           if (!portalEnabled) {
             onNavigate("abbonamento");
@@ -8298,9 +8264,11 @@ function PortalPage({
           }
 
           setShowAdd(true);
-
-        }}
-      />
+          }}
+        />
+      ) : (
+        <PageHeader eyebrow="Accesso esterno" title="Portale condomini" />
+      )}
 
 
       <section className="portal-hero">
@@ -8377,7 +8345,7 @@ function PortalPage({
       </section>
 
 
-      {showAdd && (
+      {isAdministrator && showAdd && (
         <form
           className="form-card"
           onSubmit={save}
@@ -8668,8 +8636,8 @@ function PortalPage({
                   </div>
 
 
-                  <div className="row-actions">
-
+                  {isAdministrator && (
+                    <div className="row-actions">
                     <Badge
                       value={
                         member.active
@@ -8701,8 +8669,9 @@ function PortalPage({
                     >
                       ×
                     </button>
-
                   </div>
+                  )}
+
 
                 </div>
               )
