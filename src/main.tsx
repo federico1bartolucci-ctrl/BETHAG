@@ -2456,6 +2456,10 @@ function App() {
   const confirmDocumentAI = (
     id: number
   ) => {
+    if (!isAdministrator) {
+      alert("La conferma dell'analisi AI è riservata all'Amministratore.");
+      return;
+    }
     setDocuments((current) =>
       current.map((doc) =>
         doc.id === id
@@ -2575,6 +2579,10 @@ function App() {
     assembly: Assembly,
     file: File
   ) => {
+    if (!isAdministrator) {
+      alert("L'acquisizione dell'audio è riservata all'Amministratore.");
+      return;
+    }
     if (
       !requirePlan(
         "professional",
@@ -2617,6 +2625,10 @@ function App() {
   const generateMinutes = (
     assembly: Assembly
   ) => {
+    if (!isAdministrator) {
+      alert("La generazione dei verbali è riservata all'Amministratore.");
+      return;
+    }
     if (
       !requirePlan(
         "professional",
@@ -2676,6 +2688,10 @@ function App() {
   const confirmMinutes = (
     id: number
   ) => {
+    if (!isAdministrator) {
+      alert("La conferma del verbale è riservata all'Amministratore.");
+      return;
+    }
     setAssemblies((current) =>
       current.map((item) =>
         item.id === id
