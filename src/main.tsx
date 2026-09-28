@@ -4485,14 +4485,11 @@ function BrandLogo({
 }) {
   return (
     <div className={`brand-logo ${compact ? "brand-logo-compact" : ""}`} aria-label="BETHAG">
-      <span className="brand-mark" aria-hidden="true">
-        <span className="brand-mark-bar brand-mark-bar-a" />
-        <span className="brand-mark-bar brand-mark-bar-b" />
-        <span className="brand-mark-dot" />
-      </span>
-      <span className="brand-word">
-        BET<span>H</span>AG
-      </span>
+      <img
+        className="brand-logo-image"
+        src="/bethag.svg"
+        alt="BETHAG"
+      />
     </div>
   );
 }
@@ -12670,81 +12667,29 @@ body{
 .brand-logo{
   display:flex;
   align-items:center;
-  gap:11px;
-  min-height:44px;
-  padding:0 10px 22px;
+  justify-content:flex-start;
+  min-height:0;
+  padding:0 4px 20px;
   color:#fff;
+}
+
+.brand-logo-image{
+  display:block;
+  width:100%;
+  max-width:190px;
+  height:auto;
+  object-fit:contain;
+  object-position:center;
+  filter:drop-shadow(0 8px 18px rgba(0,153,255,.18));
 }
 
 .brand-logo-compact{
   padding:0;
-  min-height:40px;
-  gap:9px;
+  min-height:0;
 }
 
-.brand-mark{
-  position:relative;
-  width:36px;
-  height:36px;
-  flex:0 0 36px;
-  border-radius:11px;
-  background:linear-gradient(145deg,#8da7ff 0%,#536ff2 52%,#344fd0 100%);
-  box-shadow:0 8px 20px rgba(79,109,245,.28), inset 0 1px 0 rgba(255,255,255,.35);
-  overflow:hidden;
-}
-
-.brand-logo-compact .brand-mark{
-  width:32px;
-  height:32px;
-  flex-basis:32px;
-  border-radius:10px;
-}
-
-.brand-mark-bar{
-  position:absolute;
-  height:5px;
-  border-radius:5px;
-  background:#fff;
-  left:8px;
-  transform:skewY(-18deg);
-  opacity:.96;
-}
-
-.brand-mark-bar-a{
-  width:20px;
-  top:10px;
-}
-
-.brand-mark-bar-b{
-  width:14px;
-  top:18px;
-  left:12px;
-  opacity:.8;
-}
-
-.brand-mark-dot{
-  position:absolute;
-  width:5px;
-  height:5px;
-  border-radius:50%;
-  background:#fff;
-  right:7px;
-  bottom:7px;
-}
-
-.brand-word{
-  font-size:25px;
-  line-height:1;
-  font-weight:800;
-  letter-spacing:.06em;
-}
-
-.brand-word span{
-  color:#9fb2ff;
-}
-
-.brand-logo-compact .brand-word{
-  font-size:20px;
+.brand-logo-compact .brand-logo-image{
+  max-width:120px;
 }
 
 .plan-sidebar{
