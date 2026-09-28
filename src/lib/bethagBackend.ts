@@ -372,23 +372,12 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     .eq("workspace_id", workspaceId);
   if (existingUnitsError) throw existingUnitsError;
 
-  // Protezione anti-perdita dati: una sincronizzazione con uno stato locale
-  // temporaneamente vuoto/non idratato non deve mai interpretare l'assenza
-  // delle unità come una richiesta di cancellazione massiva. Le cancellazioni
-  // esplicite vengono gestite dalle azioni dedicate dell'interfaccia.
-  if (desiredUnitKeys.size > 0 || (existingUnitsWorkspace ?? []).length === 0) {
-    for (const unit of existingUnitsWorkspace ?? []) {
-      const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
-      if (!desiredUnitKeys.has(key)) {
-        const { error: deleteUnitError } = await supabase
-          .from("condominium_units")
-          .delete()
-          .eq("id", unit.id)
-          .eq("workspace_id", workspaceId);
-        if (deleteUnitError) throw deleteUnitError;
-      }
-    }
-  }
+  // Le unità sono dati persistenti e non vengono mai cancellate dalla
+  // sincronizzazione dello stato locale. La loro eliminazione deve essere
+  // effettuata da un'azione esplicita dell'interfaccia, mai da un refresh,
+  // login o stato locale temporaneamente incompleto.
+  void desiredUnitKeys;
+  void existingUnitsWorkspace;
 }
 
 async function reconcileWorkspaceRows(table: string, workspaceId: string, desiredRows: any[]) {
@@ -419,22 +408,13 @@ async function reconcileCondominiumMembers(condominiumId: string, desiredRows: a
     .eq("condominium_id", condominiumId);
   if (error) throw error;
 
-  // Protezione anti-perdita dati: se il frontend invia temporaneamente una
-  // lista vuota mentre il database contiene già condòmini, non cancelliamo
-  // automaticamente l'intero elenco. La cancellazione esplicita deve partire
-  // dall'azione di eliminazione del singolo condòmino.
-  if (desiredRows.length === 0 && (existingRows ?? []).length > 0) return;
-
-  const desiredIds = new Set(desiredRows.map((row: any) => row.legacy_id));
-  const staleRows = (existingRows ?? []).filter((row: any) => !desiredIds.has(row.legacy_id));
-  for (const row of staleRows) {
-    const { error: deleteError } = await supabase
-      .from("condominium_members")
-      .delete()
-      .eq("id", row.id)
-      .eq("condominium_id", condominiumId);
-    if (deleteError) throw deleteError;
-  }
+  // I condòmini sono dati anagrafici persistenti: la sincronizzazione
+  // dello stato locale può aggiungere o modificare record, ma non può
+  // cancellarli. L'eliminazione passa esclusivamente dall'azione esplicita
+  // deleteCondominiumMember(), così un refresh o uno stato locale incompleto
+  // non può mai svuotare l'anagrafica.
+  void desiredRows;
+  void existingRows;
 }
 
 async function upsertRows(table: string, rows: any[], onConflict = "workspace_id,legacy_id") {
@@ -491,6 +471,34 @@ export async function deleteCondominium(workspaceId: string, legacyId: number) {
       p_workspace_id: workspaceId,
       p_legacy_id: legacyId,
     });
+
+    if (error) throw error;
+  });
+}
+
+export async function deleteCondominiumMember(
+  workspaceId: string,
+  condominiumId: number,
+  legacyId: number
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", condominiumId)
+      .maybeSingle();
+
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) return;
+
+    const { error } = await supabase
+      .from("condominium_members")
+      .delete()
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", legacyId);
 
     if (error) throw error;
   });
