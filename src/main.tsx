@@ -2903,6 +2903,7 @@ function App() {
      ======================================================= */
 
   const saveCondominiumMember = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!requireAdministrator("La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
     if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) { alert("Inserisci nome, cognome e interno/appartamento del condòmino."); return; }
     if (!validateEmail(condominiumMemberForm.email)) { alert("Controlla l'indirizzo email del condòmino."); return; }
@@ -2913,7 +2914,7 @@ function App() {
   };
 
   const editCondominiumMember = (member: CondominiumMember) => { setSelectedCondominiumMember(member); setCondominiumMemberForm(member); openModal("condominium-member"); };
-  const deleteCondominiumMember = (id: number) => { if (!confirm("Eliminare questo condòmino dall'anagrafica?")) return; setCondominiumMembers((current) => current.filter((member) => member.id !== id)); };
+  const deleteCondominiumMember = (id: number) => { if (!requireAdministrator("L'eliminazione del condòmino")) return; if (!confirm("Eliminare questo condòmino dall'anagrafica?")) return; setCondominiumMembers((current) => current.filter((member) => member.id !== id)); };
 
   const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -3148,6 +3149,7 @@ function App() {
   const addPortalMember = (
     member: PortalMember
   ) => {
+    if (!requireAdministrator("La gestione degli accessi al Portale condomini")) return;
     if (
       !requirePlan(
         "portal",
@@ -3169,6 +3171,7 @@ function App() {
   const togglePortalMember = (
     id: number
   ) => {
+    if (!requireAdministrator("La modifica dello stato di accesso al Portale condomini")) return;
     setPortalMembers((current) =>
       current.map((member) =>
         member.id === id
@@ -3184,6 +3187,7 @@ function App() {
   const deletePortalMember = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione dell'accesso al Portale condomini")) return;
     if (
       !confirm(
         "Eliminare l'accesso del condomino?"
