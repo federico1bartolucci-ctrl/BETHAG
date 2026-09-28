@@ -1,28 +1,6 @@
-import type {
-  Activity,
-  Assembly,
-  Communication,
-  Condominium,
-  CondominiumMember,
-  CondominiumRequest,
-  Deadline,
-  DocumentItem,
-  Supplier,
-} from "../main";
-
 import { supabase } from "./supabase";
 
-export type BackendState = {
-  condominiums: Condominium[];
-  condominiumMembers: CondominiumMember[];
-  documents: DocumentItem[];
-  deadlines: Deadline[];
-  assemblies: Assembly[];
-  suppliers: Supplier[];
-  activities: Activity[];
-  communications: Communication[];
-  condominiumRequests: CondominiumRequest[];
-};
+export type BackendState = Record<string, any[]>;
 
 export async function getActiveWorkspaceId(userId: string) {
   if (!supabase) return null;
