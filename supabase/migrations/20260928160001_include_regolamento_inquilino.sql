@@ -10,7 +10,7 @@ as $function$
 declare
   member_role text;
 begin
-  select cm.role into member_role
+  select coalesce(cm.data->>'role', cm.role) into member_role
   from public.condominium_members cm
   where cm.condominium_id = new.condominium_id
     and (
