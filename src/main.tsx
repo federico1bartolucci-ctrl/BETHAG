@@ -10273,10 +10273,21 @@ function CollaboratorsPage({
         if (error) throw error;
         if (!data?.success || !data?.userId) throw new Error(data?.error || "Invito collaboratore non riuscito.");
 
+        const invitedStatus = data?.invited === false ? "Attivo" : "Invitato";
         setCollaborators((items) => [...items, {
-          ...form, id: legacyId, userId: data.userId, name, email, workspaceId, status: "Attivo",
+          ...form,
+          id: legacyId,
+          userId: data.userId,
+          name,
+          email,
+          workspaceId,
+          status: invitedStatus,
         }]);
-        alert("Collaboratore creato e invito inviato via e-mail.");
+        alert(
+          data?.invited === false
+            ? "Collaboratore collegato all'account esistente e aggiunto al workspace."
+            : "Collaboratore creato e invito inviato via e-mail."
+        );
       } else {
         const current = collaborators.find((item) => item.id === form.id);
         if (!current?.userId) throw new Error("Questo collaboratore non è ancora collegato a un account Auth.");
