@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured } from "./lib/supabase";
-import { getActiveWorkspaceId, loadBackendState } from "./lib/bethagBackend";
+import { getActiveWorkspaceId, loadBackendState, syncBackendState } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -1857,6 +1857,8 @@ function App() {
     profile.workspaceId,
   ]);
 
+  const backendHydrated = useRef(false);
+
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
 
@@ -1902,6 +1904,46 @@ function App() {
       cancelled = true;
     };
   }, [sessionRole]);
+
+  useEffect(() => {
+    if (
+      !supabaseConfigured ||
+      !supabase ||
+      !sessionRole ||
+      !profile.workspaceId ||
+      !backendHydrated.current
+    ) return;
+
+    const timer = window.setTimeout(() => {
+      void syncBackendState(profile.workspaceId, {
+        condominiums,
+        condominiumMembers,
+        documents,
+        deadlines,
+        assemblies,
+        suppliers,
+        activities,
+        communications,
+        condominiumRequests,
+      }).catch((error) => {
+        console.error("BETHAG backend sync failed", error);
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    sessionRole,
+    profile.workspaceId,
+    condominiums,
+    condominiumMembers,
+    documents,
+    deadlines,
+    assemblies,
+    suppliers,
+    activities,
+    communications,
+    condominiumRequests,
+  ]);
 
   useEffect(() => {
     localStorage.setItem(
