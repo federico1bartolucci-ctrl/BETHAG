@@ -451,6 +451,49 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
   if (error) throw error;
 }
 
+export async function saveCondominiumUnit(workspaceId: string, item: any) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", item.condominiumId)
+      .maybeSingle();
+
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+
+    const unitCode = String(item.unitCode ?? "").trim();
+    if (!unitCode) throw new Error("Il codice dell'unità è obbligatorio.");
+
+    const { data, error } = await supabase
+      .from("condominium_units")
+      .upsert({
+        workspace_id: workspaceId,
+        condominium_id: condominium.id,
+        unit_code: unitCode,
+        data: {
+          ...item,
+          unitCode,
+          unitType: item.unitType ?? "Abitazione",
+          cadastralCategory: item.cadastralCategory ?? "",
+          cadastralAutonomous: item.cadastralAutonomous ?? true,
+          millesimi: item.millesimi ?? "",
+          incorporatedInUnitId: item.incorporatedInUnitId ?? null,
+          notes: item.notes ?? "",
+          active: item.active ?? true,
+        },
+      }, { onConflict: "condominium_id,unit_code" })
+      .select("id, unit_code, data")
+      .single();
+
+    if (error) throw error;
+    return data;
+  });
+}
+
 export async function saveCondominiumMember(
   workspaceId: string,
   item: any
