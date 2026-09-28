@@ -4328,6 +4328,7 @@ if (!requireAdministrator("La modifica delle attività")) return;
                 "portal",
                 "portale"
               )}
+              isAdministrator={isAdministrator}
               onAdd={
                 addPortalMember
               }
