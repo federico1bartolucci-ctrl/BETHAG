@@ -3816,6 +3816,16 @@ function App() {
               </NavButton>
             )}
 
+            {canAccessPage("aiuto") && (
+              <NavButton
+                active={page === "aiuto"}
+                onClick={() => navigate("aiuto")}
+              >
+                <span className="nav-icon"><AppIcon name="help" size={18} /></span>
+                <span>Aiuto e guida</span>
+              </NavButton>
+            )}
+
           </nav>
 
           <div className="sidebar-bottom">
