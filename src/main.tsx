@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -4108,7 +4108,7 @@ function App() {
     openModal("condominium-member");
   };
 
-  const deleteCondominiumMember = (id: number) => {
+  const deleteCondominiumMember = async (id: number) => {
     if (!requireModulePermission("condomini", "L'eliminazione del condòmino")) return;
 
     const member = condominiumMembers.find((item) => item.id === id);
@@ -4126,19 +4126,36 @@ function App() {
 
     if (!confirm(confirmationMessage)) return;
 
-    setCondominiumMembers((current) =>
-      current.filter((item) => item.id !== id)
-    );
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteCondominiumMemberBackend(
+          profile.workspaceId,
+          member.condominiumId,
+          member.id
+        );
+      }
 
-    if (linkedPortalAccess) {
-      setPortalMembers((current) =>
-        current.filter(
-          (portalMember) =>
-            !(
-              portalMember.condominiumId === member.condominiumId &&
-              portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
-            )
-        )
+      setCondominiumMembers((current) =>
+        current.filter((item) => item.id !== id)
+      );
+
+      if (linkedPortalAccess) {
+        setPortalMembers((current) =>
+          current.filter(
+            (portalMember) =>
+              !(
+                portalMember.condominiumId === member.condominiumId &&
+                portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+              )
+          )
+        );
+      }
+    } catch (error) {
+      console.error("BETHAG condominium member deletion failed", error);
+      alert(
+        error instanceof Error
+          ? `Non è stato possibile eliminare il condòmino: ${error.message}`
+          : "Non è stato possibile eliminare il condòmino. Nessun dato è stato rimosso."
       );
     }
   };
