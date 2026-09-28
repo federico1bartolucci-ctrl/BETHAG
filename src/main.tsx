@@ -4606,7 +4606,7 @@ function App() {
     openModal("activity");
   };
 
-  const newCondominiumMember = (condominiumId: number) => { if (!requireModulePermission("condomini", "La gestione dell’anagrafica dei condòmini")) return; setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
+  const newCondominiumMember = (condominiumId: number, apartment = "") => { if (!requireModulePermission("condomini", "La gestione dell’anagrafica dei condòmini")) return; setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId, apartment }); openModal("condominium-member"); };
   const newCondominiumRequest = (condominiumId: number) => {
     if (!requireModulePermission("condomini", "La creazione di una segnalazione o richiesta")) return;
     setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");
@@ -7187,6 +7187,7 @@ function CondominiumsPage(
 function CondominiumDetails(
   props: any
 ) {
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const {
     item,
     onClose,
@@ -7491,17 +7492,44 @@ function CondominiumDetails(
               </div>
               <div className="request-actions">
                 <Badge value={owners.length ? "Proprietà" : "Locazione"} />
-                <button className="secondary-button small" onClick={() => {
-                  const summary = unitMembers.map((m: CondominiumMember) =>
-                    `${m.firstName} ${m.lastName} — ${m.role} — Portale: ${m.userId ? "attivo" : "non attivo"}`
-                  ).join("\n");
-                  alert(`Unità ${apartment}\\n\\n${summary}\\n\\nPermessi inquilino: spese ordinarie, comunicazioni/avvisi e regolamento.\\nPermessi proprietario: accesso completo al Portale.`);
-                }}>Gestisci unità</button>
+                <button className="secondary-button small" onClick={() => setSelectedUnit(apartment)}>Gestisci unità</button>
               </div>
             </div>;
           })}
         </div>
       </section>
+      {selectedUnit && (() => {
+        const unitMembers = activeMembers.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedUnit.trim().toLowerCase());
+        return <Modal onClose={() => setSelectedUnit(null)}>
+          <ModalTitle title={`Unità abitativa ${selectedUnit}`} />
+          <p className="section-subtitle">Tutte le persone associate a questa unità e i relativi accessi al Portale.</p>
+          <div className="related-list" style={{marginTop:16}}>
+            {unitMembers.map((member: CondominiumMember) => {
+              const permissions = member.role === "Inquilino"
+                ? ["Spese ordinarie", "Comunicazioni e avvisi", "Regolamento condominiale"]
+                : ["Documenti", "Verbali", "Regolamento", "Assemblee", "Spese ordinarie", "Spese straordinarie", "Comunicazioni e avvisi"];
+              return <div className="request-card" key={member.id}>
+                <div className="request-main">
+                  <b>{member.firstName} {member.lastName}</b>
+                  <span>{member.role} · {member.email || "E-mail non inserita"}</span>
+                  <small>{member.userId ? "🟢 Accesso Portale attivo" : "⚪ Accesso Portale non attivo"}</small>
+                  <p><strong>Permessi:</strong> {permissions.join(" · ")}</p>
+                </div>
+                {isAdministrator && <div className="request-actions">
+                  <button className="secondary-button small" onClick={() => { setSelectedUnit(null); onEditMember(member); }}>Modifica</button>
+                </div>}
+              </div>;
+            })}
+          </div>
+          {isAdministrator && (
+            <div className="form-actions">
+              <button className="secondary-button" onClick={() => setSelectedUnit(null)}>Chiudi</button>
+              <button className="primary-button" onClick={() => { setSelectedUnit(null); onNewMember(item.id, selectedUnit); }}>+ Aggiungi persona a questa unità</button>
+            </div>
+          )}
+        </Modal>;
+      })()}
+
       <section className="condominium-section-card">
         <div className="section-title">
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
