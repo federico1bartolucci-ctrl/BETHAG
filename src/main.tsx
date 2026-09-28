@@ -313,7 +313,7 @@ type Communication = {
   status: CommunicationStatus;
   body: string;
   publishedToPortal: boolean;
-  emailStatus?: "Non inviata" | "Predisposta";
+  emailStatus?: "Non inviata" | "Predisposta" | "Inviata";
   emailPreparedAt?: string;
 };
 
@@ -3294,7 +3294,7 @@ function App() {
     );
   };
 
-  const prepareCondominiumEmail = (
+  const prepareCondominiumEmail = async (
     condominiumId: number,
     memberIds?: number[],
     communicationId?: number,
@@ -3303,9 +3303,15 @@ function App() {
     audience: CommunicationAudience = "Tutti"
   ) => {
     if (!isAdministrator) {
-      alert("La preparazione dell'e-mail è riservata all'Amministratore.");
+      alert("L'invio dell'e-mail è riservato all'Amministratore.");
       return;
     }
+
+    if (!supabaseConfigured || !supabase) {
+      alert("Il servizio e-mail BETHAG non è disponibile perché Supabase non è configurato.");
+      return;
+    }
+
     const condominium = condominiums.find((item) => item.id === condominiumId);
 
     const recipientEmails =
@@ -3329,7 +3335,6 @@ function App() {
             )
             .map((member) => member.email.trim());
 
-    // Evita destinatari duplicati, mantenendo il primo indirizzo inserito.
     const uniqueRecipients = Array.from(
       new Map(
         recipientEmails.map((email) => [email.toLowerCase(), email])
@@ -3345,7 +3350,6 @@ function App() {
       return;
     }
 
-    const bcc = uniqueRecipients.join(",");
     const subject =
       emailSubject?.trim() ||
       `Comunicazione - ${condominium?.name || "Condominio"}`;
@@ -3353,20 +3357,50 @@ function App() {
       emailBody?.trim() ||
       "Inserisci qui il testo della comunicazione.";
 
-    window.location.href =
-      `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "bethag-send-email",
+        {
+          body: {
+            workspaceId: profile.workspaceId,
+            communicationId,
+            condominiumId,
+            recipients: uniqueRecipients,
+            subject,
+            body,
+            audience,
+          },
+        }
+      );
 
-    if (communicationId) {
-      setCommunications((current) =>
-        current.map((communication) =>
-          communication.id === communicationId
-            ? {
-                ...communication,
-                emailStatus: "Predisposta",
-                emailPreparedAt: new Date().toISOString(),
-              }
-            : communication
-        )
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || "Invio e-mail non riuscito.");
+      }
+
+      if (communicationId) {
+        setCommunications((current) =>
+          current.map((communication) =>
+            communication.id === communicationId
+              ? {
+                  ...communication,
+                  emailStatus: "Inviata",
+                  emailPreparedAt: new Date().toISOString(),
+                }
+              : communication
+          )
+        );
+      }
+
+      alert(
+        `E-mail inviata correttamente a ${data.recipients ?? uniqueRecipients.length} destinatari.`
+      );
+    } catch (error) {
+      console.error("BETHAG email send failed", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Invio e-mail non riuscito. Verifica la configurazione del servizio e-mail."
       );
     }
   };
@@ -11412,7 +11446,7 @@ function CommunicationForm({
       </div>
 
       {value.condominiumId && (
-        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body, value.audience)}>✉️ Predisponi e-mail</button><span>{value.emailStatus === "Predisposta" ? "E-mail predisposta nel client di posta." : "Apre il client e-mail con i destinatari in BCC."}</span></div>
+        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body, value.audience)}>✉️ Invia e-mail</button><span>{value.emailStatus === "Inviata" ? "E-mail inviata correttamente." : "Invio diretto ai destinatari autorizzati."}</span></div>
       )}
 
       <Actions
