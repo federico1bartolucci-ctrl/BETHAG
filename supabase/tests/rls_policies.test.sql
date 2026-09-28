@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(19);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -72,10 +72,11 @@ select is(
        'can_access_resident_condominium',
        'can_access_resident_condominium_module',
        'is_workspace_admin',
-       'is_workspace_member'
+       'is_workspace_member',
+       'can_manage_workspace_module'
      )
      and p.prosecdef),
-  6,
+  7,
   'Le sei funzioni RLS devono essere SECURITY DEFINER'
 );
 
@@ -90,7 +91,8 @@ select is(
        'can_access_resident_condominium',
        'can_access_resident_condominium_module',
        'is_workspace_admin',
-       'is_workspace_member'
+       'is_workspace_member',
+       'can_manage_workspace_module'
      )
      and has_function_privilege('anon', p.oid, 'EXECUTE')),
   0,
@@ -108,10 +110,11 @@ select is(
        'can_access_resident_condominium',
        'can_access_resident_condominium_module',
        'is_workspace_admin',
-       'is_workspace_member'
+       'is_workspace_member',
+       'can_manage_workspace_module'
      )
      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
-  6,
+  7,
   'Authenticated deve poter eseguire le funzioni RLS private'
 );
 
@@ -141,29 +144,39 @@ select is(
   'Tutte le tabelle applicative devono avere RLS abilitato'
 );
 
--- Le operazioni amministrative devono essere limitate agli amministratori.
+-- Le policy di scrittura dei moduli devono essere autenticate e usare
+-- l'autorizzazione per modulo, così i collaboratori possono operare solo
+-- sulle funzioni assegnate.
 select is(
   (select count(*)::integer
    from pg_policies
    where schemaname = 'public'
      and policyname in (
-       'admins manage activities',
-       'admins manage assemblies',
-       'admins manage communications',
-       'admins manage condominium members',
-       'admins manage requests',
-       'admins manage condominiums',
-       'admins manage deadlines',
-       'admins manage documents',
-       'admins manage portal access',
-       'admins manage suppliers',
-       'admins manage memberships',
-       'admins can manage workspaces'
+       'authorized managers manage activities',
+       'authorized managers manage assemblies',
+       'authorized managers manage communications',
+       'authorized managers manage condominium members',
+       'authorized managers manage requests',
+       'authorized managers manage condominiums',
+       'authorized managers manage deadlines',
+       'authorized managers manage documents',
+       'authorized managers manage portal access',
+       'authorized managers manage suppliers'
      )
      and roles = '{authenticated}'::name[]
      and cmd = 'ALL'),
-  12,
-  'Le policy amministrative devono essere authenticated e ALL'
+  10,
+  'Le policy di gestione dei moduli devono essere authenticated e ALL'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_policies
+   where schemaname = 'public'
+     and policyname like 'authorized managers manage %'
+     and (qual like '%can_manage_workspace_module%' or with_check like '%can_manage_workspace_module%')),
+  10,
+  'Le policy di gestione devono usare can_manage_workspace_module'
 );
 
 -- Un residente non deve poter modificare una richiesta esistente.
