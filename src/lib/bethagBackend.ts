@@ -185,84 +185,33 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     });
   }
 
+  // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
+  // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
   const rowsByTable: Array<[string, any[]]> = [
     ["documents", (state.documents ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.name,
-      category: item.category,
-      status: item.publication,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.name, category: item.category, status: item.publication, data: item,
     }))],
     ["deadlines", (state.deadlines ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.title,
-      due_date: item.dueDate || null,
-      status: item.status,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title, due_date: item.dueDate || null, status: item.status, data: item,
     }))],
     ["assemblies", (state.assemblies ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.title,
-      assembly_date: item.date ? new Date(item.date).toISOString() : null,
-      status: item.status,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title, assembly_date: item.date ? new Date(item.date).toISOString() : null, status: item.status, data: item,
     }))],
     ["suppliers", (state.suppliers ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      name: item.name,
-      category: item.service,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      name: item.name, category: item.service, data: item,
     }))],
     ["activities", (state.activities ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.title,
-      activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null,
-      status: item.status,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title, activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null, status: item.status, data: item,
     }))],
     ["communications", (state.communications ?? []).map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.title,
-      body: item.body,
-      published: item.publishedToPortal,
-      email_status: item.emailStatus,
-      email_prepared_at: item.emailPreparedAt || null,
-      data: item,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
     }))],
-    ["condominium_requests", (state.condominiumRequests ?? []).map((item: any) => {
-      const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId) ?? null;
-      const memberDb = condominiumDbId
-        ? memberRowsByLegacyKey.get(`${condominiumDbId}::${item.memberId ?? ""}`)
-        : null;
-      const requester = (state.condominiumMembers ?? []).find(
-        (member: any) =>
-          member.id === item.memberId &&
-          member.condominiumId === item.condominiumId
-      );
-      return {
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: condominiumDbId,
-        member_id: memberDb?.id ?? null,
-        requester_user_id: item.requesterUserId ?? requester?.userId ?? null,
-        title: item.category,
-        description: item.description,
-        status: item.status,
-        data: item,
-      };
-    })],
   ];
 
   for (const [table, rows] of rowsByTable) {
@@ -377,6 +326,23 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
       memberRowsByLegacyKey.set(`${member.condominium_id}::${member.legacy_id}`, member);
     });
   }
+
+  const requestRows = (state.condominiumRequests ?? []).map((item: any) => {
+    const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId) ?? null;
+    const memberDb = condominiumDbId
+      ? memberRowsByLegacyKey.get(String(condominiumDbId) + "::" + String(item.memberId ?? ""))
+      : null;
+    const requester = (state.condominiumMembers ?? []).find(
+      (member: any) => member.id === item.memberId && member.condominiumId === item.condominiumId
+    );
+    return {
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbId,
+      member_id: memberDb?.id ?? null, requester_user_id: item.requesterUserId ?? requester?.userId ?? null,
+      title: item.category, description: item.description, status: item.status, data: item,
+    };
+  });
+
+  if (requestRows.length) await upsertRows("condominium_requests", requestRows);
 
   // I condomini vengono creati/modificati tramite RPC dedicato. Non riconciliamo
   // qui le cancellazioni, perché una sincronizzazione già accodata con uno stato
