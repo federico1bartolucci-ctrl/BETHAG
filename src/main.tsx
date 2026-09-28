@@ -169,6 +169,17 @@ type Condominium = {
   notes: string;
 };
 
+type ExternalUnitOwner = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fiscalCode: string;
+  email: string;
+  phone: string;
+  ownershipShare: string;
+  notes: string;
+};
+
 type CondominiumUnit = {
   id: string;
   condominiumId: number;
@@ -178,6 +189,10 @@ type CondominiumUnit = {
   cadastralAutonomous: boolean;
   millesimi: string;
   incorporatedInUnitId?: string;
+  relationshipToResidentialUnit: "Nessuna" | "Pertinenza" | "Incorporata";
+  ownerMode: "condominium_member" | "external" | "mixed" | "inherited";
+  ownerMemberIds: number[];
+  externalOwners: ExternalUnitOwner[];
   notes: string;
   active: boolean;
 };
@@ -1788,17 +1803,20 @@ function App() {
     );
 
   const [condominiumUnits, setCondominiumUnits] = useState<CondominiumUnit[]>([]);
-  const [condominiumUnits, setCondominiumUnits] = useState<CondominiumUnit[]>([]);
   const [selectedCondominiumUnit, setSelectedCondominiumUnit] = useState<CondominiumUnit | null>(null);
   const [condominiumUnitForm, setCondominiumUnitForm] = useState<CondominiumUnit>({
     id: "",
     condominiumId: 1,
     unitCode: "",
     unitType: "Abitazione",
-    cadastralCategory: "A/2",
+    cadastralCategory: "",
     cadastralAutonomous: true,
     millesimi: "",
     incorporatedInUnitId: "",
+    relationshipToResidentialUnit: "Nessuna",
+    ownerMode: "condominium_member",
+    ownerMemberIds: [],
+    externalOwners: [],
     notes: "",
     active: true,
   });
@@ -3026,13 +3044,21 @@ function App() {
     event.preventDefault();
     if (!requireModulePermission("condomini", "La gestione delle unità immobiliari")) return;
 
-    const data = {
+    const data: CondominiumUnit = {
       ...condominiumUnitForm,
       unitCode: condominiumUnitForm.unitCode.trim(),
       cadastralCategory: condominiumUnitForm.cadastralCategory.trim(),
       millesimi: condominiumUnitForm.millesimi.trim(),
       notes: condominiumUnitForm.notes.trim(),
       incorporatedInUnitId: condominiumUnitForm.cadastralAutonomous ? "" : (condominiumUnitForm.incorporatedInUnitId || ""),
+      relationshipToResidentialUnit: !condominiumUnitForm.cadastralAutonomous
+        ? "Incorporata"
+        : (condominiumUnitForm.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
+      ownerMemberIds: Array.isArray(condominiumUnitForm.ownerMemberIds) ? condominiumUnitForm.ownerMemberIds : [],
+      externalOwners: Array.isArray(condominiumUnitForm.externalOwners) ? condominiumUnitForm.externalOwners : [],
+      ownerMode: !condominiumUnitForm.cadastralAutonomous
+        ? "inherited"
+        : condominiumUnitForm.ownerMode,
     };
 
     if (!data.unitCode) {
@@ -3080,10 +3106,14 @@ function App() {
       condominiumId,
       unitCode: "",
       unitType,
-      cadastralCategory: unitType === "Garage" ? "C/6" : unitType === "Cantina" ? "C/2" : "A/2",
+      cadastralCategory: unitType === "Garage" ? "C/6" : unitType === "Cantina" ? "C/2" : "",
       cadastralAutonomous: true,
       millesimi: "",
       incorporatedInUnitId: "",
+      relationshipToResidentialUnit: "Nessuna",
+      ownerMode: "condominium_member",
+      ownerMemberIds: [],
+      externalOwners: [],
       notes: "",
       active: true,
     });
@@ -6263,6 +6293,7 @@ function App() {
               value={condominiumUnitForm}
               setValue={setCondominiumUnitForm}
               units={condominiumUnits.filter((u) => u.condominiumId === condominiumUnitForm.condominiumId)}
+              members={condominiumMembers.filter((m) => m.condominiumId === condominiumUnitForm.condominiumId && m.active)}
               onSubmit={saveCondominiumUnit}
               onCancel={closeModal}
               editing={!!selectedCondominiumUnit}
@@ -7873,8 +7904,8 @@ function CondominiumDetails(
         <div className="section-title">
           <div>
             <div className="eyebrow">Patrimonio catastale</div>
-            <h2>Unità immobiliari</h2>
-            <p className="section-subtitle">Le abitazioni, i garage e le cantine sono gestiti come cespiti distinti. Le pertinenze catastalmente incorporate possono essere collegate all'abitazione senza creare un cespite autonomo.</p>
+            <h2>Unità immobiliari e pertinenze</h2>
+            <p className="section-subtitle">Abitazioni, garage, cantine e altre unità sono registrati separatamente quando hanno autonomia catastale. Una pertinenza autonoma può essere collegata a un'abitazione oppure restare di proprietà indipendente, anche di un soggetto esterno al condominio.</p>
           </div>
           {isAdministrator && (
             <div className="button-row compact">
@@ -7886,13 +7917,21 @@ function CondominiumDetails(
         <div className="related-list">
           {condominiumUnits.length === 0 ? <Empty text="Nessuna unità catastale disponibile." /> : condominiumUnits.map((unit: CondominiumUnit) => {
             const linkedMembers = activeMembers.filter((member: CondominiumMember) => member.unitId === unit.id || member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase());
+            const ownerMembers = activeMembers.filter((member: CondominiumMember) => Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id));
+            const externalOwners = Array.isArray(unit.externalOwners) ? unit.externalOwners : [];
             const incorporated = unit.incorporatedInUnitId ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId) : null;
+            const ownerLabels = [
+              ...ownerMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName),
+              ...externalOwners.map((o: ExternalUnitOwner) => [o.firstName, o.lastName].filter(Boolean).join(" ")).filter(Boolean),
+            ];
             return <div className="request-card" key={unit.id}>
               <div className="request-main">
                 <b>{unit.unitType === "Garage" ? "🚗" : unit.unitType === "Cantina" ? "📦" : "🏠"} {unit.unitCode}</b>
                 <span>{unit.unitType} · {unit.cadastralCategory || "Categoria non inserita"} · {unit.millesimi ? unit.millesimi + " millesimi" : "Millesimi non inseriti"}</span>
                 <small>{unit.cadastralAutonomous ? "Unità catastalmente autonoma" : "Incorporata catastalmente"}{incorporated ? " · collegata a " + incorporated.unitCode : ""}</small>
-                {linkedMembers.length > 0 && <p>{linkedMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName + " · " + m.role).join(" | ")}</p>}
+                {ownerLabels.length > 0 && <p><strong>Proprietari:</strong> {ownerLabels.join(" | ")}</p>}
+                {ownerLabels.length === 0 && unit.cadastralAutonomous && <p style={{ color: "#b45309" }}><strong>Proprietario non associato.</strong></p>}
+                {linkedMembers.length > 0 && ownerLabels.length === 0 && <small>Condòmini associati all'unità: {linkedMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName + " · " + m.role).join(" | ")}</small>}
               </div>
               {isAdministrator && <div className="request-actions"><button className="secondary-button small" type="button" onClick={() => onEditUnit(unit)}>Modifica</button></div>}
             </div>;
@@ -11870,39 +11909,110 @@ function Modal({
    FORM UNITÀ IMMOBILIARE
    ========================================================= */
 
-function CondominiumUnitForm({ value, setValue, units = [], onSubmit, onCancel, editing }: any) {
+function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubmit, onCancel, editing }: any) {
   const set = (key: keyof CondominiumUnit, val: any) => setValue({ ...value, [key]: val });
   const residentialUnits = units.filter((u: CondominiumUnit) => u.unitType === "Abitazione" && u.id !== value.id);
+  const externalOwners: ExternalUnitOwner[] = Array.isArray(value.externalOwners) ? value.externalOwners : [];
+  const ownerMemberIds: number[] = Array.isArray(value.ownerMemberIds) ? value.ownerMemberIds : [];
+
+  const syncOwnerMode = (nextMemberIds: number[], nextExternalOwners: ExternalUnitOwner[]) => {
+    setValue({
+      ...value,
+      ownerMemberIds: nextMemberIds,
+      externalOwners: nextExternalOwners,
+      ownerMode: nextMemberIds.length && nextExternalOwners.length ? "mixed" : nextExternalOwners.length ? "external" : "condominium_member",
+    });
+  };
+
+  const toggleMemberOwner = (memberId: number) => {
+    const next = ownerMemberIds.includes(memberId)
+      ? ownerMemberIds.filter((id) => id !== memberId)
+      : [...ownerMemberIds, memberId];
+    syncOwnerMode(next, externalOwners);
+  };
+
+  const addExternalOwner = () => {
+    const owner: ExternalUnitOwner = { id: "owner-" + makeId(), firstName: "", lastName: "", fiscalCode: "", email: "", phone: "", ownershipShare: "", notes: "" };
+    syncOwnerMode(ownerMemberIds, [...externalOwners, owner]);
+  };
+
+  const updateExternalOwner = (id: string, patch: Partial<ExternalUnitOwner>) => {
+    syncOwnerMode(ownerMemberIds, externalOwners.map((owner) => owner.id === id ? { ...owner, ...patch } : owner));
+  };
+
+  const removeExternalOwner = (id: string) => {
+    syncOwnerMode(ownerMemberIds, externalOwners.filter((owner) => owner.id !== id));
+  };
 
   return (
     <form onSubmit={onSubmit}>
       <ModalTitle title={editing ? "Modifica unità immobiliare" : "Nuova unità immobiliare"} />
       <div className="form-grid">
-        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Garage 1, Cantina 1, Interno 1" />
+        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Interno 1, Garage G1, Cantina C1" />
         <SelectField label="Tipologia" value={value.unitType} onChange={(v: string) => set("unitType", v)} options={[
-          ["Abitazione","Abitazione"],
-          ["Garage","Garage / autorimessa"],
-          ["Cantina","Cantina / deposito"],
-          ["Altro","Altra unità"],
+          ["Abitazione","Abitazione"],["Garage","Garage / autorimessa"],["Cantina","Cantina / deposito"],["Altro","Altra unità"],
         ]} />
         <Field label="Categoria catastale" value={value.cadastralCategory} onChange={(v: string) => set("cadastralCategory", v)} placeholder="Es. A/2, C/2, C/6" />
         <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} placeholder="Es. 102,35" />
+
         <div className="field full">
           <label className="switch-row">
-            <input type="checkbox" checked={value.cadastralAutonomous} onChange={(e) => set("cadastralAutonomous", e.target.checked)} />
+            <input type="checkbox" checked={value.cadastralAutonomous} onChange={(e) => {
+              const autonomous = e.target.checked;
+              setValue({
+                ...value,
+                cadastralAutonomous: autonomous,
+                relationshipToResidentialUnit: autonomous ? (value.incorporatedInUnitId ? "Pertinenza" : "Nessuna") : "Incorporata",
+                ownerMode: autonomous ? (value.ownerMode === "inherited" ? "condominium_member" : value.ownerMode) : "inherited",
+              });
+            }} />
             <span>Unità catastalmente autonoma</span>
           </label>
-          <div className="form-help">
-            Disattiva per una cantina o altro vano che risulta catastalmente incorporato nell'unità abitativa.
-          </div>
+          <div className="form-help">Una pertinenza autonoma può essere collegata a un'abitazione oppure rimanere autonoma senza alcun collegamento.</div>
         </div>
-        {!value.cadastralAutonomous && (
-          <SelectField full label="Unità abitativa incorporante" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
-            ["","Seleziona l'abitazione"],
-            ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
+
+        {value.cadastralAutonomous && value.unitType !== "Abitazione" && (
+          <SelectField full label="Collegamento con unità abitativa (facoltativo)" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
+            ["","Nessun collegamento: unità autonoma indipendente"], ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
           ]} />
         )}
-        <Field full label="Note catastali / gestionali" value={value.notes} onChange={(v: string) => set("notes", v)} textarea placeholder="Annotazioni, riferimento catastale, collegamenti, ecc." />
+
+        {!value.cadastralAutonomous && (
+          <SelectField full label="Unità abitativa incorporante" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
+            ["","Seleziona l'abitazione"], ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
+          ]} />
+        )}
+
+        {value.cadastralAutonomous && (
+          <div className="field full">
+            <label>Proprietari dell'unità</label>
+            <div className="form-help">Il proprietario può essere un condòmino, un soggetto esterno al condominio oppure più soggetti insieme. Non è necessario collegare garage o cantine a un'abitazione.</div>
+            {members.length > 0 && <div className="permission-checks" style={{ marginTop: 10 }}>
+              {members.map((member: CondominiumMember) => (
+                <label className="permission-check" key={member.id}>
+                  <input type="checkbox" checked={ownerMemberIds.includes(member.id)} onChange={() => toggleMemberOwner(member.id)} />
+                  <span>{member.firstName} {member.lastName}<small style={{ display: "block", opacity: .7 }}>{member.apartment || "Unità non indicata"}</small></span>
+                </label>
+              ))}
+            </div>}
+            {externalOwners.map((owner) => (
+              <div key={owner.id} className="form-grid" style={{ marginTop: 12, padding: 14, border: "1px solid #e2e8f0", borderRadius: 12 }}>
+                <Field label="Nome" value={owner.firstName} onChange={(v: string) => updateExternalOwner(owner.id, { firstName: v })} />
+                <Field label="Cognome / denominazione" value={owner.lastName} onChange={(v: string) => updateExternalOwner(owner.id, { lastName: v })} />
+                <Field label="Codice fiscale / P.IVA" value={owner.fiscalCode} onChange={(v: string) => updateExternalOwner(owner.id, { fiscalCode: v })} />
+                <Field label="Email" value={owner.email} onChange={(v: string) => updateExternalOwner(owner.id, { email: v })} />
+                <Field label="Telefono" value={owner.phone} onChange={(v: string) => updateExternalOwner(owner.id, { phone: v })} />
+                <Field label="Quota di proprietà" value={owner.ownershipShare} onChange={(v: string) => updateExternalOwner(owner.id, { ownershipShare: v })} placeholder="Es. 50%" />
+                <Field full label="Note" value={owner.notes} onChange={(v: string) => updateExternalOwner(owner.id, { notes: v })} />
+                <button type="button" className="danger-button small" onClick={() => removeExternalOwner(owner.id)}>Rimuovi proprietario esterno</button>
+              </div>
+            ))}
+            <button type="button" className="secondary-button small" style={{ marginTop: 12 }} onClick={addExternalOwner}>+ Aggiungi proprietario esterno</button>
+          </div>
+        )}
+
+        {!value.cadastralAutonomous && <div className="field full"><div className="form-help">La proprietà della pertinenza incorporata non viene duplicata: BETHAG considera come riferimento l'unità abitativa incorporante.</div></div>}
+        <Field full label="Note catastali / gestionali" value={value.notes} onChange={(v: string) => set("notes", v)} textarea placeholder="Annotazioni, riferimento catastale, vincoli pertinenziali, ecc." />
       </div>
       <Actions onCancel={onCancel} />
     </form>
