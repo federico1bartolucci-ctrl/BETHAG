@@ -3187,6 +3187,13 @@ function App() {
 
         await saveCondominiumBackend(workspaceId, savedItem);
 
+        const refreshedBackend = await loadBackendState(workspaceId);
+        setCondominiumUnits(
+          Array.isArray(refreshedBackend.condominiumUnits)
+            ? refreshedBackend.condominiumUnits
+            : []
+        );
+
         if (!profile.workspaceId) {
           setProfile((current) => ({
             ...current,
@@ -13310,7 +13317,7 @@ function CommunicationForm({
 
       </div>
 
-      {value.condominiumId && (
+      {value.condominiumId && value.deliveryMode === "email" && (
         <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body, value.audience)}>✉️ Invia e-mail</button><span>{value.emailStatus === "Inviata" ? "E-mail inviata correttamente." : "Invio diretto ai destinatari autorizzati."}</span></div>
       )}
 
