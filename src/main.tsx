@@ -1564,7 +1564,7 @@ function App() {
 
   const [sessionRole, setSessionRole] =
     useState<"admin" | "collaborator" | "resident" | null>(() =>
-      load(KEYS.session, null)
+      supabaseConfigured ? null : load(KEYS.session, null)
     );
 
   const [sessionEmail, setSessionEmail] =
@@ -1817,6 +1817,57 @@ function App() {
     }
   };
 
+  const resolveSupabaseAccess = async (
+    userId: string,
+    email: string
+  ) => {
+    if (!supabase) return null;
+
+    const membershipResult = await supabase
+      .from("workspace_members")
+      .select("workspace_id, role, active")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .order("workspace_id")
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipResult.error) throw membershipResult.error;
+
+    if (membershipResult.data) {
+      const mappedRole =
+        membershipResult.data.role === "admin"
+          ? "admin"
+          : membershipResult.data.role === "collaborator"
+            ? "collaborator"
+            : "resident";
+
+      return {
+        role: mappedRole as "admin" | "collaborator" | "resident",
+        workspaceId: membershipResult.data.workspace_id as string,
+      };
+    }
+
+    const portalResult = await supabase
+      .from("portal_access")
+      .select("workspace_id, role, active, email")
+      .eq("active", true)
+      .ilike("email", email.trim())
+      .limit(1)
+      .maybeSingle();
+
+    if (portalResult.error) throw portalResult.error;
+
+    if (portalResult.data) {
+      return {
+        role: "resident" as const,
+        workspaceId: portalResult.data.workspace_id as string,
+      };
+    }
+
+    return null;
+  };
+
   const handleLogin = async (
     role: PublicRole,
     email: string,
@@ -1833,42 +1884,50 @@ function App() {
         return;
       }
 
-      let { data: membership } = await supabase
-        .from("workspace_members")
-        .select("workspace_id, role, active")
-        .eq("user_id", data.user.id)
-        .eq("active", true)
-        .maybeSingle();
+      try {
+        const access = await resolveSupabaseAccess(
+          data.user.id,
+          data.user.email || email
+        );
 
-      if (!membership && role === "admin") {
-        try {
-          await claimFirstWorkspaceAdmin();
-          const membershipResult = await supabase
-            .from("workspace_members")
-            .select("workspace_id, role, active")
-            .eq("user_id", data.user.id)
-            .eq("active", true)
-            .maybeSingle();
-          membership = membershipResult.data;
-        } catch (claimError) {
-          console.error("BETHAG workspace claim failed", claimError);
+        if (!access) {
+          await supabase.auth.signOut();
+          alert("Credenziali valide, ma nessun accesso BETHAG attivo è associato a questo account.");
+          return;
         }
-      }
 
-      if (!membership) {
+        if (access.role !== role) {
+          await supabase.auth.signOut();
+          alert("Il profilo selezionato non corrisponde al ruolo autorizzato per questo account.");
+          return;
+        }
+
+        const normalizedEmail = (data.user.email || email).trim();
+        setSessionRole(access.role);
+        setSessionEmail(normalizedEmail);
+
+        setProfile((current) => ({
+          ...current,
+          workspaceId: access.workspaceId,
+          email: normalizedEmail || current.email,
+        }));
+
+        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
+        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+        setPage("homepage");
+        return;
+      } catch (authError) {
+        console.error("BETHAG authorization lookup failed", authError);
         await supabase.auth.signOut();
-        alert("L'utente è autenticato ma non è ancora associato a un workspace BETHAG attivo.");
+        alert(
+          authError instanceof Error
+            ? authError.message
+            : "Impossibile verificare le autorizzazioni dell'account."
+        );
         return;
       }
-
-      role =
-        membership.role === "admin"
-          ? "admin"
-          : membership.role === "collaborator"
-            ? "collaborator"
-            : "resident";
-      email = data.user.email || email;
     }
+
     const normalizedEmail = email.trim();
     const collaborator = collaborators.find(
       (item) =>
@@ -1904,14 +1963,8 @@ function App() {
 
     setSessionRole(role);
     setSessionEmail(normalizedEmail);
-    localStorage.setItem(
-      KEYS.session,
-      JSON.stringify(role)
-    );
-    localStorage.setItem(
-      KEYS.sessionEmail,
-      JSON.stringify(normalizedEmail)
-    );
+    localStorage.setItem(KEYS.session, JSON.stringify(role));
+    localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
     setPage("homepage");
   };
 
@@ -1946,53 +1999,40 @@ function App() {
       if (!session?.user || cancelled) return;
 
       try {
-        let { data: membership } = await supabase
-          .from("workspace_members")
-          .select("workspace_id, role, active")
-          .eq("user_id", session.user.id)
-          .eq("active", true)
-          .maybeSingle();
+        const normalizedEmail = (session.user.email || "").trim();
+        const access = await resolveSupabaseAccess(
+          session.user.id,
+          normalizedEmail
+        );
 
-        if (!membership) {
-          try {
-            await claimFirstWorkspaceAdmin();
-            const result = await supabase
-              .from("workspace_members")
-              .select("workspace_id, role, active")
-              .eq("user_id", session.user.id)
-              .eq("active", true)
-              .maybeSingle();
-            membership = result.data;
-          } catch {
-            // Un utente non ancora associato può essere un collaboratore
-            // o un condòmino invitato; in tal caso resta sulla schermata pubblica.
-          }
+        if (!access || cancelled) {
+          setSessionRole(null);
+          setSessionEmail("");
+          localStorage.removeItem(KEYS.session);
+          localStorage.removeItem(KEYS.sessionEmail);
+          setPage("homepage");
+          return;
         }
 
-        if (!membership || cancelled) return;
-
-        const mappedRole =
-          membership.role === "admin"
-            ? "admin"
-            : membership.role === "collaborator"
-              ? "collaborator"
-              : "resident";
-
-        const normalizedEmail = (session.user.email || "").trim();
-
-        setSessionRole(mappedRole);
+        setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
-        localStorage.setItem(KEYS.session, JSON.stringify(mappedRole));
+        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
         localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
 
         setProfile((current) => ({
           ...current,
-          workspaceId: membership.workspace_id,
+          workspaceId: access.workspaceId,
           email: normalizedEmail || current.email,
         }));
         setPage("homepage");
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
+        if (!cancelled) {
+          setSessionRole(null);
+          setSessionEmail("");
+          localStorage.removeItem(KEYS.session);
+          localStorage.removeItem(KEYS.sessionEmail);
+        }
       }
     };
 
