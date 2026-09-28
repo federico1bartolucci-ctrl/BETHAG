@@ -1662,7 +1662,24 @@ function App() {
       (c) => c.id === id
     )?.name || "Tutti i condomini";
 
+  const canAccessPage = (target: Page) => {
+    if (sessionRole === "admin") return true;
+
+    if (sessionRole === "collaborator") {
+      return target !== "abbonamento" && target !== "amministratore";
+    }
+
+    return false;
+  };
+
   const navigate = (target: Page) => {
+    if (!canAccessPage(target)) {
+      alert(
+        "Questa sezione è riservata all'Amministratore."
+      );
+      return;
+    }
+
     setPage(target);
     setSearch("");
     setMobileMenuOpen(false);
@@ -3100,6 +3117,12 @@ function App() {
             <small>
               {profile.workspaceId}
             </small>
+
+            <small className="role-badge">
+              {sessionRole === "admin"
+                ? "Amministratore"
+                : "Assistente"}
+            </small>
           </div>
 
           <nav className="nav">
@@ -3235,34 +3258,38 @@ function App() {
               <span>Portale condomini</span>
             </NavButton>
 
-            <NavButton
-              active={
-                page === "abbonamento"
-              }
-              onClick={() =>
-                navigate(
-                  "abbonamento"
-                )
-              }
-            >
-              <span className="nav-icon"><AppIcon name="star" size={18} /></span>
-              <span>Piano e upgrade</span>
-            </NavButton>
+            {canAccessPage("abbonamento") && (
+              <NavButton
+                active={
+                  page === "abbonamento"
+                }
+                onClick={() =>
+                  navigate(
+                    "abbonamento"
+                  )
+                }
+              >
+                <span className="nav-icon"><AppIcon name="star" size={18} /></span>
+                <span>Piano e upgrade</span>
+              </NavButton>
+            )}
 
-            <NavButton
-              active={
-                page ===
-                "amministratore"
-              }
-              onClick={() =>
-                navigate(
+            {canAccessPage("amministratore") && (
+              <NavButton
+                active={
+                  page ===
                   "amministratore"
-                )
-              }
-            >
-              <span className="nav-icon"><AppIcon name="user" size={18} /></span>
-              <span>Amministratore</span>
-            </NavButton>
+                }
+                onClick={() =>
+                  navigate(
+                    "amministratore"
+                  )
+                }
+              >
+                <span className="nav-icon"><AppIcon name="user" size={18} /></span>
+                <span>Amministratore</span>
+              </NavButton>
+            )}
 
           </nav>
 
@@ -3911,8 +3938,8 @@ function App() {
               {(
                 [
                   [
-                    "dashboard",
-                    "⌂ Dashboard",
+                    "homepage",
+                    "⌂ Homepage",
                   ],
                   [
                     "condomini",
@@ -3962,7 +3989,11 @@ function App() {
                   Page,
                   string
                 ][]
-              ).map(
+              )
+              .filter(([target]) =>
+                canAccessPage(target)
+              )
+              .map(
                 ([target, label]) => (
                   <NavButton
                     key={target}
@@ -10299,6 +10330,19 @@ button{
   color:#94a3b8;
   font-size:9px;
   word-break:break-all;
+}
+.role-badge{
+  display:inline-block!important;
+  margin-top:8px!important;
+  padding:4px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  color:#e2e8f0!important;
+  font-size:10px!important;
+  font-weight:700;
+  letter-spacing:.02em;
+  width:max-content;
 }
 
 .nav{
