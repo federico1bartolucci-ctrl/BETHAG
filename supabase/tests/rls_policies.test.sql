@@ -77,7 +77,7 @@ select is(
      )
      and p.prosecdef),
   7,
-  'Le sei funzioni RLS devono essere SECURITY DEFINER'
+  'Le sette funzioni RLS devono essere SECURITY DEFINER'
 );
 
 select is(
