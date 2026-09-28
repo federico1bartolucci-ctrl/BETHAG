@@ -6277,7 +6277,7 @@ function CondominiumDetails(
                 }
               >
 
-                <select
+                {isAdministrator && <select
                   value={d.status}
                   onChange={(e) =>
                     onStatusDeadline(
@@ -6682,6 +6682,7 @@ function DocumentsPage({
   onConfirmAI,
   onPublication,
   plan,
+  isAdministrator = false,
 }: any) {
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
   const [sourceFilter, setSourceFilter] = useState("Tutti");
@@ -6706,12 +6707,11 @@ function DocumentsPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Archivio digitale"
-        title="Documenti"
-        action="+ Nuovo documento"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Archivio digitale" title="Documenti" action="+ Nuovo documento" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Archivio digitale" title="Documenti" />
+      )}
 
       <div className="feature-banner">
 
@@ -6856,31 +6856,15 @@ function DocumentsPage({
               )}
 
 
-              <div className="button-row">
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onEdit(d)
-                  }
-                >
-                  Modifica
-                </button>
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onAI(d)
-                  }
-                >
-                  ✨ AI
-                </button>
-
-              </div>
+              {isAdministrator && (
+                <div className="button-row">
+                  <button className="secondary-button" onClick={() => onEdit(d)}>Modifica</button>
+                  <button className="secondary-button" onClick={() => onAI(d)}>✨ AI</button>
+                </div>
+              )}
 
 
-              {d.aiStatus ===
-                "Da verificare" && (
+              {isAdministrator && d.aiStatus === "Da verificare" && (
                 <button
                   className="primary-button full-button"
                   onClick={() =>
@@ -6894,32 +6878,14 @@ function DocumentsPage({
               )}
 
 
-              <div className="document-bottom">
-
-                <button
-                  className="link"
-                  onClick={() =>
-                    onPublication(
-                      d.id
-                    )
-                  }
-                >
-                  {d.publication ===
-                  "Condiviso"
-                    ? <><AppIcon name="lock" size={16} /> Rendi privato</>
-                    : <><AppIcon name="users" size={16} /> Condividi con condomini</>}
-                </button>
-
-                <button
-                  className="mini-danger"
-                  onClick={() =>
-                    onDelete(d.id)
-                  }
-                >
-                  Elimina
-                </button>
-
-              </div>
+              {isAdministrator && (
+                <div className="document-bottom">
+                  <button className="link" onClick={() => onPublication(d.id)}>
+                    {d.publication === "Condiviso" ? <><AppIcon name="lock" size={16} /> Rendi privato</> : <><AppIcon name="users" size={16} /> Condividi con condomini</>}
+                  </button>
+                  <button className="mini-danger" onClick={() => onDelete(d.id)}>Elimina</button>
+                </div>
+              )}
 
             </article>
           )
@@ -6953,6 +6919,7 @@ function DeadlinesPage({
   onDelete,
   onStatus,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
@@ -6976,12 +6943,11 @@ function DeadlinesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Pianificazione"
-        title="Scadenze"
-        action="+ Nuova scadenza"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Pianificazione" title="Scadenze" action="+ Nuova scadenza" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Pianificazione" title="Scadenze" />
+      )}
 
       <SearchBox
         value={search}
@@ -7076,12 +7042,10 @@ function DeadlinesPage({
                   <option>
                     In scadenza
                   </option>
-                  <option>
-                    Completata
-                  </option>
-                </select>
+                  <option>Completata</option>
+                </select>}
 
-                <button
+                {isAdministrator && <button
                   className="secondary-button small"
                   onClick={() =>
                     onEdit(d)
@@ -7167,12 +7131,11 @@ function AssembliesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Riunioni"
-        title="Assemblee"
-        action="+ Nuova assemblea"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Riunioni" title="Assemblee" action="+ Nuova assemblea" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Riunioni" title="Assemblee" />
+      )}
 
       <div className="feature-banner">
 
@@ -7288,7 +7251,7 @@ function AssembliesPage({
               </div>
 
 
-              <div className="assembly-actions">
+              {isAdministrator && <div className="assembly-actions">
 
                 <select
                   value={a.status}
@@ -7392,18 +7355,8 @@ function AssembliesPage({
                 >
                   Modifica
                 </button>
-
-
-                <button
-                  className="mini-danger"
-                  onClick={() =>
-                    onDelete(a.id)
-                  }
-                >
-                  ×
-                </button>
-
-              </div>
+                <button className="mini-danger" onClick={() => onDelete(a.id)}>×</button>
+              </div>}
 
             </article>
           )
@@ -7434,6 +7387,7 @@ function SuppliersPage({
   onEdit,
   onDelete,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const filtered =
     suppliers.filter(
@@ -7456,12 +7410,11 @@ function SuppliersPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Gestione fornitori"
-        title="Fornitori"
-        action="+ Nuovo fornitore"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" action="+ Nuovo fornitore" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" />
+      )}
 
       <SearchBox
         value={search}
@@ -7519,27 +7472,12 @@ function SuppliersPage({
                 </p>
               )}
 
-              <div className="button-row">
-
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    onEdit(s)
-                  }
-                >
-                  Modifica
-                </button>
-
-                <button
-                  className="danger-button"
-                  onClick={() =>
-                    onDelete(s.id)
-                  }
-                >
-                  Elimina
-                </button>
-
-              </div>
+              {isAdministrator && (
+                <div className="button-row">
+                  <button className="secondary-button" onClick={() => onEdit(s)}>Modifica</button>
+                  <button className="danger-button" onClick={() => onDelete(s.id)}>Elimina</button>
+                </div>
+              )}
 
             </article>
           )
@@ -7573,6 +7511,7 @@ function ActivitiesPage({
   onDelete,
   onStatus,
   condominiumName,
+  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [priorityFilter, setPriorityFilter] = useState("Tutte");
@@ -7598,12 +7537,11 @@ function ActivitiesPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Organizzazione"
-        title="Attività"
-        action="+ Nuova attività"
-        onAction={onNew}
-      />
+      {isAdministrator ? (
+        <PageHeader eyebrow="Organizzazione" title="Attività" action="+ Nuova attività" onAction={onNew} />
+      ) : (
+        <PageHeader eyebrow="Organizzazione" title="Attività" />
+      )}
 
       <SearchBox
         value={search}
@@ -7665,7 +7603,7 @@ function ActivitiesPage({
               </div>
 
 
-              <div className="row-actions">
+              {isAdministrator && <div className="row-actions">
 
                 <select
                   value={a.status}
@@ -7689,7 +7627,6 @@ function ActivitiesPage({
                     Completata
                   </option>
                 </select>
-
 
                 <button
                   className="secondary-button small"
@@ -7742,6 +7679,7 @@ function CommunicationsPage({
   onEdit,
   onDelete,
   onPublication,
+  isAdministrator = false,
 }: any) {
   const filtered =
     communications.filter(
@@ -8216,6 +8154,7 @@ function PortalPage({
   communications,
   plan,
   portalEnabled,
+  isAdministrator = false,
   onAdd,
   onToggle,
   onDelete,
@@ -8302,11 +8241,8 @@ function PortalPage({
   return (
     <>
 
-      <PageHeader
-        eyebrow="Accesso esterno"
-        title="Portale condomini"
-        action="+ Nuovo accesso"
-        onAction={() => {
+      {isAdministrator ? (
+        <PageHeader eyebrow="Accesso esterno" title="Portale condomini" action="+ Nuovo accesso" onAction={() => {
 
           if (!portalEnabled) {
             onNavigate("abbonamento");
@@ -8314,9 +8250,10 @@ function PortalPage({
           }
 
           setShowAdd(true);
-
-        }}
-      />
+        }} />
+      ) : (
+        <PageHeader eyebrow="Accesso esterno" title="Portale condomini" />
+      )}
 
 
       <section className="portal-hero">
@@ -8684,7 +8621,7 @@ function PortalPage({
                   </div>
 
 
-                  <div className="row-actions">
+                  {isAdministrator && <div className="row-actions">
 
                     <Badge
                       value={
@@ -8717,8 +8654,7 @@ function PortalPage({
                     >
                       ×
                     </button>
-
-                  </div>
+                  </div>}
 
                 </div>
               )
