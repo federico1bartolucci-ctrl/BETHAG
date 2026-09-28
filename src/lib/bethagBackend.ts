@@ -112,7 +112,7 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
       await upsertRows(table, items.map((item: any) => ({
         workspace_id: workspaceId,
         legacy_id: item.id,
-        condominium_id: awaitCondominiumId(workspaceId, item.condominiumId),
+        condominium_id: null,
         title: item.name,
         category: item.category,
         status: item.publication,
@@ -190,16 +190,4 @@ async function upsertRows(table: string, rows: any[]) {
     onConflict: "workspace_id,legacy_id",
   });
   if (error) throw error;
-}
-
-async function awaitCondominiumId(workspaceId: string, legacyId: number) {
-  if (!supabase || legacyId == null) return null;
-  const { data, error } = await supabase
-    .from("condominiums")
-    .select("id")
-    .eq("workspace_id", workspaceId)
-    .eq("legacy_id", legacyId)
-    .maybeSingle();
-  if (error) throw error;
-  return data?.id ?? null;
 }
