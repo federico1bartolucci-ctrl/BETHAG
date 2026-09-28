@@ -2662,6 +2662,9 @@ function App() {
 
     if (!requireAdministrator("La modifica dei dati del condominio")) return;
 
+    const isEditing =
+      Boolean(editingCondominium && editingCondominium.id !== 0);
+
     const data =
       editingCondominium ||
       emptyCondominium;
@@ -2694,10 +2697,10 @@ function App() {
       return;
     }
 
-    const nextCondominiums = editingCondominium
+    const nextCondominiums = isEditing
       ? condominiums.map((item) =>
-          item.id === editingCondominium.id
-            ? { ...data, id: editingCondominium.id }
+          item.id === editingCondominium!.id
+            ? { ...data, id: editingCondominium!.id }
             : item
         )
       : [
@@ -2708,9 +2711,9 @@ function App() {
           },
         ];
 
-    const savedItem = editingCondominium
+    const savedItem = isEditing
       ? nextCondominiums.find(
-          (item) => item.id === editingCondominium.id
+          (item) => item.id === editingCondominium!.id
         )!
       : nextCondominiums[nextCondominiums.length - 1];
 
