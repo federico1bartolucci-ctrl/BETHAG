@@ -430,6 +430,7 @@ const KEYS = {
   subscription: "bethag-subscription-v2",
   collaborators: "bethag-collaborators-v1",
   page: "bethag-current-page-v1",
+  selectedCondominium: "bethag-selected-condominium-v1",
 };
 
 
@@ -1838,6 +1839,24 @@ function App() {
     null
   );
 
+  const [savedSelectedCondominiumId] = useState<number | null>(() =>
+    load<number | null>(KEYS.selectedCondominium, null)
+  );
+
+  useEffect(() => {
+    if (selectedCondominium || savedSelectedCondominiumId == null) return;
+    const restored = condominiums.find((item) => item.id === savedSelectedCondominiumId);
+    if (restored) setSelectedCondominium(restored);
+  }, [condominiums, savedSelectedCondominiumId, selectedCondominium]);
+
+  useEffect(() => {
+    if (selectedCondominium) {
+      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
+    } else {
+      localStorage.removeItem(KEYS.selectedCondominium);
+    }
+  }, [selectedCondominium]);
+
   const [selectedDeadline, setSelectedDeadline] =
     useState<Deadline | null>(null);
 
@@ -2889,6 +2908,7 @@ function App() {
     setSearch("");
     setMobileMenuOpen(false);
     setSelectedCondominium(null);
+    localStorage.removeItem(KEYS.selectedCondominium);
     setSelectedDeadline(null);
     setSelectedDocument(null);
     setSelectedAssembly(null);
@@ -3130,6 +3150,7 @@ function App() {
     setCondominiumMembers((current) => current.filter((member) => member.condominiumId !== item.id));
     setCondominiumRequests((current) => current.filter((request) => request.condominiumId !== item.id));
     setSelectedCondominium(null);
+    localStorage.removeItem(KEYS.selectedCondominium);
   };
 
 
