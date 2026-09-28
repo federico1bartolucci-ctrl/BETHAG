@@ -28,11 +28,11 @@ import { claimFirstWorkspaceAdmin, getActiveWorkspaceId, loadBackendState, syncB
    - Workspace
 
    NOTA:
-   Questa versione prepara l'architettura frontend.
-   Autenticazione reale, isolamento reale degli account,
-   database cloud, pagamenti, AI reale, OCR reale,
-   trascrizione audio reale e portale online reale
-   richiederanno successivamente un backend.
+   Autenticazione, isolamento degli account e persistenza
+   dei dati principali sono integrati con Supabase.
+   Le funzioni AI, OCR, trascrizione audio, pagamenti
+   e alcune integrazioni operative restano predisposte
+   a integrazioni backend/servizi dedicati.
    ========================================================= */
 
 
