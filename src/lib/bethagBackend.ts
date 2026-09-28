@@ -95,6 +95,19 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   return {
     condominiums: (condominiums.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    condominiumUnits: (condominiumUnits.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.id,
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      unitCode: row.unit_code,
+      unitType: row.data?.unitType ?? "Abitazione",
+      cadastralCategory: row.data?.cadastralCategory ?? "",
+      cadastralAutonomous: row.data?.cadastralAutonomous ?? (row.data?.unitType !== "Abitazione"),
+      millesimi: row.data?.millesimi ?? "",
+      incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
+      notes: row.data?.notes ?? "",
+      active: row.data?.active ?? true,
+    })),
     condominiumMembers: (condominiumMembers.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.legacy_id,
