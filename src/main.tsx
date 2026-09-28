@@ -3971,14 +3971,39 @@ function App() {
 
     if (selectedCondominiumMember) {
       const previousMember = selectedCondominiumMember;
-
-      setCondominiumMembers((current) =>
-        current.map((member) =>
-          member.id === previousMember.id
-            ? { ...data, id: previousMember.id }
-            : member
-        )
+      const nextMembers = condominiumMembers.map((member) =>
+        member.id === previousMember.id
+          ? { ...data, id: previousMember.id }
+          : member
       );
+
+      setCondominiumMembers(nextMembers);
+
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        try {
+          await syncBackendState(profile.workspaceId, {
+            condominiums,
+            condominiumMembers: nextMembers,
+            documents,
+            deadlines,
+            assemblies,
+            suppliers,
+            activities,
+            communications,
+            condominiumRequests,
+            portalMembers,
+            collaborators,
+          });
+        } catch (syncError) {
+          console.error("BETHAG condominium member update sync failed", syncError);
+          alert(
+            syncError instanceof Error
+              ? `Condòmino modificato localmente, ma il salvataggio sul server non è riuscito: ${syncError.message}`
+              : "Condòmino modificato localmente, ma il salvataggio sul server non è riuscito."
+          );
+          return;
+        }
+      }
 
       setPortalMembers((current) => {
         const previousEmail = previousMember.email.trim().toLowerCase();
