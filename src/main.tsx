@@ -39,7 +39,7 @@ import ReactDOM from "react-dom/client";
    ========================================================= */
 
 type Page =
-  | "dashboard"
+  | "homepage"
   | "condomini"
   | "documenti"
   | "scadenze"
@@ -325,6 +325,8 @@ const KEYS = {
   communications: "bethag-communications-v1",
   condominiumMembers: "bethag-condominium-members-v1",
   condominiumRequests: "bethag-condominium-requests-v1",
+  session: "bethag-session-v1",
+  sessionEmail: "bethag-session-email-v1",
   profile: "bethag-profile-v5",
   portalMembers: "bethag-portal-members-v2",
   subscription: "bethag-subscription-v2",
@@ -986,12 +988,373 @@ function permissionName(
 
 
 /* =========================================================
+   PUBLIC HOME / ACCESSO / PORTALE CONDOMINO
+   ========================================================= */
+
+type PublicRole = "admin" | "collaborator" | "resident";
+
+function PublicHome({
+  onLogin,
+}: {
+  onLogin: (role: PublicRole, email: string) => void;
+}) {
+  const [showLogin, setShowLogin] = useState(false);
+
+  if (showLogin) {
+    return (
+      <LoginPage
+        onBack={() => setShowLogin(false)}
+        onLogin={onLogin}
+      />
+    );
+  }
+
+  const openLogin = () => setShowLogin(true);
+
+  return (
+    <div className="public-home">
+      <div className="public-home-inner">
+        <header className="public-header">
+          <BrandLogo />
+          <button className="public-login-button" onClick={openLogin}>
+            Accedi
+          </button>
+        </header>
+
+        <main className="public-main">
+          <section className="public-copy">
+            <span className="public-kicker">BETHAG PLATFORM</span>
+            <h1>Un'unica piattaforma.<br />Più professioni.</h1>
+            <p>
+              BETHAG nasce come piattaforma digitale modulare.
+              Il primo ambiente disponibile è dedicato agli
+              amministratori di condominio, con accessi distinti
+              per amministratori, assistenti e condòmini.
+            </p>
+          </section>
+
+          <section className="platform-panel">
+            <div className="platform-label">Piattaforme professionali</div>
+
+            <button className="platform-card" onClick={openLogin}>
+              <span className="platform-icon">
+                <AppIcon name="building" size={25} />
+              </span>
+              <strong>Amministratori di Condominio</strong>
+              <span>
+                Gestionale completo per amministratori e collaboratori,
+                con area riservata ai condòmini.
+              </span>
+              <b>Entra nella piattaforma →</b>
+            </button>
+
+            <div className="future-platform">
+              <div>Professionisti e studi — prossimamente</div>
+              <div>Altre piattaforme professionali — prossimamente</div>
+            </div>
+          </section>
+        </main>
+
+        <footer className="public-footer">
+          BETHAG · piattaforma modulare per la gestione professionale
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function LoginPage({
+  onBack,
+  onLogin,
+}: {
+  onBack: () => void;
+  onLogin: (role: PublicRole, email: string) => void;
+}) {
+  const [role, setRole] = useState<PublicRole>("admin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const roles: Array<{
+    id: PublicRole;
+    title: string;
+    description: string;
+  }> = [
+    {
+      id: "admin",
+      title: "Amministratore",
+      description: "Accesso completo al gestionale.",
+    },
+    {
+      id: "collaborator",
+      title: "Assistente",
+      description: "Accesso all'area gestionale del titolare.",
+    },
+    {
+      id: "resident",
+      title: "Condomino",
+      description: "Accesso alla sola area di consultazione.",
+    },
+  ];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!email.trim() || !password.trim()) {
+      setError("Inserisci e-mail e password per continuare.");
+      return;
+    }
+
+    setError("");
+    onLogin(role, email.trim());
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-card-header">
+          <BrandLogo />
+          <button className="secondary-button" onClick={onBack}>
+            ← Indietro
+          </button>
+        </div>
+
+        <h1>Accedi a BETHAG</h1>
+        <p className="login-intro">
+          Seleziona il profilo con cui vuoi entrare nella piattaforma.
+        </p>
+
+        <div className="login-role-grid">
+          {roles.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={
+                role === item.id
+                  ? "login-role active"
+                  : "login-role"
+              }
+              onClick={() => {
+                setRole(item.id);
+                setError("");
+              }}
+            >
+              {item.title}
+            </button>
+          ))}
+        </div>
+
+        <div className="login-role-description">
+          {roles.find((item) => item.id === role)?.description}
+        </div>
+
+        <form onSubmit={submit}>
+          <label>E-mail</label>
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            type="email"
+            placeholder="nome@esempio.it"
+          />
+
+          <label>Password</label>
+          <input
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            type="password"
+            placeholder="••••••••"
+          />
+
+          {role === "resident" && (
+            <small className="login-note">
+              L'area condomino sarà associata al profilo condominiale
+              collegato all'e-mail.
+            </small>
+          )}
+
+          {error && <div className="login-error">{error}</div>}
+
+          <button className="primary-button login-submit" type="submit">
+            Accedi
+          </button>
+        </form>
+
+        <p className="login-disclaimer">
+          Accesso attualmente predisposto lato frontend. L'autenticazione
+          reale e la gestione sicura delle credenziali saranno collegate
+          al backend.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ResidentPortalView({
+  email,
+  condominiums,
+  portalMembers,
+  documents,
+  assemblies,
+  communications,
+  onLogout,
+}: {
+  email: string;
+  condominiums: Condominium[];
+  portalMembers: PortalMember[];
+  documents: DocumentItem[];
+  assemblies: Assembly[];
+  communications: Communication[];
+  onLogout: () => void;
+}) {
+  const member =
+    portalMembers.find(
+      (item) =>
+        item.active &&
+        item.role === "resident" &&
+        item.email.toLowerCase() === email.toLowerCase()
+    ) ||
+    portalMembers.find(
+      (item) => item.active && item.role === "resident"
+    );
+
+  const condominium = member
+    ? condominiums.find((item) => item.id === member.condominiumId)
+    : null;
+
+  const sharedDocuments = documents.filter(
+    (item) =>
+      item.publication === "Condiviso" &&
+      (!member || item.condominiumId === member.condominiumId)
+  );
+
+  const publishedCommunications = communications.filter(
+    (item) =>
+      item.status === "Pubblicata" &&
+      item.publishedToPortal &&
+      (!member || item.condominiumId === member.condominiumId)
+  );
+
+  const publishedAssemblies = assemblies
+    .filter(
+      (item) =>
+        item.publishedToPortal &&
+        (!member || item.condominiumId === member.condominiumId)
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return (
+    <div className="resident-portal">
+      <header className="resident-header">
+        <BrandLogo />
+        <div className="resident-header-right">
+          <div className="resident-identity">
+            <strong>{member?.name || "Condomino"}</strong>
+            <span>Area condòmino</span>
+          </div>
+          <button className="secondary-button" onClick={onLogout}>
+            Esci
+          </button>
+        </div>
+      </header>
+
+      <main className="resident-main">
+        <section className="resident-hero">
+          <div className="eyebrow">Portale condòmino</div>
+          <h1>{condominium?.name || "La tua area condominiale"}</h1>
+          <p>
+            Consultazione di documenti, comunicazioni e assemblee
+            pubblicate dall'amministratore.
+          </p>
+        </section>
+
+        <div className="resident-stats">
+          <div><b>{sharedDocuments.length}</b><span>Documenti</span></div>
+          <div><b>{publishedCommunications.length}</b><span>Comunicazioni</span></div>
+          <div><b>{publishedAssemblies.length}</b><span>Assemblee</span></div>
+        </div>
+
+        <div className="resident-grid">
+          <section className="resident-card">
+            <h2>Comunicazioni</h2>
+            {publishedCommunications.length === 0 ? (
+              <p className="empty-state">Nessuna comunicazione pubblicata.</p>
+            ) : (
+              publishedCommunications.map((item) => (
+                <article className="resident-list-item" key={item.id}>
+                  <strong>{item.title}</strong>
+                  <small>{formatDate(item.date)}</small>
+                  <p>{item.body}</p>
+                </article>
+              ))
+            )}
+          </section>
+
+          <section className="resident-card">
+            <h2>Documenti disponibili</h2>
+            {sharedDocuments.length === 0 ? (
+              <p className="empty-state">Nessun documento disponibile.</p>
+            ) : (
+              sharedDocuments.map((item) => (
+                <div className="resident-list-row" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {item.category} · {formatDate(item.date)}
+                    </small>
+                  </div>
+                  <span>Consultabile</span>
+                </div>
+              ))
+            )}
+          </section>
+
+          <section className="resident-card">
+            <h2>Assemblee</h2>
+            {publishedAssemblies.length === 0 ? (
+              <p className="empty-state">Nessuna assemblea pubblicata.</p>
+            ) : (
+              publishedAssemblies.map((item) => (
+                <div className="resident-list-item" key={item.id}>
+                  <strong>{item.title}</strong>
+                  <small>
+                    {formatDate(item.date)}
+                    {item.time ? " · " + item.time : ""}
+                  </small>
+                  {item.place && <p>{item.place}</p>}
+                </div>
+              ))
+            )}
+          </section>
+        </div>
+
+        <div className="resident-readonly-note">
+          Questa area è riservata alla consultazione. Le operazioni di
+          gestione rimangono nell'area riservata all'amministratore e ai
+          suoi collaboratori.
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+/* =========================================================
    APP
    ========================================================= */
 
 function App() {
   const [page, setPage] =
-    useState<Page>("dashboard");
+    useState<Page>("homepage");
+
+  const [sessionRole, setSessionRole] =
+    useState<"admin" | "collaborator" | "resident" | null>(() =>
+      load(KEYS.session, null)
+    );
+
+  const [sessionEmail, setSessionEmail] =
+    useState<string>(() =>
+      load(KEYS.sessionEmail, "")
+    );
 
   const [condominiums, setCondominiums] =
     useState<Condominium[]>(
@@ -1176,6 +1539,34 @@ function App() {
   const [selectedCondominiumRequest, setSelectedCondominiumRequest] = useState<CondominiumRequest | null>(null);
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
+
+  const handleLogin = (
+    role: PublicRole,
+    email: string
+  ) => {
+    const normalizedEmail = email.trim();
+
+    setSessionRole(role);
+    setSessionEmail(normalizedEmail);
+    localStorage.setItem(
+      KEYS.session,
+      JSON.stringify(role)
+    );
+    localStorage.setItem(
+      KEYS.sessionEmail,
+      JSON.stringify(normalizedEmail)
+    );
+    setPage("homepage");
+  };
+
+  const logout = () => {
+    setSessionRole(null);
+    setSessionEmail("");
+    localStorage.removeItem(KEYS.session);
+    localStorage.removeItem(KEYS.sessionEmail);
+    setPage("homepage");
+    setMobileMenuOpen(false);
+  };
 
   /* =======================================================
      PERSISTENZA
@@ -2659,6 +3050,32 @@ function App() {
   ).length;
 
 
+  if (!sessionRole) {
+    return (
+      <>
+        <style>{styles}</style>
+        <PublicHome onLogin={handleLogin} />
+      </>
+    );
+  }
+
+  if (sessionRole === "resident") {
+    return (
+      <>
+        <style>{styles}</style>
+        <ResidentPortalView
+          email={sessionEmail}
+          condominiums={condominiums}
+          portalMembers={portalMembers}
+          documents={documents}
+          assemblies={assemblies}
+          communications={communications}
+          onLogout={logout}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <style>{styles}</style>
@@ -2688,15 +3105,26 @@ function App() {
           <nav className="nav">
 
             <NavButton
+              active={false}
+              onClick={logout}
+            >
+              <span className="nav-icon">
+                <AppIcon name="menu" size={18} />
+              </span>
+              <span>Esci</span>
+            </NavButton>
+
+
+            <NavButton
               active={
-                page === "dashboard"
+                page === "homepage"
               }
               onClick={() =>
-                navigate("dashboard")
+                navigate("homepage")
               }
             >
               <span className="nav-icon"><AppIcon name="dashboard" size={18} /></span>
-              <span>Dashboard</span>
+              <span>Homepage</span>
             </NavButton>
 
             <NavButton
@@ -2885,7 +3313,7 @@ function App() {
           </header>
 
 
-          {page === "dashboard" && (
+          {page === "homepage" && (
             <Dashboard
               condominiums={
                 condominiums
@@ -3357,12 +3785,12 @@ function App() {
 
         <button
           className={
-            page === "dashboard"
+            page === "homepage"
               ? "mobile-bottom-active"
               : ""
           }
           onClick={() =>
-            navigate("dashboard")
+            navigate("homepage")
           }
         >
           <span><AppIcon name="dashboard" size={19} /></span>
@@ -3892,7 +4320,7 @@ function Dashboard({
           </div>
 
           <h1>
-            Buongiorno 👋
+            Homepage
           </h1>
 
           <p className="dashboard-subtitle">
@@ -11944,6 +12372,93 @@ input:focus,textarea:focus,select:focus{
   }
 }
 `;
+
+
+/* =========================================================
+   PUBLIC HOME / LOGIN / RESIDENT PORTAL
+   ========================================================= */
+
+.public-home{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(124,156,255,.22),transparent 30%),radial-gradient(circle at 90% 85%,rgba(79,109,245,.16),transparent 32%),linear-gradient(135deg,#f8faff 0%,#eef3ff 100%);color:#172033;padding:28px;box-sizing:border-box}
+.public-home-inner{max-width:1180px;margin:0 auto;min-height:calc(100vh - 56px);display:flex;flex-direction:column}
+.public-header{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.public-login-button{border:1px solid #dbe3ef;background:#fff;border-radius:12px;padding:11px 17px;font-weight:700;color:#3857d6;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.06)}
+.public-main{flex:1;display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:center;padding:60px 0 50px}
+.public-copy h1{font-size:clamp(42px,6vw,72px);line-height:1.02;letter-spacing:-.055em;margin:18px 0 20px}
+.public-copy p{color:#64748b;font-size:18px;line-height:1.65;max-width:650px;margin:0}
+.public-kicker{display:inline-flex;padding:7px 11px;border-radius:999px;background:#e9efff;color:#3857d6;font-size:12px;font-weight:800;letter-spacing:.04em}
+.platform-panel{background:rgba(255,255,255,.88);border:1px solid #e1e7f2;border-radius:26px;padding:28px;box-shadow:0 25px 70px rgba(15,23,42,.1);backdrop-filter:blur(18px)}
+.platform-label{font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.platform-card{width:100%;margin-top:16px;text-align:left;border:1px solid #dbe3ef;background:linear-gradient(145deg,#fff,#f5f7ff);border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 12px 30px rgba(79,109,245,.1)}
+.platform-card strong,.platform-card>span{display:block}
+.platform-card strong{font-size:19px;color:#172033}
+.platform-card>span:not(.platform-icon){margin-top:7px;color:#64748b;line-height:1.5;font-size:13px}
+.platform-card b{display:block;margin-top:14px;color:#3857d6;font-size:13px}
+.platform-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#e9efff;color:#3857d6;margin-bottom:14px}
+.future-platform{display:grid;gap:10px;margin-top:14px}
+.future-platform div{padding:14px 15px;border-radius:14px;border:1px dashed #dbe3ef;color:#94a3b8;background:#fafbfe;font-size:12px;font-weight:700}
+.public-footer{border-top:1px solid rgba(148,163,184,.25);padding-top:18px;color:#94a3b8;font-size:12px}
+
+.login-page{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(124,156,255,.22),transparent 30%),linear-gradient(135deg,#f8faff,#eef3ff);display:grid;place-items:center;padding:18px;box-sizing:border-box}
+.login-card{width:min(520px,100%);background:#fff;border:1px solid #e1e7f2;border-radius:24px;padding:28px;box-shadow:0 25px 70px rgba(15,23,42,.12);box-sizing:border-box}
+.login-card-header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}
+.login-card h1{margin:0 0 7px;font-size:28px;letter-spacing:-.03em}
+.login-intro{color:#64748b;margin:0 0 22px;line-height:1.5;font-size:13px}
+.login-role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.login-role{border:1px solid #dbe3ef;background:#fff;color:#475569;border-radius:12px;padding:12px 8px;cursor:pointer;font-weight:800;font-size:12px}
+.login-role.active{border:2px solid #526dfe;background:#eef2ff;color:#3857d6}
+.login-role-description{padding:13px;border-radius:12px;background:#f8fafc;color:#64748b;font-size:12px;line-height:1.45;margin-bottom:18px}
+.login-card label{display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:7px}
+.login-card input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #dbe3ef;border-radius:11px;margin-bottom:13px}
+.login-note{display:block;margin-top:-4px;color:#64748b;font-size:11px;line-height:1.4}
+.login-error{margin-top:13px;padding:10px;border-radius:9px;background:#fff1f2;color:#be123c;font-size:12px}
+.login-submit{width:100%;margin-top:18px}
+.login-disclaimer{margin:18px 0 0;color:#94a3b8;font-size:10px;line-height:1.45}
+
+.resident-portal{min-height:100vh;background:radial-gradient(circle at 85% 0%,rgba(124,156,255,.15),transparent 30%),#f5f7fb;color:#172033}
+.resident-header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:10}
+.resident-header-right{display:flex;align-items:center;gap:10px}
+.resident-identity{text-align:right;font-size:12px;color:#64748b}
+.resident-identity strong,.resident-identity span{display:block}
+.resident-identity strong{color:#172033}
+.resident-main{max-width:1180px;margin:0 auto;padding:28px 18px 60px}
+.resident-hero{background:linear-gradient(135deg,#172554,#3857d6);color:#fff;border-radius:22px;padding:28px;box-shadow:0 20px 45px rgba(30,64,175,.18)}
+.resident-hero h1{margin:7px 0;font-size:30px;letter-spacing:-.035em}
+.resident-hero p{margin:0;opacity:.82;line-height:1.5}
+.resident-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.resident-stats>div{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+.resident-stats b,.resident-stats span{display:block}
+.resident-stats b{font-size:24px}
+.resident-stats span{color:#64748b;font-size:12px}
+.resident-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.resident-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px}
+.resident-card h2{margin:0;font-size:18px}
+.resident-list-item{padding:15px 0;border-bottom:1px solid #eef2f7}
+.resident-list-item:last-child{border-bottom:0}
+.resident-list-item strong{display:block}
+.resident-list-item small,.resident-list-row small{display:block;color:#94a3b8;font-size:11px;margin-top:4px}
+.resident-list-item p{color:#475569;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.resident-list-row{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #eef2f7}
+.resident-list-row strong{font-size:13px}
+.resident-list-row>span{color:#3857d6;font-size:11px;font-weight:800}
+.empty-state{color:#94a3b8;font-size:13px}
+.resident-readonly-note{margin-top:18px;padding:15px;border-radius:14px;background:#eef2ff;color:#475569;font-size:12px;line-height:1.5}
+
+@media(max-width:850px){
+  .public-home{padding:18px}
+  .public-main{grid-template-columns:1fr;padding:40px 0}
+  .public-copy h1{font-size:clamp(38px,11vw,58px)}
+  .public-copy p{font-size:16px}
+  .resident-header{padding:14px 16px}
+  .resident-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .public-header .brand-word{font-size:18px}
+  .platform-panel{padding:20px}
+  .login-card{padding:20px}
+  .login-role-grid{grid-template-columns:1fr}
+  .resident-stats{grid-template-columns:1fr 1fr}
+  .resident-identity{display:none}
+}
 
 /* =========================================================
  RENDER
