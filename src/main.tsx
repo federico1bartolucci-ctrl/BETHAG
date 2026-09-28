@@ -1876,15 +1876,15 @@ function App() {
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
 
-        if (backend.condominiums.length) setCondominiums(backend.condominiums);
-        if (backend.condominiumMembers.length) setCondominiumMembers(backend.condominiumMembers);
-        if (backend.documents.length) setDocuments(backend.documents);
-        if (backend.deadlines.length) setDeadlines(backend.deadlines);
-        if (backend.assemblies.length) setAssemblies(backend.assemblies);
-        if (backend.suppliers.length) setSuppliers(backend.suppliers);
-        if (backend.activities.length) setActivities(backend.activities);
-        if (backend.communications.length) setCommunications(backend.communications);
-        if (backend.condominiumRequests.length) setCondominiumRequests(backend.condominiumRequests);
+        setCondominiums(backend.condominiums);
+        setCondominiumMembers(backend.condominiumMembers);
+        setDocuments(backend.documents);
+        setDeadlines(backend.deadlines);
+        setAssemblies(backend.assemblies);
+        setSuppliers(backend.suppliers);
+        setActivities(backend.activities);
+        setCommunications(backend.communications);
+        setCondominiumRequests(backend.condominiumRequests);
 
         setProfile((current) => ({
           ...current,
