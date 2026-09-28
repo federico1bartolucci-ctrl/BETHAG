@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: membership, error: membershipError } = await supabase
       .from("workspace_members")
-      .select("workspace_id, role, active")
+      .select("workspace_id, role, active, permissions")
       .eq("workspace_id", payload.workspaceId)
       .eq("user_id", user.id)
       .eq("active", true)
@@ -102,9 +102,20 @@ Deno.serve(async (req: Request) => {
 
     if (membershipError) throw membershipError;
 
-    if (!membership || membership.role !== "admin") {
+    const canSendEmail =
+      Boolean(membership) &&
+      (
+        membership.role === "admin" ||
+        (
+          membership.role === "collaborator" &&
+          Array.isArray((membership as any).permissions) &&
+          (membership as any).permissions.includes("comunicazioni")
+        )
+      );
+
+    if (!canSendEmail) {
       return new Response(
-        JSON.stringify({ error: "Operazione riservata all'Amministratore." }),
+        JSON.stringify({ error: "Non disponi dell'autorizzazione per gestire le comunicazioni." }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
