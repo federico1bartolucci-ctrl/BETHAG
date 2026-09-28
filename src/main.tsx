@@ -4117,9 +4117,8 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onPublication={
                 toggleDocumentPublication
               }
-              plan={
-                subscription.plan
-              }
+              plan={subscription.plan}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4147,9 +4146,8 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onStatus={
                 updateDeadlineStatus
               }
-              condominiumName={
-                condominiumName
-              }
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4189,9 +4187,8 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onConfirmMinutes={
                 confirmMinutes
               }
-              onPublication={
-                toggleAssemblyPublication
-              }
+              onPublication={toggleAssemblyPublication}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4216,9 +4213,8 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onDelete={
                 deleteSupplier
               }
-              condominiumName={
-                condominiumName
-              }
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -4246,9 +4242,8 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onStatus={
                 updateActivityStatus
               }
-              condominiumName={
-                condominiumName
-              }
+              condominiumName={condominiumName}
+              isAdministrator={isAdministrator}
             />
           )}
 
