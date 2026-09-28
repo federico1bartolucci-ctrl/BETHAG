@@ -4383,6 +4383,7 @@ function App() {
               portalMembers={
                 portalMembers
               }
+              isAdministrator={isAdministrator}
             />
           )}
 
@@ -9031,9 +9032,11 @@ function HelpPage({
 function SubscriptionPage({
   subscription,
   setSubscription,
+  isAdministrator = false,
 }: {
   subscription: Subscription;
   setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
+  isAdministrator?: boolean;
 }) {
   const plans = [
     { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Accesso alla struttura BETHAG"] },
@@ -9045,10 +9048,18 @@ function SubscriptionPage({
   const addons: AddonId[] = ["condomini","documenti","scadenze","assemblee","fornitori","attivita","comunicazioni","ai","portale"];
 
   const activateDemo = (id: PlanId) => {
+    if (!isAdministrator) {
+      alert("La gestione del piano è riservata all'Amministratore.");
+      return;
+    }
     setSubscription((current) => ({ ...current, plan: id, status: "Demo", renewalDate: "" }));
   };
 
   const unlockAddon = (addon: AddonId) => {
+    if (!isAdministrator) {
+      alert("La gestione degli add-on è riservata all'Amministratore.");
+      return;
+    }
     setSubscription((current) => ({
       ...current,
       addons: current.addons.includes(addon) ? current.addons : [...current.addons, addon],
@@ -9514,6 +9525,7 @@ function ProfilePage({
   setProfile,
   subscription,
   portalMembers,
+  isAdministrator = false,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -9521,6 +9533,10 @@ function ProfilePage({
   const save = (
     e: React.FormEvent<HTMLFormElement>
   ) => {
+    if (!isAdministrator) {
+      alert("La modifica del profilo amministratore è riservata all'Amministratore.");
+      return;
+    }
     e.preventDefault();
 
     if (
