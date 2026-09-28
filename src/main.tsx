@@ -2671,9 +2671,7 @@ function App() {
 
         <aside className="sidebar">
 
-          <div className="logo">
-            BET<span>H</span>AG
-          </div>
+          <BrandLogo />
 
           <div className="plan-sidebar">
             <span>
@@ -2697,7 +2695,8 @@ function App() {
                 navigate("dashboard")
               }
             >
-              ⌂ Dashboard
+              <span className="nav-icon"><AppIcon name="dashboard" size={18} /></span>
+              <span>Dashboard</span>
             </NavButton>
 
             <NavButton
@@ -2708,7 +2707,8 @@ function App() {
                 navigate("condomini")
               }
             >
-              🏢 Condomini
+              <span className="nav-icon"><AppIcon name="building" size={18} /></span>
+              <span>Condomini</span>
             </NavButton>
 
             <NavButton
@@ -2719,7 +2719,8 @@ function App() {
                 navigate("documenti")
               }
             >
-              📁 Documenti
+              <span className="nav-icon"><AppIcon name="folder" size={18} /></span>
+              <span>Documenti</span>
             </NavButton>
 
             <NavButton
@@ -2730,7 +2731,8 @@ function App() {
                 navigate("scadenze")
               }
             >
-              📅 Scadenze
+              <span className="nav-icon"><AppIcon name="calendar" size={18} /></span>
+              <span>Scadenze</span>
             </NavButton>
 
             <NavButton
@@ -2741,7 +2743,8 @@ function App() {
                 navigate("assemblee")
               }
             >
-              👥 Assemblee
+              <span className="nav-icon"><AppIcon name="users" size={18} /></span>
+              <span>Assemblee</span>
             </NavButton>
 
             <NavButton
@@ -2752,7 +2755,8 @@ function App() {
                 navigate("fornitori")
               }
             >
-              🔧 Fornitori
+              <span className="nav-icon"><AppIcon name="wrench" size={18} /></span>
+              <span>Fornitori</span>
             </NavButton>
 
             <NavButton
@@ -2763,7 +2767,8 @@ function App() {
                 navigate("attivita")
               }
             >
-              ✓ Attività
+              <span className="nav-icon"><AppIcon name="check" size={18} /></span>
+              <span>Attività</span>
             </NavButton>
 
             <NavButton
@@ -2774,7 +2779,8 @@ function App() {
                 navigate("comunicazioni")
               }
             >
-              📢 Comunicazioni
+              <span className="nav-icon"><AppIcon name="megaphone" size={18} /></span>
+              <span>Comunicazioni</span>
             </NavButton>
 
             <NavButton
@@ -2785,7 +2791,8 @@ function App() {
                 navigate("ai")
               }
             >
-              ✨ BETHAG AI
+              <span className="nav-icon"><AppIcon name="sparkles" size={18} /></span>
+              <span>BETHAG AI</span>
             </NavButton>
 
             <NavButton
@@ -2796,7 +2803,8 @@ function App() {
                 navigate("portale")
               }
             >
-              👥 Portale condomini
+              <span className="nav-icon"><AppIcon name="portal" size={18} /></span>
+              <span>Portale condomini</span>
             </NavButton>
 
             <NavButton
@@ -2809,7 +2817,8 @@ function App() {
                 )
               }
             >
-              ⭐ Piano e upgrade
+              <span className="nav-icon"><AppIcon name="star" size={18} /></span>
+              <span>Piano e upgrade</span>
             </NavButton>
 
             <NavButton
@@ -2823,13 +2832,14 @@ function App() {
                 )
               }
             >
-              👤 Amministratore
+              <span className="nav-icon"><AppIcon name="user" size={18} /></span>
+              <span>Amministratore</span>
             </NavButton>
 
           </nav>
 
           <div className="sidebar-bottom">
-            <b>BETHAG</b>
+            <BrandLogo compact />
             <br />
             <small>
               Gestione intelligente
@@ -2856,7 +2866,7 @@ function App() {
               }
               aria-label="Apri menu"
             >
-              ☰
+              <AppIcon name="menu" size={21} />
             </button>
 
             <b>BETHAG</b>
@@ -2869,7 +2879,7 @@ function App() {
                 )
               }
             >
-              ⚙
+              <AppIcon name="settings" size={19} />
             </button>
 
           </header>
@@ -3355,7 +3365,7 @@ function App() {
             navigate("dashboard")
           }
         >
-          <span>⌂</span>
+          <span><AppIcon name="dashboard" size={19} /></span>
           <small>Home</small>
         </button>
 
@@ -3369,7 +3379,7 @@ function App() {
             navigate("condomini")
           }
         >
-          <span>🏢</span>
+          <span><AppIcon name="building" size={19} /></span>
           <small>Condomini</small>
         </button>
 
@@ -3392,7 +3402,7 @@ function App() {
             navigate("scadenze")
           }
         >
-          <span>📅</span>
+          <span><AppIcon name="calendar" size={19} /></span>
           <small>Scadenze</small>
         </button>
 
@@ -3408,7 +3418,7 @@ function App() {
             )
           }
         >
-          <span>👤</span>
+          <span><AppIcon name="user" size={19} /></span>
           <small>Profilo</small>
         </button>
 
@@ -3747,6 +3757,79 @@ function App() {
 
     </>
   );
+}
+
+
+function BrandLogo({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
+  return (
+    <div className={`brand-logo ${compact ? "brand-logo-compact" : ""}`} aria-label="BETHAG">
+      <span className="brand-mark" aria-hidden="true">
+        <span className="brand-mark-bar brand-mark-bar-a" />
+        <span className="brand-mark-bar brand-mark-bar-b" />
+        <span className="brand-mark-dot" />
+      </span>
+      <span className="brand-word">
+        BET<span>H</span>AG
+      </span>
+    </div>
+  );
+}
+
+function AppIcon({
+  name,
+  size = 18,
+}: {
+  name: string;
+  size?: number;
+}) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (name) {
+    case "dashboard":
+      return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
+    case "building":
+      return <svg {...common}><path d="M4 21V6.5L12 3l8 3.5V21" /><path d="M8 9h1M8 13h1M8 17h1M15 9h1M15 13h1M15 17h1" /><path d="M10 21v-4h4v4" /></svg>;
+    case "folder":
+      return <svg {...common}><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" /><path d="M3.5 9h17" /></svg>;
+    case "calendar":
+      return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" /></svg>;
+    case "users":
+      return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0" /><path d="M16 5.5a3 3 0 0 1 0 5.8M17 14a4.5 4.5 0 0 1 3.5 4.4" /></svg>;
+    case "wrench":
+      return <svg {...common}><path d="M14.7 6.2a4.2 4.2 0 0 0-5.5 5.5L4 16.9a2.1 2.1 0 1 0 3 3l5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-3 3-2.9-.9-.9-2.9z" /></svg>;
+    case "check":
+      return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="m8 12 2.6 2.6L16.5 9" /></svg>;
+    case "megaphone":
+      return <svg {...common}><path d="M4 13V9l12-4v12L4 13z" /><path d="M16 8.5 20 7v8l-4-1.5M7 13l1.5 6h3L10 14" /></svg>;
+    case "sparkles":
+      return <svg {...common}><path d="m12 3-1.1 4.4L7 9l3.9 1.6L12 15l1.1-4.4L17 9l-3.9-1.6z" /><path d="m19 14-.6 2.4L16 17l2.4.6L19 20l.6-2.4L22 17l-2.4-.6zM5 3v3M3.5 4.5h3" /></svg>;
+    case "portal":
+      return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.2 3.3 8.5S14.2 18.1 12 20.5C9.8 18.1 8.7 15.3 8.7 12S9.8 5.9 12 3.5z" /></svg>;
+    case "star":
+      return <svg {...common}><path d="m12 3 2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8-5.3 2.8 1-6-4.4-4.3 6-.9z" /></svg>;
+    case "user":
+      return <svg {...common}><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>;
+    case "settings":
+      return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2A2 2 0 0 0 5.8 18l-.1.1a2 2 0 0 1-2.8-2.8L3 15a2 2 0 0 0-1.4-3.4h-.2a2 2 0 0 1 0-4h.2A2 2 0 0 0 3 4.2l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1A2 2 0 0 0 9.2 0h.2a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1A2 2 0 0 0 21 7.8v.2a2 2 0 0 1 0 4h-.2a2 2 0 0 0-1.4 3.4z" transform="scale(.8) translate(3 3)" /></svg>;
+    case "menu":
+      return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="8.5" /></svg>;
+  }
 }
 
 
@@ -11554,6 +11637,312 @@ select:focus{
   .filter-bar select { flex: 1 1 140px; min-width: 0; }
 }
 
+
+/* =========================================================
+   BETHAG VISUAL SYSTEM
+   ========================================================= */
+
+:root{
+  --bethag-ink:#172033;
+  --bethag-muted:#64748b;
+  --bethag-line:#e2e8f0;
+  --bethag-surface:#ffffff;
+  --bethag-soft:#f7f9fc;
+  --bethag-primary:#4f6df5;
+  --bethag-primary-dark:#3857d6;
+  --bethag-accent:#7c9cff;
+  --bethag-shadow:0 12px 32px rgba(15,23,42,.08);
+}
+
+body{
+  background:
+    radial-gradient(circle at 80% -10%, rgba(124,156,255,.14), transparent 34%),
+    #f5f7fb;
+}
+
+.app{
+  background:transparent;
+}
+
+.sidebar{
+  background:
+    radial-gradient(circle at 10% 0%, rgba(124,156,255,.18), transparent 28%),
+    linear-gradient(180deg,#0f172a 0%,#111827 55%,#0b1220 100%);
+  border-right:1px solid rgba(255,255,255,.06);
+  box-shadow:8px 0 28px rgba(15,23,42,.08);
+}
+
+.brand-logo{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:44px;
+  padding:0 10px 22px;
+  color:#fff;
+}
+
+.brand-logo-compact{
+  padding:0;
+  min-height:40px;
+  gap:9px;
+}
+
+.brand-mark{
+  position:relative;
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  border-radius:11px;
+  background:linear-gradient(145deg,#8da7ff 0%,#536ff2 52%,#344fd0 100%);
+  box-shadow:0 8px 20px rgba(79,109,245,.28), inset 0 1px 0 rgba(255,255,255,.35);
+  overflow:hidden;
+}
+
+.brand-logo-compact .brand-mark{
+  width:32px;
+  height:32px;
+  flex-basis:32px;
+  border-radius:10px;
+}
+
+.brand-mark-bar{
+  position:absolute;
+  height:5px;
+  border-radius:5px;
+  background:#fff;
+  left:8px;
+  transform:skewY(-18deg);
+  opacity:.96;
+}
+
+.brand-mark-bar-a{
+  width:20px;
+  top:10px;
+}
+
+.brand-mark-bar-b{
+  width:14px;
+  top:18px;
+  left:12px;
+  opacity:.8;
+}
+
+.brand-mark-dot{
+  position:absolute;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#fff;
+  right:7px;
+  bottom:7px;
+}
+
+.brand-word{
+  font-size:25px;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:.06em;
+}
+
+.brand-word span{
+  color:#9fb2ff;
+}
+
+.brand-logo-compact .brand-word{
+  font-size:20px;
+}
+
+.plan-sidebar{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.09);
+  backdrop-filter:blur(12px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.nav{
+  gap:4px;
+}
+
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid transparent;
+  transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+
+.nav-item:hover{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.06);
+  transform:translateX(2px);
+}
+
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(79,109,245,.26),rgba(79,109,245,.10));
+  border-color:rgba(124,156,255,.20);
+  box-shadow:inset 3px 0 0 #7c9cff;
+}
+
+.nav-icon{
+  width:20px;
+  height:20px;
+  display:grid;
+  place-items:center;
+  color:#9fb2ff;
+  flex:0 0 20px;
+}
+
+.nav-item.active .nav-icon{
+  color:#fff;
+}
+
+.content{
+  padding:32px clamp(20px,3vw,42px) 90px;
+}
+
+.topbar,.page-header{
+  margin-bottom:24px;
+}
+
+h1{
+  letter-spacing:-.025em;
+}
+
+.dashboard-subtitle{
+  font-size:14px;
+}
+
+.profile{
+  border-color:#dbe3ef;
+  box-shadow:0 5px 18px rgba(15,23,42,.05);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+
+.profile:hover{
+  transform:translateY(-1px);
+  box-shadow:0 9px 24px rgba(15,23,42,.09);
+}
+
+.stat-card,.card,.panel,.table-card,.section-card{
+  box-shadow:var(--bethag-shadow);
+}
+
+.stat-card{
+  border-color:#e4e9f2;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+
+.stat-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 16px 34px rgba(15,23,42,.10);
+  border-color:#d5def0;
+}
+
+button{
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease,border-color .15s ease;
+}
+
+.primary-button{
+  background:linear-gradient(135deg,var(--bethag-primary),var(--bethag-primary-dark));
+  box-shadow:0 7px 16px rgba(79,109,245,.20);
+}
+
+.primary-button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(79,109,245,.28);
+}
+
+.secondary-button{
+  background:#fff;
+}
+
+input,textarea,select{
+  border-color:#dbe3ef;
+  background:#fff;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+
+input:focus,textarea:focus,select:focus{
+  outline:none;
+  border-color:#7c9cff;
+  box-shadow:0 0 0 3px rgba(124,156,255,.14);
+}
+
+.mobile-header{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(226,232,240,.9);
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  backdrop-filter:blur(16px);
+}
+
+.icon-button{
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+}
+
+.mobile-bottom-nav{
+  background:rgba(255,255,255,.94);
+  border-top:1px solid rgba(226,232,240,.9);
+  box-shadow:0 -10px 30px rgba(15,23,42,.08);
+  backdrop-filter:blur(18px);
+}
+
+.mobile-bottom-nav button{
+  color:#64748b;
+}
+
+.mobile-bottom-nav button span{
+  display:grid;
+  place-items:center;
+}
+
+.mobile-bottom-active{
+  color:#4f6df5 !important;
+}
+
+.mobile-ai-button{
+  border:4px solid #f5f7fb;
+  background:linear-gradient(145deg,#8da7ff,#536ff2) !important;
+  box-shadow:0 8px 20px rgba(79,109,245,.28);
+}
+
+.sidebar-bottom{
+  border-top-color:rgba(255,255,255,.08);
+}
+
+@media (max-width:900px){
+  .content{
+    padding:18px 16px 92px;
+  }
+  .brand-logo{
+    padding-bottom:18px;
+  }
+}
+
+@media (max-width:640px){
+  .content{
+    padding:14px 12px 86px;
+  }
+  .topbar,.page-header{
+    gap:12px;
+    margin-bottom:18px;
+  }
+  h1{
+    font-size:25px;
+  }
+  .stats{
+    gap:10px;
+  }
+  .stat-card{
+    border-radius:14px;
+    padding:14px;
+  }
+}
 `;
 
 /* =========================================================
