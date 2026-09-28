@@ -3236,6 +3236,7 @@ function App() {
   const saveCommunication = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+    if (!requireAdministrator("La gestione delle comunicazioni")) return;
     event.preventDefault();
 
     if (
@@ -3525,7 +3526,7 @@ function App() {
     openModal("activity");
   };
 
-  const newCondominiumMember = (condominiumId: number) => { setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
+  const newCondominiumMember = (condominiumId: number) => { if (!requireAdministrator("La gestione dell’anagrafica dei condòmini")) return; setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
   const newCondominiumRequest = (condominiumId: number) => {
     if (!requireAdministrator("La creazione di una segnalazione o richiesta")) return;
     setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");
