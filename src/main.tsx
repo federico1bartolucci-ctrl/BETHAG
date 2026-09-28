@@ -1356,7 +1356,7 @@ function ResidentPortalView({
     }
     onCreateRequest({
       ...emptyCondominiumRequest,
-      id: Date.now(),
+      id: makeId(),
       condominiumId: member.condominiumId,
       memberId: member.id,
       category: requestCategory,
