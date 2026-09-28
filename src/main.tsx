@@ -4110,6 +4110,14 @@ function App() {
 
   const saveCondominiumRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    // I condòmini autenticati possono inviare le proprie richieste dal portale.
+    // Per amministratori e collaboratori, invece, la gestione resta soggetta
+    // al permesso del modulo "condomini".
+    if (!sessionRole || sessionRole !== "resident") {
+      if (!requireModulePermission("condomini", "La gestione delle segnalazioni o richieste")) return;
+    }
+
     const portalMember = !isAdministrator
       ? portalMembers.find((member) => member.active && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
       : null;
