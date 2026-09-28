@@ -292,6 +292,24 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     });
   }
 
+  // Rimuoviamo le unità non più rappresentate dallo stato locale.
+  // Questo mantiene coerente la relazione unità <-> condòmini anche quando
+  // un appartamento viene cambiato o un ultimo condòmino viene eliminato.
+  const desiredUnitKeys = new Set(
+    desiredUnits.map((row: any) =>
+      String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
+    )
+  );
+  for (const [unitKey, unit] of unitRowsByKey) {
+    if (!desiredUnitKeys.has(unitKey)) {
+      const { error: deleteUnitError } = await supabase
+        .from("condominium_units")
+        .delete()
+        .eq("id", unit.id)
+        .eq("workspace_id", workspaceId);
+      if (deleteUnitError) throw deleteUnitError;
+    }
+  }
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
 
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
