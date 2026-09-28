@@ -282,10 +282,22 @@ type PortalMember = {
   active: boolean;
 };
 
+type AddonId =
+  | "condomini"
+  | "documenti"
+  | "scadenze"
+  | "assemblee"
+  | "fornitori"
+  | "attivita"
+  | "comunicazioni"
+  | "ai"
+  | "portale";
+
 type Subscription = {
   plan: PlanId;
   status: "Attivo" | "Demo";
   renewalDate: string;
+  addons: AddonId[];
 };
 
 type Communication = {
@@ -334,6 +346,42 @@ const PLAN_LEVEL: Record<PlanId, number> = {
   plus: 1,
   professional: 2,
   portal: 3,
+};
+
+const ADDON_NAMES: Record<AddonId, string> = {
+  condomini: "Gestione Condomini",
+  documenti: "Gestione Documenti",
+  scadenze: "Scadenze",
+  assemblee: "Assemblee avanzate",
+  fornitori: "Fornitori",
+  attivita: "Attività",
+  comunicazioni: "Comunicazioni",
+  ai: "BETHAG AI",
+  portale: "Portale Condomini",
+};
+
+const ADDON_PRICES: Record<AddonId, string> = {
+  condomini: "2,90 €/mese",
+  documenti: "2,90 €/mese",
+  scadenze: "1,90 €/mese",
+  assemblee: "4,90 €/mese",
+  fornitori: "1,90 €/mese",
+  attivita: "1,90 €/mese",
+  comunicazioni: "2,90 €/mese",
+  ai: "5,90 €/mese",
+  portale: "6,90 €/mese",
+};
+
+const ADDON_REQUIRED_PLAN: Record<AddonId, PlanId> = {
+  condomini: "free",
+  documenti: "free",
+  scadenze: "free",
+  assemblee: "professional",
+  fornitori: "free",
+  attivita: "free",
+  comunicazioni: "free",
+  ai: "plus",
+  portale: "portal",
 };
 
 
@@ -736,6 +784,7 @@ const initialSubscription: Subscription = {
   plan: "free",
   status: "Demo",
   renewalDate: "",
+  addons: [],
 };
 
 const initialCollaborators: Collaborator[] = [];
@@ -986,6 +1035,14 @@ function hasFeature(
   return PLAN_LEVEL[plan] >= PLAN_LEVEL[required];
 }
 
+function hasAddon(subscription: Subscription, addon: AddonId) {
+  return subscription.addons.includes(addon);
+}
+
+function hasEntitlement(subscription: Subscription, required: PlanId, addon?: AddonId) {
+  return hasFeature(subscription.plan, required) || Boolean(addon && hasAddon(subscription, addon));
+}
+
 function roleName(role: UserRole) {
   const labels: Record<UserRole, string> = {
     admin: "Amministratore",
@@ -1058,7 +1115,7 @@ function PublicHome({
               BETHAG nasce come piattaforma digitale modulare.
               Il primo ambiente disponibile è dedicato agli
               amministratori di condominio, con accessi distinti
-              per amministratori, assistenti e condòmini.
+              per amministratori, collaboratori e condòmini.
             </p>
           </section>
 
@@ -1486,13 +1543,14 @@ function App() {
     );
 
   const [subscription, setSubscription] =
-    useState<Subscription>(
-      () =>
-        load(
-          KEYS.subscription,
-          initialSubscription
-        )
-    );
+    useState<Subscription>(() => {
+      const stored = load<Partial<Subscription>>(KEYS.subscription, initialSubscription);
+      return {
+        ...initialSubscription,
+        ...stored,
+        addons: Array.isArray(stored.addons) ? stored.addons : [],
+      };
+    });
 
   const [search, setSearch] =
     useState("");
@@ -1849,19 +1907,20 @@ function App() {
 
   const requirePlan = (
     required: PlanId,
-    feature: string
+    feature: string,
+    addon?: AddonId
   ) => {
-    if (
-      hasFeature(
-        subscription.plan,
-        required
-      )
-    ) {
+    if (hasEntitlement(subscription, required, addon)) {
       return true;
     }
 
+    const addonText = addon
+      ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
+      : "";
+
     const answer = confirm(
-      `${feature} richiede ${PLAN_NAMES[required]}.\n\nVuoi vedere i piani disponibili?`
+      feature + " richiede " + PLAN_NAMES[required] + "." + addonText +
+      "\n\nVuoi vedere piani e sblocchi singoli?"
     );
 
     if (answer) {
@@ -2252,7 +2311,8 @@ function App() {
     if (
       !requirePlan(
         "portal",
-        "La condivisione con i condomini"
+        "La condivisione con i condomini",
+        "portale"
       )
     )
       return;
@@ -2279,7 +2339,8 @@ function App() {
     if (
       !requirePlan(
         "plus",
-        "L'elaborazione automatica AI dei documenti"
+        "L'elaborazione automatica AI dei documenti",
+        "ai"
       )
     )
       return;
@@ -2436,7 +2497,8 @@ function App() {
     if (
       !requirePlan(
         "professional",
-        "La gestione dell'audio delle assemblee"
+        "La gestione dell'audio delle assemblee",
+        "assemblee"
       )
     )
       return;
@@ -2477,7 +2539,8 @@ function App() {
     if (
       !requirePlan(
         "professional",
-        "La generazione automatica dei verbali"
+        "La generazione automatica dei verbali",
+        "assemblee"
       )
     )
       return;
@@ -2551,7 +2614,8 @@ function App() {
     if (
       !requirePlan(
         "portal",
-        "La pubblicazione dei verbali nel portale"
+        "La pubblicazione dei verbali nel portale",
+        "portale"
       )
     )
       return;
@@ -2905,7 +2969,8 @@ function App() {
       communicationForm.publishedToPortal &&
       !requirePlan(
         "portal",
-        "La pubblicazione delle comunicazioni nel portale"
+        "La pubblicazione delle comunicazioni nel portale",
+        "portale"
       )
     ) {
       return;
@@ -2983,7 +3048,8 @@ function App() {
     if (
       !requirePlan(
         "portal",
-        "La pubblicazione delle comunicazioni"
+        "La pubblicazione delle comunicazioni",
+        "portale"
       )
     )
       return;
@@ -3016,7 +3082,8 @@ function App() {
     if (
       !requirePlan(
         "portal",
-        "Il portale condomini"
+        "Il portale condomini",
+        "portale"
       )
     )
       return;
@@ -8303,248 +8370,101 @@ function PortalPage({
 function SubscriptionPage({
   subscription,
   setSubscription,
-}: any) {
-  const plans: {
-    id: PlanId;
-    title: string;
-    description: string;
-    features: string[];
-  }[] = [
-    {
-      id: "free",
-      title: "BETHAG Free",
-      description:
-        "Il gestionale essenziale.",
-      features: [
-        "Condomini",
-        "Inserimento manuale",
-        "Archivio documenti",
-        "Scadenze",
-        "Promemoria",
-        "Attività",
-        "Fornitori",
-        "Assemblee",
-      ],
-    },
-    {
-      id: "plus",
-      title: "BETHAG Plus",
-      description:
-        "Automazione documentale.",
-      features: [
-        "Tutto Free",
-        "Acquisizione documenti",
-        "PDF",
-        "Word",
-        "Excel",
-        "Immagini",
-        "Analisi AI",
-        "Estrazione dati",
-      ],
-    },
-    {
-      id: "professional",
-      title:
-        "BETHAG Professional",
-      description:
-        "Automazione avanzata.",
-      features: [
-        "Tutto Plus",
-        "Generazione documenti",
-        "Acquisizione audio",
-        "Trascrizione assemblee",
-        "Bozza automatica verbale",
-        "Workflow di verifica",
-        "Automazioni avanzate",
-      ],
-    },
-    {
-      id: "portal",
-      title: "BETHAG Portal",
-      description:
-        "Amministratore + condomini.",
-      features: [
-        "Tutto Professional",
-        "Portale condomini",
-        "Utenti e ruoli",
-        "Permessi granulari",
-        "Documenti condivisi",
-        "Verbali pubblicabili",
-        "Comunicazioni",
-        "Accesso riservato",
-      ],
-    },
+}: {
+  subscription: Subscription;
+  setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
+}) {
+  const plans = [
+    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Condomini","Inserimento manuale","Archivio documenti","Scadenze","Promemoria","Attività","Fornitori","Assemblee"] },
+    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Acquisizione documenti","PDF","Word","Excel","Immagini","Analisi AI","Estrazione dati"] },
+    { id: "professional" as PlanId, title: "BETHAG Professional", description: "Automazione avanzata.", features: ["Tutto Plus","Generazione documenti","Acquisizione audio","Trascrizione assemblee","Bozza automatica verbale","Workflow di verifica","Automazioni avanzate"] },
+    { id: "portal" as PlanId, title: "BETHAG Portal", description: "Amministratore + condomini.", features: ["Tutto Professional","Portale condomini","Utenti e ruoli","Permessi granulari","Documenti condivisi","Verbali pubblicabili","Comunicazioni","Accesso riservato"] },
   ];
 
-  const activateDemo = (
-    id: PlanId
-  ) => {
-    setSubscription({
-      plan: id,
-      status: "Demo",
-      renewalDate: "",
-    });
+  const addons: AddonId[] = ["condomini","documenti","scadenze","assemblee","fornitori","attivita","comunicazioni","ai","portale"];
+
+  const activateDemo = (id: PlanId) => {
+    setSubscription((current) => ({ ...current, plan: id, status: "Demo", renewalDate: "" }));
   };
+
+  const unlockAddon = (addon: AddonId) => {
+    setSubscription((current) => ({
+      ...current,
+      addons: current.addons.includes(addon) ? current.addons : [...current.addons, addon],
+    }));
+  };
+
+  const isIncluded = (addon: AddonId) => hasFeature(subscription.plan, ADDON_REQUIRED_PLAN[addon]);
 
   return (
     <>
-
-      <PageHeader
-        eyebrow="Modello di servizio"
-        title="Piano BETHAG"
-      />
-
-
+      <PageHeader eyebrow="Modello di servizio" title="Piano e upgrade" />
       <section className="subscription-current">
-
         <div>
-
-          <span className="eyebrow">
-            Piano attuale
-          </span>
-
-          <h2>
-            {
-              PLAN_NAMES[
-                subscription.plan
-              ]
-            }
-          </h2>
-
-          <p>
-            {
-              PLAN_DESCRIPTIONS[
-                subscription.plan
-              ]
-            }
-          </p>
-
+          <span className="eyebrow">Piano attuale</span>
+          <h2>{PLAN_NAMES[subscription.plan]}</h2>
+          <p>{PLAN_DESCRIPTIONS[subscription.plan]}</p>
         </div>
-
-        <Badge
-          value={
-            subscription.status
-          }
-        />
-
+        <div className="subscription-current-right">
+          <Badge value={subscription.status} />
+          {subscription.addons.length > 0 && <span className="badge">{subscription.addons.length} sblocc{subscription.addons.length === 1 ? "o" : "hi"} singol{subscription.addons.length === 1 ? "o" : "i"}</span>}
+        </div>
       </section>
-
 
       <section className="pricing-grid">
-
-        {plans.map(
-          (plan) => (
-            <article
-              className={`pricing-card ${
-                subscription.plan ===
-                plan.id
-                  ? "current"
-                  : ""
-              }`}
-              key={plan.id}
-            >
-
-              {subscription.plan ===
-                plan.id && (
-                <div className="current-plan">
-                  Piano attuale
-                </div>
-              )}
-
-              <div className="pricing-icon">
-
-                {plan.id ===
-                "free"
-                  ? "🆓"
-                  : plan.id ===
-                    "plus"
-                  ? "✨"
-                  : plan.id ===
-                    "professional"
-                  ? "🚀"
-                  : "👥"}
-
-              </div>
-
-              <h2>
-                {plan.title}
-              </h2>
-
-              <p>
-                {plan.description}
-              </p>
-
-              <ul>
-
-                {plan.features.map(
-                  (
-                    feature
-                  ) => (
-                    <li
-                      key={
-                        feature
-                      }
-                    >
-                      ✓{" "}
-                      {
-                        feature
-                      }
-                    </li>
-                  )
-                )}
-
-              </ul>
-
-              <button
-                className={
-                  subscription.plan ===
-                  plan.id
-                    ? "secondary-button"
-                    : "primary-button"
-                }
-                onClick={() =>
-                  activateDemo(
-                    plan.id
-                  )
-                }
-              >
-                {subscription.plan ===
-                plan.id
-                  ? "Piano attivo"
-                  : "Prova struttura"}
-              </button>
-
-            </article>
-          )
-        )}
-
+        {plans.map((plan) => (
+          <article className={`pricing-card ${subscription.plan === plan.id ? "current" : ""}`} key={plan.id}>
+            {subscription.plan === plan.id && <div className="current-plan">Piano attuale</div>}
+            <div className="pricing-icon">{plan.id === "free" ? "🆓" : plan.id === "plus" ? "✨" : plan.id === "professional" ? "🚀" : "👥"}</div>
+            <h2>{plan.title}</h2>
+            <p>{plan.description}</p>
+            <ul>{plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul>
+            <button className={subscription.plan === plan.id ? "secondary-button" : "primary-button"} onClick={() => activateDemo(plan.id)}>
+              {subscription.plan === plan.id ? "Piano attivo" : "Prova struttura"}
+            </button>
+          </article>
+        ))}
       </section>
 
+      <section className="addon-panel">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Modello modulare</span>
+            <h2>Sblocchi singoli</h2>
+            <p className="section-subtitle">Non devi necessariamente passare al piano superiore. Puoi aggiungere una singola funzionalità al tuo piano quando ti serve.</p>
+          </div>
+          <span className="badge">Add-on</span>
+        </div>
+        <div className="addon-grid">
+          {addons.map((addon) => {
+            const included = isIncluded(addon);
+            const unlocked = hasAddon(subscription, addon);
+            return (
+              <article className="addon-card" key={addon}>
+                <div className="addon-card-top">
+                  <div>
+                    <span className="addon-icon">{addon === "ai" ? "✦" : addon === "portale" ? "◈" : "▦"}</span>
+                    <h3>{ADDON_NAMES[addon]}</h3>
+                  </div>
+                  <strong>{ADDON_PRICES[addon]}</strong>
+                </div>
+                <p>{included ? "Incluso in " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "." : unlocked ? "Sbloccato singolarmente nel tuo workspace." : "Disponibile anche senza passare a " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "."}</p>
+                <button type="button" className={included || unlocked ? "secondary-button" : "primary-button"} disabled={included || unlocked} onClick={() => unlockAddon(addon)}>
+                  {included ? "✓ Incluso nel piano" : unlocked ? "✓ Sbloccato" : "Sblocca singolarmente"}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="info-card">
-
-        <b>
-          Struttura predisposta per
-          gli abbonamenti
-        </b>
-
-        <p>
-          I pulsanti presenti in questa
-          versione servono per testare
-          localmente i diversi livelli.
-          Il pagamento reale verrà
-          collegato successivamente a un
-          sistema di abbonamento e il
-          controllo del piano dovrà essere
-          effettuato anche dal backend.
-        </p>
-
+        <b>Abbonamento e acquisti reali</b>
+        <p>In questa versione gli upgrade e gli sblocchi singoli sono simulati localmente per permettere di testare il modello commerciale. Il pagamento reale, la fatturazione e il controllo server-side degli entitlement verranno collegati successivamente.</p>
       </div>
-
     </>
   );
 }
-
 
 /* =========================================================
    GESTIONE COLLABORATORI
@@ -13008,6 +12928,14 @@ input:focus,textarea:focus,select:focus{
   .resident-identity{display:none}
 }
 
+
+.addon-panel{margin-top:22px;padding:22px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:var(--bethag-shadow)}
+.subscription-current-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.addon-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.addon-card{display:flex;flex-direction:column;gap:10px;padding:17px;border:1px solid #e2e8f0;border-radius:15px;background:linear-gradient(145deg,#fff,#f8faff)}
+.addon-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.addon-card-top h3{margin:8px 0 0;font-size:15px}.addon-card-top strong{font-size:12px;color:#3857d6;white-space:nowrap}.addon-card p{margin:0;color:#64748b;font-size:12px;line-height:1.5;min-height:38px}.addon-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eef2ff;color:#3857d6;font-weight:900}.addon-card button{margin-top:auto}.addon-card button:disabled{opacity:1;cursor:default}
+@media(max-width:900px){.addon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.addon-grid{grid-template-columns:1fr}.subscription-current-right{justify-content:flex-start}}
 `;
 
 
