@@ -5424,7 +5424,6 @@ function App() {
               onStatusRequest={updateCondominiumRequestStatus}
               onNewCommunication={newCommunication}
               onPrepareEmail={prepareCondominiumEmail}
-              onOpenEmailComposer={openCondominiumEmailComposer}
               isAdministrator={isAdministrator}
             />
           )}
@@ -7091,7 +7090,6 @@ function CondominiumsPage(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
-    onOpenEmailComposer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
@@ -7246,7 +7244,6 @@ function CondominiumsPage(
           onStatusRequest={onStatusRequest}
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
-          onOpenEmailComposer={openCondominiumEmailComposer}
           onNewDeadline={() => onNewDeadline(selected.id)}
           onNewDocument={() => onNewDocument(selected.id)}
           onNewAssembly={() => onNewAssembly(selected.id)}
@@ -7426,7 +7423,6 @@ function CondominiumDetails(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
-    onOpenEmailComposer,
     onEditDeadline,
     onEditDocument,
     onEditAssembly,
@@ -7752,7 +7748,7 @@ function CondominiumDetails(
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
           <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
-            <button className="primary-button" type="button" onClick={() => onOpenEmailComposer(item.id, undefined, "Tutti")}>
+            <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
               ✉️ Scrivi a tutti
             </button>
             <button
@@ -7779,7 +7775,7 @@ function CondominiumDetails(
               </button>
               <div className="related-actions">
                 <button className="secondary-button small" type="button" onClick={() => setSelectedMemberDetail(member)}>Dettagli</button>
-                <button className="secondary-button small" type="button" onClick={() => onOpenEmailComposer(item.id, [member.id], "Selezionati")}>
+                <button className="secondary-button small" type="button" onClick={() => openCondominiumEmailComposer(item.id, [member.id], "Selezionati")}>
                   ✉️ Scrivi
                 </button>
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
@@ -7817,7 +7813,7 @@ function CondominiumDetails(
           </div>
           <div className="form-actions">
             <button className="secondary-button" type="button" onClick={() => setSelectedMemberDetail(null)}>Chiudi</button>
-            <button className="secondary-button" type="button" onClick={() => onOpenEmailComposer(item.id, [selectedMemberDetail.id], "Selezionati")}>
+            <button className="secondary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, [selectedMemberDetail.id], "Selezionati")}>
               ✉️ Scrivi
             </button>
             <button
