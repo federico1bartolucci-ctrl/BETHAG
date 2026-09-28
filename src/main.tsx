@@ -7370,6 +7370,7 @@ function CondominiumDetails(
   props: any
 ) {
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [selectedMemberDetail, setSelectedMemberDetail] = useState<CondominiumMember | null>(null);
   const {
     item,
     onClose,
@@ -7732,18 +7733,70 @@ function CondominiumDetails(
         <div className="condominium-member-list">
           {activeMembers.length === 0 ? <Empty text="Nessun condòmino presente nell'anagrafica." /> : activeMembers.map((member: CondominiumMember) => (
             <div className="condominium-member-card" key={member.id}>
-              <div className="member-main"><b>{member.firstName} {member.lastName}</b><span>{member.apartment} · {member.role} · {member.millesimi || "Millesimi non inseriti"}</span><small>{member.phone || "Telefono non inserito"}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</small></div>
-              {isAdministrator && (
-                <div className="related-actions">
-                  {member.email && <button className="secondary-button small" onClick={() => onPrepareEmail(item.id, [member.id])}>Scrivi</button>}
-                  <button className="secondary-button small" onClick={() => onEditMember(member)}>Modifica</button>
-                  <button className="mini-danger" onClick={() => onDeleteMember(member.id)}>×</button>
-                </div>
-              )}
+              <button
+                type="button"
+                className="member-main member-main-button"
+                onClick={() => setSelectedMemberDetail(member)}
+                aria-label={`Visualizza il dettaglio di ${member.firstName} ${member.lastName}`}
+              >
+                <b>{member.firstName} {member.lastName}</b>
+                <span>{member.apartment} · {member.role} · {member.millesimi || "Millesimi non inseriti"}</span>
+                <small>{member.phone || "Telefono non inserito"}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</small>
+              </button>
+              <div className="related-actions">
+                <button className="secondary-button small" type="button" onClick={() => setSelectedMemberDetail(member)}>Dettagli</button>
+                {isAdministrator && (
+                  <>
+                    {member.email && <button className="secondary-button small" type="button" onClick={() => onPrepareEmail(item.id, [member.id])}>Scrivi</button>}
+                    <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>Modifica</button>
+                    <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)}>×</button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </section>
+
+      {selectedMemberDetail && (
+        <Modal onClose={() => setSelectedMemberDetail(null)}>
+          <ModalTitle title="Dettaglio condòmino" />
+          <div className="detail-grid">
+            <Detail label="Nome e cognome" value={`${selectedMemberDetail.firstName} ${selectedMemberDetail.lastName}`} />
+            <Detail label="Qualifica" value={selectedMemberDetail.role} />
+            <Detail label="Unità abitativa" value={selectedMemberDetail.apartment || "Non associata"} />
+            <Detail label="Millesimi" value={selectedMemberDetail.millesimi || "Non inseriti"} />
+            <Detail label="Codice fiscale" value={selectedMemberDetail.fiscalCode || "Non inserito"} />
+            <Detail label="Telefono" value={selectedMemberDetail.phone || "Non inserito"} />
+            <Detail label="E-mail" value={selectedMemberDetail.email || "Non inserita"} />
+            <Detail label="Stato" value={selectedMemberDetail.active ? "Attivo" : "Disattivato"} />
+          </div>
+          <div className="notes">
+            <div className="detail-label">Accesso Portale</div>
+            <p>{selectedMemberDetail.userId ? "Attivo e associato all'account BETHAG." : "Non ancora attivato."}</p>
+          </div>
+          <div className="notes">
+            <div className="detail-label">Note</div>
+            <p>{selectedMemberDetail.notes || "Nessuna nota inserita."}</p>
+          </div>
+          <div className="form-actions">
+            <button className="secondary-button" type="button" onClick={() => setSelectedMemberDetail(null)}>Chiudi</button>
+            {isAdministrator && (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  const member = selectedMemberDetail;
+                  setSelectedMemberDetail(null);
+                  onEditMember(member);
+                }}
+              >
+                Modifica condòmino
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
 
       <section className="condominium-section-card">
         <div className="section-title"><div><div className="eyebrow">Assistenza</div><h2>Segnalazioni e richieste</h2><p className="section-subtitle">Raccogli le richieste dei condòmini e gestiscine lo stato fino alla chiusura.</p></div>{isAdministrator && <button className="primary-button" onClick={() => onNewRequest(item.id)}>+ Nuova segnalazione</button>}</div>
@@ -14952,7 +15005,8 @@ select:focus{
   .condominium-members-actions>*{flex:1 1 auto!important}
   .condominium-add-member-button{min-width:100%}
 }
-.condominium-member-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}.condominium-member-card{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;border:1px solid #eef2f7;border-radius:12px;background:#f8fafc}.member-main{min-width:0}.member-main b,.member-main span,.member-main small{display:block}.member-main span{margin-top:5px;color:#475569;font-size:13px}.member-main small{margin-top:4px;color:#64748b;font-size:12px;word-break:break-word}
+.condominium-member-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}.member-main-button{border:0;background:transparent;padding:0;text-align:left;cursor:pointer;color:inherit;display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0}.member-main-button:hover b{text-decoration:underline}.condominium-member-card .related-actions{flex-wrap:wrap;justify-content:flex-end}
+.condominium-member-card{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;border:1px solid #eef2f7;border-radius:12px;background:#f8fafc}.member-main{min-width:0}.member-main b,.member-main span,.member-main small{display:block}.member-main span{margin-top:5px;color:#475569;font-size:13px}.member-main small{margin-top:4px;color:#64748b;font-size:12px;word-break:break-word}
 .request-summary{display:flex;gap:20px;margin:14px 0;color:#64748b;font-size:13px}.request-summary b{color:#111827;font-size:18px}.request-card{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid #eef2f7}.request-card:last-child{border-bottom:0}.request-main{min-width:0;flex:1}.request-main>b,.request-main>span{display:block}.request-main>span{margin-top:4px;color:#64748b;font-size:12px}.request-main p{margin:8px 0 0;color:#475569;line-height:1.5;white-space:pre-wrap}.request-response{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.request-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:230px}
 .recipient-picker{padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px}.recipient-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.recipient-option{display:flex;align-items:center;gap:8px;font-size:13px}.communication-email-actions{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px;background:#f8fafc;border-radius:10px}.communication-email-actions span{color:#64748b;font-size:12px}
 @media (max-width:760px){.condominium-member-card,.request-card{align-items:flex-start;flex-direction:column}.request-actions{width:100%;justify-content:flex-start;min-width:0}.button-row.compact{width:100%;flex-direction:column}.button-row.compact>*{width:100%}.communication-email-actions{align-items:flex-start;flex-direction:column}}
