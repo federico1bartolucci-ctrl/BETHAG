@@ -3233,11 +3233,25 @@ function App() {
 
   const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const portalMember = !isAdministrator
+      ? portalMembers.find((member) => member.active && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
+      : null;
+    const portalCondominiumMember = portalMember
+      ? condominiumMembers.find((member) => member.condominiumId === portalMember.condominiumId && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
+      : null;
+    if (!isAdministrator && (!portalMember || !portalMember.condominiumId)) {
+      alert("Il profilo del portale non è associato a un condominio attivo.");
+      return;
+    }
     if (selectedCondominiumRequest) {
       if (!isAdministrator) {
         alert("La modifica di una richiesta ricevuta è riservata all'Amministratore.");
         return;
       }
+    }
+    if (!isAdministrator) {
+      condominiumRequestForm.condominiumId = portalMember!.condominiumId;
+      condominiumRequestForm.memberId = portalCondominiumMember?.id ?? null;
     }
     if (!condominiumRequestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
     if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
@@ -4081,6 +4095,20 @@ function App() {
                 subscription
               }
               isAdministrator={isAdministrator}
+              condominiumMembers={condominiumMembers}
+              condominiumRequests={condominiumRequests}
+              sessionEmail={sessionEmail}
+              onPortalRequest={(member: PortalMember) => {
+                const condominiumMember = condominiumMembers.find((item) => item.condominiumId === member.condominiumId && item.email.trim().toLowerCase() === member.email.trim().toLowerCase());
+                setSelectedCondominiumRequest(null);
+                setCondominiumRequestForm({
+                  ...emptyCondominiumRequest,
+                  condominiumId: member.condominiumId,
+                  memberId: condominiumMember?.id ?? null,
+                  date: localISODate(),
+                });
+                openModal("condominium-request");
+              }}
             />
           )}
 
