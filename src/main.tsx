@@ -137,7 +137,8 @@ type PortalPermission =
   | "documenti"
   | "verbali"
   | "regolamento"
-  | "pagamenti"
+  | "pagamenti_ordinari"
+  | "pagamenti_straordinari"
   | "assemblee"
   | "comunicazioni";
 
@@ -795,6 +796,8 @@ const initialPortalMembers: PortalMember[] = [
       "documenti",
       "verbali",
       "regolamento",
+      "pagamenti_ordinari",
+      "pagamenti_straordinari",
       "assemblee",
       "comunicazioni",
     ],
@@ -1086,7 +1089,8 @@ function permissionName(
     documenti: "Documenti",
     verbali: "Verbali",
     regolamento: "Regolamento",
-    pagamenti: "Pagamenti",
+    pagamenti_ordinari: "Spese ordinarie",
+    pagamenti_straordinari: "Spese straordinarie",
     assemblee: "Assemblee",
     comunicazioni: "Comunicazioni",
   };
@@ -9887,7 +9891,8 @@ function PortalPage({
                   "documenti",
                   "verbali",
                   "regolamento",
-                  "pagamenti",
+                  "pagamenti_ordinari",
+                  "pagamenti_straordinari",
                   "assemblee",
                   "comunicazioni",
                 ] as PortalPermission[]
