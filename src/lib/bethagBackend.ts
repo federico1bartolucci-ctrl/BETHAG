@@ -371,15 +371,22 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     .select("id, condominium_id, unit_code")
     .eq("workspace_id", workspaceId);
   if (existingUnitsError) throw existingUnitsError;
-  for (const unit of existingUnitsWorkspace ?? []) {
-    const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
-    if (!desiredUnitKeys.has(key)) {
-      const { error: deleteUnitError } = await supabase
-        .from("condominium_units")
-        .delete()
-        .eq("id", unit.id)
-        .eq("workspace_id", workspaceId);
-      if (deleteUnitError) throw deleteUnitError;
+
+  // Protezione anti-perdita dati: una sincronizzazione con uno stato locale
+  // temporaneamente vuoto/non idratato non deve mai interpretare l'assenza
+  // delle unità come una richiesta di cancellazione massiva. Le cancellazioni
+  // esplicite vengono gestite dalle azioni dedicate dell'interfaccia.
+  if (desiredUnitKeys.size > 0 || (existingUnitsWorkspace ?? []).length === 0) {
+    for (const unit of existingUnitsWorkspace ?? []) {
+      const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
+      if (!desiredUnitKeys.has(key)) {
+        const { error: deleteUnitError } = await supabase
+          .from("condominium_units")
+          .delete()
+          .eq("id", unit.id)
+          .eq("workspace_id", workspaceId);
+        if (deleteUnitError) throw deleteUnitError;
+      }
     }
   }
 }
@@ -411,6 +418,12 @@ async function reconcileCondominiumMembers(condominiumId: string, desiredRows: a
     .select("id, legacy_id")
     .eq("condominium_id", condominiumId);
   if (error) throw error;
+
+  // Protezione anti-perdita dati: se il frontend invia temporaneamente una
+  // lista vuota mentre il database contiene già condòmini, non cancelliamo
+  // automaticamente l'intero elenco. La cancellazione esplicita deve partire
+  // dall'azione di eliminazione del singolo condòmino.
+  if (desiredRows.length === 0 && (existingRows ?? []).length > 0) return;
 
   const desiredIds = new Set(desiredRows.map((row: any) => row.legacy_id));
   const staleRows = (existingRows ?? []).filter((row: any) => !desiredIds.has(row.legacy_id));
