@@ -5571,7 +5571,7 @@ function BrandLogo({
     <div className={`brand-logo ${compact ? "brand-logo-compact" : ""}`} aria-label="BETHAG">
       <img
         className="brand-logo-image"
-        src="/bethag.svg"
+        src={`${import.meta.env.BASE_URL}bethag.svg`}
         alt="BETHAG"
       />
     </div>
