@@ -4554,6 +4554,24 @@ function AppIcon({
       return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2A2 2 0 0 0 5.8 18l-.1.1a2 2 0 0 1-2.8-2.8L3 15a2 2 0 0 0-1.4-3.4h-.2a2 2 0 0 1 0-4h.2A2 2 0 0 0 3 4.2l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1A2 2 0 0 0 9.2 0h.2a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1A2 2 0 0 0 21 7.8v.2a2 2 0 0 1 0 4h-.2a2 2 0 0 0-1.4 3.4z" transform="scale(.8) translate(3 3)" /></svg>;
     case "alert":
       return <svg {...common}><path d="M12 4 3.8 19h16.4L12 4z" /><path d="M12 9v4M12 16h.01" /></svg>;
+    case "trash":
+      return <svg {...common}><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>;
+    case "lock":
+      return <svg {...common}><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>;
+    case "microphone":
+      return <svg {...common}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" /></svg>;
+    case "file":
+      return <svg {...common}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>;
+    case "image":
+      return <svg {...common}><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m5 17 5-5 3 3 2-2 4 4" /></svg>;
+    case "pdf":
+      return <svg {...common}><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5M9 14h6M9 17h4" /></svg>;
+    case "wallet":
+      return <svg {...common}><path d="M4 7h15a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14v3" /><path d="M17 13h4" /></svg>;
+    case "book":
+      return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z" /><path d="M4 5.5V22M8 7h8M8 11h8" /></svg>;
+    case "rocket":
+      return <svg {...common}><path d="M14 4c3-2 5-1 6-1 0 1 1 3-1 6l-5 5-4-1-1-4z" /><path d="m10 14-4 4M7 17l-1 3 3-1M14 9h.01" /></svg>;
     case "menu":
       return <svg {...common}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
     default:
@@ -6568,8 +6586,8 @@ function DocumentsPage({
                 >
                   {d.publication ===
                   "Condiviso"
-                    ? "🔒 Rendi privato"
-                    : "👥 Condividi con condomini"}
+                    ? <><AppIcon name="lock" size={16} /> Rendi privato</>
+                    : <><AppIcon name="users" size={16} /> Condividi con condomini</>}
                 </button>
 
                 <button
@@ -7040,8 +7058,8 @@ function AssembliesPage({
                   }
                 >
                   {a.publishedToPortal
-                    ? "🔒 Nascondi"
-                    : "👥 Pubblica"}
+                    ? <><AppIcon name="lock" size={16} /> Nascondi</>
+                    : <><AppIcon name="users" size={16} /> Pubblica</>}
                 </button>
 
 
@@ -7548,8 +7566,8 @@ function CommunicationsPage({
                   }
                 >
                   {c.publishedToPortal
-                    ? "🔒 Ritira"
-                    : "👥 Pubblica"}
+                    ? <><AppIcon name="lock" size={16} /> Ritira</>
+                    : <><AppIcon name="users" size={16} /> Pubblica</>}
                 </button>
 
                 <button
@@ -8757,7 +8775,7 @@ function SubscriptionPage({
         {plans.map((plan) => (
           <article className={`pricing-card ${subscription.plan === plan.id ? "current" : ""}`} key={plan.id}>
             {subscription.plan === plan.id && <div className="current-plan">Piano attuale</div>}
-            <div className="pricing-icon">{plan.id === "free" ? "🆓" : plan.id === "plus" ? "✨" : plan.id === "professional" ? "🚀" : "👥"}</div>
+            <div className="pricing-icon">{plan.id === "free" ? "🆓" : plan.id === "plus" ? <AppIcon name="sparkles" size={20} /> : plan.id === "professional" ? "🚀" : "👥"}</div>
             <h2>{plan.title}</h2>
             <p>{plan.description}</p>
             <ul>{plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul>
