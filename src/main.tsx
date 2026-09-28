@@ -1336,6 +1336,54 @@ function LoginPage({
   );
 }
 
+function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 8) {
+      setError("La password deve contenere almeno 8 caratteri.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Le password non coincidono.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await onComplete(password);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Impossibile impostare la password.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-card-header"><BrandLogo /></div>
+        <h1>Attiva il tuo account BETHAG</h1>
+        <p className="login-intro">La tua e-mail è stata invitata dall'amministratore. Imposta ora la password personale per completare l'attivazione.</p>
+        <form onSubmit={submit}>
+          <label>Nuova password</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
+          <label>Conferma password</label>
+          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
+          {error && <div className="login-error">{error}</div>}
+          <button className="primary-button login-submit" disabled={busy} type="submit">
+            {busy ? "Attivazione in corso…" : "Attiva account"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function ResidentPortalView({
   email,
   condominiums,
@@ -1656,6 +1704,7 @@ function App() {
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
 
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -2095,6 +2144,36 @@ function App() {
     setPage("homepage");
   };
 
+  const completePasswordSetup = async (password: string) => {
+    if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
+    const { error } = await supabase.auth.updateUser({
+      password,
+      data: { bethag_password_set: true },
+    });
+    if (error) throw new Error(error.message || "Impossibile impostare la password.");
+
+    setRequiresPasswordSetup(false);
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (!user) throw new Error("Sessione BETHAG non disponibile.");
+
+    const access = await resolveSupabaseAccess(user.id, user.email || "");
+    if (!access) {
+      await supabase.auth.signOut();
+      throw new Error("Account attivato, ma l'associazione al portale non è disponibile.");
+    }
+
+    setSessionRole(access.role);
+    setSessionEmail(user.email || "");
+    setProfile((current) => ({
+      ...current,
+      workspaceId: access.workspaceId,
+      email: user.email || current.email,
+      name: user.user_metadata?.full_name || current.name,
+    }));
+    setPage("homepage");
+  };
+
   const logout = async () => {
     if (supabaseConfigured && supabase) {
       await supabase.auth.signOut();
@@ -2182,6 +2261,12 @@ function App() {
 
       try {
         const normalizedEmail = (session.user.email || "").trim();
+        const invitedResident = session.user.user_metadata?.bethag_invited === true &&
+          session.user.user_metadata?.bethag_password_set !== true;
+        if (invitedResident) {
+          setRequiresPasswordSetup(true);
+          return;
+        }
         const pendingRegistrationRaw = sessionStorage.getItem("bethag-pending-resident-registration");
         if (pendingRegistrationRaw && supabase) {
           try {
@@ -2322,7 +2407,16 @@ function App() {
           }
         }
 
-        if (sessionRole === "resident") {
+        if (requiresPasswordSetup) {
+    return (
+      <>
+        <style>{styles}</style>
+        <PasswordSetupPage onComplete={completePasswordSetup} />
+      </>
+    );
+  }
+
+  if (sessionRole === "resident") {
           const { data: portalAccess, error } = await supabase
             .from("portal_access")
             .select("workspace_id, role, active")
