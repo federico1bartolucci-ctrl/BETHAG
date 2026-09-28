@@ -53,6 +53,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     communications,
     condominiumRequests,
     portalAccess,
+    workspaceMembers,
   ] = await Promise.all([
     condominiumIds.length
       ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
@@ -65,6 +66,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("communications").select("*").eq("workspace_id", workspaceId),
     supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
     supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
+    supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
   ]);
 
   const firstError = [
@@ -77,6 +79,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     communications,
     condominiumRequests,
     portalAccess,
+    workspaceMembers,
   ].find((result) => result.error)?.error;
 
   if (firstError) throw firstError;
@@ -102,6 +105,15 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities: (activities.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     communications: (communications.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    collaborators: (workspaceMembers.data ?? []).map((row: any) => ({
+      id: row.legacy_id,
+      userId: row.user_id,
+      name: row.data?.name ?? "",
+      email: row.data?.email ?? "",
+      workspaceId,
+      status: row.active ? "Attivo" : "Disattivato",
+      permissions: Array.isArray(row.permissions) ? row.permissions : [],
+    })),
     portalMembers: (portalAccess.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.legacy_id,
@@ -225,6 +237,18 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
     if (rows.length) await upsertRows(table, rows);
   }
 
+  const collaboratorRows = (state.collaborators ?? []).map((item: any) => ({
+    workspace_id: workspaceId,
+    user_id: item.userId ?? null,
+    role: "collaborator",
+    active: item.status !== "Disattivato",
+    permissions: item.permissions ?? [],
+    legacy_id: item.id,
+    data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
+  })).filter((row: any) => row.user_id);
+
+  if (collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
+
   const portalRows = (state.portalMembers ?? []).map((item: any) => ({
     workspace_id: workspaceId,
     legacy_id: item.id,
@@ -241,6 +265,25 @@ export async function syncBackendState(workspaceId: string, state: BackendState)
 
   if (portalRows.length) await upsertRows("portal_access", portalRows);
   await reconcileWorkspaceRows("portal_access", workspaceId, portalRows);
+
+  const { data: existingCollaborators, error: collaboratorQueryError } = await supabase
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId)
+    .eq("role", "collaborator");
+  if (collaboratorQueryError) throw collaboratorQueryError;
+  const desiredCollaboratorIds = new Set(collaboratorRows.map((row: any) => row.user_id));
+  for (const row of existingCollaborators ?? []) {
+    if (!desiredCollaboratorIds.has(row.user_id)) {
+      const { error: deleteError } = await supabase
+        .from("workspace_members")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", row.user_id)
+        .eq("role", "collaborator");
+      if (deleteError) throw deleteError;
+    }
+  }
 
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
