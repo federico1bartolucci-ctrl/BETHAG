@@ -19,8 +19,16 @@ export async function getActiveWorkspaceId(userId: string) {
 export async function loadBackendState(workspaceId: string): Promise<BackendState> {
   if (!supabase) throw new Error("Supabase non configurato.");
 
+  const condominiums = await supabase
+    .from("condominiums")
+    .select("*")
+    .eq("workspace_id", workspaceId);
+
+  if (condominiums.error) throw condominiums.error;
+
+  const condominiumIds = (condominiums.data ?? []).map((row: any) => row.id);
+
   const [
-    condominiums,
     condominiumMembers,
     documents,
     deadlines,
@@ -30,8 +38,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     communications,
     condominiumRequests,
   ] = await Promise.all([
-    supabase.from("condominiums").select("*").eq("workspace_id", workspaceId),
-    supabase.from("condominium_members").select("*").order("created_at"),
+    condominiumIds.length
+      ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
+      : Promise.resolve({ data: [], error: null }),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
@@ -42,7 +51,6 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   ]);
 
   const firstError = [
-    condominiums,
     condominiumMembers,
     documents,
     deadlines,
@@ -55,9 +63,20 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   if (firstError) throw firstError;
 
+  const condominiumLegacyByDbId = new Map(
+    (condominiums.data ?? []).map((row: any) => [row.id, row.legacy_id])
+  );
+
   return {
     condominiums: (condominiums.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
-    condominiumMembers: (condominiumMembers.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    condominiumMembers: (condominiumMembers.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      condominiumId:
+        row.data?.condominiumId ??
+        condominiumLegacyByDbId.get(row.condominium_id) ??
+        null,
+    })),
     documents: (documents.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     deadlines: (deadlines.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     assemblies: (assemblies.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
