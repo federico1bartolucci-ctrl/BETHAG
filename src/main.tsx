@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3981,19 +3981,7 @@ function App() {
 
       if (supabaseConfigured && supabase && profile.workspaceId) {
         try {
-          await syncBackendState(profile.workspaceId, {
-            condominiums,
-            condominiumMembers: nextMembers,
-            documents,
-            deadlines,
-            assemblies,
-            suppliers,
-            activities,
-            communications,
-            condominiumRequests,
-            portalMembers,
-            collaborators,
-          });
+          await saveCondominiumMemberBackend(profile.workspaceId, data);
         } catch (syncError) {
           console.error("BETHAG condominium member update sync failed", syncError);
           alert(
@@ -4042,19 +4030,7 @@ function App() {
 
       if (supabaseConfigured && supabase && profile.workspaceId && newMember.email.trim()) {
         try {
-          await syncBackendState(profile.workspaceId, {
-            condominiums,
-            condominiumMembers: nextMembers,
-            documents,
-            deadlines,
-            assemblies,
-            suppliers,
-            activities,
-            communications,
-            condominiumRequests,
-            portalMembers,
-            collaborators,
-          });
+          await saveCondominiumMemberBackend(profile.workspaceId, data);
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
               workspaceId: profile.workspaceId,
