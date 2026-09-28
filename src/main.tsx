@@ -2310,6 +2310,7 @@ function App() {
   const saveDeadline = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+if (!requireAdministrator("La gestione delle scadenze")) return;
     event.preventDefault();
 
     if (
@@ -2359,6 +2360,7 @@ function App() {
   const editDeadline = (
     item: Deadline
   ) => {
+if (!requireAdministrator("La modifica delle scadenze")) return;
     setSelectedDeadline(item);
     setDeadlineForm(item);
     openModal("deadline");
@@ -2411,6 +2413,7 @@ function App() {
   const saveDocument = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+if (!requireAdministrator("La gestione dei documenti")) return;
     event.preventDefault();
 
     if (!documentForm.name.trim()) {
@@ -2478,6 +2481,7 @@ function App() {
   const editDocument = (
     item: DocumentItem
   ) => {
+if (!requireAdministrator("La modifica dei documenti")) return;
     setSelectedDocument(item);
     setDocumentForm(item);
     setSelectedFileName("");
@@ -2538,6 +2542,7 @@ function App() {
   const processDocumentAI = (
     item: DocumentItem
   ) => {
+    if (!requireAdministrator("L'elaborazione AI dei documenti")) return;
     if (
       !requirePlan(
         "plus",
@@ -2605,6 +2610,7 @@ function App() {
   const saveAssembly = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+if (!requireAdministrator("La gestione delle assemblee")) return;
     event.preventDefault();
 
     if (
@@ -2665,6 +2671,7 @@ function App() {
   const editAssembly = (
     item: Assembly
   ) => {
+if (!requireAdministrator("La modifica delle assemblee")) return;
     setSelectedAssembly(item);
     setAssemblyForm(item);
     openModal("assembly");
@@ -2876,6 +2883,7 @@ function App() {
   const saveSupplier = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+if (!requireAdministrator("La gestione dei fornitori")) return;
     event.preventDefault();
 
     if (
@@ -2931,6 +2939,7 @@ function App() {
   const editSupplier = (
     item: Supplier
   ) => {
+if (!requireAdministrator("La modifica dei fornitori")) return;
     setSelectedSupplier(item);
     setSupplierForm(item);
     openModal("supplier");
@@ -2971,6 +2980,7 @@ function App() {
   const saveActivity = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+if (!requireAdministrator("La gestione delle attività")) return;
     event.preventDefault();
 
     if (!activityForm.title.trim()) {
@@ -3015,6 +3025,7 @@ function App() {
   const editActivity = (
     item: Activity
   ) => {
+if (!requireAdministrator("La modifica delle attività")) return;
     setSelectedActivity(item);
     setActivityForm(item);
     openModal("activity");
@@ -3461,6 +3472,7 @@ function App() {
      ======================================================= */
 
   const newDeadline = () => {
+    if (!requireAdministrator("La creazione di scadenze")) return;
     setSelectedDeadline(null);
 
     setDeadlineForm({
@@ -3473,6 +3485,7 @@ function App() {
   };
 
   const newDocument = () => {
+    if (!requireAdministrator("La creazione di documenti")) return;
     setSelectedDocument(null);
 
     setDocumentForm({
@@ -3487,6 +3500,7 @@ function App() {
   };
 
   const newAssembly = () => {
+    if (!requireAdministrator("La creazione di assemblee")) return;
     setSelectedAssembly(null);
 
     setAssemblyForm({
@@ -3499,12 +3513,14 @@ function App() {
   };
 
   const newSupplier = () => {
+    if (!requireAdministrator("La creazione di fornitori")) return;
     setSelectedSupplier(null);
     setSupplierForm(emptySupplier);
     openModal("supplier");
   };
 
   const newActivity = () => {
+    if (!requireAdministrator("La creazione di attività")) return;
     setSelectedActivity(null);
     setActivityForm(emptyActivity);
     openModal("activity");
