@@ -3568,7 +3568,7 @@ function App() {
   const editCondominiumMember = (member: CondominiumMember) => { setSelectedCondominiumMember(member); setCondominiumMemberForm(member); openModal("condominium-member"); };
   const deleteCondominiumMember = (id: number) => { if (!requireAdministrator("L'eliminazione del condòmino")) return; if (!confirm("Eliminare questo condòmino dall'anagrafica?")) return; setCondominiumMembers((current) => current.filter((member) => member.id !== id)); };
 
-  const saveCondominiumRequest = (event: React.FormEvent<HTMLFormElement>) => {
+  const saveCondominiumRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const portalMember = !isAdministrator
       ? portalMembers.find((member) => member.active && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
