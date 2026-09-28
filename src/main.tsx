@@ -7013,7 +7013,6 @@ function DeadlinesPage({
 
 
               <div className="row-actions">
-
                 <Badge
                   value={
                     d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
@@ -7022,43 +7021,37 @@ function DeadlinesPage({
                   }
                 />
 
-                <select
-                  value={d.status}
-                  onChange={(e) =>
-                    onStatus(
-                      d.id,
-                      e.target
-                        .value as DeadlineStatus
-                    )
-                  }
-                >
-                  <option>
-                    Da fare
-                  </option>
-                  <option>
-                    In scadenza
-                  </option>
-                  <option>Completata</option>
-                </select>}
+                {isAdministrator && (
+                  <>
+                    <select
+                      value={d.status}
+                      onChange={(e) =>
+                        onStatus(
+                          d.id,
+                          e.target.value as DeadlineStatus
+                        )
+                      }
+                    >
+                      <option>Da fare</option>
+                      <option>In scadenza</option>
+                      <option>Completata</option>
+                    </select>
 
-                {isAdministrator && <button
-                  className="secondary-button small"
-                  onClick={() =>
-                    onEdit(d)
-                  }
-                >
-                  Modifica
-                </button>
+                    <button
+                      className="secondary-button small"
+                      onClick={() => onEdit(d)}
+                    >
+                      Modifica
+                    </button>
 
-                <button
-                  className="mini-danger"
-                  onClick={() =>
-                    onDelete(d.id)
-                  }
-                >
-                  ×
-                </button>
-
+                    <button
+                      className="mini-danger"
+                      onClick={() => onDelete(d.id)}
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
               </div>
 
             </article>
@@ -7247,7 +7240,8 @@ function AssembliesPage({
               </div>
 
 
-              {isAdministrator && <div className="assembly-actions">
+              {isAdministrator && (
+                <div className="assembly-actions">
 
                 <select
                   value={a.status}
@@ -7644,6 +7638,7 @@ function ActivitiesPage({
                 </button>
 
               </div>
+              )}
 
             </article>
           )
