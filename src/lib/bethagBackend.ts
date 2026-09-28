@@ -505,7 +505,6 @@ export async function updateCondominiumRequestStatus(
         title: request.category,
         description: request.description,
         status: request.status,
-        member_id: request.memberDbId ?? undefined,
         data: request,
         updated_at: new Date().toISOString(),
       })
