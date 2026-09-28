@@ -4034,6 +4034,11 @@ function App() {
               plan={
                 subscription.plan
               }
+              portalEnabled={hasEntitlement(
+                subscription,
+                "portal",
+                "portale"
+              )}
               onAdd={
                 addPortalMember
               }
@@ -7861,6 +7866,7 @@ function PortalPage({
   assemblies,
   communications,
   plan,
+  portalEnabled,
   onAdd,
   onToggle,
   onDelete,
@@ -7953,16 +7959,8 @@ function PortalPage({
         action="+ Nuovo accesso"
         onAction={() => {
 
-          if (
-            !hasFeature(
-              plan,
-              "portal"
-            )
-          ) {
-            onNavigate(
-              "abbonamento"
-            );
-
+          if (!portalEnabled) {
+            onNavigate("abbonamento");
             return;
           }
 
@@ -8389,7 +8387,7 @@ function PortalPage({
 
           <div className="permission-box">
             <b>
-              📁 Documenti
+              <AppIcon name="folder" size={18} /> Documenti
             </b>
 
             <span>
@@ -8400,7 +8398,7 @@ function PortalPage({
 
           <div className="permission-box">
             <b>
-              💶 Pagamenti
+              <AppIcon name="wallet" size={18} /> Pagamenti
             </b>
 
             <span>
@@ -8414,12 +8412,23 @@ function PortalPage({
 
           <div className="permission-box">
             <b>
-              👥 Assemblee
+              <AppIcon name="users" size={18} /> Assemblee
             </b>
 
             <span>
               Convocazioni e verbali
               pubblicati
+              dall'amministratore.
+            </span>
+          </div>
+
+          <div className="permission-box">
+            <b>
+              <AppIcon name="megaphone" size={18} /> Comunicazioni
+            </b>
+
+            <span>
+              Avvisi e comunicazioni pubblicati
               dall'amministratore.
             </span>
           </div>
