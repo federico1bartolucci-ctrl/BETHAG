@@ -9102,18 +9102,39 @@ function PortalPage({
   const residentCondominiumId = !isAdministrator ? currentPortalMember?.condominiumId : null;
   const visibleDocuments = documents.filter((d: DocumentItem) =>
     d.publication === "Condiviso" &&
-    (residentCondominiumId === null || residentCondominiumId === undefined || d.condominiumId === residentCondominiumId) &&
-    (isAdministrator || currentPortalMember?.permissions.includes("documenti"))
+    (
+      isAdministrator ||
+      (
+        residentCondominiumId != null &&
+        d.condominiumId === residentCondominiumId &&
+        Boolean(currentPortalMember?.permissions.includes("documenti"))
+      )
+    )
   );
   const visibleMinutes = assemblies.filter((a: Assembly) =>
     a.publishedToPortal &&
-    (residentCondominiumId === null || residentCondominiumId === undefined || a.condominiumId === residentCondominiumId) &&
-    (isAdministrator || currentPortalMember?.permissions.includes("verbali") || currentPortalMember?.permissions.includes("assemblee"))
+    (
+      isAdministrator ||
+      (
+        residentCondominiumId != null &&
+        a.condominiumId === residentCondominiumId &&
+        Boolean(
+          currentPortalMember?.permissions.includes("verbali") ||
+          currentPortalMember?.permissions.includes("assemblee")
+        )
+      )
+    )
   );
   const visibleCommunications = communications.filter((communication: Communication) =>
     communication.publishedToPortal &&
-    (residentCondominiumId === null || residentCondominiumId === undefined || communication.condominiumId === residentCondominiumId) &&
-    (isAdministrator || currentPortalMember?.permissions.includes("comunicazioni"))
+    (
+      isAdministrator ||
+      (
+        residentCondominiumId != null &&
+        communication.condominiumId === residentCondominiumId &&
+        Boolean(currentPortalMember?.permissions.includes("comunicazioni"))
+      )
+    )
   );
   const currentCondominiumMember = currentPortalMember
     ? condominiumMembers.find(
