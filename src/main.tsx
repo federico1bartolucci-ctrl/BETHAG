@@ -2968,6 +2968,15 @@ function App() {
     event.preventDefault();
     if (!condominiumRequestForm.condominiumId) { alert("Seleziona il condominio della segnalazione o richiesta."); return; }
     if (!condominiumRequestForm.description.trim()) { alert("Inserisci la descrizione della segnalazione o richiesta."); return; }
+    if (condominiumRequestForm.memberId) {
+      const member = condominiumMembers.find(
+        (item) => item.id === condominiumRequestForm.memberId
+      );
+      if (!member || member.condominiumId !== condominiumRequestForm.condominiumId) {
+        alert("Il condòmino indicato non appartiene al condominio selezionato.");
+        return;
+      }
+    }
     const data = { ...condominiumRequestForm, description: condominiumRequestForm.description.trim(), response: condominiumRequestForm.response.trim() };
     if (selectedCondominiumRequest) setCondominiumRequests((current) => current.map((request) => request.id === selectedCondominiumRequest.id ? { ...data, id: selectedCondominiumRequest.id } : request));
     else setCondominiumRequests((current) => [{ ...data, id: makeId() }, ...current]);
@@ -2975,8 +2984,20 @@ function App() {
   };
 
   const editCondominiumRequest = (request: CondominiumRequest) => { setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request"); };
-  const deleteCondominiumRequest = (id: number) => { if (!confirm("Eliminare questa segnalazione o richiesta?")) return; setCondominiumRequests((current) => current.filter((request) => request.id !== id)); };
-  const updateCondominiumRequestStatus = (id: number, status: RequestStatus) => { setCondominiumRequests((current) => current.map((request) => request.id === id ? { ...request, status } : request)); };
+  const deleteCondominiumRequest = (id: number) => {
+    if (!requireAdministrator("L'eliminazione della segnalazione o richiesta")) return;
+    if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
+    setCondominiumRequests((current) => current.filter((request) => request.id !== id));
+  };
+
+  const updateCondominiumRequestStatus = (id: number, status: RequestStatus) => {
+    if (!requireAdministrator("La gestione dello stato della segnalazione o richiesta")) return;
+    setCondominiumRequests((current) =>
+      current.map((request) =>
+        request.id === id ? { ...request, status } : request
+      )
+    );
+  };
 
   const prepareCondominiumEmail = (
     condominiumId: number,
