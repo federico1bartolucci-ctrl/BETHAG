@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -1788,6 +1788,20 @@ function App() {
     );
 
   const [condominiumUnits, setCondominiumUnits] = useState<CondominiumUnit[]>([]);
+  const [condominiumUnits, setCondominiumUnits] = useState<CondominiumUnit[]>([]);
+  const [selectedCondominiumUnit, setSelectedCondominiumUnit] = useState<CondominiumUnit | null>(null);
+  const [condominiumUnitForm, setCondominiumUnitForm] = useState<CondominiumUnit>({
+    id: "",
+    condominiumId: 1,
+    unitCode: "",
+    unitType: "Abitazione",
+    cadastralCategory: "A/2",
+    cadastralAutonomous: true,
+    millesimi: "",
+    incorporatedInUnitId: "",
+    notes: "",
+    active: true,
+  });
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
@@ -2610,6 +2624,7 @@ function App() {
 
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
+        setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
         setDocuments(backend.documents);
         setDeadlines(backend.deadlines);
         setAssemblies(backend.assemblies);
@@ -3006,6 +3021,80 @@ function App() {
   /* =======================================================
      CONDOMINI
      ======================================================= */
+
+  const saveCondominiumUnit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!requireModulePermission("condomini", "La gestione delle unità immobiliari")) return;
+
+    const data = {
+      ...condominiumUnitForm,
+      unitCode: condominiumUnitForm.unitCode.trim(),
+      cadastralCategory: condominiumUnitForm.cadastralCategory.trim(),
+      millesimi: condominiumUnitForm.millesimi.trim(),
+      notes: condominiumUnitForm.notes.trim(),
+      incorporatedInUnitId: condominiumUnitForm.cadastralAutonomous ? "" : (condominiumUnitForm.incorporatedInUnitId || ""),
+    };
+
+    if (!data.unitCode) {
+      alert("Inserisci il codice dell'unità.");
+      return;
+    }
+    if (data.unitType === "Garage" && !data.cadastralCategory) data.cadastralCategory = "C/6";
+    if (data.unitType === "Cantina" && !data.cadastralCategory) data.cadastralCategory = "C/2";
+
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        const saved = await saveCondominiumUnitBackend(profile.workspaceId, data);
+        const next: CondominiumUnit = {
+          ...data,
+          id: String(saved?.id || data.id || ("local-" + makeId())),
+        };
+        setCondominiumUnits((current) => {
+          const sameCode = current.find((unit) =>
+            unit.condominiumId === next.condominiumId &&
+            unit.unitCode.trim().toLowerCase() === next.unitCode.trim().toLowerCase()
+          );
+          return sameCode
+            ? current.map((unit) => unit.id === sameCode.id ? next : unit)
+            : [...current, next];
+        });
+      } else {
+        const next = { ...data, id: data.id || ("local-" + makeId()) };
+        setCondominiumUnits((current) => current.some((unit) => unit.id === next.id)
+          ? current.map((unit) => unit.id === next.id ? next : unit)
+          : [...current, next]);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? ("Unità non salvata: " + error.message) : "Unità non salvata.");
+      return;
+    }
+
+    setSelectedCondominiumUnit(null);
+    closeModal();
+  };
+
+  const newCondominiumUnit = (condominiumId: number, unitType: CondominiumUnit["unitType"] = "Garage") => {
+    setSelectedCondominiumUnit(null);
+    setCondominiumUnitForm({
+      id: "",
+      condominiumId,
+      unitCode: "",
+      unitType,
+      cadastralCategory: unitType === "Garage" ? "C/6" : unitType === "Cantina" ? "C/2" : "A/2",
+      cadastralAutonomous: true,
+      millesimi: "",
+      incorporatedInUnitId: "",
+      notes: "",
+      active: true,
+    });
+    openModal("condominium-unit");
+  };
+
+  const editCondominiumUnit = (unit: CondominiumUnit) => {
+    setSelectedCondominiumUnit(unit);
+    setCondominiumUnitForm(unit);
+    openModal("condominium-unit");
+  };
 
   const saveCondominium = async (
     event: React.FormEvent<HTMLFormElement>
@@ -6163,7 +6252,7 @@ function App() {
           )}
 
           {modalType === "condominium-member" && (
-            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} members={condominiumMembers} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
+            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} members={condominiumMembers} units={condominiumUnits} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
           )}
 
           {modalType === "condominium-request" && (
@@ -7298,6 +7387,9 @@ function CondominiumsPage(
               selected.id
           )}
           condominiumMembers={condominiumMembers.filter((x: CondominiumMember) => x.condominiumId === selected.id)}
+          condominiumUnits={condominiumUnits.filter((x: CondominiumUnit) => x.condominiumId === selected.id)}
+          onNewUnit={newCondominiumUnit}
+          onEditUnit={editCondominiumUnit}
           condominiumRequests={condominiumRequests.filter((x: CondominiumRequest) => x.condominiumId === selected.id)}
           onNewMember={onNewMember}
           onEditMember={onEditMember}
@@ -12841,10 +12933,14 @@ function ActivityForm({
    FORM COMUNICAZIONE
    ========================================================= */
 
-function CondominiumMemberForm({ value, setValue, condominiums, members, onSubmit, onCancel, editing }: any) {
+function CondominiumMemberForm({ value, setValue, condominiums, members, units = [], onSubmit, onCancel, editing }: any) {
   const set = (key: keyof CondominiumMember, val: any) => setValue({ ...value, [key]: val });
   const sameCondominium = members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId && m.id !== value.id);
-  const existingApartments = Array.from(new Set(sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean)));
+  const availableUnits = units.filter((u: CondominiumUnit) => u.condominiumId === value.condominiumId && u.active);
+  const existingApartments = Array.from(new Set([
+    ...availableUnits.map((u: CondominiumUnit) => u.unitCode.trim()),
+    ...sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean),
+  ]));
   const selectedApartment = value.apartment.trim();
   const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
   const unitSelection = existingApartments.includes(value.apartment)
@@ -12878,6 +12974,9 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, onSubmi
             <br />Il nuovo soggetto sarà collegato alla stessa unità abitativa.
           </div>
         )}
+      </div>
+      <div className="form-help" style={{marginTop: 4}}>
+        I millesimi sono gestiti sull'unità immobiliare e non sul singolo condòmino.
       </div>
       <SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
       <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} />
