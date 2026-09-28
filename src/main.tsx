@@ -7094,7 +7094,7 @@ function CondominiumDetails(
             <div>
               <div className="eyebrow">Azioni rapide</div>
               <h2>Gestione del condominio</h2>
-              <p className="section-subtitle">Crea direttamente dalla scheda le attività collegate a item.name.</p>
+              <p className="section-subtitle">Crea direttamente dalla scheda le attività collegate a questo condominio.</p>
             </div>
           </div>
           <div className="quick-action-grid">
