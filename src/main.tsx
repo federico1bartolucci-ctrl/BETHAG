@@ -2309,6 +2309,15 @@ function App() {
       return;
     }
 
+    if (
+      selectedDocument &&
+      selectedDocument.publication === "Condiviso" &&
+      !isAdministrator
+    ) {
+      alert("La modifica di un documento già condiviso nel Portale è riservata all'Amministratore.");
+      return;
+    }
+
     const documentData = {
       ...documentForm,
       name: documentForm.name.trim(),
@@ -2494,6 +2503,15 @@ function App() {
 
     if (!assemblyForm.condominiumId) {
       alert("Seleziona un condominio.");
+      return;
+    }
+
+    if (
+      selectedAssembly &&
+      selectedAssembly.publishedToPortal &&
+      !isAdministrator
+    ) {
+      alert("La modifica di un'assemblea pubblicata nel Portale è riservata all'Amministratore.");
       return;
     }
 
@@ -3093,6 +3111,16 @@ function App() {
 
     if (!communicationForm.condominiumId) {
       alert("Seleziona il condominio destinatario della comunicazione.");
+      return;
+    }
+
+    if (
+      selectedCommunication &&
+      (selectedCommunication.publishedToPortal ||
+        selectedCommunication.status === "Pubblicata") &&
+      !isAdministrator
+    ) {
+      alert("La modifica di una comunicazione pubblicata è riservata all'Amministratore.");
       return;
     }
 
