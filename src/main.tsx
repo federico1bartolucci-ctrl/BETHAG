@@ -4383,7 +4383,7 @@ function App() {
     return (
       <>
         <style>{styles}</style>
-        <PublicHome onLogin={handleLogin} />
+        <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} />
       </>
     );
   }
