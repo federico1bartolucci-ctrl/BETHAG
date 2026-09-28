@@ -315,3 +315,14 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
   });
   if (error) throw error;
 }
+
+export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  const { data, error } = await supabase.rpc("claim_first_workspace_admin", {
+    p_workspace_id: workspaceId ?? null,
+  });
+
+  if (error) throw error;
+  return data as string;
+}
