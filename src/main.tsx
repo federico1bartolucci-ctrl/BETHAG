@@ -2310,7 +2310,6 @@ function App() {
   const saveDeadline = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-if (!requireAdministrator("La gestione delle scadenze")) return;
     event.preventDefault();
 
     if (
@@ -2360,7 +2359,6 @@ if (!requireAdministrator("La gestione delle scadenze")) return;
   const editDeadline = (
     item: Deadline
   ) => {
-if (!requireAdministrator("La modifica delle scadenze")) return;
     setSelectedDeadline(item);
     setDeadlineForm(item);
     openModal("deadline");
@@ -2413,7 +2411,6 @@ if (!requireAdministrator("La modifica delle scadenze")) return;
   const saveDocument = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-if (!requireAdministrator("La gestione dei documenti")) return;
     event.preventDefault();
 
     if (!documentForm.name.trim()) {
@@ -2481,7 +2478,6 @@ if (!requireAdministrator("La gestione dei documenti")) return;
   const editDocument = (
     item: DocumentItem
   ) => {
-if (!requireAdministrator("La modifica dei documenti")) return;
     setSelectedDocument(item);
     setDocumentForm(item);
     setSelectedFileName("");
@@ -2542,7 +2538,6 @@ if (!requireAdministrator("La modifica dei documenti")) return;
   const processDocumentAI = (
     item: DocumentItem
   ) => {
-    if (!requireAdministrator("L'elaborazione AI dei documenti")) return;
     if (
       !requirePlan(
         "plus",
@@ -2610,7 +2605,6 @@ if (!requireAdministrator("La modifica dei documenti")) return;
   const saveAssembly = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-if (!requireAdministrator("La gestione delle assemblee")) return;
     event.preventDefault();
 
     if (
@@ -2671,7 +2665,6 @@ if (!requireAdministrator("La gestione delle assemblee")) return;
   const editAssembly = (
     item: Assembly
   ) => {
-if (!requireAdministrator("La modifica delle assemblee")) return;
     setSelectedAssembly(item);
     setAssemblyForm(item);
     openModal("assembly");
@@ -2883,7 +2876,6 @@ if (!requireAdministrator("La modifica delle assemblee")) return;
   const saveSupplier = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-if (!requireAdministrator("La gestione dei fornitori")) return;
     event.preventDefault();
 
     if (
@@ -2939,7 +2931,6 @@ if (!requireAdministrator("La gestione dei fornitori")) return;
   const editSupplier = (
     item: Supplier
   ) => {
-if (!requireAdministrator("La modifica dei fornitori")) return;
     setSelectedSupplier(item);
     setSupplierForm(item);
     openModal("supplier");
@@ -2980,7 +2971,6 @@ if (!requireAdministrator("La modifica dei fornitori")) return;
   const saveActivity = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-if (!requireAdministrator("La gestione delle attività")) return;
     event.preventDefault();
 
     if (!activityForm.title.trim()) {
@@ -3025,7 +3015,6 @@ if (!requireAdministrator("La gestione delle attività")) return;
   const editActivity = (
     item: Activity
   ) => {
-if (!requireAdministrator("La modifica delle attività")) return;
     setSelectedActivity(item);
     setActivityForm(item);
     openModal("activity");
@@ -3472,7 +3461,6 @@ if (!requireAdministrator("La modifica delle attività")) return;
      ======================================================= */
 
   const newDeadline = () => {
-    if (!requireAdministrator("La creazione di scadenze")) return;
     setSelectedDeadline(null);
 
     setDeadlineForm({
@@ -3485,7 +3473,6 @@ if (!requireAdministrator("La modifica delle attività")) return;
   };
 
   const newDocument = () => {
-    if (!requireAdministrator("La creazione di documenti")) return;
     setSelectedDocument(null);
 
     setDocumentForm({
@@ -3500,7 +3487,6 @@ if (!requireAdministrator("La modifica delle attività")) return;
   };
 
   const newAssembly = () => {
-    if (!requireAdministrator("La creazione di assemblee")) return;
     setSelectedAssembly(null);
 
     setAssemblyForm({
@@ -3513,14 +3499,12 @@ if (!requireAdministrator("La modifica delle attività")) return;
   };
 
   const newSupplier = () => {
-    if (!requireAdministrator("La creazione di fornitori")) return;
     setSelectedSupplier(null);
     setSupplierForm(emptySupplier);
     openModal("supplier");
   };
 
   const newActivity = () => {
-    if (!requireAdministrator("La creazione di attività")) return;
     setSelectedActivity(null);
     setActivityForm(emptyActivity);
     openModal("activity");
@@ -4117,8 +4101,9 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onPublication={
                 toggleDocumentPublication
               }
-              plan={subscription.plan}
-              isAdministrator={isAdministrator}
+              plan={
+                subscription.plan
+              }
             />
           )}
 
@@ -4146,8 +4131,9 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onStatus={
                 updateDeadlineStatus
               }
-              condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              condominiumName={
+                condominiumName
+              }
             />
           )}
 
@@ -4187,8 +4173,9 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onConfirmMinutes={
                 confirmMinutes
               }
-              onPublication={toggleAssemblyPublication}
-              isAdministrator={isAdministrator}
+              onPublication={
+                toggleAssemblyPublication
+              }
             />
           )}
 
@@ -4213,8 +4200,9 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onDelete={
                 deleteSupplier
               }
-              condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              condominiumName={
+                condominiumName
+              }
             />
           )}
 
@@ -4242,8 +4230,9 @@ if (!requireAdministrator("La modifica delle attività")) return;
               onStatus={
                 updateActivityStatus
               }
-              condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              condominiumName={
+                condominiumName
+              }
             />
           )}
 
@@ -4328,7 +4317,6 @@ if (!requireAdministrator("La modifica delle attività")) return;
                 "portal",
                 "portale"
               )}
-              isAdministrator={isAdministrator}
               onAdd={
                 addPortalMember
               }
@@ -6273,7 +6261,7 @@ function CondominiumDetails(
                 }
               >
 
-                {isAdministrator && <select
+                <select
                   value={d.status}
                   onChange={(e) =>
                     onStatusDeadline(
@@ -6295,7 +6283,7 @@ function CondominiumDetails(
                     Completata
                   </option>
 
-                </select>}
+                </select>
 
               </RelatedRow>
             )
@@ -6678,7 +6666,6 @@ function DocumentsPage({
   onConfirmAI,
   onPublication,
   plan,
-  isAdministrator = false,
 }: any) {
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
   const [sourceFilter, setSourceFilter] = useState("Tutti");
@@ -6703,11 +6690,12 @@ function DocumentsPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Archivio digitale" title="Documenti" action="+ Nuovo documento" onAction={onNew} />
-      ) : (
-        <PageHeader eyebrow="Archivio digitale" title="Documenti" />
-      )}
+      <PageHeader
+        eyebrow="Archivio digitale"
+        title="Documenti"
+        action="+ Nuovo documento"
+        onAction={onNew}
+      />
 
       <div className="feature-banner">
 
@@ -6852,15 +6840,31 @@ function DocumentsPage({
               )}
 
 
-              {isAdministrator && (
-                <div className="button-row">
-                  <button className="secondary-button" onClick={() => onEdit(d)}>Modifica</button>
-                  <button className="secondary-button" onClick={() => onAI(d)}>✨ AI</button>
-                </div>
-              )}
+              <div className="button-row">
+
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    onEdit(d)
+                  }
+                >
+                  Modifica
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    onAI(d)
+                  }
+                >
+                  ✨ AI
+                </button>
+
+              </div>
 
 
-              {isAdministrator && d.aiStatus === "Da verificare" && (
+              {d.aiStatus ===
+                "Da verificare" && (
                 <button
                   className="primary-button full-button"
                   onClick={() =>
@@ -6874,14 +6878,32 @@ function DocumentsPage({
               )}
 
 
-              {isAdministrator && (
-                <div className="document-bottom">
-                  <button className="link" onClick={() => onPublication(d.id)}>
-                    {d.publication === "Condiviso" ? <><AppIcon name="lock" size={16} /> Rendi privato</> : <><AppIcon name="users" size={16} /> Condividi con condomini</>}
-                  </button>
-                  <button className="mini-danger" onClick={() => onDelete(d.id)}>Elimina</button>
-                </div>
-              )}
+              <div className="document-bottom">
+
+                <button
+                  className="link"
+                  onClick={() =>
+                    onPublication(
+                      d.id
+                    )
+                  }
+                >
+                  {d.publication ===
+                  "Condiviso"
+                    ? <><AppIcon name="lock" size={16} /> Rendi privato</>
+                    : <><AppIcon name="users" size={16} /> Condividi con condomini</>}
+                </button>
+
+                <button
+                  className="mini-danger"
+                  onClick={() =>
+                    onDelete(d.id)
+                  }
+                >
+                  Elimina
+                </button>
+
+              </div>
 
             </article>
           )
@@ -6915,7 +6937,6 @@ function DeadlinesPage({
   onDelete,
   onStatus,
   condominiumName,
-  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [categoryFilter, setCategoryFilter] = useState("Tutte");
@@ -6939,11 +6960,12 @@ function DeadlinesPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Pianificazione" title="Scadenze" action="+ Nuova scadenza" onAction={onNew} />
-      ) : (
-        <PageHeader eyebrow="Pianificazione" title="Scadenze" />
-      )}
+      <PageHeader
+        eyebrow="Pianificazione"
+        title="Scadenze"
+        action="+ Nuova scadenza"
+        onAction={onNew}
+      />
 
       <SearchBox
         value={search}
@@ -7013,6 +7035,7 @@ function DeadlinesPage({
 
 
               <div className="row-actions">
+
                 <Badge
                   value={
                     d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
@@ -7021,37 +7044,45 @@ function DeadlinesPage({
                   }
                 />
 
-                {isAdministrator && (
-                  <>
-                    <select
-                      value={d.status}
-                      onChange={(e) =>
-                        onStatus(
-                          d.id,
-                          e.target.value as DeadlineStatus
-                        )
-                      }
-                    >
-                      <option>Da fare</option>
-                      <option>In scadenza</option>
-                      <option>Completata</option>
-                    </select>
+                <select
+                  value={d.status}
+                  onChange={(e) =>
+                    onStatus(
+                      d.id,
+                      e.target
+                        .value as DeadlineStatus
+                    )
+                  }
+                >
+                  <option>
+                    Da fare
+                  </option>
+                  <option>
+                    In scadenza
+                  </option>
+                  <option>
+                    Completata
+                  </option>
+                </select>
 
-                    <button
-                      className="secondary-button small"
-                      onClick={() => onEdit(d)}
-                    >
-                      Modifica
-                    </button>
+                <button
+                  className="secondary-button small"
+                  onClick={() =>
+                    onEdit(d)
+                  }
+                >
+                  Modifica
+                </button>
 
-                    <button
-                      className="mini-danger"
-                      onClick={() => onDelete(d.id)}
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
+                <button
+                  className="mini-danger"
+                  onClick={() =>
+                    onDelete(d.id)
+                  }
+                >
+                  ×
+                </button>
+
               </div>
 
             </article>
@@ -7120,11 +7151,12 @@ function AssembliesPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Riunioni" title="Assemblee" action="+ Nuova assemblea" onAction={onNew} />
-      ) : (
-        <PageHeader eyebrow="Riunioni" title="Assemblee" />
-      )}
+      <PageHeader
+        eyebrow="Riunioni"
+        title="Assemblee"
+        action="+ Nuova assemblea"
+        onAction={onNew}
+      />
 
       <div className="feature-banner">
 
@@ -7240,8 +7272,7 @@ function AssembliesPage({
               </div>
 
 
-              {isAdministrator && (
-                <div className="assembly-actions">
+              <div className="assembly-actions">
 
                 <select
                   value={a.status}
@@ -7345,8 +7376,18 @@ function AssembliesPage({
                 >
                   Modifica
                 </button>
-                <button className="mini-danger" onClick={() => onDelete(a.id)}>×</button>
-              </div>}
+
+
+                <button
+                  className="mini-danger"
+                  onClick={() =>
+                    onDelete(a.id)
+                  }
+                >
+                  ×
+                </button>
+
+              </div>
 
             </article>
           )
@@ -7377,7 +7418,6 @@ function SuppliersPage({
   onEdit,
   onDelete,
   condominiumName,
-  isAdministrator = false,
 }: any) {
   const filtered =
     suppliers.filter(
@@ -7400,11 +7440,12 @@ function SuppliersPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" action="+ Nuovo fornitore" onAction={onNew} />
-      ) : (
-        <PageHeader eyebrow="Gestione fornitori" title="Fornitori" />
-      )}
+      <PageHeader
+        eyebrow="Gestione fornitori"
+        title="Fornitori"
+        action="+ Nuovo fornitore"
+        onAction={onNew}
+      />
 
       <SearchBox
         value={search}
@@ -7462,12 +7503,27 @@ function SuppliersPage({
                 </p>
               )}
 
-              {isAdministrator && (
-                <div className="button-row">
-                  <button className="secondary-button" onClick={() => onEdit(s)}>Modifica</button>
-                  <button className="danger-button" onClick={() => onDelete(s.id)}>Elimina</button>
-                </div>
-              )}
+              <div className="button-row">
+
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    onEdit(s)
+                  }
+                >
+                  Modifica
+                </button>
+
+                <button
+                  className="danger-button"
+                  onClick={() =>
+                    onDelete(s.id)
+                  }
+                >
+                  Elimina
+                </button>
+
+              </div>
 
             </article>
           )
@@ -7501,7 +7557,6 @@ function ActivitiesPage({
   onDelete,
   onStatus,
   condominiumName,
-  isAdministrator = false,
 }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const [priorityFilter, setPriorityFilter] = useState("Tutte");
@@ -7527,11 +7582,12 @@ function ActivitiesPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Organizzazione" title="Attività" action="+ Nuova attività" onAction={onNew} />
-      ) : (
-        <PageHeader eyebrow="Organizzazione" title="Attività" />
-      )}
+      <PageHeader
+        eyebrow="Organizzazione"
+        title="Attività"
+        action="+ Nuova attività"
+        onAction={onNew}
+      />
 
       <SearchBox
         value={search}
@@ -7593,7 +7649,7 @@ function ActivitiesPage({
               </div>
 
 
-              {isAdministrator && <div className="row-actions">
+              <div className="row-actions">
 
                 <select
                   value={a.status}
@@ -7618,6 +7674,7 @@ function ActivitiesPage({
                   </option>
                 </select>
 
+
                 <button
                   className="secondary-button small"
                   onClick={() =>
@@ -7638,7 +7695,6 @@ function ActivitiesPage({
                 </button>
 
               </div>
-              )}
 
             </article>
           )
@@ -7670,7 +7726,6 @@ function CommunicationsPage({
   onEdit,
   onDelete,
   onPublication,
-  isAdministrator = false,
 }: any) {
   const filtered =
     communications.filter(
@@ -8145,7 +8200,6 @@ function PortalPage({
   communications,
   plan,
   portalEnabled,
-  isAdministrator = false,
   onAdd,
   onToggle,
   onDelete,
@@ -8232,8 +8286,11 @@ function PortalPage({
   return (
     <>
 
-      {isAdministrator ? (
-        <PageHeader eyebrow="Accesso esterno" title="Portale condomini" action="+ Nuovo accesso" onAction={() => {
+      <PageHeader
+        eyebrow="Accesso esterno"
+        title="Portale condomini"
+        action="+ Nuovo accesso"
+        onAction={() => {
 
           if (!portalEnabled) {
             onNavigate("abbonamento");
@@ -8241,10 +8298,9 @@ function PortalPage({
           }
 
           setShowAdd(true);
-        }} />
-      ) : (
-        <PageHeader eyebrow="Accesso esterno" title="Portale condomini" />
-      )}
+
+        }}
+      />
 
 
       <section className="portal-hero">
@@ -8612,7 +8668,7 @@ function PortalPage({
                   </div>
 
 
-                  {isAdministrator && <div className="row-actions">
+                  <div className="row-actions">
 
                     <Badge
                       value={
@@ -8645,7 +8701,8 @@ function PortalPage({
                     >
                       ×
                     </button>
-                  </div>}
+
+                  </div>
 
                 </div>
               )
