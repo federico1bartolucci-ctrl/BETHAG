@@ -429,6 +429,7 @@ const KEYS = {
   portalMembers: "bethag-portal-members-v2",
   subscription: "bethag-subscription-v2",
   collaborators: "bethag-collaborators-v1",
+  page: "bethag-current-page-v1",
 };
 
 
@@ -1685,7 +1686,11 @@ function ResidentPortalView({
 
 function App() {
   const [page, setPage] =
-    useState<Page>("homepage");
+    useState<Page>(() => load<Page>(KEYS.page, "homepage"));
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.page, page);
+  }, [page]);
 
   const [sessionRole, setSessionRole] =
     useState<"admin" | "collaborator" | "resident" | null>(() =>
@@ -2244,6 +2249,7 @@ function App() {
     setSessionEmail("");
     localStorage.removeItem(KEYS.session);
     localStorage.removeItem(KEYS.sessionEmail);
+    localStorage.removeItem(KEYS.page);
     setPage("homepage");
     setMobileMenuOpen(false);
   };
