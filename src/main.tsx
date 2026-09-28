@@ -3104,15 +3104,20 @@ function App() {
       return;
     }
 
-    if (
-      communicationForm.publishedToPortal &&
-      !requirePlan(
-        "portal",
-        "La pubblicazione delle comunicazioni nel portale",
-        "portale"
-      )
-    ) {
-      return;
+    if (communicationForm.publishedToPortal) {
+      if (!isAdministrator) {
+        alert("La pubblicazione delle comunicazioni nel portale è riservata all'Amministratore.");
+        return;
+      }
+      if (
+        !requirePlan(
+          "portal",
+          "La pubblicazione delle comunicazioni nel portale",
+          "portale"
+        )
+      ) {
+        return;
+      }
     }
 
     const recipientIds = communicationForm.recipientIds || [];
