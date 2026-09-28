@@ -537,6 +537,50 @@ export async function saveCondominium(
     });
 
     if (error) throw error;
+
+    const condominiumDbId = data as string;
+    const requestedUnits = Math.max(0, Number(item.units) || 0);
+
+    if (requestedUnits > 0) {
+      const { data: existingUnits, error: existingUnitsError } = await supabase
+        .from("condominium_units")
+        .select("id, unit_code, data")
+        .eq("condominium_id", condominiumDbId);
+
+      if (existingUnitsError) throw existingUnitsError;
+
+      const existingCodes = new Set(
+        (existingUnits ?? []).map((unit: any) => String(unit.unit_code).trim().toLowerCase())
+      );
+
+      const rows = Array.from({ length: requestedUnits }, (_, index) => {
+        const code = `Interno ${index + 1}`;
+        return {
+          workspace_id: workspaceId,
+          condominium_id: condominiumDbId,
+          unit_code: code,
+          data: {
+            unitCode: code,
+            unitType: "Abitazione",
+            cadastralCategory: "A/2",
+            cadastralAutonomous: true,
+            millesimi: "",
+            incorporatedInUnitId: null,
+            notes: "",
+            active: true,
+          },
+        };
+      }).filter((row: any) => !existingCodes.has(row.unit_code.toLowerCase()));
+
+      if (rows.length) {
+        const { error: unitsError } = await supabase
+          .from("condominium_units")
+          .upsert(rows, { onConflict: "condominium_id,unit_code" });
+
+        if (unitsError) throw unitsError;
+      }
+    }
+
     return data as string;
   });
 }
