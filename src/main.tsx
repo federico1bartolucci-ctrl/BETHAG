@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
+import { supabase, supabaseConfigured } from "./lib/supabase";
 
 /* =========================================================
    BETHAG
@@ -1083,7 +1084,7 @@ type PublicRole = "admin" | "collaborator" | "resident";
 function PublicHome({
   onLogin,
 }: {
-  onLogin: (role: PublicRole, email: string) => void;
+  onLogin: (role: PublicRole, email: string, password: string) => void;
 }) {
   const [showLogin, setShowLogin] = useState(false);
 
@@ -1184,7 +1185,7 @@ function LoginPage({
     },
   ];
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!email.trim() || !password.trim()) {
@@ -1193,7 +1194,7 @@ function LoginPage({
     }
 
     setError("");
-    onLogin(role, email.trim());
+    await onLogin(role, email.trim(), password);
   };
 
   return (
@@ -1713,10 +1714,38 @@ function App() {
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
 
-  const handleLogin = (
+  const handleLogin = async (
     role: PublicRole,
-    email: string
+    email: string,
+    password: string
   ) => {
+    if (supabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error || !data.user) {
+        alert(error?.message || "Impossibile completare l'accesso a BETHAG.");
+        return;
+      }
+
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id, role, active")
+        .eq("user_id", data.user.id)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (!membership) {
+        await supabase.auth.signOut();
+        alert("L'utente è autenticato ma non è ancora associato a un workspace BETHAG attivo.");
+        return;
+      }
+
+      role = membership.role as PublicRole;
+      email = data.user.email || email;
+    }
     const normalizedEmail = email.trim();
     const collaborator = collaborators.find(
       (item) =>
@@ -1763,7 +1792,10 @@ function App() {
     setPage("homepage");
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (supabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    }
     setSessionRole(null);
     setSessionEmail("");
     localStorage.removeItem(KEYS.session);
