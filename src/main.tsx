@@ -1787,6 +1787,7 @@ function App() {
         data: {
           full_name: fullName.trim(),
         },
+        emailRedirectTo: window.location.href,
       },
     });
 
@@ -1894,6 +1895,36 @@ function App() {
           data.user.id,
           data.user.email || email
         );
+
+        if (!access && role === "admin") {
+          try {
+            await claimFirstWorkspaceAdmin();
+          } catch (claimError) {
+            console.error("BETHAG admin bootstrap during login failed", claimError);
+          }
+
+          const bootstrappedAccess = await resolveSupabaseAccess(
+            data.user.id,
+            data.user.email || email
+          );
+
+          if (bootstrappedAccess) {
+            if (bootstrappedAccess.role !== role) {
+              await supabase.auth.signOut();
+              alert("Il profilo selezionato non corrisponde al ruolo autorizzato.");
+              return;
+            }
+
+            setProfile((current) => ({
+              ...current,
+              workspaceId: bootstrappedAccess.workspaceId,
+              email: data.user.email || current.email,
+              name: data.user.user_metadata?.full_name || current.name,
+            }));
+            setSessionRole(bootstrappedAccess.role);
+            return;
+          }
+        }
 
         if (!access) {
           await supabase.auth.signOut();
