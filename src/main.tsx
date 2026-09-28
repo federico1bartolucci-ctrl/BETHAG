@@ -6295,7 +6295,7 @@ function CondominiumDetails(
                     Completata
                   </option>
 
-                </select>
+                </select>}
 
               </RelatedRow>
             )
