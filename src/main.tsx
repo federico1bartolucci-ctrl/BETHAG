@@ -1284,6 +1284,8 @@ function ResidentPortalView({
   assemblies,
   communications,
   onLogout,
+  requests,
+  onCreateRequest,
 }: {
   email: string;
   condominiums: Condominium[];
@@ -1291,7 +1293,9 @@ function ResidentPortalView({
   documents: DocumentItem[];
   assemblies: Assembly[];
   communications: Communication[];
+  requests: CondominiumRequest[];
   onLogout: () => void;
+  onCreateRequest: (request: CondominiumRequest) => void;
 }) {
   const member =
     portalMembers.find(
@@ -1335,6 +1339,36 @@ function ResidentPortalView({
         )
         .sort((a, b) => a.date.localeCompare(b.date))
     : [];
+
+  const [requestCategory, setRequestCategory] = useState("Informazioni");
+  const [requestPriority, setRequestPriority] = useState<RequestPriority>("Media");
+  const [requestDescription, setRequestDescription] = useState("");
+
+  const ownRequests = member
+    ? requests.filter((request) => request.memberId === member.id).sort((a, b) => b.date.localeCompare(a.date))
+    : [];
+
+  const submitRequest = () => {
+    if (!member) return;
+    if (!requestDescription.trim()) {
+      alert("Inserisci la descrizione della richiesta.");
+      return;
+    }
+    onCreateRequest({
+      ...emptyCondominiumRequest,
+      id: Date.now(),
+      condominiumId: member.condominiumId,
+      memberId: member.id,
+      category: requestCategory,
+      description: requestDescription.trim(),
+      priority: requestPriority,
+      date: localISODate(),
+      status: "Nuova",
+    });
+    setRequestDescription("");
+    setRequestCategory("Informazioni");
+    setRequestPriority("Media");
+  };
 
   return (
     <div className="resident-portal">
@@ -1421,6 +1455,40 @@ function ResidentPortalView({
             )}
           </section>
         </div>
+
+        {member && (
+          <section className="resident-card resident-request-card">
+            <h2>Segnala un problema o chiedi informazioni</h2>
+            <p className="section-subtitle">Invia una richiesta direttamente all'amministratore.</p>
+            <div className="resident-request-form">
+              <select value={requestCategory} onChange={(e) => setRequestCategory(e.target.value)}>
+                <option>Informazioni</option>
+                <option>Manutenzione</option>
+                <option>Segnalazione</option>
+                <option>Amministrazione</option>
+                <option>Altro</option>
+              </select>
+              <select value={requestPriority} onChange={(e) => setRequestPriority(e.target.value as RequestPriority)}>
+                <option>Bassa</option>
+                <option>Media</option>
+                <option>Alta</option>
+              </select>
+              <textarea value={requestDescription} onChange={(e) => setRequestDescription(e.target.value)} placeholder="Descrivi la richiesta o il problema..." rows={4} />
+              <button className="primary-button" onClick={submitRequest}>Invia richiesta</button>
+            </div>
+            {ownRequests.length > 0 && (
+              <div className="resident-request-history">
+                <strong>Le tue richieste</strong>
+                {ownRequests.slice(0, 5).map((request) => (
+                  <div className="resident-list-row" key={request.id}>
+                    <div><strong>{request.category}</strong><small>{formatDate(request.date)} · {request.description}</small></div>
+                    <Badge value={request.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="resident-readonly-note">
           Questa area è riservata alla consultazione. Le operazioni di
@@ -3479,6 +3547,10 @@ function App() {
           documents={documents}
           assemblies={assemblies}
           communications={communications}
+          requests={condominiumRequests}
+          onCreateRequest={(request) =>
+            setCondominiumRequests((current) => [request, ...current])
+          }
           onLogout={logout}
         />
       </>
