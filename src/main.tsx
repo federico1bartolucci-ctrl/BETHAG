@@ -4593,6 +4593,9 @@ function Dashboard({
   completedDeadlines,
   completedActivities,
   publishedCommunications,
+  overdueDeadlines,
+  pendingRequests,
+  documentsToVerify,
   onNavigate,
   condominiumName,
   subscription,
@@ -4893,6 +4896,48 @@ function Dashboard({
 
       </section>
 
+
+      <section className="homepage-focus-grid">
+        <button className="focus-card focus-card-warning" onClick={() => onNavigate("scadenze")}>
+          <span className="focus-icon">!</span>
+          <div>
+            <strong>{overdueDeadlines}</strong>
+            <span>Scadenze oltre termine</span>
+          </div>
+          <small>Controlla →</small>
+        </button>
+
+        <button className="focus-card" onClick={() => onNavigate("condomini")}>
+          <span className="focus-icon">⌂</span>
+          <div>
+            <strong>{pendingRequests}</strong>
+            <span>Richieste da gestire</span>
+          </div>
+          <small>Apri →</small>
+        </button>
+
+        <button className="focus-card" onClick={() => onNavigate("documenti")}>
+          <span className="focus-icon">✓</span>
+          <div>
+            <strong>{documentsToVerify}</strong>
+            <span>Documenti da verificare</span>
+          </div>
+          <small>Verifica →</small>
+        </button>
+
+        <button className="focus-card focus-card-plan" onClick={() => onNavigate("abbonamento")}>
+          <span className="focus-icon">✦</span>
+          <div>
+            <strong>{PLAN_NAMES[subscription.plan]}</strong>
+            <span>
+              {subscription.addons.length
+                ? subscription.addons.length + " add-on attivi"
+                : "Gestisci piano e moduli"}
+            </span>
+          </div>
+          <small>Gestisci →</small>
+        </button>
+      </section>
 
       <section className="dashboard-grid dashboard-secondary">
 
@@ -12985,7 +13030,7 @@ input:focus,textarea:focus,select:focus{
 .addon-card-top h3{margin:8px 0 0;font-size:15px}.addon-card-top strong{font-size:12px;color:#3857d6;white-space:nowrap}.addon-card p{margin:0;color:#64748b;font-size:12px;line-height:1.5;min-height:38px}.addon-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eef2ff;color:#3857d6;font-weight:900}.addon-card button{margin-top:auto}.addon-card button:disabled{opacity:1;cursor:default}
 @media(max-width:900px){.addon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.addon-grid{grid-template-columns:1fr}.subscription-current-right{justify-content:flex-start}}
 
-.nav-lock{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 5px;border-radius:6px;background:#eef2ff;color:#3857d6}
+.nav-lock{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 5px;border-radius:6px;background:#eef2ff;color:#3857d6}.homepage-focus-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.focus-card{border:1px solid #e5e9f2;background:#fff;border-radius:18px;padding:17px;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 8px 24px rgba(20,31,55,.05);transition:transform .18s ease,box-shadow .18s ease}.focus-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(20,31,55,.09)}.focus-card>div{min-width:0;display:flex;flex-direction:column;gap:3px;flex:1}.focus-card strong{font-size:18px;color:#17233f}.focus-card span{font-size:12px;color:#667085}.focus-card small{font-weight:700;color:#3857d6;white-space:nowrap}.focus-icon{width:34px;height:34px;border-radius:11px;background:#eef2ff;display:grid;place-items:center;font-weight:900;color:#3857d6}.focus-card-warning .focus-icon{background:#fff2e8;color:#c65b18}.focus-card-plan{background:linear-gradient(135deg,#f8f9ff,#eef3ff)}@media(max-width:1000px){.homepage-focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.homepage-focus-grid{grid-template-columns:1fr}.focus-card{padding:15px}}
 `;
 
 
