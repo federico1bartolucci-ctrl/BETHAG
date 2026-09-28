@@ -3736,10 +3736,19 @@ function App() {
       ? portalMembers.find((member) => member.active && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
       : null;
     const portalCondominiumMember = portalMember
-      ? condominiumMembers.find((member) => member.condominiumId === portalMember.condominiumId && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
+      ? condominiumMembers.find(
+          (member) =>
+            member.active &&
+            member.condominiumId === portalMember.condominiumId &&
+            member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+        )
       : null;
     if (!isAdministrator && (!portalMember || !portalMember.condominiumId)) {
       alert("Il profilo del portale non è associato a un condominio attivo.");
+      return;
+    }
+    if (!isAdministrator && !portalCondominiumMember) {
+      alert("Il profilo del Portale non è associato a un condòmino attivo nell'anagrafica.");
       return;
     }
     if (selectedCondominiumRequest) {
