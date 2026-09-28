@@ -2831,10 +2831,10 @@ function App() {
 
     const message =
       related > 0
-        ? `Il condominio "${item.name}" ha ${related} elementi collegati. Eliminando il condominio verranno rimossi anche i collegamenti. Continuare?`
-        : `Eliminare "${item.name}"?`;
+        ? `Sei sicuro di voler cancellare "${item.name}"? Il condominio ha ${related} elementi collegati e verranno rimossi anche i relativi collegamenti.`
+        : `Sei sicuro di voler cancellare "${item.name}"?`;
 
-    if (!confirm(message)) return;
+    if (!window.confirm(message)) return;
 
     setCondominiums((current) =>
       current.filter(
