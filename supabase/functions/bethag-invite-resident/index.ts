@@ -174,7 +174,7 @@ Deno.serve(async (req: Request) => {
     const portalData = {
       name,
       email,
-      condominiumId: Number(member.legacy_id),
+      condominiumId: Number(condominium.legacy_id),
       apartment,
       permissions: portalPermissions,
       active: true,
