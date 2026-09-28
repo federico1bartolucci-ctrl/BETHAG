@@ -1322,7 +1322,7 @@ function ResidentPortalView({
       )
     : [];
 
-  const publishedCommunications = member && hasPortalPermission("comunicazioni")
+  const visibleCommunications = member && hasPortalPermission("comunicazioni")
     ? communications.filter(
         (item) =>
           item.status === "Pubblicata" &&
@@ -1400,17 +1400,17 @@ function ResidentPortalView({
 
         <div className="resident-stats">
           <div><b>{sharedDocuments.length}</b><span>Documenti</span></div>
-          <div><b>{publishedCommunications.length}</b><span>Comunicazioni</span></div>
+          <div><b>{visibleCommunications.length}</b><span>Comunicazioni</span></div>
           <div><b>{publishedAssemblies.length}</b><span>Assemblee</span></div>
         </div>
 
         <div className="resident-grid">
           <section className="resident-card">
             <h2>Comunicazioni</h2>
-            {publishedCommunications.length === 0 ? (
+            {visibleCommunications.length === 0 ? (
               <p className="empty-state">Nessuna comunicazione pubblicata.</p>
             ) : (
-              publishedCommunications.map((item) => (
+              visibleCommunications.map((item) => (
                 <article className="resident-list-item" key={item.id}>
                   <strong>{item.title}</strong>
                   <small>{formatDate(item.date)}</small>
@@ -3720,7 +3720,7 @@ function App() {
         "Completata"
     ).length;
 
-  const publishedCommunications =
+  const visibleCommunications =
     communications.filter(
       (c) =>
         c.publishedToPortal
@@ -4065,8 +4065,8 @@ function App() {
               completedActivities={
                 completedActivities
               }
-              publishedCommunications={
-                publishedCommunications
+              visibleCommunications={
+                visibleCommunications
               }
               overdueDeadlines={overdueDeadlines}
               pendingRequests={pendingRequests}
@@ -5033,7 +5033,7 @@ function Dashboard({
   urgentDeadlines,
   completedDeadlines,
   completedActivities,
-  publishedCommunications,
+  visibleCommunications,
   overdueDeadlines,
   pendingRequests,
   documentsToVerify,
@@ -5194,7 +5194,7 @@ function Dashboard({
 
         <div className="mini-stat">
           <b>
-            {publishedCommunications}
+            {visibleCommunications}
           </b>
 
           <span>
@@ -6101,14 +6101,14 @@ function CondominiumDetails(
         "Completata"
     ).length;
 
-  const publishedDocuments =
+  const visibleDocuments =
     documents.filter(
       (x: DocumentItem) =>
         x.publication ===
         "Condiviso"
     ).length;
 
-  const publishedCommunications =
+  const visibleCommunications =
     communications.filter(
       (x: Communication) =>
         x.publishedToPortal
@@ -6194,7 +6194,7 @@ function CondominiumDetails(
 
         <div className="overview-stat">
           <b>
-            {publishedDocuments}
+            {visibleDocuments}
           </b>
           <span>
             Documenti condivisi
@@ -6203,7 +6203,7 @@ function CondominiumDetails(
 
         <div className="overview-stat">
           <b>
-            {publishedCommunications}
+            {visibleCommunications}
           </b>
           <span>
             Comunicazioni pubblicate
@@ -8304,6 +8304,10 @@ function PortalPage({
   documents,
   assemblies,
   communications,
+  condominiumMembers,
+  condominiumRequests,
+  onPortalRequest,
+  sessionEmail,
   plan,
   portalEnabled,
   onAdd,
@@ -8335,24 +8339,36 @@ function PortalPage({
       active: true,
     });
 
-  const publishedDocuments =
-    documents.filter(
-      (d: DocumentItem) =>
-        d.publication ===
-        "Condiviso"
-    );
-
-  const publishedMinutes =
-    assemblies.filter(
-      (a: Assembly) =>
-        a.publishedToPortal
-    );
-
-  const publishedCommunications =
-    communications.filter(
-      (c: Communication) =>
-        c.publishedToPortal
-    );
+  const currentPortalMember = members.find(
+    (member: PortalMember) =>
+      member.active &&
+      member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+  );
+  const residentCondominiumId = !isAdministrator ? currentPortalMember?.condominiumId : null;
+  const visibleDocuments = documents.filter((d: DocumentItem) =>
+    d.publication === "Condiviso" &&
+    (residentCondominiumId === null || residentCondominiumId === undefined || d.condominiumId === residentCondominiumId) &&
+    (isAdministrator || currentPortalMember?.permissions.includes("documenti"))
+  );
+  const visibleMinutes = assemblies.filter((a: Assembly) =>
+    a.publishedToPortal &&
+    (residentCondominiumId === null || residentCondominiumId === undefined || a.condominiumId === residentCondominiumId) &&
+    (isAdministrator || currentPortalMember?.permissions.includes("verbali") || currentPortalMember?.permissions.includes("assemblee"))
+  );
+  const visibleCommunications = communications.filter((communication: Communication) =>
+    communication.publishedToPortal &&
+    (residentCondominiumId === null || residentCondominiumId === undefined || communication.condominiumId === residentCondominiumId) &&
+    (isAdministrator || currentPortalMember?.permissions.includes("comunicazioni"))
+  );
+  const visibleRequests = condominiumRequests.filter((request: CondominiumRequest) =>
+    !isAdministrator &&
+    request.condominiumId === residentCondominiumId &&
+    (request.memberId === null || request.memberId === currentPortalMember?.id ||
+      condominiumMembers.some((member: CondominiumMember) =>
+        member.id === request.memberId &&
+        member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+      ))
+  );
 
   const save = (
     e: React.FormEvent
@@ -8452,7 +8468,7 @@ function PortalPage({
           <div>
             <b>
               {
-                publishedDocuments.length
+                visibleDocuments.length
               }
             </b>
             <span>
@@ -8463,7 +8479,7 @@ function PortalPage({
           <div>
             <b>
               {
-                publishedMinutes.length
+                visibleMinutes.length
               }
             </b>
             <span>
@@ -8474,7 +8490,7 @@ function PortalPage({
           <div>
             <b>
               {
-                publishedCommunications.length
+                visibleCommunications.length
               }
             </b>
             <span>
@@ -8486,6 +8502,26 @@ function PortalPage({
 
       </section>
 
+
+      {!isAdministrator && currentPortalMember && portalEnabled && (
+        <section className="card portal-request-card">
+          <SectionTitle title="Segnalazioni e richieste" />
+          <p className="section-subtitle">Invia rapidamente una segnalazione o una richiesta all'amministratore del tuo condominio.</p>
+          <button className="primary-button" type="button" onClick={() => onPortalRequest(currentPortalMember)}>
+            + Nuova segnalazione o richiesta
+          </button>
+          {visibleRequests.length > 0 && (
+            <div className="related-list" style={{ marginTop: 16 }}>
+              {visibleRequests.map((request: CondominiumRequest) => (
+                <div className="request-card" key={request.id}>
+                  <div className="request-main"><b>{request.category}</b><span>{formatDate(request.date)}</span><p>{request.description}</p>{request.response && <div className="request-response"><strong>Risposta amministratore:</strong> {request.response}</div>}</div>
+                  <div className="request-actions"><Badge value={request.status} /><Badge value={"Priorità " + request.priority} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {isAdministrator && showAdd && (
         <form
