@@ -1358,6 +1358,7 @@ function ResidentPortalView({
   email,
   condominiums,
   portalMembers,
+  condominiumMembers,
   documents,
   assemblies,
   communications,
@@ -1368,6 +1369,7 @@ function ResidentPortalView({
   email: string;
   condominiums: Condominium[];
   portalMembers: PortalMember[];
+  condominiumMembers: CondominiumMember[];
   documents: DocumentItem[];
   assemblies: Assembly[];
   communications: Communication[];
@@ -1380,7 +1382,13 @@ function ResidentPortalView({
       (item) =>
         item.active &&
         item.role === "resident" &&
-        item.email.trim().toLowerCase() === email.trim().toLowerCase()
+        item.email.trim().toLowerCase() === email.trim().toLowerCase() &&
+        condominiumMembers.some(
+          (registryMember) =>
+            registryMember.active &&
+            registryMember.condominiumId === item.condominiumId &&
+            registryMember.email.trim().toLowerCase() === email.trim().toLowerCase()
+        )
     ) || null;
 
   const condominium = member
@@ -4430,6 +4438,7 @@ function App() {
           email={sessionEmail}
           condominiums={condominiums}
           portalMembers={portalMembers}
+          condominiumMembers={condominiumMembers}
           documents={documents}
           assemblies={assemblies}
           communications={communications}
