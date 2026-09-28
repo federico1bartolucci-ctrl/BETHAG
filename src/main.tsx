@@ -2655,12 +2655,12 @@ function App() {
      CONDOMINI
      ======================================================= */
 
-  const saveCondominium = (
+  const saveCondominium = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La modifica dei dati del condominio")) return;
-
     event.preventDefault();
+
+    if (!requireAdministrator("La modifica dei dati del condominio")) return;
 
     const data =
       editingCondominium ||
@@ -2694,35 +2694,60 @@ function App() {
       return;
     }
 
-    if (editingCondominium) {
-      const updated = {
-        ...data,
-        id: editingCondominium.id,
-      };
-
-      setCondominiums((current) =>
-        current.map((item) =>
-          item.id === updated.id
-            ? updated
+    const nextCondominiums = editingCondominium
+      ? condominiums.map((item) =>
+          item.id === editingCondominium.id
+            ? { ...data, id: editingCondominium.id }
             : item
         )
-      );
+      : [
+          ...condominiums,
+          {
+            ...data,
+            id: makeId(),
+          },
+        ];
 
-      setSelectedCondominium(updated);
-    } else {
-      const item = {
-        ...data,
-        id: makeId(),
-      };
+    const savedItem = editingCondominium
+      ? nextCondominiums.find(
+          (item) => item.id === editingCondominium.id
+        )!
+      : nextCondominiums[nextCondominiums.length - 1];
 
-      setCondominiums((current) => [
-        ...current,
-        item,
-      ]);
-
-      setSelectedCondominium(item);
+    if (
+      supabaseConfigured &&
+      supabase &&
+      sessionRole === "admin" &&
+      profile.workspaceId &&
+      backendHydrated.current
+    ) {
+      try {
+        await syncBackendState(profile.workspaceId, {
+          condominiums: nextCondominiums,
+          condominiumMembers,
+          documents,
+          deadlines,
+          assemblies,
+          suppliers,
+          activities,
+          communications,
+          condominiumRequests,
+          portalMembers,
+          collaborators,
+        });
+      } catch (error) {
+        console.error("BETHAG condominium save failed", error);
+        alert(
+          error instanceof Error
+            ? "Il condominio non è stato salvato sul server.\\n\\n" + error.message
+            : "Il condominio non è stato salvato sul server. Riprova."
+        );
+        return;
+      }
     }
 
+    setCondominiums(nextCondominiums);
+    setSelectedCondominium(savedItem);
     setEditingCondominium(null);
     closeModal();
   };
