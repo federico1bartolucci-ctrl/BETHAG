@@ -3927,8 +3927,14 @@ function App() {
     emailBody?: string,
     audience: CommunicationAudience = "Tutti"
   ) => {
-    if (!isAdministrator) {
-      alert("L'invio dell'e-mail è riservato all'Amministratore.");
+    if (
+      !isAdministrator &&
+      !(
+        isCollaborator &&
+        collaboratorPermissions.includes("comunicazioni")
+      )
+    ) {
+      alert("Non disponi dell'autorizzazione per gestire le comunicazioni.");
       return;
     }
 
