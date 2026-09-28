@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(16);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -25,6 +25,28 @@ select is(
      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
   1,
   'Authenticated deve poter eseguire save_condominium'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_proc p
+   join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname = 'delete_condominium'
+     and has_function_privilege('anon', p.oid, 'EXECUTE')),
+  0,
+  'Anon non deve poter eseguire delete_condominium'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_proc p
+   join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname = 'delete_condominium'
+     and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+  1,
+  'Authenticated deve poter eseguire delete_condominium'
 );
 
 -- Nessuna policy pubblica: tutte le policy applicative devono richiedere autenticazione.
