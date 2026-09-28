@@ -292,16 +292,21 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     });
   }
 
-  // Rimuoviamo le unità non più rappresentate dallo stato locale.
-  // Questo mantiene coerente la relazione unità <-> condòmini anche quando
-  // un appartamento viene cambiato o un ultimo condòmino viene eliminato.
+  // Riconciliazione delle unità: anche un'unità rimasta senza condòmini
+  // deve essere eliminata quando non è più presente nello stato locale.
   const desiredUnitKeys = new Set(
     desiredUnits.map((row: any) =>
       String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
     )
   );
-  for (const [unitKey, unit] of unitRowsByKey) {
-    if (!desiredUnitKeys.has(unitKey)) {
+  const { data: existingUnitsWorkspace, error: existingUnitsError } = await supabase
+    .from("condominium_units")
+    .select("id, condominium_id, unit_code")
+    .eq("workspace_id", workspaceId);
+  if (existingUnitsError) throw existingUnitsError;
+  for (const unit of existingUnitsWorkspace ?? []) {
+    const key = String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase();
+    if (!desiredUnitKeys.has(key)) {
       const { error: deleteUnitError } = await supabase
         .from("condominium_units")
         .delete()
