@@ -419,3 +419,25 @@ export async function deleteCondominium(workspaceId: string, legacyId: number) {
     if (error) throw error;
   });
 }
+
+
+export async function updateCondominiumRequestStatus(
+  workspaceId: string,
+  request: any
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { error } = await supabase
+      .from("condominium_requests")
+      .update({
+        status: request.status,
+        data: request,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", request.id);
+
+    if (error) throw error;
+  });
+}
