@@ -12523,6 +12523,11 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, onSubmi
   const existingApartments = Array.from(new Set(sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean)));
   const selectedApartment = value.apartment.trim();
   const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
+  const unitSelection = existingApartments.includes(value.apartment)
+    ? value.apartment
+    : value.apartment
+      ? "__new__"
+      : "";
   return <form onSubmit={onSubmit}>
     <ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} />
     <div className="form-grid">
@@ -12531,7 +12536,7 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, onSubmi
       <Field label="Cognome *" value={value.lastName} onChange={(v: string) => set("lastName", v)} />
       <div className="field full">
         <label>Unità abitativa *</label>
-        <select value={existingApartments.includes(value.apartment) ? value.apartment : ""} onChange={(e) => {
+        <select value={unitSelection} onChange={(e) => {
           if (e.target.value === "__new__") setValue({ ...value, apartment: "", unitId: "" });
           else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\\s+/g, "-")}` });
         }}>
