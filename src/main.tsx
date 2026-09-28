@@ -5424,6 +5424,7 @@ function App() {
               onStatusRequest={updateCondominiumRequestStatus}
               onNewCommunication={newCommunication}
               onPrepareEmail={prepareCondominiumEmail}
+              openCondominiumEmailComposer={openCondominiumEmailComposer}
               isAdministrator={isAdministrator}
             />
           )}
@@ -7090,6 +7091,7 @@ function CondominiumsPage(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
+    openCondominiumEmailComposer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
@@ -7244,6 +7246,7 @@ function CondominiumsPage(
           onStatusRequest={onStatusRequest}
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
+          openCondominiumEmailComposer={openCondominiumEmailComposer}
           onNewDeadline={() => onNewDeadline(selected.id)}
           onNewDocument={() => onNewDocument(selected.id)}
           onNewAssembly={() => onNewAssembly(selected.id)}
@@ -7423,6 +7426,7 @@ function CondominiumDetails(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
+    openCondominiumEmailComposer,
     onEditDeadline,
     onEditDocument,
     onEditAssembly,
