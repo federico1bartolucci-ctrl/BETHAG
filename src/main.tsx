@@ -1087,7 +1087,7 @@ function LoginPage({
     },
     {
       id: "collaborator",
-      title: "Assistente",
+      title: "Collaboratore",
       description: "Accesso all'area gestionale del titolare.",
     },
     {
@@ -1662,13 +1662,23 @@ function App() {
       (c) => c.id === id
     )?.name || "Tutti i condomini";
 
-  const canAccessPage = (target: Page) => {
-    if (sessionRole === "admin") return true;
+  const isAdministrator = sessionRole === "admin";
+  const isCollaborator = sessionRole === "collaborator";
 
-    if (sessionRole === "collaborator") {
+  const canAccessPage = (target: Page) => {
+    if (isAdministrator) return true;
+
+    if (isCollaborator) {
       return target !== "abbonamento" && target !== "amministratore";
     }
 
+    return false;
+  };
+
+  const requireAdministrator = (action: string) => {
+    if (isAdministrator) return true;
+
+    alert(action + " è riservata all'Amministratore.");
     return false;
   };
 
@@ -1763,6 +1773,8 @@ function App() {
   const saveCondominium = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
+    if (!requireAdministrator("La modifica dei dati del condominio")) return;
+
     event.preventDefault();
 
     const data =
@@ -1833,6 +1845,8 @@ function App() {
   const deleteCondominium = (
     item: Condominium
   ) => {
+    if (!requireAdministrator("L'eliminazione del condominio")) return;
+
     const related =
       deadlines.filter(
         (x) =>
@@ -2003,6 +2017,8 @@ function App() {
   const deleteDeadline = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione della scadenza")) return;
+
     if (
       !confirm(
         "Eliminare questa scadenza?"
@@ -2108,6 +2124,8 @@ function App() {
   const deleteDocument = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione del documento")) return;
+
     if (
       !confirm(
         "Eliminare questo documento?"
@@ -2273,6 +2291,8 @@ function App() {
   const deleteAssembly = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione dell'assemblea")) return;
+
     if (
       !confirm(
         "Eliminare questa assemblea?"
@@ -2514,6 +2534,8 @@ function App() {
   const deleteSupplier = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione del fornitore")) return;
+
     if (
       !confirm(
         "Eliminare questo fornitore?"
@@ -2596,6 +2618,8 @@ function App() {
   const deleteActivity = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione dell'attività")) return;
+
     if (
       !confirm(
         "Eliminare questa attività?"
@@ -2831,6 +2855,8 @@ function App() {
   const deleteCommunication = (
     id: number
   ) => {
+    if (!requireAdministrator("L'eliminazione della comunicazione")) return;
+
     if (
       !confirm(
         "Eliminare questa comunicazione?"
@@ -3121,7 +3147,7 @@ function App() {
             <small className="role-badge">
               {sessionRole === "admin"
                 ? "Amministratore"
-                : "Assistente"}
+                : "Collaboratore"}
             </small>
           </div>
 
