@@ -4133,8 +4133,9 @@ function App() {
           onClick={() =>
             navigate("ai")
           }
+          aria-label="Apri BETHAG AI"
         >
-          ✨
+          <AppIcon name="sparkles" size={21} />
         </button>
 
         <button
@@ -4190,9 +4191,7 @@ function App() {
 
             <div className="mobile-menu-header">
 
-              <div className="logo">
-                BET<span>H</span>AG
-              </div>
+              <BrandLogo compact />
 
               <button
                 className="modal-close"
@@ -4201,6 +4200,7 @@ function App() {
                     false
                   )
                 }
+                aria-label="Chiudi menu"
               >
                 ×
               </button>
@@ -4227,56 +4227,23 @@ function App() {
 
               {(
                 [
-                  [
-                    "homepage",
-                    "⌂ Homepage",
-                  ],
-                  [
-                    "condomini",
-                    "🏢 Condomini",
-                  ],
-                  [
-                    "documenti",
-                    "📁 Documenti",
-                  ],
-                  [
-                    "scadenze",
-                    "📅 Scadenze",
-                  ],
-                  [
-                    "assemblee",
-                    "👥 Assemblee",
-                  ],
-                  [
-                    "fornitori",
-                    "🔧 Fornitori",
-                  ],
-                  [
-                    "attivita",
-                    "✓ Attività",
-                  ],
-                  [
-                    "comunicazioni",
-                    "📢 Comunicazioni",
-                  ],
-                  [
-                    "ai",
-                    "✨ BETHAG AI",
-                  ],
-                  [
-                    "portale",
-                    "👥 Portale condomini",
-                  ],
-                  [
-                    "abbonamento",
-                    "⭐ Piano e upgrade",
-                  ],
-                  [
-                    "amministratore",
-                    "👤 Amministratore",
-                  ],
+                  ["homepage", "Homepage", "dashboard"],
+                  ["condomini", "Condomini", "building"],
+                  ["documenti", "Documenti", "folder"],
+                  ["scadenze", "Scadenze", "calendar"],
+                  ["assemblee", "Assemblee", "users"],
+                  ["fornitori", "Fornitori", "wrench"],
+                  ["attivita", "Attività", "check"],
+                  ["comunicazioni", "Comunicazioni", "megaphone"],
+                  ["ai", "BETHAG AI", "sparkles"],
+                  ["portale", "Portale condomini", "portal"],
+                  ["abbonamento", "Piano e upgrade", "star"],
+                  ["collaboratori", "Collaboratori", "users"],
+                  ["amministratore", "Amministratore", "user"],
+                  ["aiuto", "Aiuto", "help"],
                 ] as [
                   Page,
+                  string,
                   string
                 ][]
               )
@@ -4284,7 +4251,7 @@ function App() {
                 canAccessPage(target)
               )
               .map(
-                ([target, label]) => (
+                ([target, label, icon]) => (
                   <NavButton
                     key={target}
                     active={
@@ -4296,7 +4263,10 @@ function App() {
                       )
                     }
                   >
-                    {label}
+                    <span className="nav-icon">
+                      <AppIcon name={icon} size={18} />
+                    </span>
+                    <span>{label}</span>
                   </NavButton>
                 )
               )}
