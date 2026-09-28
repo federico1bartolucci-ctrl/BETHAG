@@ -118,7 +118,8 @@ select is(
   'Authenticated deve poter eseguire le funzioni RLS private'
 );
 
--- Tutte le tabelle applicative devono avere RLS.
+-- Tutte le tabelle applicative pubbliche devono avere RLS.
+-- Il set attuale comprende anche le tabelle di registrazione del portale.
 select is(
   (select count(*)::integer
    from pg_class c
@@ -128,6 +129,7 @@ select is(
        'workspaces',
        'workspace_members',
        'condominiums',
+       'condominium_units',
        'condominium_members',
        'documents',
        'deadlines',
@@ -137,11 +139,12 @@ select is(
        'communications',
        'condominium_requests',
        'portal_access',
+       'portal_registration_requests',
        'profiles'
      )
      and c.relrowsecurity),
-  13,
-  'Tutte le tabelle applicative devono avere RLS abilitato'
+  15,
+  'Tutte le 15 tabelle applicative devono avere RLS abilitato'
 );
 
 -- Le policy di scrittura dei moduli devono essere autenticate e usare
