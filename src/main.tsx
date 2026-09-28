@@ -2382,7 +2382,8 @@ function App() {
           workspaceId: access.workspaceId,
           email: normalizedEmail || current.email,
         }));
-        setPage("homepage");
+        // Con una sessione già autenticata manteniamo la sezione salvata.
+        // Il ritorno alla Homepage avviene esplicitamente nel flusso di login.
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
         if (!cancelled) {
