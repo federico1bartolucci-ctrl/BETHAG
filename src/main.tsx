@@ -1689,7 +1689,10 @@ function App() {
     useState<Page>(() => load<Page>(KEYS.page, "homepage"));
 
   useEffect(() => {
-    localStorage.setItem(KEYS.page, page);
+    // KEYS.* viene letto tramite load(), che usa JSON.parse():
+    // salviamo quindi anche la pagina come JSON per poterla ripristinare
+    // correttamente dopo un refresh.
+    localStorage.setItem(KEYS.page, JSON.stringify(page));
   }, [page]);
 
   const [sessionRole, setSessionRole] =
