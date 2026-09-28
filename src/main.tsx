@@ -7718,17 +7718,15 @@ function CondominiumDetails(
           <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
             {isAdministrator && (
-              <>
-                <button className="primary-button" onClick={() => onPrepareEmail(item.id)}>✉️ Scrivi a tutti</button>
-                <button
-                  className="secondary-button condominium-add-member-button"
-                  type="button"
-                  onClick={() => onNewMember(item.id)}
-                >
-                  + Aggiungi condòmino
-                </button>
-              </>
+              <button className="primary-button" onClick={() => onPrepareEmail(item.id)}>✉️ Scrivi a tutti</button>
             )}
+            <button
+              className="secondary-button condominium-add-member-button"
+              type="button"
+              onClick={() => onNewMember(item.id)}
+            >
+              + Aggiungi condòmino
+            </button>
           </div>
         </div>
         <div className="condominium-member-list">
