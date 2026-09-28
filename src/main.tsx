@@ -2720,12 +2720,31 @@ function App() {
     if (
       supabaseConfigured &&
       supabase &&
-      sessionRole === "admin" &&
-      profile.workspaceId &&
-      backendHydrated.current
+      sessionRole === "admin"
     ) {
       try {
-        await syncBackendState(profile.workspaceId, {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
+        }
+
+        let workspaceId = profile.workspaceId;
+
+        if (!workspaceId) {
+          workspaceId = await getActiveWorkspaceId(
+            session.user.id,
+            null
+          );
+        }
+
+        if (!workspaceId) {
+          throw new Error("Workspace amministratore non trovato.");
+        }
+
+        await syncBackendState(workspaceId, {
           condominiums: nextCondominiums,
           condominiumMembers,
           documents,
@@ -2738,6 +2757,16 @@ function App() {
           portalMembers,
           collaborators,
         });
+
+        if (!profile.workspaceId) {
+          setProfile((current) => ({
+            ...current,
+            workspaceId,
+            email: session.user.email || current.email,
+          }));
+        }
+
+        backendHydrated.current = true;
       } catch (error) {
         console.error("BETHAG condominium save failed", error);
         alert(
