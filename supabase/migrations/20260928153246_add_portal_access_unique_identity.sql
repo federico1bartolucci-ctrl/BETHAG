@@ -1,0 +1,1 @@
+create unique index if not exists uq_portal_access_workspace_condominium_email on public.portal_access(workspace_id,condominium_id,(lower(trim(email))));
