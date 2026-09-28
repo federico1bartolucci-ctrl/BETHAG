@@ -2547,6 +2547,26 @@ function App() {
     return false;
   };
 
+  const requireModulePermission = (
+    permission: CollaboratorPermission,
+    action: string
+  ) => {
+    if (isAdministrator) return true;
+
+    if (
+      isCollaborator &&
+      collaboratorPermissions.includes(permission)
+    ) {
+      return true;
+    }
+
+    alert(
+      action +
+        " non è autorizzata per il tuo profilo o per le funzioni assegnate."
+    );
+    return false;
+  };
+
   const requireAdministrator = (action: string) => {
     if (isAdministrator) return true;
 
@@ -2668,7 +2688,7 @@ function App() {
   ) => {
     event.preventDefault();
 
-    if (!requireAdministrator("La modifica dei dati del condominio")) return;
+    if (!requireModulePermission("condomini", "La modifica dei dati del condominio")) return;
 
     const isEditing =
       Boolean(editingCondominium && editingCondominium.id !== 0);
@@ -2781,7 +2801,7 @@ function App() {
   };
 
   const deleteCondominium = async (item: Condominium) => {
-    if (!requireAdministrator("L'eliminazione del condominio")) return;
+    if (!requireModulePermission("condomini", "L'eliminazione del condominio")) return;
 
     const related =
       deadlines.filter((x) => x.condominiumId === item.id).length +
@@ -2837,7 +2857,7 @@ function App() {
   const saveDeadline = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione delle scadenze")) return;
+    if (!requireModulePermission("scadenze", "La gestione delle scadenze")) return;
     event.preventDefault();
 
     if (
@@ -2887,7 +2907,7 @@ function App() {
   const editDeadline = (
     item: Deadline
   ) => {
-    if (!requireAdministrator("La modifica di una scadenza")) return;
+    if (!requireModulePermission("scadenze", "La modifica di una scadenza")) return;
     setSelectedDeadline(item);
     setDeadlineForm(item);
     openModal("deadline");
@@ -2896,7 +2916,7 @@ function App() {
   const deleteDeadline = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione della scadenza")) return;
+    if (!requireModulePermission("scadenze", "L'eliminazione della scadenza")) return;
 
     if (
       !confirm(
@@ -2940,7 +2960,7 @@ function App() {
   const saveDocument = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione dei documenti")) return;
+    if (!requireModulePermission("documenti", "La gestione dei documenti")) return;
     event.preventDefault();
 
     if (!documentForm.name.trim()) {
@@ -3008,7 +3028,7 @@ function App() {
   const editDocument = (
     item: DocumentItem
   ) => {
-    if (!requireAdministrator("La modifica di un documento")) return;
+    if (!requireModulePermission("documenti", "La modifica di un documento")) return;
     setSelectedDocument(item);
     setDocumentForm(item);
     setSelectedFileName("");
@@ -3018,7 +3038,7 @@ function App() {
   const deleteDocument = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione del documento")) return;
+    if (!requireModulePermission("documenti", "L'eliminazione del documento")) return;
 
     if (
       !confirm(
@@ -3136,7 +3156,7 @@ function App() {
   const saveAssembly = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione delle assemblee")) return;
+    if (!requireModulePermission("assemblee", "La gestione delle assemblee")) return;
     event.preventDefault();
 
     if (
@@ -3197,7 +3217,7 @@ function App() {
   const editAssembly = (
     item: Assembly
   ) => {
-    if (!requireAdministrator("La modifica di un'assemblea")) return;
+    if (!requireModulePermission("assemblee", "La modifica di un'assemblea")) return;
     setSelectedAssembly(item);
     setAssemblyForm(item);
     openModal("assembly");
@@ -3206,7 +3226,7 @@ function App() {
   const deleteAssembly = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione dell'assemblea")) return;
+    if (!requireModulePermission("assemblee", "L'eliminazione dell'assemblea")) return;
 
     if (
       !confirm(
@@ -3409,7 +3429,7 @@ function App() {
   const saveSupplier = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione dei fornitori")) return;
+    if (!requireModulePermission("fornitori", "La gestione dei fornitori")) return;
     event.preventDefault();
 
     if (
@@ -3465,7 +3485,7 @@ function App() {
   const editSupplier = (
     item: Supplier
   ) => {
-    if (!requireAdministrator("La modifica di un fornitore")) return;
+    if (!requireModulePermission("fornitori", "La modifica di un fornitore")) return;
     setSelectedSupplier(item);
     setSupplierForm(item);
     openModal("supplier");
@@ -3474,7 +3494,7 @@ function App() {
   const deleteSupplier = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione del fornitore")) return;
+    if (!requireModulePermission("fornitori", "L'eliminazione del fornitore")) return;
 
     if (
       !confirm(
@@ -3506,7 +3526,7 @@ function App() {
   const saveActivity = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione delle attività")) return;
+    if (!requireModulePermission("attivita", "La gestione delle attività")) return;
     event.preventDefault();
 
     if (!activityForm.title.trim()) {
@@ -3551,7 +3571,7 @@ function App() {
   const editActivity = (
     item: Activity
   ) => {
-    if (!requireAdministrator("La modifica di un'attività")) return;
+    if (!requireModulePermission("attivita", "La modifica di un'attività")) return;
     setSelectedActivity(item);
     setActivityForm(item);
     openModal("activity");
@@ -3560,7 +3580,7 @@ function App() {
   const deleteActivity = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione dell'attività")) return;
+    if (!requireModulePermission("attivita", "L'eliminazione dell'attività")) return;
 
     if (
       !confirm(
@@ -3610,7 +3630,7 @@ function App() {
      ======================================================= */
 
   const saveCondominiumMember = (event: React.FormEvent<HTMLFormElement>) => {
-    if (!requireAdministrator("La gestione dell'anagrafica dei condòmini")) return;
+    if (!requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
     if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) {
       alert("Inserisci nome, cognome e interno/appartamento del condòmino.");
@@ -3704,7 +3724,7 @@ function App() {
   };
 
   const deleteCondominiumMember = (id: number) => {
-    if (!requireAdministrator("L'eliminazione del condòmino")) return;
+    if (!requireModulePermission("condomini", "L'eliminazione del condòmino")) return;
 
     const member = condominiumMembers.find((item) => item.id === id);
     if (!member) return;
@@ -3855,17 +3875,17 @@ function App() {
   };
 
   const editCondominiumRequest = (request: CondominiumRequest) => {
-    if (!requireAdministrator("La modifica di una segnalazione o richiesta")) return;
+    if (!requireModulePermission("condomini", "La modifica di una segnalazione o richiesta")) return;
     setSelectedCondominiumRequest(request); setCondominiumRequestForm(request); openModal("condominium-request");
   };
   const deleteCondominiumRequest = (id: number) => {
-    if (!requireAdministrator("L'eliminazione della segnalazione o richiesta")) return;
+    if (!requireModulePermission("condomini", "L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
     setCondominiumRequests((current) => current.filter((request) => request.id !== id));
   };
 
   const updateCondominiumRequestStatus = async (id: number, status: RequestStatus) => {
-    if (!requireAdministrator("La gestione dello stato della segnalazione o richiesta")) return;
+    if (!requireModulePermission("condomini", "La gestione dello stato della segnalazione o richiesta")) return;
 
     const currentRequest = condominiumRequests.find((request) => request.id === id);
     if (!currentRequest) return;
@@ -4017,7 +4037,7 @@ function App() {
   const saveCommunication = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireAdministrator("La gestione delle comunicazioni")) return;
+    if (!requireModulePermission("comunicazioni", "La gestione delle comunicazioni")) return;
     event.preventDefault();
 
     if (
@@ -4137,7 +4157,7 @@ function App() {
   const deleteCommunication = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione della comunicazione")) return;
+    if (!requireModulePermission("comunicazioni", "L'eliminazione della comunicazione")) return;
 
     if (
       !confirm(
@@ -4194,7 +4214,7 @@ function App() {
   const addPortalMember = (
     member: PortalMember
   ) => {
-    if (!requireAdministrator("La gestione degli accessi al Portale condomini")) return;
+    if (!requireModulePermission("portale", "La gestione degli accessi al Portale condomini")) return;
     if (
       !requirePlan(
         "portal",
@@ -4244,7 +4264,7 @@ function App() {
   const togglePortalMember = (
     id: number
   ) => {
-    if (!requireAdministrator("La modifica dello stato di accesso al Portale condomini")) return;
+    if (!requireModulePermission("portale", "La modifica dello stato di accesso al Portale condomini")) return;
     setPortalMembers((current) =>
       current.map((member) =>
         member.id === id
@@ -4260,7 +4280,7 @@ function App() {
   const deletePortalMember = (
     id: number
   ) => {
-    if (!requireAdministrator("L'eliminazione dell'accesso al Portale condomini")) return;
+    if (!requireModulePermission("portale", "L'eliminazione dell'accesso al Portale condomini")) return;
     if (
       !confirm(
         "Eliminare l'accesso del condomino?"
@@ -4281,7 +4301,7 @@ function App() {
      ======================================================= */
 
   const newDeadline = (condominiumId?: number) => {
-    if (!requireAdministrator("La creazione di una scadenza")) return;
+    if (!requireModulePermission("scadenze", "La creazione di una scadenza")) return;
     setSelectedDeadline(null);
 
     setDeadlineForm({
@@ -4293,7 +4313,7 @@ function App() {
   };
 
   const newDocument = (condominiumId?: number) => {
-    if (!requireAdministrator("La creazione di un documento")) return;
+    if (!requireModulePermission("documenti", "La creazione di un documento")) return;
     setSelectedDocument(null);
 
     setDocumentForm({
@@ -4307,7 +4327,7 @@ function App() {
   };
 
   const newAssembly = (condominiumId?: number) => {
-    if (!requireAdministrator("La creazione di un'assemblea")) return;
+    if (!requireModulePermission("assemblee", "La creazione di un'assemblea")) return;
     setSelectedAssembly(null);
 
     setAssemblyForm({
@@ -4319,22 +4339,22 @@ function App() {
   };
 
   const newSupplier = (condominiumId?: number) => {
-    if (!requireAdministrator("La creazione di un fornitore")) return;
+    if (!requireModulePermission("fornitori", "La creazione di un fornitore")) return;
     setSelectedSupplier(null);
     setSupplierForm({ ...emptySupplier, condominiumId: condominiumId ?? emptySupplier.condominiumId });
     openModal("supplier");
   };
 
   const newActivity = (condominiumId?: number) => {
-    if (!requireAdministrator("La creazione di un'attività")) return;
+    if (!requireModulePermission("attivita", "La creazione di un'attività")) return;
     setSelectedActivity(null);
     setActivityForm({ ...emptyActivity, condominiumId: condominiumId ?? emptyActivity.condominiumId });
     openModal("activity");
   };
 
-  const newCondominiumMember = (condominiumId: number) => { if (!requireAdministrator("La gestione dell’anagrafica dei condòmini")) return; setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
+  const newCondominiumMember = (condominiumId: number) => { if (!requireModulePermission("condomini", "La gestione dell’anagrafica dei condòmini")) return; setSelectedCondominiumMember(null); setCondominiumMemberForm({ ...emptyCondominiumMember, condominiumId }); openModal("condominium-member"); };
   const newCondominiumRequest = (condominiumId: number) => {
-    if (!requireAdministrator("La creazione di una segnalazione o richiesta")) return;
+    if (!requireModulePermission("condomini", "La creazione di una segnalazione o richiesta")) return;
     setSelectedCondominiumRequest(null); setCondominiumRequestForm({ ...emptyCondominiumRequest, condominiumId }); openModal("condominium-request");
   };
 
