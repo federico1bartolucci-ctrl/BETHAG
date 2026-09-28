@@ -170,6 +170,7 @@ type Condominium = {
 
 type CondominiumMember = {
   id: number;
+  userId?: string;
   condominiumId: number;
   firstName: string;
   lastName: string;
@@ -277,6 +278,7 @@ type AdminProfile = {
 
 type PortalMember = {
   id: number;
+  userId?: string;
   name: string;
   email: string;
   condominiumId: number;
@@ -316,6 +318,21 @@ type Communication = {
   publishedToPortal: boolean;
   emailStatus?: "Non inviata" | "Predisposta" | "Inviata";
   emailPreparedAt?: string;
+};
+
+
+type PortalRegistrationRequest = {
+  id: string;
+  workspace_id: string | null;
+  requested_user_id: string | null;
+  matched_member_id: string | null;
+  email: string;
+  full_name: string;
+  fiscal_code: string | null;
+  condominium_name: string | null;
+  status: "pending" | "approved" | "rejected";
+  note: string | null;
+  created_at: string;
 };
 
 type WorkspaceSummary = {
@@ -1086,9 +1103,11 @@ type PublicRole = "admin" | "collaborator" | "resident";
 function PublicHome({
   onLogin,
   onRegisterAdmin,
+  onRegisterResident,
 }: {
   onLogin: (role: PublicRole, email: string, password: string) => void;
   onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
+  onRegisterResident: (fullName: string, email: string, fiscalCode: string, condominiumName: string, password: string) => Promise<void>;
 }) {
   const [showLogin, setShowLogin] = useState(false);
 
@@ -1098,6 +1117,7 @@ function PublicHome({
         onBack={() => setShowLogin(false)}
         onLogin={onLogin}
         onRegisterAdmin={onRegisterAdmin}
+        onRegisterResident={onRegisterResident}
       />
     );
   }
@@ -1160,44 +1180,31 @@ function LoginPage({
   onBack,
   onLogin,
   onRegisterAdmin,
+  onRegisterResident,
 }: {
   onBack: () => void;
   onLogin: (role: PublicRole, email: string, password: string) => Promise<void> | void;
   onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
+  onRegisterResident: (fullName: string, email: string, fiscalCode: string, condominiumName: string, password: string) => Promise<void>;
 }) {
   const [role, setRole] = useState<PublicRole>("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [fiscalCode, setFiscalCode] = useState("");
+  const [condominiumName, setCondominiumName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const roles: Array<{
-    id: PublicRole;
-    title: string;
-    description: string;
-  }> = [
-    {
-      id: "admin",
-      title: "Amministratore",
-      description: "Accesso completo al gestionale.",
-    },
-    {
-      id: "collaborator",
-      title: "Collaboratore",
-      description: "Accesso all'area gestionale del titolare.",
-    },
-    {
-      id: "resident",
-      title: "Condomino",
-      description: "Accesso alla sola area di consultazione.",
-    },
+  const roles: Array<{ id: PublicRole; title: string; description: string }> = [
+    { id: "admin", title: "Amministratore", description: "Accesso completo al gestionale." },
+    { id: "collaborator", title: "Collaboratore", description: "Accesso all'area gestionale del titolare." },
+    { id: "resident", title: "Condomino", description: "Accesso al portale del proprio condominio." },
   ];
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-
     if (submitting) return;
 
     if (!email.trim() || !password.trim()) {
@@ -1205,7 +1212,12 @@ function LoginPage({
       return;
     }
 
-    if (registerMode && !fullName.trim()) {
+    if (registerMode && role === "resident" && !fullName.trim()) {
+      setError("Inserisci nome e cognome.");
+      return;
+    }
+
+    if (registerMode && role === "admin" && !fullName.trim()) {
       setError("Inserisci nome e cognome.");
       return;
     }
@@ -1215,23 +1227,19 @@ function LoginPage({
 
     try {
       if (registerMode) {
-        if (role !== "admin") {
-          setError("La creazione del primo account è disponibile solo per l'Amministratore.");
-          return;
+        if (role === "admin") {
+          await onRegisterAdmin(fullName.trim(), email.trim(), password);
+        } else if (role === "resident") {
+          await onRegisterResident(fullName.trim(), email.trim(), fiscalCode.trim(), condominiumName.trim(), password);
+        } else {
+          throw new Error("La registrazione autonoma dei collaboratori non è disponibile: il collaboratore viene invitato dall'amministratore.");
         }
-
-        await onRegisterAdmin(fullName.trim(), email.trim(), password);
-        return;
+      } else {
+        await onLogin(role, email.trim(), password);
       }
-
-      await onLogin(role, email.trim(), password);
     } catch (submitError) {
       console.error("BETHAG authentication action failed", submitError);
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Operazione non completata. Riprova."
-      );
+      setError(submitError instanceof Error ? submitError.message : "Operazione non completata. Riprova.");
     } finally {
       setSubmitting(false);
     }
@@ -1242,14 +1250,14 @@ function LoginPage({
       <div className="login-card">
         <div className="login-card-header">
           <BrandLogo />
-          <button className="secondary-button" onClick={onBack}>
-            ← Indietro
-          </button>
+          <button className="secondary-button" onClick={onBack}>← Indietro</button>
         </div>
 
-        <h1>Accedi a BETHAG</h1>
+        <h1>{registerMode ? "Registrazione nuovo utente" : "Accedi a BETHAG"}</h1>
         <p className="login-intro">
-          Seleziona il profilo con cui vuoi entrare nella piattaforma.
+          {registerMode
+            ? "Per i condòmini BETHAG verifica prima l'anagrafica inserita dall'amministratore."
+            : "Seleziona il profilo con cui vuoi entrare nella piattaforma."}
         </p>
 
         <div className="login-role-grid">
@@ -1257,15 +1265,8 @@ function LoginPage({
             <button
               key={item.id}
               type="button"
-              className={
-                role === item.id
-                  ? "login-role active"
-                  : "login-role"
-              }
-              onClick={() => {
-                setRole(item.id);
-                setError("");
-              }}
+              className={role === item.id ? "login-role active" : "login-role"}
+              onClick={() => { setRole(item.id); setError(""); }}
             >
               {item.title}
             </button>
@@ -1280,52 +1281,36 @@ function LoginPage({
           {registerMode && (
             <>
               <label>Nome e cognome</label>
-              <input
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                type="text"
-                placeholder="Mario Rossi"
-                autoComplete="name"
-              />
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} type="text" placeholder="Mario Rossi" autoComplete="name" />
+
+              {role === "resident" && (
+                <>
+                  <label>Codice fiscale</label>
+                  <input value={fiscalCode} onChange={(event) => setFiscalCode(event.target.value.toUpperCase())} type="text" placeholder="RSSMRA..." autoComplete="off" />
+
+                  <label>Nome del condominio <span style={{fontWeight:400,color:"#94a3b8"}}>(se conosciuto)</span></label>
+                  <input value={condominiumName} onChange={(event) => setCondominiumName(event.target.value)} type="text" placeholder="Condominio Aurora" />
+                </>
+              )}
             </>
           )}
 
           <label>E-mail</label>
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            placeholder="nome@esempio.it"
-          />
+          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="nome@esempio.it" autoComplete="email" />
 
           <label>Password</label>
-          <input
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            placeholder="••••••••"
-          />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="••••••••" autoComplete={registerMode ? "new-password" : "current-password"} />
 
-          {role === "resident" && (
+          {registerMode && role === "resident" && (
             <small className="login-note">
-              L'area condomino sarà associata al profilo condominiale
-              collegato all'e-mail.
+              Se esiste un profilo con la stessa e-mail e dati anagrafici, BETHAG lo collega automaticamente al relativo condominio dopo la verifica dell'e-mail. In caso contrario la richiesta passa all'amministratore.
             </small>
           )}
 
           {error && <div className="login-error">{error}</div>}
 
-          <button
-            className="primary-button login-submit"
-            type="submit"
-            disabled={submitting}
-            aria-busy={submitting}
-          >
-            {submitting
-              ? "Operazione in corso…"
-              : registerMode
-                ? "Crea account amministratore"
-                : "Accedi"}
+          <button className="primary-button login-submit" type="submit" disabled={submitting} aria-busy={submitting}>
+            {submitting ? "Operazione in corso…" : registerMode ? (role === "resident" ? "Registrati come condòmino" : "Crea account amministratore") : "Accedi"}
           </button>
         </form>
 
@@ -1339,15 +1324,12 @@ function LoginPage({
               setError("");
             }}
           >
-            {registerMode
-              ? "Ho già un account: accedi"
-              : "È il primo accesso? Crea account amministratore"}
+            {registerMode ? "Ho già un account: accedi" : "Registrazione nuovo utente"}
           </button>
         )}
 
         <p className="login-disclaimer">
-          Accesso protetto tramite autenticazione BETHAG e autorizzazioni
-          del workspace. Le credenziali non vengono gestite localmente.
+          Le credenziali sono gestite da Supabase Auth. L'accesso al portale viene concesso solo dopo l'associazione/autorizzazione del profilo condominiale.
         </p>
       </div>
     </div>
@@ -1673,6 +1655,7 @@ function App() {
 
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
+  const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
 
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -1801,6 +1784,62 @@ function App() {
   const [selectedCondominiumRequest, setSelectedCondominiumRequest] = useState<CondominiumRequest | null>(null);
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
+
+  const handleRegisterResident = async (
+    fullName: string,
+    email: string,
+    fiscalCode: string,
+    condominiumName: string,
+    password: string
+  ) => {
+    if (!supabaseConfigured || !supabasePublicAuth) {
+      throw new Error("Il servizio di autenticazione BETHAG non è disponibile.");
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const registration = {
+      fullName: fullName.trim(),
+      email: normalizedEmail,
+      fiscalCode: fiscalCode.trim(),
+      condominiumName: condominiumName.trim(),
+    };
+
+    sessionStorage.setItem("bethag-pending-resident-registration", JSON.stringify(registration));
+
+    const { data, error } = await supabasePublicAuth.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        data: {
+          full_name: fullName.trim(),
+          bethag_role: "resident",
+        },
+      },
+    });
+
+    if (error) throw new Error(error.message || "Impossibile creare l'account condòmino.");
+    if (!data.user) throw new Error("Registrazione non completata. Riprova.");
+
+    if (data.session && supabase) {
+      const { data: completion, error: completionError } = await supabase.rpc("complete_portal_registration", {
+        p_full_name: registration.fullName,
+        p_fiscal_code: registration.fiscalCode || null,
+        p_condominium_name: registration.condominiumName || null,
+      });
+      if (completionError) throw completionError;
+      sessionStorage.removeItem("bethag-pending-resident-registration");
+      if (completion?.status === "approved") {
+        alert("Registrazione completata. Il tuo account è stato collegato al condominio.");
+        await handleLogin("resident", normalizedEmail, password);
+      } else {
+        await supabase.auth.signOut();
+        alert("Account creato. Controlla la tua e-mail. Dopo la verifica, BETHAG completerà il collegamento oppure invierà la richiesta all'amministratore.");
+      }
+    } else {
+      alert("Account creato. Controlla la tua e-mail e conferma l'indirizzo. Dopo la verifica BETHAG completerà automaticamente la procedura.");
+    }
+  };
 
   const handleRegisterAdmin = async (
     fullName: string,
@@ -2068,6 +2107,46 @@ function App() {
     setMobileMenuOpen(false);
   };
 
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase || sessionRole !== "admin" || !profile.workspaceId) {
+      setRegistrationRequests([]);
+      return;
+    }
+    let cancelled = false;
+    const loadRegistrationRequests = async () => {
+      const { data, error } = await supabase
+        .from("portal_registration_requests")
+        .select("*")
+        .eq("workspace_id", profile.workspaceId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
+    };
+    void loadRegistrationRequests();
+    return () => { cancelled = true; };
+  }, [sessionRole, profile.workspaceId]);
+
+  const approvePortalRegistration = async (requestId: string, memberId: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.rpc("admin_approve_portal_registration", {
+      p_request_id: requestId,
+      p_member_id: memberId,
+    });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
+    try {
+      const backend = await loadBackendState(profile.workspaceId);
+      setCondominiumMembers(backend.condominiumMembers);
+      setPortalMembers(backend.portalMembers || []);
+    } catch (refreshError) {
+      console.error("BETHAG registration approval refresh failed", refreshError);
+    }
+    alert("Accesso condòmino autorizzato e collegato.");
+  };
+
   /* =======================================================
      PERSISTENZA
      ======================================================= */
@@ -2088,6 +2167,29 @@ function App() {
 
       try {
         const normalizedEmail = (session.user.email || "").trim();
+        const pendingRegistrationRaw = sessionStorage.getItem("bethag-pending-resident-registration");
+        if (pendingRegistrationRaw && supabase) {
+          try {
+            const pendingRegistration = JSON.parse(pendingRegistrationRaw);
+            const { data: completion, error: completionError } = await supabase.rpc("complete_portal_registration", {
+              p_full_name: pendingRegistration.fullName || session.user.user_metadata?.full_name || "",
+              p_fiscal_code: pendingRegistration.fiscalCode || null,
+              p_condominium_name: pendingRegistration.condominiumName || null,
+            });
+            if (completionError) throw completionError;
+            sessionStorage.removeItem("bethag-pending-resident-registration");
+            if (completion?.status === "pending") {
+              await supabase.auth.signOut();
+              alert("Registrazione ricevuta. L'amministratore dovrà autorizzare l'accesso e collegarti al relativo profilo condominiale.");
+              return;
+            }
+          } catch (registrationError) {
+            console.error("BETHAG resident registration completion failed", registrationError);
+            await supabase.auth.signOut();
+            alert(registrationError instanceof Error ? registrationError.message : "Impossibile completare la registrazione condòmino.");
+            return;
+          }
+        }
         const access = await resolveSupabaseAccess(
           session.user.id,
           normalizedEmail
@@ -4839,6 +4941,9 @@ function App() {
                 subscription
               }
               isAdministrator={isAdministrator}
+              registrationRequests={registrationRequests}
+              condominiumMembers={condominiumMembers}
+              onApproveRegistration={approvePortalRegistration}
             />
           )}
 
@@ -5800,6 +5905,61 @@ function NavButton({
    DASHBOARD
    ========================================================= */
 
+function PortalRegistrationRequestsPanel({
+  requests,
+  condominiumMembers,
+  onApprove,
+}: {
+  requests: PortalRegistrationRequest[];
+  condominiumMembers: CondominiumMember[];
+  onApprove: (requestId: string, memberId: string) => Promise<void>;
+}) {
+  return (
+    <section className="card" style={{marginBottom:18,borderColor:"#c7d2fe",background:"#f8faff"}}>
+      <SectionTitle title="Richieste di accesso condòmini" action={`${requests.length} da gestire`} />
+      <p className="section-subtitle">
+        Un utente ha richiesto l'accesso ma non è stato trovato automaticamente nell'anagrafica. Seleziona il profilo condòmino da collegare.
+      </p>
+      {requests.map((request) => {
+        const candidates = condominiumMembers.filter((member) =>
+          member.active &&
+          member.email.trim().toLowerCase() === request.email.trim().toLowerCase()
+        );
+        const defaultId = candidates[0]?.id ? String(candidates[0].id) : "";
+        return (
+          <div key={request.id} className="list-row" style={{alignItems:"center",gap:14}}>
+            <div style={{flex:1,minWidth:0}}>
+              <b>{request.full_name}</b>
+              <small>{request.email}{request.condominium_name ? ` · ${request.condominium_name}` : ""}</small>
+            </div>
+            <select
+              defaultValue={defaultId}
+              disabled={candidates.length === 0}
+              style={{minWidth:220}}
+              id={`registration-member-${request.id}`}
+            >
+              {candidates.length === 0
+                ? <option value="">Nessun profilo compatibile</option>
+                : candidates.map((member) => <option key={member.id} value={String(member.id)}>{member.firstName} {member.lastName} · {member.apartment || "unità"}</option>)}
+            </select>
+            <button
+              className="primary-button"
+              disabled={candidates.length === 0}
+              onClick={() => {
+                const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
+                const memberId = select?.value || "";
+                if (memberId) void onApprove(request.id, memberId);
+              }}
+            >
+              Autorizza
+            </button>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 function Dashboard({
   condominiums,
   deadlines,
@@ -5819,6 +5979,9 @@ function Dashboard({
   condominiumName,
   subscription,
   isAdministrator,
+  registrationRequests,
+  condominiumMembers,
+  onApproveRegistration,
 }: any) {
   return (
     <>
@@ -5856,6 +6019,14 @@ function Dashboard({
 
       </header>
 
+
+      {isAdministrator && registrationRequests.length > 0 && (
+        <PortalRegistrationRequestsPanel
+          requests={registrationRequests}
+          condominiumMembers={condominiumMembers}
+          onApprove={onApproveRegistration}
+        />
+      )}
 
       <section className="stats">
 
