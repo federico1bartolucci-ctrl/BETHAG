@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium, getActiveWorkspaceId, loadBackendState, saveCondominium, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3045,7 +3045,7 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
-        await saveCondominium(workspaceId, savedItem);
+        await saveCondominiumBackend(workspaceId, savedItem);
 
         if (!profile.workspaceId) {
           setProfile((current) => ({
@@ -3060,7 +3060,7 @@ function App() {
         console.error("BETHAG condominium save failed", error);
         alert(
           error instanceof Error
-            ? "Il condominio non è stato salvato sul server.\\n\\n" + error.message
+            ? "Il condominio non è stato salvato sul server.\n\n" + error.message
             : "Il condominio non è stato salvato sul server. Riprova."
         );
         return;
@@ -3101,10 +3101,10 @@ function App() {
         const workspaceId = profile.workspaceId || await getActiveWorkspaceId(session.user.id, null);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
-        await deleteCondominium(workspaceId, item.id);
+        await deleteCondominiumBackend(workspaceId, item.id);
       } catch (error) {
         console.error("BETHAG condominium deletion failed", error);
-        alert(error instanceof Error ? "Il condominio non è stato cancellato dal server.\\n\\n" + error.message : "Il condominio non è stato cancellato dal server. Riprova.");
+        alert(error instanceof Error ? "Il condominio non è stato cancellato dal server.\n\n" + error.message : "Il condominio non è stato cancellato dal server. Riprova.");
         return;
       }
     }
