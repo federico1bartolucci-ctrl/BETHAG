@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(13);
 
 -- Nessuna policy pubblica: tutte le policy applicative devono richiedere autenticazione.
 select is(
@@ -25,12 +25,13 @@ select is(
        'can_access_condominium',
        'can_access_workspace_module',
        'can_access_resident_condominium',
+       'can_access_resident_condominium_module',
        'is_workspace_admin',
        'is_workspace_member'
      )
      and p.prosecdef),
-  5,
-  'Le cinque funzioni RLS devono essere SECURITY DEFINER'
+  6,
+  'Le sei funzioni RLS devono essere SECURITY DEFINER'
 );
 
 select is(
@@ -42,6 +43,7 @@ select is(
        'can_access_condominium',
        'can_access_workspace_module',
        'can_access_resident_condominium',
+       'can_access_resident_condominium_module',
        'is_workspace_admin',
        'is_workspace_member'
      )
@@ -59,11 +61,12 @@ select is(
        'can_access_condominium',
        'can_access_workspace_module',
        'can_access_resident_condominium',
+       'can_access_resident_condominium_module',
        'is_workspace_admin',
        'is_workspace_member'
      )
      and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
-  5,
+  6,
   'Authenticated deve poter eseguire le funzioni RLS private'
 );
 
@@ -159,7 +162,7 @@ select is(
 -- I documenti, comunicazioni e verbali devono prevedere il filtro del condominio
 -- per gli utenti resident/council.
 select ok(
-  (select qual like '%can_access_resident_condominium%'
+  (select qual like '%can_access_resident_condominium_module%'
    from pg_policies
    where schemaname = 'public'
      and tablename = 'documents'
