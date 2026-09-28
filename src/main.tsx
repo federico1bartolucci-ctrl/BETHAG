@@ -1856,6 +1856,7 @@ function App() {
       .from("portal_access")
       .select("workspace_id, role, active, email")
       .eq("active", true)
+      .eq("role", "resident")
       .ilike("email", email.trim())
       .limit(1)
       .maybeSingle();
@@ -2068,8 +2069,6 @@ function App() {
     let cancelled = false;
 
     const validateServerAuthorization = async () => {
-      if (sessionRole === "admin") return;
-
       try {
         const {
           data: { user },
@@ -2078,6 +2077,21 @@ function App() {
         if (!user || cancelled) return;
 
         let authorized = false;
+
+        if (sessionRole === "admin") {
+          const { data: membership, error } = await supabase
+            .from("workspace_members")
+            .select("workspace_id, role, active")
+            .eq("user_id", user.id)
+            .eq("workspace_id", profile.workspaceId)
+            .eq("role", "admin")
+            .eq("active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+          authorized = Boolean(membership);
+        }
 
         if (sessionRole === "collaborator") {
           const { data: membership, error } = await supabase
@@ -2112,6 +2126,7 @@ function App() {
           const { data: portalAccess, error } = await supabase
             .from("portal_access")
             .select("workspace_id, role, active")
+            .eq("workspace_id", profile.workspaceId)
             .eq("active", true)
             .eq("role", "resident")
             .ilike("email", user.email || "")
