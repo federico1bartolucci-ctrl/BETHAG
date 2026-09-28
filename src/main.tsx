@@ -1321,9 +1321,8 @@ function LoginPage({
         )}
 
         <p className="login-disclaimer">
-          Accesso attualmente predisposto lato frontend. L'autenticazione
-          reale e la gestione sicura delle credenziali saranno collegate
-          al backend.
+          Accesso protetto tramite autenticazione BETHAG e autorizzazioni
+          del workspace. Le credenziali non vengono gestite localmente.
         </p>
       </div>
     </div>
@@ -1787,7 +1786,6 @@ function App() {
         data: {
           full_name: fullName.trim(),
         },
-        emailRedirectTo: window.location.href,
       },
     });
 
