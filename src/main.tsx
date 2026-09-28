@@ -2059,46 +2059,72 @@ function App() {
      ======================================================= */
 
   useEffect(() => {
-    if (sessionRole === "collaborator") {
-      const activeCollaborator = collaborators.some(
-        (item) =>
-          item.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase() &&
-          item.workspaceId === profile.workspaceId &&
-          item.status === "Attivo"
-      );
+    if (!sessionRole || !supabaseConfigured || !supabase) return;
 
-      if (!activeCollaborator) {
-        setSessionRole(null);
-        setSessionEmail("");
-        localStorage.removeItem(KEYS.session);
-        localStorage.removeItem(KEYS.sessionEmail);
-        setPage("homepage");
-        setMobileMenuOpen(false);
+    let cancelled = false;
+
+    const validateServerAuthorization = async () => {
+      if (sessionRole === "admin") return;
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user || cancelled) return;
+
+        let authorized = false;
+
+        if (sessionRole === "collaborator") {
+          const { data: membership, error } = await supabase
+            .from("workspace_members")
+            .select("workspace_id, role, active")
+            .eq("user_id", user.id)
+            .eq("workspace_id", profile.workspaceId)
+            .eq("role", "collaborator")
+            .eq("active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+          authorized = Boolean(membership);
+        }
+
+        if (sessionRole === "resident") {
+          const { data: portalAccess, error } = await supabase
+            .from("portal_access")
+            .select("workspace_id, role, active")
+            .eq("active", true)
+            .eq("role", "resident")
+            .ilike("email", user.email || "")
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+          authorized = Boolean(portalAccess);
+        }
+
+        if (!authorized && !cancelled) {
+          await supabase.auth.signOut();
+          setSessionRole(null);
+          setSessionEmail("");
+          localStorage.removeItem(KEYS.session);
+          localStorage.removeItem(KEYS.sessionEmail);
+          setPage("homepage");
+          setMobileMenuOpen(false);
+        }
+      } catch (error) {
+        console.error("BETHAG server authorization validation failed", error);
       }
-    }
+    };
 
-    if (sessionRole === "resident") {
-      const activeResident = portalMembers.some(
-        (item) =>
-          item.active &&
-          item.role === "resident" &&
-          item.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
-      );
+    void validateServerAuthorization();
 
-      if (!activeResident) {
-        setSessionRole(null);
-        setSessionEmail("");
-        localStorage.removeItem(KEYS.session);
-        localStorage.removeItem(KEYS.sessionEmail);
-        setPage("homepage");
-        setMobileMenuOpen(false);
-      }
-    }
+    return () => {
+      cancelled = true;
+    };
   }, [
     sessionRole,
-    sessionEmail,
-    collaborators,
-    portalMembers,
     profile.workspaceId,
   ]);
 
