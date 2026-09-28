@@ -5931,6 +5931,7 @@ function CondominiumDetails(
     onStatusDeadline,
     onStatusAssembly,
     onStatusActivity,
+    isAdministrator = false,
   } = props;
 
   const openDeadlines =
@@ -6214,6 +6215,7 @@ function CondominiumDetails(
           deadlines.map(
             (d: Deadline) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={d.id}
                 title={d.title}
                 subtitle={`${formatDate(
@@ -6284,6 +6286,7 @@ function CondominiumDetails(
           documents.map(
             (d: DocumentItem) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={d.id}
                 title={d.name}
                 subtitle={`${d.category} · ${formatDate(
@@ -6325,6 +6328,7 @@ function CondominiumDetails(
           assemblies.map(
             (a: Assembly) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={a.id}
                 title={a.title}
                 subtitle={`${formatDate(
@@ -6367,6 +6371,7 @@ function CondominiumDetails(
           suppliers.map(
             (s: Supplier) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={s.id}
                 title={s.name}
                 subtitle={`${s.service} · ${
@@ -6403,6 +6408,7 @@ function CondominiumDetails(
           activities.map(
             (a: Activity) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={a.id}
                 title={a.title}
                 subtitle={`Scadenza ${formatDate(
@@ -6469,6 +6475,7 @@ function CondominiumDetails(
               c: Communication
             ) => (
               <RelatedRow
+              canManage={isAdministrator}
                 key={c.id}
                 title={c.title}
                 subtitle={`${formatDate(
@@ -6540,6 +6547,7 @@ function RelatedRow({
   badge,
   onEdit,
   onDelete,
+  canManage = true,
   children,
 }: {
   title: string;
@@ -6547,6 +6555,7 @@ function RelatedRow({
   badge?: string;
   onEdit: () => void;
   onDelete: () => void;
+  canManage?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -6574,19 +6583,23 @@ function RelatedRow({
 
         {children}
 
-        <button
-          className="secondary-button small"
-          onClick={onEdit}
-        >
-          Modifica
-        </button>
+        {canManage && (
+          <>
+            <button
+              className="secondary-button small"
+              onClick={onEdit}
+            >
+              Modifica
+            </button>
 
-        <button
-          className="mini-danger"
-          onClick={onDelete}
-        >
-          ×
-        </button>
+            <button
+              className="mini-danger"
+              onClick={onDelete}
+            >
+              ×
+            </button>
+          </>
+        )}
 
       </div>
 
