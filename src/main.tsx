@@ -5424,6 +5424,7 @@ function App() {
               onStatusRequest={updateCondominiumRequestStatus}
               onNewCommunication={newCommunication}
               onPrepareEmail={prepareCondominiumEmail}
+              onOpenEmailComposer={openCondominiumEmailComposer}
               isAdministrator={isAdministrator}
             />
           )}
@@ -7090,6 +7091,7 @@ function CondominiumsPage(
     onStatusRequest,
     onNewCommunication,
     onPrepareEmail,
+    onOpenEmailComposer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
