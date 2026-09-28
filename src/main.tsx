@@ -6581,7 +6581,7 @@ function RelatedRow({
 
       <div className="related-actions">
 
-        {children}
+        {canManage && children}
 
         {canManage && (
           <>
