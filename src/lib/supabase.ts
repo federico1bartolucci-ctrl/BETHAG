@@ -23,6 +23,19 @@ export const supabase = supabaseConfigured
     })
   : null;
 
+// Dedicated client for public registration. It does not share the main
+// session/storage lock, so a first-time signup cannot be blocked by the
+// application's session hydration.
+export const supabasePublicAuth = supabaseConfigured
+  ? createClient(supabaseUrl!, supabasePublishableKey!, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
+
 export function requireSupabase() {
   if (!supabase) {
     throw new Error(
