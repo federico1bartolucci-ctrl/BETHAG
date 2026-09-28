@@ -90,117 +90,125 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 export async function syncBackendState(workspaceId: string, state: BackendState) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const rows = [
-    ["condominiums", state.condominiums],
-    ["documents", state.documents],
-    ["deadlines", state.deadlines],
-    ["assemblies", state.assemblies],
-    ["suppliers", state.suppliers],
-    ["activities", state.activities],
-    ["communications", state.communications],
-    ["condominium_requests", state.condominiumRequests],
-  ] as const;
+  const condominiumRows = state.condominiums ?? [];
+  const { data: existingCondominiums, error: condominiumError } = await supabase
+    .from("condominiums")
+    .select("id, legacy_id")
+    .eq("workspace_id", workspaceId);
 
-  for (const [table, items] of rows) {
-    if (!items.length) continue;
+  if (condominiumError) throw condominiumError;
 
-    const payload = items.map((item: any) => ({
+  const condominiumDbIdByLegacyId = new Map(
+    (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row.id])
+  );
+
+  if (condominiumRows.length) {
+    await upsertRows("condominiums", condominiumRows.map((item: any) => ({
       workspace_id: workspaceId,
-      condominium_id:
-        "condominiumId" in item
-          ? undefined
-          : undefined,
       legacy_id: item.id,
-      title: item.title ?? item.name ?? "BETHAG",
-      name: item.name ?? item.title ?? "BETHAG",
+      name: item.name,
+      address: item.address,
+      city: item.city,
+      postal_code: item.cap,
+      province: item.province,
       data: item,
-    }));
+    })));
 
-    if (table === "condominiums") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        name: item.name,
-        address: item.address,
-        city: item.city,
-        postal_code: item.cap,
-        province: item.province,
-        data: item,
-      })));
-    } else if (table === "documents") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: null,
-        title: item.name,
-        category: item.category,
-        status: item.publication,
-        data: item,
-      })));
-    } else if (table === "deadlines") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        title: item.title,
-        due_date: item.dueDate || null,
-        status: item.status,
-        data: item,
-      })));
-    } else if (table === "assemblies") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        title: item.title,
-        assembly_date: item.date ? new Date(item.date).toISOString() : null,
-        status: item.status,
-        data: item,
-      })));
-    } else if (table === "suppliers") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        name: item.name,
-        category: item.service,
-        status: undefined,
-        data: item,
-      })));
-    } else if (table === "activities") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        title: item.title,
-        activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null,
-        status: item.status,
-        data: item,
-      })));
-    } else if (table === "communications") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        title: item.title,
-        body: item.body,
-        published: item.publishedToPortal,
-        email_status: item.emailStatus,
-        email_prepared_at: item.emailPreparedAt || null,
-        data: item,
-      })));
-    } else if (table === "condominium_requests") {
-      await upsertRows(table, items.map((item: any) => ({
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        condominium_id: undefined,
-        title: item.category,
-        description: item.description,
-        status: item.status,
-        data: item,
-      })));
-    }
+    const { data: refreshedCondominiums, error } = await supabase
+      .from("condominiums")
+      .select("id, legacy_id")
+      .eq("workspace_id", workspaceId);
+
+    if (error) throw error;
+    (refreshedCondominiums ?? []).forEach((row: any) => {
+      condominiumDbIdByLegacyId.set(row.legacy_id, row.id);
+    });
   }
+
+  const rowsByTable: Array<[string, any[]]> = [
+    ["documents", (state.documents ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.name,
+      category: item.category,
+      status: item.publication,
+      data: item,
+    }))],
+    ["deadlines", (state.deadlines ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title,
+      due_date: item.dueDate || null,
+      status: item.status,
+      data: item,
+    }))],
+    ["assemblies", (state.assemblies ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title,
+      assembly_date: item.date ? new Date(item.date).toISOString() : null,
+      status: item.status,
+      data: item,
+    }))],
+    ["suppliers", (state.suppliers ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      name: item.name,
+      category: item.service,
+      data: item,
+    }))],
+    ["activities", (state.activities ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title,
+      activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null,
+      status: item.status,
+      data: item,
+    }))],
+    ["communications", (state.communications ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title,
+      body: item.body,
+      published: item.publishedToPortal,
+      email_status: item.emailStatus,
+      email_prepared_at: item.emailPreparedAt || null,
+      data: item,
+    }))],
+    ["condominium_requests", (state.condominiumRequests ?? []).map((item: any) => ({
+      workspace_id: workspaceId,
+      legacy_id: item.id,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.category,
+      description: item.description,
+      status: item.status,
+      data: item,
+    }))],
+  ];
+
+  for (const [table, rows] of rowsByTable) {
+    if (rows.length) await upsertRows(table, rows);
+  }
+
+  const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
+    condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+    legacy_id: item.id,
+    user_id: item.userId ?? null,
+    name: [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name || "Condòmino",
+    email: item.email ?? null,
+    role: item.role === "Inquilino" ? "resident" : "resident",
+    active: item.active ?? true,
+    permissions: item.permissions ?? {},
+    data: item,
+  })).filter((row: any) => row.condominium_id);
+
+  if (memberRows.length) await upsertRows("condominium_members", memberRows);
 }
 
 async function upsertRows(table: string, rows: any[]) {
