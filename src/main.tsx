@@ -4300,8 +4300,7 @@ function App() {
 
     setDeadlineForm({
       ...emptyDeadline,
-      condominiumId:
-        condominiums[0]?.id || 0,
+      condominiumId: condominiumId ?? (condominiums[0]?.id || 0),
     });
 
     openModal("deadline");
@@ -4313,8 +4312,7 @@ function App() {
 
     setDocumentForm({
       ...emptyDocument,
-      condominiumId:
-        condominiums[0]?.id || 0,
+      condominiumId: condominiumId ?? (condominiums[0]?.id || 0),
     });
 
     setSelectedFileName("");
@@ -4328,8 +4326,7 @@ function App() {
 
     setAssemblyForm({
       ...emptyAssembly,
-      condominiumId:
-        condominiums[0]?.id || 0,
+      condominiumId: condominiumId ?? (condominiums[0]?.id || 0),
     });
 
     openModal("assembly");
@@ -4338,14 +4335,14 @@ function App() {
   const newSupplier = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un fornitore")) return;
     setSelectedSupplier(null);
-    setSupplierForm(emptySupplier);
+    setSupplierForm({ ...emptySupplier, condominiumId: condominiumId ?? emptySupplier.condominiumId });
     openModal("supplier");
   };
 
   const newActivity = (condominiumId?: number) => {
     if (!requireAdministrator("La creazione di un'attività")) return;
     setSelectedActivity(null);
-    setActivityForm(emptyActivity);
+    setActivityForm({ ...emptyActivity, condominiumId: condominiumId ?? emptyActivity.condominiumId });
     openModal("activity");
   };
 
@@ -6670,11 +6667,11 @@ function CondominiumsPage(
           onStatusRequest={onStatusRequest}
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
-          onNewDeadline={newDeadline}
-          onNewDocument={newDocument}
-          onNewAssembly={newAssembly}
-          onNewSupplier={newSupplier}
-          onNewActivity={newActivity}
+          onNewDeadline={() => onNewDeadline(selected.id)}
+          onNewDocument={() => onNewDocument(selected.id)}
+          onNewAssembly={() => onNewAssembly(selected.id)}
+          onNewSupplier={() => onNewSupplier(selected.id)}
+          onNewActivity={() => onNewActivity(selected.id)}
           condominiumName={
             condominiumName
           }
