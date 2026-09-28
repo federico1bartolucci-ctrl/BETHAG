@@ -12371,12 +12371,6 @@ input:focus,textarea:focus,select:focus{
     padding:14px;
   }
 }
-`;
-
-
-/* =========================================================
-   PUBLIC HOME / LOGIN / RESIDENT PORTAL
-   ========================================================= */
 
 .public-home{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(124,156,255,.22),transparent 30%),radial-gradient(circle at 90% 85%,rgba(79,109,245,.16),transparent 32%),linear-gradient(135deg,#f8faff 0%,#eef3ff 100%);color:#172033;padding:28px;box-sizing:border-box}
 .public-home-inner{max-width:1180px;margin:0 auto;min-height:calc(100vh - 56px);display:flex;flex-direction:column}
@@ -12459,6 +12453,13 @@ input:focus,textarea:focus,select:focus{
   .resident-stats{grid-template-columns:1fr 1fr}
   .resident-identity{display:none}
 }
+
+`;
+
+
+/* =========================================================
+   PUBLIC HOME / LOGIN / RESIDENT PORTAL
+   ========================================================= */
 
 /* =========================================================
  RENDER
