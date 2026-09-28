@@ -169,6 +169,19 @@ type Condominium = {
   notes: string;
 };
 
+type CondominiumUnit = {
+  id: string;
+  condominiumId: number;
+  unitCode: string;
+  unitType: "Abitazione" | "Garage" | "Cantina" | "Altro";
+  cadastralCategory: string;
+  cadastralAutonomous: boolean;
+  millesimi: string;
+  incorporatedInUnitId?: string;
+  notes: string;
+  active: boolean;
+};
+
 type CondominiumMember = {
   id: number;
   userId?: string;
@@ -311,6 +324,7 @@ type Subscription = {
 
 type Communication = {
   id: number;
+  deliveryMode?: "portal" | "email";
   title: string;
   condominiumId: number | null;
   audience: CommunicationAudience;
@@ -924,6 +938,7 @@ const emptyCondominiumRequest: CondominiumRequest = {
 
 const emptyCommunication: Communication = {
   id: 0,
+  deliveryMode: "portal",
   title: "",
   condominiumId: null,
   audience: "Tutti",
@@ -1772,6 +1787,7 @@ function App() {
         )
     );
 
+  const [condominiumUnits, setCondominiumUnits] = useState<CondominiumUnit[]>([]);
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
@@ -2328,6 +2344,7 @@ function App() {
     try {
       const backend = await loadBackendState(profile.workspaceId);
       setCondominiumMembers(backend.condominiumMembers);
+        setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
       setPortalMembers(backend.portalMembers || []);
     } catch (refreshError) {
       console.error("BETHAG registration approval refresh failed", refreshError);
@@ -3950,7 +3967,7 @@ function App() {
     }
 
     const normalizedEmail = condominiumMemberForm.email.trim().toLowerCase();
-    const duplicate = condominiumMembers.some((member) =>
+    const duplicate = Boolean(normalizedEmail) && condominiumMembers.some((member) =>
       member.condominiumId === condominiumMemberForm.condominiumId &&
       member.id !== selectedCondominiumMember?.id &&
       member.email.trim().toLowerCase() === normalizedEmail
@@ -4849,6 +4866,9 @@ function App() {
       recipientIds: [],
       emailStatus: "Non inviata",
       emailPreparedAt: "",
+      deliveryMode: "portal",
+      publishedToPortal: true,
+      status: "Pubblicata",
     });
 
     openModal("communication");
@@ -4880,6 +4900,7 @@ function App() {
       publishedToPortal: false,
       emailStatus: "Non inviata",
       emailPreparedAt: "",
+      deliveryMode: "email",
     });
     openModal("communication");
   };
@@ -7792,7 +7813,7 @@ function CondominiumDetails(
         <div className="section-title">
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
           <div className="button-row compact condominium-members-actions">
-            <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>✉️ Nuova comunicazione</button>
+            <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>📢 Nuova comunicazione</button>
             <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
               ✉️ Scrivi a tutti
             </button>
@@ -12900,7 +12921,9 @@ function CommunicationForm({
         title={
           editing
             ? "Modifica comunicazione"
-            : "Nuova comunicazione"
+            : value.deliveryMode === "email"
+              ? "Nuova e-mail"
+              : "Nuova comunicazione al Portale"
         }
       />
 
@@ -13069,6 +13092,7 @@ function CommunicationForm({
 
             <input
               type="checkbox"
+              disabled={value.deliveryMode === "email"}
               checked={
                 value.publishedToPortal
               }
