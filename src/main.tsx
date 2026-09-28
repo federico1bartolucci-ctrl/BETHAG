@@ -2118,7 +2118,26 @@ function App() {
 
         if (!session?.user || cancelled) return;
 
-        const workspaceId = await getActiveWorkspaceId(session.user.id, profile.workspaceId);
+        let workspaceId = profile.workspaceId;
+
+        if (sessionRole !== "resident") {
+          workspaceId = await getActiveWorkspaceId(
+            session.user.id,
+            profile.workspaceId
+          );
+        } else if (!workspaceId) {
+          const { data: portalAccess, error: portalAccessError } = await supabase
+            .from("portal_access")
+            .select("workspace_id")
+            .eq("active", true)
+            .ilike("email", session.user.email || "")
+            .limit(1)
+            .maybeSingle();
+
+          if (portalAccessError) throw portalAccessError;
+          workspaceId = portalAccess?.workspace_id ?? null;
+        }
+
         if (!workspaceId || cancelled) return;
 
         const backend = await loadBackendState(workspaceId);
@@ -2133,9 +2152,11 @@ function App() {
         setActivities(backend.activities);
         setCommunications(backend.communications);
         setCondominiumRequests(backend.condominiumRequests);
-        if (Array.isArray(backend.portalMembers) && backend.portalMembers.length > 0) {
-          setPortalMembers(backend.portalMembers);
-        }
+        setPortalMembers(
+          Array.isArray(backend.portalMembers)
+            ? backend.portalMembers
+            : []
+        );
         backendHydrated.current = true;
 
         setProfile((current) => ({
@@ -2159,7 +2180,7 @@ function App() {
     if (
       !supabaseConfigured ||
       !supabase ||
-      !sessionRole ||
+      sessionRole !== "admin" ||
       !profile.workspaceId ||
       !backendHydrated.current
     ) return;
@@ -4057,9 +4078,57 @@ function App() {
           assemblies={assemblies}
           communications={communications}
           requests={condominiumRequests}
-          onCreateRequest={(request) =>
-            setCondominiumRequests((current) => [request, ...current])
-          }
+          onCreateRequest={async (request) => {
+            if (supabaseConfigured && supabase) {
+              try {
+                const {
+                  data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user) {
+                  throw new Error("Sessione BETHAG non disponibile.");
+                }
+
+                const { data: condominium, error: condominiumError } =
+                  await supabase
+                    .from("condominiums")
+                    .select("id, workspace_id, legacy_id")
+                    .eq("workspace_id", profile.workspaceId)
+                    .eq("legacy_id", request.condominiumId)
+                    .maybeSingle();
+
+                if (condominiumError) throw condominiumError;
+                if (!condominium) {
+                  throw new Error("Il condominio associato al profilo non è disponibile.");
+                }
+
+                const { error: requestError } = await supabase
+                  .from("condominium_requests")
+                  .insert({
+                    workspace_id: condominium.workspace_id,
+                    condominium_id: condominium.id,
+                    legacy_id: request.id,
+                    requester_user_id: user.id,
+                    title: request.category,
+                    description: request.description,
+                    status: request.status,
+                    data: request,
+                  });
+
+                if (requestError) throw requestError;
+              } catch (requestError) {
+                console.error("BETHAG resident request persistence failed", requestError);
+                alert(
+                  requestError instanceof Error
+                    ? requestError.message
+                    : "Impossibile inviare la richiesta all'amministratore."
+                );
+                return;
+              }
+            }
+
+            setCondominiumRequests((current) => [request, ...current]);
+          }}
           onLogout={logout}
         />
       </>
