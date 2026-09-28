@@ -1433,11 +1433,9 @@ function ResidentPortalView({
   const hasPortalPermission = (permission: PortalPermission) => {
     const permissions = member?.permissions ?? [];
     if (permissions.includes(permission)) return true;
-    // Compatibilità con i vecchi accessi che usavano il permesso generico "pagamenti".
-    if (
-      permission === "pagamenti_ordinari" ||
-      permission === "pagamenti_straordinari"
-    ) {
+    // Compatibilità sicura con i vecchi accessi: il vecchio permesso
+    // generico "pagamenti" viene ricondotto esclusivamente alle spese ordinarie.
+    if (permission === "pagamenti_ordinari") {
       return (permissions as string[]).includes("pagamenti");
     }
     return false;
@@ -1447,6 +1445,15 @@ function ResidentPortalView({
     ? documents.filter(
         (item) =>
           item.publication === "Condiviso" &&
+          item.condominiumId === member.condominiumId
+      )
+    : [];
+
+  const visibleRegulations = member && hasPortalPermission("regolamento")
+    ? documents.filter(
+        (item) =>
+          item.publication === "Condiviso" &&
+          item.category.toLowerCase().includes("regolamento") &&
           item.condominiumId === member.condominiumId
       )
     : [];
@@ -1529,8 +1536,8 @@ function ResidentPortalView({
 
         <div className="resident-stats">
           <div><b>{sharedDocuments.length}</b><span>Documenti</span></div>
+          <div><b>{visibleRegulations.length}</b><span>Regolamento</span></div>
           <div><b>{visibleCommunications.length}</b><span>Comunicazioni</span></div>
-          <div><b>{publishedAssemblies.length}</b><span>Assemblee</span></div>
         </div>
 
         <div className="resident-grid">
@@ -1567,6 +1574,45 @@ function ResidentPortalView({
               ))
             )}
           </section>
+
+          {member && hasPortalPermission("regolamento") && (
+            <section className="resident-card">
+              <h2>Regolamento condominiale</h2>
+              {visibleRegulations.length === 0 ? (
+                <p className="empty-state">Nessun regolamento pubblicato.</p>
+              ) : (
+                visibleRegulations.map((item) => (
+                  <div className="resident-list-row" key={item.id}>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <small>{item.category} · {formatDate(item.date)}</small>
+                    </div>
+                    <span>Consultabile</span>
+                  </div>
+                ))
+              )}
+            </section>
+          )}
+
+          {member && (hasPortalPermission("pagamenti_ordinari") || hasPortalPermission("pagamenti_straordinari")) && (
+            <section className="resident-card">
+              <h2>Spese condominiali</h2>
+              <div className="resident-list-item">
+                {hasPortalPermission("pagamenti_ordinari") && (
+                  <>
+                    <strong>Spese ordinarie</strong>
+                    <p>Accesso abilitato alle spese ordinarie dell'unità.</p>
+                  </>
+                )}
+                {hasPortalPermission("pagamenti_straordinari") && (
+                  <>
+                    <strong>Spese straordinarie</strong>
+                    <p>Accesso abilitato alle spese straordinarie dell'unità.</p>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="resident-card">
             <h2>Assemblee</h2>
