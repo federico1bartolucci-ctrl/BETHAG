@@ -6147,8 +6147,6 @@ function App() {
               onNewSupplier={newSupplier}
               onNewActivity={newActivity}
               isAdministrator={isAdministrator}
-              onExportBackup={exportWorkspaceBackup}
-              onRestoreBackup={restoreWorkspaceBackup}
               />
             </CondominiumsErrorBoundary>
           )}
