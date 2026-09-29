@@ -982,6 +982,13 @@ function AccountingPage({
       setError("L'importo pagato deve essere compreso tra zero e l'importo della ripartizione.");
       return;
     }
+    const otherAllocated = allocations
+      .filter(a => a.ledger_entry_id === selectedExpense.id && a.id !== editingAllocation?.id && (!dbCondominiumId || a.condominium_id === dbCondominiumId))
+      .reduce((sum, a) => sum + Number(a.amount || 0), 0);
+    if (otherAllocated + amount > Number(selectedExpense.amount || 0) + 0.005) {
+      setError("La ripartizione supera l'importo della spesa. Riduci l'importo oppure modifica una quota esistente.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
