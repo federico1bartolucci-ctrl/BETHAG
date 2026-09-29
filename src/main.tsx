@@ -5260,7 +5260,7 @@ function App() {
               active={page === "registro"}
               onClick={() => navigate("registro")}
             >
-              <span className="nav-icon"><AppIcon name="shield" size={18} /></span>
+              <span className="nav-icon"><AppIcon name="wrench" size={18} /></span>
               <span>Registro e sicurezza</span>
             </NavButton>
 
