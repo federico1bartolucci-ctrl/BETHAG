@@ -5477,10 +5477,7 @@ function App() {
   };
 
   const newCommunication = (condominiumId?: number) => {
-    if (!isAdministrator) {
-      alert("La creazione delle comunicazioni è riservata all'Amministratore.");
-      return;
-    }
+    if (!requireModulePermission("comunicazioni", "La creazione delle comunicazioni")) return;
     setSelectedCommunication(null);
 
     setCommunicationForm({
