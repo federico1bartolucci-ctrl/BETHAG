@@ -1140,7 +1140,7 @@ function AccountingPage({
       const { error: saveError } = await supabase.from("condominium_installments").insert({
         workspace_id:workspaceId, condominium_id:dbCondominiumId,
         fiscal_year_id:installmentForm.fiscal_year_id || null, member_id:null,
-        unit_id:installmentForm.unit_id || null, title:installmentForm.title.trim(),
+        unit_id:installmentForm.unit_id || null, ledger_entry_id:null, title:installmentForm.title.trim(),
         due_date:installmentForm.due_date || null, amount,
         paid_amount:paidAmount, status:installmentForm.status,
         notes:installmentForm.notes
