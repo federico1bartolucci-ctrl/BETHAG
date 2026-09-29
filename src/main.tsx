@@ -16352,7 +16352,7 @@ input:focus,textarea:focus,select:focus{
 .login-card label{display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:7px}
 .login-card input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #dbe3ef;border-radius:11px;margin-bottom:13px}
 .login-note{display:block;margin-top:-4px;color:#64748b;font-size:11px;line-height:1.4}
-.login-error{margin-top:13px;padding:10px;border-radius:9px;background:#fff1f2;color:#be123c;font-size:12px}
+.login-error{margin-top:15px;padding:16px 14px;border:2px solid #b42318;border-radius:12px;background:#fff1f2;color:#b42318;font-size:22px;font-weight:900;letter-spacing:.08em;text-align:center;text-transform:uppercase}
 .login-submit{width:100%;margin-top:18px}
 .login-disclaimer{margin:18px 0 0;color:#94a3b8;font-size:10px;line-height:1.45}
 
