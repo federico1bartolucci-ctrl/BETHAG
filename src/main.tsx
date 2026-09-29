@@ -2491,6 +2491,7 @@ function App() {
       return {
         role: "resident" as const,
         workspaceId: portalResult.data.workspace_id as string,
+        permissions: [] as CollaboratorPermission[],
       };
     }
 
