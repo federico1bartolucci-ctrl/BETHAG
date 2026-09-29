@@ -3919,10 +3919,7 @@ function App() {
     id: number,
     status: DeadlineStatus
   ) => {
-    if (!isAdministrator) {
-      alert("L'aggiornamento delle scadenze è riservato all'Amministratore.");
-      return;
-    }
+    if (!requireModulePermission("scadenze", "L'aggiornamento delle scadenze")) return;
     setDeadlines((current) =>
       current.map((item) =>
         item.id === id
@@ -4219,10 +4216,7 @@ function App() {
     id: number,
     status: AssemblyStatus
   ) => {
-    if (!isAdministrator) {
-      alert("L'aggiornamento delle assemblee è riservato all'Amministratore.");
-      return;
-    }
+    if (!requireModulePermission("assemblee", "L'aggiornamento delle assemblee")) return;
     setAssemblies((current) =>
       current.map((item) =>
         item.id === id
@@ -4556,10 +4550,7 @@ function App() {
     id: number,
     status: ActivityStatus
   ) => {
-    if (!isAdministrator) {
-      alert("L'aggiornamento delle attività è riservato all'Amministratore.");
-      return;
-    }
+    if (!requireModulePermission("attivita", "L'aggiornamento delle attività")) return;
     setActivities((current) =>
       current.map((item) =>
         item.id === id
@@ -5280,10 +5271,7 @@ function App() {
   const editCommunication = (
     item: Communication
   ) => {
-    if (!isAdministrator) {
-      alert("La modifica delle comunicazioni è riservata all'Amministratore.");
-      return;
-    }
+    if (!requireModulePermission("comunicazioni", "La modifica delle comunicazioni")) return;
     setSelectedCommunication(item);
     setCommunicationForm(item);
     openModal("communication");
