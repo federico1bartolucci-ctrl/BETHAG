@@ -324,15 +324,23 @@ function AccountingPage({
       row.paid += Number(a.paid_amount || 0);
       map.set(a.unit_id, row);
     }
+    const installmentUnits = new Set<string>();
     for (const i of rendicontoInstallments) {
       if (!i.unit_id) continue;
+      installmentUnits.add(i.unit_id);
       const unit = units.find((u) => u.id === i.unit_id);
       const row = map.get(i.unit_id) ?? { unitId:i.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0 };
       row.installments += Number(i.amount || 0);
       row.paid += Number(i.paid_amount || 0);
       map.set(i.unit_id, row);
     }
-    return Array.from(map.values()).map((row) => ({ ...row, residual:Math.max(0,row.installments-row.paid) })).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
+    return Array.from(map.values()).map((row) => ({
+      ...row,
+      paid: installmentUnits.has(row.unitId) ? row.paid : row.paid,
+      residual: installmentUnits.has(row.unitId)
+        ? Math.max(0,row.installments-row.paid)
+        : Math.max(0,row.allocated-row.paid)
+    })).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
   }, [rendicontoAllocations, rendicontoInstallments, units]);
 
   const totals = useMemo(() => {
