@@ -1105,8 +1105,13 @@ function AccountingPage({
 
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
-      setError("Inserisci titolo e importo della rata."); return;
+    const amount = Number(installmentForm.amount);
+    const paidAmount = Number(installmentForm.paid_amount);
+    if (!supabase || !dbCondominiumId || !installmentForm.unit_id || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || !Number.isFinite(amount) || amount <= 0) {
+      setError("Inserisci unità, titolo e un importo della rata maggiore di zero."); return;
+    }
+    if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > amount) {
+      setError("L'importo pagato deve essere compreso tra zero e l'importo della rata."); return;
     }
     setSaving(true); setError("");
     try {
