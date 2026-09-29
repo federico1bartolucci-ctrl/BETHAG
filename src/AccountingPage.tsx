@@ -797,8 +797,10 @@ function AccountingPage({
     const totalMillesimi = eligible.reduce((sum, item) => sum + Number(item.value?.value || 0), 0);
     if (totalMillesimi <= 0) {
       setAutoPreview([]);
+      setError("Non è possibile calcolare il riparto: la tabella selezionata non ha quote millesimali valide associate alle unità.");
       return;
     }
+    setError("");
     const totalCents = Math.round(Number(expense.amount || 0) * 100);
     const rows = eligible.map(item => {
       const exactCents = totalCents * Number(item.value?.value || 0) / totalMillesimi;
@@ -826,6 +828,7 @@ function AccountingPage({
       setError("Impossibile generare il riparto: verifica spesa, tabella e quote millesimali.");
       return;
     }
+    if (!guardOpenFiscalYear(expense.fiscal_year_id)) return;
     const previewTotal = autoPreview.reduce((sum,row)=>sum+row.amount,0);
     if (Math.abs(previewTotal-Number(expense.amount))>0.005) {
       setError("La somma del riparto non coincide con l'importo della spesa.");
