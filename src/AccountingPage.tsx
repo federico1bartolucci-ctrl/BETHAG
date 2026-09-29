@@ -73,6 +73,7 @@ type Allocation = {
   id: string;
   condominium_id: string;
   ledger_entry_id: string;
+  allocation_table_id: string | null;
   unit_id: string;
   member_id: string | null;
   allocation_basis: string;
@@ -88,6 +89,7 @@ type UnitOption = { id: string; condominium_id: string; unit_code: string; data:
 
 type MillesimalTable = { id:string; condominium_id:string; name:string; description:string; total_millesimi:number; active:boolean; notes:string };
 type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
+type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso";
 
@@ -149,6 +151,9 @@ function AccountingPage({
   const [installmentForm, setInstallmentForm] = useState({ title:"", fiscal_year_id:"", unit_id:"", due_date:"", amount:0, paid_amount:0, status:"Da pagare", notes:"" });
   const [showAllocationForm, setShowAllocationForm] = useState(false);
   const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(null);
+  const [showAutoAllocationForm, setShowAutoAllocationForm] = useState(false);
+  const [autoAllocationForm, setAutoAllocationForm] = useState({ ledger_entry_id:"", table_id:"", due_date:"" });
+  const [autoPreview, setAutoPreview] = useState<AllocationPreviewRow[]>([]);
   const [allocationForm, setAllocationForm] = useState({
     ledger_entry_id: "",
     unit_id: "",
