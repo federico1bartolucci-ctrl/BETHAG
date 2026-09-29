@@ -140,6 +140,8 @@ function AccountingPage({
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [showMillesimalForm, setShowMillesimalForm] = useState(false);
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
+  const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
+  const [millesimalValueForm, setMillesimalValueForm] = useState({ table_id:"", unit_id:"", value:0, excluded:false, notes:"" });
   const [millesimalForm, setMillesimalForm] = useState({ name:"Tabella generale", description:"", total_millesimi:1000, active:true, notes:"" });
   const [installmentForm, setInstallmentForm] = useState({ title:"", fiscal_year_id:"", unit_id:"", due_date:"", amount:0, paid_amount:0, status:"Da pagare", notes:"" });
   const [showAllocationForm, setShowAllocationForm] = useState(false);
@@ -635,6 +637,28 @@ function AccountingPage({
     finally{setSaving(false);}
   }
 
+  async function saveMillesimalValue(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !millesimalValueForm.table_id || !millesimalValueForm.unit_id) {
+      setError("Seleziona tabella e unità."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      const payload = {
+        workspace_id:workspaceId, condominium_id:dbCondominiumId,
+        table_id:millesimalValueForm.table_id, unit_id:millesimalValueForm.unit_id,
+        value:Number(millesimalValueForm.value), excluded:millesimalValueForm.excluded,
+        notes:millesimalValueForm.notes
+      };
+      const { error: saveError } = await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"table_id,unit_id"});
+      if(saveError) throw saveError;
+      setShowMillesimalValueForm(false);
+      setMillesimalValueForm({table_id:"",unit_id:"",value:0,excluded:false,notes:""});
+      flash("Quota millesimale salvata."); await load();
+    } catch(e:any){setError(e?.message || "Impossibile salvare il valore millesimale.");}
+    finally{setSaving(false);}
+  }
+
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
@@ -892,7 +916,7 @@ function AccountingPage({
             <div className="section-heading"><div><h2>Tabelle millesimali</h2><p>Definisci le tabelle di riparto del condominio e il relativo totale.</p></div>{isAdministrator && dbCondominiumId && <button className="primary-button" onClick={()=>setShowMillesimalForm(true)}>+ Nuova tabella</button>}</div>
             {scopedMillesimalTables.length===0 ? <p>Nessuna tabella configurata.</p> : scopedMillesimalTables.map(t=><article className="row-card" key={t.id}><div><b>{t.name}</b><small>{t.description || "Nessuna descrizione"} · Totale {t.total_millesimi}</small><span>{t.active ? "Attiva" : "Disattivata"}</span></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_millesimal_tables",t.id,"la tabella millesimale")}>×</button>}</article>)}
           </article>
-          <article className="card"><h2>Valori per unità</h2><p>{scopedMillesimalValues.length} valori registrati. La compilazione puntuale delle quote resta associata alla singola unità e non modifica l'anagrafe.</p>{scopedMillesimalValues.slice(0,20).map(v=><div className="row-card" key={v.id}><div><b>{units.find(u=>u.id===v.unit_id)?.unit_code || "Unità"}</b><small>{scopedMillesimalTables.find(t=>t.id===v.table_id)?.name || "Tabella"}</small><span>{v.excluded ? "Esclusa" : v.value + " millesimi"}</span></div></div>)}</article>
+          <article className="card"><div className="section-heading"><div><h2>Valori per unità</h2><p>{scopedMillesimalValues.length} valori registrati. La compilazione puntuale delle quote resta associata alla singola unità e non modifica l'anagrafe.</p>{isAdministrator && dbCondominiumId && <button className="primary-button" onClick={()=>{setMillesimalValueForm({table_id:scopedMillesimalTables[0]?.id||"",unit_id:units.find(u=>u.condominium_id===dbCondominiumId)?.id||"",value:0,excluded:false,notes:""});setShowMillesimalValueForm(true)}}>+ Assegna quota</button>}</div>{scopedMillesimalValues.slice(0,20).map(v=><div className="row-card" key={v.id}><div><b>{units.find(u=>u.id===v.unit_id)?.unit_code || "Unità"}</b><small>{scopedMillesimalTables.find(t=>t.id===v.table_id)?.name || "Tabella"}</small><span>{v.excluded ? "Esclusa" : v.value + " millesimi"}</span></div></div>)}</article>
         </section>
       ) : tab === "rate" ? (
         <section className="card">
@@ -993,6 +1017,8 @@ function AccountingPage({
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowLedgerForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
+
+      {showMillesimalValueForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveMillesimalValue}><h2>Assegna quota millesimale</h2><label>Tabella<select required value={millesimalValueForm.table_id} onChange={e=>setMillesimalValueForm({...millesimalValueForm,table_id:e.target.value})}><option value="">Seleziona</option>{scopedMillesimalTables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><label>Unità<select required value={millesimalValueForm.unit_id} onChange={e=>setMillesimalValueForm({...millesimalValueForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label><label>Millesimi<input type="number" step="0.001" min="0" value={millesimalValueForm.value} onChange={e=>setMillesimalValueForm({...millesimalValueForm,value:Number(e.target.value)})}/></label><label className="check-row"><input type="checkbox" checked={millesimalValueForm.excluded} onChange={e=>setMillesimalValueForm({...millesimalValueForm,excluded:e.target.checked})}/> Unità esclusa dal riparto</label><label>Note<textarea value={millesimalValueForm.notes} onChange={e=>setMillesimalValueForm({...millesimalValueForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowMillesimalValueForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div></form></div>}
 
       {showMillesimalForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveMillesimalTable}><h2>Nuova tabella millesimale</h2><label>Nome<input required value={millesimalForm.name} onChange={e=>setMillesimalForm({...millesimalForm,name:e.target.value})}/></label><label>Descrizione<input value={millesimalForm.description} onChange={e=>setMillesimalForm({...millesimalForm,description:e.target.value})}/></label><label>Totale millesimi<input type="number" step="0.001" value={millesimalForm.total_millesimi} onChange={e=>setMillesimalForm({...millesimalForm,total_millesimi:Number(e.target.value)})}/></label><label>Note<textarea value={millesimalForm.notes} onChange={e=>setMillesimalForm({...millesimalForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowMillesimalForm(false)}>Annulla</button><button className="primary-button">Salva</button></div></form></div>}
 
