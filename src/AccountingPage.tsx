@@ -1119,8 +1119,8 @@ function AccountingPage({
         workspace_id:workspaceId, condominium_id:dbCondominiumId,
         fiscal_year_id:installmentForm.fiscal_year_id || null, member_id:null,
         unit_id:installmentForm.unit_id || null, title:installmentForm.title.trim(),
-        due_date:installmentForm.due_date || null, amount:Number(installmentForm.amount),
-        paid_amount:Number(installmentForm.paid_amount), status:installmentForm.status,
+        due_date:installmentForm.due_date || null, amount,
+        paid_amount:paidAmount, status:installmentForm.status,
         notes:installmentForm.notes
       });
       if(saveError) throw saveError;
