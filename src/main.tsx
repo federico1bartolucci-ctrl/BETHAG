@@ -2389,7 +2389,7 @@ function App() {
       });
 
       if (error || !data.user) {
-        alert(error?.message || "Impossibile completare l'accesso a BETHAG.");
+        alert("ERRORE");
         return;
       }
 
@@ -2583,7 +2583,7 @@ function App() {
       .eq("legacy_id", localMemberId)
       .maybeSingle();
     if (dbMemberError || !dbMember?.id) {
-      alert(dbMemberError?.message || "Profilo condòmino non ancora sincronizzato. Riprova tra qualche secondo.");
+      alert("ERRORE");
       return;
     }
     const { error } = await supabase.rpc("admin_approve_portal_registration", {
@@ -2591,7 +2591,7 @@ function App() {
       p_member_id: dbMember.id,
     });
     if (error) {
-      alert(error.message);
+      alert("ERRORE");
       return;
     }
     setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
@@ -14176,7 +14176,7 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
       : await supabase.from("condominium_insurance_policies").insert(payload);
     if (result.error) {
-      alert(result.error.message);
+      alert("ERRORE");
       return;
     }
     resetForm();
