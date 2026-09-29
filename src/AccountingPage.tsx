@@ -1189,11 +1189,18 @@ function AccountingPage({
       .eq("id", id)
       .eq("workspace_id", workspaceId);
     if (deleteError) {
-      if ((deleteError as any).code === "23503") {
-        const dependencyMessage =
-          table === "condominium_ledger_entries"
-            ? "Non è possibile cancellare la voce contabile perché è collegata a una o più rate. Elimina prima le rate collegate e riprova."
-            : "Non è possibile cancellare l'elemento perché esistono dati contabili collegati che ne impediscono la cancellazione.";
+      const errorCode = (deleteError as any).code;
+      if (errorCode === "23503" || errorCode === "P0001") {
+        let dependencyMessage = "Non è possibile cancellare l'elemento perché esistono dati collegati che ne impediscono la cancellazione.";
+        if (table === "condominium_ledger_entries") {
+          dependencyMessage = "Non è possibile cancellare la voce contabile perché è collegata a una o più rate. Elimina prima le rate collegate e riprova.";
+        } else if (table === "condominium_installments") {
+          dependencyMessage = "Non è possibile cancellare una rata con pagamenti registrati. Occorre utilizzare una rettifica del pagamento.";
+        } else if (table === "condominium_expense_allocations") {
+          dependencyMessage = "Non è possibile cancellare una ripartizione con pagamenti registrati.";
+        } else if (table === "condominium_units") {
+          dependencyMessage = "Non è possibile cancellare l'unità perché ha movimenti contabili o rate collegate.";
+        }
         setError(dependencyMessage);
       } else {
         setError(deleteError.message);
