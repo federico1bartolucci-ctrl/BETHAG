@@ -8083,7 +8083,10 @@ function CondominiumsPage(
           onStatusActivity={
             onStatusActivity
           }
-          isAdministrator={isAdministrator}
+          isAdministrator={
+            isAdministrator ||
+            (isCollaborator && collaboratorPermissions.includes("condomini"))
+          }
         />
 
       </div>
