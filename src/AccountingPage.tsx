@@ -86,7 +86,10 @@ type Allocation = {
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; data: any };
 
-type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "fondi" | "fiscale" | "contenzioso";
+type MillesimalTable = { id:string; condominium_id:string; name:string; description:string; total_millesimi:number; active:boolean; notes:string };
+type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
+type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
+type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso";
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   fiscal_year_id: null,
@@ -132,6 +135,13 @@ function AccountingPage({
   const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [units, setUnits] = useState<UnitOption[]>([]);
+  const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
+  const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
+  const [installments, setInstallments] = useState<Installment[]>([]);
+  const [showMillesimalForm, setShowMillesimalForm] = useState(false);
+  const [showInstallmentForm, setShowInstallmentForm] = useState(false);
+  const [millesimalForm, setMillesimalForm] = useState({ name:"Tabella generale", description:"", total_millesimi:1000, active:true, notes:"" });
+  const [installmentForm, setInstallmentForm] = useState({ title:"", fiscal_year_id:"", unit_id:"", due_date:"", amount:0, paid_amount:0, status:"Da pagare", notes:"" });
   const [showAllocationForm, setShowAllocationForm] = useState(false);
   const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(null);
   const [allocationForm, setAllocationForm] = useState({
@@ -233,6 +243,11 @@ function AccountingPage({
     [dbCondominiumId, taxes]
   );
 
+
+  const scopedMillesimalTables = useMemo(() => dbCondominiumId ? millesimalTables.filter(t=>t.condominium_id===dbCondominiumId) : millesimalTables,[dbCondominiumId,millesimalTables]);
+  const scopedMillesimalValues = useMemo(() => dbCondominiumId ? millesimalValues.filter(v=>v.condominium_id===dbCondominiumId) : millesimalValues,[dbCondominiumId,millesimalValues]);
+  const scopedInstallments = useMemo(() => dbCondominiumId ? installments.filter(i=>i.condominium_id===dbCondominiumId) : installments,[dbCondominiumId,installments]);
+
   const scopedCases = useMemo(
     () =>
       dbCondominiumId
@@ -240,6 +255,8 @@ function AccountingPage({
         : legalCases,
     [dbCondominiumId, legalCases]
   );
+
+  const arrears = useMemo(() => scopedInstallments.reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
 
   const totals = useMemo(() => {
     const income = scopedLedger
@@ -316,6 +333,20 @@ function AccountingPage({
             .select("id, condominium_id, unit_code, data")
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
+          supabase
+            .from("condominium_millesimal_tables")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("name"),
+          supabase
+            .from("condominium_millesimal_values")
+            .select("*")
+            .eq("workspace_id", workspaceId),
+          supabase
+            .from("condominium_installments")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("due_date"),
         ]);
       for (const result of [
         yearsResult,
@@ -325,6 +356,9 @@ function AccountingPage({
         caseResult,
         allocationsResult,
         unitsResult,
+        millesimalTablesResult,
+        millesimalValuesResult,
+        installmentsResult,
       ]) {
         if (result.error) throw result.error;
       }
@@ -335,6 +369,9 @@ function AccountingPage({
       setLegalCases((caseResult.data ?? []) as LegalCase[]);
       setAllocations((allocationsResult.data ?? []) as Allocation[]);
       setUnits((unitsResult.data ?? []) as UnitOption[]);
+      setMillesimalTables((millesimalTablesResult.data ?? []) as MillesimalTable[]);
+      setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
+      setInstallments((installmentsResult.data ?? []) as Installment[]);
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -582,6 +619,45 @@ function AccountingPage({
     }
   }
 
+  async function saveMillesimalTable(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !millesimalForm.name.trim()) return;
+    setSaving(true); setError("");
+    try {
+      const { error: saveError } = await supabase.from("condominium_millesimal_tables").insert({
+        workspace_id: workspaceId, condominium_id: dbCondominiumId, name:millesimalForm.name.trim(),
+        description:millesimalForm.description, total_millesimi:Number(millesimalForm.total_millesimi),
+        active:millesimalForm.active, notes:millesimalForm.notes
+      });
+      if (saveError) throw saveError;
+      setShowMillesimalForm(false); flash("Tabella millesimale salvata."); await load();
+    } catch(e:any){ setError(e?.message || "Impossibile salvare la tabella."); }
+    finally{setSaving(false);}
+  }
+
+  async function saveInstallment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
+      setError("Inserisci titolo e importo della rata."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      const { error: saveError } = await supabase.from("condominium_installments").insert({
+        workspace_id:workspaceId, condominium_id:dbCondominiumId,
+        fiscal_year_id:installmentForm.fiscal_year_id || null, member_id:null,
+        unit_id:installmentForm.unit_id || null, title:installmentForm.title.trim(),
+        due_date:installmentForm.due_date || null, amount:Number(installmentForm.amount),
+        paid_amount:Number(installmentForm.paid_amount), status:installmentForm.status,
+        notes:installmentForm.notes
+      });
+      if(saveError) throw saveError;
+      setShowInstallmentForm(false);
+      setInstallmentForm({title:"",fiscal_year_id:"",unit_id:"",due_date:"",amount:0,paid_amount:0,status:"Da pagare",notes:""});
+      flash("Rata salvata."); await load();
+    } catch(e:any){setError(e?.message || "Impossibile salvare la rata.");}
+    finally{setSaving(false);}
+  }
+
   async function remove(table: string, id: string, label: string) {
     if (!supabase) return;
     if (!window.confirm("Sei sicuro di voler cancellare " + label + "?")) return;
@@ -668,6 +744,7 @@ function AccountingPage({
         <div className="quick-stat"><b>{money(totals.expenses)}</b><span>Uscite</span></div>
         <div className="quick-stat"><b>{money(totals.balance)}</b><span>Saldo movimenti</span></div>
         <div className="quick-stat"><b>{money(totals.due)}</b><span>Uscite non pagate</span></div>
+        <div className="quick-stat"><b>{money(arrears)}</b><span>Residuo rate</span></div>
       </div>
 
       <div className="filter-bar">
@@ -675,6 +752,8 @@ function AccountingPage({
           ["rendiconto", "Rendiconto"],
           ["movimenti", "Registro contabile"],
           ["ripartizioni", "Ripartizioni"],
+          ["millesimi", "Tabelle millesimali"],
+          ["rate", "Rate e morosità"],
           ["fondi", "Fondi e riserve"],
           ["fiscale", "Adempimenti fiscali"],
           ["contenzioso", "Contenzioso"],
@@ -807,6 +886,19 @@ function AccountingPage({
             </div>
           )}
         </section>
+      ) : tab === "millesimi" ? (
+        <section className="cards-grid">
+          <article className="card">
+            <div className="section-heading"><div><h2>Tabelle millesimali</h2><p>Definisci le tabelle di riparto del condominio e il relativo totale.</p></div>{isAdministrator && dbCondominiumId && <button className="primary-button" onClick={()=>setShowMillesimalForm(true)}>+ Nuova tabella</button>}</div>
+            {scopedMillesimalTables.length===0 ? <p>Nessuna tabella configurata.</p> : scopedMillesimalTables.map(t=><article className="row-card" key={t.id}><div><b>{t.name}</b><small>{t.description || "Nessuna descrizione"} · Totale {t.total_millesimi}</small><span>{t.active ? "Attiva" : "Disattivata"}</span></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_millesimal_tables",t.id,"la tabella millesimale")}>×</button>}</article>)}
+          </article>
+          <article className="card"><h2>Valori per unità</h2><p>{scopedMillesimalValues.length} valori registrati. La compilazione puntuale delle quote resta associata alla singola unità e non modifica l'anagrafe.</p>{scopedMillesimalValues.slice(0,20).map(v=><div className="row-card" key={v.id}><div><b>{units.find(u=>u.id===v.unit_id)?.unit_code || "Unità"}</b><small>{scopedMillesimalTables.find(t=>t.id===v.table_id)?.name || "Tabella"}</small><span>{v.excluded ? "Esclusa" : v.value + " millesimi"}</span></div></div>)}</article>
+        </section>
+      ) : tab === "rate" ? (
+        <section className="card">
+          <div className="section-heading"><div><h2>Rate e morosità</h2><p>Posizioni individuali, scadenze, pagamenti e residui da incassare.</p></div>{isAdministrator&&dbCondominiumId&&<button className="primary-button" onClick={()=>setShowInstallmentForm(true)}>+ Nuova rata</button>}</div>
+          {scopedInstallments.length===0 ? <p>Nessuna rata registrata.</p> : scopedInstallments.map(i=><article className="row-card" key={i.id}><div><b>{i.title}</b><small>{units.find(u=>u.id===i.unit_id)?.unit_code || "Unità non associata"} · {i.due_date || "senza scadenza"} · {i.status}</small><span>Dovuto {money(i.amount)} · Pagato {money(i.paid_amount)} · Residuo {money(Math.max(0,i.amount-i.paid_amount))}</span>{i.notes&&<small>{i.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_installments",i.id,"la rata")}>×</button>}</article>)}
+        </section>
       ) : tab === "fondi" ? (
         <section className="card">
           <div className="section-heading">
@@ -901,6 +993,10 @@ function AccountingPage({
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowLedgerForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
+
+      {showMillesimalForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveMillesimalTable}><h2>Nuova tabella millesimale</h2><label>Nome<input required value={millesimalForm.name} onChange={e=>setMillesimalForm({...millesimalForm,name:e.target.value})}/></label><label>Descrizione<input value={millesimalForm.description} onChange={e=>setMillesimalForm({...millesimalForm,description:e.target.value})}/></label><label>Totale millesimi<input type="number" step="0.001" value={millesimalForm.total_millesimi} onChange={e=>setMillesimalForm({...millesimalForm,total_millesimi:Number(e.target.value)})}/></label><label>Note<textarea value={millesimalForm.notes} onChange={e=>setMillesimalForm({...millesimalForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowMillesimalForm(false)}>Annulla</button><button className="primary-button">Salva</button></div></form></div>}
+
+      {showInstallmentForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveInstallment}><h2>Nuova rata</h2><label>Titolo<input required value={installmentForm.title} onChange={e=>setInstallmentForm({...installmentForm,title:e.target.value})} placeholder="Rata ordinaria 1/4"/></label><label>Unità<select value={installmentForm.unit_id} onChange={e=>setInstallmentForm({...installmentForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label><div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={installmentForm.amount} onChange={e=>setInstallmentForm({...installmentForm,amount:Number(e.target.value)})}/></label><label>Pagato<input type="number" min="0" step="0.01" value={installmentForm.paid_amount} onChange={e=>setInstallmentForm({...installmentForm,paid_amount:Number(e.target.value)})}/></label></div><div className="form-grid"><label>Scadenza<input type="date" value={installmentForm.due_date} onChange={e=>setInstallmentForm({...installmentForm,due_date:e.target.value})}/></label><label>Stato<select value={installmentForm.status} onChange={e=>setInstallmentForm({...installmentForm,status:e.target.value})}><option>Da pagare</option><option>Parzialmente pagato</option><option>Pagato</option><option>Scaduto</option></select></label></div><label>Note<textarea value={installmentForm.notes} onChange={e=>setInstallmentForm({...installmentForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentForm(false)}>Annulla</button><button className="primary-button">Salva</button></div></form></div>}
 
       {showAllocationForm && (
         <div className="modal-backdrop"><form className="modal-card" onSubmit={saveAllocation}>
