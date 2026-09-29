@@ -111,15 +111,21 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     (condominiums.data ?? []).map((row: any) => [row.id, row.legacy_id])
   );
 
-  const mappedCondominiumMembers = (condominiumMembers.data ?? []).map((row: any) => ({
-    ...row.data,
-    id: row.legacy_id,
-    condominiumId:
-      row.data?.condominiumId ??
-      condominiumLegacyByDbId.get(row.condominium_id) ??
-      null,
-    unitId: row.unit_id ?? row.data?.unitId ?? "",
-  }));
+  const mappedCondominiumMembers = (condominiumMembers.data ?? []).map((row: any) => {
+    // I millesimi appartengono esclusivamente all'unità immobiliare.
+    // Eliminiamo anche eventuali valori legacy rimasti nel JSON del condòmino,
+    // così un vecchio record non può farli riapparire nella scheda persona.
+    const { millesimi: _legacyMillesimi, ...memberData } = row.data ?? {};
+    return {
+      ...memberData,
+      id: row.legacy_id,
+      condominiumId:
+        row.data?.condominiumId ??
+        condominiumLegacyByDbId.get(row.condominium_id) ??
+        null,
+      unitId: row.unit_id ?? row.data?.unitId ?? "",
+    };
+  });
 
   const ownerIdsByUnit = new Map<string, number[]>();
   mappedCondominiumMembers.forEach((member: any) => {
