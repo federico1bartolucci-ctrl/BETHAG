@@ -16700,12 +16700,47 @@ input:focus,textarea:focus,select:focus{
  RENDER
  ========================================================= */
 
+class BethagAppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; message: string }
+> {
+  state = { hasError: false, message: "" };
+
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  componentDidCatch(error: unknown, info: React.ErrorInfo) {
+    console.error("BETHAG application render error", error, info);
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div style={{ minHeight: "100vh", background: "#f5f7fb", padding: "40px 20px", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", background: "#fff", border: "1px solid #fecaca", borderRadius: 18, padding: 28, boxShadow: "0 10px 30px rgba(15,23,42,.08)" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#b42318", letterSpacing: ".08em" }}>BETHAG · ERRORE APPLICAZIONE</div>
+          <h1 style={{ margin: "10px 0", color: "#172033" }}>Si è verificato un errore</h1>
+          <p style={{ color: "#64748b", lineHeight: 1.5 }}>La pagina non verrà più lasciata bianca. Questo messaggio serve a identificare esattamente il punto che interrompe il render.</p>
+          <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", background: "#fff7f7", color: "#7f1d1d", padding: 14, borderRadius: 10 }}>{this.state.message}</pre>
+          <button type="button" style={{ border: 0, borderRadius: 10, padding: "12px 18px", background: "#526dfe", color: "#fff", fontWeight: 700, cursor: "pointer" }} onClick={() => window.location.reload()}>
+            Ricarica BETHAG
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 ReactDOM.createRoot(
   document.getElementById(
     "root"
   )!
 ).render(
   <React.StrictMode>
-    <App />
+    <BethagAppErrorBoundary><App /></BethagAppErrorBoundary>
   </React.StrictMode>
 );
