@@ -6152,7 +6152,10 @@ function App() {
               onNewAssembly={newAssembly}
               onNewSupplier={newSupplier}
               onNewActivity={newActivity}
-              isAdministrator={isAdministrator}
+              isAdministrator={
+                isAdministrator ||
+                (isCollaborator && collaboratorPermissions.includes("condomini"))
+              }
               />
             </CondominiumsErrorBoundary>
           )}
@@ -7894,6 +7897,8 @@ function CondominiumsPage(
     isAdministrator,
   } = props;
 
+  const canManageCondominium = Boolean(isAdministrator);
+
   useEffect(() => {
     if (selected) {
       window.scrollTo({
@@ -7961,7 +7966,7 @@ function CondominiumsPage(
 
           <div className="detail-page-actions">
 
-            {isAdministrator && (
+            {canManageCondominium && (
               <>
                 <button
                   className="secondary-button"
@@ -8113,8 +8118,8 @@ function CondominiumsPage(
       <PageHeader
         eyebrow="Gestione patrimonio"
         title="Condomìni"
-        action="+ Nuovo condominio"
-        onAction={onNew}
+        action={canManageCondominium ? "+ Nuovo condominio" : undefined}
+        onAction={canManageCondominium ? onNew : undefined}
       />
 
       <SearchBox
@@ -8174,14 +8179,16 @@ function CondominiumsPage(
                     Dettagli
                   </button>
 
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      onEdit(c)
-                    }
-                  >
-                    Modifica
-                  </button>
+                  {canManageCondominium && (
+                    <button
+                      className="secondary-button"
+                      onClick={() =>
+                        onEdit(c)
+                      }
+                    >
+                      Modifica
+                    </button>
+                  )}
 
                 </div>
 
