@@ -5702,6 +5702,7 @@ function App() {
               openCondominiumEmailComposer={openCondominiumEmailComposer}
               isAdministrator={isAdministrator}
               onExportBackup={exportWorkspaceBackup}
+              onRestoreBackup={restoreWorkspaceBackup}
             />
           )}
 
@@ -11682,6 +11683,7 @@ function ProfilePage({
   portalMembers,
   isAdministrator = false,
   onExportBackup,
+  onRestoreBackup,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -11925,7 +11927,23 @@ function ProfilePage({
           <button className="secondary-button" type="button" onClick={() => onExportBackup?.()}>
             Esporta backup JSON
           </button>
+          <label className="secondary-button" style={{cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+            Ripristina backup JSON
+            <input
+              type="file"
+              accept=".json,application/json"
+              style={{display:"none"}}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (file) void onRestoreBackup?.(file);
+              }}
+            />
+          </label>
         </div>
+        <small className="muted-text" style={{display:"block",marginTop:10}}>
+          Il ripristino aggiorna i dati presenti nel backup senza eliminare i dati più recenti che non compaiono nel file.
+        </small>
       </section>
 
       <section className="workspace-grid">
