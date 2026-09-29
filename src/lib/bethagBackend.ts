@@ -492,7 +492,8 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   });
 
   if (requestRows.length) await upsertRows("condominium_requests", requestRows);
-  await reconcileWorkspaceRows("condominium_requests", workspaceId, requestRows);
+  // Le richieste/segnalazioni sono persistenti: un refresh o uno stato locale
+  // incompleto non può cancellarle. La rimozione passa dall'azione esplicita.
 
   // I condomini vengono creati/modificati tramite RPC dedicato. Non riconciliamo
   // qui le cancellazioni, perché una sincronizzazione già accodata con uno stato
