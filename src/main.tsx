@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
+import RegisterPage from "./RegisterPage";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -45,6 +46,7 @@ type Page =
   | "homepage"
   | "condomini"
   | "contabilita"
+  | "registro"
   | "documenti"
   | "scadenze"
   | "assemblee"
@@ -5255,6 +5257,14 @@ function App() {
             )}
 
             <NavButton
+              active={page === "registro"}
+              onClick={() => navigate("registro")}
+            >
+              <span className="nav-icon"><AppIcon name="shield" size={18} /></span>
+              <span>Registro e sicurezza</span>
+            </NavButton>
+
+            <NavButton
               active={
                 page === "documenti"
               }
@@ -5631,6 +5641,14 @@ function App() {
             />
           )}
 
+
+          {page === "registro" && (
+            <RegisterPage
+              workspaceId={profile.workspaceId}
+              condominiums={condominiums.map((c) => ({ id: c.id, name: c.name }))}
+              isAdministrator={isAdministrator}
+            />
+          )}
 
           {page === "documenti" && (
             <DocumentsPage
