@@ -1565,7 +1565,7 @@ function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => P
           </div>
           <label>Conferma password</label>
           <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
-          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>
+          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>}
           <button className="primary-button login-submit" disabled={busy} type="submit">
             {busy ? "Attivazione in corso…" : "Attiva account"}
           </button>
