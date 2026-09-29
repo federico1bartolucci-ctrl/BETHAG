@@ -440,6 +440,18 @@ function AccountingPage({
       .rendiconto-print-sheet p { margin:5px 0; }
     }
   `;
+  function isFiscalYearClosed(yearId?: string | null) {
+    return !!yearId && fiscalYears.some(y => y.id === yearId && y.status === "Chiuso");
+  }
+
+  function guardOpenFiscalYear(yearId?: string | null) {
+    if (isFiscalYearClosed(yearId)) {
+      setError("L'esercizio contabile selezionato è chiuso. Riaprilo prima di modificare i dati.");
+      return false;
+    }
+    return true;
+  }
+
   function printRendiconto() {
     setShowRendicontoPrint(true);
     setTimeout(() => window.print(), 100);
@@ -554,6 +566,24 @@ function AccountingPage({
     window.setTimeout(() => setMessage(""), 3000);
   }
 
+  async function closeFiscalYear(year: FiscalYear) {
+    if (!supabase) return;
+    if (year.status === "Chiuso") return;
+    if (!window.confirm("Confermi la chiusura dell'esercizio " + year.name + "? Dopo la chiusura non sarà possibile modificare movimenti, ripartizioni, rate, pagamenti e preventivi associati.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { error: closeError } = await supabase.from("condominium_fiscal_years").update({ status: "Chiuso" }).eq("id", year.id).eq("workspace_id", workspaceId);
+      if (closeError) throw closeError;
+      flash("Esercizio chiuso.");
+      await load();
+    } catch (e:any) {
+      setError(e?.message || "Impossibile chiudere l'esercizio.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveYear(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
@@ -590,6 +620,7 @@ function AccountingPage({
   async function saveLedger(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
+    if (!guardOpenFiscalYear(ledgerForm.fiscal_year_id)) return;
     if (!ledgerForm.description.trim() || Number(ledgerForm.amount) <= 0) {
       setError("Inserisci descrizione e importo maggiore di zero.");
       return;
@@ -850,6 +881,8 @@ function AccountingPage({
   async function saveAllocation(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
+    const allocationYearId = scopedLedger.find(x => x.id === allocationForm.ledger_entry_id)?.fiscal_year_id;
+    if (!guardOpenFiscalYear(allocationYearId)) return;
     if (!allocationForm.ledger_entry_id || !allocationForm.unit_id || Number(allocationForm.amount) <= 0) {
       setError("Seleziona un movimento, un'unità e un importo maggiore di zero.");
       return;
@@ -929,7 +962,7 @@ function AccountingPage({
 
   async function saveBudget(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !budgetForm.description.trim() || Number(budgetForm.amount) <= 0) {
+    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(budgetForm.fiscal_year_id) || !budgetForm.description.trim() || Number(budgetForm.amount) <= 0) {
       setError("Inserisci descrizione e importo del preventivo.");
       return;
     }
@@ -958,7 +991,7 @@ function AccountingPage({
 
   async function savePayment(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !paymentInstallment || Number(paymentForm.amount)<=0) {
+    if (!supabase || !dbCondominiumId || !paymentInstallment || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || Number(paymentForm.amount)<=0) {
       setError("Inserisci un importo di pagamento maggiore di zero."); return;
     }
     const residual=Math.max(0,Number(paymentInstallment.amount)-Number(paymentInstallment.paid_amount));
@@ -986,7 +1019,7 @@ function AccountingPage({
 
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
+    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
       setError("Inserisci titolo e importo della rata."); return;
     }
     setSaving(true); setError("");
