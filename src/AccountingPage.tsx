@@ -892,6 +892,11 @@ function AccountingPage({
       setError("La somma del riparto non coincide con l'importo della spesa.");
       return;
     }
+    const linkedInstallments = scopedInstallments.filter(i => i.ledger_entry_id === expense.id);
+    if (linkedInstallments.length > 0) {
+      setError("La spesa ha già rate collegate. Modifica o elimina prima le rate per poter rigenerare la ripartizione.");
+      return;
+    }
     if (!window.confirm("Confermi il riparto automatico? Le ripartizioni automatiche precedenti della stessa spesa e tabella saranno sostituite.")) return;
     setSaving(true);
     setError("");
