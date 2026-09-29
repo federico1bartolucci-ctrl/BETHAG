@@ -279,7 +279,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
-      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult] =
+      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, unitsResult] =
         await Promise.all([
           supabase
             .from("condominium_fiscal_years")
@@ -323,6 +323,8 @@ function AccountingPage({
         fundsResult,
         taxResult,
         caseResult,
+        allocationsResult,
+        unitsResult,
       ]) {
         if (result.error) throw result.error;
       }
