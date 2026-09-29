@@ -2556,7 +2556,70 @@ function App() {
         }
 
         if (requiresPasswordSetup) {
-    return (
+    const exportWorkspaceBackup = async () => {
+    if (!isAdministrator) {
+      alert("L'esportazione del backup è riservata all'Amministratore.");
+      return;
+    }
+    const tableNames = [
+      "condominiums", "condominium_members", "condominium_units", "documents", "suppliers", "activities",
+      "condominium_fiscal_years", "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
+      "condominium_installments", "condominium_payment_movements", "condominium_budgets", "condominium_tax_obligations",
+      "condominium_legal_cases", "condominium_register_items", "condominium_suppliers", "condominium_works",
+      "condominium_work_documents", "condominium_work_progress", "condominium_audit_log"
+    ];
+    const backend: Record<string, unknown> = {};
+    const errors: Record<string, string> = {};
+    if (supabase && profile.workspaceId) {
+      await Promise.all(tableNames.map(async (table) => {
+        try {
+          const { data, error } = await supabase.from(table).select("*").eq("workspace_id", profile.workspaceId);
+          if (error) errors[table] = error.message;
+          else backend[table] = data || [];
+        } catch (e: any) {
+          errors[table] = e?.message || "Errore di lettura";
+        }
+      }));
+    }
+    const localStorageData: Record<string, unknown> = {};
+    const excludedKeys = new Set([KEYS.session, KEYS.sessionEmail]);
+    Object.values(KEYS).forEach((key) => {
+      if (excludedKeys.has(key)) return;
+      const raw = localStorage.getItem(key);
+      if (raw === null) return;
+      try { localStorageData[key] = JSON.parse(raw); } catch { localStorageData[key] = raw; }
+    });
+    const backup = {
+      format: "BETHAG_WORKSPACE_BACKUP",
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      workspaceId: profile.workspaceId,
+      administrator: { name: profile.name, company: profile.company, email: profile.email },
+      frontendState: {
+        condominiums, condominiumMembers, condominiumUnits, condominiumRequests, deadlines, documents,
+        assemblies, suppliers, activities, communications, portalMembers, collaborators, subscription, profile
+      },
+      backend,
+      backendReadErrors: errors,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `bethag-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    if (Object.keys(errors).length) {
+      alert("Backup esportato. Alcune tabelle non sono state lette e sono state indicate nel campo backendReadErrors.");
+    } else {
+      alert("Backup BETHAG esportato correttamente.");
+    }
+  };
+
+  return (
       <>
         <style>{styles}</style>
         <PasswordSetupPage onComplete={completePasswordSetup} />
