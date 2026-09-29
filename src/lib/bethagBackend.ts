@@ -120,8 +120,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       ...memberData,
       id: row.legacy_id,
       condominiumId:
-        row.data?.condominiumId ??
         condominiumLegacyByDbId.get(row.condominium_id) ??
+        row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
     };
