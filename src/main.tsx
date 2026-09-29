@@ -8565,7 +8565,16 @@ function CondominiumDetails(
               </div>
               <div className="request-actions">
                 <Badge value={owners.length ? "Proprietà" : "Locazione"} />
-                <button className="secondary-button small" onClick={() => setSelectedUnit(apartment)}>Gestisci unità</button>
+                <button className="secondary-button small" type="button" onClick={() => setSelectedUnit(apartment)}>Gestisci unità</button>
+                {isAdministrator && (
+                  <button
+                    className="primary-button small"
+                    type="button"
+                    onClick={() => onNewMember(item.id, apartment)}
+                  >
+                    + Aggiungi persona
+                  </button>
+                )}
               </div>
             </div>;
           })}
