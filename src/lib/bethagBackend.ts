@@ -112,7 +112,19 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   );
 
   return {
-    condominiums: (condominiums.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    condominiums: (condominiums.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      // Le colonne strutturate sono la fonte di verità per i dati essenziali
+      // del condominio. Questo fallback è fondamentale quando il JSON data
+      // di una vecchia riga è incompleto: il refresh non deve trasformare
+      // dati già presenti nel database in valori null/vuoti.
+      name: row.name ?? row.data?.name ?? "",
+      address: row.address ?? row.data?.address ?? "",
+      city: row.city ?? row.data?.city ?? "",
+      cap: row.postal_code ?? row.data?.cap ?? "",
+      province: row.province ?? row.data?.province ?? "",
+    })),
     condominiumUnits: (condominiumUnits.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.id,
@@ -194,7 +206,7 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   const condominiumRows = state.condominiums ?? [];
   const { data: existingCondominiums, error: condominiumError } = await supabase
     .from("condominiums")
-    .select("id, legacy_id")
+    .select("id, legacy_id, name, address, city, postal_code, province, data")
     .eq("workspace_id", workspaceId);
 
   if (condominiumError) throw condominiumError;
@@ -204,16 +216,49 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   );
 
   if (condominiumRows.length) {
-    await upsertRows("condominiums", condominiumRows.map((item: any) => ({
-      workspace_id: workspaceId,
-      legacy_id: item.id,
-      name: item.name,
-      address: item.address,
-      city: item.city,
-      postal_code: item.cap,
-      province: item.province,
-      data: item,
-    })));
+    const existingByLegacyId = new Map(
+      (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row])
+    );
+
+    const rowsToPersist = condominiumRows.map((item: any) => {
+      const existing = existingByLegacyId.get(item.id);
+
+      // La sincronizzazione automatica riceve anche stati locali parziali
+      // (ad esempio durante hydration/refresh). Un valore assente o vuoto
+      // nel payload di sincronizzazione non deve cancellare un dato già
+      // persistito. Le modifiche intenzionali effettuate dal form passano
+      // invece da save_condominium e continuano a poter impostare i campi.
+      const hasText = (value: unknown) =>
+        typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined;
+
+      const name = hasText(item.name) ? item.name : (existing?.name ?? existing?.data?.name ?? "");
+      const address = hasText(item.address) ? item.address : (existing?.address ?? existing?.data?.address ?? "");
+      const city = hasText(item.city) ? item.city : (existing?.city ?? existing?.data?.city ?? "");
+      const postalCode = hasText(item.cap) ? item.cap : (existing?.postal_code ?? existing?.data?.cap ?? "");
+      const province = hasText(item.province) ? item.province : (existing?.province ?? existing?.data?.province ?? "");
+      const mergedData = {
+        ...(existing?.data && typeof existing.data === "object" ? existing.data : {}),
+        ...item,
+        name,
+        address,
+        city,
+        cap: postalCode,
+        province,
+      };
+
+      return {
+        workspace_id: workspaceId,
+        legacy_id: item.id,
+        name,
+        address,
+        city,
+        postal_code: postalCode,
+        province,
+        data: mergedData,
+      };
+    });
+
+    await upsertRows("condominiums", rowsToPersist);
 
     const { data: refreshedCondominiums, error } = await supabase
       .from("condominiums")
