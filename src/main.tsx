@@ -12503,9 +12503,15 @@ function CondominiumForm({
         if (requestId !== capLookupRef.current || !Array.isArray(results) || results.length === 0) return;
         const address = results[0]?.address || {};
         const city = address.city || address.town || address.village || address.municipality || "";
-        const province = String(address.county || address.state_district || "")
-          .replace(/^Provincia di\s+/i, "")
-          .replace(/\s+$/, "");
+        const isoProvince = Object.keys(address)
+          .filter((key) => key.toLowerCase().startsWith("iso3166-2"))
+          .map((key) => String(address[key] || ""))
+          .find((code) => /^IT-[A-Z]{2}$/i.test(code));
+        const province = isoProvince
+          ? isoProvince.slice(-2).toUpperCase()
+          : String(address.county || address.state_district || "")
+              .replace(/^Provincia di\s+/i, "")
+              .replace(/\s+$/, "");
         if (!city && !province) return;
         onChange({
           ...value,
