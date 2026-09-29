@@ -1469,6 +1469,58 @@ function LoginPage({
   );
 }
 
+function PasswordResetPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 8) {
+      setError("La password deve contenere almeno 8 caratteri.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Le password non coincidono.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await onComplete(password);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Impossibile aggiornare la password.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-card-header"><BrandLogo /></div>
+        <h1>Reimposta la password</h1>
+        <p className="login-intro">Inserisci la nuova password per il tuo account BETHAG.</p>
+        <form onSubmit={submit}>
+          <label>Nuova password</label>
+          <div className="password-field-wrap">
+            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
+            <button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Nascondi password" : "Mostra password"} title={showPassword ? "Nascondi password" : "Mostra password"}>{showPassword ? "🙈" : "👁️"}</button>
+          </div>
+          <label>Conferma nuova password</label>
+          <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
+          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>}
+          <button className="primary-button login-submit" disabled={busy} type="submit">
+            {busy ? "Aggiornamento in corso…" : "Salva nuova password"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -2102,6 +2154,7 @@ function App() {
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -2569,6 +2622,15 @@ function App() {
     if (error) throw new Error(error.message || "Impossibile inviare il link di recupero password.");
   };
 
+  const completePasswordRecovery = async (password: string) => {
+    if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
+    setPasswordRecoveryMode(false);
+    await supabase.auth.signOut();
+    alert("Password aggiornata correttamente. Ora puoi accedere a BETHAG con la nuova password.");
+  };
+
   const completePasswordSetup = async (password: string) => {
     if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
     const { error } = await supabase.auth.updateUser({
@@ -2761,7 +2823,10 @@ function App() {
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") setRequiresPasswordSetup(true);
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecoveryMode(true);
+        return;
+      }
       window.setTimeout(() => {
         void applySupabaseSession(session);
       }, 0);
@@ -2836,7 +2901,16 @@ function App() {
           }
         }
 
-        if (requiresPasswordSetup) {
+        if (passwordRecoveryMode) {
+    return (
+      <>
+        <style>{styles}</style>
+        <PasswordResetPage onComplete={completePasswordRecovery} />
+      </>
+    );
+  }
+
+  if (requiresPasswordSetup) {
     const restoreWorkspaceBackup = async (file: File) => {
     if (!isAdministrator) {
       alert("Il ripristino del backup è riservato all'Amministratore.");
