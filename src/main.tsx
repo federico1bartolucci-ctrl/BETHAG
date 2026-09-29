@@ -4689,13 +4689,20 @@ function App() {
     } else {
       let newMember = { ...data, id: makeId() };
 
-      if (supabaseConfigured && supabase && profile.workspaceId && newMember.email.trim()) {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
         try {
+          // L'anagrafica deve essere persistita anche senza e-mail.
+          // L'e-mail serve esclusivamente per l'eventuale invito al Portale.
           const saved = await saveCondominiumMemberBackend(profile.workspaceId, newMember);
           newMember = {
             ...newMember,
             unitId: saved?.unit_id ?? newMember.unitId ?? "",
           };
+
+          if (!newMember.email.trim()) {
+            // Nessun invito possibile senza e-mail, ma il condòmino è già
+            // stato salvato correttamente nel database.
+          } else {
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
               workspaceId: profile.workspaceId,
@@ -4771,6 +4778,7 @@ function App() {
             alert("Condòmino inserito. È stata inviata automaticamente una e-mail per attivare l'accesso al Portale BETHAG.");
           } else {
             alert("Condòmino inserito. L'account BETHAG esistente è stato collegato al relativo profilo.");
+          }
           }
         } catch (inviteError) {
           console.error("BETHAG resident invitation failed", inviteError);
