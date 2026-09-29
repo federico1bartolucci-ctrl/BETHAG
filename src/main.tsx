@@ -2450,7 +2450,7 @@ function App() {
 
     const membershipResult = await supabase
       .from("workspace_members")
-      .select("workspace_id, role, active")
+      .select("workspace_id, role, active, permissions")
       .eq("user_id", userId)
       .eq("active", true)
       .order("workspace_id")
@@ -2470,6 +2470,9 @@ function App() {
       return {
         role: mappedRole as "admin" | "collaborator" | "resident",
         workspaceId: membershipResult.data.workspace_id as string,
+        permissions: Array.isArray(membershipResult.data.permissions)
+          ? membershipResult.data.permissions as CollaboratorPermission[]
+          : [],
       };
     }
 
@@ -2541,6 +2544,9 @@ function App() {
               name: data.user.user_metadata?.full_name || current.name,
             }));
             setSessionRole(bootstrappedAccess.role);
+            setServerCollaboratorPermissions(
+              bootstrappedAccess.permissions ?? []
+            );
             return;
           }
         }
@@ -2560,6 +2566,9 @@ function App() {
         const normalizedEmail = (data.user.email || email).trim();
         setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
+        setServerCollaboratorPermissions(
+          access.permissions ?? []
+        );
 
         setProfile((current) => ({
           ...current,
@@ -2660,6 +2669,9 @@ function App() {
 
     setSessionRole(access.role);
     setSessionEmail(user.email || "");
+    setServerCollaboratorPermissions(
+      access.permissions ?? []
+    );
     setProfile((current) => ({
       ...current,
       workspaceId: access.workspaceId,
@@ -2675,6 +2687,7 @@ function App() {
     }
     setSessionRole(null);
     setSessionEmail("");
+    setServerCollaboratorPermissions([]);
     localStorage.removeItem(KEYS.session);
     localStorage.removeItem(KEYS.sessionEmail);
     localStorage.removeItem(KEYS.page);
