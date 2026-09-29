@@ -27,3 +27,9 @@ drop trigger if exists trg_prevent_closed_fiscal_year_delete on public.condomini
 create trigger trg_prevent_closed_fiscal_year_delete
 before delete on public.condominium_fiscal_years
 for each row execute function public.prevent_closed_fiscal_year_delete();
+
+
+drop trigger if exists trg_block_closed_budgets on public.condominium_budgets;
+create trigger trg_block_closed_budgets
+before insert or update or delete on public.condominium_budgets
+for each row execute function public.prevent_closed_condominium_accounting();
