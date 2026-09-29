@@ -353,26 +353,13 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   })).filter((row: any) => row.condominium_id);
 
   if (portalRows.length) await upsertRows("portal_access", portalRows);
-  await reconcileWorkspaceRows("portal_access", workspaceId, portalRows);
+  // L'accesso al Portale è persistente: uno stato locale parziale durante
+  // hydration/refresh non deve mai cancellare autorizzazioni server.
+  // La rimozione passa esclusivamente dalle azioni esplicite dell'interfaccia.
 
-  const { data: existingCollaborators, error: collaboratorQueryError } = await supabase
-    .from("workspace_members")
-    .select("user_id")
-    .eq("workspace_id", workspaceId)
-    .eq("role", "collaborator");
-  if (collaboratorQueryError) throw collaboratorQueryError;
-  const desiredCollaboratorIds = new Set(collaboratorRows.map((row: any) => row.user_id));
-  for (const row of existingCollaborators ?? []) {
-    if (!desiredCollaboratorIds.has(row.user_id)) {
-      const { error: deleteError } = await supabase
-        .from("workspace_members")
-        .delete()
-        .eq("workspace_id", workspaceId)
-        .eq("user_id", row.user_id)
-        .eq("role", "collaborator");
-      if (deleteError) throw deleteError;
-    }
-  }
+  // Anche i collaboratori sono persistenti: la sincronizzazione automatica
+  // può creare/aggiornare record ma non eliminarli in base a uno stato locale
+  // potenzialmente incompleto. La cancellazione resta un'azione esplicita.
 
   const unitRowsByKey = new Map<string, any>();
 
