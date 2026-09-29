@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3669,6 +3669,54 @@ function App() {
     setSelectedCondominiumUnit(unit);
     setCondominiumUnitForm(unit);
     openModal("condominium-unit");
+  };
+
+  const deleteCondominiumUnit = async (unit: CondominiumUnit) => {
+    if (!requireModulePermission("condomini", "L'eliminazione di un'unità immobiliare")) return;
+
+    const linkedMembers = condominiumMembers.filter(
+      (member) =>
+        member.condominiumId === unit.condominiumId &&
+        (String(member.unitId ?? "") === String(unit.id) ||
+          member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase())
+    );
+
+    const linkedPertinences = condominiumUnits.filter(
+      (candidate) =>
+        candidate.condominiumId === unit.condominiumId &&
+        candidate.id !== unit.id &&
+        candidate.incorporatedInUnitId === unit.id
+    );
+
+    const warning = linkedMembers.length
+      ? "L'unità è associata a uno o più condòmini."
+      : linkedPertinences.length
+        ? "L'unità è l'unità principale di una o più pertinenze."
+        : "L'unità verrà rimossa dal patrimonio del condominio.";
+
+    if (!confirm(`Eliminare l'unità ${unit.unitCode}?\n\n${warning} La cancellazione sarà eseguita solo se non esistono collegamenti che la rendano non eliminabile.`)) {
+      return;
+    }
+
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId && !String(unit.id).startsWith("local-")) {
+        await deleteCondominiumUnitBackend(profile.workspaceId, unit.condominiumId, unit.id);
+      } else {
+        if (linkedMembers.length) throw new Error("L'unità è associata a uno o più condòmini e non può essere eliminata.");
+        if (linkedPertinences.length) throw new Error("L'unità è collegata come unità principale di una o più pertinenze e non può essere eliminata.");
+      }
+
+      setCondominiumUnits((current) => current.filter((candidate) => candidate.id !== unit.id));
+      setSelectedCondominiumUnit((current) => current?.id === unit.id ? null : current);
+      setSelectedUnit((current) => current === unit.id ? null : current);
+    } catch (error) {
+      console.error("BETHAG condominium unit deletion failed", error);
+      alert(
+        error instanceof Error
+          ? `Non è stato possibile eliminare l'unità: ${error.message}`
+          : "Non è stato possibile eliminare l'unità. Nessun dato è stato rimosso."
+      );
+    }
   };
 
   const saveCondominium = async (
@@ -7881,6 +7929,7 @@ function CondominiumsPage(
     condominiumUnits = [],
     onNewUnit,
     onEditUnit,
+    onDeleteUnit,
     condominiumRequests,
     onNewMember,
     onEditMember,
@@ -8041,6 +8090,7 @@ function CondominiumsPage(
           condominiumUnits={condominiumUnits.filter((x: CondominiumUnit) => x.condominiumId === selected.id)}
           onNewUnit={onNewUnit}
           onEditUnit={onEditUnit}
+          onDeleteUnit={onDeleteUnit}
           condominiumRequests={condominiumRequests.filter((x: CondominiumRequest) => x.condominiumId === selected.id)}
           onNewMember={onNewMember}
           onEditMember={onEditMember}
@@ -8641,6 +8691,14 @@ function CondominiumDetails(
                           >
                             + Aggiungi persona
                           </button>
+                          <button
+                            className="secondary-button small"
+                            type="button"
+                            onClick={() => onDeleteUnit(unit)}
+                            title="Elimina unità"
+                          >
+                            Elimina unità
+                          </button>
                         </>
                       )}
                     </div>
@@ -8679,9 +8737,14 @@ function CondominiumDetails(
             <div className="form-actions">
               <button className="secondary-button" type="button" onClick={() => setSelectedUnit(null)}>Chiudi</button>
               {isAdministrator && (
-                <button className="primary-button" type="button" onClick={() => { setSelectedUnit(null); onNewMember(item.id, detailUnit.unitCode); }}>
-                  + Aggiungi persona
-                </button>
+                <>
+                  <button className="primary-button" type="button" onClick={() => { setSelectedUnit(null); onNewMember(item.id, detailUnit.unitCode); }}>
+                    + Aggiungi persona
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => { setSelectedUnit(null); onDeleteUnit(detailUnit); }}>
+                    Elimina unità
+                  </button>
+                </>
               )}
             </div>
           </Modal>
