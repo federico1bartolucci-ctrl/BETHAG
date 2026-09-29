@@ -1472,6 +1472,7 @@ function LoginPage({
 function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -1490,7 +1491,7 @@ function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => P
     try {
       await onComplete(password);
     } catch (error) {
-      setError("ERRORE");
+      setError(error instanceof Error ? error.message : "Operazione non completata. Riprova.");
     } finally {
       setBusy(false);
     }
@@ -1504,10 +1505,15 @@ function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => P
         <p className="login-intro">La tua e-mail è stata invitata dall'amministratore. Imposta ora la password personale per completare l'attivazione.</p>
         <form onSubmit={submit}>
           <label>Nuova password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
+          <div className="password-field-wrap">
+            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
+            <button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Nascondi password" : "Mostra password"} title={showPassword ? "Nascondi password" : "Mostra password"}>
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
           <label>Conferma password</label>
-          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
-          {error && <div className="login-error" role="alert"><strong>ERRORE</strong></div>}
+          <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
+          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>
           <button className="primary-button login-submit" disabled={busy} type="submit">
             {busy ? "Attivazione in corso…" : "Attiva account"}
           </button>
