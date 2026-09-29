@@ -4,29 +4,29 @@ import { supabase, supabaseConfigured } from "./lib/supabase";
 type InsurancePolicy = {
   id: string;
   policy_number: string;
-  insurer: string;
+  company_name: string;
   policy_type: string;
-  policyholder: string;
+  contact_name: string;
   coverage: string;
   premium: number | null;
   deductible: number | null;
   start_date: string;
-  expiry_date: string;
-  status: "Attiva" | "In scadenza" | "Scaduta" | "Sospesa";
+  end_date: string;
+  active: boolean;
   notes: string;
 };
 
 const emptyPolicy: Omit<InsurancePolicy, "id"> = {
   policy_number: "",
-  insurer: "",
+  company_name: "",
   policy_type: "Globale fabbricati",
-  policyholder: "",
+  contact_name: "",
   coverage: "",
   premium: null,
   deductible: null,
   start_date: "",
-  expiry_date: "",
-  status: "Attiva",
+  end_date: "",
+  active: true,
   notes: "",
 };
 
@@ -34,14 +34,14 @@ function localDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function effectiveStatus(expiryDate: string, current: InsurancePolicy["status"]) {
-  if (current === "Sospesa") return current;
-  if (!expiryDate) return current;
+function effectiveStatus(endDate: string, active: boolean) {
+  if (!active) return "Sospesa";
+  if (!endDate) return "Attiva";
   const today = localDate();
-  if (expiryDate < today) return "Scaduta";
+  if (endDate < today) return "Scaduta";
   const soon = new Date();
   soon.setDate(soon.getDate() + 60);
-  if (expiryDate <= soon.toISOString().slice(0, 10)) return "In scadenza";
+  if (endDate <= soon.toISOString().slice(0, 10)) return "In scadenza";
   return "Attiva";
 }
 
@@ -98,7 +98,7 @@ export default function InsurancePoliciesSection({
         ...row,
         premium: row.premium === null ? null : Number(row.premium),
         deductible: row.deductible === null ? null : Number(row.deductible),
-        status: effectiveStatus(row.expiry_date || "", row.status || "Attiva"),
+        active: row.active !== false,
         notes: row.notes || "",
       })));
     } catch (e) {
@@ -121,7 +121,7 @@ export default function InsurancePoliciesSection({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!supabase || !workspaceId || !dbCondominiumId) return;
-    if (!form.insurer.trim() || !form.policy_number.trim()) {
+    if (!form.company_name.trim() || !form.policy_number.trim()) {
       setError("Compila compagnia assicurativa e numero polizza.");
       return;
     }
@@ -132,15 +132,15 @@ export default function InsurancePoliciesSection({
         workspace_id: workspaceId,
         condominium_id: dbCondominiumId,
         policy_number: form.policy_number.trim(),
-        insurer: form.insurer.trim(),
+        company_name: form.company_name.trim(),
         policy_type: form.policy_type.trim(),
-        policyholder: form.policyholder.trim(),
+        contact_name: form.contact_name.trim(),
         coverage: form.coverage.trim(),
         premium: form.premium === null || form.premium === "" as any ? null : Number(form.premium),
         deductible: form.deductible === null || form.deductible === "" as any ? null : Number(form.deductible),
         start_date: form.start_date || null,
-        expiry_date: form.expiry_date || null,
-        status: effectiveStatus(form.expiry_date, form.status),
+        end_date: form.end_date || null,
+        active: form.active,
         notes: form.notes.trim(),
       };
       const query = editing
@@ -209,30 +209,30 @@ export default function InsurancePoliciesSection({
           {policies.map((policy) => (
             <article className="request-card" key={policy.id}>
               <div className="request-main">
-                <b>🛡️ {policy.insurer} · {policy.policy_number}</b>
-                <span>{policy.policy_type || "Tipologia non indicata"}{policy.policyholder ? ` · Contraente: ${policy.policyholder}` : ""}</span>
+                <b>🛡️ {policy.company_name} · {policy.policy_number}</b>
+                <span>{policy.policy_type || "Tipologia non indicata"}{policy.contact_name ? ` · Contraente: ${policy.contact_name}` : ""}</span>
                 <small>
-                  Decorrenza: {policy.start_date || "—"} · Scadenza: {policy.expiry_date || "—"} · Premio: {money(policy.premium)} · Franchigia: {money(policy.deductible)}
+                  Decorrenza: {policy.start_date || "—"} · Scadenza: {policy.end_date || "—"} · Premio: {money(policy.premium)} · Franchigia: {money(policy.deductible)}
                 </small>
                 {policy.coverage && <p><strong>Copertura:</strong> {policy.coverage}</p>}
                 {policy.notes && <small>{policy.notes}</small>}
               </div>
               <div className="request-actions">
-                <span className="badge">{policy.status}</span>
+                <span className="badge">{effectiveStatus(policy.end_date || "", policy.active)}</span>
                 {isAdministrator && <>
                   <button className="secondary-button small" type="button" onClick={() => {
                     setEditing(policy);
                     setForm({
                       policy_number: policy.policy_number,
-                      insurer: policy.insurer,
+                      insurer: policy.company_name,
                       policy_type: policy.policy_type,
-                      policyholder: policy.policyholder,
+                      policyholder: policy.contact_name,
                       coverage: policy.coverage,
                       premium: policy.premium,
                       deductible: policy.deductible,
                       start_date: policy.start_date || "",
-                      expiry_date: policy.expiry_date || "",
-                      status: policy.status,
+                      expiry_date: policy.end_date || "",
+                      status: effectiveStatus(policy.end_date || "", policy.active),
                       notes: policy.notes,
                     });
                     setOpenForm(true);
@@ -250,12 +250,12 @@ export default function InsurancePoliciesSection({
           <form className="modal-card" onSubmit={save}>
             <h2>{editing ? "Modifica polizza assicurativa" : "Nuova polizza assicurativa"}</h2>
             <div className="form-grid">
-              <label>Compagnia assicurativa<input required value={form.insurer} onChange={(e) => setForm({ ...form, insurer: e.target.value })} /></label>
+              <label>Compagnia assicurativa<input required value={form.company_name} onChange={(e) => setForm({ ...form, insurer: e.target.value })} /></label>
               <label>Numero polizza<input required value={form.policy_number} onChange={(e) => setForm({ ...form, policy_number: e.target.value })} /></label>
             </div>
             <div className="form-grid">
               <label>Tipologia<input value={form.policy_type} onChange={(e) => setForm({ ...form, policy_type: e.target.value })} /></label>
-              <label>Contraente<input value={form.policyholder} onChange={(e) => setForm({ ...form, policyholder: e.target.value })} /></label>
+              <label>Referente<input value={form.contact_name} onChange={(e) => setForm({ ...form, policyholder: e.target.value })} /></label>
             </div>
             <label>Copertura<textarea value={form.coverage} onChange={(e) => setForm({ ...form, coverage: e.target.value })} /></label>
             <div className="form-grid">
@@ -264,9 +264,9 @@ export default function InsurancePoliciesSection({
             </div>
             <div className="form-grid">
               <label>Decorrenza<input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></label>
-              <label>Scadenza<input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} /></label>
+              <label>Scadenza<input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} /></label>
             </div>
-            <label>Stato<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as InsurancePolicy["status"] })}><option>Attiva</option><option>In scadenza</option><option>Scaduta</option><option>Sospesa</option></select></label>
+            <label>Stato<select value={form.active ? "Attiva" : "Sospesa"} onChange={(e) => setForm({ ...form, active: e.target.value === "Attiva" })}><option>Attiva</option><option>Sospesa</option></select></label>
             <label>Note<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
             <div className="form-actions">
               <button type="button" className="secondary-button" onClick={closeForm}>Annulla</button>
