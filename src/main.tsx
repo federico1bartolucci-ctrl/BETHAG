@@ -1281,7 +1281,7 @@ function LoginPage({
       }
     } catch (submitError) {
       console.error("BETHAG authentication action failed", submitError);
-      setError(submitError instanceof Error ? submitError.message : "Operazione non completata. Riprova.");
+      setError("ERRORE");
     } finally {
       setSubmitting(false);
     }
@@ -1349,7 +1349,7 @@ function LoginPage({
             </small>
           )}
 
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="login-error" role="alert"><strong>ERRORE</strong></div>}
 
           <button className="primary-button login-submit" type="submit" disabled={submitting} aria-busy={submitting}>
             {submitting ? "Operazione in corso…" : registerMode ? (role === "resident" ? "Registrati come condòmino" : "Crea account amministratore") : "Accedi"}
@@ -1399,7 +1399,7 @@ function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => P
     try {
       await onComplete(password);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Impossibile impostare la password.");
+      setError("ERRORE");
     } finally {
       setBusy(false);
     }
@@ -1744,7 +1744,9 @@ function bethagSetNativeInputValue(input: HTMLInputElement | HTMLTextAreaElement
 
 function bethagIsNumericField(meta: string, input: HTMLInputElement): boolean {
   if (input.type === "number") return true;
-  return /(cap|codice postale|telefono|cellulare|numero civico|civico|quantità|quantita|importo|premio|franchigia|millesimi|percentuale|quota|numero|progressivo|anno|giorni|ore|metri|superficie|prezzo|totale)/i.test(meta);
+  // "Numero polizza", "numero pratica", ecc. possono essere alfanumerici:
+  // rendiamo numerici solo i campi che rappresentano effettivamente valori numerici.
+  return /(cap|codice postale|telefono|cellulare|numero civico|civico|quantità|quantita|importo|premio|franchigia|millesimi|percentuale|quota|progressivo|anno|giorni|ore|metri|superficie|prezzo|totale)/i.test(meta);
 }
 
 function bethagInstallGlobalFieldRules() {
@@ -1781,7 +1783,11 @@ function bethagInstallGlobalFieldRules() {
     }
 
     if (isFiscalCode) input.maxLength = 16;
-    if (isIban) input.maxLength = 34;
+    if (isIban) {
+      // IBAN: 34 caratteri al massimo; per gli IBAN italiani il formato è di 27.
+      input.maxLength = /^IT/i.test(value) ? 27 : 34;
+      input.inputMode = "text";
+    }
     if (isCap) { input.maxLength = 5; input.inputMode = "numeric"; }
 
     if (numeric) input.inputMode = "decimal";
@@ -1829,13 +1835,22 @@ function bethagInstallGlobalFieldRules() {
     if (!/^[0-9]$/.test(event.key)) event.preventDefault();
   };
 
+  const onInvalid = (event: Event) => {
+    // Evita i messaggi nativi del browser (che possono mostrare valori sensibili)
+    // e uniforma tutti gli errori di validazione al messaggio BETHAG "ERRORE".
+    event.preventDefault();
+    window.alert("ERRORE");
+  };
+
   document.addEventListener("input", onInput, true);
   document.addEventListener("blur", onBlur, true);
   document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener("invalid", onInvalid, true);
   return () => {
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("blur", onBlur, true);
     document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener("invalid", onInvalid, true);
   };
 }
 
@@ -2763,7 +2778,7 @@ function App() {
         "condominiums", "condominium_units", "condominium_members", "documents", "suppliers", "activities",
         "condominium_fiscal_years", "condominium_funds", "condominium_suppliers", "condominium_register_items",
         "condominium_budgets", "condominium_tax_obligations", "condominium_legal_cases",
-        "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_ledger_entries",
+        "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies", "condominium_ledger_entries",
         "condominium_expense_allocations", "condominium_installments", "condominium_payment_movements",
         "condominium_works", "condominium_work_documents", "condominium_work_progress",
         "condominium_work_events", "condominium_audit_log", "condominium_requests"
@@ -2798,7 +2813,7 @@ function App() {
       "condominiums", "condominium_members", "condominium_units", "documents", "suppliers", "activities",
       "condominium_fiscal_years", "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
       "condominium_installments", "condominium_payment_movements", "condominium_budgets", "condominium_tax_obligations",
-      "condominium_legal_cases", "condominium_millesimal_tables", "condominium_millesimal_values",
+      "condominium_legal_cases", "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies",
       "condominium_register_items", "condominium_suppliers", "condominium_works", "condominium_work_documents",
       "condominium_work_progress", "condominium_work_events", "condominium_audit_log", "condominium_requests"
     ];
