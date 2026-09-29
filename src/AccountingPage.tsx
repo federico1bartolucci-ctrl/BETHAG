@@ -656,6 +656,11 @@ function AccountingPage({
       setError("Inserisci descrizione e importo maggiore di zero.");
       return;
     }
+    const ledgerYear = scopedYears.find(y => y.id === ledgerForm.fiscal_year_id);
+    if (ledgerYear && (ledgerForm.entry_date < ledgerYear.start_date || ledgerForm.entry_date > ledgerYear.end_date)) {
+      setError("La data del movimento non rientra nell'esercizio contabile selezionato.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -1144,6 +1149,10 @@ function AccountingPage({
     }
     if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > amount) {
       setError("L'importo pagato deve essere compreso tra zero e l'importo della rata."); return;
+    }
+    const installmentYear = scopedYears.find(y => y.id === installmentForm.fiscal_year_id);
+    if (installmentYear && installmentForm.due_date && (installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
+      setError("La scadenza della rata non rientra nell'esercizio contabile selezionato."); return;
     }
     setSaving(true); setError("");
     try {
