@@ -3696,7 +3696,7 @@ function App() {
     if (
       supabaseConfigured &&
       supabase &&
-      sessionRole === "admin"
+      (sessionRole === "admin" || sessionRole === "collaborator")
     ) {
       try {
         const {
@@ -3775,7 +3775,7 @@ function App() {
 
     if (!window.confirm(message)) return;
 
-    if (supabaseConfigured && supabase && sessionRole === "admin") {
+    if (supabaseConfigured && supabase && (sessionRole === "admin" || sessionRole === "collaborator")) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
