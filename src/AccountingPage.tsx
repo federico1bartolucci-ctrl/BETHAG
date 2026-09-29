@@ -690,6 +690,17 @@ function AccountingPage({
   async function saveFund(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !fundForm.name.trim()) return;
+    const targetAmount = Number(fundForm.target_amount);
+    const allocatedAmount = Number(fundForm.allocated_amount);
+    const usedAmount = Number(fundForm.used_amount);
+    if (![targetAmount, allocatedAmount, usedAmount].every(Number.isFinite) || targetAmount < 0 || allocatedAmount < 0 || usedAmount < 0) {
+      setError("Gli importi del fondo devono essere numerici e non negativi.");
+      return;
+    }
+    if (usedAmount > allocatedAmount) {
+      setError("L'importo utilizzato non può superare l'importo allocato.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -698,9 +709,9 @@ function AccountingPage({
         condominium_id: dbCondominiumId,
         name: fundForm.name.trim(),
         purpose: fundForm.purpose,
-        target_amount: Number(fundForm.target_amount),
-        allocated_amount: Number(fundForm.allocated_amount),
-        used_amount: Number(fundForm.used_amount),
+        target_amount: targetAmount,
+        allocated_amount: allocatedAmount,
+        used_amount: usedAmount,
         active: fundForm.active,
         notes: fundForm.notes,
       };
@@ -727,6 +738,11 @@ function AccountingPage({
   async function saveTax(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !taxForm.title.trim()) return;
+    const taxAmount = Number(taxForm.amount);
+    if (taxForm.amount !== "" && (!Number.isFinite(taxAmount) || taxAmount < 0)) {
+      setError("L'importo dell'adempimento deve essere numerico e non negativo.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -736,7 +752,7 @@ function AccountingPage({
         title: taxForm.title.trim(),
         category: taxForm.category,
         due_date: taxForm.due_date || null,
-        amount: Number(taxForm.amount),
+        amount: taxForm.amount === "" ? null : taxAmount,
         status: taxForm.status,
         notes: taxForm.notes,
       };
@@ -763,6 +779,10 @@ function AccountingPage({
   async function saveCase(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !caseForm.title.trim()) return;
+    if (caseForm.closed_date && caseForm.opened_date && caseForm.closed_date < caseForm.opened_date) {
+      setError("La data di chiusura non può essere antecedente alla data di apertura.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
