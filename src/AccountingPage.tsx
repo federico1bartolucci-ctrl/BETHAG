@@ -429,6 +429,17 @@ function AccountingPage({
     setDbCondominiumId(data?.id ?? null);
   }
 
+  const rendicontoPrintStyles = `
+    .rendiconto-print-sheet { display:none; }
+    @media print {
+      body * { visibility:hidden !important; }
+      .rendiconto-print-sheet, .rendiconto-print-sheet * { visibility:visible !important; }
+      .rendiconto-print-sheet { display:block !important; position:absolute; inset:0; padding:24px; background:white; color:black; font-family:Arial,sans-serif; }
+      .rendiconto-print-sheet h1 { margin:0 0 8px; }
+      .rendiconto-print-sheet h2 { margin:20px 0 8px; }
+      .rendiconto-print-sheet p { margin:5px 0; }
+    }
+  `;
   function printRendiconto() {
     setShowRendicontoPrint(true);
     setTimeout(() => window.print(), 100);
@@ -1040,7 +1051,8 @@ function AccountingPage({
     setShowLedgerForm(true);
   }
 
-  return (
+  return (<>
+    <style>{rendicontoPrintStyles}</style>
     <>
       <div className="page-header">
         <div>
@@ -1458,6 +1470,7 @@ function AccountingPage({
       )}
     </>
   );
+  </>);
 }
 
 export default AccountingPage;
