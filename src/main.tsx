@@ -1040,6 +1040,48 @@ function currency(value: string) {
   }).format(number);
 }
 
+function normalizeWords(value: string) {
+  return value
+    .toLocaleLowerCase("it-IT")
+    .replace(/(^|[\\s'’-])(\\p{L})/gu, (_, prefix, letter) => prefix + letter.toLocaleUpperCase("it-IT"));
+}
+
+function normalizeSentence(value: string) {
+  const cleaned = value.replace(/\\s+/g, " ").trimStart();
+  if (!cleaned) return cleaned;
+  return cleaned.charAt(0).toLocaleUpperCase("it-IT") + cleaned.slice(1);
+}
+
+function normalizeByLabel(value: string, label = "", type = "text") {
+  const l = label.toLocaleLowerCase("it-IT");
+  if (type === "number" || l.includes("numero") && !l.includes("polizza")) {
+    return value.replace(/[^0-9.,-]/g, "");
+  }
+  if (l.includes("codice fiscale")) {
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16);
+  }
+  if (l.includes("iban")) {
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 27);
+  }
+  if (type === "email" || l.includes("e-mail") || l.includes("email")) {
+    return value.toLocaleLowerCase("it-IT").replace(/\\s/g, "");
+  }
+  if (l.includes("cognome")) {
+    return value.toLocaleUpperCase("it-IT").replace(/\\s+/g, " ");
+  }
+  if (l.includes("nome") && !l.includes("condominio") && !l.includes("documento")) {
+    return normalizeWords(value);
+  }
+  if (l.includes("cap")) {
+    return value.replace(/\\D/g, "").slice(0, 5);
+  }
+  return normalizeSentence(value);
+}
+
+function normalizeErrorText() {
+  return "ERRORE";
+}
+
 function validateEmail(value: string) {
   if (!value) return true;
 
@@ -1328,7 +1370,7 @@ function LoginPage({
               {role === "resident" && (
                 <>
                   <label>Codice fiscale</label>
-                  <input value={fiscalCode} onChange={(event) => setFiscalCode(event.target.value.toUpperCase())} type="text" placeholder="RSSMRA..." autoComplete="off" />
+                  <input value={fiscalCode} onChange={(event) => setFiscalCode(event.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16))} type="text" placeholder="RSSMRA..." autoComplete="off" />
 
                   <label>Nome del condominio <span style={{fontWeight:400,color:"#94a3b8"}}>(se conosciuto)</span></label>
                   <input value={condominiumName} onChange={(event) => setCondominiumName(event.target.value)} type="text" placeholder="Condominio Aurora" />
@@ -1338,7 +1380,7 @@ function LoginPage({
           )}
 
           <label>E-mail</label>
-          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="nome@esempio.it" autoComplete="email" />
+          <input value={email} onChange={(event) => setEmail(event.target.value.toLocaleLowerCase("it-IT").replace(/\\s/g, ""))} type="email" placeholder="nome@esempio.it" autoComplete="email" />
 
           <label>Password</label>
           <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="••••••••" autoComplete={registerMode ? "new-password" : "current-password"} />
@@ -1416,7 +1458,7 @@ function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => P
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
           <label>Conferma password</label>
           <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="login-error" role="alert"><strong>ERRORE</strong></div>}
           <button className="primary-button login-submit" disabled={busy} type="submit">
             {busy ? "Attivazione in corso…" : "Attiva account"}
           </button>
@@ -2516,7 +2558,19 @@ function App() {
       if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
     };
     void loadRegistrationRequests();
-    return () => { cancelled = true; };
+  const handleGlobalInputChangeCapture = (event: React.FormEvent<HTMLElement>) => {
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) return;
+    if (target.type === "password" || target.type === "date" || target.type === "time" || target.type === "checkbox" || target.type === "file") return;
+    const labelElement = target.closest(".field, label")?.querySelector("label") || target.closest("label");
+    const labelText = labelElement?.textContent || "";
+    const next = normalizeByLabel(target.value, labelText, target.type || "text");
+    if (next !== target.value) {
+      target.value = next;
+    }
+  };
+
+  return () => { cancelled = true; };
   }, [sessionRole, profile.workspaceId]);
 
   const approvePortalRegistration = async (requestId: string, memberId: string) => {
@@ -5496,7 +5550,7 @@ function App() {
     <>
       <style>{styles}</style>
 
-      <div className="app">
+      <div className="app" onChangeCapture={handleGlobalInputChangeCapture}>
 
         {/* =================================================
             SIDEBAR
@@ -12426,6 +12480,36 @@ function CondominiumForm({
       [key]: val,
     });
 
+  const capLookupRef = useRef(0);
+  useEffect(() => {
+    const cap = String(value.cap || "").replace(/\\D/g, "").slice(0, 5);
+    if (cap.length !== 5) return;
+    const requestId = ++capLookupRef.current;
+    const controller = new AbortController();
+    void fetch(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cap)}&country=Italy&format=json&addressdetails=1&limit=5`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((results: any[]) => {
+        if (requestId !== capLookupRef.current || !Array.isArray(results) || results.length === 0) return;
+        const address = results[0]?.address || {};
+        const city = address.city || address.town || address.village || address.municipality || "";
+        const province = String(address.county || address.state_district || "")
+          .replace(/^Provincia di\\s+/i, "")
+          .replace(/\\s+$/, "");
+        if (!city && !province) return;
+        onChange({
+          ...value,
+          cap,
+          city: city ? normalizeSentence(city) : value.city,
+          province: province ? normalizeSentence(province) : value.province,
+        });
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [value.cap]);
+
   return (
     <form onSubmit={onSubmit}>
 
@@ -13888,45 +13972,39 @@ function Field({
   type = "text",
   full = false,
   textarea = false,
+  maxLength,
 }: any) {
+  const normalizedValue = value ?? "";
+  const handleChange = (raw: string) => onChange(normalizeByLabel(raw, String(label || ""), type));
+  const labelText = String(label || "");
+  const lowerLabel = labelText.toLocaleLowerCase("it-IT");
+  const inferredMaxLength =
+    maxLength ??
+    (lowerLabel.includes("codice fiscale") ? 16 :
+      lowerLabel.includes("iban") ? 27 :
+      lowerLabel.includes("cap") ? 5 : undefined);
+  const inferredType = type === "number" ? "number" : type;
   return (
-    <div
-      className={`field ${
-        full ? "full" : ""
-      }`}
-    >
-
-      <label>
-        {label}
-      </label>
-
+    <div className={`field ${full ? "full" : ""}`}>
+      <label>{label}</label>
       {textarea ? (
         <textarea
-          value={value}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-            )
-          }
-          placeholder={
-            placeholder
-          }
+          value={normalizedValue}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
         />
       ) : (
         <input
-          type={type}
-          value={value}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-            )
-          }
-          placeholder={
-            placeholder
-          }
+          type={inferredType}
+          value={normalizedValue}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          maxLength={inferredMaxLength}
+          inputMode={inferredType === "number" || lowerLabel.includes("cap") ? "numeric" : undefined}
+          autoCapitalize={lowerLabel.includes("e-mail") || lowerLabel.includes("email") ? "none" : "sentences"}
+          spellCheck={false}
         />
       )}
-
     </div>
   );
 }
@@ -14139,18 +14217,18 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       {isAdministrator && editing && (
         <div className="form-card" style={{ marginBottom: 16 }}>
           <div className="form-grid">
-            <label>Compagnia assicurativa<input value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})} /></label>
-            <label>Numero polizza<input value={form.policy_number} onChange={e => setForm({...form, policy_number: e.target.value})} /></label>
-            <label>Tipo polizza<input value={form.policy_type} onChange={e => setForm({...form, policy_type: e.target.value})} /></label>
-            <label>Copertura<input value={form.coverage} onChange={e => setForm({...form, coverage: e.target.value})} /></label>
+            <label>Compagnia assicurativa<input value={form.company_name} onChange={e => setForm({...form, company_name: normalizeSentence(e.target.value)})} /></label>
+            <label>Numero polizza<input value={form.policy_number} onChange={e => setForm({...form, policy_number: normalizeSentence(e.target.value)})} /></label>
+            <label>Tipo polizza<input value={form.policy_type} onChange={e => setForm({...form, policy_type: normalizeSentence(e.target.value)})} /></label>
+            <label>Copertura<input value={form.coverage} onChange={e => setForm({...form, coverage: normalizeSentence(e.target.value)})} /></label>
             <label>Decorrenza<input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} /></label>
             <label>Scadenza<input type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} /></label>
-            <label>Premio<input type="number" min="0" step="0.01" value={form.premium} onChange={e => setForm({...form, premium: e.target.value})} /></label>
-            <label>Franchigia<input type="number" min="0" step="0.01" value={form.deductible} onChange={e => setForm({...form, deductible: e.target.value})} /></label>
-            <label>Referente<input value={form.contact_name} onChange={e => setForm({...form, contact_name: e.target.value})} /></label>
-            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value})} /></label>
-            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value})} /></label>
-            <label className="form-grid-wide">Copertura / condizioni<textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></label>
+            <label>Premio<input type="number" min="0" step="0.01" value={form.premium} onChange={e => setForm({...form, premium: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
+            <label>Franchigia<input type="number" min="0" step="0.01" value={form.deductible} onChange={e => setForm({...form, deductible: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
+            <label>Referente<input value={form.contact_name} onChange={e => setForm({...form, contact_name: normalizeWords(e.target.value)})} /></label>
+            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value.toLocaleLowerCase("it-IT").replace(/\\s/g, "")})} /></label>
+            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value.replace(/[^0-9+()\\s-]/g, "")})} /></label>
+            <label className="form-grid-wide">Copertura / condizioni<textarea value={form.notes} onChange={e => setForm({...form, notes: normalizeSentence(e.target.value)})} /></label>
           </div>
           <div className="form-actions">
             <button className="secondary-button" type="button" onClick={resetForm}>Annulla</button>
