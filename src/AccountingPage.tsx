@@ -308,6 +308,29 @@ function AccountingPage({
     [scopedInstallments, rendicontoYearId]
   );
 
+  const rendicontoBudgets = useMemo(
+    () => rendicontoYearId === "all"
+      ? scopedBudgets
+      : scopedBudgets.filter((b) => b.fiscal_year_id === rendicontoYearId),
+    [scopedBudgets, rendicontoYearId]
+  );
+
+  const budgetSummary = useMemo(() => {
+    const rows = new Map<string, { category:string; budget:number; actual:number }>();
+    for (const b of rendicontoBudgets) {
+      const row = rows.get(b.category) ?? { category:b.category, budget:0, actual:0 };
+      row.budget += Number(b.amount || 0);
+      rows.set(b.category, row);
+    }
+    for (const e of rendicontoLedger.filter((x) => x.direction === "Uscita")) {
+      const row = rows.get(e.category) ?? { category:e.category, budget:0, actual:0 };
+      row.actual += Number(e.amount || 0);
+      rows.set(e.category, row);
+    }
+    return Array.from(rows.values()).map((r) => ({ ...r, variance:r.budget-r.actual }))
+      .sort((a,b) => a.category.localeCompare(b.category,"it"));
+  }, [rendicontoBudgets, rendicontoLedger]);
+
   const rendicontoSummary = useMemo(() => {
     const income = rendicontoLedger.filter((e) => e.direction === "Entrata").reduce((s,e) => s + Number(e.amount || 0), 0);
     const expenses = rendicontoLedger.filter((e) => e.direction === "Uscita").reduce((s,e) => s + Number(e.amount || 0), 0);
@@ -1083,6 +1106,19 @@ function AccountingPage({
           </article>
 
           <article className="card">
+            <div className="section-heading">
+              <div><h2>Preventivo vs consuntivo</h2><p>Confronto per categoria tra importi preventivati e movimenti di uscita registrati.</p></div>
+              {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => { setEditingBudget(null); setBudgetForm({ fiscal_year_id:rendicontoYearId === "all" ? scopedYears[0]?.id ?? "" : rendicontoYearId, category:"Manutenzione", description:"", amount:0, notes:"" }); setShowBudgetForm(true); }}>+ Voce preventivo</button>}
+            </div>
+            <div className="quick-stats">
+              <div className="quick-stat"><b>{money(rendicontoBudgets.reduce((s,b)=>s+Number(b.amount||0),0))}</b><span>Preventivo</span></div>
+              <div className="quick-stat"><b>{money(rendicontoLedger.filter(e=>e.direction==="Uscita").reduce((s,e)=>s+Number(e.amount||0),0))}</b><span>Consuntivo</span></div>
+              <div className="quick-stat"><b>{money(rendicontoBudgets.reduce((s,b)=>s+Number(b.amount||0),0)-rendicontoLedger.filter(e=>e.direction==="Uscita").reduce((s,e)=>s+Number(e.amount||0),0))}</b><span>Scostamento</span></div>
+            </div>
+            {budgetSummary.length===0 ? <p>Nessuna voce di preventivo configurata.</p> : budgetSummary.map(row=><div className="row-card" key={row.category}><div><b>{row.category}</b><small>Preventivo {money(row.budget)} · Consuntivo {money(row.actual)}</small><span>Scostamento {money(row.variance)}</span></div></div>)}
+          </article>
+
+          <article className="card">
             <h2>Confronto spese e ripartizioni</h2>
             <p>Il prospetto evidenzia eventuali importi ancora non attribuiti alle unità.</p>
             <div className="quick-stats">
@@ -1290,6 +1326,17 @@ function AccountingPage({
           <label>Scadenza<input type="date" value={ledgerForm.due_date} onChange={(e) => setLedgerForm({ ...ledgerForm, due_date: e.target.value })} /></label>
           <label>Note<textarea value={ledgerForm.notes} onChange={(e) => setLedgerForm({ ...ledgerForm, notes: e.target.value })} /></label>
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowLedgerForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
+        </form></div>
+      )}
+
+      {showBudgetForm && (
+        <div className="modal-backdrop"><form className="modal-card" onSubmit={saveBudget}>
+          <h2>{editingBudget ? "Modifica voce di preventivo" : "Nuova voce di preventivo"}</h2>
+          <label>Esercizio<select value={budgetForm.fiscal_year_id} onChange={e=>setBudgetForm({...budgetForm,fiscal_year_id:e.target.value})}><option value="">Nessuno</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label>
+          <div className="form-grid"><label>Categoria<input value={budgetForm.category} onChange={e=>setBudgetForm({...budgetForm,category:e.target.value})}/></label><label>Importo<input type="number" min="0.01" step="0.01" required value={budgetForm.amount} onChange={e=>setBudgetForm({...budgetForm,amount:Number(e.target.value)})}/></label></div>
+          <label>Descrizione<input required value={budgetForm.description} onChange={e=>setBudgetForm({...budgetForm,description:e.target.value})}/></label>
+          <label>Note<textarea value={budgetForm.notes} onChange={e=>setBudgetForm({...budgetForm,notes:e.target.value})}/></label>
+          <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowBudgetForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
 
