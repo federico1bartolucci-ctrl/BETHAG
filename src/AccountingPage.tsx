@@ -176,6 +176,7 @@ function AccountingPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [showRendicontoPrint, setShowRendicontoPrint] = useState(false);
   const [editingLedger, setEditingLedger] = useState<LedgerEntry | null>(null);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
   const [editingTax, setEditingTax] = useState<TaxObligation | null>(null);
@@ -426,6 +427,11 @@ function AccountingPage({
       .maybeSingle();
     if (readError) throw readError;
     setDbCondominiumId(data?.id ?? null);
+  }
+
+  function printRendiconto() {
+    setShowRendicontoPrint(true);
+    setTimeout(() => window.print(), 100);
   }
 
   async function load() {
@@ -1151,6 +1157,10 @@ function AccountingPage({
                 <div><b>{fund.name}</b><small>{fund.purpose || "Finalità non indicata"}</small><span>Allocato {money(fund.allocated_amount)} · Utilizzato {money(fund.used_amount)} · Residuo {money(Math.max(0,Number(fund.allocated_amount)-Number(fund.used_amount)))}</span></div>
               </div>
             ))}
+          </article>
+
+          <article className="card rendiconto-actions">
+            <div className="section-heading"><div><h2>Esporta rendiconto</h2><p>Genera una versione stampabile del prospetto selezionato, pronta per PDF tramite la stampa del dispositivo.</p></div><button className="primary-button" onClick={printRendiconto}>Stampa / PDF</button></div>
           </article>
 
           <article className="card">
