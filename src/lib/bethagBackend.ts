@@ -310,15 +310,43 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
 
   const desiredUnits = Array.from(desiredUnitMap.values());
   if (desiredUnits.length) {
-    await upsertRows("condominium_units", desiredUnits, "condominium_id,unit_code");
     const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
-    const { data: persistedUnits, error: unitsError } = await supabase
+
+    const existingResult = await supabase
       .from("condominium_units")
       .select("id, condominium_id, unit_code")
       .in("condominium_id", unitCondominiums);
-    if (unitsError) throw unitsError;
-    (persistedUnits ?? []).forEach((unit: any) => {
-      unitRowsByKey.set(`${unit.condominium_id}::${String(unit.unit_code).trim().toLowerCase()}`, unit);
+    if (existingResult.error) throw existingResult.error;
+
+    const existingKeys = new Set(
+      (existingResult.data ?? []).map((unit: any) =>
+        String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
+      )
+    );
+
+    // Creiamo solo le unità mancanti. Non sovrascriviamo mai un'unità già
+    // presente: potrebbe contenere dati catastali, proprietari esterni,
+    // pertinenze e altri dati inseriti dall'amministratore.
+    const missingUnits = desiredUnits.filter((row: any) =>
+      !existingKeys.has(
+        String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
+      )
+    );
+    if (missingUnits.length) {
+      await upsertRows("condominium_units", missingUnits, "condominium_id,unit_code");
+    }
+
+    const persistedResult = await supabase
+      .from("condominium_units")
+      .select("id, condominium_id, unit_code")
+      .in("condominium_id", unitCondominiums);
+    if (persistedResult.error) throw persistedResult.error;
+
+    (persistedResult.data ?? []).forEach((unit: any) => {
+      unitRowsByKey.set(
+        String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
+        unit
+      );
     });
   }
 
