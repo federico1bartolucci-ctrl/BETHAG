@@ -331,6 +331,24 @@ function AccountingPage({
       .sort((a,b) => a.category.localeCompare(b.category,"it"));
   }, [rendicontoBudgets, rendicontoLedger]);
 
+  const quadratura = useMemo(() => {
+    const expenses = rendicontoLedger.filter(e => e.direction === "Uscita").reduce((s,e) => s + Number(e.amount || 0), 0);
+    const allocated = rendicontoAllocations.reduce((s,a) => s + Number(a.amount || 0), 0);
+    const installments = rendicontoInstallments.reduce((s,i) => s + Number(i.amount || 0), 0);
+    const paidInstallments = rendicontoInstallments.reduce((s,i) => s + Number(i.paid_amount || 0), 0);
+    const budget = rendicontoBudgets.reduce((s,b) => s + Number(b.amount || 0), 0);
+    const allocationGap = expenses - allocated;
+    const installmentGap = allocated - installments;
+    const collectionGap = installments - paidInstallments;
+    const budgetVariance = budget - expenses;
+    return {
+      expenses, allocated, installments, paidInstallments, budget,
+      allocationGap, installmentGap, collectionGap, budgetVariance,
+      balancedAllocations: Math.abs(allocationGap) < 0.01,
+      balancedInstallments: Math.abs(installmentGap) < 0.01,
+    };
+  }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoBudgets]);
+
   const rendicontoSummary = useMemo(() => {
     const income = rendicontoLedger.filter((e) => e.direction === "Entrata").reduce((s,e) => s + Number(e.amount || 0), 0);
     const expenses = rendicontoLedger.filter((e) => e.direction === "Uscita").reduce((s,e) => s + Number(e.amount || 0), 0);
@@ -1133,6 +1151,16 @@ function AccountingPage({
                 <div><b>{fund.name}</b><small>{fund.purpose || "Finalità non indicata"}</small><span>Allocato {money(fund.allocated_amount)} · Utilizzato {money(fund.used_amount)} · Residuo {money(Math.max(0,Number(fund.allocated_amount)-Number(fund.used_amount)))}</span></div>
               </div>
             ))}
+          </article>
+
+          <article className="card">
+            <h2>Controllo di quadratura</h2>
+            <p>Verifica automatica delle principali corrispondenze contabili del periodo selezionato.</p>
+            <div className="permission-box"><b>Registro → Ripartizioni</b><span>Spese {money(quadratura.expenses){"}"} · Ripartito {money(quadratura.allocated){"}"} · Differenza {money(quadratura.allocationGap){"}"}</span></div>
+            <div className="permission-box"><b>Ripartizioni → Rate</b><span>Ripartito {money(quadratura.allocated){"}"} · Rate {money(quadratura.installments){"}"} · Differenza {money(quadratura.installmentGap){"}"}</span></div>
+            <div className="permission-box"><b>Rate → Incassi</b><span>Dovuto {money(quadratura.installments){"}"} · Incassato {money(quadratura.paidInstallments){"}"} · Residuo {money(quadratura.collectionGap){"}"}</span></div>
+            <div className="permission-box"><b>Preventivo → Consuntivo</b><span>Preventivo {money(quadratura.budget){"}"} · Consuntivo {money(quadratura.expenses){"}"} · Scostamento {money(quadratura.budgetVariance){"}"}</span></div>
+            <div className="status-line">{quadratura.balancedAllocations ? "✓ Ripartizioni quadrate" : "⚠ Verificare ripartizioni"} · {quadratura.balancedInstallments ? "✓ Rate quadrate" : "⚠ Verificare rate"}{"}"}</div>
           </article>
 
           <article className="card">
