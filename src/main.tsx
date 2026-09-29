@@ -5638,6 +5638,7 @@ function App() {
               onPrepareEmail={prepareCondominiumEmail}
               openCondominiumEmailComposer={openCondominiumEmailComposer}
               isAdministrator={isAdministrator}
+              onExportBackup={exportWorkspaceBackup}
             />
           )}
 
@@ -11617,6 +11618,7 @@ function ProfilePage({
   subscription,
   portalMembers,
   isAdministrator = false,
+  onExportBackup,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -11849,6 +11851,19 @@ function ProfilePage({
 
       </form>
 
+
+      <section className="card" style={{marginBottom:18}}>
+        <span className="eyebrow">Sicurezza e continuità operativa</span>
+        <h2>Backup dei dati</h2>
+        <p className="section-subtitle">
+          Esporta una copia locale dei dati disponibili nel workspace. Il file non contiene credenziali di accesso.
+        </p>
+        <div className="form-actions">
+          <button className="secondary-button" type="button" onClick={() => onExportBackup?.()}>
+            Esporta backup JSON
+          </button>
+        </div>
+      </section>
 
       <section className="workspace-grid">
 
