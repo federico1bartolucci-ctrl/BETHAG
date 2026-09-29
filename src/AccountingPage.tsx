@@ -264,6 +264,14 @@ function AccountingPage({
 
   const scopedMillesimalTables = useMemo(() => dbCondominiumId ? millesimalTables.filter(t=>t.condominium_id===dbCondominiumId) : millesimalTables,[dbCondominiumId,millesimalTables]);
   const scopedMillesimalValues = useMemo(() => dbCondominiumId ? millesimalValues.filter(v=>v.condominium_id===dbCondominiumId) : millesimalValues,[dbCondominiumId,millesimalValues]);
+  const millesimalTableChecks = useMemo(() => scopedMillesimalTables.map(t => {
+    const condominiumUnits = units.filter(u => !dbCondominiumId || u.condominium_id === dbCondominiumId);
+    const values = condominiumUnits.map(u => scopedMillesimalValues.find(v => v.table_id === t.id && v.unit_id === u.id)).filter(Boolean) as MillesimalValue[];
+    const eligible = values.filter(v => !v.excluded);
+    const sum = eligible.reduce((s,v) => s + Number(v.value || 0), 0);
+    const missing = condominiumUnits.filter(u => !scopedMillesimalValues.some(v => v.table_id === t.id && v.unit_id === u.id));
+    return { id:t.id, total:Number(t.total_millesimi||0), sum, count:values.length, missingCount:missing.length, complete:missing.length===0 && Math.abs(sum-Number(t.total_millesimi||0))<0.001 };
+  }), [scopedMillesimalTables, scopedMillesimalValues, units, dbCondominiumId]);
   const scopedInstallments = useMemo(() => dbCondominiumId ? installments.filter(i=>i.condominium_id===dbCondominiumId) : installments,[dbCondominiumId,installments]);
   const scopedBudgets = useMemo(() => dbCondominiumId ? budgets.filter(b=>b.condominium_id===dbCondominiumId) : budgets,[dbCondominiumId,budgets]);
 
@@ -788,6 +796,12 @@ function AccountingPage({
     const table = scopedMillesimalTables.find(t => t.id === autoAllocationForm.table_id);
     if (!expense || expense.direction !== "Uscita" || !table) {
       setAutoPreview([]);
+      return;
+    }
+    const selectedTableCheck = millesimalTableChecks.find(x => x.id === autoAllocationForm.table_id);
+    if (!selectedTableCheck?.complete) {
+      setAutoPreview([]);
+      setError("Il riparto non può essere calcolato: completare le quote millesimali di tutte le unità e verificare che la somma coincida con il totale della tabella.");
       return;
     }
     const eligible = units
@@ -1316,7 +1330,7 @@ function AccountingPage({
         <section className="cards-grid">
           <article className="card">
             <div className="section-heading"><div><h2>Tabelle millesimali</h2><p>Definisci le tabelle di riparto del condominio e il relativo totale.</p></div>{isAdministrator && dbCondominiumId && <button className="primary-button" onClick={()=>setShowMillesimalForm(true)}>+ Nuova tabella</button>}</div>
-            {scopedMillesimalTables.length===0 ? <p>Nessuna tabella configurata.</p> : scopedMillesimalTables.map(t=><article className="row-card" key={t.id}><div><b>{t.name}</b><small>{t.description || "Nessuna descrizione"} · Totale {t.total_millesimi}</small><span>{t.active ? "Attiva" : "Disattivata"}</span></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_millesimal_tables",t.id,"la tabella millesimale")}>×</button>}</article>)}
+            {scopedMillesimalTables.length===0 ? <p>Nessuna tabella configurata.</p> : scopedMillesimalTables.map(t=><article className="row-card" key={t.id}><div><b>{t.name}</b><small>{t.description || "Nessuna descrizione"} · Totale {t.total_millesimi}</small><span>{t.active ? "Attiva" : "Disattivata"}</span><small>{(() => { const c=millesimalTableChecks.find(x=>x.id===t.id); return c?.complete ? "✓ Quote complete e quadrate" : `⚠ Quote incomplete o non quadrate (0/0)`; })()}</small></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_millesimal_tables",t.id,"la tabella millesimale")}>×</button>}</article>)}
           </article>
           <article className="card"><div className="section-heading"><div><h2>Valori per unità</h2><p>{scopedMillesimalValues.length} valori registrati. I millesimi sono associati esclusivamente alle unità immobiliari.</p>{scopedMillesimalTables.length>0 && <p><b>Totale tabella:</b> {scopedMillesimalTables.reduce((s,t)=>s+Number(t.total_millesimi||0),0)} millesimi</p>}{isAdministrator && dbCondominiumId && scopedMillesimalTables.length>0 && <button className="primary-button" onClick={()=>{setMillesimalValueForm({table_id:scopedMillesimalTables[0]?.id||"",unit_id:units.find(u=>u.condominium_id===dbCondominiumId)?.id||"",value:0,excluded:false,notes:""});setShowMillesimalValueForm(true)}}>+ Assegna quota</button>}</div></div>{scopedMillesimalTables.length===0 ? <p>Nessuna tabella disponibile.</p> : scopedMillesimalTables.flatMap(t=>units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=>({t,u,v:scopedMillesimalValues.find(v=>v.table_id===t.id&&v.unit_id===u.id)}))).map(({t,u,v})=><div className="row-card" key={t.id+"-"+u.id}><div><b>Unità {u.unit_code}</b><small>{t.name}</small><span>{v ? (v.excluded ? "Esclusa" : v.value + " millesimi") : "Quota non ancora inserita"}</span></div></div>)}</article>
         </section>
