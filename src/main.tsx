@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3877,23 +3877,18 @@ function App() {
     openModal("deadline");
   };
 
-  const deleteDeadline = (
-    id: number
-  ) => {
+  const deleteDeadline = async (id: number) => {
     if (!requireModulePermission("scadenze", "L'eliminazione della scadenza")) return;
-
-    if (
-      !confirm(
-        "Eliminare questa scadenza?"
-      )
-    )
-      return;
-
-    setDeadlines((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
+    if (!confirm("Eliminare questa scadenza?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "deadlines", id);
+      }
+      setDeadlines((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("BETHAG deadline deletion failed", error);
+      alert(error instanceof Error ? "La scadenza non è stata eliminata dal server.\n\n" + error.message : "La scadenza non è stata eliminata dal server.");
+    }
   };
 
   const updateDeadlineStatus = (
@@ -3999,23 +3994,18 @@ function App() {
     openModal("document");
   };
 
-  const deleteDocument = (
-    id: number
-  ) => {
+  const deleteDocument = async (id: number) => {
     if (!requireModulePermission("documenti", "L'eliminazione del documento")) return;
-
-    if (
-      !confirm(
-        "Eliminare questo documento?"
-      )
-    )
-      return;
-
-    setDocuments((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
+    if (!confirm("Eliminare questo documento?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "documents", id);
+      }
+      setDocuments((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("BETHAG document deletion failed", error);
+      alert(error instanceof Error ? "Il documento non è stato eliminato dal server.\n\n" + error.message : "Il documento non è stato eliminato dal server.");
+    }
   };
 
   const toggleDocumentPublication = (
@@ -4187,23 +4177,18 @@ function App() {
     openModal("assembly");
   };
 
-  const deleteAssembly = (
-    id: number
-  ) => {
+  const deleteAssembly = async (id: number) => {
     if (!requireModulePermission("assemblee", "L'eliminazione dell'assemblea")) return;
-
-    if (
-      !confirm(
-        "Eliminare questa assemblea?"
-      )
-    )
-      return;
-
-    setAssemblies((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
+    if (!confirm("Eliminare questa assemblea?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "assemblies", id);
+      }
+      setAssemblies((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("BETHAG assembly deletion failed", error);
+      alert(error instanceof Error ? "L'assemblea non è stata eliminata dal server.\n\n" + error.message : "L'assemblea non è stata eliminata dal server.");
+    }
   };
 
   const updateAssemblyStatus = (
@@ -4455,37 +4440,22 @@ function App() {
     openModal("supplier");
   };
 
-  const deleteSupplier = (
-    id: number
-  ) => {
+  const deleteSupplier = async (id: number) => {
     if (!requireModulePermission("fornitori", "L'eliminazione del fornitore")) return;
-
-    if (
-      !confirm(
-        "Eliminare questo fornitore?"
-      )
-    )
-      return;
-
-    setSuppliers((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
-
-    setCondominiumRequests((current) =>
-      current.map((request) =>
-        request.supplierId === id
-          ? { ...request, supplierId: null }
-          : request
-      )
-    );
+    if (!confirm("Eliminare questo fornitore?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "suppliers", id);
+      }
+      setSuppliers((current) => current.filter((item) => item.id !== id));
+      setCondominiumRequests((current) =>
+        current.map((request) => request.supplierId === id ? { ...request, supplierId: null } : request)
+      );
+    } catch (error) {
+      console.error("BETHAG supplier deletion failed", error);
+      alert(error instanceof Error ? "Il fornitore non è stato eliminato dal server.\n\n" + error.message : "Il fornitore non è stato eliminato dal server.");
+    }
   };
-
-
-  /* =======================================================
-     ATTIVITÀ
-     ======================================================= */
 
   const saveActivity = (
     event: React.FormEvent<HTMLFormElement>
@@ -4541,31 +4511,21 @@ function App() {
     openModal("activity");
   };
 
-  const deleteActivity = (
-    id: number
-  ) => {
+  const deleteActivity = async (id: number) => {
     if (!requireModulePermission("attivita", "L'eliminazione dell'attività")) return;
-
-    if (
-      !confirm(
-        "Eliminare questa attività?"
-      )
-    )
-      return;
-
-    setActivities((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
-
-    setCondominiumRequests((current) =>
-      current.map((request) =>
-        request.activityId === id
-          ? { ...request, activityId: null }
-          : request
-      )
-    );
+    if (!confirm("Eliminare questa attività?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "activities", id);
+      }
+      setActivities((current) => current.filter((item) => item.id !== id));
+      setCondominiumRequests((current) =>
+        current.map((request) => request.activityId === id ? { ...request, activityId: null } : request)
+      );
+    } catch (error) {
+      console.error("BETHAG activity deletion failed", error);
+      alert(error instanceof Error ? "L'attività non è stata eliminata dal server.\n\n" + error.message : "L'attività non è stata eliminata dal server.");
+    }
   };
 
   const updateActivityStatus = (
@@ -5305,23 +5265,18 @@ function App() {
     openModal("communication");
   };
 
-  const deleteCommunication = (
-    id: number
-  ) => {
+  const deleteCommunication = async (id: number) => {
     if (!requireModulePermission("comunicazioni", "L'eliminazione della comunicazione")) return;
-
-    if (
-      !confirm(
-        "Eliminare questa comunicazione?"
-      )
-    )
-      return;
-
-    setCommunications((current) =>
-      current.filter(
-        (item) => item.id !== id
-      )
-    );
+    if (!confirm("Eliminare questa comunicazione?")) return;
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await deleteWorkspaceRecordBackend(profile.workspaceId, "communications", id);
+      }
+      setCommunications((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("BETHAG communication deletion failed", error);
+      alert(error instanceof Error ? "La comunicazione non è stata eliminata dal server.\n\n" + error.message : "La comunicazione non è stata eliminata dal server.");
+    }
   };
 
   const toggleCommunicationPublication = (
