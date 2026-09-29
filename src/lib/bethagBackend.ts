@@ -717,31 +717,57 @@ export async function saveCondominium(
         (existingUnits ?? []).map((unit: any) => String(unit.unit_code).trim().toLowerCase())
       );
 
-      const rows = Array.from({ length: requestedUnits }, (_, index) => {
-        const code = `Interno ${index + 1}`;
-        return {
-          workspace_id: workspaceId,
-          condominium_id: condominiumDbId,
-          unit_code: code,
-          data: {
-            unitCode: code,
-            unitType: "Abitazione",
-            cadastralCategory: "",
-            cadastralAutonomous: true,
-            millesimi: "",
-            incorporatedInUnitId: null,
-            notes: "",
-            active: true,
-          },
-        };
-      }).filter((row: any) => !existingCodes.has(row.unit_code.toLowerCase()));
+      // Le unità residenziali iniziali hanno come codice l'interno numerico
+      // (1, 2, 3, ...). Non usiamo più "Interno 1", perché il codice deve
+      // coincidere con quello utilizzato dall'anagrafica dei condòmini.
+      for (let index = 0; index < requestedUnits; index += 1) {
+        const code = String(index + 1);
+        const legacyCode = `Interno ${index + 1}`;
+        const exact = (existingUnits ?? []).find(
+          (unit: any) => String(unit.unit_code).trim().toLowerCase() === code.toLowerCase()
+        );
+        const legacy = (existingUnits ?? []).find(
+          (unit: any) => String(unit.unit_code).trim().toLowerCase() === legacyCode.toLowerCase()
+        );
 
-      if (rows.length) {
-        const { error: unitsError } = await supabase
+        if (exact) continue;
+
+        if (legacy) {
+          const { error: renameError } = await supabase
+            .from("condominium_units")
+            .update({
+              unit_code: code,
+              data: {
+                ...(legacy.data ?? {}),
+                unitCode: code,
+              },
+            })
+            .eq("id", legacy.id)
+            .eq("condominium_id", condominiumDbId);
+
+          if (renameError) throw renameError;
+          continue;
+        }
+
+        const { error: insertError } = await supabase
           .from("condominium_units")
-          .upsert(rows, { onConflict: "condominium_id,unit_code" });
+          .insert({
+            workspace_id: workspaceId,
+            condominium_id: condominiumDbId,
+            unit_code: code,
+            data: {
+              unitCode: code,
+              unitType: "Abitazione",
+              cadastralCategory: "",
+              cadastralAutonomous: true,
+              millesimi: "",
+              incorporatedInUnitId: null,
+              notes: "",
+              active: true,
+            },
+          });
 
-        if (unitsError) throw unitsError;
+        if (insertError) throw insertError;
       }
     }
 
