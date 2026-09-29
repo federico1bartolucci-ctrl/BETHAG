@@ -91,6 +91,7 @@ type MillesimalTable = { id:string; condominium_id:string; name:string; descript
 type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
+type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso";
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
@@ -140,6 +141,10 @@ function AccountingPage({
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
+  const [budgets, setBudgets] = useState<BudgetItem[]>([]);
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
+  const [budgetForm, setBudgetForm] = useState({ fiscal_year_id:"", category:"Manutenzione", description:"", amount:0, notes:"" });
   const [showMillesimalForm, setShowMillesimalForm] = useState(false);
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -259,6 +264,7 @@ function AccountingPage({
   const scopedMillesimalTables = useMemo(() => dbCondominiumId ? millesimalTables.filter(t=>t.condominium_id===dbCondominiumId) : millesimalTables,[dbCondominiumId,millesimalTables]);
   const scopedMillesimalValues = useMemo(() => dbCondominiumId ? millesimalValues.filter(v=>v.condominium_id===dbCondominiumId) : millesimalValues,[dbCondominiumId,millesimalValues]);
   const scopedInstallments = useMemo(() => dbCondominiumId ? installments.filter(i=>i.condominium_id===dbCondominiumId) : installments,[dbCondominiumId,installments]);
+  const scopedBudgets = useMemo(() => dbCondominiumId ? budgets.filter(b=>b.condominium_id===dbCondominiumId) : budgets,[dbCondominiumId,budgets]);
 
   const scopedCases = useMemo(
     () =>
@@ -391,7 +397,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
-      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult] =
+      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult] =
         await Promise.all([
           supabase
             .from("condominium_fiscal_years")
@@ -442,6 +448,11 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("due_date"),
+          supabase
+            .from("condominium_budgets")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("category"),
         ]);
       for (const result of [
         yearsResult,
@@ -454,6 +465,7 @@ function AccountingPage({
         millesimalTablesResult,
         millesimalValuesResult,
         installmentsResult,
+        budgetsResult,
       ]) {
         if (result.error) throw result.error;
       }
@@ -467,6 +479,7 @@ function AccountingPage({
       setMillesimalTables((millesimalTablesResult.data ?? []) as MillesimalTable[]);
       setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
       setInstallments((installmentsResult.data ?? []) as Installment[]);
+      setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -854,6 +867,35 @@ function AccountingPage({
       flash("Quota millesimale salvata."); await load();
     } catch(e:any){setError(e?.message || "Impossibile salvare il valore millesimale.");}
     finally{setSaving(false);}
+  }
+
+  async function saveBudget(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !budgetForm.description.trim() || Number(budgetForm.amount) <= 0) {
+      setError("Inserisci descrizione e importo del preventivo.");
+      return;
+    }
+    setSaving(true); setError("");
+    try {
+      const payload = {
+        workspace_id: workspaceId,
+        condominium_id: dbCondominiumId,
+        fiscal_year_id: budgetForm.fiscal_year_id || null,
+        category: budgetForm.category.trim() || "Generale",
+        description: budgetForm.description.trim(),
+        amount: Number(budgetForm.amount),
+        notes: budgetForm.notes
+      };
+      const query = editingBudget
+        ? supabase.from("condominium_budgets").update(payload).eq("id", editingBudget.id).eq("workspace_id", workspaceId)
+        : supabase.from("condominium_budgets").insert(payload);
+      const { error: saveError } = await query;
+      if (saveError) throw saveError;
+      setEditingBudget(null); setShowBudgetForm(false);
+      setBudgetForm({ fiscal_year_id:"", category:"Manutenzione", description:"", amount:0, notes:"" });
+      flash("Voce di preventivo salvata."); await load();
+    } catch(e:any) { setError(e?.message || "Impossibile salvare il preventivo."); }
+    finally { setSaving(false); }
   }
 
   async function savePayment(e: React.FormEvent) {
