@@ -1116,6 +1116,7 @@ function AccountingPage({
               <div className="quick-stat"><b>{money(rendicontoBudgets.reduce((s,b)=>s+Number(b.amount||0),0)-rendicontoLedger.filter(e=>e.direction==="Uscita").reduce((s,e)=>s+Number(e.amount||0),0))}</b><span>Scostamento</span></div>
             </div>
             {budgetSummary.length===0 ? <p>Nessuna voce di preventivo configurata.</p> : budgetSummary.map(row=><div className="row-card" key={row.category}><div><b>{row.category}</b><small>Preventivo {money(row.budget)} · Consuntivo {money(row.actual)}</small><span>Scostamento {money(row.variance)}</span></div></div>)}
+            {rendicontoBudgets.length > 0 && <><h3>Voci di preventivo</h3>{rendicontoBudgets.map((item) => <div className="row-card" key={item.id}><div><b>{item.description}</b><small>{item.category} · {money(item.amount)}</small>{item.notes && <small>{item.notes}</small>}</div>{isAdministrator && <div className="row-actions"><button className="secondary-button small" onClick={() => { setEditingBudget(item); setBudgetForm({ fiscal_year_id:item.fiscal_year_id || "", category:item.category, description:item.description, amount:item.amount, notes:item.notes }); setShowBudgetForm(true); }}>Modifica</button><button className="mini-danger" onClick={() => remove("condominium_budgets", item.id, "la voce di preventivo")}>×</button></div>}</div>)}</>}
           </article>
 
           <article className="card">
