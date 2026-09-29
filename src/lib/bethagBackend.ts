@@ -629,48 +629,6 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
   });
 }
 
-export async function deleteCondominiumUnit(workspaceId: string, unitId: string) {
-  if (!supabase) throw new Error("Supabase non configurato.");
-
-  return enqueueBackendSync(async () => {
-    const { data: unit, error: unitError } = await supabase
-      .from("condominium_units")
-      .select("id, workspace_id, condominium_id")
-      .eq("id", unitId)
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-
-    if (unitError) throw unitError;
-    if (!unit) throw new Error("Unità immobiliare non trovata o non appartenente al workspace.");
-
-    const { data: childUnits, error: childError } = await supabase
-      .from("condominium_units")
-      .select("id, unit_code")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", unit.condominium_id)
-      .eq("data->>incorporatedInUnitId", unitId);
-
-    if (childError) throw childError;
-    if ((childUnits ?? []).length > 0) {
-      const labels = childUnits.map((child: any) => String(child.unit_code ?? "")).filter(Boolean).join(", ");
-      throw new Error(
-        labels
-          ? `Impossibile eliminare l'unità: contiene pertinenze collegate (${labels}). Prima rimuovi o ricollega tali pertinenze.`
-          : "Impossibile eliminare l'unità: contiene pertinenze collegate. Prima rimuovi o ricollega tali pertinenze."
-      );
-    }
-
-    const { error } = await supabase
-      .from("condominium_units")
-      .delete()
-      .eq("id", unitId)
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", unit.condominium_id);
-
-    if (error) throw error;
-  });
-}
-
 export async function saveCondominiumMember(
   workspaceId: string,
   item: any
