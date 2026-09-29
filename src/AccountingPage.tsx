@@ -152,12 +152,6 @@ function AccountingPage({
   const [paymentForm, setPaymentForm] = useState({ payment_date:new Date().toISOString().slice(0,10), amount:0, method:"Bonifico", reference:"", notes:"" });
   const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
   const [showBulkMillesimalForm, setShowBulkMillesimalForm] = useState(false);
-  const allocationReconciliation = useMemo(() => scopedLedger.filter(e => e.direction === "Uscita").map(expense => {
-    const rows = allocations.filter(a => a.ledger_entry_id === expense.id && (!dbCondominiumId || a.condominium_id === dbCondominiumId));
-    const allocated = rows.reduce((s,a) => s + Number(a.amount || 0), 0);
-    const difference = Number(expense.amount || 0) - allocated;
-    return { id:expense.id, description:expense.description, amount:Number(expense.amount||0), allocated, difference, balanced:Math.abs(difference)<0.005 };
-  }), [scopedLedger, allocations, dbCondominiumId]);
   const [bulkMillesimalTableId, setBulkMillesimalTableId] = useState("");
   const [bulkMillesimalValues, setBulkMillesimalValues] = useState<Record<string, number>>({});
   const [millesimalValueForm, setMillesimalValueForm] = useState({ table_id:"", unit_id:"", value:0, excluded:false, notes:"" });
@@ -254,6 +248,12 @@ function AccountingPage({
     [dbCondominiumId, ledger]
   );
 
+  const allocationReconciliation = useMemo(() => scopedLedger.filter(e => e.direction === "Uscita").map(expense => {
+    const rows = allocations.filter(a => a.ledger_entry_id === expense.id && (!dbCondominiumId || a.condominium_id === dbCondominiumId));
+    const allocated = rows.reduce((s,a) => s + Number(a.amount || 0), 0);
+    const difference = Number(expense.amount || 0) - allocated;
+    return { id:expense.id, description:expense.description, amount:Number(expense.amount||0), allocated, difference, balanced:Math.abs(difference)<0.005 };
+  }), [scopedLedger, allocations, dbCondominiumId]);
   const scopedFunds = useMemo(
     () =>
       dbCondominiumId
