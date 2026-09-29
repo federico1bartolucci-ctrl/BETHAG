@@ -12006,3 +12006,4680 @@ function CollaboratorsPage({
               <option value="Disattivato">Disattivato</option>
             </select>
             <small>
+              L'accesso frontend viene consentito solo quando
+              lo stato è "Attivo".
+            </small>
+          </div>
+        </div>
+
+        <div className="permission-checks">
+          {(
+            Object.keys(
+              COLLABORATOR_PERMISSION_LABELS
+            ) as CollaboratorPermission[]
+          ).map((permission) => (
+            <label
+              className="permission-check"
+              key={permission}
+            >
+              <input
+                type="checkbox"
+                checked={form.permissions.includes(permission)}
+                onChange={() =>
+                  togglePermission(permission)
+                }
+              />
+              <span>
+                {COLLABORATOR_PERMISSION_LABELS[permission]}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={reset}
+          >
+            Annulla
+          </button>
+          <button
+            type="submit"
+            className="primary-button"
+          >
+            {form.id
+              ? "Salva modifiche"
+              : "Invita collaboratore"}
+          </button>
+        </div>
+      </form>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Accessi</span>
+            <h2>Collaboratori del workspace</h2>
+          </div>
+          <span className="badge">
+            {collaborators.length}
+          </span>
+        </div>
+
+        {collaborators.length === 0 ? (
+          <div className="empty-state">
+            Nessun collaboratore configurato.
+          </div>
+        ) : (
+          <div className="collaborator-list">
+            {collaborators.map((item) => (
+              <article
+                className="row-card collaborator-card"
+                key={item.id}
+              >
+                <div className="row-main">
+                  <strong>{item.name}</strong>
+                  <span>{item.email}</span>
+                  <small>
+                    {item.permissions
+                      .map(
+                        (permission) =>
+                          COLLABORATOR_PERMISSION_LABELS[
+                            permission
+                          ]
+                      )
+                      .join(" · ")}
+                  </small>
+                </div>
+
+                <div className="row-actions">
+                  <span className="badge">
+                    {item.status}
+                  </span>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => edit(item)}
+                  >
+                    Modifica
+                  </button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => toggleStatus(item.id)}
+                  >
+                    {item.status === "Attivo"
+                      ? "Disattiva"
+                      : "Attiva"}
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => remove(item.id)}
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+
+/* =========================================================
+   PROFILO / WORKSPACE
+   ========================================================= */
+
+function ProfilePage({
+  profile,
+  setProfile,
+  subscription,
+  portalMembers,
+  isAdministrator = false,
+  onExportBackup,
+  onRestoreBackup,
+}: any) {
+  const [saved, setSaved] =
+    useState(false);
+
+  const save = (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    if (!isAdministrator) {
+      alert("La modifica del profilo amministratore è riservata all'Amministratore.");
+      return;
+    }
+    e.preventDefault();
+
+    if (
+      profile.email &&
+      !validateEmail(
+        profile.email
+      )
+    ) {
+      alert(
+        "Controlla l'indirizzo email."
+      );
+      return;
+    }
+
+    setSaved(true);
+
+    setTimeout(
+      () =>
+        setSaved(false),
+      1800
+    );
+  };
+
+  return (
+    <>
+
+      <PageHeader
+        eyebrow="Impostazioni"
+        title="Amministratore"
+      />
+
+
+      <div className="profile-plan-card">
+
+        <div>
+
+          <span className="eyebrow">
+            Piano BETHAG
+          </span>
+
+          <h2>
+            {
+              PLAN_NAMES[
+                subscription.plan
+              ]
+            }
+          </h2>
+
+        </div>
+
+        <button
+          className="secondary-button"
+          type="button"
+        >
+          Piano attivo
+        </button>
+
+      </div>
+
+
+      <section className="workspace-card">
+
+        <div>
+
+          <span className="eyebrow">
+            Workspace amministratore
+          </span>
+
+          <h2>
+            Workspace BETHAG
+          </h2>
+
+          <p>
+            Questo identificativo è
+            predisposto per il futuro
+            isolamento dei dati tra
+            amministratori.
+          </p>
+
+        </div>
+
+        <div className="workspace-id">
+          {profile.workspaceId}
+        </div>
+
+      </section>
+
+
+      <form
+        className="form-card"
+        onSubmit={save}
+      >
+
+        <div className="form-grid">
+
+          <Field
+            full
+            label="Nome e cognome"
+            value={profile.name}
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                name: v,
+              })
+            }
+          />
+
+          <Field
+            full
+            label="Studio / società"
+            value={
+              profile.company
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                company: v,
+              })
+            }
+          />
+
+          <Field
+            label="Email"
+            type="email"
+            value={
+              profile.email
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                email: v,
+              })
+            }
+          />
+
+          <Field
+            label="Telefono"
+            type="tel"
+            value={
+              profile.phone
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                phone: v,
+              })
+            }
+          />
+
+          <Field
+            full
+            label="Indirizzo"
+            value={
+              profile.address
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                address: v,
+              })
+            }
+          />
+
+          <Field
+            label="Codice fiscale"
+            value={
+              profile.fiscalCode
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                fiscalCode: v,
+              })
+            }
+          />
+
+          <Field
+            label="Partita IVA"
+            value={
+              profile.vat
+            }
+            onChange={(
+              v: string
+            ) =>
+              setProfile({
+                ...profile,
+                vat: v,
+              })
+            }
+          />
+
+        </div>
+
+
+        <div className="form-actions">
+
+          <button
+            className="primary-button"
+            type="submit"
+          >
+            {saved
+              ? "Salvato ✓"
+              : "Salva dati"}
+          </button>
+
+        </div>
+
+      </form>
+
+
+      <section className="card" style={{marginBottom:18}}>
+        <span className="eyebrow">Sicurezza e continuità operativa</span>
+        <h2>Backup dei dati</h2>
+        <p className="section-subtitle">
+          Esporta una copia locale dei dati disponibili nel workspace. Il file non contiene credenziali di accesso.
+        </p>
+        <div className="form-actions">
+          <button className="secondary-button" type="button" onClick={() => onExportBackup?.()}>
+            Esporta backup JSON
+          </button>
+          <label className="secondary-button" style={{cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+            Ripristina backup JSON
+            <input
+              type="file"
+              accept=".json,application/json"
+              style={{display:"none"}}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (file) void onRestoreBackup?.(file);
+              }}
+            />
+          </label>
+        </div>
+        <small className="muted-text" style={{display:"block",marginTop:10}}>
+          Il ripristino aggiorna i dati presenti nel backup senza eliminare i dati più recenti che non compaiono nel file.
+        </small>
+      </section>
+
+      <section className="workspace-grid">
+
+        <div className="info-card">
+
+          <b>
+            👥 Collaboratori e utenti
+          </b>
+
+          <p>
+            Utenti configurati nel
+            workspace:
+            {" "}
+            <strong>
+              {portalMembers.length}
+            </strong>
+          </p>
+
+          <p>
+            Nella versione backend sarà
+            possibile associare utenti,
+            ruoli, permessi e accessi a
+            specifici condomini.
+          </p>
+
+        </div>
+
+
+        <div className="info-card">
+
+          <b>
+            🔐 Sicurezza e isolamento
+          </b>
+
+          <p>
+            L'attuale frontend utilizza
+            localStorage esclusivamente
+            per la demo.
+          </p>
+
+          <p>
+            Nella versione pubblica
+            autenticazione, autorizzazioni,
+            workspace e dati dovranno
+            essere gestiti dal backend.
+          </p>
+
+        </div>
+
+      </section>
+
+    </>
+  );
+}
+
+
+/* =========================================================
+   MODALE
+   ========================================================= */
+
+function Modal({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={onClose}
+    >
+
+      <div
+        className="modal"
+        onMouseDown={(e) =>
+          e.stopPropagation()
+        }
+      >
+
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
+          ×
+        </button>
+
+        {children}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   FORM UNITÀ IMMOBILIARE
+   ========================================================= */
+
+function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumUnit, val: any) => setValue({ ...value, [key]: val });
+  const residentialUnits = units.filter((u: CondominiumUnit) => u.unitType === "Abitazione" && u.id !== value.id);
+  const externalOwners: ExternalUnitOwner[] = Array.isArray(value.externalOwners) ? value.externalOwners : [];
+  const ownerMemberIds: number[] = Array.isArray(value.ownerMemberIds) ? value.ownerMemberIds : [];
+
+  const syncOwnerMode = (nextMemberIds: number[], nextExternalOwners: ExternalUnitOwner[]) => {
+    setValue({
+      ...value,
+      ownerMemberIds: nextMemberIds,
+      externalOwners: nextExternalOwners,
+      ownerMode: nextMemberIds.length && nextExternalOwners.length ? "mixed" : nextExternalOwners.length ? "external" : "condominium_member",
+    });
+  };
+
+  const toggleMemberOwner = (memberId: number) => {
+    const next = ownerMemberIds.includes(memberId)
+      ? ownerMemberIds.filter((id) => id !== memberId)
+      : [...ownerMemberIds, memberId];
+    syncOwnerMode(next, externalOwners);
+  };
+
+  const addExternalOwner = () => {
+    const owner: ExternalUnitOwner = { id: "owner-" + makeId(), firstName: "", lastName: "", fiscalCode: "", email: "", phone: "", ownershipShare: "", notes: "" };
+    syncOwnerMode(ownerMemberIds, [...externalOwners, owner]);
+  };
+
+  const updateExternalOwner = (id: string, patch: Partial<ExternalUnitOwner>) => {
+    syncOwnerMode(ownerMemberIds, externalOwners.map((owner) => owner.id === id ? { ...owner, ...patch } : owner));
+  };
+
+  const removeExternalOwner = (id: string) => {
+    syncOwnerMode(ownerMemberIds, externalOwners.filter((owner) => owner.id !== id));
+  };
+
+  return (
+    <form onSubmit={onSubmit}>
+      <ModalTitle title={editing ? "Modifica unità immobiliare" : "Nuova unità immobiliare"} />
+      <div className="form-grid">
+        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Interno 1, Garage G1, Cantina C1" />
+        <SelectField label="Tipologia" value={value.unitType} onChange={(v: string) => set("unitType", v)} options={[
+          ["Abitazione","Abitazione"],["Garage","Garage / autorimessa"],["Cantina","Cantina / deposito"],["Altro","Altra unità"],
+        ]} />
+        <Field label="Categoria catastale" value={value.cadastralCategory} onChange={(v: string) => set("cadastralCategory", v)} placeholder="Es. A/2, C/2, C/6" />
+        <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} placeholder="Es. 102,35" />
+
+        <div className="field full">
+          <label className="switch-row">
+            <input type="checkbox" checked={value.cadastralAutonomous} onChange={(e) => {
+              const autonomous = e.target.checked;
+              setValue({
+                ...value,
+                cadastralAutonomous: autonomous,
+                relationshipToResidentialUnit: autonomous ? (value.incorporatedInUnitId ? "Pertinenza" : "Nessuna") : "Incorporata",
+                ownerMode: autonomous ? (value.ownerMode === "inherited" ? "condominium_member" : value.ownerMode) : "inherited",
+              });
+            }} />
+            <span>Unità catastalmente autonoma</span>
+          </label>
+          <div className="form-help">Una pertinenza autonoma può essere collegata a un'abitazione oppure rimanere autonoma senza alcun collegamento.</div>
+        </div>
+
+        {value.cadastralAutonomous && value.unitType !== "Abitazione" && (
+          <SelectField full label="Collegamento con unità abitativa (facoltativo)" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
+            ["","Nessun collegamento: unità autonoma indipendente"], ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
+          ]} />
+        )}
+
+        {!value.cadastralAutonomous && (
+          <SelectField full label="Unità abitativa incorporante" value={value.incorporatedInUnitId || ""} onChange={(v: string) => set("incorporatedInUnitId", v)} options={[
+            ["","Seleziona l'abitazione"], ...residentialUnits.map((u: CondominiumUnit) => [u.id, u.unitCode]),
+          ]} />
+        )}
+
+        {value.cadastralAutonomous && (
+          <div className="field full">
+            <label>Proprietari dell'unità</label>
+            <div className="form-help">Il proprietario può essere un condòmino, un soggetto esterno al condominio oppure più soggetti insieme. Non è necessario collegare garage o cantine a un'abitazione.</div>
+            {members.length > 0 && <div className="permission-checks" style={{ marginTop: 10 }}>
+              {members.map((member: CondominiumMember) => (
+                <label className="permission-check" key={member.id}>
+                  <input type="checkbox" checked={ownerMemberIds.includes(member.id)} onChange={() => toggleMemberOwner(member.id)} />
+                  <span>{member.firstName} {member.lastName}<small style={{ display: "block", opacity: .7 }}>{member.apartment || "Unità non indicata"}</small></span>
+                </label>
+              ))}
+            </div>}
+            {externalOwners.map((owner) => (
+              <div key={owner.id} className="form-grid" style={{ marginTop: 12, padding: 14, border: "1px solid #e2e8f0", borderRadius: 12 }}>
+                <Field label="Nome" value={owner.firstName} onChange={(v: string) => updateExternalOwner(owner.id, { firstName: v })} />
+                <Field label="Cognome / denominazione" value={owner.lastName} onChange={(v: string) => updateExternalOwner(owner.id, { lastName: v })} />
+                <Field label="Codice fiscale / P.IVA" value={owner.fiscalCode} onChange={(v: string) => updateExternalOwner(owner.id, { fiscalCode: v })} />
+                <Field label="Email" value={owner.email} onChange={(v: string) => updateExternalOwner(owner.id, { email: v })} />
+                <Field label="Telefono" value={owner.phone} onChange={(v: string) => updateExternalOwner(owner.id, { phone: v })} />
+                <Field label="Quota di proprietà" value={owner.ownershipShare} onChange={(v: string) => updateExternalOwner(owner.id, { ownershipShare: v })} placeholder="Es. 50%" />
+                <Field full label="Note" value={owner.notes} onChange={(v: string) => updateExternalOwner(owner.id, { notes: v })} />
+                <button type="button" className="danger-button small" onClick={() => removeExternalOwner(owner.id)}>Rimuovi proprietario esterno</button>
+              </div>
+            ))}
+            <button type="button" className="secondary-button small" style={{ marginTop: 12 }} onClick={addExternalOwner}>+ Aggiungi proprietario esterno</button>
+          </div>
+        )}
+
+        {!value.cadastralAutonomous && <div className="field full"><div className="form-help">La proprietà della pertinenza incorporata non viene duplicata: BETHAG considera come riferimento l'unità abitativa incorporante.</div></div>}
+        <Field full label="Note catastali / gestionali" value={value.notes} onChange={(v: string) => set("notes", v)} textarea placeholder="Annotazioni, riferimento catastale, vincoli pertinenziali, ecc." />
+      </div>
+      <Actions onCancel={onCancel} />
+    </form>
+  );
+}
+
+/* =========================================================
+   FORM CONDOMINIO
+   ========================================================= */
+
+function CondominiumForm({
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  const set = (
+    key: keyof Condominium,
+    val: string
+  ) =>
+    onChange({
+      ...value,
+      [key]: val,
+    });
+
+  const capLookupRef = useRef(0);
+  useEffect(() => {
+    const cap = String(value.cap || "").replace(/\D/g, "").slice(0, 5);
+    if (cap.length !== 5) return;
+    const requestId = ++capLookupRef.current;
+    const controller = new AbortController();
+    void fetch(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(cap)}&country=Italy&format=json&addressdetails=1&limit=5`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((results: any[]) => {
+        if (requestId !== capLookupRef.current || !Array.isArray(results) || results.length === 0) return;
+        const address = results[0]?.address || {};
+        const city = address.city || address.town || address.village || address.municipality || "";
+        const isoProvince = Object.keys(address)
+          .filter((key) => key.toLowerCase().startsWith("iso3166-2"))
+          .map((key) => String(address[key] || ""))
+          .find((code) => /^IT-[A-Z]{2}$/i.test(code));
+        const province = isoProvince
+          ? isoProvince.slice(-2).toUpperCase()
+          : String(address.county || address.state_district || "")
+              .replace(/^Provincia di\s+/i, "")
+              .replace(/\s+$/, "");
+        if (!city && !province) return;
+        onChange({
+          ...value,
+          cap,
+          city: city ? normalizeSentence(city) : value.city,
+          province: province ? normalizeSentence(province) : value.province,
+        });
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [value.cap]);
+
+  return (
+    <form onSubmit={onSubmit}>
+
+      <div className="modal-title">
+
+        <div className="eyebrow">
+          Gestione patrimonio
+        </div>
+
+        <h2>
+          {editing
+            ? "Modifica condominio"
+            : "Nuovo condominio"}
+        </h2>
+
+      </div>
+
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Nome del condominio *"
+          value={value.name}
+          onChange={(
+            v: string
+          ) =>
+            set("name", v)
+          }
+          placeholder="Es. Condominio Magnolia"
+        />
+
+        <Field
+          full
+          label="Indirizzo *"
+          value={
+            value.address
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "address",
+              v
+            )
+          }
+          placeholder="Via e numero civico"
+        />
+
+        <Field
+          label="CAP"
+          value={value.cap}
+          onChange={(
+            v: string
+          ) =>
+            set("cap", v)
+          }
+        />
+
+        <Field
+          label="Comune"
+          value={value.city}
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "city",
+              v
+            )
+          }
+        />
+
+        <Field
+          label="Provincia"
+          value={
+            value.province
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "province",
+              v
+            )
+          }
+        />
+
+        <Field
+          label="Unità immobiliari *"
+          value={value.units}
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "units",
+              v.replace(
+                /\D/g,
+                ""
+              )
+            )
+          }
+          type="number"
+        />
+
+        <Field
+          full
+          label="Codice fiscale del condominio"
+          value={
+            value.fiscalCode
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "fiscalCode",
+              v
+            )
+          }
+        />
+
+        <Field
+          label="Referente"
+          value={
+            value.contact
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "contact",
+              v
+            )
+          }
+        />
+
+        <Field
+          label="Telefono"
+          value={
+            value.phone
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "phone",
+              v
+            )
+          }
+          type="tel"
+        />
+
+        <Field
+          full
+          label="Email"
+          value={
+            value.email
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "email",
+              v
+            )
+          }
+          type="email"
+        />
+
+        <Field
+          label="Banca"
+          value={value.bank}
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "bank",
+              v
+            )
+          }
+        />
+
+        <Field
+          label="IBAN"
+          value={value.iban}
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "iban",
+              v
+            )
+          }
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            set(
+              "notes",
+              v
+            )
+          }
+          textarea
+        />
+
+      </div>
+
+
+      <div className="form-actions">
+
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onCancel}
+        >
+          Annulla
+        </button>
+
+        <button
+          type="submit"
+          className="primary-button"
+        >
+          {editing
+            ? "Salva modifiche"
+            : "Salva condominio"}
+        </button>
+
+      </div>
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM SCADENZA
+   ========================================================= */
+
+function DeadlineForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica scadenza"
+            : "Nuova scadenza"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Titolo *"
+          value={value.title}
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              title: v,
+            })
+          }
+        />
+
+        <SelectField
+          label="Condominio"
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                Number(v),
+            })
+          }
+          options={condominiums.map(
+            (
+              c: Condominium
+            ) => [
+              c.id,
+              c.name,
+            ]
+          )}
+        />
+
+        <Field
+          label="Data *"
+          value={
+            value.dueDate
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              dueDate: v,
+            })
+          }
+          type="date"
+        />
+
+        <Field
+          label="Importo (€)"
+          value={
+            value.amount
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              amount: v,
+            })
+          }
+          type="number"
+        />
+
+        <Field
+          label="Categoria"
+          value={
+            value.category
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              category: v,
+            })
+          }
+        />
+
+        <SelectField
+          label="Stato"
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              status:
+                v as DeadlineStatus,
+            })
+          }
+          options={[
+            "Da fare",
+            "In scadenza",
+            "Completata",
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              notes: v,
+            })
+          }
+          textarea
+        />
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM DOCUMENTO
+   ========================================================= */
+
+function DocumentForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  selectedFileName,
+  setSelectedFileName,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica documento"
+            : "Nuovo documento"
+        }
+      />
+
+      <div className="form-grid">
+
+        <div className="field full">
+
+          <label>
+            Carica file
+          </label>
+
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.odt,image/*"
+            onChange={(
+              e: React.ChangeEvent<HTMLInputElement>
+            ) => {
+
+              const file =
+                e.target.files?.[0];
+
+              if (!file)
+                return;
+
+              const source =
+                fileSource(
+                  file.name,
+                  file.type
+                );
+
+              setSelectedFileName(
+                file.name
+              );
+
+              setValue({
+                ...value,
+                name: file.name,
+                size: `${Math.round(
+                  file.size / 1024
+                )} KB`,
+                source,
+                mimeType:
+                  file.type,
+              });
+
+            }}
+          />
+
+          <small>
+            Formati predisposti:
+            PDF, Word, Excel, CSV,
+            TXT, RTF, ODT,
+            immagini.
+          </small>
+
+          {selectedFileName && (
+            <small>
+              Selezionato:{" "}
+              {
+                selectedFileName
+              }
+            </small>
+          )}
+
+        </div>
+
+
+        <Field
+          full
+          label="Nome documento *"
+          value={value.name}
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              name: v,
+            })
+          }
+        />
+
+        <SelectField
+          label="Condominio"
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                Number(v),
+            })
+          }
+          options={condominiums.map(
+            (
+              c: Condominium
+            ) => [
+              c.id,
+              c.name,
+            ]
+          )}
+        />
+
+        <Field
+          label="Categoria"
+          value={
+            value.category
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              category: v,
+            })
+          }
+        />
+
+        <Field
+          label="Data"
+          value={value.date}
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              date: v,
+            })
+          }
+          type="date"
+        />
+
+        <SelectField
+          label="Visibilità"
+          value={
+            value.publication
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              publication:
+                v as PublicationStatus,
+            })
+          }
+          options={[
+            [
+              "Privato",
+              "Privato",
+            ],
+            [
+              "Condiviso",
+              "Condiviso",
+            ],
+          ]}
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              notes: v,
+            })
+          }
+          textarea
+        />
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM ASSEMBLEA
+   ========================================================= */
+
+function AssemblyForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica assemblea"
+            : "Nuova assemblea"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Titolo *"
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              title: v,
+            })
+          }
+        />
+
+        <SelectField
+          label="Condominio"
+          value={
+            value.condominiumId
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                Number(v),
+            })
+          }
+          options={condominiums.map(
+            (
+              c: Condominium
+            ) => [
+              c.id,
+              c.name,
+            ]
+          )}
+        />
+
+        <Field
+          label="Data *"
+          value={
+            value.date
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              date: v,
+            })
+          }
+          type="date"
+        />
+
+        <Field
+          label="Ora"
+          value={
+            value.time
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              time: v,
+            })
+          }
+          type="time"
+        />
+
+        <Field
+          label="Luogo"
+          value={
+            value.place
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              place: v,
+            })
+          }
+        />
+
+        <SelectField
+          label="Stato"
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              status:
+                v as AssemblyStatus,
+            })
+          }
+          options={[
+            "Programmato",
+            "Svolto",
+            "Annullato",
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              notes: v,
+            })
+          }
+          textarea
+        />
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM FORNITORE
+   ========================================================= */
+
+function SupplierForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica fornitore"
+            : "Nuovo fornitore"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          label="Nome *"
+          value={value.name}
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              name: v,
+            })
+          }
+        />
+
+        <Field
+          label="Servizio *"
+          value={
+            value.service
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              service: v,
+            })
+          }
+        />
+
+        <Field
+          label="Telefono"
+          value={
+            value.phone
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              phone: v,
+            })
+          }
+          type="tel"
+        />
+
+        <Field
+          label="Email"
+          value={
+            value.email
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              email: v,
+            })
+          }
+          type="email"
+        />
+
+        <SelectField
+          full
+          label="Condominio"
+          value={
+            value.condominiumId ??
+            ""
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
+            })
+          }
+          options={[
+            [
+              "",
+              "Tutti i condomini",
+            ],
+            ...condominiums.map(
+              (
+                c: Condominium
+              ) => [
+                c.id,
+                c.name,
+              ]
+            ),
+          ]}
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              notes: v,
+            })
+          }
+          textarea
+        />
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM ATTIVITÀ
+   ========================================================= */
+
+function ActivityForm({
+  value,
+  setValue,
+  condominiums,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica attività"
+            : "Nuova attività"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Titolo *"
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              title: v,
+            })
+          }
+        />
+
+        <SelectField
+          full
+          label="Condominio"
+          value={
+            value.condominiumId ??
+            ""
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
+            })
+          }
+          options={[
+            [
+              "",
+              "Tutti i condomini",
+            ],
+            ...condominiums.map(
+              (
+                c: Condominium
+              ) => [
+                c.id,
+                c.name,
+              ]
+            ),
+          ]}
+        />
+
+        <Field
+          label="Scadenza"
+          value={
+            value.dueDate
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              dueDate: v,
+            })
+          }
+          type="date"
+        />
+
+        <SelectField
+          label="Priorità"
+          value={
+            value.priority
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              priority:
+                v as ActivityPriority,
+            })
+          }
+          options={[
+            "Bassa",
+            "Media",
+            "Alta",
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
+        />
+
+        <SelectField
+          label="Stato"
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              status:
+                v as ActivityStatus,
+            })
+          }
+          options={[
+            "Aperta",
+            "In corso",
+            "Completata",
+          ].map(
+            (x) => [
+              x,
+              x,
+            ]
+          )}
+        />
+
+        <Field
+          full
+          label="Note"
+          value={
+            value.notes
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              notes: v,
+            })
+          }
+          textarea
+        />
+
+      </div>
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM COMUNICAZIONE
+   ========================================================= */
+
+function CondominiumMemberForm({ value, setValue, condominiums, members, units = [], onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumMember, val: any) => setValue({ ...value, [key]: val });
+  const sameCondominium = members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId && m.id !== value.id);
+  const availableUnits = units.filter((u: CondominiumUnit) => u.condominiumId === value.condominiumId && u.active);
+  const existingApartments = Array.from(new Set([
+    ...availableUnits.map((u: CondominiumUnit) => u.unitCode.trim()),
+    ...sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean),
+  ]));
+  const selectedApartment = value.apartment.trim();
+  const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
+  const unitSelection = existingApartments.includes(value.apartment)
+    ? value.apartment
+    : value.apartment
+      ? "__new__"
+      : "";
+  return <form onSubmit={onSubmit}>
+    <ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} />
+    <div className="form-grid">
+      <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => setValue({ ...value, condominiumId: Number(v), apartment: "", unitId: "" })} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
+      <Field label="Nome *" value={value.firstName} onChange={(v: string) => set("firstName", v)} />
+      <Field label="Cognome *" value={value.lastName} onChange={(v: string) => set("lastName", v)} />
+      <div className="field full">
+        <label>Unità abitativa *</label>
+        <select value={unitSelection} onChange={(e) => {
+          if (e.target.value === "__new__") setValue({ ...value, apartment: "", unitId: "" });
+          else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\s+/g, "-")}` });
+        }}>
+          <option value="">Seleziona un'unità esistente oppure creane una nuova</option>
+          {existingApartments.map((apartment) => <option key={apartment} value={apartment}>{apartment}</option>)}
+          <option value="__new__">+ Nuova unità…</option>
+        </select>
+        {!existingApartments.includes(value.apartment) && (
+          <input style={{ marginTop: 8 }} value={value.apartment} autoFocus={Boolean(value.apartment)} placeholder="Es. Interno 4" onChange={(e) => setValue({ ...value, apartment: e.target.value, unitId: "" })} />
+        )}
+        {apartmentAssociates.length > 0 && (
+          <div className="form-help" style={{ marginTop: 8 }}>
+            <strong>Già associati:</strong>{" "}
+            {apartmentAssociates.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} (${m.role})`).join(" · ")}
+            <br />Il nuovo soggetto sarà collegato alla stessa unità abitativa.
+          </div>
+        )}
+      </div>
+      <div className="form-help" style={{marginTop: 4}}>
+        I millesimi sono gestiti sull'unità immobiliare e non sul singolo condòmino.
+      </div>
+      <SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
+      <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} />
+      <Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} />
+      <Field label="Telefono" value={value.phone} onChange={(v: string) => set("phone", v)} />
+      <Field label="E-mail" value={value.email} onChange={(v: string) => set("email", v)} />
+      <div className="field checkbox-field"><label>Stato</label><label className="switch-row"><input type="checkbox" checked={value.active} onChange={(e) => set("active", e.target.checked)} /><span>Condòmino attivo</span></label></div>
+      <Field full label="Note" value={value.notes} onChange={(v: string) => set("notes", v)} textarea />
+    </div>
+    <Actions onCancel={onCancel} />
+  </form>;
+}
+function CondominiumRequestForm({ value, setValue, condominiums, members, suppliers, activities, onSubmit, onCancel, editing }: any) {
+  const set = (key: keyof CondominiumRequest, val: any) => setValue({ ...value, [key]: val });
+  return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica segnalazione / richiesta" : "Nuova segnalazione / richiesta"} /><div className="form-grid">
+    <SelectField full label="Condominio" value={value.condominiumId} onChange={(v: string) => set("condominiumId", Number(v))} options={condominiums.map((c: Condominium) => [c.id, c.name])} />
+    <SelectField label="Condòmino" value={value.memberId ?? ""} onChange={(v: string) => set("memberId", v ? Number(v) : null)} options={[["","Non indicato"],...members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId).map((m: CondominiumMember) => [m.id,`${m.firstName} ${m.lastName} · ${m.apartment}`])]} />
+    <SelectField label="Categoria" value={value.category} onChange={(v: string) => set("category", v)} options={[["Informazioni","Informazioni"],["Manutenzione","Manutenzione"],["Guasto","Guasto"],["Amministrazione","Amministrazione"],["Pagamento","Pagamento"],["Segnalazione","Segnalazione"],["Altro","Altro"]]} />
+    <SelectField label="Priorità" value={value.priority} onChange={(v: string) => set("priority", v)} options={[["Bassa","Bassa"],["Media","Media"],["Alta","Alta"]]} /><Field label="Data" type="date" value={value.date} onChange={(v: string) => set("date", v)} />
+    <SelectField label="Stato" value={value.status} onChange={(v: string) => set("status", v)} options={[["Nuova","Nuova"],["In lavorazione","In lavorazione"],["Risolta","Risolta"],["Chiusa","Chiusa"]]} />
+    <Field full label="Descrizione *" value={value.description} onChange={(v: string) => set("description", v)} textarea /><Field full label="Risposta amministratore" value={value.response} onChange={(v: string) => set("response", v)} textarea /><Field label="Allegato" value={value.attachmentName} onChange={(v: string) => set("attachmentName", v)} />
+    <SelectField label="Fornitore collegato" value={value.supplierId ?? ""} onChange={(v: string) => set("supplierId", v ? Number(v) : null)} options={[["","Nessun fornitore"],...suppliers.filter((s: Supplier) => s.condominiumId === null || s.condominiumId === value.condominiumId).map((s: Supplier) => [s.id,s.name])]} />
+    <SelectField label="Attività collegata" value={value.activityId ?? ""} onChange={(v: string) => set("activityId", v ? Number(v) : null)} options={[["","Nessuna attività"],...activities.filter((a: Activity) => a.condominiumId === value.condominiumId).map((a: Activity) => [a.id,a.title])]} />
+  </div><Actions onCancel={onCancel} /></form>;
+}
+
+function CommunicationForm({
+  value,
+  setValue,
+  condominiums,
+  members = [],
+  onPrepareEmail,
+  onSubmit,
+  onCancel,
+  editing,
+}: any) {
+  return (
+    <form onSubmit={onSubmit}>
+
+      <ModalTitle
+        title={
+          editing
+            ? "Modifica comunicazione"
+            : value.deliveryMode === "email"
+              ? "Nuova e-mail"
+              : "Nuova comunicazione al Portale"
+        }
+      />
+
+      <div className="form-grid">
+
+        <Field
+          full
+          label="Titolo *"
+          value={
+            value.title
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              title: v,
+            })
+          }
+          placeholder="Es. Avviso manutenzione"
+        />
+
+        <SelectField
+          label="Condominio"
+          value={
+            value.condominiumId ??
+            ""
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              condominiumId:
+                v
+                  ? Number(v)
+                  : null,
+              recipientIds: [],
+            })
+          }
+          options={[
+            ["", "Seleziona un condominio"],
+            ...condominiums.map((item: Condominium) => [
+              String(item.id),
+              item.name,
+            ]),
+          ]}
+        />
+
+        <SelectField
+          label="Destinatari"
+          value={
+            value.audience
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              audience:
+                v as CommunicationAudience,
+              recipientIds:
+                v === "Selezionati" ? (value.recipientIds || []) : [],
+            })
+          }
+          options={[
+            [
+              "Tutti",
+              "Tutti i condòmini",
+            ],
+            [
+              "Selezionati",
+              "Condòmini selezionati",
+            ],
+            [
+              "Consiglio",
+              "Consiglio",
+            ],
+          ]}
+        />
+
+        {value.audience === "Selezionati" && (
+          <div className="field full recipient-picker"><label>Condòmini destinatari</label><div className="recipient-list">
+            {members.filter((m: CondominiumMember) => m.condominiumId === value.condominiumId && m.active).map((member: CondominiumMember) => (
+              <label className="recipient-option" key={member.id}><input type="checkbox" checked={(value.recipientIds || []).includes(member.id)} onChange={(e) => setValue({ ...value, recipientIds: e.target.checked ? [...(value.recipientIds || []), member.id] : (value.recipientIds || []).filter((id: number) => id !== member.id) })} /><span>{member.firstName} {member.lastName}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</span></label>
+            ))}
+          </div></div>
+        )}
+
+        {value.audience === "Consiglio" && (
+          <div className="field full recipient-picker">
+            <label>Destinatari del Consiglio</label>
+            <div className="recipient-help">
+              Verranno utilizzati gli indirizzi e-mail dei membri attivi con ruolo <b>Consigliere</b> nel Portale condomini per il condominio selezionato.
+            </div>
+          </div>
+        )}
+
+        <Field
+          label="Data"
+          type="date"
+          value={
+            value.date
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              date: v,
+            })
+          }
+        />
+
+        <Field
+          full
+          label="Contenuto *"
+          value={
+            value.body
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              body: v,
+            })
+          }
+          textarea
+          placeholder="Scrivi il contenuto della comunicazione..."
+        />
+
+        <SelectField
+          label="Stato"
+          value={
+            value.status
+          }
+          onChange={(
+            v: string
+          ) =>
+            setValue({
+              ...value,
+              status:
+                v as CommunicationStatus,
+            })
+          }
+          options={[
+            [
+              "Bozza",
+              "Bozza",
+            ],
+            [
+              "Pubblicata",
+              "Pubblicata",
+            ],
+          ]}
+        />
+
+        <div className="field checkbox-field">
+
+          <label>
+            Pubblica nel portale
+          </label>
+
+          <label className="switch-row">
+
+            <input
+              type="checkbox"
+              disabled={value.deliveryMode === "email"}
+              checked={
+                value.publishedToPortal
+              }
+              onChange={(e) =>
+                setValue({
+                  ...value,
+                  publishedToPortal:
+                    e.target.checked,
+                  status:
+                    e.target.checked
+                      ? "Pubblicata"
+                      : "Bozza",
+                })
+              }
+            />
+
+            <span>
+              Rendi visibile ai
+              destinatari autorizzati
+            </span>
+
+          </label>
+
+        </div>
+
+      </div>
+
+      {value.condominiumId && value.deliveryMode === "email" && (
+        <div className="communication-email-actions"><button type="button" className="secondary-button" onClick={() => onPrepareEmail(value.condominiumId, value.audience === "Selezionati" ? value.recipientIds || [] : undefined, value.id || undefined, value.title, value.body, value.audience)}>✉️ Invia e-mail</button><span>{value.emailStatus === "Inviata" ? "E-mail inviata correttamente." : "Invio diretto ai destinatari autorizzati."}</span></div>
+      )}
+
+      <Actions
+        onCancel={onCancel}
+      />
+
+    </form>
+  );
+}
+
+
+/* =========================================================
+   FORM HELPERS
+   ========================================================= */
+
+function ModalTitle({
+  title,
+}: {
+  title: string;
+}) {
+  return (
+    <div className="modal-title">
+
+      <div className="eyebrow">
+        BETHAG
+      </div>
+
+      <h2>
+        {title}
+      </h2>
+
+    </div>
+  );
+}
+
+
+function Actions({
+  onCancel,
+}: {
+  onCancel: () => void;
+}) {
+  return (
+    <div className="form-actions">
+
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={onCancel}
+      >
+        Annulla
+      </button>
+
+      <button
+        type="submit"
+        className="primary-button"
+      >
+        Salva
+      </button>
+
+    </div>
+  );
+}
+
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  full = false,
+  textarea = false,
+  maxLength,
+}: any) {
+  const normalizedValue = value ?? "";
+  const handleChange = (raw: string) => onChange(normalizeByLabel(raw, String(label || ""), type));
+  const labelText = String(label || "");
+  const lowerLabel = labelText.toLocaleLowerCase("it-IT");
+  const inferredMaxLength =
+    maxLength ??
+    (lowerLabel.includes("codice fiscale") ? 16 :
+      lowerLabel.includes("iban") ? 27 :
+      lowerLabel.includes("cap") ? 5 : undefined);
+  const inferredType = type === "number" ? "number" : type;
+  return (
+    <div className={`field ${full ? "full" : ""}`}>
+      <label>{label}</label>
+      {textarea ? (
+        <textarea
+          value={normalizedValue}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      ) : (
+        <input
+          type={inferredType}
+          value={normalizedValue}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          maxLength={inferredMaxLength}
+          inputMode={inferredType === "number" || lowerLabel.includes("cap") ? "numeric" : undefined}
+          autoCapitalize={lowerLabel.includes("e-mail") || lowerLabel.includes("email") ? "none" : "sentences"}
+          spellCheck={false}
+        />
+      )}
+    </div>
+  );
+}
+
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  full = false,
+}: any) {
+  return (
+    <div
+      className={`field ${
+        full ? "full" : ""
+      }`}
+    >
+
+      <label>
+        {label}
+      </label>
+
+      <select
+        value={value ?? ""}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+          )
+        }
+      >
+
+        {options.map(
+          (x: any) => (
+            <option
+              key={String(
+                x[0]
+              )}
+              value={x[0]}
+            >
+              {x[1]}
+            </option>
+          )
+        )}
+
+      </select>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   CSS
+   ========================================================= */
+
+type CondominiumInsurancePolicy = {
+  id: string;
+  company_name: string;
+  policy_number: string;
+  policy_type: string;
+  coverage: string;
+  start_date: string | null;
+  end_date: string | null;
+  premium: number;
+  deductible: number;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  notes: string;
+  active: boolean;
+};
+
+function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condominiumId: number; isAdministrator: boolean }) {
+  const [policies, setPolicies] = useState<CondominiumInsurancePolicy[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const emptyForm = {
+    company_name: "", policy_number: "", policy_type: "Globale fabbricati", coverage: "",
+    start_date: "", end_date: "", premium: "0", deductible: "0",
+    contact_name: "", contact_email: "", contact_phone: "", notes: "", active: true
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  const loadPolicies = async () => {
+    if (!supabase || !supabaseConfigured) return;
+    setLoading(true);
+    try {
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId) return;
+      const { data: condominium } = await supabase
+        .from("condominiums")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("legacy_id", condominiumId)
+        .maybeSingle();
+      if (!condominium?.id) return;
+      const { data, error } = await supabase
+        .from("condominium_insurance_policies")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id)
+        .order("end_date", { ascending: true });
+      if (error) throw error;
+      setPolicies((data || []) as CondominiumInsurancePolicy[]);
+    } catch (error) {
+      console.error("BETHAG insurance load error", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadPolicies(); }, [condominiumId]);
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(emptyForm);
+  };
+
+  const savePolicy = async () => {
+    if (!supabase || !supabaseConfigured) return;
+    if (!form.company_name.trim()) {
+      alert("Inserisci la compagnia assicurativa.");
+      return;
+    }
+    if (!form.policy_number.trim()) {
+      alert("Inserisci il numero di polizza.");
+      return;
+    }
+    const workspaceId = await getActiveWorkspaceId();
+    if (!workspaceId) return;
+    const { data: condominium } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", condominiumId)
+      .maybeSingle();
+    if (!condominium?.id) {
+      alert("Impossibile individuare il condominio.");
+      return;
+    }
+    const payload = {
+      workspace_id: workspaceId,
+      condominium_id: condominium.id,
+      company_name: form.company_name.trim(),
+      policy_number: form.policy_number.trim(),
+      policy_type: form.policy_type.trim(),
+      coverage: form.coverage.trim(),
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
+      premium: Number(form.premium) || 0,
+      deductible: Number(form.deductible) || 0,
+      contact_name: form.contact_name.trim(),
+      contact_email: form.contact_email.trim().toLowerCase(),
+      contact_phone: form.contact_phone.trim(),
+      notes: form.notes.trim(),
+      active: form.active,
+      updated_at: new Date().toISOString(),
+    };
+    const result = editing
+      ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
+      : await supabase.from("condominium_insurance_policies").insert(payload);
+    if (result.error) {
+      alert("ERRORE");
+      return;
+    }
+    resetForm();
+    await loadPolicies();
+  };
+
+  const editPolicy = (policy: CondominiumInsurancePolicy) => {
+    setEditing(policy.id);
+    setForm({
+      company_name: policy.company_name || "",
+      policy_number: policy.policy_number || "",
+      policy_type: policy.policy_type || "Globale fabbricati",
+      coverage: policy.coverage || "",
+      start_date: policy.start_date || "",
+      end_date: policy.end_date || "",
+      premium: String(policy.premium ?? 0),
+      deductible: String(policy.deductible ?? 0),
+      contact_name: policy.contact_name || "",
+      contact_email: policy.contact_email || "",
+      contact_phone: policy.contact_phone || "",
+      notes: policy.notes || "",
+      active: policy.active !== false,
+    });
+  };
+
+  const deletePolicy = async (policy: CondominiumInsurancePolicy) => {
+    if (!supabase || !window.confirm("Sei sicuro di voler cancellare questa polizza assicurativa?")) return;
+    const workspaceId = await getActiveWorkspaceId();
+    if (!workspaceId) return;
+    const { error } = await supabase.from("condominium_insurance_policies").delete().eq("id", policy.id).eq("workspace_id", workspaceId);
+    if (error) { alert(error.message); return; }
+    await loadPolicies();
+  };
+
+  return (
+    <section className="condominium-section-card">
+      <div className="section-title">
+        <div>
+          <div className="eyebrow">Tutela assicurativa</div>
+          <h2>Polizze assicurative</h2>
+          <p className="section-subtitle">Polizze del fabbricato, coperture, premi, franchigie e scadenze. Le scadenze possono essere controllate direttamente dalla scheda del condominio.</p>
+        </div>
+        {isAdministrator && <button className="primary-button" type="button" onClick={() => { resetForm(); setEditing("new"); }}>+ Nuova polizza</button>}
+      </div>
+
+      {isAdministrator && editing && (
+        <div className="form-card" style={{ marginBottom: 16 }}>
+          <div className="form-grid">
+            <label>Compagnia assicurativa<input value={form.company_name} onChange={e => setForm({...form, company_name: normalizeSentence(e.target.value)})} /></label>
+            <label>Numero polizza<input value={form.policy_number} onChange={e => setForm({...form, policy_number: normalizeSentence(e.target.value)})} /></label>
+            <label>Tipo polizza<input value={form.policy_type} onChange={e => setForm({...form, policy_type: normalizeSentence(e.target.value)})} /></label>
+            <label>Copertura<input value={form.coverage} onChange={e => setForm({...form, coverage: normalizeSentence(e.target.value)})} /></label>
+            <label>Decorrenza<input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} /></label>
+            <label>Scadenza<input type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} /></label>
+            <label>Premio<input type="number" min="0" step="0.01" value={form.premium} onChange={e => setForm({...form, premium: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
+            <label>Franchigia<input type="number" min="0" step="0.01" value={form.deductible} onChange={e => setForm({...form, deductible: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
+            <label>Referente<input value={form.contact_name} onChange={e => setForm({...form, contact_name: normalizeWords(e.target.value)})} /></label>
+            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value.toLocaleLowerCase("it-IT").replace(/\s/g, "")})} /></label>
+            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value.replace(/[^0-9+()\s-]/g, "")})} /></label>
+            <label className="form-grid-wide">Copertura / condizioni<textarea value={form.notes} onChange={e => setForm({...form, notes: normalizeSentence(e.target.value)})} /></label>
+          </div>
+          <div className="form-actions">
+            <button className="secondary-button" type="button" onClick={resetForm}>Annulla</button>
+            <button className="primary-button" type="button" onClick={() => void savePolicy()}>{editing === "new" ? "Salva polizza" : "Salva modifiche"}</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <p>Caricamento polizze…</p> : policies.length === 0 ? (
+        <Empty text="Nessuna polizza assicurativa registrata." />
+      ) : (
+        <div className="related-list">
+          {policies.map(policy => {
+            const expired = policy.end_date && new Date(policy.end_date + "T23:59:59") < new Date();
+            const daysToExpiry = policy.end_date ? Math.ceil((new Date(policy.end_date + "T23:59:59").getTime() - Date.now()) / 86400000) : null;
+            const warning = !expired && daysToExpiry !== null && daysToExpiry <= 30;
+            return (
+              <div className="request-card" key={policy.id}>
+                <div className="request-main">
+                  <b>🛡️ {policy.company_name} · {policy.policy_number}</b>
+                  <span>{policy.policy_type}{policy.coverage ? " · " + policy.coverage : ""}</span>
+                  <small>
+                    {policy.start_date || "—"} → {policy.end_date || "Nessuna scadenza"}
+                    {expired ? " · POLIZZA SCADUTA" : warning ? " · SCADENZA ENTRO 30 GIORNI" : ""}
+                  </small>
+                  <p>Premio: € {Number(policy.premium || 0).toFixed(2)} · Franchigia: € {Number(policy.deductible || 0).toFixed(2)}</p>
+                  {policy.contact_name && <small>Referente: {policy.contact_name}{policy.contact_phone ? " · " + policy.contact_phone : ""}{policy.contact_email ? " · " + policy.contact_email : ""}</small>}
+                </div>
+                {isAdministrator && <div className="request-actions">
+                  <button className="secondary-button small" type="button" onClick={() => editPolicy(policy)}>Modifica</button>
+                  <button className="mini-danger" type="button" onClick={() => void deletePolicy(policy)}>×</button>
+                </div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+const styles = `
+*{
+  box-sizing:border-box;
+}
+
+html{
+  -webkit-text-size-adjust:100%;
+  scroll-behavior:smooth;
+}
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#f5f7fb;
+  color:#172033;
+}
+
+button,
+input,
+textarea,
+select{
+  font:inherit;
+}
+
+button{
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.app{
+  min-height:100vh;
+  display:flex;
+}
+
+.sidebar{
+  width:260px;
+  flex-shrink:0;
+  background:#111827;
+  color:#fff;
+  padding:26px 16px;
+  display:flex;
+  flex-direction:column;
+}
+
+.logo{
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:1px;
+  padding:0 12px 22px;
+}
+
+.logo span{
+  color:#7c9cff;
+}
+
+.plan-sidebar{
+  margin:0 10px 18px;
+  padding:9px 11px;
+  background:#1f2937;
+  border:1px solid #334155;
+  border-radius:10px;
+  font-size:12px;
+  color:#c7d2fe;
+}
+
+.plan-sidebar small{
+  display:block;
+  margin-top:4px;
+  color:#94a3b8;
+  font-size:9px;
+  word-break:break-all;
+}
+.role-badge{
+  display:inline-block!important;
+  margin-top:8px!important;
+  padding:4px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  color:#e2e8f0!important;
+  font-size:10px!important;
+  font-weight:700;
+  letter-spacing:.02em;
+  width:max-content;
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav-item{
+  border:0;
+  background:transparent;
+  color:#cbd5e1;
+  text-align:left;
+  padding:12px 13px;
+  border-radius:10px;
+  font-size:14px;
+  width:100%;
+}
+
+.nav-item.active,
+.nav-item:hover{
+  background:#1f2937;
+  color:#fff;
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding:14px;
+  border-top:1px solid #273244;
+  color:#94a3b8;
+  font-size:13px;
+}
+
+.content{
+  flex:1;
+  padding:30px;
+  max-width:1500px;
+  margin:0 auto;
+  width:100%;
+}
+
+.mobile-header{
+  display:none;
+}
+
+.topbar,
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  margin-bottom:28px;
+}
+
+.dashboard-subtitle{
+  margin:7px 0 0;
+  color:#64748b;
+  font-size:13px;
+}
+
+.eyebrow{
+  color:#64748b;
+  font-size:13px;
+  margin-bottom:5px;
+}
+
+h1{
+  margin:0;
+  font-size:30px;
+}
+
+.profile{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:10px 14px;
+  font-weight:600;
+  color:#172033;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.stat-card{
+  border:1px solid #e2e8f0;
+  background:#fff;
+  border-radius:16px;
+  padding:20px;
+  text-align:left;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.stat-card span{
+  font-size:24px;
+}
+
+.stat-card strong{
+  display:block;
+  font-size:30px;
+  margin-top:14px;
+}
+
+.stat-card small{
+  display:block;
+  color:#64748b;
+  margin-top:4px;
+}
+
+.mini-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:24px;
+}
+
+.mini-stat{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:15px 18px;
+}
+
+.mini-stat b{
+  font-size:22px;
+  display:block;
+}
+
+.mini-stat span{
+  font-size:12px;
+  color:#64748b;
+}
+
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:1.5fr 1fr;
+  gap:20px;
+}
+
+.dashboard-secondary{
+  margin-top:20px;
+}
+
+.card,
+.form-card,
+.detail-card,
+.search-card,
+.table-card,
+.info-card,
+.subscription-current,
+.profile-plan-card,
+.workspace-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.section-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:16px;
+}
+
+.section-title h2{
+  font-size:19px;
+  margin:0;
+}
+
+.link{
+  border:0;
+  background:transparent;
+  color:#526dfe;
+  font-size:14px;
+  padding:5px;
+}
+
+.list-row,
+.activity{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  padding:15px 0;
+  border-bottom:1px solid #eef2f7;
+}
+
+.list-row:last-child,
+.activity:last-child{
+  border-bottom:0;
+}
+
+.list-row small,
+.activity small,
+.row-card small{
+  display:block;
+  color:#64748b;
+  margin-top:5px;
+}
+
+.list-row>strong{
+  white-space:nowrap;
+  font-size:13px;
+  color:#475569;
+}
+
+.badge{
+  display:inline-block;
+  margin-top:7px;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  background:#eef2ff;
+  color:#4f46e5;
+}
+
+.badge.urgent{
+  background:#fff1f2;
+  color:#be123c;
+}
+
+.badge.done{
+  background:#ecfdf5;
+  color:#047857;
+}
+
+.notice{
+  margin-top:14px;
+  padding:11px;
+  border-radius:10px;
+  background:#fff7ed;
+  color:#9a3412;
+  font-size:13px;
+}
+
+.ai-card{
+  margin-top:20px;
+  background:linear-gradient(135deg,#111827,#263454);
+  color:#fff;
+  border-radius:18px;
+  padding:24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+}
+
+.ai-card h2{
+  margin:4px 0 8px;
+}
+
+.ai-card p{
+  color:#cbd5e1;
+  max-width:680px;
+  line-height:1.5;
+  margin:0;
+}
+
+.ai-kicker{
+  font-size:12px;
+  letter-spacing:1px;
+  color:#a5b4fc;
+}
+
+.ai-button{
+  border:0;
+  border-radius:10px;
+  background:#fff;
+  color:#111827;
+  padding:12px 16px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.primary-button{
+  border:0;
+  background:#526dfe;
+  color:#fff;
+  padding:12px 17px;
+  border-radius:10px;
+  font-weight:700;
+}
+
+.primary-button:hover{
+  background:#4359dc;
+}
+
+.secondary-button{
+  border:1px solid #dbe2ea;
+  background:#fff;
+  color:#334155;
+  padding:11px 16px;
+  border-radius:10px;
+  font-weight:600;
+}
+
+.secondary-button.small{
+  padding:7px 10px;
+  font-size:12px;
+}
+
+.small-button{
+  padding:8px 11px;
+  font-size:12px;
+}
+
+.danger-button,
+.mini-danger{
+  border:1px solid #fecdd3;
+  background:#fff1f2;
+  color:#be123c;
+  padding:11px 16px;
+  border-radius:10px;
+  font-weight:600;
+}
+
+.mini-danger{
+  padding:6px 10px;
+}
+
+.search-card{
+  margin-bottom:8px;
+  padding:14px;
+}
+
+.search-input{
+  width:100%;
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  padding:12px 14px;
+  outline:0;
+}
+
+.search-input:focus,
+input:focus,
+textarea:focus,
+select:focus{
+  border-color:#526dfe;
+  box-shadow:0 0 0 3px rgba(82,109,254,.12);
+}
+
+.results-info{
+  color:#64748b;
+  font-size:13px;
+  margin:10px 0 16px;
+}
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+}
+
+.entity-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.entity-icon{
+  font-size:26px;
+}
+
+.entity-card h2{
+  font-size:18px;
+  margin:12px 0 7px;
+}
+
+.entity-card p{
+  color:#64748b;
+  line-height:1.5;
+}
+
+.meta{
+  margin:15px 0;
+  color:#475569;
+  font-size:14px;
+}
+
+.small-note{
+  font-size:13px;
+  background:#f8fafc;
+  border-radius:8px;
+  padding:9px;
+}
+
+.button-row{
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:18px;
+}
+
+.button-row>*{
+  flex:1;
+}
+
+.detail-card{
+  margin-top:20px;
+}
+
+.detail-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+}
+
+.detail-label{
+  color:#64748b;
+  font-size:12px;
+  margin-bottom:4px;
+}
+
+.detail-value{
+  font-weight:600;
+  word-break:break-word;
+}
+
+.notes{
+  border-top:1px solid #eef2f7;
+  margin-top:20px;
+  padding-top:18px;
+}
+
+.notes p{
+  color:#475569;
+  white-space:pre-wrap;
+  line-height:1.5;
+}
+
+.cards-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.row-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:17px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+}
+
+.row-card b{
+  display:block;
+}
+
+.row-card span{
+  display:block;
+  color:#475569;
+  font-size:13px;
+  margin-top:7px;
+}
+
+.row-card p{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+
+.row-actions{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+}
+
+.row-actions select,
+.field select{
+  border:1px solid #dbe2ea;
+  background:#fff;
+  border-radius:10px;
+  padding:10px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:16px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.field.full{
+  grid-column:1/-1;
+}
+
+.field label{
+  font-size:13px;
+  font-weight:650;
+  color:#334155;
+}
+
+.field input,
+.field textarea,
+.field select{
+  width:100%;
+  border:1px solid #dbe2ea;
+  border-radius:10px;
+  padding:12px;
+  background:#fff;
+  color:#172033;
+  outline:0;
+}
+
+.field textarea{
+  min-height:100px;
+  resize:vertical;
+}
+
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:22px;
+}
+
+.info-card{
+  margin-top:18px;
+  color:#475569;
+}
+
+.info-card p{
+  line-height:1.5;
+}
+
+.empty{
+  padding:28px;
+  text-align:center;
+  color:#64748b;
+}
+
+.quick-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.quick-action{
+  border:1px solid #e2e8f0;
+  background:#f8fafc;
+  border-radius:12px;
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:100px;
+  color:#334155;
+}
+
+.quick-action span{
+  font-size:12px;
+  font-weight:600;
+}
+
+/* DETTAGLIO CONDOMINIO */
+
+.condominium-quick-actions{margin-top:20px}.quick-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.quick-action-card{border:1px solid #dbe4f3;background:#f8faff;border-radius:14px;padding:15px;text-align:left;display:flex;flex-direction:column;gap:5px;color:#172033;cursor:pointer;transition:.15s}.quick-action-card:hover{border-color:#b9c9ec;transform:translateY(-1px)}.quick-action-card strong{font-size:13px}.quick-action-card span{font-size:11px;color:#64748b}.quick-action-card:first-letter{font-size:18px}
+
+.condominium-detail-page{
+  width:100%;
+}
+
+.detail-page-header{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:22px;
+  margin-bottom:20px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.back-button{
+  border:0;
+  background:transparent;
+  color:#526dfe;
+  padding:0;
+  margin:0 0 22px;
+  font-weight:700;
+  font-size:14px;
+}
+
+.detail-page-heading{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.detail-page-icon{
+  width:60px;
+  height:60px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef2ff;
+  border-radius:15px;
+  font-size:29px;
+}
+
+.detail-page-heading-text{
+  min-width:0;
+}
+
+.detail-page-heading h1{
+  margin:0;
+  font-size:28px;
+  line-height:1.2;
+}
+
+.detail-page-heading p{
+  margin:7px 0 0;
+  color:#64748b;
+  font-size:14px;
+  line-height:1.5;
+}
+
+.detail-page-actions{
+  display:flex;
+  gap:10px;
+  margin-top:22px;
+}
+
+.detail-page-actions button{
+  min-width:120px;
+}
+
+.condominium-detail-page .detail-card{
+  margin-top:0;
+}
+
+.condominium-overview{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;
+  margin-bottom:22px;
+}
+
+.overview-stat{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:11px;
+  padding:13px;
+  text-align:center;
+}
+
+.overview-stat b{
+  display:block;
+  font-size:21px;
+}
+
+.overview-stat span{
+  display:block;
+  margin-top:3px;
+  color:#64748b;
+  font-size:10px;
+}
+
+/* RELATED */
+
+.related-section{
+  border-top:1px solid #eef2f7;
+  margin-top:24px;
+  padding-top:20px;
+}
+
+.related-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.related-title h3{
+  margin:0;
+  font-size:17px;
+}
+
+.related-title span{
+  background:#eef2ff;
+  color:#4f46e5;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.related-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.related-row{
+  border:1px solid #eef2f7;
+  border-radius:12px;
+  padding:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+
+.related-main{
+  min-width:0;
+}
+
+.related-main b{
+  display:block;
+}
+
+.related-main small{
+  display:block;
+  color:#64748b;
+  margin-top:4px;
+  line-height:1.4;
+}
+
+.related-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.related-actions select{
+  border:1px solid #dbe2ea;
+  border-radius:8px;
+  padding:7px;
+  background:#fff;
+}
+
+/* DOCUMENTI */
+
+.document-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+
+.document-card{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 4px 18px rgba(15,23,42,.04);
+}
+
+.document-icon{
+  font-size:28px;
+}
+
+.document-card h3{
+  margin:12px 0 5px;
+  font-size:16px;
+  word-break:break-word;
+}
+
+.document-card>p{
+  color:#64748b;
+  font-size:13px;
+}
+
+.document-meta{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin:12px 0;
+}
+
+.document-meta span{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  padding:5px 7px;
+  border-radius:7px;
+  font-size:11px;
+  color:#475569;
+}
+
+.document-status{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+}
+
+.ai-summary{
+  margin-top:12px;
+  padding:10px;
+  background:#f5f3ff;
+  border-radius:10px;
+  color:#4c1d95;
+  font-size:12px;
+}
+
+.ai-summary p{
+  margin:5px 0 0;
+  line-height:1.4;
+}
+
+.full-button{
+  width:100%;
+  margin-top:8px;
+}
+
+.document-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:12px;
+  border-top:1px solid #eef2f7;
+  padding-top:10px;
+}
+
+/* BANNER */
+
+.feature-banner{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  background:#eef2ff;
+  border:1px solid #c7d2fe;
+  border-radius:14px;
+  padding:14px 17px;
+  margin-bottom:15px;
+}
+
+.feature-banner div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.feature-banner span{
+  font-size:12px;
+  color:#4f46e5;
+}
+
+.feature-plan{
+  background:#fff;
+  border-radius:999px;
+  padding:7px 10px;
+  font-weight:700;
+}
+
+/* AI */
+
+.ai-hero{
+  background:linear-gradient(135deg,#111827,#263454);
+  color:#fff;
+  border-radius:20px;
+  padding:28px;
+  display:flex;
+  justify-content:space-between;
+  gap:25px;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.ai-hero h2{
+  margin:8px 0;
+  font-size:27px;
+}
+
+.ai-hero p{
+  color:#cbd5e1;
+  max-width:760px;
+  line-height:1.55;
+}
+
+.ai-plan-box{
+  min-width:210px;
+  padding:18px;
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.ai-plan-box span{
+  color:#cbd5e1;
+  font-size:12px;
+}
+
+.ai-tools-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  margin-bottom:20px;
+}
+
+.ai-tool{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:20px;
+}
+
+.tool-icon{
+  font-size:28px;
+}
+
+.ai-tool h3{
+  margin:12px 0 8px;
+}
+
+.ai-tool p{
+  color:#64748b;
+  line-height:1.5;
+  font-size:13px;
+}
+
+.tool-flow{
+  display:block;
+  background:#f8fafc;
+  border-radius:8px;
+  padding:8px;
+  color:#475569;
+  font-size:11px;
+}
+
+/* ASSEMBLEE */
+
+.assembly-card{
+  align-items:flex-start;
+}
+
+.assembly-main{
+  min-width:0;
+  flex:1;
+}
+
+.assembly-statuses{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.assembly-actions{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-width:190px;
+}
+
+.file-button{
+  border:1px solid #dbe2ea;
+  background:#fff;
+  color:#334155;
+  padding:10px;
+  border-radius:9px;
+  font-weight:600;
+  font-size:12px;
+  text-align:center;
+}
+
+.file-button input{
+  display:none;
+}
+
+.minutes-preview{
+  background:#f8fafc;
+  border:1px solid #eef2f7;
+  border-radius:10px;
+  padding:10px;
+  margin-top:10px;
+  max-width:700px;
+}
+
+.minutes-preview p{
+  white-space:pre-wrap;
+  font-size:12px;
+  color:#475569;
+  max-height:150px;
+  overflow:auto;
+}
+
+/* COMUNICAZIONI */
+
+.communication-main{
+  min-width:0;
+  flex:1;
+}
+
+.communication-main p{
+  max-width:750px;
+  margin-bottom:0;
+}
+
+/* PORTALE */
+
+.portal-hero{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:25px;
+  display:flex;
+  justify-content:space-between;
+  gap:25px;
+  margin-bottom:20px;
+}
+
+.portal-hero h2{
+  margin:5px 0;
+  font-size:25px;
+}
+
+.portal-hero p{
+  max-width:700px;
+  color:#64748b;
+  line-height:1.5;
+}
+
+.portal-stats{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.portal-stats div{
+  min-width:100px;
+  padding:15px;
+  background:#f8fafc;
+  border-radius:12px;
+  text-align:center;
+}
+
+.portal-stats b{
+  display:block;
+  font-size:22px;
+}
+
+.portal-stats span{
+  color:#64748b;
+  font-size:11px;
+}
+
+.portal-grid{
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:20px;
+  margin-top:20px;
+}
+
+.portal-member{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:13px 0;
+  border-bottom:1px solid #eef2f7;
+}
+
+.portal-member small{
+  display:block;
+  color:#64748b;
+  margin-top:4px;
+}
+
+.permission-box{
+  padding:13px;
+  border:1px solid #eef2f7;
+  border-radius:11px;
+  margin-bottom:9px;
+}
+
+.permission-box b,
+.permission-box span{
+  display:block;
+}
+
+.permission-box span{
+  color:#64748b;
+  font-size:12px;
+  margin-top:4px;
+  line-height:1.4;
+}
+
+.permission-tags{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.permission-tags span{
+  display:inline-block;
+  padding:4px 7px;
+  background:#eef2ff;
+  color:#4f46e5;
+  border-radius:999px;
+  font-size:10px;
+}
+
+/* PERMISSION EDITOR */
+
+.permission-editor{
+  margin-top:18px;
+  padding:14px;
+  border:1px solid #eef2f7;
+  border-radius:12px;
+}
+
+.permission-checks{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:9px;
+  margin-top:10px;
+}
+
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#475569;
+  font-size:13px;
+}
+
+.check-row input{
+  width:17px;
+  height:17px;
+}
+
+.switch-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#475569;
+  font-size:13px;
+}
+
+.switch-row input{
+  width:18px;
+  height:18px;
+}
+
+.checkbox-field{
+  justify-content:flex-end;
+}
+
+/* PRICING */
+
+.subscription-current{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.subscription-current h2{
+  margin:3px 0;
+}
+
+.subscription-current p{
+  color:#64748b;
+  margin:5px 0 0;
+}
+
+.pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+}
+
+.pricing-card{
+  position:relative;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:17px;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  min-height:430px;
+}
+
+.pricing-card.current{
+  border:2px solid #526dfe;
+}
+
+.current-plan{
+  position:absolute;
+  top:12px;
+  right:12px;
+  background:#eef2ff;
+  color:#4f46e5;
+  border-radius:999px;
+  padding:5px 8px;
+  font-size:10px;
+  font-weight:700;
+}
+
+.pricing-icon{
+  font-size:28px;
+}
+
+.pricing-card h2{
+  margin:12px 0 6px;
+}
+
+.pricing-card>p{
+  color:#64748b;
+  font-size:13px;
+  min-height:38px;
+}
+
+.pricing-card ul{
+  list-style:none;
+  padding:0;
+  margin:12px 0 20px;
+  flex:1;
+}
+
+.pricing-card li{
+  padding:6px 0;
+  color:#475569;
+  font-size:12px;
+}
+
+/* PROFILO */
+
+.profile-plan-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.profile-plan-card h2{
+  margin:2px 0 0;
+}
+
+.workspace-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  margin-bottom:18px;
+}
+
+.workspace-card h2{
+  margin:3px 0;
+}
+
+.workspace-card p{
+  color:#64748b;
+  max-width:700px;
+  margin-bottom:0;
+  line-height:1.5;
+}
+
+.workspace-id{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:13px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  padding:10px 12px;
+  border-radius:9px;
+  word-break:break-all;
+}
+
+.workspace-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+
+/* MODAL */
+
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.48);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:1000;
+}
+
+.modal{
+  position:relative;
+  background:#fff;
+  border-radius:18px;
+  max-width:760px;
+  width:100%;
+  max-height:92vh;
+  overflow:auto;
+  padding:25px;
+  box-shadow:0 25px 70px rgba(15,23,42,.25);
+}
+
+.modal-close{
+  position:absolute;
+  right:15px;
+  top:12px;
+  border:0;
+  background:#f1f5f9;
+  border-radius:50%;
+  width:34px;
+  height:34px;
+  font-size:22px;
+}
+
+.modal-title{
+  margin-bottom:22px;
+}
+
+.modal-title h2{
+  margin:0;
+  font-size:24px;
+}
+
+/* MOBILE */
+
+.mobile-menu-backdrop{
+  display:none;
+}
+
+.mobile-plan{
+  margin:10px 0 15px;
+  background:#1f2937;
+  color:#c7d2fe;
+  padding:9px;
+  border-radius:8px;
+  font-size:12px;
+}
+
+.mobile-plan small{
+  display:block;
+  color:#94a3b8;
+  margin-top:4px;
+  font-size:9px;
+}
+
+.mobile-bottom-nav{
+  display:none;
+}
+
+@media(max-width:1100px){
+
+  .cards-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .mini-stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .pricing-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .document-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .ai-tools-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .condominium-overview{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+}
+
+@media(max-width:850px){
+
+  .sidebar{
+    display:none;
+  }
+
+  .content{
+    padding:12px 15px 100px;
+  }
+
+  .mobile-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 2px 18px;
+    font-size:18px;
+  }
+
+  .icon-button{
+    border:1px solid #dbe2ea;
+    background:#fff;
+    border-radius:10px;
+    width:42px;
+    height:42px;
+  }
+
+  .mobile-menu-backdrop{
+    display:flex;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    z-index:200;
+  }
+
+  .mobile-menu{
+    width:min(320px,88vw);
+    height:100%;
+    background:#111827;
+    color:#fff;
+    padding:20px 15px;
+    box-shadow:20px 0 50px rgba(0,0,0,.25);
+    overflow:auto;
+  }
+
+  .mobile-menu-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .mobile-menu-header .logo{
+    padding:0;
+  }
+
+  .mobile-menu-header .modal-close{
+    position:static;
+    background:#1f2937;
+    color:#fff;
+  }
+
+  .mobile-nav{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    margin-top:15px;
+  }
+
+  .mobile-nav .nav-item{
+    padding:14px;
+    font-size:15px;
+  }
+
+  .mobile-bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    gap:3px;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(16px);
+    border-top:1px solid #e2e8f0;
+    z-index:150;
+    padding:7px 6px;
+  }
+
+  .mobile-bottom-nav button{
+    border:0;
+    background:transparent;
+    color:#64748b;
+    min-width:52px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    padding:4px;
+  }
+
+  .mobile-bottom-nav button span{
+    font-size:18px;
+  }
+
+  .mobile-bottom-nav button small{
+    font-size:9px;
+  }
+
+  .mobile-bottom-nav .mobile-bottom-active{
+    color:#526dfe;
+    font-weight:700;
+  }
+
+  .mobile-bottom-nav .mobile-ai-button{
+    width:48px;
+    height:48px;
+    min-width:48px;
+    border-radius:50%;
+    background:#526dfe;
+    color:#fff;
+    font-size:20px;
+    margin-top:-20px;
+    box-shadow:0 7px 20px rgba(82,109,254,.35);
+  }
+
+  .mobile-bottom-nav .mobile-ai-button small{
+    display:none;
+  }
+
+  .dashboard-grid,
+  .portal-grid,
+  .workspace-grid{
+    grid-template-columns:1fr;
+  }
+
+  .ai-card,
+  .ai-hero,
+  .portal-hero{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .ai-plan-box{
+    width:100%;
+  }
+
+  .portal-stats{
+    width:100%;
+  }
+
+  .topbar,
+  .page-header{
+    align-items:flex-start;
+  }
+
+  h1{
+    font-size:26px;
+  }
+
+  .assembly-card{
+    flex-direction:column;
+  }
+
+  .assembly-actions{
+    width:100%;
+  }
+
+  .assembly-actions>*{
+    width:100%;
+  }
+
+  .workspace-card{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+}
+
+@media(max-width:650px){
+
+  .stats,
+  .cards-grid,
+  .form-grid,
+  .detail-grid,
+  .mini-stats,
+  .document-grid,
+  .pricing-grid,
+  .ai-tools-grid,
+  .workspace-grid,
+  .permission-checks{
+    grid-template-columns:1fr;
+  }
+
+  .page-header{
+    flex-direction:column;
+  }
+
+  .page-header .primary-button{
+    width:100%;
+  }
+
+  .feature-banner{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .row-card{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .row-actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  .row-actions select{
+    flex:1;
+  }
+
+  .form-actions{
+    flex-direction:column-reverse;
+  }
+
+  .form-actions button{
+    width:100%;
+  }
+
+  .modal{
+    padding:20px 16px;
+  }
+
+  .list-row{
+    align-items:flex-start;
+  }
+
+  .list-row>strong{
+    font-size:12px;
+  }
+
+  .related-row{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .related-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  .related-actions>*{
+    flex:1;
+  }
+
+  .quick-action-grid{grid-template-columns:1fr 1fr}
+
+  .detail-page-header{
+    padding:18px;
+  }
+
+  .detail-page-heading{
+    align-items:flex-start;
+  }
+
+  .detail-page-icon{
+    width:52px;
+    height:52px;
+    font-size:24px;
+  }
+
+  .detail-page-heading h1{
+    font-size:23px;
+  }
+
+  .detail-page-heading p{
+    font-size:13px;
+  }
+
+  .detail-page-actions{
+    flex-direction:column;
+  }
+
+  .detail-page-actions button{
+    width:100%;
+  }
+
+  .back-button{
+    margin-bottom:18px;
+  }
+
+  .portal-stats{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .portal-member{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .subscription-current,
+  .profile-plan-card{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .pricing-card{
+    min-height:auto;
+  }
+
+  .document-bottom{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .document-bottom>*{
+    width:100%;
+    text-align:left;
+  }
+
+  .condominium-overview{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .quick-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .workspace-id{
+    width:100%;
+  }
+
+}
+.condominium-section-card{margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 4px 18px rgba(15,23,42,.04)}
+.section-subtitle{margin:5px 0 0;color:#64748b;font-size:13px;line-height:1.5}.button-row.compact{margin-top:0}.button-row.compact>*{flex:0 0 auto}
+.condominium-members-actions{justify-content:flex-end;align-items:center;gap:8px}
+.condominium-add-member-button{white-space:nowrap}
+@media (max-width:760px){
+  .condominium-members-actions{width:100%;justify-content:flex-start}
+  .condominium-members-actions>*{flex:1 1 auto!important}
+  .condominium-add-member-button{min-width:100%}
+}
+.condominium-member-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}.member-main-button{border:0;background:transparent;padding:0;text-align:left;cursor:pointer;color:inherit;display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0}.member-main-button:hover b{text-decoration:underline}.condominium-member-card .related-actions{flex-wrap:wrap;justify-content:flex-end}
+.condominium-member-card{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;border:1px solid #eef2f7;border-radius:12px;background:#f8fafc}.member-main{min-width:0}.member-main b,.member-main span,.member-main small{display:block}.member-main span{margin-top:5px;color:#475569;font-size:13px}.member-main small{margin-top:4px;color:#64748b;font-size:12px;word-break:break-word}
+.request-summary{display:flex;gap:20px;margin:14px 0;color:#64748b;font-size:13px}.request-summary b{color:#111827;font-size:18px}.request-card{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid #eef2f7}.request-card:last-child{border-bottom:0}.request-main{min-width:0;flex:1}.request-main>b,.request-main>span{display:block}.request-main>span{margin-top:4px;color:#64748b;font-size:12px}.request-main p{margin:8px 0 0;color:#475569;line-height:1.5;white-space:pre-wrap}.request-response{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:12px}.request-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:230px}
+.recipient-picker{padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px}.recipient-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.recipient-option{display:flex;align-items:center;gap:8px;font-size:13px}.communication-email-actions{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px;background:#f8fafc;border-radius:10px}.communication-email-actions span{color:#64748b;font-size:12px}
+@media (max-width:760px){.condominium-member-card,.request-card{align-items:flex-start;flex-direction:column}.request-actions{width:100%;justify-content:flex-start;min-width:0}.button-row.compact{width:100%;flex-direction:column}.button-row.compact>*{width:100%}.communication-email-actions{align-items:flex-start;flex-direction:column}}
+.collaborator-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.collaborator-card{align-items:flex-start}
+.collaborator-card .row-main{min-width:0}
+.collaborator-card .row-main strong,.collaborator-card .row-main span,.collaborator-card .row-main small{display:block}
+.collaborator-card .row-main span{margin-top:4px;color:#64748b;font-size:13px}
+.collaborator-card .row-main small{margin-top:6px;color:#94a3b8;font-size:11px;line-height:1.45}
+.collaborator-card .row-actions{align-items:center}
+.permission-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.permission-check{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;color:#475569;font-size:12px;font-weight:700}
+.permission-check input{width:auto;margin:0}
+@media(max-width:760px){.permission-checks{grid-template-columns:1fr}.collaborator-card .row-actions{width:100%}.collaborator-card .row-actions>*{flex:1}}
+
+/* =========================================================
+   BETHAG - KPI E FILTRI AVANZATI
+   ========================================================= */
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.quick-stat {
+  padding: 14px 16px;
+  border: 1px solid #e6e8ec;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.quick-stat b { font-size: 20px; }
+.quick-stat span { font-size: 12px; opacity: .7; }
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+.filter-bar select {
+  min-width: 150px;
+  padding: 9px 11px;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  background: #fff;
+}
+@media (max-width: 760px) {
+  .quick-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter-bar select { flex: 1 1 140px; min-width: 0; }
+}
+
+
+/* =========================================================
+   BETHAG VISUAL SYSTEM
+   ========================================================= */
+
+:root{
+  --bethag-ink:#172033;
+  --bethag-muted:#64748b;
+  --bethag-line:#e2e8f0;
+  --bethag-surface:#ffffff;
+  --bethag-soft:#f7f9fc;
+  --bethag-primary:#4f6df5;
+  --bethag-primary-dark:#3857d6;
+  --bethag-accent:#7c9cff;
+  --bethag-shadow:0 12px 32px rgba(15,23,42,.08);
+}
+
+body{
+  background:
+    radial-gradient(circle at 80% -10%, rgba(124,156,255,.14), transparent 34%),
+    #f5f7fb;
+}
+
+.app{
+  background:transparent;
+}
+
+.sidebar{
+  background:
+    radial-gradient(circle at 10% 0%, rgba(124,156,255,.18), transparent 28%),
+    linear-gradient(180deg,#0f172a 0%,#111827 55%,#0b1220 100%);
+  border-right:1px solid rgba(255,255,255,.06);
+  box-shadow:8px 0 28px rgba(15,23,42,.08);
+}
+
+.brand-logo{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  min-height:0;
+  padding:0 4px 20px;
+  color:#fff;
+}
+
+.brand-logo-image{
+  display:block;
+  width:100%;
+  max-width:190px;
+  height:auto;
+  object-fit:contain;
+  object-position:center;
+  filter:drop-shadow(0 8px 18px rgba(0,153,255,.18));
+}
+
+.brand-logo-compact{
+  padding:0;
+  min-height:0;
+}
+
+.brand-logo-compact .brand-logo-image{
+  max-width:120px;
+}
+
+.plan-sidebar{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.09);
+  backdrop-filter:blur(12px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.nav{
+  gap:4px;
+}
+
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid transparent;
+  transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+
+.nav-item:hover{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.06);
+  transform:translateX(2px);
+}
+
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(79,109,245,.26),rgba(79,109,245,.10));
+  border-color:rgba(124,156,255,.20);
+  box-shadow:inset 3px 0 0 #7c9cff;
+}
+
+.nav-icon{
+  width:20px;
+  height:20px;
+  display:grid;
+  place-items:center;
+  color:#9fb2ff;
+  flex:0 0 20px;
+}
+
+.nav-item.active .nav-icon{
+  color:#fff;
+}
+
+.content{
+  padding:32px clamp(20px,3vw,42px) 90px;
+}
+
+.topbar,.page-header{
+  margin-bottom:24px;
+}
+
+h1{
+  letter-spacing:-.025em;
+}
+
+.dashboard-subtitle{
+  font-size:14px;
+}
+
+.profile{
+  border-color:#dbe3ef;
+  box-shadow:0 5px 18px rgba(15,23,42,.05);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+
+.profile:hover{
+  transform:translateY(-1px);
+  box-shadow:0 9px 24px rgba(15,23,42,.09);
+}
+
+.stat-card,.card,.panel,.table-card,.section-card{
+  box-shadow:var(--bethag-shadow);
+}
+
+.stat-card{
+  border-color:#e4e9f2;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+
+.stat-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 16px 34px rgba(15,23,42,.10);
+  border-color:#d5def0;
+}
+
+button{
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease,border-color .15s ease;
+}
+
+.primary-button{
+  background:linear-gradient(135deg,var(--bethag-primary),var(--bethag-primary-dark));
+  box-shadow:0 7px 16px rgba(79,109,245,.20);
+}
+
+.primary-button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(79,109,245,.28);
+}
+
+.secondary-button{
+  background:#fff;
+}
+
+input,textarea,select{
+  border-color:#dbe3ef;
+  background:#fff;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+
+input:focus,textarea:focus,select:focus{
+  outline:none;
+  border-color:#7c9cff;
+  box-shadow:0 0 0 3px rgba(124,156,255,.14);
+}
+
+.mobile-header{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(226,232,240,.9);
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  backdrop-filter:blur(16px);
+}
+
+.icon-button{
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+}
+
+.mobile-bottom-nav{
+  background:rgba(255,255,255,.94);
+  border-top:1px solid rgba(226,232,240,.9);
+  box-shadow:0 -10px 30px rgba(15,23,42,.08);
+  backdrop-filter:blur(18px);
+}
+
+.mobile-bottom-nav button{
+  color:#64748b;
+}
+
+.mobile-bottom-nav button span{
+  display:grid;
+  place-items:center;
+}
+
+.mobile-bottom-active{
+  color:#4f6df5 !important;
+}
+
+.mobile-ai-button{
+  border:4px solid #f5f7fb;
+  background:linear-gradient(145deg,#8da7ff,#536ff2) !important;
+  box-shadow:0 8px 20px rgba(79,109,245,.28);
+}
+
+.sidebar-bottom{
+  border-top-color:rgba(255,255,255,.08);
+}
+
+@media (max-width:900px){
+  .content{
+    padding:18px 16px 92px;
+  }
+  .brand-logo{
+    padding-bottom:18px;
+  }
+}
+
+@media (max-width:640px){
+  .content{
+    padding:14px 12px 86px;
+  }
+  .topbar,.page-header{
+    gap:12px;
+    margin-bottom:18px;
+  }
+  h1{
+    font-size:25px;
+  }
+  .stats{
+    gap:10px;
+  }
+  .stat-card{
+    border-radius:14px;
+    padding:14px;
+  }
+}
+
+.public-home{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(124,156,255,.22),transparent 30%),radial-gradient(circle at 90% 85%,rgba(79,109,245,.16),transparent 32%),linear-gradient(135deg,#f8faff 0%,#eef3ff 100%);color:#172033;padding:28px;box-sizing:border-box}
+.public-home-inner{max-width:1180px;margin:0 auto;min-height:calc(100vh - 56px);display:flex;flex-direction:column}
+.public-header{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.public-login-button{border:1px solid #dbe3ef;background:#fff;border-radius:12px;padding:11px 17px;font-weight:700;color:#3857d6;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.06)}
+.public-main{flex:1;display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:center;padding:60px 0 50px}
+.public-copy h1{font-size:clamp(42px,6vw,72px);line-height:1.02;letter-spacing:-.055em;margin:18px 0 20px}
+.public-copy p{color:#64748b;font-size:18px;line-height:1.65;max-width:650px;margin:0}
+.public-kicker{display:inline-flex;padding:7px 11px;border-radius:999px;background:#e9efff;color:#3857d6;font-size:12px;font-weight:800;letter-spacing:.04em}
+.platform-panel{background:rgba(255,255,255,.88);border:1px solid #e1e7f2;border-radius:26px;padding:28px;box-shadow:0 25px 70px rgba(15,23,42,.1);backdrop-filter:blur(18px)}
+.platform-label{font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.platform-card{width:100%;margin-top:16px;text-align:left;border:1px solid #dbe3ef;background:linear-gradient(145deg,#fff,#f5f7ff);border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 12px 30px rgba(79,109,245,.1)}
+.platform-card strong,.platform-card>span{display:block}
+.platform-card strong{font-size:19px;color:#172033}
+.platform-card>span:not(.platform-icon){margin-top:7px;color:#64748b;line-height:1.5;font-size:13px}
+.platform-card b{display:block;margin-top:14px;color:#3857d6;font-size:13px}
+.platform-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#e9efff;color:#3857d6;margin-bottom:14px}
+.future-platform{display:grid;gap:10px;margin-top:14px}
+.future-platform div{padding:14px 15px;border-radius:14px;border:1px dashed #dbe3ef;color:#94a3b8;background:#fafbfe;font-size:12px;font-weight:700}
+.public-footer{border-top:1px solid rgba(148,163,184,.25);padding-top:18px;color:#94a3b8;font-size:12px}
+
+.login-page{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(124,156,255,.22),transparent 30%),linear-gradient(135deg,#f8faff,#eef3ff);display:grid;place-items:center;padding:18px;box-sizing:border-box}
+.login-card{width:min(520px,100%);background:#fff;border:1px solid #e1e7f2;border-radius:24px;padding:28px;box-shadow:0 25px 70px rgba(15,23,42,.12);box-sizing:border-box}
+.login-card-header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}
+.login-card h1{margin:0 0 7px;font-size:28px;letter-spacing:-.03em}
+.login-intro{color:#64748b;margin:0 0 22px;line-height:1.5;font-size:13px}
+.login-role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.login-role{border:1px solid #dbe3ef;background:#fff;color:#475569;border-radius:12px;padding:12px 8px;cursor:pointer;font-weight:800;font-size:12px}
+.login-role.active{border:2px solid #526dfe;background:#eef2ff;color:#3857d6}
+.login-role-description{padding:13px;border-radius:12px;background:#f8fafc;color:#64748b;font-size:12px;line-height:1.45;margin-bottom:18px}
+.login-card label{display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:7px}
+.login-card input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #dbe3ef;border-radius:11px;margin-bottom:13px}
+.login-note{display:block;margin-top:-4px;color:#64748b;font-size:11px;line-height:1.4}
+.password-field-wrap{position:relative;display:flex;align-items:center;}
+.password-field-wrap input{width:100%;padding-right:48px;}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:6px;line-height:1;cursor:pointer;}
+.login-forgot-button{display:block;width:100%;margin:10px 0 0;border:0;background:transparent;color:#4f46e5;font-weight:700;cursor:pointer;}
+.login-success{margin:12px 0;padding:10px 12px;border-radius:10px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;font-size:13px;}
+.login-error{margin-top:15px;padding:16px 14px;border:2px solid #b42318;border-radius:12px;background:#fff1f2;color:#b42318;font-size:22px;font-weight:900;letter-spacing:.08em;text-align:center;text-transform:uppercase}
+.login-submit{width:100%;margin-top:18px}
+.login-disclaimer{margin:18px 0 0;color:#94a3b8;font-size:10px;line-height:1.45}
+
+.resident-portal{min-height:100vh;background:radial-gradient(circle at 85% 0%,rgba(124,156,255,.15),transparent 30%),#f5f7fb;color:#172033}
+.resident-header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:10}
+.resident-header-right{display:flex;align-items:center;gap:10px}
+.resident-identity{text-align:right;font-size:12px;color:#64748b}
+.resident-identity strong,.resident-identity span{display:block}
+.resident-identity strong{color:#172033}
+.resident-main{max-width:1180px;margin:0 auto;padding:28px 18px 60px}
+.resident-hero{background:linear-gradient(135deg,#172554,#3857d6);color:#fff;border-radius:22px;padding:28px;box-shadow:0 20px 45px rgba(30,64,175,.18)}
+.resident-hero h1{margin:7px 0;font-size:30px;letter-spacing:-.035em}
+.resident-hero p{margin:0;opacity:.82;line-height:1.5}
+.resident-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.resident-stats>div{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+.resident-stats b,.resident-stats span{display:block}
+.resident-stats b{font-size:24px}
+.resident-stats span{color:#64748b;font-size:12px}
+.resident-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.resident-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px}
+.resident-card h2{margin:0;font-size:18px}
+.resident-list-item{padding:15px 0;border-bottom:1px solid #eef2f7}
+.resident-list-item:last-child{border-bottom:0}
+.resident-list-item strong{display:block}
+.resident-list-item small,.resident-list-row small{display:block;color:#94a3b8;font-size:11px;margin-top:4px}
+.resident-list-item p{color:#475569;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.resident-list-row{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #eef2f7}
+.resident-list-row strong{font-size:13px}
+.resident-list-row>span{color:#3857d6;font-size:11px;font-weight:800}
+.empty-state{color:#94a3b8;font-size:13px}
+.resident-readonly-note{margin-top:18px;padding:15px;border-radius:14px;background:#eef2ff;color:#475569;font-size:12px;line-height:1.5}
+.resident-request-card{margin-top:18px}
+.resident-request-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.resident-request-form select,.resident-request-form textarea{width:100%;box-sizing:border-box;border:1px solid #dbe2ee;border-radius:10px;padding:10px 12px;font:inherit;background:#fff;color:#1e293b}
+.resident-request-form textarea{grid-column:1/-1;resize:vertical;min-height:100px}
+.resident-request-form .primary-button{justify-self:start}
+.resident-request-history{margin-top:20px;padding-top:16px;border-top:1px solid #eef2f7}
+.resident-request-history>strong{display:block;margin-bottom:6px}
+
+
+@media(max-width:850px){
+  .public-home{padding:18px}
+  .public-main{grid-template-columns:1fr;padding:40px 0}
+  .public-copy h1{font-size:clamp(38px,11vw,58px)}
+  .public-copy p{font-size:16px}
+  .resident-header{padding:14px 16px}
+  .resident-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .public-header .brand-word{font-size:18px}
+  .platform-panel{padding:20px}
+  .login-card{padding:20px}
+  .login-role-grid{grid-template-columns:1fr}
+  .resident-stats{grid-template-columns:1fr 1fr}
+  .resident-identity{display:none}
+}
+
+
+.addon-panel{margin-top:22px;padding:22px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:var(--bethag-shadow)}
+.subscription-current-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.addon-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.addon-card{display:flex;flex-direction:column;gap:10px;padding:17px;border:1px solid #e2e8f0;border-radius:15px;background:linear-gradient(145deg,#fff,#f8faff)}
+.addon-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.addon-card-top h3{margin:8px 0 0;font-size:15px}.addon-card-top strong{font-size:12px;color:#3857d6;white-space:nowrap}.addon-card p{margin:0;color:#64748b;font-size:12px;line-height:1.5;min-height:38px}.addon-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eef2ff;color:#3857d6;font-weight:900}.addon-card button{margin-top:auto}.addon-card button:disabled{opacity:1;cursor:default}
+@media(max-width:900px){.addon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.addon-grid{grid-template-columns:1fr}.subscription-current-right{justify-content:flex-start}}
+
+.nav-lock{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 5px;border-radius:6px;background:#eef2ff;color:#3857d6}.homepage-focus-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.focus-card{border:1px solid #e5e9f2;background:#fff;border-radius:18px;padding:17px;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 8px 24px rgba(20,31,55,.05);transition:transform .18s ease,box-shadow .18s ease}.focus-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(20,31,55,.09)}.focus-card>div{min-width:0;display:flex;flex-direction:column;gap:3px;flex:1}.focus-card strong{font-size:18px;color:#17233f}.focus-card span{font-size:12px;color:#667085}.focus-card small{font-weight:700;color:#3857d6;white-space:nowrap}.focus-icon{width:34px;height:34px;border-radius:11px;background:#eef2ff;display:grid;place-items:center;font-weight:900;color:#3857d6}.focus-card-warning .focus-icon{background:#fff2e8;color:#c65b18}.focus-card-plan{background:linear-gradient(135deg,#f8f9ff,#eef3ff)}@media(max-width:1000px){.homepage-focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.homepage-focus-grid{grid-template-columns:1fr}.focus-card{padding:15px}}
+.help-hero{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 28px;border-radius:22px;background:linear-gradient(135deg,#071b4d,#0a4fd8);color:#fff;box-shadow:0 18px 42px rgba(16,55,130,.18);margin-bottom:18px}.help-hero h2{margin:7px 0 8px;font-size:27px}.help-hero p{margin:0;max-width:700px;color:rgba(255,255,255,.78);line-height:1.6}.help-hero .eyebrow{color:#9fc5ff}.help-hero-badge{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:95px;font-weight:800}.help-ai-panel{padding:24px;border:1px solid #dce5f5;border-radius:20px;background:#fff;box-shadow:var(--bethag-shadow);margin-bottom:20px}.help-ai-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.help-ai-heading h2{margin:4px 0}.help-ai-panel p{color:#667085;line-height:1.55}.help-ai-status{font-size:11px;font-weight:800;padding:7px 10px;border-radius:999px;background:#eef3ff;color:#3857d6}.help-question{display:flex;gap:10px}.help-question input,.help-toolbar input{flex:1;min-width:0}.help-answer{display:flex;gap:10px;margin-top:14px;padding:14px;border-radius:14px;background:#f5f8ff;color:#334155;line-height:1.5}.help-answer strong{color:#3857d6;white-space:nowrap}.help-toolbar{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:24px 0 14px}.help-toolbar h2{margin:0}.help-toolbar p{margin:4px 0 0;color:#667085;font-size:13px}.help-toolbar input{max-width:330px}.help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.help-card{text-align:left;padding:20px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(20,31,55,.045);cursor:pointer}.help-card:hover{border-color:#b9c9ec;transform:translateY(-1px)}.help-card-section{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#3857d6}.help-card h3{margin:8px 0}.help-card p{margin:0;color:#667085;line-height:1.5;font-size:13px}.help-card-more{display:block;margin-top:15px;font-weight:800;color:#3857d6;font-size:12px}.help-detail{margin-top:18px;padding:24px;border-radius:18px;border:1px solid #dbe4f3;background:#f8faff}.help-detail-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.help-detail h2{margin:5px 0}.help-detail p{color:#475569;line-height:1.7}.help-roadmap{margin-top:20px;padding:24px;border-radius:20px;background:#f1f5ff;border:1px solid #dbe5fa;display:flex;justify-content:space-between;gap:24px}.help-roadmap h2{margin:5px 0}.help-roadmap p{max-width:720px;color:#64748b;line-height:1.6}.help-roadmap-items{display:flex;flex-direction:column;gap:9px;font-weight:700;color:#3857d6;white-space:nowrap}@media(max-width:900px){.help-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.help-roadmap{flex-direction:column}.help-roadmap-items{white-space:normal}}@media(max-width:650px){.help-hero{padding:22px;flex-direction:column;align-items:flex-start}.help-ai-heading,.help-toolbar{align-items:stretch;flex-direction:column}.help-question{flex-direction:column}.help-toolbar input{max-width:none}.help-grid{grid-template-columns:1fr}}
+`;
+
+
+/* =========================================================
+   PUBLIC HOME / LOGIN / RESIDENT PORTAL
+   ========================================================= */
+
+/* =========================================================
+ RENDER
+ ========================================================= */
+
+ReactDOM.createRoot(
+  document.getElementById(
+    "root"
+  )!
+).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
