@@ -8549,68 +8549,133 @@ function CondominiumDetails(
 
       <section className="condominium-section-card">
         <div className="section-title">
-          <div><div className="eyebrow">Unità abitative</div><h2>Unità e persone associate</h2><p className="section-subtitle">Ogni unità può avere più proprietari e/o inquilini, mantenendo una sola identità abitativa.</p></div>
-          <span className="badge">{activeMembers.length} soggetti</span>
+          <div>
+            <div className="eyebrow">Patrimonio catastale e anagrafica</div>
+            <h2>Unità immobiliari, pertinenze e persone associate</h2>
+            <p className="section-subtitle">
+              Tutte le unità previste dal condominio sono mantenute qui, anche quando non hanno ancora persone associate.
+              Ogni unità può avere più proprietari e/o inquilini e le pertinenze autonome possono essere collegate all'abitazione.
+            </p>
+          </div>
+          <div className="button-row compact">
+            <span className="badge">{condominiumUnits.filter((unit: CondominiumUnit) => unit.active).length} unità</span>
+            {isAdministrator && (
+              <>
+                <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Garage")}>+ Garage</button>
+                <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Cantina")}>+ Cantina</button>
+              </>
+            )}
+          </div>
         </div>
+
         <div className="related-list">
-          {Array.from(new Set(activeMembers.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean))).map((apartment) => {
-            const unitMembers = activeMembers.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === apartment.toLowerCase());
-            const owners = unitMembers.filter((m: CondominiumMember) => m.role === "Proprietario");
-            const tenants = unitMembers.filter((m: CondominiumMember) => m.role === "Inquilino");
-            return <div className="request-card" key={apartment}>
-              <div className="request-main">
-                <b>🏠 {apartment}</b>
-                <span>{unitMembers.length} {unitMembers.length === 1 ? "persona associata" : "persone associate"} · {owners.length} proprietari · {tenants.length} inquilini</span>
-                <p>{unitMembers.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} · ${m.role}${m.email ? ` · ${m.email}` : ""}`).join("  |  ")}</p>
-              </div>
-              <div className="request-actions">
-                <Badge value={owners.length ? "Proprietà" : "Locazione"} />
-                <button className="secondary-button small" type="button" onClick={() => setSelectedUnit(apartment)}>Gestisci unità</button>
-                {isAdministrator && (
-                  <button
-                    className="primary-button small"
-                    type="button"
-                    onClick={() => onNewMember(item.id, apartment)}
-                  >
-                    + Aggiungi persona
-                  </button>
-                )}
-              </div>
-            </div>;
-          })}
+          {condominiumUnits.filter((unit: CondominiumUnit) => unit.active).length === 0 ? (
+            <Empty text="Nessuna unità immobiliare disponibile." />
+          ) : (
+            condominiumUnits
+              .filter((unit: CondominiumUnit) => unit.active)
+              .map((unit: CondominiumUnit) => {
+                const linkedMembers = activeMembers.filter(
+                  (member: CondominiumMember) =>
+                    member.unitId === unit.id ||
+                    member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase()
+                );
+                const owners = linkedMembers.filter((member: CondominiumMember) => member.role === "Proprietario");
+                const tenants = linkedMembers.filter((member: CondominiumMember) => member.role === "Inquilino");
+                const ownerMembers = activeMembers.filter(
+                  (member: CondominiumMember) =>
+                    Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id)
+                );
+                const externalOwners = Array.isArray(unit.externalOwners) ? unit.externalOwners : [];
+                const incorporated = unit.incorporatedInUnitId
+                  ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId)
+                  : null;
+                const ownerLabels = [
+                  ...ownerMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName),
+                  ...externalOwners
+                    .map((o: ExternalUnitOwner) => [o.firstName, o.lastName].filter(Boolean).join(" "))
+                    .filter(Boolean),
+                ];
+
+                return (
+                  <div className="request-card" key={unit.id}>
+                    <div className="request-main">
+                      <b>
+                        {unit.unitType === "Garage"
+                          ? "🚗"
+                          : unit.unitType === "Cantina"
+                            ? "📦"
+                            : "🏠"}{" "}
+                        Unità {unit.unitCode}
+                      </b>
+                      <span>
+                        {unit.unitType} · {unit.cadastralCategory || "Categoria non inserita"} ·{" "}
+                        {unit.millesimi ? unit.millesimi + " millesimi" : "Millesimi non inseriti"}
+                      </span>
+                      <small>
+                        {unit.cadastralAutonomous
+                          ? "Unità catastalmente autonoma"
+                          : "Incorporata catastalmente"}
+                        {incorporated ? " · collegata a " + incorporated.unitCode : ""}
+                      </small>
+
+                      <p>
+                        <strong>
+                          {linkedMembers.length}{" "}
+                          {linkedMembers.length === 1 ? "persona associata" : "persone associate"}
+                        </strong>
+                        {" · "}
+                        {owners.length} proprietari · {tenants.length} inquilini
+                      </p>
+
+                      {ownerLabels.length > 0 && (
+                        <p>
+                          <strong>Proprietari:</strong> {ownerLabels.join(" | ")}
+                        </p>
+                      )}
+
+                      {linkedMembers.length > 0 && (
+                        <p>
+                          {linkedMembers
+                            .map(
+                              (member: CondominiumMember) =>
+                                `${member.firstName} ${member.lastName} · ${member.role}${member.email ? ` · ${member.email}` : ""}`
+                            )
+                            .join(" | ")}
+                        </p>
+                      )}
+
+                      {linkedMembers.length === 0 && ownerLabels.length === 0 && (
+                        <p style={{ color: "#b45309" }}>
+                          <strong>Nessuna persona associata.</strong> L'unità è comunque già presente nel patrimonio del condominio.
+                        </p>
+                      )}
+                    </div>
+
+                    {isAdministrator && (
+                      <div className="request-actions">
+                        <button
+                          className="secondary-button small"
+                          type="button"
+                          onClick={() => onEditUnit(unit)}
+                        >
+                          Modifica unità
+                        </button>
+                        <button
+                          className="primary-button small"
+                          type="button"
+                          onClick={() => onNewMember(item.id, unit.unitCode)}
+                        >
+                          + Aggiungi persona
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          )}
         </div>
       </section>
-      {selectedUnit && (() => {
-        const unitMembers = activeMembers.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedUnit.trim().toLowerCase());
-        return <Modal onClose={() => setSelectedUnit(null)}>
-          <ModalTitle title={`Unità abitativa ${selectedUnit}`} />
-          <p className="section-subtitle">Tutte le persone associate a questa unità e i relativi accessi al Portale.</p>
-          <div className="related-list" style={{marginTop:16}}>
-            {unitMembers.map((member: CondominiumMember) => {
-              const permissions = member.role === "Inquilino"
-                ? ["Spese ordinarie", "Comunicazioni e avvisi", "Regolamento condominiale"]
-                : ["Documenti", "Verbali", "Regolamento", "Assemblee", "Spese ordinarie", "Spese straordinarie", "Comunicazioni e avvisi"];
-              return <div className="request-card" key={member.id}>
-                <div className="request-main">
-                  <b>{member.firstName} {member.lastName}</b>
-                  <span>{member.role} · {member.email || "E-mail non inserita"}</span>
-                  <small>{member.userId ? "🟢 Accesso Portale attivo" : "⚪ Accesso Portale non attivo"}</small>
-                  <p><strong>Permessi:</strong> {permissions.join(" · ")}</p>
-                </div>
-                {isAdministrator && <div className="request-actions">
-                  <button className="secondary-button small" onClick={() => { setSelectedUnit(null); onEditMember(member); }}>Modifica</button>
-                </div>}
-              </div>;
-            })}
-          </div>
-          {isAdministrator && (
-            <div className="form-actions">
-              <button className="secondary-button" onClick={() => setSelectedUnit(null)}>Chiudi</button>
-              <button className="primary-button" onClick={() => { setSelectedUnit(null); onNewMember(item.id, selectedUnit); }}>+ Aggiungi persona a questa unità</button>
-            </div>
-          )}
-        </Modal>;
-      })()}
 
       <section className="condominium-section-card">
         <div className="section-title">
