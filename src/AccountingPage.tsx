@@ -1172,7 +1172,15 @@ function AccountingPage({
       .eq("id", id)
       .eq("workspace_id", workspaceId);
     if (deleteError) {
-      setError(deleteError.message);
+      if ((deleteError as any).code === "23503") {
+        const dependencyMessage =
+          table === "condominium_ledger_entries"
+            ? "Non è possibile cancellare la voce contabile perché è collegata a una o più rate. Elimina prima le rate collegate e riprova."
+            : "Non è possibile cancellare l'elemento perché esistono dati contabili collegati che ne impediscono la cancellazione.";
+        setError(dependencyMessage);
+      } else {
+        setError(deleteError.message);
+      }
       return;
     }
     flash("Elemento eliminato.");
