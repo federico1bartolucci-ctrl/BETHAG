@@ -6200,7 +6200,7 @@ function App() {
                 toggleDocumentPublication
               }
               plan={subscription.plan}
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("documenti"))}
             />
           )}
 
@@ -6229,7 +6229,7 @@ function App() {
                 updateDeadlineStatus
               }
               condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("scadenze"))}
             />
           )}
 
@@ -6270,7 +6270,7 @@ function App() {
                 confirmMinutes
               }
               onPublication={toggleAssemblyPublication}
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("assemblee"))}
             />
           )}
 
@@ -6296,7 +6296,7 @@ function App() {
                 deleteSupplier
               }
               condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("fornitori"))}
             />
           )}
 
@@ -6323,7 +6323,7 @@ function App() {
               }
               onStatus={updateActivityStatus}
               condominiumName={condominiumName}
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("attivita"))}
             />
           )}
 
@@ -6354,7 +6354,7 @@ function App() {
               onPublication={
                 toggleCommunicationPublication
               }
-              isAdministrator={isAdministrator}
+              isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("comunicazioni"))}
             />
           )}
 
