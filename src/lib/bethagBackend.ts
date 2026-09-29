@@ -497,9 +497,11 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   // I condomini vengono creati/modificati tramite RPC dedicato. Non riconciliamo
   // qui le cancellazioni, perché una sincronizzazione già accodata con uno stato
   // precedente potrebbe eliminare subito un condominio appena salvato.
-  for (const [table, rows] of rowsByTable) {
-    await reconcileWorkspaceRows(table, workspaceId, rows);
-  }
+  // Questi moduli sono persistenti: uno stato locale parziale non deve mai
+  // trasformarsi in una cancellazione server al refresh. La cancellazione
+  // passa esclusivamente dalle azioni esplicite dell'interfaccia.
+  // Le riconciliazioni automatiche restano quindi disabilitate per:
+  // documenti, scadenze, assemblee, fornitori, attività e comunicazioni.
 
   const condominiumIds = Array.from(condominiumDbIdByLegacyId.values());
   for (const condominiumId of condominiumIds) {
