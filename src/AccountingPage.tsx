@@ -1470,7 +1470,6 @@ function AccountingPage({
       )}
     </>
   );
-  </>);
 }
 
 export default AccountingPage;
