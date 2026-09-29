@@ -636,26 +636,36 @@ export async function saveCondominiumMember(
     let unitId: string | null = null;
 
     if (apartment) {
-      const { error: unitError } = await supabase
+      // L'unità è il contenitore dei millesimi e degli altri dati patrimoniali.
+      // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
+      // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
+      // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
+      const { data: existingUnit, error: existingUnitError } = await supabase
         .from("condominium_units")
-        .upsert({
-          workspace_id: workspaceId,
-          condominium_id: condominium.id,
-          unit_code: apartment,
-          data: { unitCode: apartment },
-        }, { onConflict: "condominium_id,unit_code" });
-
-      if (unitError) throw unitError;
-
-      const { data: unit, error: unitReadError } = await supabase
-        .from("condominium_units")
-        .select("id")
+        .select("id, data")
         .eq("condominium_id", condominium.id)
         .eq("unit_code", apartment)
         .maybeSingle();
 
-      if (unitReadError) throw unitReadError;
-      unitId = unit?.id ?? null;
+      if (existingUnitError) throw existingUnitError;
+
+      if (existingUnit?.id) {
+        unitId = existingUnit.id;
+      } else {
+        const { data: createdUnit, error: unitError } = await supabase
+          .from("condominium_units")
+          .insert({
+            workspace_id: workspaceId,
+            condominium_id: condominium.id,
+            unit_code: apartment,
+            data: { unitCode: apartment },
+          })
+          .select("id")
+          .single();
+
+        if (unitError) throw unitError;
+        unitId = createdUnit?.id ?? null;
+      }
     }
 
     const { millesimi: _legacyMillesimi, ...memberData } = item ?? {};
