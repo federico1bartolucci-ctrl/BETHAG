@@ -879,6 +879,13 @@ function AccountingPage({
       setError("Indica spesa, titolo e scadenza delle rate.");
       return;
     }
+    const selectedExpense = scopedLedger.find(e => e.id === allocationInstallmentForm.ledger_entry_id);
+    const selectedAllocations = allocations.filter(a => a.ledger_entry_id === allocationInstallmentForm.ledger_entry_id && (!dbCondominiumId || a.condominium_id === dbCondominiumId) && Number(a.amount) > 0);
+    if (!selectedExpense || !selectedAllocations.length) {
+      setError("Non ci sono ripartizioni valide per la spesa selezionata.");
+      return;
+    }
+    if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
     if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata? Le rate già identiche non verranno duplicate.")) return;
     setSaving(true);
     setError("");
@@ -967,6 +974,14 @@ function AccountingPage({
     const table = scopedMillesimalTables.find(t => t.id === bulkMillesimalTableId);
     const condominiumUnits = units.filter(u => u.condominium_id === dbCondominiumId);
     if (!table || condominiumUnits.length === 0) { setError("Tabella o unità non disponibili."); return; }
+    const invalidValue = condominiumUnits.some(u => {
+      const value = Number(bulkMillesimalValues[u.id]);
+      return !Number.isFinite(value) || value < 0;
+    });
+    if (invalidValue) {
+      setError("Tutte le quote devono essere numeriche e non negative.");
+      return;
+    }
     const total = condominiumUnits.reduce((s,u) => s + Number(bulkMillesimalValues[u.id] || 0), 0);
     if (Math.abs(total - Number(table.total_millesimi || 0)) > 0.001) { setError("La somma delle quote deve coincidere con il totale della tabella."); return; }
     setSaving(true); setError("");
