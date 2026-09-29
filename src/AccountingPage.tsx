@@ -914,8 +914,25 @@ function AccountingPage({
     if (!supabase || !dbCondominiumId) return;
     const allocationYearId = scopedLedger.find(x => x.id === allocationForm.ledger_entry_id)?.fiscal_year_id;
     if (!guardOpenFiscalYear(allocationYearId)) return;
-    if (!allocationForm.ledger_entry_id || !allocationForm.unit_id || Number(allocationForm.amount) <= 0) {
-      setError("Seleziona un movimento, un'unità e un importo maggiore di zero.");
+    const selectedExpense = scopedLedger.find(x => x.id === allocationForm.ledger_entry_id);
+    const selectedUnit = units.find(u => u.id === allocationForm.unit_id && u.condominium_id === dbCondominiumId);
+    const millesimi = Number(allocationForm.millesimi);
+    const amount = Number(allocationForm.amount);
+    const paidAmount = Number(allocationForm.paid_amount);
+    if (!selectedExpense || selectedExpense.direction !== "Uscita") {
+      setError("La ripartizione deve riferirsi a una spesa registrata nel condominio.");
+      return;
+    }
+    if (!selectedUnit || !allocationForm.ledger_entry_id || !allocationForm.unit_id || !Number.isFinite(amount) || amount <= 0) {
+      setError("Seleziona una spesa, un'unità e un importo maggiore di zero.");
+      return;
+    }
+    if (!Number.isFinite(millesimi) || millesimi < 0) {
+      setError("I millesimi devono essere numerici e non negativi.");
+      return;
+    }
+    if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > amount) {
+      setError("L'importo pagato deve essere compreso tra zero e l'importo della ripartizione.");
       return;
     }
     setSaving(true);
@@ -929,9 +946,9 @@ function AccountingPage({
         unit_id: allocationForm.unit_id,
         member_id: null,
         allocation_basis: allocationForm.allocation_basis,
-        millesimi: Number(allocationForm.millesimi),
-        amount: Number(allocationForm.amount),
-        paid_amount: Number(allocationForm.paid_amount),
+        millesimi,
+        amount,
+        paid_amount: paidAmount,
         due_date: allocationForm.due_date || null,
         status: allocationForm.status,
         notes: allocationForm.notes,
