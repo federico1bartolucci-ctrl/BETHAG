@@ -713,10 +713,6 @@ export async function saveCondominium(
 
       if (existingUnitsError) throw existingUnitsError;
 
-      const existingCodes = new Set(
-        (existingUnits ?? []).map((unit: any) => String(unit.unit_code).trim().toLowerCase())
-      );
-
       // Le unità residenziali iniziali hanno come codice l'interno numerico
       // (1, 2, 3, ...). Non usiamo più "Interno 1", perché il codice deve
       // coincidere con quello utilizzato dall'anagrafica dei condòmini.
