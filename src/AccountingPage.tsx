@@ -995,9 +995,9 @@ function AccountingPage({
         allocation_basis: allocationForm.allocation_basis,
         millesimi,
         amount,
-        paid_amount: paidAmount,
+        paid_amount: editingAllocation ? paidAmount : 0,
         due_date: allocationForm.due_date || null,
-        status: allocationForm.status,
+        status: editingAllocation ? allocationForm.status : "Da pagare",
         notes: allocationForm.notes,
       };
       const query = editingAllocation
@@ -1601,8 +1601,9 @@ function AccountingPage({
             </select>
           </label>
           <div className="form-grid"><label>Base di riparto<input value={allocationForm.allocation_basis} onChange={(e) => setAllocationForm({ ...allocationForm, allocation_basis: e.target.value })} /></label><label>Millesimi<input type="number" step="0.001" value={allocationForm.millesimi} onChange={(e) => setAllocationForm({ ...allocationForm, millesimi: Number(e.target.value) })} /></label></div>
-          <div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={allocationForm.amount} onChange={(e) => setAllocationForm({ ...allocationForm, amount: Number(e.target.value) })} /></label><label>Pagato<input type="number" min="0" step="0.01" value={allocationForm.paid_amount} onChange={(e) => setAllocationForm({ ...allocationForm, paid_amount: Number(e.target.value) })} /></label></div>
-          <div className="form-grid"><label>Scadenza<input type="date" value={allocationForm.due_date} onChange={(e) => setAllocationForm({ ...allocationForm, due_date: e.target.value })} /></label><label>Stato<select value={allocationForm.status} onChange={(e) => setAllocationForm({ ...allocationForm, status: e.target.value })}><option>Da pagare</option><option>Parzialmente pagato</option><option>Pagato</option></select></label></div>
+          <div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={allocationForm.amount} onChange={(e) => setAllocationForm({ ...allocationForm, amount: Number(e.target.value) })} /></label><label>Pagato<input type="number" min="0" step="0.01" value={allocationForm.paid_amount} readOnly disabled /></label></div>
+          <div className="form-grid"><label>Scadenza<input type="date" value={allocationForm.due_date} onChange={(e) => setAllocationForm({ ...allocationForm, due_date: e.target.value })} /></label><label>Stato<select value={allocationForm.status} disabled><option>Da pagare</option><option>Parzialmente pagato</option><option>Pagato</option></select></label></div>
+          <p style={{margin:"6px 0 0",fontSize:13,opacity:.75}}>Il pagamento viene gestito tramite le rate e la funzione <b>Registra pagamento</b>.</p>
           <label>Note<textarea value={allocationForm.notes} onChange={(e) => setAllocationForm({ ...allocationForm, notes: e.target.value })} /></label>
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowAllocationForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
