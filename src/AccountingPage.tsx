@@ -334,13 +334,19 @@ function AccountingPage({
       row.paid += Number(i.paid_amount || 0);
       map.set(i.unit_id, row);
     }
-    return Array.from(map.values()).map((row) => ({
-      ...row,
-      paid: installmentUnits.has(row.unitId) ? row.paid : row.paid,
-      residual: installmentUnits.has(row.unitId)
-        ? Math.max(0,row.installments-row.paid)
-        : Math.max(0,row.allocated-row.paid)
-    })).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
+    return Array.from(map.values()).map((row) => {
+      const installmentPaid = rendicontoInstallments
+        .filter((i) => i.unit_id === row.unitId)
+        .reduce((s,i) => s + Number(i.paid_amount || 0), 0);
+      const paid = installmentUnits.has(row.unitId) ? installmentPaid : row.paid;
+      return {
+        ...row,
+        paid,
+        residual: installmentUnits.has(row.unitId)
+          ? Math.max(0,row.installments-paid)
+          : Math.max(0,row.allocated-paid)
+      };
+    }).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
   }, [rendicontoAllocations, rendicontoInstallments, units]);
 
   const totals = useMemo(() => {
