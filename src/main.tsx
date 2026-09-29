@@ -3613,6 +3613,14 @@ function App() {
           id: String(saved?.id || data.id || ("local-" + makeId())),
         };
         setCondominiumUnits((current) => {
+          // In modifica l'ID dell'unità è stabile anche quando cambia il codice.
+          const existingById = current.find((unit) => String(unit.id) === String(next.id));
+          if (existingById) {
+            return current.map((unit) =>
+              String(unit.id) === String(next.id) ? next : unit
+            );
+          }
+
           const sameCode = current.find((unit) =>
             unit.condominiumId === next.condominiumId &&
             unit.unitCode.trim().toLowerCase() === next.unitCode.trim().toLowerCase()
