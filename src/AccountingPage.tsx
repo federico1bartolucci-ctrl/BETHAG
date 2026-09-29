@@ -1077,22 +1077,25 @@ function AccountingPage({
 
   async function savePayment(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !paymentInstallment || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || Number(paymentForm.amount)<=0) {
-      setError("Inserisci un importo di pagamento maggiore di zero."); return;
+    const paymentAmount = Number(paymentForm.amount);
+    const installmentAmount = Number(paymentInstallment?.amount || 0);
+    const installmentPaid = Number(paymentInstallment?.paid_amount || 0);
+    if (!supabase || !dbCondominiumId || !paymentInstallment || paymentInstallment.condominium_id !== dbCondominiumId || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
-    const residual=Math.max(0,Number(paymentInstallment.amount)-Number(paymentInstallment.paid_amount));
-    if(Number(paymentForm.amount)>residual){
+    const residual=Math.max(0,installmentAmount-installmentPaid);
+    if(paymentAmount>residual){
       setError("Il pagamento non può superare il residuo della rata."); return;
     }
     setSaving(true); setError("");
     try {
       const { error: paymentError } = await supabase.from("condominium_payment_movements").insert({
         workspace_id:workspaceId, condominium_id:dbCondominiumId, installment_id:paymentInstallment.id,
-        payment_date:paymentForm.payment_date, amount:Number(paymentForm.amount), method:paymentForm.method,
+        payment_date:paymentForm.payment_date, amount:paymentAmount, method:paymentForm.method,
         reference:paymentForm.reference, notes:paymentForm.notes
       });
       if(paymentError) throw paymentError;
-      const paid=Number(paymentInstallment.paid_amount)+Number(paymentForm.amount);
+      const paid=installmentPaid+paymentAmount;
       const status=paid>=Number(paymentInstallment.amount) ? "Pagato" : "Parzialmente pagato";
       const { error:updateError }=await supabase.from("condominium_installments").update({paid_amount:paid,status}).eq("id",paymentInstallment.id).eq("workspace_id",workspaceId);
       if(updateError) throw updateError;
