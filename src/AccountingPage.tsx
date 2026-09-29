@@ -608,6 +608,15 @@ function AccountingPage({
       return;
     }
     if (!supabase || !dbCondominiumId) return;
+    if (yearForm.start_date > yearForm.end_date) {
+      setError("La data di inizio esercizio non può essere successiva alla data di fine.");
+      return;
+    }
+    const openingBalance = Number(yearForm.opening_balance);
+    if (!Number.isFinite(openingBalance)) {
+      setError("Il saldo iniziale deve essere numerico.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -615,6 +624,7 @@ function AccountingPage({
         workspace_id: workspaceId,
         condominium_id: dbCondominiumId,
         ...yearForm,
+        opening_balance: openingBalance,
       };
       const { error: saveError } = await supabase
         .from("condominium_fiscal_years")
