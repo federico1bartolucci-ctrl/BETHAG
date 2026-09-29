@@ -140,6 +140,9 @@ function AccountingPage({
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [showMillesimalForm, setShowMillesimalForm] = useState(false);
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentInstallment, setPaymentInstallment] = useState<Installment | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ payment_date:new Date().toISOString().slice(0,10), amount:0, method:"Bonifico", reference:"", notes:"" });
   const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
   const [millesimalValueForm, setMillesimalValueForm] = useState({ table_id:"", unit_id:"", value:0, excluded:false, notes:"" });
   const [millesimalForm, setMillesimalForm] = useState({ name:"Tabella generale", description:"", total_millesimi:1000, active:true, notes:"" });
@@ -659,6 +662,34 @@ function AccountingPage({
     finally{setSaving(false);}
   }
 
+  async function savePayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !paymentInstallment || Number(paymentForm.amount)<=0) {
+      setError("Inserisci un importo di pagamento maggiore di zero."); return;
+    }
+    const residual=Math.max(0,Number(paymentInstallment.amount)-Number(paymentInstallment.paid_amount));
+    if(Number(paymentForm.amount)>residual){
+      setError("Il pagamento non può superare il residuo della rata."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      const { error: paymentError } = await supabase.from("condominium_payment_movements").insert({
+        workspace_id:workspaceId, condominium_id:dbCondominiumId, installment_id:paymentInstallment.id,
+        payment_date:paymentForm.payment_date, amount:Number(paymentForm.amount), method:paymentForm.method,
+        reference:paymentForm.reference, notes:paymentForm.notes
+      });
+      if(paymentError) throw paymentError;
+      const paid=Number(paymentInstallment.paid_amount)+Number(paymentForm.amount);
+      const status=paid>=Number(paymentInstallment.amount) ? "Pagato" : "Parzialmente pagato";
+      const { error:updateError }=await supabase.from("condominium_installments").update({paid_amount:paid,status}).eq("id",paymentInstallment.id).eq("workspace_id",workspaceId);
+      if(updateError) throw updateError;
+      setShowPaymentForm(false); setPaymentInstallment(null);
+      setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
+      flash("Pagamento registrato."); await load();
+    } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
+    finally{setSaving(false);}
+  }
+
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !installmentForm.title.trim() || Number(installmentForm.amount)<=0) {
@@ -921,7 +952,7 @@ function AccountingPage({
       ) : tab === "rate" ? (
         <section className="card">
           <div className="section-heading"><div><h2>Rate e morosità</h2><p>Posizioni individuali, scadenze, pagamenti e residui da incassare.</p></div>{isAdministrator&&dbCondominiumId&&<button className="primary-button" onClick={()=>setShowInstallmentForm(true)}>+ Nuova rata</button>}</div>
-          {scopedInstallments.length===0 ? <p>Nessuna rata registrata.</p> : scopedInstallments.map(i=><article className="row-card" key={i.id}><div><b>{i.title}</b><small>{units.find(u=>u.id===i.unit_id)?.unit_code || "Unità non associata"} · {i.due_date || "senza scadenza"} · {i.status}</small><span>Dovuto {money(i.amount)} · Pagato {money(i.paid_amount)} · Residuo {money(Math.max(0,i.amount-i.paid_amount))}</span>{i.notes&&<small>{i.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_installments",i.id,"la rata")}>×</button>}</article>)}
+          {scopedInstallments.length===0 ? <p>Nessuna rata registrata.</p> : scopedInstallments.map(i=><article className="row-card" key={i.id}><div><b>{i.title}</b><small>{units.find(u=>u.id===i.unit_id)?.unit_code || "Unità non associata"} · {i.due_date || "senza scadenza"} · {i.status}</small><span>Dovuto {money(i.amount)} · Pagato {money(i.paid_amount)} · Residuo {money(Math.max(0,i.amount-i.paid_amount))}</span>{isAdministrator && Number(i.amount)>Number(i.paid_amount) && <button className="secondary-button small" onClick={()=>{setPaymentInstallment(i);setPaymentForm({...paymentForm,amount:Math.max(0,Number(i.amount)-Number(i.paid_amount))});setShowPaymentForm(true)}}>Registra pagamento</button>{i.notes&&<small>{i.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_installments",i.id,"la rata")}>×</button>}</article>)}
         </section>
       ) : tab === "fondi" ? (
         <section className="card">
@@ -1017,6 +1048,8 @@ function AccountingPage({
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowLedgerForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
+
+      {showPaymentForm && paymentInstallment && <div className="modal-backdrop"><form className="modal-card" onSubmit={savePayment}><h2>Registra pagamento</h2><p><b>{paymentInstallment.title}</b><br/>Residuo: {money(Math.max(0,Number(paymentInstallment.amount)-Number(paymentInstallment.paid_amount)))}</p><div className="form-grid"><label>Data<input type="date" required value={paymentForm.payment_date} onChange={e=>setPaymentForm({...paymentForm,payment_date:e.target.value})}/></label><label>Importo<input type="number" min="0.01" step="0.01" required value={paymentForm.amount} onChange={e=>setPaymentForm({...paymentForm,amount:Number(e.target.value)})}/></label></div><label>Metodo<select value={paymentForm.method} onChange={e=>setPaymentForm({...paymentForm,method:e.target.value})}><option>Bonifico</option><option>Addebito</option><option>Assegno</option><option>Contanti</option><option>Altro</option></select></label><label>Riferimento<input value={paymentForm.reference} onChange={e=>setPaymentForm({...paymentForm,reference:e.target.value})}/></label><label>Note<textarea value={paymentForm.notes} onChange={e=>setPaymentForm({...paymentForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowPaymentForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Registra</button></div></form></div>}
 
       {showMillesimalValueForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveMillesimalValue}><h2>Assegna quota millesimale</h2><label>Tabella<select required value={millesimalValueForm.table_id} onChange={e=>setMillesimalValueForm({...millesimalValueForm,table_id:e.target.value})}><option value="">Seleziona</option>{scopedMillesimalTables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><label>Unità<select required value={millesimalValueForm.unit_id} onChange={e=>setMillesimalValueForm({...millesimalValueForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label><label>Millesimi<input type="number" step="0.001" min="0" value={millesimalValueForm.value} onChange={e=>setMillesimalValueForm({...millesimalValueForm,value:Number(e.target.value)})}/></label><label className="check-row"><input type="checkbox" checked={millesimalValueForm.excluded} onChange={e=>setMillesimalValueForm({...millesimalValueForm,excluded:e.target.checked})}/> Unità esclusa dal riparto</label><label>Note<textarea value={millesimalValueForm.notes} onChange={e=>setMillesimalValueForm({...millesimalValueForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowMillesimalValueForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div></form></div>}
 
