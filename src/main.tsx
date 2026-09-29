@@ -3708,7 +3708,6 @@ function App() {
 
       setCondominiumUnits((current) => current.filter((candidate) => candidate.id !== unit.id));
       setSelectedCondominiumUnit((current) => current?.id === unit.id ? null : current);
-      setSelectedUnit((current) => current === unit.id ? null : current);
     } catch (error) {
       console.error("BETHAG condominium unit deletion failed", error);
       alert(
