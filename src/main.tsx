@@ -1811,8 +1811,9 @@ function bethagInstallGlobalFieldRules() {
     const isFiscalCode = /(codice fiscale|fiscal code|codicefiscale)/i.test(meta);
     const isIban = /\biban\b/i.test(meta);
     const isCap = /(cap|codice postale|postal code)/i.test(meta);
-    const isSurname = /(cognome|surname|last name)/i.test(meta);
-    const isFirstName = /^(?:nome|first name|nome e cognome)$/.test(meta.trim()) || /(?:nome referente|nome contatto|nome amministratore|first name)/i.test(meta);
+    const isSurname = /\\b(cognome|surname|last name)\\b/i.test(meta);
+    const isFullName = /(nome e cognome|nome completo|full name)/i.test(meta);
+    const isFirstName = !isFullName && /\\b(nome|first name)\\b/i.test(meta) && !isSurname;
     
     let value = input.value;
     if (numeric) {
@@ -1826,6 +1827,14 @@ function bethagInstallGlobalFieldRules() {
       value = value.replace(/\s/g, "").toLocaleUpperCase("it-IT").slice(0, 34);
     } else if (isSurname) {
       value = value.toLocaleUpperCase("it-IT");
+    } else if (isFullName) {
+      const words = value.trim().split(/\\s+/).filter(Boolean);
+      if (words.length > 1) {
+        const surname = words.pop()!.toLocaleUpperCase("it-IT");
+        value = bethagTitleCase(words.join(" ")) + " " + surname;
+      } else {
+        value = bethagTitleCase(value);
+      }
     } else if (isFirstName) {
       value = bethagTitleCase(value);
     } else {
@@ -1834,8 +1843,8 @@ function bethagInstallGlobalFieldRules() {
 
     if (isFiscalCode) input.maxLength = 16;
     if (isIban) {
-      // IBAN: 34 caratteri al massimo; per gli IBAN italiani il formato è di 27.
-      input.maxLength = /^IT/i.test(value) ? 27 : 34;
+      // BETHAG opera in Italia: l'IBAN italiano è composto da 27 caratteri.
+      input.maxLength = 27;
       input.inputMode = "text";
     }
     if (isCap) { input.maxLength = 5; input.inputMode = "numeric"; }
@@ -1908,7 +1917,7 @@ function bethagInstallErrorDialog() {
   const nativeAlert = window.alert.bind(window);
   window.alert = (message?: unknown) => {
     const text = String(message ?? "");
-    const isError = /@[^\s@]+\\.[^\s@]+/i.test(text) || /\\berrore?\\b|error|impossibile|failed|invalid|non valido|not found|denied|unauthorized/i.test(text);
+    const isError = /@[^\s@]+\.[^\s@]+/i.test(text) || /\\berrore?\\b|error|impossibile|failed|invalid|non valido|not found|denied|unauthorized/i.test(text);
     if (!isError) {
       nativeAlert(text);
       return;
