@@ -519,26 +519,6 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   void existingUnitsWorkspace;
 }
 
-async function reconcileWorkspaceRows(table: string, workspaceId: string, desiredRows: any[]) {
-  if (!supabase) return;
-  const { data: existingRows, error } = await supabase
-    .from(table)
-    .select("id, legacy_id")
-    .eq("workspace_id", workspaceId);
-  if (error) throw error;
-
-  const desiredIds = new Set(desiredRows.map((row: any) => row.legacy_id));
-  const staleRows = (existingRows ?? []).filter((row: any) => !desiredIds.has(row.legacy_id));
-  for (const row of staleRows) {
-    const { error: deleteError } = await supabase
-      .from(table)
-      .delete()
-      .eq("id", row.id)
-      .eq("workspace_id", workspaceId);
-    if (deleteError) throw deleteError;
-  }
-}
-
 async function reconcileCondominiumMembers(condominiumId: string, desiredRows: any[]) {
   if (!supabase) return;
   const { data: existingRows, error } = await supabase
