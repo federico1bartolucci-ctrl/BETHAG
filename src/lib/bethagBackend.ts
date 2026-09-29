@@ -676,6 +676,15 @@ export async function saveCondominiumMember(
       }
     }
 
+    const { data: previousMemberRow, error: previousMemberError } = await supabase
+      .from("condominium_members")
+      .select("id, email, user_id")
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", item.id)
+      .maybeSingle();
+
+    if (previousMemberError) throw previousMemberError;
+
     const { millesimi: _legacyMillesimi, ...memberData } = item ?? {};
     const row = {
       condominium_id: condominium.id,
@@ -697,6 +706,42 @@ export async function saveCondominiumMember(
       .single();
 
     if (error) throw error;
+
+    // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
+    // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
+    // anche user_id come chiavi di collegamento. Non crea mai nuovi accessi:
+    // l'accesso viene creato esclusivamente dal flusso di invito/registrazione.
+    const previousEmail = String(previousMemberRow?.email ?? "").trim().toLowerCase();
+    const nextEmail = String(item.email ?? "").trim();
+
+    if (previousMemberRow?.id) {
+      let portalQuery = supabase
+        .from("portal_access")
+        .update({
+          name: row.name,
+          email: nextEmail || null,
+          apartment: apartment,
+          condominium_id: condominium.id,
+          active: item.active ?? true,
+          user_id: item.userId ?? previousMemberRow.user_id ?? null,
+        })
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id);
+
+      if (previousEmail) {
+        portalQuery = portalQuery.ilike("email", previousEmail);
+      } else if (previousMemberRow.user_id) {
+        portalQuery = portalQuery.eq("user_id", previousMemberRow.user_id);
+      } else {
+        portalQuery = null as any;
+      }
+
+      if (portalQuery) {
+        const { error: portalSyncError } = await portalQuery;
+        if (portalSyncError) throw portalSyncError;
+      }
+    }
+
     return data;
   });
 }
