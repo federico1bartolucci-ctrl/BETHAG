@@ -561,28 +561,63 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     const unitCode = String(item.unitCode ?? "").trim();
     if (!unitCode) throw new Error("Il codice dell'unità è obbligatorio.");
 
+    // Il vincolo di unicità dell'unità è normalizzato su lower(trim(unit_code)).
+    // Non usiamo quindi un upsert con conflict target testuale: Postgres non
+    // può inferire un indice espresso da (condominium_id, unit_code).
+    const { data: existingUnit, error: existingUnitError } = await supabase
+      .from("condominium_units")
+      .select("id")
+      .eq("condominium_id", condominium.id)
+      .ilike("unit_code", unitCode)
+      .maybeSingle();
+
+    if (existingUnitError) throw existingUnitError;
+
+    const unitData = {
+      ...item,
+      unitCode,
+      unitType: item.unitType ?? "Abitazione",
+      cadastralCategory: item.cadastralCategory ?? "",
+      cadastralAutonomous: item.cadastralAutonomous ?? true,
+      millesimi: item.millesimi ?? "",
+      incorporatedInUnitId: item.incorporatedInUnitId ?? null,
+      relationshipToResidentialUnit:
+        item.relationshipToResidentialUnit ??
+        (item.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
+      ownerMode: item.ownerMode ?? "condominium_member",
+      ownerMemberIds: Array.isArray(item.ownerMemberIds) ? item.ownerMemberIds : [],
+      externalOwners: Array.isArray(item.externalOwners) ? item.externalOwners : [],
+      notes: item.notes ?? "",
+      active: item.active ?? true,
+    };
+
+    if (existingUnit?.id) {
+      const { data, error } = await supabase
+        .from("condominium_units")
+        .update({
+          workspace_id: workspaceId,
+          condominium_id: condominium.id,
+          unit_code: unitCode,
+          data: unitData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingUnit.id)
+        .eq("condominium_id", condominium.id)
+        .select("id, unit_code, data")
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
     const { data, error } = await supabase
       .from("condominium_units")
-      .upsert({
+      .insert({
         workspace_id: workspaceId,
         condominium_id: condominium.id,
         unit_code: unitCode,
-        data: {
-          ...item,
-          unitCode,
-          unitType: item.unitType ?? "Abitazione",
-          cadastralCategory: item.cadastralCategory ?? "",
-          cadastralAutonomous: item.cadastralAutonomous ?? true,
-          millesimi: item.millesimi ?? "",
-          incorporatedInUnitId: item.incorporatedInUnitId ?? null,
-          relationshipToResidentialUnit: item.relationshipToResidentialUnit ?? (item.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
-          ownerMode: item.ownerMode ?? "condominium_member",
-          ownerMemberIds: Array.isArray(item.ownerMemberIds) ? item.ownerMemberIds : [],
-          externalOwners: Array.isArray(item.externalOwners) ? item.externalOwners : [],
-          notes: item.notes ?? "",
-          active: item.active ?? true,
-        },
-      }, { onConflict: "condominium_id,unit_code" })
+        data: unitData,
+      })
       .select("id, unit_code, data")
       .single();
 
