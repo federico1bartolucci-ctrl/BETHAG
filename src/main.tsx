@@ -213,7 +213,6 @@ type CondominiumMember = {
   email: string;
   apartment: string;
   role: "Proprietario" | "Inquilino";
-  millesimi: string;
   notes: string;
   active: boolean;
   unitId?: string;
@@ -788,7 +787,6 @@ const initialCondominiumMembers: CondominiumMember[] = [
     email: "mario@example.com",
     apartment: "Interno 4",
     role: "Proprietario",
-    millesimi: "42,50",
     notes: "",
     active: true,
   },
@@ -949,7 +947,7 @@ const emptyActivity: Activity = {
 };
 
 const emptyCondominiumMember: CondominiumMember = {
-  id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", millesimi: "", notes: "", active: true, unitId: "",
+  id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", notes: "", active: true, unitId: "",
 };
 
 const emptyCondominiumRequest: CondominiumRequest = {
@@ -4619,8 +4617,9 @@ function App() {
       return;
     }
 
+    const { millesimi: _legacyMillesimi, ...memberFormData } = condominiumMemberForm as CondominiumMember & { millesimi?: string };
     const data = {
-      ...condominiumMemberForm,
+      ...memberFormData,
       firstName: condominiumMemberForm.firstName.trim(),
       lastName: condominiumMemberForm.lastName.trim(),
       apartment: condominiumMemberForm.apartment.trim(),
@@ -8717,7 +8716,7 @@ function CondominiumDetails(
                 aria-label={`Visualizza il dettaglio di ${member.firstName} ${member.lastName}`}
               >
                 <b>{member.firstName} {member.lastName}</b>
-                <span>{member.apartment} · {member.role} · {member.millesimi || "Millesimi non inseriti"}</span>
+                <span>{member.apartment} · {member.role}</span>
                 <small>{member.phone || "Telefono non inserito"}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</small>
               </button>
               <div className="related-actions">
@@ -8744,7 +8743,6 @@ function CondominiumDetails(
             <Detail label="Nome e cognome" value={`${selectedMemberDetail.firstName} ${selectedMemberDetail.lastName}`} />
             <Detail label="Qualifica" value={selectedMemberDetail.role} />
             <Detail label="Unità abitativa" value={selectedMemberDetail.apartment || "Non associata"} />
-            <Detail label="Millesimi" value={selectedMemberDetail.millesimi || "Non inseriti"} />
             <Detail label="Codice fiscale" value={selectedMemberDetail.fiscalCode || "Non inserito"} />
             <Detail label="Telefono" value={selectedMemberDetail.phone || "Non inserito"} />
             <Detail label="E-mail" value={selectedMemberDetail.email || "Non inserita"} />
@@ -13949,7 +13947,6 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
         I millesimi sono gestiti sull'unità immobiliare e non sul singolo condòmino.
       </div>
       <SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
-      <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} />
       <Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} />
       <Field label="Telefono" value={value.phone} onChange={(v: string) => set("phone", v)} />
       <Field label="E-mail" value={value.email} onChange={(v: string) => set("email", v)} />
