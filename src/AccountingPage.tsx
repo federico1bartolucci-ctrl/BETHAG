@@ -891,6 +891,12 @@ function AccountingPage({
       setError("Non ci sono ripartizioni valide per la spesa selezionata.");
       return;
     }
+    const allocatedTotal = selectedAllocations.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const expenseTotal = Number(selectedExpense.amount || 0);
+    if (Math.abs(expenseTotal - allocatedTotal) > 0.005) {
+      setError("Non è possibile generare le rate: la ripartizione della spesa non è ancora quadrata.");
+      return;
+    }
     if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
     if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata? Le rate già identiche non verranno duplicate.")) return;
     setSaving(true);
