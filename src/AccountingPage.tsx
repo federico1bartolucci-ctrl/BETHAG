@@ -1098,34 +1098,33 @@ function AccountingPage({
   async function savePayment(e: React.FormEvent) {
     e.preventDefault();
     const paymentAmount = Number(paymentForm.amount);
-    const installmentAmount = Number(paymentInstallment?.amount || 0);
-    const installmentPaid = Number(paymentInstallment?.paid_amount || 0);
     if (!supabase || !dbCondominiumId || !paymentInstallment || paymentInstallment.condominium_id !== dbCondominiumId || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
       setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
-    const residual=Math.max(0,installmentAmount-installmentPaid);
+    const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
     if(paymentAmount>residual){
       setError("Il pagamento non può superare il residuo della rata."); return;
     }
     setSaving(true); setError("");
     try {
-      const { error: paymentError } = await supabase.from("condominium_payment_movements").insert({
-        workspace_id:workspaceId, condominium_id:dbCondominiumId, installment_id:paymentInstallment.id,
-        payment_date:paymentForm.payment_date, amount:paymentAmount, method:paymentForm.method,
-        reference:paymentForm.reference, notes:paymentForm.notes
+      const { data, error: paymentError } = await supabase.rpc("register_condominium_installment_payment", {
+        p_workspace_id: workspaceId,
+        p_condominium_id: dbCondominiumId,
+        p_installment_id: paymentInstallment.id,
+        p_payment_date: paymentForm.payment_date,
+        p_amount: paymentAmount,
+        p_method: paymentForm.method,
+        p_reference: paymentForm.reference,
+        p_notes: paymentForm.notes
       });
       if(paymentError) throw paymentError;
-      const paid=installmentPaid+paymentAmount;
-      const status=paid>=Number(paymentInstallment.amount) ? "Pagato" : "Parzialmente pagato";
-      const { error:updateError }=await supabase.from("condominium_installments").update({paid_amount:paid,status}).eq("id",paymentInstallment.id).eq("workspace_id",workspaceId);
-      if(updateError) throw updateError;
       setShowPaymentForm(false); setPaymentInstallment(null);
       setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
-      flash("Pagamento registrato."); await load();
+      flash("Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
+      await load();
     } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
     finally{setSaving(false);}
   }
-
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
     const amount = Number(installmentForm.amount);
