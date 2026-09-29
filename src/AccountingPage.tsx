@@ -677,6 +677,7 @@ function AccountingPage({
         workspace_id: workspaceId,
         condominium_id: dbCondominiumId,
         ledger_entry_id: allocationForm.ledger_entry_id,
+        allocation_table_id: null,
         unit_id: allocationForm.unit_id,
         member_id: null,
         allocation_basis: allocationForm.allocation_basis,
