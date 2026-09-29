@@ -154,6 +154,8 @@ function AccountingPage({
   const [showAutoAllocationForm, setShowAutoAllocationForm] = useState(false);
   const [autoAllocationForm, setAutoAllocationForm] = useState({ ledger_entry_id:"", table_id:"", due_date:"" });
   const [autoPreview, setAutoPreview] = useState<AllocationPreviewRow[]>([]);
+  const [showInstallmentsFromAllocation, setShowInstallmentsFromAllocation] = useState(false);
+  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"" });
   const [allocationForm, setAllocationForm] = useState({
     ledger_entry_id: "",
     unit_id: "",
@@ -658,6 +660,34 @@ function AccountingPage({
       await load();
     } catch(e:any) {
       setError(e?.message || "Impossibile generare il riparto automatico.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function generateInstallmentsFromAllocation() {
+    if (!supabase || !dbCondominiumId || !allocationInstallmentForm.ledger_entry_id || !allocationInstallmentForm.title.trim() || !allocationInstallmentForm.due_date) {
+      setError("Indica spesa, titolo e scadenza delle rate.");
+      return;
+    }
+    if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata? Le rate già identiche non verranno duplicate.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { data, error: rpcError } = await supabase.rpc("generate_installments_from_allocations", {
+        p_workspace_id:workspaceId,
+        p_condominium_id:dbCondominiumId,
+        p_ledger_entry_id:allocationInstallmentForm.ledger_entry_id,
+        p_title:allocationInstallmentForm.title.trim(),
+        p_due_date:allocationInstallmentForm.due_date,
+        p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null
+      });
+      if (rpcError) throw rpcError;
+      setShowInstallmentsFromAllocation(false);
+      flash("Rate generate: " + Number(data || 0) + ".");
+      await load();
+    } catch(e:any) {
+      setError(e?.message || "Impossibile generare le rate.");
     } finally {
       setSaving(false);
     }
