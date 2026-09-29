@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
+import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -1811,9 +1812,9 @@ function bethagInstallGlobalFieldRules() {
     const isFiscalCode = /(codice fiscale|fiscal code|codicefiscale)/i.test(meta);
     const isIban = /\biban\b/i.test(meta);
     const isCap = /(cap|codice postale|postal code)/i.test(meta);
-    const isSurname = /\\b(cognome|surname|last name)\\b/i.test(meta);
+    const isSurname = /\b(cognome|surname|last name)\b/i.test(meta);
     const isFullName = /(nome e cognome|nome completo|full name)/i.test(meta);
-    const isFirstName = !isFullName && /\\b(nome|first name)\\b/i.test(meta) && !isSurname;
+    const isFirstName = !isFullName && /\b(nome|first name)\b/i.test(meta) && !isSurname;
     
     let value = input.value;
     if (numeric) {
