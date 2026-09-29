@@ -222,10 +222,20 @@ function enqueueBackendSync<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function syncBackendStateNow(workspaceId: string, state: BackendState) {
+async function syncBackendStateNow(
+  workspaceId: string,
+  state: BackendState,
+  allowedModules: string[] | null = null
+) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const condominiumRows = state.condominiums ?? [];
+  const canSyncModule = (module: string) =>
+    allowedModules === null || allowedModules.includes(module);
+
+  const canSyncCondomini = canSyncModule("condomini");
+  const canSyncPortal = canSyncModule("portale");
+
+  const condominiumRows = canSyncCondomini ? (state.condominiums ?? []) : [];
   const { data: existingCondominiums, error: condominiumError } = await supabase
     .from("condominiums")
     .select("id, legacy_id, name, address, city, postal_code, province, data")
@@ -296,37 +306,37 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
   const rowsByTable: Array<[string, any[]]> = [
-    ["documents", (state.documents ?? []).map((item: any) => ({
+    canSyncModule("documenti") && ["documents", (state.documents ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.name, category: item.category, status: item.publication, data: item,
-    }))],
-    ["deadlines", (state.deadlines ?? []).map((item: any) => ({
+    }))] : null,
+    canSyncModule("scadenze") && ["deadlines", (state.deadlines ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, due_date: item.dueDate || null, status: item.status, data: item,
-    }))],
-    ["assemblies", (state.assemblies ?? []).map((item: any) => ({
+    }))] : null,
+    canSyncModule("assemblee") && ["assemblies", (state.assemblies ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, assembly_date: item.date ? new Date(item.date).toISOString() : null, status: item.status, data: item,
-    }))],
-    ["suppliers", (state.suppliers ?? []).map((item: any) => ({
+    }))] : null,
+    canSyncModule("fornitori") && ["suppliers", (state.suppliers ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       name: item.name, category: item.service, data: item,
-    }))],
-    ["activities", (state.activities ?? []).map((item: any) => ({
+    }))] : null,
+    canSyncModule("attivita") && ["activities", (state.activities ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null, status: item.status, data: item,
-    }))],
-    ["communications", (state.communications ?? []).map((item: any) => ({
+    }))] : null,
+    canSyncModule("comunicazioni") && ["communications", (state.communications ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
-    }))],
-  ];
+    }))] : null,
+  ].filter((entry): entry is [string, any[]] => Boolean(entry));
 
   for (const [table, rows] of rowsByTable) {
     if (rows.length) await upsertRows(table, rows);
   }
 
-  const collaboratorRows = (state.collaborators ?? []).map((item: any) => ({
+  const collaboratorRows = allowedModules === null ? (state.collaborators ?? []).map((item: any) => ({
     workspace_id: workspaceId,
     user_id: item.userId ?? null,
     role: "collaborator",
@@ -336,9 +346,9 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
     data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
   })).filter((row: any) => row.user_id);
 
-  if (collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
+  if (allowedModules === null && collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
 
-  const portalRows = (state.portalMembers ?? []).map((item: any) => ({
+  const portalRows = canSyncPortal ? (state.portalMembers ?? []).map((item: any) => ({
     workspace_id: workspaceId,
     legacy_id: item.id,
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
@@ -360,6 +370,8 @@ async function syncBackendStateNow(workspaceId: string, state: BackendState) {
   // Anche i collaboratori sono persistenti: la sincronizzazione automatica
   // può creare/aggiornare record ma non eliminarli in base a uno stato locale
   // potenzialmente incompleto. La cancellazione resta un'azione esplicita.
+
+  if (!canSyncCondomini) return;
 
   const unitRowsByKey = new Map<string, any>();
 
@@ -846,8 +858,14 @@ export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
   return data as string;
 }
 
-export function syncBackendState(workspaceId: string, state: BackendState) {
-  return enqueueBackendSync(() => syncBackendStateNow(workspaceId, state));
+export function syncBackendState(
+  workspaceId: string,
+  state: BackendState,
+  allowedModules: string[] | null = null
+) {
+  return enqueueBackendSync(() =>
+    syncBackendStateNow(workspaceId, state, allowedModules)
+  );
 }
 
 export async function deleteWorkspaceRecord(
