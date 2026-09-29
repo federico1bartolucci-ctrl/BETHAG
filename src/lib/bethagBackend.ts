@@ -336,15 +336,18 @@ async function syncBackendStateNow(
     if (rows.length) await upsertRows(table, rows);
   }
 
-  const collaboratorRows = allowedModules === null ? (state.collaborators ?? []).map((item: any) => ({
-    workspace_id: workspaceId,
-    user_id: item.userId ?? null,
-    role: "collaborator",
-    active: item.status !== "Disattivato",
-    permissions: item.permissions ?? [],
-    legacy_id: item.id,
-    data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
-  })).filter((row: any) => row.user_id);
+  const collaboratorRows =
+    allowedModules === null
+      ? (state.collaborators ?? []).map((item: any) => ({
+          workspace_id: workspaceId,
+          user_id: item.userId ?? null,
+          role: "collaborator",
+          active: item.status !== "Disattivato",
+          permissions: item.permissions ?? [],
+          legacy_id: item.id,
+          data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
+        })).filter((row: any) => row.user_id)
+      : [];
 
   if (allowedModules === null && collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
 
