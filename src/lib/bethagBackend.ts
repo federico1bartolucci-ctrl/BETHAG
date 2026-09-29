@@ -564,14 +564,17 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // Il vincolo di unicità dell'unità è normalizzato su lower(trim(unit_code)).
     // Non usiamo quindi un upsert con conflict target testuale: Postgres non
     // può inferire un indice espresso da (condominium_id, unit_code).
-    const { data: existingUnit, error: existingUnitError } = await supabase
+    const { data: existingUnits, error: existingUnitError } = await supabase
       .from("condominium_units")
-      .select("id")
-      .eq("condominium_id", condominium.id)
-      .ilike("unit_code", unitCode)
-      .maybeSingle();
+      .select("id, unit_code")
+      .eq("condominium_id", condominium.id);
 
     if (existingUnitError) throw existingUnitError;
+
+    const normalizedUnitCode = unitCode.toLowerCase();
+    const existingUnit = (existingUnits ?? []).find(
+      (unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === normalizedUnitCode
+    );
 
     const unitData = {
       ...item,
