@@ -84,7 +84,7 @@ type Allocation = {
   notes: string;
 };
 
-type UnitOption = { id: string; unit_code: string; data: any };
+type UnitOption = { id: string; condominium_id: string; unit_code: string; data: any };
 
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "fondi" | "fiscale" | "contenzioso";
 
@@ -313,7 +313,7 @@ function AccountingPage({
             .order("due_date"),
           supabase
             .from("condominium_units")
-            .select("id, unit_code, data")
+            .select("id, condominium_id, unit_code, data")
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
         ]);
@@ -623,8 +623,6 @@ function AccountingPage({
     }
     setShowLedgerForm(true);
   }
-
-  const actionDisabled = !isAdministrator || selectedCondominiumId === "all";
 
   return (
     <>
