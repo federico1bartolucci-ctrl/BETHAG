@@ -4,7 +4,7 @@ import { supabase } from "./lib/supabase";
 type Condominium={id:number;name:string};
 type RegisterItem={id:string;condominium_id:string;item_type:string;category:string;title:string;location:string;responsible:string;expiry_date:string|null;status:string;notes:string;supplier_id:string|null;estimated_amount:number};
 type Supplier={id:string;condominium_id:string;business_name:string;contact_name:string;fiscal_code:string;vat_number:string;email:string;phone:string;category:string;contract_start:string|null;contract_end:string|null;notes:string};
-type Work={id:string;condominium_id:string;title:string;category:string;description:string;status:string;priority:string;supplier_id:string|null;register_item_id:string|null;start_date:string|null;expected_end_date:string|null;actual_end_date:string|null;estimated_amount:number;approved_amount:number;actual_amount:number;notes:string}; type DocumentItem={id:number;name:string;category:string;date:string;size:string;notes:string};
+type Work={id:string;condominium_id:string;title:string;category:string;description:string;status:string;priority:string;supplier_id:string|null;register_item_id:string|null;start_date:string|null;expected_end_date:string|null;actual_end_date:string|null;estimated_amount:number;approved_amount:number;actual_amount:number;notes:string}; type DocumentItem={id:number;name:string;condominiumId:number;category:string;date:string;size:string;notes:string};
 
 export default function RegisterPage({workspaceId,condominiums,isAdministrator=false}:{workspaceId:string;condominiums:Condominium[];isAdministrator?:boolean}){
  const [selected,setSelected]=useState<number|"all">(condominiums[0]?.id??"all");
