@@ -13902,9 +13902,7 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
   const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
   const unitSelection = existingApartments.includes(value.apartment)
     ? value.apartment
-    : value.apartment
-      ? "__new__"
-      : "";
+    : "";
   return <form onSubmit={onSubmit}>
     <ModalTitle title={editing ? "Modifica condòmino" : "Nuovo condòmino"} />
     <div className="form-grid">
@@ -13917,13 +13915,9 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
           if (e.target.value === "__new__") setValue({ ...value, apartment: "", unitId: "" });
           else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\s+/g, "-")}` });
         }}>
-          <option value="">Seleziona un'unità esistente oppure creane una nuova</option>
+          <option value="">Seleziona un'unità esistente</option>
           {existingApartments.map((apartment) => <option key={apartment} value={apartment}>{apartment}</option>)}
-          <option value="__new__">+ Nuova unità…</option>
         </select>
-        {!existingApartments.includes(value.apartment) && (
-          <input style={{ marginTop: 8 }} value={value.apartment} autoFocus={Boolean(value.apartment)} placeholder="Es. Interno 4" onChange={(e) => setValue({ ...value, apartment: e.target.value, unitId: "" })} />
-        )}
         {apartmentAssociates.length > 0 && (
           <div className="form-help" style={{ marginTop: 8 }}>
             <strong>Già associati:</strong>{" "}
