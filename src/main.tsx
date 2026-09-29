@@ -1197,10 +1197,12 @@ function PublicHome({
   onLogin,
   onRegisterAdmin,
   onRegisterResident,
+  onResetPassword,
 }: {
-  onLogin: (role: PublicRole, email: string, password: string) => void;
+  onLogin: (role: PublicRole, email: string, password: string) => Promise<void> | void;
   onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
   onRegisterResident: (fullName: string, email: string, fiscalCode: string, condominiumName: string, password: string) => Promise<void>;
+  onResetPassword: (email: string) => Promise<void>;
 }) {
   const [showLogin, setShowLogin] = useState(false);
 
@@ -1211,6 +1213,7 @@ function PublicHome({
         onLogin={onLogin}
         onRegisterAdmin={onRegisterAdmin}
         onRegisterResident={onRegisterResident}
+        onResetPassword={onResetPassword}
       />
     );
   }
@@ -1274,11 +1277,13 @@ function LoginPage({
   onLogin,
   onRegisterAdmin,
   onRegisterResident,
+  onResetPassword,
 }: {
   onBack: () => void;
   onLogin: (role: PublicRole, email: string, password: string) => Promise<void> | void;
   onRegisterAdmin: (fullName: string, email: string, password: string) => Promise<void>;
   onRegisterResident: (fullName: string, email: string, fiscalCode: string, condominiumName: string, password: string) => Promise<void>;
+  onResetPassword: (email: string) => Promise<void>;
 }) {
   const [role, setRole] = useState<PublicRole>("admin");
   const [email, setEmail] = useState("");
@@ -1287,7 +1292,10 @@ function LoginPage({
   const [fiscalCode, setFiscalCode] = useState("");
   const [condominiumName, setCondominiumName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [recoverySent, setRecoverySent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const roles: Array<{ id: PublicRole; title: string; description: string }> = [
@@ -1300,8 +1308,26 @@ function LoginPage({
     event.preventDefault();
     if (submitting) return;
 
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim()) {
+      setError("Inserisci l'indirizzo e-mail.");
+      return;
+    }
+    if (!recoveryMode && !password.trim()) {
       setError("Inserisci e-mail e password per continuare.");
+      return;
+    }
+    if (recoveryMode) {
+      setError("");
+      setSubmitting(true);
+      try {
+        await onResetPassword(email.trim());
+        setRecoverySent(true);
+      } catch (resetError) {
+        console.error("BETHAG password recovery failed", resetError);
+        setError(resetError instanceof Error ? resetError.message : "Impossibile inviare il link di recupero.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -1332,7 +1358,11 @@ function LoginPage({
       }
     } catch (submitError) {
       console.error("BETHAG authentication action failed", submitError);
-      setError("ERRORE");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Operazione non completata."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1346,14 +1376,16 @@ function LoginPage({
           <button className="secondary-button" onClick={onBack}>← Indietro</button>
         </div>
 
-        <h1>{registerMode ? "Registrazione nuovo utente" : "Accedi a BETHAG"}</h1>
+        <h1>{recoveryMode ? "Recupera password" : registerMode ? "Registrazione nuovo utente" : "Accedi a BETHAG"}</h1>
         <p className="login-intro">
-          {registerMode
-            ? "Per i condòmini BETHAG verifica prima l'anagrafica inserita dall'amministratore."
-            : "Seleziona il profilo con cui vuoi entrare nella piattaforma."}
+          {recoveryMode
+            ? "Inserisci l'e-mail del tuo account. Riceverai un link per impostare una nuova password."
+            : registerMode
+              ? "Per i condòmini BETHAG verifica prima l'anagrafica inserita dall'amministratore."
+              : "Seleziona il profilo con cui vuoi entrare nella piattaforma."}
         </p>
 
-        <div className="login-role-grid">
+        {!recoveryMode && <div className="login-role-grid">
           {roles.map((item) => (
             <button
               key={item.id}
@@ -1364,14 +1396,14 @@ function LoginPage({
               {item.title}
             </button>
           ))}
-        </div>
+        </div>}
 
-        <div className="login-role-description">
+        {!recoveryMode && <div className="login-role-description">
           {roles.find((item) => item.id === role)?.description}
-        </div>
+        </div>}
 
         <form onSubmit={submit}>
-          {registerMode && (
+          {!recoveryMode && registerMode && (
             <>
               <label>Nome e cognome</label>
               <input value={fullName} onChange={(event) => setFullName(event.target.value)} type="text" placeholder="Mario Rossi" autoComplete="name" />
@@ -1391,33 +1423,41 @@ function LoginPage({
           <label>E-mail</label>
           <input value={email} onChange={(event) => setEmail(event.target.value.toLocaleLowerCase("it-IT").replace(/\s/g, ""))} type="email" placeholder="nome@esempio.it" autoComplete="email" />
 
-          <label>Password</label>
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="••••••••" autoComplete={registerMode ? "new-password" : "current-password"} />
+          {!recoveryMode && <>
+            <label>Password</label>
+            <div className="password-field-wrap">
+              <input value={password} onChange={(event) => setPassword(event.target.value)} type={showPassword ? "text" : "password"} placeholder="••••••••" autoComplete={registerMode ? "new-password" : "current-password"} />
+              <button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Nascondi password" : "Mostra password"} title={showPassword ? "Nascondi password" : "Mostra password"}>
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </>}
 
-          {registerMode && role === "resident" && (
+          {!recoveryMode && registerMode && role === "resident" && (
             <small className="login-note">
               Se esiste un profilo con la stessa e-mail e dati anagrafici, BETHAG lo collega automaticamente al relativo condominio dopo la verifica dell'e-mail. In caso contrario la richiesta passa all'amministratore.
             </small>
           )}
 
-          {error && <div className="login-error" role="alert"><strong>ERRORE</strong></div>}
-
+          {recoverySent && !error && <div className="login-success" role="status">Se l'e-mail è associata a un account BETHAG, abbiamo inviato il link per reimpostare la password.</div>}
+          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>}
           <button className="primary-button login-submit" type="submit" disabled={submitting} aria-busy={submitting}>
-            {submitting ? "Operazione in corso…" : registerMode ? (role === "resident" ? "Registrati come condòmino" : "Crea account amministratore") : "Accedi"}
+            {submitting ? "Operazione in corso…" : recoveryMode ? "Invia link di recupero" : registerMode ? (role === "resident" ? "Registrati come condòmino" : "Crea account amministratore") : "Accedi"}
           </button>
         </form>
-
-        {supabaseConfigured && (
-          <button
-            type="button"
-            className="secondary-button login-register-toggle"
-            onClick={() => {
-              setRegisterMode((current) => !current);
-              setRole("admin");
-              setError("");
-            }}
-          >
+        {!recoveryMode && !registerMode && supabaseConfigured && (
+          <button type="button" className="login-forgot-button" onClick={() => { setRecoveryMode(true); setRecoverySent(false); setError(""); setShowPassword(false); }}>
+            Password dimenticata?
+          </button>
+        )}
+        {supabaseConfigured && !recoveryMode && (
+          <button type="button" className="secondary-button login-register-toggle" onClick={() => { setRegisterMode((current) => !current); setRole("admin"); setError(""); setRecoverySent(false); }}>
             {registerMode ? "Ho già un account: accedi" : "Registrazione nuovo utente"}
+          </button>
+        )}
+        {recoveryMode && (
+          <button type="button" className="secondary-button login-register-toggle" onClick={() => { setRecoveryMode(false); setRecoverySent(false); setError(""); }}>
+            ← Torna all'accesso
           </button>
         )}
 
@@ -2399,8 +2439,7 @@ function App() {
       });
 
       if (error || !data.user) {
-        alert("ERRORE");
-        return;
+        throw new Error(error?.message || "Autenticazione non riuscita. Controlla e-mail e password.");
       }
 
       try {
@@ -2515,6 +2554,13 @@ function App() {
     localStorage.setItem(KEYS.session, JSON.stringify(role));
     localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
     setPage("homepage");
+  };
+
+  const resetPassword = async (email: string) => {
+    if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
+    const redirectTo = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin).toString();
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (error) throw new Error(error.message || "Impossibile inviare il link di recupero password.");
   };
 
   const completePasswordSetup = async (password: string) => {
@@ -2708,7 +2754,8 @@ function App() {
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") setRequiresPasswordSetup(true);
       window.setTimeout(() => {
         void applySupabaseSession(session);
       }, 0);
@@ -5477,7 +5524,7 @@ function App() {
     return (
       <>
         <style>{styles}</style>
-        <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} onRegisterResident={handleRegisterResident} />
+        <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} onRegisterResident={handleRegisterResident} onResetPassword={resetPassword} />
       </>
     );
   }
@@ -16454,6 +16501,11 @@ input:focus,textarea:focus,select:focus{
 .login-card label{display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:7px}
 .login-card input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #dbe3ef;border-radius:11px;margin-bottom:13px}
 .login-note{display:block;margin-top:-4px;color:#64748b;font-size:11px;line-height:1.4}
+.password-field-wrap{position:relative;display:flex;align-items:center;}
+.password-field-wrap input{width:100%;padding-right:48px;}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:6px;line-height:1;cursor:pointer;}
+.login-forgot-button{display:block;width:100%;margin:10px 0 0;border:0;background:transparent;color:#4f46e5;font-weight:700;cursor:pointer;}
+.login-success{margin:12px 0;padding:10px 12px;border-radius:10px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;font-size:13px;}
 .login-error{margin-top:15px;padding:16px 14px;border:2px solid #b42318;border-radius:12px;background:#fff1f2;color:#b42318;font-size:22px;font-weight:900;letter-spacing:.08em;text-align:center;text-transform:uppercase}
 .login-submit{width:100%;margin-top:18px}
 .login-disclaimer{margin:18px 0 0;color:#94a3b8;font-size:10px;line-height:1.45}
