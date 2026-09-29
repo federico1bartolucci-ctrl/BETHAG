@@ -1719,9 +1719,131 @@ function ResidentPortalView({
    APP
    ========================================================= */
 
+function bethagFieldMeta(input: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
+  const label = input.closest("label")?.textContent || "";
+  return [input.name, input.id, input.placeholder, input.getAttribute("aria-label"), label]
+    .filter(Boolean).join(" ").toLowerCase();
+}
+
+function bethagTitleCase(value: string): string {
+  return value.toLocaleLowerCase("it-IT").replace(/(^|[\s'’-])([a-zà-öø-ÿ])/giu, (_m, prefix, letter) => prefix + letter.toLocaleUpperCase("it-IT"));
+}
+
+function bethagSentenceCase(value: string): string {
+  const trimmed = value.replace(/\s+/g, " ").trimStart();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toLocaleUpperCase("it-IT") + trimmed.slice(1);
+}
+
+function bethagSetNativeInputValue(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const proto = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
+  descriptor?.set?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function bethagIsNumericField(meta: string, input: HTMLInputElement): boolean {
+  if (input.type === "number") return true;
+  return /(cap|codice postale|telefono|cellulare|numero civico|civico|quantità|quantita|importo|premio|franchigia|millesimi|percentuale|quota|numero|progressivo|anno|giorni|ore|metri|superficie|prezzo|totale)/i.test(meta);
+}
+
+function bethagInstallGlobalFieldRules() {
+  const timers = new WeakMap<HTMLInputElement, number>();
+
+  const normalize = (input: HTMLInputElement | HTMLTextAreaElement) => {
+    const meta = bethagFieldMeta(input);
+    if (!meta || input.type === "password" || input.type === "file" || input.type === "url" || input.type === "date" || input.type === "time" || input.type === "datetime-local") return;
+
+    const numeric = input instanceof HTMLInputElement && bethagIsNumericField(meta, input);
+    const isEmail = input.type === "email" || /(e-mail|email|posta elettronica)/i.test(meta);
+    const isFiscalCode = /(codice fiscale|fiscal code|codicefiscale)/i.test(meta);
+    const isIban = /\biban\b/i.test(meta);
+    const isCap = /(cap|codice postale|postal code)/i.test(meta);
+    const isSurname = /(cognome|surname|last name)/i.test(meta);
+    const isFirstName = /^(?:nome|first name|nome e cognome)$/.test(meta.trim()) || /(?:nome referente|nome contatto|nome amministratore|first name)/i.test(meta);
+    
+    let value = input.value;
+    if (numeric) {
+      value = value.replace(/[^0-9.,-]/g, "");
+      if (isCap) value = value.replace(/[^0-9]/g, "").slice(0, 5);
+    } else if (isEmail) {
+      value = value.toLocaleLowerCase("it-IT").trim();
+    } else if (isFiscalCode) {
+      value = value.replace(/\s/g, "").toLocaleUpperCase("it-IT").slice(0, 16);
+    } else if (isIban) {
+      value = value.replace(/\s/g, "").toLocaleUpperCase("it-IT").slice(0, 34);
+    } else if (isSurname) {
+      value = value.toLocaleUpperCase("it-IT");
+    } else if (isFirstName) {
+      value = bethagTitleCase(value);
+    } else {
+      value = bethagSentenceCase(value);
+    }
+
+    if (isFiscalCode) input.maxLength = 16;
+    if (isIban) input.maxLength = 34;
+    if (isCap) { input.maxLength = 5; input.inputMode = "numeric"; }
+
+    if (numeric) input.inputMode = "decimal";
+
+    if (value !== input.value) bethagSetNativeInputValue(input, value);
+
+    if (isCap && value.length === 5) {
+      const previous = timers.get(input);
+      if (previous) window.clearTimeout(previous);
+      const timer = window.setTimeout(async () => {
+        try {
+          const response = await fetch("https://api.zippopotam.us/IT/" + encodeURIComponent(value));
+          if (!response.ok) return;
+          const data = await response.json();
+          const place = Array.isArray(data.places) ? data.places[0] : null;
+          if (!place) return;
+          const scope = input.closest("form") || input.closest(".modal") || input.closest(".modal-content") || document.body;
+          const fields = Array.from(scope.querySelectorAll<HTMLInputElement>("input, textarea"));
+          const city = fields.find((el) => /(comune|città|citta|city)/i.test(bethagFieldMeta(el)));
+          const province = fields.find((el) => /(provincia|province)/i.test(bethagFieldMeta(el)));
+          if (city && place["place name"]) bethagSetNativeInputValue(city, bethagSentenceCase(String(place["place name"])));
+          if (province && place["state abbreviation"]) bethagSetNativeInputValue(province, String(place["state abbreviation"]).toLocaleUpperCase("it-IT").slice(0, 2));
+        } catch {
+          // Il CAP resta comunque utilizzabile anche se il servizio di lookup non risponde.
+        }
+      }, 250);
+      timers.set(input, timer);
+    }
+  };
+
+  const onInput = (event: Event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) normalize(target);
+  };
+  const onBlur = (event: Event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) normalize(target);
+  };
+  const onKeyDown = (event: KeyboardEvent) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const meta = bethagFieldMeta(target);
+    if (!bethagIsNumericField(meta, target)) return;
+    if (["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Home","End","Enter","Escape","." ,",","-"].includes(event.key) || event.ctrlKey || event.metaKey) return;
+    if (!/^[0-9]$/.test(event.key)) event.preventDefault();
+  };
+
+  document.addEventListener("input", onInput, true);
+  document.addEventListener("blur", onBlur, true);
+  document.addEventListener("keydown", onKeyDown, true);
+  return () => {
+    document.removeEventListener("input", onInput, true);
+    document.removeEventListener("blur", onBlur, true);
+    document.removeEventListener("keydown", onKeyDown, true);
+  };
+}
+
 function App() {
   const [page, setPage] =
     useState<Page>(() => load<Page>(KEYS.page, "homepage"));
+
+  useEffect(() => bethagInstallGlobalFieldRules(), []);
 
   useEffect(() => {
     // KEYS.* viene letto tramite load(), che usa JSON.parse():
