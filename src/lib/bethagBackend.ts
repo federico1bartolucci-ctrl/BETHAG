@@ -803,6 +803,29 @@ export function syncBackendState(workspaceId: string, state: BackendState) {
   return enqueueBackendSync(() => syncBackendStateNow(workspaceId, state));
 }
 
+export async function deleteWorkspaceRecord(
+  workspaceId: string,
+  table: "documents" | "deadlines" | "assemblies" | "suppliers" | "activities" | "communications",
+  legacyId: number
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const allowedTables = ["documents", "deadlines", "assemblies", "suppliers", "activities", "communications"] as const;
+    if (!allowedTables.includes(table)) {
+      throw new Error("Tabella non autorizzata.");
+    }
+
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", legacyId);
+
+    if (error) throw error;
+  });
+}
+
 export async function deleteCondominium(workspaceId: string, legacyId: number) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
