@@ -272,6 +272,10 @@ function AccountingPage({
 
   const [rendicontoYearId, setRendicontoYearId] = useState<string>("all");
 
+  useEffect(() => {
+    setRendicontoYearId("all");
+  }, [selectedCondominiumId]);
+
   const rendicontoYear = useMemo(
     () => scopedYears.find((y) => y.id === rendicontoYearId) ?? null,
     [scopedYears, rendicontoYearId]
