@@ -1506,6 +1506,7 @@ function AccountingPage({
         </form></div>
       )}
     </>
+  </>
   );
 }
 
