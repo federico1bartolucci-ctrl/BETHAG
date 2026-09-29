@@ -1215,10 +1215,10 @@ function AccountingPage({
           <article className="card">
             <h2>Controllo di quadratura</h2>
             <p>Verifica automatica delle principali corrispondenze contabili del periodo selezionato.</p>
-            <div className="permission-box"><b>Registro → Ripartizioni</b><span>Spese {money(quadratura.expenses) · Ripartito {money(quadratura.allocated) · Differenza {money(quadratura.allocationGap)</span></div>
-            <div className="permission-box"><b>Ripartizioni → Rate</b><span>Ripartito {money(quadratura.allocated) · Rate {money(quadratura.installments) · Differenza {money(quadratura.installmentGap)</span></div>
-            <div className="permission-box"><b>Rate → Incassi</b><span>Dovuto {money(quadratura.installments) · Incassato {money(quadratura.paidInstallments) · Residuo {money(quadratura.collectionGap)</span></div>
-            <div className="permission-box"><b>Preventivo → Consuntivo</b><span>Preventivo {money(quadratura.budget) · Consuntivo {money(quadratura.expenses) · Scostamento {money(quadratura.budgetVariance)</span></div>
+            <div className="permission-box"><b>Registro → Ripartizioni</b><span>Spese {money(quadratura.expenses)} · Ripartito {money(quadratura.allocated)} · Differenza {money(quadratura.allocationGap)}</span></div>
+            <div className="permission-box"><b>Ripartizioni → Rate</b><span>Ripartito {money(quadratura.allocated)} · Rate {money(quadratura.installments)} · Differenza {money(quadratura.installmentGap)}</span></div>
+            <div className="permission-box"><b>Rate → Incassi</b><span>Dovuto {money(quadratura.installments)} · Incassato {money(quadratura.paidInstallments)} · Residuo {money(quadratura.collectionGap)}</span></div>
+            <div className="permission-box"><b>Preventivo → Consuntivo</b><span>Preventivo {money(quadratura.budget)} · Consuntivo {money(quadratura.expenses)} · Scostamento {money(quadratura.budgetVariance)}</span></div>
             <div className="status-line">{quadratura.balancedAllocations ? "✓ Ripartizioni quadrate" : "⚠ Verificare ripartizioni"} · {quadratura.balancedInstallments ? "✓ Rate quadrate" : "⚠ Verificare rate"}</div>
           </article>
 
