@@ -588,6 +588,81 @@ function AccountingPage({
     }
   }
 
+  function calculateAutomaticPreview() {
+    if (!dbCondominiumId || !autoAllocationForm.ledger_entry_id || !autoAllocationForm.table_id) {
+      setAutoPreview([]);
+      return;
+    }
+    const expense = scopedLedger.find(e => e.id === autoAllocationForm.ledger_entry_id);
+    const table = scopedMillesimalTables.find(t => t.id === autoAllocationForm.table_id);
+    if (!expense || expense.direction !== "Uscita" || !table) {
+      setAutoPreview([]);
+      return;
+    }
+    const eligible = units
+      .filter(u => u.condominium_id === dbCondominiumId)
+      .map(unit => ({ unit, value: scopedMillesimalValues.find(v => v.table_id === table.id && v.unit_id === unit.id) }))
+      .filter(item => item.value && !item.value.excluded && Number(item.value.value) > 0);
+    const totalMillesimi = eligible.reduce((sum, item) => sum + Number(item.value?.value || 0), 0);
+    if (totalMillesimi <= 0) {
+      setAutoPreview([]);
+      return;
+    }
+    const totalCents = Math.round(Number(expense.amount || 0) * 100);
+    const rows = eligible.map(item => {
+      const exactCents = totalCents * Number(item.value?.value || 0) / totalMillesimi;
+      const baseCents = Math.floor(exactCents);
+      return { unit:item.unit, millesimi:Number(item.value?.value || 0), baseCents, remainder:exactCents-baseCents };
+    });
+    let remaining = totalCents - rows.reduce((sum,row) => sum + row.baseCents, 0);
+    rows.sort((a,b) => b.remainder-a.remainder || a.unit.unit_code.localeCompare(b.unit.unit_code));
+    for (let i=0; i<rows.length && remaining>0; i++) rows[i].baseCents += 1;
+    setAutoPreview(rows.map(row => ({
+      unit_id:row.unit.id,
+      unit_code:row.unit.unit_code,
+      millesimi:row.millesimi,
+      amount:row.baseCents/100
+    })).sort((a,b)=>a.unit_code.localeCompare(b.unit_code)));
+  }
+
+  async function generateAutomaticAllocation() {
+    if (!supabase || !dbCondominiumId || !autoAllocationForm.ledger_entry_id || !autoAllocationForm.table_id) {
+      setError("Seleziona una spesa e una tabella millesimale.");
+      return;
+    }
+    const expense = scopedLedger.find(e => e.id === autoAllocationForm.ledger_entry_id);
+    if (!expense || expense.direction !== "Uscita" || !autoPreview.length) {
+      setError("Impossibile generare il riparto: verifica spesa, tabella e quote millesimali.");
+      return;
+    }
+    const previewTotal = autoPreview.reduce((sum,row)=>sum+row.amount,0);
+    if (Math.abs(previewTotal-Number(expense.amount))>0.005) {
+      setError("La somma del riparto non coincide con l'importo della spesa.");
+      return;
+    }
+    if (!window.confirm("Confermi il riparto automatico? Le ripartizioni automatiche precedenti della stessa spesa e tabella saranno sostituite.")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { error: rpcError } = await supabase.rpc("generate_condominium_expense_allocations", {
+        p_workspace_id:workspaceId,
+        p_condominium_id:dbCondominiumId,
+        p_ledger_entry_id:expense.id,
+        p_table_id:autoAllocationForm.table_id,
+        p_due_date:autoAllocationForm.due_date || expense.due_date || null
+      });
+      if (rpcError) throw rpcError;
+      setShowAutoAllocationForm(false);
+      setAutoPreview([]);
+      flash("Ripartizione automatica generata.");
+      await load();
+    } catch(e:any) {
+      setError(e?.message || "Impossibile generare il riparto automatico.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveAllocation(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
