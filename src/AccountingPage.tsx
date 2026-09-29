@@ -69,7 +69,24 @@ type LegalCase = {
   notes: string;
 };
 
-type Tab = "rendiconto" | "movimenti" | "fondi" | "fiscale" | "contenzioso";
+type Allocation = {
+  id: string;
+  condominium_id: string;
+  ledger_entry_id: string;
+  unit_id: string;
+  member_id: string | null;
+  allocation_basis: string;
+  millesimi: number;
+  amount: number;
+  paid_amount: number;
+  due_date: string;
+  status: string;
+  notes: string;
+};
+
+type UnitOption = { id: string; unit_code: string; data: any };
+
+type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "fondi" | "fiscale" | "contenzioso";
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   fiscal_year_id: null,
@@ -113,6 +130,21 @@ function AccountingPage({
   const [funds, setFunds] = useState<Fund[]>([]);
   const [taxes, setTaxes] = useState<TaxObligation[]>([]);
   const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [units, setUnits] = useState<UnitOption[]>([]);
+  const [showAllocationForm, setShowAllocationForm] = useState(false);
+  const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(null);
+  const [allocationForm, setAllocationForm] = useState({
+    ledger_entry_id: "",
+    unit_id: "",
+    allocation_basis: "Millesimi generali",
+    millesimi: 0,
+    amount: 0,
+    paid_amount: 0,
+    due_date: "",
+    status: "Da pagare",
+    notes: "",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -274,6 +306,16 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("opened_date", { ascending: false }),
+          supabase
+            .from("condominium_expense_allocations")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("due_date"),
+          supabase
+            .from("condominium_units")
+            .select("id, unit_code, data")
+            .eq("workspace_id", workspaceId)
+            .order("unit_code"),
         ]);
       for (const result of [
         yearsResult,
@@ -289,6 +331,8 @@ function AccountingPage({
       setFunds((fundsResult.data ?? []) as Fund[]);
       setTaxes((taxResult.data ?? []) as TaxObligation[]);
       setLegalCases((caseResult.data ?? []) as LegalCase[]);
+      setAllocations((allocationsResult.data ?? []) as Allocation[]);
+      setUnits((unitsResult.data ?? []) as UnitOption[]);
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -495,6 +539,47 @@ function AccountingPage({
     }
   }
 
+  async function saveAllocation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId) return;
+    if (!allocationForm.ledger_entry_id || !allocationForm.unit_id || Number(allocationForm.amount) <= 0) {
+      setError("Seleziona un movimento, un'unità e un importo maggiore di zero.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        workspace_id: workspaceId,
+        condominium_id: dbCondominiumId,
+        ledger_entry_id: allocationForm.ledger_entry_id,
+        unit_id: allocationForm.unit_id,
+        member_id: null,
+        allocation_basis: allocationForm.allocation_basis,
+        millesimi: Number(allocationForm.millesimi),
+        amount: Number(allocationForm.amount),
+        paid_amount: Number(allocationForm.paid_amount),
+        due_date: allocationForm.due_date || null,
+        status: allocationForm.status,
+        notes: allocationForm.notes,
+      };
+      const query = editingAllocation
+        ? supabase.from("condominium_expense_allocations").update(payload).eq("id", editingAllocation.id).eq("workspace_id", workspaceId)
+        : supabase.from("condominium_expense_allocations").insert(payload);
+      const { error: saveError } = await query;
+      if (saveError) throw saveError;
+      setEditingAllocation(null);
+      setShowAllocationForm(false);
+      setAllocationForm({ ledger_entry_id: "", unit_id: "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" });
+      flash("Ripartizione salvata.");
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Impossibile salvare la ripartizione.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function remove(table: string, id: string, label: string) {
     if (!supabase) return;
     if (!window.confirm("Sei sicuro di voler cancellare " + label + "?")) return;
@@ -589,6 +674,7 @@ function AccountingPage({
         {([
           ["rendiconto", "Rendiconto"],
           ["movimenti", "Registro contabile"],
+          ["ripartizioni", "Ripartizioni"],
           ["fondi", "Fondi e riserve"],
           ["fiscale", "Adempimenti fiscali"],
           ["contenzioso", "Contenzioso"],
@@ -693,6 +779,34 @@ function AccountingPage({
             </div>
           )}
         </section>
+      ) : tab === "ripartizioni" ? (
+        <section className="card">
+          <div className="section-heading">
+            <div><h2>Ripartizione delle spese</h2><p>Associa una spesa alle unità e registra base di riparto, millesimi, importo e stato.</p></div>
+            {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button>}
+          </div>
+          {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (
+            <div className="cards-list">
+              {allocations.filter((a) => !dbCondominiumId || a.condominium_id === dbCondominiumId).map((item) => {
+                const unit = units.find((u) => u.id === item.unit_id);
+                const expense = ledger.find((e) => e.id === item.ledger_entry_id);
+                return <article className="row-card" key={item.id}>
+                  <div>
+                    <b>{unit?.unit_code || "Unità non trovata"}</b>
+                    <small>{expense?.description || "Spesa"} · {item.allocation_basis} · {item.status}</small>
+                    <span>{money(item.amount)} · millesimi {item.millesimi || 0} · pagato {money(item.paid_amount)}</span>
+                    {item.due_date && <small>Scadenza {item.due_date}</small>}
+                    {item.notes && <small>{item.notes}</small>}
+                  </div>
+                  {isAdministrator && <div className="row-actions">
+                    <button className="secondary-button small" onClick={() => { setEditingAllocation(item); setAllocationForm({ ledger_entry_id: item.ledger_entry_id, unit_id: item.unit_id, allocation_basis: item.allocation_basis, millesimi: item.millesimi, amount: item.amount, paid_amount: item.paid_amount, due_date: item.due_date || "", status: item.status, notes: item.notes }); setShowAllocationForm(true); }}>Modifica</button>
+                    <button className="mini-danger" onClick={() => remove("condominium_expense_allocations", item.id, "la ripartizione")}>×</button>
+                  </div>}
+                </article>;
+              })}
+            </div>
+          )}
+        </section>
       ) : tab === "fondi" ? (
         <section className="card">
           <div className="section-heading">
@@ -785,6 +899,29 @@ function AccountingPage({
           <label>Scadenza<input type="date" value={ledgerForm.due_date} onChange={(e) => setLedgerForm({ ...ledgerForm, due_date: e.target.value })} /></label>
           <label>Note<textarea value={ledgerForm.notes} onChange={(e) => setLedgerForm({ ...ledgerForm, notes: e.target.value })} /></label>
           <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowLedgerForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
+        </form></div>
+      )}
+
+      {showAllocationForm && (
+        <div className="modal-backdrop"><form className="modal-card" onSubmit={saveAllocation}>
+          <h2>{editingAllocation ? "Modifica ripartizione" : "Nuova ripartizione"}</h2>
+          <label>Spesa
+            <select required value={allocationForm.ledger_entry_id} onChange={(e) => setAllocationForm({ ...allocationForm, ledger_entry_id: e.target.value })}>
+              <option value="">Seleziona una spesa</option>
+              {scopedLedger.filter((e) => e.direction === "Uscita").map((e) => <option key={e.id} value={e.id}>{e.entry_date} · {e.description} · {money(e.amount)}</option>)}
+            </select>
+          </label>
+          <label>Unità
+            <select required value={allocationForm.unit_id} onChange={(e) => setAllocationForm({ ...allocationForm, unit_id: e.target.value })}>
+              <option value="">Seleziona unità</option>
+              {units.filter((u) => !dbCondominiumId || u.condominium_id === dbCondominiumId).map((u) => <option key={u.id} value={u.id}>{u.unit_code}</option>)}
+            </select>
+          </label>
+          <div className="form-grid"><label>Base di riparto<input value={allocationForm.allocation_basis} onChange={(e) => setAllocationForm({ ...allocationForm, allocation_basis: e.target.value })} /></label><label>Millesimi<input type="number" step="0.001" value={allocationForm.millesimi} onChange={(e) => setAllocationForm({ ...allocationForm, millesimi: Number(e.target.value) })} /></label></div>
+          <div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={allocationForm.amount} onChange={(e) => setAllocationForm({ ...allocationForm, amount: Number(e.target.value) })} /></label><label>Pagato<input type="number" min="0" step="0.01" value={allocationForm.paid_amount} onChange={(e) => setAllocationForm({ ...allocationForm, paid_amount: Number(e.target.value) })} /></label></div>
+          <div className="form-grid"><label>Scadenza<input type="date" value={allocationForm.due_date} onChange={(e) => setAllocationForm({ ...allocationForm, due_date: e.target.value })} /></label><label>Stato<select value={allocationForm.status} onChange={(e) => setAllocationForm({ ...allocationForm, status: e.target.value })}><option>Da pagare</option><option>Parzialmente pagato</option><option>Pagato</option></select></label></div>
+          <label>Note<textarea value={allocationForm.notes} onChange={(e) => setAllocationForm({ ...allocationForm, notes: e.target.value })} /></label>
+          <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowAllocationForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
 
