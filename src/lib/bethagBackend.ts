@@ -658,6 +658,7 @@ export async function saveCondominiumMember(
       unitId = unit?.id ?? null;
     }
 
+    const { millesimi: _legacyMillesimi, ...memberData } = item ?? {};
     const row = {
       condominium_id: condominium.id,
       unit_id: unitId,
@@ -668,7 +669,7 @@ export async function saveCondominiumMember(
       role: item.role === "Inquilino" ? "resident" : "resident",
       active: item.active ?? true,
       permissions: item.permissions ?? {},
-      data: item,
+      data: memberData,
     };
 
     const { data, error } = await supabase
