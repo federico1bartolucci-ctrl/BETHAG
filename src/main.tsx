@@ -2881,7 +2881,8 @@ function App() {
       if (
         target === "abbonamento" ||
         target === "amministratore" ||
-        target === "collaboratori"
+        target === "collaboratori" ||
+        target === "contabilita"
       ) {
         return false;
       }
@@ -5243,6 +5244,7 @@ function App() {
               {!canAccessPage("condomini") && <span className="nav-lock">PRO</span>}
             </NavButton>
 
+            {isAdministrator && (
             <NavButton
               active={page === "contabilita"}
               onClick={() => navigate("contabilita")}
@@ -5250,6 +5252,7 @@ function App() {
               <span className="nav-icon"><AppIcon name="wallet" size={18} /></span>
               <span>Contabilità</span>
             </NavButton>
+            )}
 
             <NavButton
               active={
