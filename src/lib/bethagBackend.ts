@@ -589,9 +589,15 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     if (existingUnitError) throw existingUnitError;
 
     const normalizedUnitCode = unitCode.toLowerCase();
-    const existingUnit = (existingUnits ?? []).find(
+    // In modifica l'ID DB dell'unità è la fonte di verità: il codice può
+    // essere cambiato senza trasformare la modifica in una nuova unità.
+    const existingUnitById = item.id
+      ? (existingUnits ?? []).find((unit: any) => String(unit.id) === String(item.id))
+      : null;
+    const existingUnitByCode = (existingUnits ?? []).find(
       (unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === normalizedUnitCode
     );
+    const existingUnit = existingUnitById ?? existingUnitByCode;
 
     const unitData = {
       ...item,
@@ -612,6 +618,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     };
 
     if (existingUnit?.id) {
+      const previousUnitCode = String(existingUnit.unit_code ?? "").trim();
       const { data, error } = await supabase
         .from("condominium_units")
         .update({
@@ -627,6 +634,36 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
         .single();
 
       if (error) throw error;
+
+      // Il riferimento strutturato unit_id resta invariato. Aggiorniamo solo
+      // il vecchio campo testuale apartment dei condòmini collegati, così le
+      // schermate legacy restano coerenti anche dopo la rinumerazione.
+      if (previousUnitCode !== unitCode) {
+        const { data: linkedMembers, error: linkedMembersError } = await supabase
+          .from("condominium_members")
+          .select("id, data")
+          .eq("condominium_id", condominium.id)
+          .eq("unit_id", existingUnit.id);
+        if (linkedMembersError) throw linkedMembersError;
+
+        for (const member of linkedMembers ?? []) {
+          const nextMemberData = {
+            ...(member.data ?? {}),
+            apartment: unitCode,
+          };
+          const { error: memberUpdateError } = await supabase
+            .from("condominium_members")
+            .update({
+              data: nextMemberData,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", member.id)
+            .eq("condominium_id", condominium.id)
+            .eq("unit_id", existingUnit.id);
+          if (memberUpdateError) throw memberUpdateError;
+        }
+      }
+
       return data;
     }
 
