@@ -30,8 +30,11 @@ const emptyPolicy: Omit<InsurancePolicy, "id"> = {
   notes: "",
 };
 
-function localDate() {
-  return new Date().toISOString().slice(0, 10);
+function localDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function effectiveStatus(endDate: string, active: boolean) {
@@ -41,7 +44,7 @@ function effectiveStatus(endDate: string, active: boolean) {
   if (endDate < today) return "Scaduta";
   const soon = new Date();
   soon.setDate(soon.getDate() + 60);
-  if (endDate <= soon.toISOString().slice(0, 10)) return "In scadenza";
+  if (endDate <= localDate(soon)) return "In scadenza";
   return "Attiva";
 }
 
