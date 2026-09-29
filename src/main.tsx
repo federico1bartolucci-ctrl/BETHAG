@@ -2211,6 +2211,8 @@ function App() {
     setSelectedCondominium,
   ] = useState<Condominium | null>(null);
 
+  const selectedCondominiumPersistenceReady = useRef(false);
+
   const [
     editingCondominium,
     setEditingCondominium,
@@ -2218,16 +2220,35 @@ function App() {
     null
   );
 
-  // Dopo il refresh si apre sempre l'elenco dei condomini.
-  // La scheda viene aperta solo con una scelta esplicita dell'utente,
-  // evitando il ripristino di una selezione locale obsoleta prima dell'hydration.
+  // La selezione viene mantenuta al refresh, ma solo dopo che Supabase
+  // ha completato l'hydration: in questo modo non viene mai renderizzata
+  // una scheda costruita su dati locali incompleti o obsoleti.
   useEffect(() => {
-    if (selectedCondominium) {
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
+    if (!backendHydrated.current || page !== "condomini" || selectedCondominiumPersistenceReady.current) return;
+
+    const savedId = load<number | null>(KEYS.selectedCondominium, null);
+    selectedCondominiumPersistenceReady.current = true;
+
+    if (savedId == null) {
+      return;
+    }
+
+    const restored = condominiums.find((item) => item.id === savedId);
+    if (restored) {
+      setSelectedCondominium(restored);
     } else {
       localStorage.removeItem(KEYS.selectedCondominium);
     }
+  }, [page, condominiums, sessionRole]);
+
+  useEffect(() => {
+    if (selectedCondominium) {
+      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
+    } else if (selectedCondominiumPersistenceReady.current) {
+      localStorage.removeItem(KEYS.selectedCondominium);
+    }
   }, [selectedCondominium]);
+
 
   const [selectedDeadline, setSelectedDeadline] =
     useState<Deadline | null>(null);
