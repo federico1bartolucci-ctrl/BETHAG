@@ -1839,11 +1839,42 @@ function bethagInstallGlobalFieldRules() {
   };
 }
 
+function bethagInstallErrorDialog() {
+  const nativeAlert = window.alert.bind(window);
+  window.alert = (message?: unknown) => {
+    const text = String(message ?? "");
+    const isError = /@[^\\s@]+\\.[^\\s@]+/i.test(text) || /\\berrore?\\b|error|impossibile|failed|invalid|non valido|not found|denied|unauthorized/i.test(text);
+    if (!isError) {
+      nativeAlert(text);
+      return;
+    }
+    const existing = document.getElementById("bethag-error-dialog");
+    existing?.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "bethag-error-dialog";
+    overlay.setAttribute("role", "alertdialog");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(10,18,35,.58);display:grid;place-items:center;padding:24px;";
+    const card = document.createElement("div");
+    card.style.cssText = "width:min(430px,100%);background:#fff;border:3px solid #b42318;border-radius:20px;padding:30px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.28);";
+    card.innerHTML = '<div style="font-size:42px;line-height:1;margin-bottom:12px">⚠️</div><div style="font-size:30px;font-weight:900;letter-spacing:.08em;color:#b42318">ERRORE</div><div style="margin-top:10px;color:#667085;font-size:14px">L\'operazione non è stata completata. Controlla i dati inseriti e riprova.</div>';
+    const button = document.createElement("button");
+    button.textContent = "CHIUDI";
+    button.style.cssText = "margin-top:22px;border:0;border-radius:12px;padding:12px 24px;background:#b42318;color:#fff;font-weight:900;cursor:pointer;";
+    button.onclick = () => overlay.remove();
+    overlay.onclick = (event) => { if (event.target === overlay) overlay.remove(); };
+    card.appendChild(button);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  };
+  return () => { window.alert = nativeAlert; };
+}
+
 function App() {
   const [page, setPage] =
     useState<Page>(() => load<Page>(KEYS.page, "homepage"));
 
   useEffect(() => bethagInstallGlobalFieldRules(), []);
+  useEffect(() => bethagInstallErrorDialog(), []);
 
   useEffect(() => {
     // KEYS.* viene letto tramite load(), che usa JSON.parse():
