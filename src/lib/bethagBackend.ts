@@ -946,7 +946,7 @@ export async function deleteCondominium(workspaceId: string, legacyId: number) {
   });
 }
 
-export async function deleteCondominiumMember(
+export async function deleteCondominiumUnit(\n  workspaceId: string,\n  condominiumId: number,\n  unitId: string\n) {\n  if (!supabase) throw new Error("Supabase non configurato.");\n\n  return enqueueBackendSync(async () => {\n    const { data: condominium, error: condominiumError } = await supabase\n      .from("condominiums")\n      .select("id")\n      .eq("workspace_id", workspaceId)\n      .eq("legacy_id", condominiumId)\n      .maybeSingle();\n\n    if (condominiumError) throw condominiumError;\n    if (!condominium?.id) throw new Error("Condominio non trovato sul server.");\n\n    const { error } = await supabase\n      .from("condominium_units")\n      .delete()\n      .eq("workspace_id", workspaceId)\n      .eq("condominium_id", condominium.id)\n      .eq("id", unitId);\n\n    if (error) throw error;\n  });\n}\n\nexport async function deleteCondominiumMember(
   workspaceId: string,
   condominiumId: number,
   legacyId: number
