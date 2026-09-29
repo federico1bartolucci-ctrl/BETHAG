@@ -1043,11 +1043,11 @@ function currency(value: string) {
 function normalizeWords(value: string) {
   return value
     .toLocaleLowerCase("it-IT")
-    .replace(/(^|[\\s'’-])(\\p{L})/gu, (_, prefix, letter) => prefix + letter.toLocaleUpperCase("it-IT"));
+    .replace(/(^|[\s'’-])(\p{L})/gu, (_, prefix, letter) => prefix + letter.toLocaleUpperCase("it-IT"));
 }
 
 function normalizeSentence(value: string) {
-  const cleaned = value.replace(/\\s+/g, " ").trimStart();
+  const cleaned = value.replace(/\s+/g, " ").trimStart();
   if (!cleaned) return cleaned;
   return cleaned.charAt(0).toLocaleUpperCase("it-IT") + cleaned.slice(1);
 }
@@ -1064,16 +1064,24 @@ function normalizeByLabel(value: string, label = "", type = "text") {
     return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 27);
   }
   if (type === "email" || l.includes("e-mail") || l.includes("email")) {
-    return value.toLocaleLowerCase("it-IT").replace(/\\s/g, "");
+    return value.toLocaleLowerCase("it-IT").replace(/\s/g, "");
   }
   if (l.includes("cognome")) {
-    return value.toLocaleUpperCase("it-IT").replace(/\\s+/g, " ");
+    return value.toLocaleUpperCase("it-IT").replace(/\s+/g, " ");
+  }
+  if (l.includes("nome e cognome") || l.includes("nome completo")) {
+    const parts = normalizeWords(value).split(" ").filter(Boolean);
+    if (parts.length > 1) {
+      const surname = parts.pop()!.toLocaleUpperCase("it-IT");
+      return [...parts, surname].join(" ");
+    }
+    return normalizeWords(value);
   }
   if (l.includes("nome") && !l.includes("condominio") && !l.includes("documento")) {
     return normalizeWords(value);
   }
   if (l.includes("cap")) {
-    return value.replace(/\\D/g, "").slice(0, 5);
+    return value.replace(/\D/g, "").slice(0, 5);
   }
   return normalizeSentence(value);
 }
@@ -1380,7 +1388,7 @@ function LoginPage({
           )}
 
           <label>E-mail</label>
-          <input value={email} onChange={(event) => setEmail(event.target.value.toLocaleLowerCase("it-IT").replace(/\\s/g, ""))} type="email" placeholder="nome@esempio.it" autoComplete="email" />
+          <input value={email} onChange={(event) => setEmail(event.target.value.toLocaleLowerCase("it-IT").replace(/\s/g, ""))} type="email" placeholder="nome@esempio.it" autoComplete="email" />
 
           <label>Password</label>
           <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="••••••••" autoComplete={registerMode ? "new-password" : "current-password"} />
@@ -1900,7 +1908,7 @@ function bethagInstallErrorDialog() {
   const nativeAlert = window.alert.bind(window);
   window.alert = (message?: unknown) => {
     const text = String(message ?? "");
-    const isError = /@[^\\s@]+\\.[^\\s@]+/i.test(text) || /\\berrore?\\b|error|impossibile|failed|invalid|non valido|not found|denied|unauthorized/i.test(text);
+    const isError = /@[^\s@]+\\.[^\s@]+/i.test(text) || /\\berrore?\\b|error|impossibile|failed|invalid|non valido|not found|denied|unauthorized/i.test(text);
     if (!isError) {
       nativeAlert(text);
       return;
@@ -2558,18 +2566,6 @@ function App() {
       if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
     };
     void loadRegistrationRequests();
-  const handleGlobalInputChangeCapture = (event: React.FormEvent<HTMLElement>) => {
-    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
-    if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) return;
-    if (target.type === "password" || target.type === "date" || target.type === "time" || target.type === "checkbox" || target.type === "file") return;
-    const labelElement = target.closest(".field, label")?.querySelector("label") || target.closest("label");
-    const labelText = labelElement?.textContent || "";
-    const next = normalizeByLabel(target.value, labelText, target.type || "text");
-    if (next !== target.value) {
-      target.value = next;
-    }
-  };
-
   return () => { cancelled = true; };
   }, [sessionRole, profile.workspaceId]);
 
@@ -5545,6 +5541,18 @@ function App() {
       </>
     );
   }
+
+  const handleGlobalInputChangeCapture = (event: React.FormEvent<HTMLElement>) => {
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")) return;
+    if (target.type === "password" || target.type === "date" || target.type === "time" || target.type === "checkbox" || target.type === "file") return;
+    const labelElement = target.closest(".field, label")?.querySelector("label") || target.closest("label");
+    const labelText = labelElement?.textContent || "";
+    const next = normalizeByLabel(target.value, labelText, target.type || "text");
+    if (next !== target.value) {
+      target.value = next;
+    }
+  };
 
   return (
     <>
@@ -12482,7 +12490,7 @@ function CondominiumForm({
 
   const capLookupRef = useRef(0);
   useEffect(() => {
-    const cap = String(value.cap || "").replace(/\\D/g, "").slice(0, 5);
+    const cap = String(value.cap || "").replace(/\D/g, "").slice(0, 5);
     if (cap.length !== 5) return;
     const requestId = ++capLookupRef.current;
     const controller = new AbortController();
@@ -12496,8 +12504,8 @@ function CondominiumForm({
         const address = results[0]?.address || {};
         const city = address.city || address.town || address.village || address.municipality || "";
         const province = String(address.county || address.state_district || "")
-          .replace(/^Provincia di\\s+/i, "")
-          .replace(/\\s+$/, "");
+          .replace(/^Provincia di\s+/i, "")
+          .replace(/\s+$/, "");
         if (!city && !province) return;
         onChange({
           ...value,
@@ -13637,7 +13645,7 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
         <label>Unità abitativa *</label>
         <select value={unitSelection} onChange={(e) => {
           if (e.target.value === "__new__") setValue({ ...value, apartment: "", unitId: "" });
-          else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\\s+/g, "-")}` });
+          else setValue({ ...value, apartment: e.target.value, unitId: `local-unit-${value.condominiumId}-${e.target.value.toLowerCase().replace(/\s+/g, "-")}` });
         }}>
           <option value="">Seleziona un'unità esistente oppure creane una nuova</option>
           {existingApartments.map((apartment) => <option key={apartment} value={apartment}>{apartment}</option>)}
@@ -14226,8 +14234,8 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
             <label>Premio<input type="number" min="0" step="0.01" value={form.premium} onChange={e => setForm({...form, premium: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
             <label>Franchigia<input type="number" min="0" step="0.01" value={form.deductible} onChange={e => setForm({...form, deductible: e.target.value.replace(/[^0-9.,-]/g, "")})} /></label>
             <label>Referente<input value={form.contact_name} onChange={e => setForm({...form, contact_name: normalizeWords(e.target.value)})} /></label>
-            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value.toLocaleLowerCase("it-IT").replace(/\\s/g, "")})} /></label>
-            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value.replace(/[^0-9+()\\s-]/g, "")})} /></label>
+            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value.toLocaleLowerCase("it-IT").replace(/\s/g, "")})} /></label>
+            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value.replace(/[^0-9+()\s-]/g, "")})} /></label>
             <label className="form-grid-wide">Copertura / condizioni<textarea value={form.notes} onChange={e => setForm({...form, notes: normalizeSentence(e.target.value)})} /></label>
           </div>
           <div className="form-actions">
