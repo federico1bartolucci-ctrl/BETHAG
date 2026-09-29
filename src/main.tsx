@@ -8511,45 +8511,6 @@ function CondominiumDetails(
       <section className="condominium-section-card">
         <div className="section-title">
           <div>
-            <div className="eyebrow">Patrimonio catastale</div>
-            <h2>Unità immobiliari e pertinenze</h2>
-            <p className="section-subtitle">Abitazioni, garage, cantine e altre unità sono registrati separatamente quando hanno autonomia catastale. Una pertinenza autonoma può essere collegata a un'abitazione oppure restare di proprietà indipendente, anche di un soggetto esterno al condominio.</p>
-          </div>
-          {isAdministrator && (
-            <div className="button-row compact">
-              <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Garage")}>+ Garage</button>
-              <button className="secondary-button" type="button" onClick={() => onNewUnit(item.id, "Cantina")}>+ Cantina</button>
-            </div>
-          )}
-        </div>
-        <div className="related-list">
-          {condominiumUnits.length === 0 ? <Empty text="Nessuna unità catastale disponibile." /> : condominiumUnits.map((unit: CondominiumUnit) => {
-            const linkedMembers = activeMembers.filter((member: CondominiumMember) => member.unitId === unit.id || member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase());
-            const ownerMembers = activeMembers.filter((member: CondominiumMember) => Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id));
-            const externalOwners = Array.isArray(unit.externalOwners) ? unit.externalOwners : [];
-            const incorporated = unit.incorporatedInUnitId ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId) : null;
-            const ownerLabels = [
-              ...ownerMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName),
-              ...externalOwners.map((o: ExternalUnitOwner) => [o.firstName, o.lastName].filter(Boolean).join(" ")).filter(Boolean),
-            ];
-            return <div className="request-card" key={unit.id}>
-              <div className="request-main">
-                <b>{unit.unitType === "Garage" ? "🚗" : unit.unitType === "Cantina" ? "📦" : "🏠"} {unit.unitCode}</b>
-                <span>{unit.unitType} · {unit.cadastralCategory || "Categoria non inserita"} · {unit.millesimi ? unit.millesimi + " millesimi" : "Millesimi non inseriti"}</span>
-                <small>{unit.cadastralAutonomous ? "Unità catastalmente autonoma" : "Incorporata catastalmente"}{incorporated ? " · collegata a " + incorporated.unitCode : ""}</small>
-                {ownerLabels.length > 0 && <p><strong>Proprietari:</strong> {ownerLabels.join(" | ")}</p>}
-                {ownerLabels.length === 0 && unit.cadastralAutonomous && <p style={{ color: "#b45309" }}><strong>Proprietario non associato.</strong></p>}
-                {linkedMembers.length > 0 && ownerLabels.length === 0 && <small>Condòmini associati all'unità: {linkedMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName + " · " + m.role).join(" | ")}</small>}
-              </div>
-              {isAdministrator && <div className="request-actions"><button className="secondary-button small" type="button" onClick={() => onEditUnit(unit)}>Modifica</button></div>}
-            </div>;
-          })}
-        </div>
-      </section>
-
-      <section className="condominium-section-card">
-        <div className="section-title">
-          <div>
             <div className="eyebrow">Patrimonio catastale e anagrafica</div>
             <h2>Unità immobiliari, pertinenze e persone associate</h2>
             <p className="section-subtitle">
