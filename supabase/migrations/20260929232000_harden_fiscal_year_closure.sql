@@ -33,3 +33,30 @@ drop trigger if exists trg_block_closed_budgets on public.condominium_budgets;
 create trigger trg_block_closed_budgets
 before insert or update or delete on public.condominium_budgets
 for each row execute function public.prevent_closed_condominium_accounting();
+
+
+-- Keep fiscal-year validation aligned with the UI and prevent overlapping periods.
+create or replace function public.validate_condominium_fiscal_year_scope()
+returns trigger
+language plpgsql
+set search_path to 'public'
+as $function$
+declare v_workspace uuid;
+begin
+  select c.workspace_id into v_workspace from public.condominiums c where c.id=new.condominium_id;
+  if v_workspace is null then raise exception 'Il condominio indicato non esiste'; end if;
+  if new.workspace_id<>v_workspace then raise exception 'L''esercizio contabile e il condominio devono appartenere allo stesso workspace'; end if;
+  if new.start_date>new.end_date then raise exception 'La data iniziale dell''esercizio non può essere successiva alla data finale'; end if;
+  if nullif(btrim(new.name),'') is null then raise exception 'Il nome dell''esercizio contabile è obbligatorio'; end if;
+  if new.status not in ('Aperto','Provvisorio','Chiuso') then raise exception 'Stato dell''esercizio contabile non valido'; end if;
+  if exists (
+    select 1 from public.condominium_fiscal_years fy
+    where fy.condominium_id=new.condominium_id
+      and fy.id<>coalesce(new.id,'00000000-0000-0000-0000-000000000000'::uuid)
+      and new.start_date<=fy.end_date and fy.start_date<=new.end_date
+  ) then
+    raise exception 'Le date dell''esercizio contabile si sovrappongono a un altro esercizio dello stesso condominio';
+  end if;
+  return new;
+end;
+$function$;
