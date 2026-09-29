@@ -1443,7 +1443,6 @@ function AccountingPage({
               {allocationReconciliation.map(x => <article className="row-card" key={"reconciliation-"+x.id}><div><b>{x.description}</b><small>Spesa {money(x.amount)} · Ripartito {money(x.allocated)}</small><span>{x.balanced ? "✓ Ripartizione quadrata" : `⚠ Differenza ${money(x.difference)}`}</span></div></article>)}
             </div>
             <div className="cards-list">
-            <div className="cards-list">
               {allocations.filter((a) => !dbCondominiumId || a.condominium_id === dbCondominiumId).map((item) => {
                 const unit = units.find((u) => u.id === item.unit_id);
                 const expense = ledger.find((e) => e.id === item.ledger_entry_id);
