@@ -670,19 +670,9 @@ export async function saveCondominiumMember(
       if (existingUnit?.id) {
         unitId = existingUnit.id;
       } else {
-        const { data: createdUnit, error: unitError } = await supabase
-          .from("condominium_units")
-          .insert({
-            workspace_id: workspaceId,
-            condominium_id: condominium.id,
-            unit_code: apartment,
-            data: { unitCode: apartment },
-          })
-          .select("id")
-          .single();
-
-        if (unitError) throw unitError;
-        unitId = createdUnit?.id ?? null;
+        throw new Error(
+          "L'unità indicata non esiste nel condominio. Crea prima l'unità nella gestione delle unità immobiliari."
+        );
       }
     }
 
