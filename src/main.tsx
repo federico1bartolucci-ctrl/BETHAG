@@ -8088,6 +8088,8 @@ function CondominiumDetails(
       </div>
 
 
+      <InsurancePoliciesSection condominiumId={item.id} isAdministrator={isAdministrator} />
+
       <div className="detail-grid">
 
         <Detail
@@ -13934,6 +13936,215 @@ function SelectField({
 /* =========================================================
    CSS
    ========================================================= */
+
+type CondominiumInsurancePolicy = {
+  id: string;
+  company_name: string;
+  policy_number: string;
+  policy_type: string;
+  coverage: string;
+  start_date: string | null;
+  end_date: string | null;
+  premium: number;
+  deductible: number;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  notes: string;
+  active: boolean;
+};
+
+function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condominiumId: number; isAdministrator: boolean }) {
+  const [policies, setPolicies] = useState<CondominiumInsurancePolicy[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const emptyForm = {
+    company_name: "", policy_number: "", policy_type: "Globale fabbricati", coverage: "",
+    start_date: "", end_date: "", premium: "0", deductible: "0",
+    contact_name: "", contact_email: "", contact_phone: "", notes: "", active: true
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  const loadPolicies = async () => {
+    if (!supabase || !supabaseConfigured) return;
+    setLoading(true);
+    try {
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId) return;
+      const { data: condominium } = await supabase
+        .from("condominiums")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("legacy_id", condominiumId)
+        .maybeSingle();
+      if (!condominium?.id) return;
+      const { data, error } = await supabase
+        .from("condominium_insurance_policies")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id)
+        .order("end_date", { ascending: true });
+      if (error) throw error;
+      setPolicies((data || []) as CondominiumInsurancePolicy[]);
+    } catch (error) {
+      console.error("BETHAG insurance load error", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadPolicies(); }, [condominiumId]);
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(emptyForm);
+  };
+
+  const savePolicy = async () => {
+    if (!supabase || !supabaseConfigured) return;
+    if (!form.company_name.trim()) {
+      alert("Inserisci la compagnia assicurativa.");
+      return;
+    }
+    if (!form.policy_number.trim()) {
+      alert("Inserisci il numero di polizza.");
+      return;
+    }
+    const workspaceId = await getActiveWorkspaceId();
+    if (!workspaceId) return;
+    const { data: condominium } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", condominiumId)
+      .maybeSingle();
+    if (!condominium?.id) {
+      alert("Impossibile individuare il condominio.");
+      return;
+    }
+    const payload = {
+      workspace_id: workspaceId,
+      condominium_id: condominium.id,
+      company_name: form.company_name.trim(),
+      policy_number: form.policy_number.trim(),
+      policy_type: form.policy_type.trim(),
+      coverage: form.coverage.trim(),
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
+      premium: Number(form.premium) || 0,
+      deductible: Number(form.deductible) || 0,
+      contact_name: form.contact_name.trim(),
+      contact_email: form.contact_email.trim().toLowerCase(),
+      contact_phone: form.contact_phone.trim(),
+      notes: form.notes.trim(),
+      active: form.active,
+      updated_at: new Date().toISOString(),
+    };
+    const result = editing
+      ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
+      : await supabase.from("condominium_insurance_policies").insert(payload);
+    if (result.error) {
+      alert(result.error.message);
+      return;
+    }
+    resetForm();
+    await loadPolicies();
+  };
+
+  const editPolicy = (policy: CondominiumInsurancePolicy) => {
+    setEditing(policy.id);
+    setForm({
+      company_name: policy.company_name || "",
+      policy_number: policy.policy_number || "",
+      policy_type: policy.policy_type || "Globale fabbricati",
+      coverage: policy.coverage || "",
+      start_date: policy.start_date || "",
+      end_date: policy.end_date || "",
+      premium: String(policy.premium ?? 0),
+      deductible: String(policy.deductible ?? 0),
+      contact_name: policy.contact_name || "",
+      contact_email: policy.contact_email || "",
+      contact_phone: policy.contact_phone || "",
+      notes: policy.notes || "",
+      active: policy.active !== false,
+    });
+  };
+
+  const deletePolicy = async (policy: CondominiumInsurancePolicy) => {
+    if (!supabase || !window.confirm("Sei sicuro di voler cancellare questa polizza assicurativa?")) return;
+    const workspaceId = await getActiveWorkspaceId();
+    if (!workspaceId) return;
+    const { error } = await supabase.from("condominium_insurance_policies").delete().eq("id", policy.id).eq("workspace_id", workspaceId);
+    if (error) { alert(error.message); return; }
+    await loadPolicies();
+  };
+
+  return (
+    <section className="condominium-section-card">
+      <div className="section-title">
+        <div>
+          <div className="eyebrow">Tutela assicurativa</div>
+          <h2>Polizze assicurative</h2>
+          <p className="section-subtitle">Polizze del fabbricato, coperture, premi, franchigie e scadenze. Le scadenze possono essere controllate direttamente dalla scheda del condominio.</p>
+        </div>
+        {isAdministrator && <button className="primary-button" type="button" onClick={() => { resetForm(); setEditing("new"); }}>+ Nuova polizza</button>}
+      </div>
+
+      {isAdministrator && editing && (
+        <div className="form-card" style={{ marginBottom: 16 }}>
+          <div className="form-grid">
+            <label>Compagnia assicurativa<input value={form.company_name} onChange={e => setForm({...form, company_name: e.target.value})} /></label>
+            <label>Numero polizza<input value={form.policy_number} onChange={e => setForm({...form, policy_number: e.target.value})} /></label>
+            <label>Tipo polizza<input value={form.policy_type} onChange={e => setForm({...form, policy_type: e.target.value})} /></label>
+            <label>Copertura<input value={form.coverage} onChange={e => setForm({...form, coverage: e.target.value})} /></label>
+            <label>Decorrenza<input type="date" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} /></label>
+            <label>Scadenza<input type="date" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} /></label>
+            <label>Premio<input type="number" min="0" step="0.01" value={form.premium} onChange={e => setForm({...form, premium: e.target.value})} /></label>
+            <label>Franchigia<input type="number" min="0" step="0.01" value={form.deductible} onChange={e => setForm({...form, deductible: e.target.value})} /></label>
+            <label>Referente<input value={form.contact_name} onChange={e => setForm({...form, contact_name: e.target.value})} /></label>
+            <label>E-mail<input type="email" value={form.contact_email} onChange={e => setForm({...form, contact_email: e.target.value})} /></label>
+            <label>Telefono<input inputMode="numeric" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value})} /></label>
+            <label className="form-grid-wide">Copertura / condizioni<textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></label>
+          </div>
+          <div className="form-actions">
+            <button className="secondary-button" type="button" onClick={resetForm}>Annulla</button>
+            <button className="primary-button" type="button" onClick={() => void savePolicy()}>{editing === "new" ? "Salva polizza" : "Salva modifiche"}</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <p>Caricamento polizze…</p> : policies.length === 0 ? (
+        <Empty text="Nessuna polizza assicurativa registrata." />
+      ) : (
+        <div className="related-list">
+          {policies.map(policy => {
+            const expired = policy.end_date && new Date(policy.end_date + "T23:59:59") < new Date();
+            const daysToExpiry = policy.end_date ? Math.ceil((new Date(policy.end_date + "T23:59:59").getTime() - Date.now()) / 86400000) : null;
+            const warning = !expired && daysToExpiry !== null && daysToExpiry <= 30;
+            return (
+              <div className="request-card" key={policy.id}>
+                <div className="request-main">
+                  <b>🛡️ {policy.company_name} · {policy.policy_number}</b>
+                  <span>{policy.policy_type}{policy.coverage ? " · " + policy.coverage : ""}</span>
+                  <small>
+                    {policy.start_date || "—"} → {policy.end_date || "Nessuna scadenza"}
+                    {expired ? " · POLIZZA SCADUTA" : warning ? " · SCADENZA ENTRO 30 GIORNI" : ""}
+                  </small>
+                  <p>Premio: € {Number(policy.premium || 0).toFixed(2)} · Franchigia: € {Number(policy.deductible || 0).toFixed(2)}</p>
+                  {policy.contact_name && <small>Referente: {policy.contact_name}{policy.contact_phone ? " · " + policy.contact_phone : ""}{policy.contact_email ? " · " + policy.contact_email : ""}</small>}
+                </div>
+                {isAdministrator && <div className="request-actions">
+                  <button className="secondary-button small" type="button" onClick={() => editPolicy(policy)}>Modifica</button>
+                  <button className="mini-danger" type="button" onClick={() => void deletePolicy(policy)}>×</button>
+                </div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
 const styles = `
 *{
