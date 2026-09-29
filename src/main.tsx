@@ -8112,6 +8112,7 @@ function CondominiumsPage(
           onStatusActivity={
             onStatusActivity
           }
+          isAdministrator={isAdministrator}
         />
 
       </div>
@@ -8613,30 +8614,76 @@ function CondominiumDetails(
                       )}
                     </div>
 
-                    {isAdministrator && (
-                      <div className="request-actions">
-                        <button
-                          className="secondary-button small"
-                          type="button"
-                          onClick={() => onEditUnit(unit)}
-                        >
-                          Modifica unità
-                        </button>
-                        <button
-                          className="primary-button small"
-                          type="button"
-                          onClick={() => onNewMember(item.id, unit.unitCode)}
-                        >
-                          + Aggiungi persona
-                        </button>
-                      </div>
-                    )}
+                    <div className="request-actions">
+                      <button
+                        className="secondary-button small"
+                        type="button"
+                        onClick={() => setSelectedUnit(unit.id)}
+                      >
+                        Dettagli
+                      </button>
+                      {isAdministrator && (
+                        <>
+                          <button
+                            className="secondary-button small"
+                            type="button"
+                            onClick={() => onEditUnit(unit)}
+                          >
+                            Modifica unità
+                          </button>
+                          <button
+                            className="primary-button small"
+                            type="button"
+                            onClick={() => onNewMember(item.id, unit.unitCode)}
+                          >
+                            + Aggiungi persona
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })
           )}
         </div>
       </section>
+
+      {selectedUnit && (() => {
+        const detailUnit = condominiumUnits.find((u: CondominiumUnit) => u.id === selectedUnit);
+        if (!detailUnit) return null;
+        const detailPeople = activeMembers.filter((m: CondominiumMember) =>
+          m.unitId === detailUnit.id || m.apartment.trim().toLowerCase() === detailUnit.unitCode.trim().toLowerCase()
+        );
+        return (
+          <Modal onClose={() => setSelectedUnit(null)}>
+            <ModalTitle title={`Dettagli unità ${detailUnit.unitCode}`} />
+            <div className="detail-grid">
+              <Detail label="Unità" value={detailUnit.unitCode} />
+              <Detail label="Tipologia" value={detailUnit.unitType} />
+              <Detail label="Categoria catastale" value={detailUnit.cadastralCategory || "Non inserita"} />
+              <Detail label="Millesimi" value={detailUnit.millesimi || "Non inseriti"} />
+              <Detail label="Autonomia catastale" value={detailUnit.cadastralAutonomous ? "Sì" : "No"} />
+              <Detail label="Persone associate" value={String(detailPeople.length)} />
+            </div>
+            <div className="notes">
+              <div className="detail-label">Persone associate</div>
+              {detailPeople.length ? (
+                <p>{detailPeople.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} · ${m.role}${m.email ? ` · ${m.email}` : ""}`).join(" | ")}</p>
+              ) : (
+                <p>Nessuna persona associata.</p>
+              )}
+            </div>
+            <div className="form-actions">
+              <button className="secondary-button" type="button" onClick={() => setSelectedUnit(null)}>Chiudi</button>
+              {isAdministrator && (
+                <button className="primary-button" type="button" onClick={() => { setSelectedUnit(null); onNewMember(item.id, detailUnit.unitCode); }}>
+                  + Aggiungi persona
+                </button>
+              )}
+            </div>
+          </Modal>
+        );
+      })()}
 
       <section className="condominium-section-card">
         <div className="section-title">
