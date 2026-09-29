@@ -1123,7 +1123,7 @@ function AccountingPage({
         </label>
       </div>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && <div className="alert error" style={{margin:"15px 0",padding:"16px",border:"2px solid #b42318",borderRadius:12,background:"#fff1f2",color:"#b42318",fontSize:22,fontWeight:900,letterSpacing:".08em",textAlign:"center"}}>ERRORE</div>}
       {message && <div className="alert success">{message}</div>}
 
       <div className="quick-stats">
