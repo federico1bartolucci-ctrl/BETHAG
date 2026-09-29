@@ -904,6 +904,39 @@ export async function deleteCondominiumMember(
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) return;
 
+    const { data: member, error: memberLookupError } = await supabase
+      .from("condominium_members")
+      .select("email, user_id")
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", legacyId)
+      .maybeSingle();
+
+    if (memberLookupError) throw memberLookupError;
+
+    // La cancellazione esplicita dell'anagrafica revoca anche l'accesso
+    // applicativo al Portale, ma non elimina mai l'utente da Supabase Auth.
+    if (member) {
+      let portalDelete = supabase
+        .from("portal_access")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id);
+
+      const memberEmail = String(member.email ?? "").trim().toLowerCase();
+      if (memberEmail) {
+        portalDelete = portalDelete.ilike("email", memberEmail);
+      } else if (member.user_id) {
+        portalDelete = portalDelete.eq("user_id", member.user_id);
+      } else {
+        portalDelete = null as any;
+      }
+
+      if (portalDelete) {
+        const { error: portalError } = await portalDelete;
+        if (portalError) throw portalError;
+      }
+    }
+
     const { error } = await supabase
       .from("condominium_members")
       .delete()
