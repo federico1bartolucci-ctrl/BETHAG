@@ -152,6 +152,12 @@ function AccountingPage({
   const [paymentForm, setPaymentForm] = useState({ payment_date:new Date().toISOString().slice(0,10), amount:0, method:"Bonifico", reference:"", notes:"" });
   const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
   const [showBulkMillesimalForm, setShowBulkMillesimalForm] = useState(false);
+  const allocationReconciliation = useMemo(() => scopedLedger.filter(e => e.direction === "Uscita").map(expense => {
+    const rows = allocations.filter(a => a.ledger_entry_id === expense.id && (!dbCondominiumId || a.condominium_id === dbCondominiumId));
+    const allocated = rows.reduce((s,a) => s + Number(a.amount || 0), 0);
+    const difference = Number(expense.amount || 0) - allocated;
+    return { id:expense.id, description:expense.description, amount:Number(expense.amount||0), allocated, difference, balanced:Math.abs(difference)<0.005 };
+  }), [scopedLedger, allocations, dbCondominiumId]);
   const [bulkMillesimalTableId, setBulkMillesimalTableId] = useState("");
   const [bulkMillesimalValues, setBulkMillesimalValues] = useState<Record<string, number>>({});
   const [millesimalValueForm, setMillesimalValueForm] = useState({ table_id:"", unit_id:"", value:0, excluded:false, notes:"" });
@@ -1357,7 +1363,11 @@ function AccountingPage({
             <div><h2>Ripartizione delle spese</h2><p>Associa una spesa alle unità e registra base di riparto, millesimi, importo e stato.</p></div>
             {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { setAllocationInstallmentForm({ ledger_entry_id: scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id))?.id ?? "", title:"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id ?? "" }); setShowInstallmentsFromAllocation(true); }}>Genera rate</button><button className="secondary-button" onClick={() => { setAutoAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", table_id: scopedMillesimalTables.find(t => t.active)?.id ?? "", due_date: "" }); setAutoPreview([]); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
           </div>
-          {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (
+          {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (<>
+            <div className="cards-list">
+              {allocationReconciliation.map(x => <article className="row-card" key={"reconciliation-"+x.id}><div><b>{x.description}</b><small>Spesa {money(x.amount)} · Ripartito {money(x.allocated)}</small><span>{x.balanced ? "✓ Ripartizione quadrata" : `⚠ Differenza ${money(x.difference)}`}</span></div></article>)}
+            </div>
+            <div className="cards-list">
             <div className="cards-list">
               {allocations.filter((a) => !dbCondominiumId || a.condominium_id === dbCondominiumId).map((item) => {
                 const unit = units.find((u) => u.id === item.unit_id);
@@ -1377,7 +1387,7 @@ function AccountingPage({
                 </article>;
               })}
             </div>
-          )}
+          </>)}
         </section>
       ) : tab === "millesimi" ? (
         <section className="cards-grid">
