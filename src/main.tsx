@@ -2556,7 +2556,86 @@ function App() {
         }
 
         if (requiresPasswordSetup) {
-    const exportWorkspaceBackup = async () => {
+    const restoreWorkspaceBackup = async (file: File) => {
+    if (!isAdministrator) {
+      alert("Il ripristino del backup è riservato all'Amministratore.");
+      return;
+    }
+    try {
+      const raw = await file.text();
+      const backup = JSON.parse(raw);
+      if (backup?.format !== "BETHAG_WORKSPACE_BACKUP" || backup?.version !== 1) {
+        alert("File non riconosciuto: seleziona un backup BETHAG valido.");
+        return;
+      }
+      if (!backup.workspaceId || backup.workspaceId !== profile.workspaceId) {
+        alert("Il backup appartiene a un workspace diverso. Il ripristino è stato bloccato.");
+        return;
+      }
+      const state = backup.frontendState || {};
+      const counts = Object.entries(backup.backend || {}).reduce((sum: number, [, value]: any) => sum + (Array.isArray(value) ? value.length : 0), 0);
+      const firstConfirm = window.confirm(
+        "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\\n\\nRecord backend inclusi: " + counts + ".\\n\\nVuoi procedere con il ripristino controllato?"
+      );
+      if (!firstConfirm) return;
+      if (!window.confirm("Conferma definitiva: i record presenti nel backup verranno aggiornati nel workspace corrente. I dati non presenti nel backup non verranno eliminati.")) return;
+
+      const apply = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T>>) => {
+        if (state[key] !== undefined) setter(state[key] as T);
+      };
+      apply("condominiums", setCondominiums);
+      apply("condominiumMembers", setCondominiumMembers);
+      apply("condominiumUnits", setCondominiumUnits);
+      apply("condominiumRequests", setCondominiumRequests);
+      apply("deadlines", setDeadlines);
+      apply("documents", setDocuments);
+      apply("assemblies", setAssemblies);
+      apply("suppliers", setSuppliers);
+      apply("activities", setActivities);
+      apply("communications", setCommunications);
+      apply("portalMembers", setPortalMembers);
+      apply("collaborators", setCollaborators);
+      apply("subscription", setSubscription);
+      if (state.profile) setProfile(state.profile as AdminProfile);
+
+      Object.entries(state).forEach(([key, value]) => {
+        const storageKey = (KEYS as Record<string,string>)[key];
+        if (storageKey && value !== undefined && key !== "profile") {
+          localStorage.setItem(storageKey, JSON.stringify(value));
+        }
+      });
+      if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
+
+      const restoreOrder = [
+        "condominiums", "condominium_units", "condominium_members", "documents", "suppliers", "activities",
+        "condominium_fiscal_years", "condominium_funds", "condominium_suppliers", "condominium_register_items",
+        "condominium_budgets", "condominium_tax_obligations", "condominium_legal_cases",
+        "condominium_ledger_entries", "condominium_expense_allocations", "condominium_installments",
+        "condominium_payment_movements", "condominium_works", "condominium_work_documents",
+        "condominium_work_progress", "condominium_audit_log"
+      ];
+      const errors: string[] = [];
+      if (supabase) {
+        for (const table of restoreOrder) {
+          const rows = Array.isArray(backup.backend?.[table]) ? backup.backend[table] : [];
+          if (!rows.length) continue;
+          const normalized = rows.map((row: any) => ({...row, workspace_id: profile.workspaceId}));
+          const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
+          if (error) errors.push(table + ": " + error.message);
+        }
+      }
+      if (errors.length) {
+        alert("Ripristino completato parzialmente. Le tabelle non ripristinate sono state segnalate: " + errors.join(" | "));
+      } else {
+        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati.");
+      }
+      window.location.reload();
+    } catch (e: any) {
+      alert("Impossibile ripristinare il backup: " + (e?.message || "file non valido"));
+    }
+  };
+
+  const exportWorkspaceBackup = async () => {
     if (!isAdministrator) {
       alert("L'esportazione del backup è riservata all'Amministratore.");
       return;
