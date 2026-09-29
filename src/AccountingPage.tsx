@@ -586,6 +586,10 @@ function AccountingPage({
 
   async function saveYear(e: React.FormEvent) {
     e.preventDefault();
+    if (editingYear && isFiscalYearClosed(editingYear.id)) {
+      setError("Un esercizio chiuso non può essere riaperto o modificato.");
+      return;
+    }
     if (!supabase || !dbCondominiumId) return;
     setSaving(true);
     setError("");
@@ -1242,7 +1246,7 @@ function AccountingPage({
             {scopedYears.length === 0 ? <p>Nessun esercizio configurato.</p> : scopedYears.map((year) => (
               <div className="row-card" key={year.id}>
                 <div><b>{year.name}</b><small>{year.start_date} → {year.end_date}</small><span>{year.status} · Apertura {money(year.opening_balance)}</span></div>
-                {isAdministrator && dbCondominiumId && <button className="mini-danger" onClick={() => remove("condominium_fiscal_years", year.id, "l'esercizio")}>×</button>}
+                {isAdministrator && dbCondominiumId && <div className="row-actions">{year.status !== "Chiuso" && <button className="secondary-button small" onClick={() => closeFiscalYear(year)}>Chiudi esercizio</button>}<button className="mini-danger" onClick={() => remove("condominium_fiscal_years", year.id, "l'esercizio")}>×</button></div>}
               </div>
             ))}
             {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => setShowYearForm(true)}>+ Nuovo esercizio</button>}
