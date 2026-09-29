@@ -3206,25 +3206,34 @@ function App() {
     if (
       !supabaseConfigured ||
       !supabase ||
-      sessionRole !== "admin" ||
       !profile.workspaceId ||
-      !backendHydrated.current
+      !backendHydrated.current ||
+      (sessionRole !== "admin" && sessionRole !== "collaborator")
     ) return;
 
     const timer = window.setTimeout(() => {
-      void syncBackendState(profile.workspaceId, {
-        condominiums,
-        condominiumMembers,
-        documents,
-        deadlines,
-        assemblies,
-        suppliers,
-        activities,
-        communications,
-        condominiumRequests,
-        portalMembers,
-        collaborators,
-      }).catch((error) => {
+      const allowedModules =
+        sessionRole === "collaborator"
+          ? serverCollaboratorPermissions
+          : null;
+
+      void syncBackendState(
+        profile.workspaceId,
+        {
+          condominiums,
+          condominiumMembers,
+          documents,
+          deadlines,
+          assemblies,
+          suppliers,
+          activities,
+          communications,
+          condominiumRequests,
+          portalMembers,
+          collaborators,
+        },
+        allowedModules
+      ).catch((error) => {
         console.error("BETHAG backend sync failed", error);
       });
     }, 500);
@@ -3233,6 +3242,7 @@ function App() {
   }, [
     sessionRole,
     profile.workspaceId,
+    serverCollaboratorPermissions,
     condominiums,
     condominiumMembers,
     documents,
