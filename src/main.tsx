@@ -4628,17 +4628,15 @@ function App() {
 
     if (selectedCondominiumMember) {
       const previousMember = selectedCondominiumMember;
-      const nextMembers = condominiumMembers.map((member) =>
-        member.id === previousMember.id
-          ? { ...data, id: previousMember.id }
-          : member
-      );
-
-      setCondominiumMembers(nextMembers);
+      let persistedData = { ...data };
 
       if (supabaseConfigured && supabase && profile.workspaceId) {
         try {
-          await saveCondominiumMemberBackend(profile.workspaceId, data);
+          const saved = await saveCondominiumMemberBackend(profile.workspaceId, data);
+          persistedData = {
+            ...data,
+            unitId: saved?.unit_id ?? data.unitId ?? "",
+          };
         } catch (syncError) {
           console.error("BETHAG condominium member update sync failed", syncError);
           alert(
@@ -4650,11 +4648,19 @@ function App() {
         }
       }
 
+      setCondominiumMembers(
+        condominiumMembers.map((member) =>
+          member.id === previousMember.id
+            ? { ...persistedData, id: previousMember.id }
+            : member
+        )
+      );
+
       setPortalMembers((current) => {
         const previousEmail = previousMember.email.trim().toLowerCase();
-        const nextEmail = data.email.trim().toLowerCase();
+        const nextEmail = persistedData.email.trim().toLowerCase();
 
-        if (!data.active) {
+        if (!persistedData.active) {
           return current.filter(
             (portalMember) =>
               !(
@@ -4672,22 +4678,24 @@ function App() {
           )
             ? {
                 ...portalMember,
-                name: `${data.firstName} ${data.lastName}`.trim(),
-                email: data.email,
-                condominiumId: data.condominiumId,
-                apartment: data.apartment,
+                name: `${persistedData.firstName} ${persistedData.lastName}`.trim(),
+                email: persistedData.email,
+                condominiumId: persistedData.condominiumId,
+                apartment: persistedData.apartment,
               }
             : portalMember
         );
       });
     } else {
-      const newMember = { ...data, id: makeId() };
-      const nextMembers = [...condominiumMembers, newMember];
-      setCondominiumMembers(nextMembers);
+      let newMember = { ...data, id: makeId() };
 
       if (supabaseConfigured && supabase && profile.workspaceId && newMember.email.trim()) {
         try {
-          await saveCondominiumMemberBackend(profile.workspaceId, newMember);
+          const saved = await saveCondominiumMemberBackend(profile.workspaceId, newMember);
+          newMember = {
+            ...newMember,
+            unitId: saved?.unit_id ?? newMember.unitId ?? "",
+          };
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
               workspaceId: profile.workspaceId,
@@ -4773,6 +4781,7 @@ function App() {
           );
         }
       }
+      setCondominiumMembers([...condominiumMembers, newMember]);
     }
 
     setCondominiumMemberForm({
@@ -8691,7 +8700,7 @@ function CondominiumDetails(
 
       <section className="condominium-section-card">
         <div className="section-title">
-          <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno, qualifica e millesimi.</p></div>
+          <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno e qualifica.</p></div>
           <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>📢 Nuova comunicazione</button>
             <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
@@ -13942,9 +13951,6 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
             <br />Il nuovo soggetto sarà collegato alla stessa unità abitativa.
           </div>
         )}
-      </div>
-      <div className="form-help" style={{marginTop: 4}}>
-        I millesimi sono gestiti sull'unità immobiliare e non sul singolo condòmino.
       </div>
       <SelectField label="Qualifica" value={value.role} onChange={(v: string) => set("role", v)} options={[["Proprietario","Proprietario"],["Inquilino","Inquilino"]]} />
       <Field label="Codice fiscale" value={value.fiscalCode} onChange={(v: string) => set("fiscalCode", v)} />
