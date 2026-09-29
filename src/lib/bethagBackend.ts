@@ -111,6 +111,46 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     (condominiums.data ?? []).map((row: any) => [row.id, row.legacy_id])
   );
 
+  const mappedCondominiumMembers = (condominiumMembers.data ?? []).map((row: any) => ({
+    ...row.data,
+    id: row.legacy_id,
+    condominiumId:
+      row.data?.condominiumId ??
+      condominiumLegacyByDbId.get(row.condominium_id) ??
+      null,
+    unitId: row.unit_id ?? row.data?.unitId ?? "",
+  }));
+
+  const ownerIdsByUnit = new Map<string, number[]>();
+  mappedCondominiumMembers.forEach((member: any) => {
+    if (member.role !== "Proprietario" || !member.unitId) return;
+    const current = ownerIdsByUnit.get(String(member.unitId)) ?? [];
+    if (!current.includes(member.id)) current.push(member.id);
+    ownerIdsByUnit.set(String(member.unitId), current);
+  });
+
+  const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
+    const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
+    const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
+    return {
+      ...row.data,
+      id: row.id,
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      unitCode: row.unit_code,
+      unitType: row.data?.unitType ?? "Abitazione",
+      cadastralCategory: row.data?.cadastralCategory ?? "",
+      cadastralAutonomous: row.data?.cadastralAutonomous ?? (row.data?.unitType !== "Abitazione"),
+      millesimi: row.data?.millesimi ?? "",
+      incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
+      relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
+      ownerMode: row.data?.ownerMode ?? "condominium_member",
+      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
+      notes: row.data?.notes ?? "",
+      active: row.data?.active ?? true,
+    };
+  });
+
   return {
     condominiums: (condominiums.data ?? []).map((row: any) => ({
       ...row.data,
@@ -125,32 +165,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       cap: row.postal_code ?? row.data?.cap ?? "",
       province: row.province ?? row.data?.province ?? "",
     })),
-    condominiumUnits: (condominiumUnits.data ?? []).map((row: any) => ({
-      ...row.data,
-      id: row.id,
-      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
-      unitCode: row.unit_code,
-      unitType: row.data?.unitType ?? "Abitazione",
-      cadastralCategory: row.data?.cadastralCategory ?? "",
-      cadastralAutonomous: row.data?.cadastralAutonomous ?? (row.data?.unitType !== "Abitazione"),
-      millesimi: row.data?.millesimi ?? "",
-      incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
-      relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
-      ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [],
-      externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
-      notes: row.data?.notes ?? "",
-      active: row.data?.active ?? true,
-    })),
-    condominiumMembers: (condominiumMembers.data ?? []).map((row: any) => ({
-      ...row.data,
-      id: row.legacy_id,
-      condominiumId:
-        row.data?.condominiumId ??
-        condominiumLegacyByDbId.get(row.condominium_id) ??
-        null,
-      unitId: row.unit_id ?? row.data?.unitId ?? "",
-    })),
+    condominiumUnits: mappedCondominiumUnits,
+    condominiumMembers: mappedCondominiumMembers,
     documents: (documents.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     deadlines: (deadlines.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     assemblies: (assemblies.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
