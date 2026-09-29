@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import AccountingPage from "./AccountingPage";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -43,6 +44,7 @@ import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend
 type Page =
   | "homepage"
   | "condomini"
+  | "contabilita"
   | "documenti"
   | "scadenze"
   | "assemblee"
@@ -2840,6 +2842,7 @@ function App() {
 
   const pageAddon: Partial<Record<Page, AddonId>> = {
     condomini: "condomini",
+    contabilita: "condomini",
     documenti: "documenti",
     scadenze: "scadenze",
     assemblee: "assemblee",
@@ -5241,6 +5244,14 @@ function App() {
             </NavButton>
 
             <NavButton
+              active={page === "contabilita"}
+              onClick={() => navigate("contabilita")}
+            >
+              <span className="nav-icon"><AppIcon name="wallet" size={18} /></span>
+              <span>Contabilità</span>
+            </NavButton>
+
+            <NavButton
               active={
                 page === "documenti"
               }
@@ -5890,6 +5901,14 @@ function App() {
             />
           )}
 
+
+          {page === "contabilita" && (
+            <AccountingPage
+              workspaceId={profile.workspaceId}
+              condominiums={condominiums.map((c) => ({ id: c.id, name: c.name }))}
+              isAdministrator={isAdministrator}
+            />
+          )}
 
           {page === "aiuto" && (
             <HelpPage
