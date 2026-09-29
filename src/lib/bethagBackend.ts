@@ -348,19 +348,21 @@ async function syncBackendStateNow(
 
   if (allowedModules === null && collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
 
-  const portalRows = canSyncPortal ? (state.portalMembers ?? []).map((item: any) => ({
-    workspace_id: workspaceId,
-    legacy_id: item.id,
-    condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-    name: item.name,
-    email: item.email,
-    role: item.role === "council" ? "council" : "resident",
-    apartment: item.apartment ?? "",
-    permissions: item.permissions ?? [],
-    active: item.active ?? true,
-    user_id: item.userId ?? null,
-    data: item,
-  })).filter((row: any) => row.condominium_id);
+  const portalRows = canSyncPortal
+    ? (state.portalMembers ?? []).map((item: any) => ({
+        workspace_id: workspaceId,
+        legacy_id: item.id,
+        condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+        name: item.name,
+        email: item.email,
+        role: item.role === "council" ? "council" : "resident",
+        apartment: item.apartment ?? "",
+        permissions: item.permissions ?? [],
+        active: item.active ?? true,
+        user_id: item.userId ?? null,
+        data: item,
+      })).filter((row: any) => row.condominium_id)
+    : [];
 
   if (portalRows.length) await upsertRows("portal_access", portalRows);
   // L'accesso al Portale è persistente: uno stato locale parziale durante
