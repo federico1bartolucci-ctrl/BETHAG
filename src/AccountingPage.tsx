@@ -270,6 +270,71 @@ function AccountingPage({
 
   const arrears = useMemo(() => scopedInstallments.reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
 
+  const [rendicontoYearId, setRendicontoYearId] = useState<string>("all");
+
+  const rendicontoYear = useMemo(
+    () => scopedYears.find((y) => y.id === rendicontoYearId) ?? null,
+    [scopedYears, rendicontoYearId]
+  );
+
+  const rendicontoLedger = useMemo(
+    () => rendicontoYearId === "all"
+      ? scopedLedger
+      : scopedLedger.filter((e) => e.fiscal_year_id === rendicontoYearId),
+    [scopedLedger, rendicontoYearId]
+  );
+
+  const rendicontoAllocations = useMemo(
+    () => rendicontoYearId === "all"
+      ? allocations.filter((a) => !dbCondominiumId || a.condominium_id === dbCondominiumId)
+      : allocations.filter((a) => (!dbCondominiumId || a.condominium_id === dbCondominiumId) && rendicontoLedger.some((e) => e.id === a.ledger_entry_id)),
+    [allocations, dbCondominiumId, rendicontoLedger, rendicontoYearId]
+  );
+
+  const rendicontoInstallments = useMemo(
+    () => rendicontoYearId === "all"
+      ? scopedInstallments
+      : scopedInstallments.filter((i) => i.fiscal_year_id === rendicontoYearId),
+    [scopedInstallments, rendicontoYearId]
+  );
+
+  const rendicontoSummary = useMemo(() => {
+    const income = rendicontoLedger.filter((e) => e.direction === "Entrata").reduce((s,e) => s + Number(e.amount || 0), 0);
+    const expenses = rendicontoLedger.filter((e) => e.direction === "Uscita").reduce((s,e) => s + Number(e.amount || 0), 0);
+    const paidExpenses = rendicontoLedger.filter((e) => e.direction === "Uscita" && e.payment_status === "Pagato").reduce((s,e) => s + Number(e.amount || 0), 0);
+    const unpaidExpenses = Math.max(0, expenses - paidExpenses);
+    const allocated = rendicontoAllocations.reduce((s,a) => s + Number(a.amount || 0), 0);
+    const allocatedPaid = rendicontoAllocations.reduce((s,a) => s + Number(a.paid_amount || 0), 0);
+    const installmentsAmount = rendicontoInstallments.reduce((s,i) => s + Number(i.amount || 0), 0);
+    const installmentsPaid = rendicontoInstallments.reduce((s,i) => s + Number(i.paid_amount || 0), 0);
+    const installmentsResidual = Math.max(0, installmentsAmount - installmentsPaid);
+    const opening = rendicontoYear ? Number(rendicontoYear.opening_balance || 0) : 0;
+    const closing = opening + income - expenses;
+    const fundsAllocated = scopedFunds.reduce((s,f) => s + Number(f.allocated_amount || 0), 0);
+    const fundsUsed = scopedFunds.reduce((s,f) => s + Number(f.used_amount || 0), 0);
+    return { income, expenses, paidExpenses, unpaidExpenses, allocated, allocatedPaid, installmentsAmount, installmentsPaid, installmentsResidual, opening, closing, fundsAllocated, fundsUsed };
+  }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoYear, scopedFunds]);
+
+  const rendicontoByUnit = useMemo(() => {
+    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; paid:number; residual:number }>();
+    for (const a of rendicontoAllocations) {
+      const unit = units.find((u) => u.id === a.unit_id);
+      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0 };
+      row.allocated += Number(a.amount || 0);
+      row.paid += Number(a.paid_amount || 0);
+      map.set(a.unit_id, row);
+    }
+    for (const i of rendicontoInstallments) {
+      if (!i.unit_id) continue;
+      const unit = units.find((u) => u.id === i.unit_id);
+      const row = map.get(i.unit_id) ?? { unitId:i.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0 };
+      row.installments += Number(i.amount || 0);
+      row.paid += Number(i.paid_amount || 0);
+      map.set(i.unit_id, row);
+    }
+    return Array.from(map.values()).map((row) => ({ ...row, residual:Math.max(0,row.installments-row.paid) })).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
+  }, [rendicontoAllocations, rendicontoInstallments, units]);
+
   const totals = useMemo(() => {
     const income = scopedLedger
       .filter((e) => e.direction === "Entrata")
@@ -939,60 +1004,68 @@ function AccountingPage({
       ) : tab === "rendiconto" ? (
         <section className="cards-grid">
           <article className="card">
-            <h2>Situazione economica</h2>
-            <p>Periodo e movimenti registrati per {selectedName}.</p>
-            <div className="quick-stats">
-              <div className="quick-stat"><b>{money(totals.income)}</b><span>Entrate registrate</span></div>
-              <div className="quick-stat"><b>{money(totals.expenses)}</b><span>Spese registrate</span></div>
-              <div className="quick-stat"><b>{money(totals.balance)}</b><span>Differenza</span></div>
+            <div className="section-heading">
+              <div><h2>Rendiconto condominiale</h2><p>Prospetto economico e finanziario costruito sui movimenti dell'esercizio selezionato.</p></div>
+              <select value={rendicontoYearId} onChange={(e) => setRendicontoYearId(e.target.value)}>
+                <option value="all">Tutti gli esercizi</option>
+                {scopedYears.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select>
             </div>
-            <h3>Esercizi</h3>
-            {scopedYears.length === 0 ? (
-              <p>Nessun esercizio configurato.</p>
-            ) : scopedYears.map((year) => (
-              <div className="row-card" key={year.id}>
-                <div>
-                  <b>{year.name}</b>
-                  <small>{year.start_date} → {year.end_date}</small>
-                  <span>{year.status} · Apertura {money(year.opening_balance)}</span>
-                </div>
-                {isAdministrator && dbCondominiumId && (
-                  <button className="mini-danger" onClick={() => remove("condominium_fiscal_years", year.id, "l'esercizio")}>×</button>
-                )}
-              </div>
-            ))}
-            {isAdministrator && dbCondominiumId && (
-              <button className="primary-button" onClick={() => setShowYearForm(true)}>+ Nuovo esercizio</button>
-            )}
+            <div className="quick-stats">
+              <div className="quick-stat"><b>{money(rendicontoSummary.opening)}</b><span>Saldo iniziale</span></div>
+              <div className="quick-stat"><b>{money(rendicontoSummary.income)}</b><span>Entrate</span></div>
+              <div className="quick-stat"><b>{money(rendicontoSummary.expenses)}</b><span>Uscite</span></div>
+              <div className="quick-stat"><b>{money(rendicontoSummary.closing)}</b><span>Saldo finale teorico</span></div>
+            </div>
+            <div className="permission-box"><b>Movimenti</b><span>{rendicontoLedger.length} registrati · pagato {money(rendicontoSummary.paidExpenses)} · da pagare {money(rendicontoSummary.unpaidExpenses)}</span></div>
+            <div className="permission-box"><b>Ripartizioni</b><span>{money(rendicontoSummary.allocated)} attribuiti alle unità · pagato {money(rendicontoSummary.allocatedPaid)}</span></div>
+            <div className="permission-box"><b>Rate</b><span>{money(rendicontoSummary.installmentsAmount)} dovuto · {money(rendicontoSummary.installmentsPaid)} pagato · residuo {money(rendicontoSummary.installmentsResidual)}</span></div>
           </article>
 
           <article className="card">
-            <h2>Rendiconto</h2>
-            <p>
-              Il modulo costituisce la base del registro contabile e della situazione
-              finanziaria. La nota esplicativa e il prospetto definitivo potranno
-              essere generati sui dati verificati dell'esercizio.
-            </p>
-            <div className="permission-box">
-              <b>Registro contabile</b>
-              <span>{scopedLedger.length} movimenti registrati.</span>
+            <h2>Confronto spese e ripartizioni</h2>
+            <p>Il prospetto evidenzia eventuali importi ancora non attribuiti alle unità.</p>
+            <div className="quick-stats">
+              <div className="quick-stat"><b>{money(rendicontoSummary.expenses)}</b><span>Spese a registro</span></div>
+              <div className="quick-stat"><b>{money(rendicontoSummary.allocated)}</b><span>Spese ripartite</span></div>
+              <div className="quick-stat"><b>{money(Math.max(0,rendicontoSummary.expenses-rendicontoSummary.allocated))}</b><span>Da ripartire</span></div>
             </div>
-            <div className="permission-box">
-              <b>Fondi e riserve</b>
-              <span>{scopedFunds.length} fondi configurati.</span>
-            </div>
-            <div className="permission-box">
-              <b>Adempimenti fiscali</b>
-              <span>{scopedTaxes.length} adempimenti registrati.</span>
-            </div>
-            <div className="permission-box">
-              <b>Contenzioso</b>
-              <span>{scopedCases.length} pratiche registrate.</span>
-            </div>
-            <p className="small-note">
-              La contabilità non cancella automaticamente le unità o i condòmini:
-              i dati anagrafici restano persistenti e le cancellazioni sono esplicite.
-            </p>
+            <h3>Fondi e riserve</h3>
+            {scopedFunds.length === 0 ? <p>Nessun fondo configurato.</p> : scopedFunds.map((fund) => (
+              <div className="row-card" key={fund.id}>
+                <div><b>{fund.name}</b><small>{fund.purpose || "Finalità non indicata"}</small><span>Allocato {money(fund.allocated_amount)} · Utilizzato {money(fund.used_amount)} · Residuo {money(Math.max(0,Number(fund.allocated_amount)-Number(fund.used_amount)))}</span></div>
+              </div>
+            ))}
+          </article>
+
+          <article className="card">
+            <h2>Situazione per unità</h2>
+            <p>Quote ripartite e rate registrate per ciascuna unità dell'esercizio.</p>
+            {rendicontoByUnit.length === 0 ? <p>Nessuna posizione individuale disponibile.</p> : rendicontoByUnit.map((row) => (
+              <div className="row-card" key={row.unitId}>
+                <div><b>{row.unitCode}</b><small>Ripartito {money(row.allocated)} · Rate {money(row.installments)}</small><span>Pagato {money(row.paid)} · Residuo rate {money(row.residual)}</span></div>
+              </div>
+            ))}
+          </article>
+
+          <article className="card">
+            <h2>Nota esplicativa</h2>
+            <p>Il prospetto è calcolato automaticamente dai dati presenti nel registro contabile, nelle ripartizioni, nelle rate e nei fondi.</p>
+            <div className="permission-box"><b>Formula saldo</b><span>Saldo iniziale + entrate − uscite = saldo finale teorico.</span></div>
+            <div className="permission-box"><b>Controllo riparto</b><span>Le spese registrate sono confrontate con le quote attribuite alle unità.</span></div>
+            <div className="permission-box"><b>Morosità</b><span>Il residuo delle rate deriva da importo dovuto meno pagamenti registrati.</span></div>
+            <p className="small-note">Il prospetto costituisce uno strumento gestionale; prima della presentazione assembleare l'amministratore deve verificare documenti giustificativi, competenza dell'esercizio, saldi bancari e quadratura contabile.</p>
+          </article>
+
+          <article className="card">
+            <h2>Esercizi</h2>
+            {scopedYears.length === 0 ? <p>Nessun esercizio configurato.</p> : scopedYears.map((year) => (
+              <div className="row-card" key={year.id}>
+                <div><b>{year.name}</b><small>{year.start_date} → {year.end_date}</small><span>{year.status} · Apertura {money(year.opening_balance)}</span></div>
+                {isAdministrator && dbCondominiumId && <button className="mini-danger" onClick={() => remove("condominium_fiscal_years", year.id, "l'esercizio")}>×</button>}
+              </div>
+            ))}
+            {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => setShowYearForm(true)}>+ Nuovo esercizio</button>}
           </article>
         </section>
       ) : tab === "movimenti" ? (
