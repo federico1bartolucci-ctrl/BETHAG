@@ -325,7 +325,7 @@ function AccountingPage({
     [dbCondominiumId, legalCases]
   );
 
-  const arrears = useMemo(() => scopedInstallments.reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
+  const arrears = useMemo(() => scopedInstallments.filter(i=>i.status !== "Accorpata").reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
 
   const [rendicontoYearId, setRendicontoYearId] = useState<string>("all");
 
@@ -2087,7 +2087,7 @@ function AccountingPage({
       ) : tab === "rate" ? (
         <section className="card">
           <div className="section-heading"><div><h2>Rate e morosità</h2><p>Posizioni individuali, scadenze, pagamenti e residui da incassare.</p></div>{isAdministrator&&dbCondominiumId&&<button className="primary-button" onClick={()=>setShowInstallmentForm(true)}>+ Nuova rata</button>}</div>
-          {scopedInstallments.length===0 ? <p>Nessuna rata registrata.</p> : scopedInstallments.map(i=><article className="row-card" key={i.id}><div><b>{i.title}</b><small>{units.find(u=>u.id===i.unit_id)?.unit_code || "Unità non associata"} · {i.due_date || "senza scadenza"} · {i.status}</small><span>Dovuto {money(i.amount)} · Pagato {money(i.paid_amount)} · Residuo {money(Math.max(0,i.amount-i.paid_amount))}</span>{isAdministrator && Number(i.amount)>Number(i.paid_amount) && <button className="secondary-button small" onClick={()=>{setPaymentInstallment(i);setPaymentForm({...paymentForm,amount:Math.max(0,Number(i.amount)-Number(i.paid_amount))});setShowPaymentForm(true)}}>Registra pagamento</button>}{i.notes&&<small>{i.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_installments",i.id,"la rata")}>×</button>}</article>)}
+          {scopedInstallments.length===0 ? <p>Nessuna rata registrata.</p> : scopedInstallments.map(i=><article className="row-card" key={i.id}><div><b>{i.title}</b><small>{i.unit_id ? (units.find(u=>u.id===i.unit_id)?.unit_code || "Unità") : "Rate unificate"} · {i.due_date || "senza scadenza"} · {i.status}</small><span>Dovuto {money(i.amount)} · Pagato {money(i.paid_amount)} · Residuo {money(Math.max(0,i.amount-i.paid_amount))}</span>{isAdministrator && i.status !== "Accorpata" && Number(i.amount)>Number(i.paid_amount) && <button className="secondary-button small" onClick={()=>{setPaymentInstallment(i);setPaymentForm({...paymentForm,amount:Math.max(0,Number(i.amount)-Number(i.paid_amount))});setShowPaymentForm(true)}}>Registra pagamento</button>}{i.notes&&<small>{i.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_installments",i.id,"la rata")}>×</button>}</article>)}
         </section>
       ) : tab === "fondi" ? (
         <section className="card">
