@@ -1026,6 +1026,37 @@ export function syncBackendState(
   );
 }
 
+export async function reconcileCondominiumWork(workspaceId: string, workId: string) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  return enqueueBackendSync(async () => {
+    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,title,condominium_id,estimated_amount,approved_amount,actual_amount").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
+    if (workError) throw workError;
+    if (!work) throw new Error("Lavoro non trovato.");
+    const { data: links, error: linksError } = await supabase.from("condominium_work_documents").select("document_id,title").eq("workspace_id", workspaceId).eq("work_id", workId);
+    if (linksError) throw linksError;
+    const documentIds = (links ?? []).map((x: any) => x.document_id).filter(Boolean);
+    const { data: docs, error: docsError } = documentIds.length ? await supabase.from("documents").select("id,title,category,data").eq("workspace_id", workspaceId).in("id", documentIds) : { data: [], error: null } as any;
+    if (docsError) throw docsError;
+    const invoices = (docs ?? []).map((doc: any) => {
+      const d = doc.data ?? {};
+      const amount = Number(d.invoiceAmount ?? d.amount ?? d.totalAmount ?? d.importo ?? d.importoTotale ?? d.expenseAmount ?? 0);
+      const isInvoice = String(doc.category ?? "").toLowerCase().includes("fattur") || String(d.documentType ?? d.aiDocumentType ?? "").toLowerCase().includes("fattur") || amount > 0;
+      return isInvoice ? { id: doc.id, title: doc.title, amount: Number.isFinite(amount) ? amount : 0 } : null;
+    }).filter(Boolean);
+    const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").select("progress_no,title,amount,paid_amount,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).order("progress_no");
+    if (progressError) throw progressError;
+    const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").select("id,amount,payment_status,description,data,document_id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("direction", "Uscita");
+    if (ledgerError) throw ledgerError;
+    const linkedLedger = (ledger ?? []).filter((entry: any) => entry.data?.workId === workId || (progress ?? []).some((p: any) => p.ledger_entry_id === entry.id));
+    const invoiceAmount = (invoices as any[]).reduce((sum, x) => sum + Number(x.amount || 0), 0);
+    const salAmount = (progress ?? []).reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
+    const accountingAmount = linkedLedger.reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
+    const approvedAmount = Number(work.approved_amount || 0);
+    const expectedAmount = approvedAmount || Number(work.estimated_amount || 0);
+    return { workId, title: work.title, invoiceCount: (invoices as any[]).length, invoiceAmount, salAmount, accountingAmount, approvedAmount, estimatedAmount: Number(work.estimated_amount || 0), expectedAmount, residualToInvoices: invoiceAmount - salAmount, residualToAccounting: invoiceAmount - accountingAmount, residualToExpected: expectedAmount - invoiceAmount, documents: invoices, progress: progress ?? [], ledger: linkedLedger };
+  });
+}
+
 export async function syncCondominiumWorkDocuments(workspaceId: string, workId: string, condominiumId: string, legacyDocumentIds: number[]) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
