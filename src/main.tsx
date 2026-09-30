@@ -7655,6 +7655,9 @@ function App() {
               setSelectedFileName={
                 setSelectedFileName
               }
+              setSelectedDocumentFile={
+                setSelectedDocumentFile
+              }
               editing={
                 !!selectedDocument
               }
