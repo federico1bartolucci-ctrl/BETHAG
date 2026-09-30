@@ -732,7 +732,7 @@ export async function saveCondominiumMember(
 
     const { data: previousMemberRow, error: previousMemberError } = await supabase
       .from("condominium_members")
-      .select("id, email, user_id")
+      .select("id, email, user_id, name, data")
       .eq("condominium_id", condominium.id)
       .eq("legacy_id", item.id)
       .maybeSingle();
@@ -782,10 +782,16 @@ export async function saveCondominiumMember(
         .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id);
 
-      if (previousEmail) {
-        portalQuery = portalQuery.ilike("email", previousEmail);
-      } else if (previousMemberRow.user_id) {
-        portalQuery = portalQuery.eq("user_id", previousMemberRow.user_id);
+      const effectiveUserId = item.userId ?? previousMemberRow.user_id ?? null;
+      if (effectiveUserId) {
+        portalQuery = portalQuery.eq("user_id", effectiveUserId);
+      } else if (previousEmail) {
+        // L'e-mail può essere condivisa da più persone della stessa unità:
+        // non è quindi un identificatore sufficiente per l'accesso Portale.
+        portalQuery = portalQuery
+          .ilike("email", previousEmail)
+          .eq("name", previousMemberRow.name ?? row.name)
+          .eq("apartment", String(previousMemberRow.data?.apartment ?? apartment));
       } else {
         portalQuery = null as any;
       }
@@ -995,7 +1001,7 @@ export async function deleteCondominiumMember(
 
     const { data: member, error: memberLookupError } = await supabase
       .from("condominium_members")
-      .select("email, user_id")
+      .select("email, user_id, name, data")
       .eq("condominium_id", condominium.id)
       .eq("legacy_id", legacyId)
       .maybeSingle();
@@ -1012,10 +1018,14 @@ export async function deleteCondominiumMember(
         .eq("condominium_id", condominium.id);
 
       const memberEmail = String(member.email ?? "").trim().toLowerCase();
-      if (memberEmail) {
-        portalDelete = portalDelete.ilike("email", memberEmail);
-      } else if (member.user_id) {
+      if (member.user_id) {
         portalDelete = portalDelete.eq("user_id", member.user_id);
+      } else if (memberEmail) {
+        // L'e-mail può essere condivisa: abbiniamo anche identità e unità.
+        portalDelete = portalDelete
+          .ilike("email", memberEmail)
+          .eq("name", member.name ?? "")
+          .eq("apartment", String(member.data?.apartment ?? ""));
       } else {
         portalDelete = null as any;
       }
