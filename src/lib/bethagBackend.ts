@@ -1159,6 +1159,108 @@ export async function deleteCondominiumMember(
 }
 
 
+export async function createCondominiumCreationIntake(
+  workspaceId: string,
+  payload: {
+    source?: "AI" | "Importazione" | "Manuale";
+    sourceDocuments?: any[];
+    extractedData?: Record<string, any>;
+    structure?: Record<string, any>;
+    validationErrors?: any[];
+    warnings?: any[];
+    notes?: string;
+  }
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userResult.user) throw new Error("Sessione utente non disponibile.");
+
+    const { data, error } = await supabase
+      .from("condominium_creation_intakes")
+      .insert({
+        workspace_id: workspaceId,
+        source: payload.source ?? "AI",
+        status: "Da verificare",
+        source_documents: payload.sourceDocuments ?? [],
+        extracted_data: payload.extractedData ?? {},
+        structure: payload.structure ?? {},
+        validation_errors: payload.validationErrors ?? [],
+        warnings: payload.warnings ?? [],
+        notes: payload.notes ?? "",
+        created_by: userResult.user.id,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data.id as string;
+  });
+}
+
+export async function confirmCondominiumCreationIntake(
+  workspaceId: string,
+  intakeId: string,
+  payload: {
+    extractedData?: Record<string, any>;
+    structure?: Record<string, any>;
+    validationErrors?: any[];
+    warnings?: any[];
+    notes?: string;
+  }
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userResult.user) throw new Error("Sessione utente non disponibile.");
+
+    const { data, error } = await supabase
+      .from("condominium_creation_intakes")
+      .update({
+        status: "Confermato",
+        extracted_data: payload.extractedData ?? {},
+        structure: payload.structure ?? {},
+        validation_errors: payload.validationErrors ?? [],
+        warnings: payload.warnings ?? [],
+        notes: payload.notes ?? "",
+        confirmed_by: userResult.user.id,
+        confirmed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("id", intakeId)
+      .select("id, status")
+      .single();
+
+    if (error) throw error;
+    return data;
+  });
+}
+
+export async function cancelCondominiumCreationIntake(
+  workspaceId: string,
+  intakeId: string
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { error } = await supabase
+      .from("condominium_creation_intakes")
+      .update({
+        status: "Annullato",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("id", intakeId);
+
+    if (error) throw error;
+  });
+}
+
 export async function updateCondominiumRequestStatus(
   workspaceId: string,
   request: any
