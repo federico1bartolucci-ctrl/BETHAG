@@ -3089,7 +3089,10 @@ function App() {
           const rows = Array.isArray(backup.backend?.[table]) ? backup.backend[table] : [];
           if (!rows.length) continue;
           const normalized = rows.map((row: any) => ({...row, workspace_id: profile.workspaceId}));
-          const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
+          const onConflict = table === "workspace_members"
+            ? "workspace_id,user_id"
+            : "id";
+          const { error } = await supabase.from(table).upsert(normalized, { onConflict });
           if (error) errors.push(table + ": " + error.message);
         }
       }
