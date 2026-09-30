@@ -340,6 +340,73 @@ async function syncBackendStateNow(
 
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
+  let condominiumSupplierIdByLegacySupplierId = new Map<number, string>();
+  if (canSyncModule("attivita")) {
+    const selectedSupplierIds = Array.from(new Set(
+      (state.condominiumWorks ?? [])
+        .map((item: any) => Number(item.supplierId))
+        .filter((id: number) => Number.isFinite(id) && id > 0)
+    ));
+    if (selectedSupplierIds.length) {
+      const { data: condominiumSuppliers, error: condominiumSuppliersError } = await supabase
+        .from("condominium_suppliers")
+        .select("id,condominium_id,business_name,vendor_code,data")
+        .eq("workspace_id", workspaceId);
+      if (condominiumSuppliersError) throw condominiumSuppliersError;
+
+      const normalizeSupplierName = (value: unknown) =>
+        String(value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
+      const genericSuppliersByLegacyId = new Map(
+        (state.suppliers ?? []).map((supplier: any) => [Number(supplier.id), supplier])
+      );
+
+      for (const legacySupplierId of selectedSupplierIds) {
+        const supplier = genericSuppliersByLegacyId.get(legacySupplierId);
+        if (!supplier) continue;
+        const condominiumDbId = condominiumDbIdByLegacyId.get(Number(supplier.condominiumId));
+        const candidateCondominiumIds = condominiumDbId
+          ? [condominiumDbId]
+          : Array.from(condominiumDbIdByLegacyId.values());
+        const name = normalizeSupplierName(supplier.name);
+        const existing = (condominiumSuppliers ?? []).find((row: any) =>
+          candidateCondominiumIds.includes(row.condominium_id) &&
+          normalizeSupplierName(row.business_name) === name
+        );
+
+        if (existing) {
+          condominiumSupplierIdByLegacySupplierId.set(legacySupplierId, existing.id);
+          continue;
+        }
+
+        const workCondominiumIds = Array.from(new Set(
+          (state.condominiumWorks ?? [])
+            .filter((work: any) => Number(work.supplierId) === legacySupplierId)
+            .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
+            .filter(Boolean)
+        ));
+
+        for (const workCondominiumId of workCondominiumIds) {
+          const { data: created, error: createError } = await supabase
+            .from("condominium_suppliers")
+            .insert({
+              workspace_id: workspaceId,
+              condominium_id: workCondominiumId,
+              business_name: supplier.name,
+              email: supplier.email || null,
+              phone: supplier.phone || null,
+              category: supplier.service || null,
+              data: { source: "supplier_legacy", legacySupplierId, supplierId: legacySupplierId }
+            })
+            .select("id")
+            .single();
+          if (createError) throw createError;
+          condominiumSupplierIdByLegacySupplierId.set(legacySupplierId, created.id);
+          break;
+        }
+      }
+    }
+  }
+
   const rowsByTable: Array<[string, any[]]> = [
     canSyncModule("documenti") ? ["documents", (state.documents ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
@@ -383,6 +450,7 @@ async function syncBackendStateNow(
       approved_amount: Number(item.approvedAmount || 0),
       actual_amount: Number(item.actualAmount || 0),
       progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
+      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierId.get(Number(item.supplierId)) ?? null) : null,
       notes: item.notes ?? "",
       data: item,
     })).filter((row: any) => row.condominium_id && row.title)] : null,
