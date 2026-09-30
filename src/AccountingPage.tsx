@@ -1105,15 +1105,28 @@ function AccountingPage({
     if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
     const percentages=allocationInstallmentForm.percentages.slice(0,installmentCount).map(Number);
     if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
-    const memberIds = new Set(selectedAllocations.map(a => a.member_id).filter(Boolean));
-    const hasAmbiguousMembers = selectedAllocations.some(a => !a.member_id);
-    if (allocationInstallmentForm.unifyByMember && hasAmbiguousMembers) {
-      setError("Non è possibile unificare automaticamente le rate: almeno una quota non ha un unico proprietario/responsabile associato.");
-      return;
-    }
-    if (allocationInstallmentForm.unifyByMember && memberIds.size < 1) {
-      setError("Non sono stati individuati soggetti univoci per l'unificazione delle rate.");
-      return;
+    let resolvedMemberByUnit = new Map<string, string>();
+    if (allocationInstallmentForm.unifyByMember) {
+      const unitIds = [...new Set(selectedAllocations.map(a => a.unit_id).filter(Boolean))];
+      const { data: unitMembers, error: unitMembersError } = await supabase
+        .from("condominium_members")
+        .select("id,unit_id,role,active")
+        .eq("condominium_id", dbCondominiumId)
+        .eq("active", true)
+        .in("unit_id", unitIds);
+      if (unitMembersError) throw unitMembersError;
+      const byUnit = new Map<string, any[]>();
+      for (const member of unitMembers || []) {
+        const list = byUnit.get(member.unit_id) || [];
+        list.push(member);
+        byUnit.set(member.unit_id, list);
+      }
+      const ambiguousUnits = unitIds.filter(unitId => (byUnit.get(unitId) || []).length !== 1);
+      if (ambiguousUnits.length) {
+        setError("L'unificazione è disponibile solo per unità con un unico proprietario/responsabile attivo. Le altre rate resteranno disgiunte.");
+        return;
+      }
+      resolvedMemberByUnit = new Map(unitIds.map(unitId => [unitId, byUnit.get(unitId)![0].id]));
     }
     const confirmText = allocationInstallmentForm.unifyByMember
       ? "Confermi la generazione delle rate unificate per ciascun proprietario/responsabile? Le singole quote delle unità resteranno comunque conservate."
@@ -1145,10 +1158,11 @@ function AccountingPage({
         if (generated.error) throw generated.error;
         const grouped = new Map<string, any[]>();
         for (const row of generated.data || []) {
-          const key = String(row.member_id || "");
-          if (!key) continue;
+          const resolvedMemberId = String(row.member_id || resolvedMemberByUnit.get(String(row.unit_id)) || "");
+          if (!resolvedMemberId) continue;
+          const key = resolvedMemberId;
           if (!grouped.has(key + "|" + row.due_date)) grouped.set(key + "|" + row.due_date, []);
-          grouped.get(key + "|" + row.due_date)!.push(row);
+          grouped.get(key + "|" + row.due_date)!.push({ ...row, resolvedMemberId });
         }
         // L'unificazione è eseguita solo quando ogni gruppo contiene un solo membro.
         // Le rate originali restano tracciate per unità; le rate aggregate vengono
@@ -1163,7 +1177,7 @@ function AccountingPage({
             condominium_id: dbCondominiumId,
             fiscal_year_id: allocationInstallmentForm.fiscal_year_id || null,
             ledger_entry_id: allocationInstallmentForm.ledger_entry_id,
-            member_id: first.member_id,
+            member_id: first.resolvedMemberId,
             unit_id: null,
             title: allocationInstallmentForm.title.trim() + " - unificata",
             amount,
