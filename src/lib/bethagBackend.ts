@@ -828,7 +828,11 @@ export async function saveCondominiumMember(
         .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id);
 
-      const effectiveUserId = item.userId ?? previousMemberRow.user_id ?? null;
+      // Per individuare un accesso già esistente usiamo sempre l'identificativo
+      // precedente: se user_id cambia, l'UPDATE deve comunque raggiungere la
+      // vecchia riga e poi sostituirlo con il nuovo valore.
+      const previousUserId = previousMemberRow.user_id ?? null;
+      const effectiveUserId = previousUserId;
       if (effectiveUserId) {
         portalQuery = portalQuery.eq("user_id", effectiveUserId);
       } else if (previousEmail) {
