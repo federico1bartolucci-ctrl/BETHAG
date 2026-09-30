@@ -1678,11 +1678,11 @@ export async function confirmCondominiumInvoice(
 
     if (workId) {
       const { data: linked, error: linkedError } = await supabase.from("condominium_work_documents").select("id")
-        .eq("workspace_id", workspaceId).eq("work_id", workId).eq("document_id", document.id).limit(1).maybeSingle();
+        .eq("workspace_id", workspaceId).eq("work_id", workId).eq("document_id", payload.documentLegacyId).limit(1).maybeSingle();
       if (linkedError) throw linkedError;
       if (!linked?.id) {
         const { error } = await supabase.from("condominium_work_documents").insert({
-          workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: document.id,
+          workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: payload.documentLegacyId,
           title: document.title ?? "Fattura", notes: invoiceNumber ? `Fattura ${invoiceNumber}` : "Fattura collegata dall'analisi AI.",
         });
         if (error) throw error;
