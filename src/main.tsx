@@ -4,7 +4,9 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { analyzeCondominiumDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { analyzeCondominiumDocumentsWithAI,
+  analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3747,7 +3749,20 @@ function App() {
         return;
       }
 
-      const draft = await analyzeCondominiumDocumentsWithAI(workspaceId, selectedFiles);
+      const analysisFiles = storedDocuments.map((item: any, index: number) => ({
+        filename: item.name || selectedFiles[index]?.name || "documento",
+        storagePath: item.path,
+        mimeType: item.type || selectedFiles[index]?.type || "application/octet-stream",
+      }));
+      const draft = await analyzeCondominiumStoredDocumentsWithAI(workspaceId, analysisFiles);
+
+      if (storageMode === "analysis" && storedDocuments.length) {
+        await Promise.all(
+          storedDocuments.map((item: any) =>
+            deleteWorkspaceStoredFile(item.path).catch(() => undefined)
+          )
+        );
+      }
       setCondominiumAiDraft(draft);
       const intakeId = await createCondominiumCreationIntake(workspaceId, {
         source: "AI",
@@ -4818,11 +4833,11 @@ function App() {
       if (error) throw error;
       if (!blob) throw new Error("File originale non disponibile.");
 
-      const file = new File([blob], item.name, {
-        type: item.mimeType || blob.type || "application/octet-stream",
-        lastModified: item.fileSizeBytes ? Date.now() : Date.now(),
-      });
-      const draft = await analyzeWorkspaceDocumentsWithAI(workspaceId, [file]);
+      const draft = await analyzeWorkspaceStoredDocumentsWithAI(workspaceId, [{
+        filename: item.name,
+        storagePath: item.storagePath,
+        mimeType: item.mimeType || blob.type || "application/octet-stream",
+      }]);
 
       setDocuments((current) =>
         current.map((doc) =>
