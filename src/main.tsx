@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -382,6 +382,7 @@ type Activity = {
 };
 
 type CondominiumWork = { id: string; condominiumId: number; title: string; category: string; description: string; status: WorkStatus; priority: WorkPriority; supplierId: number | null; activityId: number | null; documentIds: number[]; startDate: string; expectedEndDate: string; actualEndDate: string; estimatedAmount: number; approvedAmount: number; actualAmount: number; progressPercent: number; notes: string; };
+type WorkProgress = { id?: string; workId: string; progressNo: number; progressDate: string; title: string; status: string; percentage: number; amount: number; paidAmount: number; notes: string; ledgerEntryId?: string | null; };
 
 type AdminProfile = {
   name: string;
@@ -1037,6 +1038,7 @@ const emptyActivity: Activity = {
 };
 
 const emptyCondominiumWork: CondominiumWork = { id: "", condominiumId: 1, title: "", category: "Manutenzione", description: "", status: "Da programmare", priority: "Media", supplierId: null, activityId: null, documentIds: [], startDate: "", expectedEndDate: "", actualEndDate: "", estimatedAmount: 0, approvedAmount: 0, actualAmount: 0, progressPercent: 0, notes: "" };
+const emptyWorkProgress: WorkProgress = { workId: "", progressNo: 1, progressDate: localISODate(), title: "SAL 1", status: "In corso", percentage: 0, amount: 0, paidAmount: 0, notes: "" };
 
 const emptyCondominiumMember: CondominiumMember = {
   id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", notes: "", active: true, unitId: "",
@@ -2407,6 +2409,8 @@ function App() {
     useState<Activity>(emptyActivity);
 
   const [condominiumWorkForm, setCondominiumWorkForm] = useState<CondominiumWork>(emptyCondominiumWork);
+  const [workProgressForm, setWorkProgressForm] = useState<WorkProgress>(emptyWorkProgress);
+  const [selectedWorkProgress, setSelectedWorkProgress] = useState<WorkProgress | null>(null);
 
   const [
     communicationForm,
@@ -5416,6 +5420,32 @@ function App() {
     setSelectedCondominiumWork(null); setCondominiumWorkForm(emptyCondominiumWork); closeModal();
   };
   const editCondominiumWork = (item: CondominiumWork) => { if (!requireModulePermission("attivita", "La modifica di un lavoro")) return; setSelectedCondominiumWork(item); setCondominiumWorkForm(item); openModal("condominium-work"); };
+  const newWorkProgress = (work: CondominiumWork) => { if (!requireModulePermission("attivita", "La gestione degli stati di avanzamento")) return; setSelectedWorkProgress(null); setWorkProgressForm({ ...emptyWorkProgress, workId: work.id, progressNo: 1, title: "SAL " + 1, percentage: work.progressPercent, amount: 0, paidAmount: 0 }); openModal("work-progress"); };
+  const saveWorkProgress = async (event: React.FormEvent<HTMLFormElement>) => {
+    if (!requireModulePermission("attivita", "La registrazione dello stato di avanzamento")) return;
+    event.preventDefault();
+    const f = workProgressForm;
+    if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
+      const work = condominiumWorks.find(w => w.id === f.workId);
+      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: f.amount > 0 ? f.amount : w.actualAmount, status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
+      setWorkProgressForm(emptyWorkProgress); setSelectedWorkProgress(null); closeModal();
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL."); }
+  };
+  const saveWorkProgressAndAccount = async (event: React.FormEvent<HTMLFormElement>) => {
+    if (!requireModulePermission("attivita", "La registrazione contabile del SAL")) return;
+    event.preventDefault();
+    const f = workProgressForm;
+    try {
+      if (!supabaseConfigured || !supabase || !profile.workspaceId) throw new Error("Per registrare il SAL in contabilità è necessario il collegamento al server.");
+      await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: true });
+      const work = condominiumWorks.find(w => w.id === f.workId);
+      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: f.percentage, actualAmount: f.amount || w.actualAmount, status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status } : w));
+      setWorkProgressForm(emptyWorkProgress); closeModal();
+      alert("SAL registrato e imputato in Contabilità senza creare una seconda voce per lo stesso SAL.");
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL in Contabilità."); }
+  };
   const deleteCondominiumWork = async (id: string) => { if (!requireModulePermission("attivita", "L'eliminazione di un lavoro")) return; if (!confirm("Eliminare definitivamente questo lavoro?")) return; const previous = condominiumWorks; setCondominiumWorks(current => current.filter(item => item.id !== id)); if (supabaseConfigured && supabase && profile.workspaceId) { try { await deleteCondominiumWorkBackend(profile.workspaceId, id); } catch (error) { setCondominiumWorks(previous); alert(error instanceof Error ? "Il lavoro non è stato eliminato dal server.\n\n" + error.message : "Il lavoro non è stato eliminato dal server."); } } };
   const updateCondominiumWorkProgress = (id: string, progressPercent: number) => { if (!requireModulePermission("attivita", "L'aggiornamento dell'avanzamento lavori")) return; const progress = Math.max(0, Math.min(100, Number(progressPercent) || 0)); setCondominiumWorks(current => current.map(item => item.id === id ? { ...item, progressPercent: progress, status: progress >= 100 ? "Completato" : progress > 0 && item.status === "Da programmare" ? "In corso" : item.status, actualEndDate: progress >= 100 && !item.actualEndDate ? localISODate() : item.actualEndDate } : item)); };
 
@@ -7305,7 +7335,7 @@ function App() {
           )}
 
 
-          {page === "lavori" && (<CondominiumWorksPage works={condominiumWorks} search={search} setSearch={setSearch} onNew={newCondominiumWork} onEdit={editCondominiumWork} onDelete={deleteCondominiumWork} onProgress={updateCondominiumWorkProgress} condominiumName={condominiumName} suppliers={suppliers} activities={activities} isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("attivita"))} />)}
+          {page === "lavori" && (<CondominiumWorksPage works={condominiumWorks} search={search} setSearch={setSearch} onNew={newCondominiumWork} onEdit={editCondominiumWork} onDelete={deleteCondominiumWork} onProgress={updateCondominiumWorkProgress} onNewProgress={newWorkProgress} condominiumName={condominiumName} suppliers={suppliers} activities={activities} isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("attivita"))} />)}
 
           {page === "comunicazioni" && (
             <CommunicationsPage
@@ -7889,6 +7919,8 @@ function App() {
               }
             />
           )}
+
+          {modalType === "work-progress" && (<WorkProgressForm value={workProgressForm} setValue={setWorkProgressForm} onSubmit={saveWorkProgress} onSubmitAccounting={saveWorkProgressAndAccount} onCancel={closeModal} />)}
 
           {modalType === "condominium-work" && (<CondominiumWorkForm value={condominiumWorkForm} setValue={setCondominiumWorkForm} condominiums={condominiums.filter((c) => !c.archivedAt)} suppliers={suppliers} activities={activities} documents={documents} onSubmit={saveCondominiumWork} onCancel={closeModal} editing={!!selectedCondominiumWork} />)}
 
@@ -11226,14 +11258,19 @@ function SuppliersPage({
 /* =========================================================
    LAVORI E MANUTENZIONI
    ========================================================= */
-function CondominiumWorksPage({ works, search, setSearch, onNew, onEdit, onDelete, onProgress, condominiumName, suppliers, activities, isAdministrator = false }: any) {
+function CondominiumWorksPage({ works, search, setSearch, onNew, onEdit, onDelete, onProgress, onNewProgress, condominiumName, suppliers, activities, isAdministrator = false }: any) {
   const [statusFilter, setStatusFilter] = useState("Tutti");
   const filtered = works.filter((w: CondominiumWork) => { const supplier = suppliers.find((s: Supplier) => s.id === w.supplierId); const text = [w.title,w.category,w.description,w.status,w.priority,condominiumName(w.condominiumId),supplier?.name || ""].join(" ").toLowerCase(); return text.includes(search.toLowerCase()) && (statusFilter === "Tutti" || w.status === statusFilter); });
   const active = works.filter((w: CondominiumWork) => !["Completato","Annullato"].includes(w.status));
   const inProgress = works.filter((w: CondominiumWork) => w.status === "In corso").length;
   const completed = works.filter((w: CondominiumWork) => w.status === "Completato").length;
   const totalActual = works.reduce((sum: number,w: CondominiumWork)=>sum+(Number(w.actualAmount)||0),0);
-  return <><PageHeader eyebrow="Gestione tecnica" title="Lavori e manutenzioni" action={isAdministrator ? "+ Nuovo lavoro" : undefined} onAction={isAdministrator ? onNew : undefined}/><SearchBox value={search} onChange={setSearch} placeholder="Cerca lavoro, fornitore, condominio o stato..."/><div className="quick-stats"><div className="quick-stat"><b>{works.length}</b><span>Lavori</span></div><div className="quick-stat"><b>{active.length}</b><span>In gestione</span></div><div className="quick-stat"><b>{inProgress}</b><span>In corso</span></div><div className="quick-stat"><b>{completed}</b><span>Completati</span></div><div className="quick-stat"><b>€ {totalActual.toLocaleString("it-IT",{minimumFractionDigits:2})}</b><span>Consuntivo</span></div></div><div className="filter-bar"><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option>Tutti</option><option>Da programmare</option><option>Preventivo richiesto</option><option>Approvato</option><option>In corso</option><option>Sospeso</option><option>Completato</option><option>Annullato</option></select></div><div className="cards-list">{filtered.map((w: CondominiumWork)=>{const supplier=suppliers.find((s:Supplier)=>s.id===w.supplierId);const activity=activities.find((a:Activity)=>a.id===w.activityId);return <article className="row-card" key={w.id}><div style={{minWidth:0,flex:1}}><b>{w.title}</b><small>{condominiumName(w.condominiumId)} · {w.category}{supplier ? " · "+supplier.name : ""}</small><span><Badge value={w.priority}/> <strong>{w.status}</strong> · Avanzamento {w.progressPercent}%</span><div style={{marginTop:10,height:7,borderRadius:99,background:"#e8edf5",overflow:"hidden"}}><div style={{width:w.progressPercent+"%",height:"100%",background:"currentColor",opacity:.7}}/></div><small style={{display:"block",marginTop:8}}>Documenti: {w.documentIds.length} · Attività: {activity?.title || "nessuna"} · Preventivo € {Number(w.estimatedAmount||0).toLocaleString("it-IT",{minimumFractionDigits:2})} · Consuntivo € {Number(w.actualAmount||0).toLocaleString("it-IT",{minimumFractionDigits:2})}</small></div>{isAdministrator&&<div className="row-actions"><select value={w.progressPercent} onChange={e=>onProgress(w.id,Number(e.target.value))}><option value={0}>0%</option><option value={25}>25%</option><option value={50}>50%</option><option value={75}>75%</option><option value={100}>100%</option></select><button className="secondary-button small" onClick={()=>onEdit(w)}>Dettagli</button><button className="mini-danger" onClick={()=>onDelete(w.id)}>×</button></div>}</article>;})}{filtered.length===0&&<Empty text="Nessun lavoro o intervento trovato."/>}</div></>;
+  return <><PageHeader eyebrow="Gestione tecnica" title="Lavori e manutenzioni" action={isAdministrator ? "+ Nuovo lavoro" : undefined} onAction={isAdministrator ? onNew : undefined}/><SearchBox value={search} onChange={setSearch} placeholder="Cerca lavoro, fornitore, condominio o stato..."/><div className="quick-stats"><div className="quick-stat"><b>{works.length}</b><span>Lavori</span></div><div className="quick-stat"><b>{active.length}</b><span>In gestione</span></div><div className="quick-stat"><b>{inProgress}</b><span>In corso</span></div><div className="quick-stat"><b>{completed}</b><span>Completati</span></div><div className="quick-stat"><b>€ {totalActual.toLocaleString("it-IT",{minimumFractionDigits:2})}</b><span>Consuntivo</span></div></div><div className="filter-bar"><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option>Tutti</option><option>Da programmare</option><option>Preventivo richiesto</option><option>Approvato</option><option>In corso</option><option>Sospeso</option><option>Completato</option><option>Annullato</option></select></div><div className="cards-list">{filtered.map((w: CondominiumWork)=>{const supplier=suppliers.find((s:Supplier)=>s.id===w.supplierId);const activity=activities.find((a:Activity)=>a.id===w.activityId);return <article className="row-card" key={w.id}><div style={{minWidth:0,flex:1}}><b>{w.title}</b><small>{condominiumName(w.condominiumId)} · {w.category}{supplier ? " · "+supplier.name : ""}</small><span><Badge value={w.priority}/> <strong>{w.status}</strong> · Avanzamento {w.progressPercent}%</span><div style={{marginTop:10,height:7,borderRadius:99,background:"#e8edf5",overflow:"hidden"}}><div style={{width:w.progressPercent+"%",height:"100%",background:"currentColor",opacity:.7}}/></div><small style={{display:"block",marginTop:8}}>Documenti: {w.documentIds.length} · Attività: {activity?.title || "nessuna"} · Preventivo € {Number(w.estimatedAmount||0).toLocaleString("it-IT",{minimumFractionDigits:2})} · Consuntivo € {Number(w.actualAmount||0).toLocaleString("it-IT",{minimumFractionDigits:2})}</small></div>{isAdministrator&&<div className="row-actions"><select value={w.progressPercent} onChange={e=>onProgress(w.id,Number(e.target.value))}><option value={0}>0%</option><option value={25}>25%</option><option value={50}>50%</option><option value={75}>75%</option><option value={100}>100%</option></select><button className="secondary-button small" onClick={()=>onNewProgress(w)}>+ SAL</button><button className="secondary-button small" onClick={()=>onEdit(w)}>Dettagli</button><button className="mini-danger" onClick={()=>onDelete(w.id)}>×</button></div>}</article>;})}{filtered.length===0&&<Empty text="Nessun lavoro o intervento trovato."/>}</div></>;
+}
+
+function WorkProgressForm({ value, setValue, onSubmit, onSubmitAccounting, onCancel }: any) {
+  const set=(key:keyof WorkProgress,next:any)=>setValue((current:WorkProgress)=>({...current,[key]:next}));
+  return <form onSubmit={onSubmit}><div className="modal-header"><div><div className="eyebrow">Avanzamento lavori</div><h2>Nuovo stato di avanzamento</h2></div><button type="button" className="modal-close" onClick={onCancel}>×</button></div><div className="form-grid"><InputField label="N. SAL" type="number" value={String(value.progressNo)} onChange={(v:string)=>set("progressNo",Math.max(1,Number(v)||1))}/><InputField label="Data" type="date" value={value.progressDate} onChange={(v:string)=>set("progressDate",v)}/><InputField label="Titolo" value={value.title} onChange={(v:string)=>set("title",v)} placeholder="SAL 1"/><InputField label="Avanzamento %" type="number" value={String(value.percentage)} onChange={(v:string)=>set("percentage",Math.max(0,Math.min(100,Number(v)||0)))}/><InputField label="Importo SAL" type="number" value={String(value.amount||"")} onChange={(v:string)=>set("amount",Math.max(0,Number(v)||0))} placeholder="0,00"/><InputField label="Importo pagato" type="number" value={String(value.paidAmount||"")} onChange={(v:string)=>set("paidAmount",Math.max(0,Number(v)||0))} placeholder="0,00"/><InputField label="Stato" value={value.status} onChange={(v:string)=>set("status",v)} placeholder="In corso / Completato"/></div><TextAreaField label="Note" value={value.notes} onChange={(v:string)=>set("notes",v)} placeholder="Lavorazioni eseguite, certificazioni, fatture..."/><div className="button-row"><button type="button" className="secondary-button" onClick={onCancel}>Annulla</button><button type="submit" className="secondary-button">Salva solo SAL</button><button type="button" className="primary-button" onClick={onSubmitAccounting}>Salva + Contabilità</button></div></form>;
 }
 
 function CondominiumWorkForm({ value, setValue, condominiums, suppliers, activities, documents, onSubmit, onCancel, editing }: any) {
