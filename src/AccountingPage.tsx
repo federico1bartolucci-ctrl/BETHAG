@@ -92,6 +92,7 @@ type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
+type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso";
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
@@ -142,6 +143,7 @@ function AccountingPage({
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
+  const [carryovers, setCarryovers] = useState<FiscalCarryover[]>([]);
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [budgetForm, setBudgetForm] = useState({ fiscal_year_id:"", category:"Manutenzione", description:"", amount:0, notes:"" });
@@ -293,6 +295,10 @@ function AccountingPage({
   );
 
   const arrears = useMemo(() => scopedInstallments.reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
+  const scopedCarryovers = useMemo(() => dbCondominiumId ? carryovers.filter(c => c.condominium_id === dbCondominiumId) : carryovers,[dbCondominiumId,carryovers]);
+  const rendicontoCarryovers = useMemo(() => rendicontoYearId === "all" ? scopedCarryovers : scopedCarryovers.filter(c => c.target_fiscal_year_id === rendicontoYearId), [scopedCarryovers, rendicontoYearId]);
+  const carryoverDebt = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Debito").reduce((s,c)=>s+Number(c.balance||0),0),[rendicontoCarryovers]);
+  const carryoverCredit = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Credito").reduce((s,c)=>s+Math.abs(Number(c.balance||0)),0),[rendicontoCarryovers]);
 
   const [rendicontoYearId, setRendicontoYearId] = useState<string>("all");
 
@@ -553,6 +559,7 @@ function AccountingPage({
         millesimalValuesResult,
         installmentsResult,
         budgetsResult,
+        carryoversResult,
       ]) {
         if (result.error) throw result.error;
       }
@@ -567,6 +574,7 @@ function AccountingPage({
       setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
       setInstallments((installmentsResult.data ?? []) as Installment[]);
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
+      setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -592,7 +600,14 @@ function AccountingPage({
     try {
       const { error: closeError } = await supabase.from("condominium_fiscal_years").update({ status: "Chiuso" }).eq("id", year.id).eq("workspace_id", workspaceId);
       if (closeError) throw closeError;
-      flash("Esercizio chiuso.");
+      const nextYear = fiscalYears.filter(y => y.condominium_id === year.condominium_id && y.id !== year.id && y.start_date > year.end_date).sort((a,b) => a.start_date.localeCompare(b.start_date))[0];
+      if (nextYear) {
+        const { data: carryCount, error: carryError } = await supabase.rpc("generate_fiscal_year_carryovers", { p_workspace_id: workspaceId, p_condominium_id: year.condominium_id, p_source_fiscal_year_id: year.id, p_target_fiscal_year_id: nextYear.id });
+        if (carryError) throw carryError;
+        flash("Esercizio chiuso. Partite riportate: " + Number(carryCount || 0) + ".");
+      } else {
+        flash("Esercizio chiuso. Il riporto sarà generato quando esisterà l'esercizio successivo.");
+      }
       await load();
     } catch (e:any) {
       setError(e?.message || "Impossibile chiudere l'esercizio.");
@@ -1145,8 +1160,9 @@ function AccountingPage({
       setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
     const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
-    if(paymentAmount>residual){
-      setError("Il pagamento non può superare il residuo della rata."); return;
+    if(paymentAmount > residual + 0.005){
+      const credit = paymentAmount - residual;
+      if (!window.confirm("Il pagamento supera il residuo di " + money(credit) + ". L'eccedenza sarà registrata come credito da riportare all'esercizio successivo. Confermi?")) return;
     }
     setSaving(true); setError("");
     try {
@@ -1163,7 +1179,8 @@ function AccountingPage({
       if(paymentError) throw paymentError;
       setShowPaymentForm(false); setPaymentInstallment(null);
       setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
-      flash("Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
+      const overpayment = Math.max(0, paymentAmount - residual);
+      flash(overpayment > 0.005 ? "Pagamento registrato. Eccedenza a credito: " + money(overpayment) + "." : "Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
       await load();
     } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
     finally{setSaving(false);}
@@ -1559,6 +1576,8 @@ function AccountingPage({
           ))}
         </section>
       )}
+
+      <div className="card"><div className="section-heading"><div><h2>Partite riportate</h2><p>Crediti e debiti individuali provenienti dagli esercizi precedenti.</p></div></div>{rendicontoCarryovers.length===0 ? <p>Nessuna partita riportata.</p> : <div className="cards-list">{rendicontoCarryovers.map(c=>{const unit=units.find(u=>u.id===c.unit_id); const source=scopedYears.find(y=>y.id===c.source_fiscal_year_id); return <article className="row-card" key={c.id}><div><b>{unit?.unit_code || "Unità non associata"} · {c.kind}</b><small>Da {source?.name || "esercizio precedente"} · {c.status}</small><span>{money(Math.abs(Number(c.balance||0)))}</span></div></article>})}</div>}<div className="permission-box"><span>Debiti riportati: {money(carryoverDebt)}</span><span>Crediti riportati: {money(carryoverCredit)}</span></div></div>
 
       {showYearForm && (
         <div className="modal-backdrop"><form className="modal-card" onSubmit={saveYear}>
