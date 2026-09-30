@@ -23,8 +23,8 @@ begin
     raise exception 'Autenticazione richiesta';
   end if;
 
-  if not private.is_workspace_admin(p_workspace_id) then
-    raise exception 'Autorizzazione amministratore richiesta';
+  if not private.can_manage_workspace_module(p_workspace_id, 'condomini') then
+    raise exception 'Autorizzazione gestione condomini richiesta';
   end if;
 
   insert into public.condominiums (
