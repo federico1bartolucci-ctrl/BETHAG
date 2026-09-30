@@ -1257,9 +1257,10 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       ledgerSupplierId = supplier?.id ?? null;
     }
 
-    let ledgerEntryId: string | null = null;
+    const { data: existingProgress } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+    let ledgerEntryId: string | null = existingProgress?.ledger_entry_id ?? null;
     if (input.registerAccounting && amount > 0) {
-      const { data: existing } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+      const existing = existingProgress;
       if (existing?.ledger_entry_id) {
         ledgerEntryId = existing.ledger_entry_id;
         const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount, payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
