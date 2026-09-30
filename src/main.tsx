@@ -3719,6 +3719,7 @@ function App() {
     setCondominiumAiDraft(null);
     setCondominiumAiFiles([]);
     setCondominiumAiProcessing(false);
+    setCondominiumAiLargeFiles([]);
     setCondominiumAiConfirmedUnits([]);
     openModal("condominium-ai");
   };
@@ -7477,7 +7478,9 @@ function App() {
               draft={condominiumAiDraft}
               files={condominiumAiFiles}
               processing={condominiumAiProcessing}
+              largeFiles={condominiumAiLargeFiles}
               onFiles={analyzeCondominiumDocuments}
+              onLargeFileDecision={handleLargeCondominiumFiles}
               onConfirm={async (draft, automatic = false) => {
                 try {
                   const workspaceId = await getActiveWorkspaceId();
@@ -13903,12 +13906,14 @@ function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubm
    ========================================================= */
 
 function CondominiumAiCreationForm({
-  draft, files, processing, onFiles, onConfirm, onCancel,
+  draft, files, processing, largeFiles, onFiles, onLargeFileDecision, onConfirm, onCancel,
 }: {
   draft: CondominiumCreationDraft | null;
   files: string[];
   processing: boolean;
+  largeFiles: File[];
   onFiles: (files: FileList | null) => void;
+  onLargeFileDecision: (mode: "both" | "analysis" | "storage") => void;
   onConfirm: (draft: CondominiumCreationDraft, automatic?: boolean) => void;
   onCancel: () => void;
 }) {
@@ -13926,7 +13931,26 @@ function CondominiumAiCreationForm({
         <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.odt,image/*" onChange={(e) => onFiles(e.target.files)} />
         {files.length > 0 && <small>{files.join(" · ")}</small>}
       </div>
-      {processing && <div className="login-success">Analisi documentale in corso…</div>}
+      {largeFiles.length > 0 && !processing && (
+        <div className="request-card" style={{ marginTop: 12 }}>
+          <div className="request-main">
+            <strong>Documento di grandi dimensioni</strong>
+            <p>
+              {largeFiles.map((file) => file.name + " (" + (file.size / 1024 / 1024).toFixed(1) + " MB)").join(" · ")}
+            </p>
+            <small>
+              Il file non viene bloccato. Puoi conservarlo, analizzarlo senza conservarlo,
+              oppure fare entrambe le operazioni.
+            </small>
+            <div className="form-actions" style={{ marginTop: 10 }}>
+              <button type="button" className="secondary-button" onClick={() => onLargeFileDecision("storage")}>Memorizza soltanto</button>
+              <button type="button" className="secondary-button" onClick={() => onLargeFileDecision("analysis")}>Analizza senza memorizzare</button>
+              <button type="button" className="primary-button" onClick={() => onLargeFileDecision("both")}>Memorizza e analizza</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {processing && <div className="login-success">Elaborazione documentale in corso…</div>}
       {draft && !processing && <>
         <div className="form-grid">
           <Field full label="Nome condominio" value={edited.name ?? ""} onChange={(v: string) => setEdited({ ...edited, name: v })} />
