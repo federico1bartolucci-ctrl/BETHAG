@@ -1173,6 +1173,19 @@ function AccountingPage({
             notes: "Rata unificata facoltativamente. Quote originarie per unità: " + unitIds.join(", ")
           });
           if (insertError) throw insertError;
+          const generatedIds = rows.map(row => row.id).filter(Boolean);
+          if (generatedIds.length) {
+            const { error: archiveError } = await supabase
+              .from("condominium_installments")
+              .update({
+                status: "Accorpata",
+                notes: "Quota originaria mantenuta per tracciabilità; accorpata nella rata aggregata."
+              })
+              .in("id", generatedIds)
+              .eq("workspace_id", workspaceId)
+              .eq("condominium_id", dbCondominiumId);
+            if (archiveError) throw archiveError;
+          }
         }
       }
       if (rpcError) throw rpcError;
