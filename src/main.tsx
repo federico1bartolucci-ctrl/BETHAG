@@ -4926,7 +4926,7 @@ function App() {
     const portalMember = !isAdministrator
       ? portalMembers.find((member) =>
           member.active &&
-          (member.userId === sessionUserId ||
+          (member.userId === portalMember?.userId ||
             (!member.userId &&
               member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()))
         )
