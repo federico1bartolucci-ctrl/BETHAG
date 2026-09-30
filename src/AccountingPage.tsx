@@ -295,10 +295,6 @@ function AccountingPage({
   );
 
   const arrears = useMemo(() => scopedInstallments.reduce((s,i)=>s+Math.max(0,Number(i.amount)-Number(i.paid_amount)),0),[scopedInstallments]);
-  const scopedCarryovers = useMemo(() => dbCondominiumId ? carryovers.filter(c => c.condominium_id === dbCondominiumId) : carryovers,[dbCondominiumId,carryovers]);
-  const rendicontoCarryovers = useMemo(() => rendicontoYearId === "all" ? scopedCarryovers : scopedCarryovers.filter(c => c.target_fiscal_year_id === rendicontoYearId), [scopedCarryovers, rendicontoYearId]);
-  const carryoverDebt = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Debito").reduce((s,c)=>s+Number(c.balance||0),0),[rendicontoCarryovers]);
-  const carryoverCredit = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Credito").reduce((s,c)=>s+Math.abs(Number(c.balance||0)),0),[rendicontoCarryovers]);
 
   const [rendicontoYearId, setRendicontoYearId] = useState<string>("all");
 
@@ -310,6 +306,11 @@ function AccountingPage({
     () => scopedYears.find((y) => y.id === rendicontoYearId) ?? null,
     [scopedYears, rendicontoYearId]
   );
+
+  const scopedCarryovers = useMemo(() => dbCondominiumId ? carryovers.filter(c => c.condominium_id === dbCondominiumId) : carryovers,[dbCondominiumId,carryovers]);
+  const rendicontoCarryovers = useMemo(() => rendicontoYearId === "all" ? scopedCarryovers : scopedCarryovers.filter(c => c.target_fiscal_year_id === rendicontoYearId), [scopedCarryovers, rendicontoYearId]);
+  const carryoverDebt = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Debito").reduce((s,c)=>s+Number(c.balance||0),0),[rendicontoCarryovers]);
+  const carryoverCredit = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Credito").reduce((s,c)=>s+Math.abs(Number(c.balance||0)),0),[rendicontoCarryovers]);
 
   const rendicontoLedger = useMemo(
     () => rendicontoYearId === "all"
