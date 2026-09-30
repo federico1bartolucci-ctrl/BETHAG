@@ -6478,6 +6478,7 @@ function App() {
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
+              aiEnabled={hasEntitlement(subscription, "professional", "ai")}
             />
           )}
 
