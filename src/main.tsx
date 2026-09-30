@@ -12599,6 +12599,7 @@ function SecuritySettingsCard() {
     if (!supabase) return;
     const code = window.prompt("Imposta un codice personale di sicurezza (almeno 6 caratteri):");
     if (!code) return;
+    if (code.trim().length < 6) { alert("Il codice personale deve contenere almeno 6 caratteri."); return; }
     const confirmation = window.prompt("Ripeti il codice personale:");
     if (code !== confirmation) { alert("I due codici non coincidono."); return; }
     setLoading(true);
@@ -12685,7 +12686,7 @@ function SecuritySettingsCard() {
       </div>
       <div className="info-card">
         <b>🛡️ Autenticazione a due fattori</b>
-        <p>{mfaFactors.length ? "Attiva: il secondo fattore viene richiesto al login. Puoi disattivarlo in qualsiasi momento." : "Disattivata: il login continua con e-mail e password. L'attivazione della 2FA è facoltativa."}</p>
+        <p>{mfaFactors.length ? "Attiva: al login BETHAG proporrà il secondo fattore, ma potrai scegliere di accedere senza utilizzarlo. Puoi disattivarlo in qualsiasi momento." : "Disattivata: il login continua con e-mail e password. L'attivazione della 2FA è facoltativa."}</p>
         {!mfaFactors.length && <button className="secondary-button" type="button" disabled={loading} onClick={() => void startMfaEnrollment()}>Attiva 2FA</button>}
         {mfaFactors.map((factor) => <div key={factor.id} style={{marginTop:10}}><span>{factor.factor_type === "totp" ? "Authenticator TOTP" : "Telefono"}</span> <button className="danger-button" type="button" disabled={loading} onClick={() => void disableMfa(factor)}>Disattiva</button></div>)}
       </div>
