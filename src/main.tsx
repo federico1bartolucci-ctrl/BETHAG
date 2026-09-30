@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { analyzeCondominiumDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { analyzeCondominiumDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -4791,56 +4791,62 @@ function App() {
     );
   };
 
-  const processDocumentAI = (
+  const processDocumentAI = async (
     item: DocumentItem
   ) => {
-    if (
-      !requirePlan(
-        "plus",
-        "L'elaborazione automatica AI dei documenti",
-        "ai"
-      )
-    )
+    if (!requirePlan("plus", "L'elaborazione automatica AI dei documenti", "ai")) return;
+    if (!isAdministrator) {
+      alert("L'avvio dell'analisi AI è riservato all'Amministratore.");
       return;
+    }
 
     setDocuments((current) =>
       current.map((doc) =>
-        doc.id === item.id
-          ? {
-              ...doc,
-              aiStatus:
-                "In elaborazione",
-            }
-          : doc
+        doc.id === item.id ? { ...doc, aiStatus: "In elaborazione" } : doc
       )
     );
 
-    setTimeout(() => {
+    try {
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+
+      if (!item.storagePath) {
+        throw new Error("Questo documento non dispone del file originale memorizzato. Ricaricalo dal modulo Documenti prima di avviare l'analisi AI.");
+      }
+
+      const { data: blob, error } = await supabase!.storage.from("bethag-documents").download(item.storagePath);
+      if (error) throw error;
+      if (!blob) throw new Error("File originale non disponibile.");
+
+      const file = new File([blob], item.name, {
+        type: item.mimeType || blob.type || "application/octet-stream",
+        lastModified: item.fileSizeBytes ? Date.now() : Date.now(),
+      });
+      const draft = await analyzeWorkspaceDocumentsWithAI(workspaceId, [file]);
+
       setDocuments((current) =>
         current.map((doc) =>
           doc.id === item.id
             ? {
                 ...doc,
-                aiStatus:
-                  "Da verificare",
-                aiSummary:
-                  "Analisi automatica predisposta. Il contenuto dovrà essere verificato dall'amministratore prima della conferma.",
-                extractedData: JSON.stringify({
-                  document_type: "Riparto spese",
-                  expense_amount: null,
-                  total_millesimi: null,
-                  scope: "",
-                  rows: [],
-                  source_status: "Da verificare",
-                  extraction_note: "Nessun dato contabile viene considerato definitivo senza verifica."
-                }),
-                aiDocumentType: "Riparto spese",
-                aiConfidence: 0,
+                aiStatus: "Da verificare",
+                aiSummary: draft.summary || "Analisi AI completata: verifica richiesta.",
+                extractedData: JSON.stringify(draft),
+                aiDocumentType: draft.documentType || "Altro",
+                aiConfidence: Number.isFinite(Number(draft.confidence)) ? Number(draft.confidence) : 0,
               }
             : doc
         )
       );
-    }, 1200);
+    } catch (error: any) {
+      console.error("BETHAG general document AI error", error);
+      setDocuments((current) =>
+        current.map((doc) =>
+          doc.id === item.id ? { ...doc, aiStatus: "Non elaborato" } : doc
+        )
+      );
+      alert(error?.message || "Impossibile analizzare il documento con l'AI.");
+    }
   };
 
   const confirmDocumentAI = (
