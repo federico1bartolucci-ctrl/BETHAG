@@ -889,7 +889,7 @@ export async function saveCondominium(
     const condominiumDbId = data as string;
     const requestedUnits = Math.max(0, Number(item.units) || 0);
 
-    if (requestedUnits > 0) {
+    if (requestedUnits > 0 && !item.structure?.configured) {
       const { data: existingUnits, error: existingUnitsError } = await supabase
         .from("condominium_units")
         .select("id, unit_code, data")
