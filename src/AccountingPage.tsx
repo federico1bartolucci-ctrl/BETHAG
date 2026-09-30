@@ -1446,8 +1446,8 @@ function AccountingPage({
     }
     const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
     if(paymentAmount > residual + 0.005){
-      const credit = paymentAmount - residual;
-      if (!window.confirm("Il pagamento supera il residuo di " + money(credit) + ". L'eccedenza sarà registrata come credito da riportare all'esercizio successivo. Confermi?")) return;
+      setError("Il pagamento supera il residuo della rata di " + money(residual) + ". Registrare un importo non superiore al residuo; un'eventuale eccedenza va gestita separatamente come credito.");
+      return;
     }
     setSaving(true); setError("");
     try {
@@ -1464,8 +1464,7 @@ function AccountingPage({
       if(paymentError) throw paymentError;
       setShowPaymentForm(false); setPaymentInstallment(null);
       setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
-      const overpayment = Math.max(0, paymentAmount - residual);
-      flash(overpayment > 0.005 ? "Pagamento registrato. Eccedenza a credito: " + money(overpayment) + "." : "Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
+      flash("Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
       await load();
     } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
     finally{setSaving(false);}
