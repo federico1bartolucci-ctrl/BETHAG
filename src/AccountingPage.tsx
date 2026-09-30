@@ -1150,8 +1150,14 @@ function AccountingPage({
       setError("I millesimi devono essere numerici e non negativi.");
       return;
     }
-    if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > amount) {
-      setError("L'importo pagato deve essere compreso tra zero e l'importo della ripartizione.");
+    // Il pagato di una ripartizione esistente deve provenire dai movimenti
+    // di pagamento; non consentiamo modifiche manuali che creerebbero disallineamenti.
+    if (editingAllocation && Number(editingAllocation.paid_amount || 0) > amount + 0.005) {
+      setError("L'importo della ripartizione non può essere inferiore a quanto già pagato.");
+      return;
+    }
+    if (!editingAllocation && (!Number.isFinite(paidAmount) || paidAmount !== 0)) {
+      setError("Una nuova ripartizione deve partire da pagato pari a zero.");
       return;
     }
     const otherAllocated = allocations
@@ -1174,9 +1180,17 @@ function AccountingPage({
         allocation_basis: allocationForm.allocation_basis,
         millesimi,
         amount,
-        paid_amount: editingAllocation ? paidAmount : 0,
+        // Il pagato non è modificabile manualmente: viene aggiornato esclusivamente
+        // dai movimenti di pagamento registrati tramite la RPC dedicata.
+        paid_amount: editingAllocation ? Number(editingAllocation.paid_amount || 0) : 0,
         due_date: allocationForm.due_date || null,
-        status: editingAllocation ? allocationForm.status : "Da pagare",
+        status: editingAllocation
+          ? (Number(editingAllocation.paid_amount || 0) >= amount - 0.005
+              ? "Pagato"
+              : Number(editingAllocation.paid_amount || 0) > 0
+                ? "Parzialmente pagato"
+                : "Da pagare")
+          : "Da pagare",
         notes: allocationForm.notes,
       };
       const query = editingAllocation
