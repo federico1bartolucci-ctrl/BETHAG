@@ -6169,9 +6169,7 @@ function App() {
 
           {page === "homepage" && (
             <Dashboard
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               deadlines={
                 deadlines
               }
@@ -6588,9 +6586,7 @@ function App() {
               members={
                 portalMembers
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               documents={
                 documents
               }
@@ -6954,9 +6950,7 @@ function App() {
               setValue={
                 setDeadlineForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               onSubmit={
                 saveDeadline
               }
@@ -6978,9 +6972,7 @@ function App() {
               setValue={
                 setDocumentForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               onSubmit={
                 saveDocument
               }
@@ -7008,9 +7000,7 @@ function App() {
               setValue={
                 setAssemblyForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               onSubmit={
                 saveAssembly
               }
@@ -7032,9 +7022,7 @@ function App() {
               setValue={
                 setSupplierForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               onSubmit={
                 saveSupplier
               }
@@ -7056,9 +7044,7 @@ function App() {
               setValue={
                 setActivityForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               onSubmit={
                 saveActivity
               }
@@ -7100,9 +7086,7 @@ function App() {
               setValue={
                 setCommunicationForm
               }
-              condominiums={
-                condominiums
-              }
+              condominiums={condominiums.filter((c) => !c.archivedAt)}
               members={condominiumMembers}
               onPrepareEmail={prepareCondominiumEmail}
               onSubmit={
