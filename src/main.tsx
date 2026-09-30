@@ -3745,9 +3745,13 @@ function App() {
       ...condominiumUnitForm,
       unitCode: condominiumUnitForm.unitCode.trim(),
       cadastralCategory: condominiumUnitForm.cadastralCategory.trim(),
-      millesimi: condominiumUnitForm.millesimi.trim(),
+      millesimi: condominiumUnitForm.cadastralAutonomous ? condominiumUnitForm.millesimi.trim() : "",
       notes: condominiumUnitForm.notes.trim(),
-      incorporatedInUnitId: condominiumUnitForm.cadastralAutonomous ? "" : (condominiumUnitForm.incorporatedInUnitId || ""),
+      // Una pertinenza catastalmente autonoma può essere collegata
+      // facoltativamente all'unità principale; il collegamento non implica
+      // che i millesimi vengano ereditati. Solo l'unità catastalmente
+      // incorporata non ha millesimi autonomi.
+      incorporatedInUnitId: condominiumUnitForm.incorporatedInUnitId || "",
       relationshipToResidentialUnit: !condominiumUnitForm.cadastralAutonomous
         ? "Incorporata"
         : (condominiumUnitForm.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
@@ -13458,7 +13462,7 @@ function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubm
         <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Interno 1, Garage G1, Cantina C1" /> 
         <Field label="Fabbricato / civico" value={value.buildingCode ?? ""} onChange={(v: string) => set("buildingCode", v)} placeholder="Es. 8, 10, 12" />
         <SelectField label="Tipologia" value={value.unitType} onChange={(v: string) => set("unitType", v)} options={[
-          ["Abitazione","Abitazione"],["Garage","Garage / autorimessa"],["Cantina","Cantina / deposito"],["Altro","Altra unità"],
+          ["Abitazione","Abitazione"],["Garage","Garage / autorimessa"],["Cantina","Cantina / deposito"],["Posto auto","Posto auto"],["Altro","Altra unità"],
         ]} />
         <Field label="Categoria catastale" value={value.cadastralCategory} onChange={(v: string) => set("cadastralCategory", v)} placeholder="Es. A/2, C/2, C/6" />
         <Field label="Millesimi" value={value.millesimi} onChange={(v: string) => set("millesimi", v)} placeholder="Es. 102,35" />
@@ -13476,7 +13480,7 @@ function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubm
             }} />
             <span>Unità catastalmente autonoma</span>
           </label>
-          <div className="form-help">Una pertinenza autonoma può essere collegata a un'abitazione oppure rimanere autonoma senza alcun collegamento.</div>
+          <div className="form-help">Una pertinenza autonoma può essere collegata facoltativamente a un'unità abitativa oppure rimanere autonoma. Se è catastalmente appartenente a un interno, invece, segue quell'unità e non ha millesimi propri.</div>
         </div>
 
         {value.cadastralAutonomous && value.unitType !== "Abitazione" && (
