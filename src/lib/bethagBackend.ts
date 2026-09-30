@@ -53,6 +53,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities,
     communications,
     condominiumRequests,
+    condominiumWorks,
     fiscalYears,
     ledgerEntries,
     funds,
@@ -75,6 +76,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("activities").select("*").eq("workspace_id", workspaceId),
     supabase.from("communications").select("*").eq("workspace_id", workspaceId),
     supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
+    supabase.from("condominium_works").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date"),
     supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date"),
     supabase.from("condominium_funds").select("*").eq("workspace_id", workspaceId).order("created_at"),
@@ -95,6 +97,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     activities,
     communications,
     condominiumRequests,
+    condominiumWorks,
     fiscalYears,
     ledgerEntries,
     funds,
@@ -195,6 +198,27 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       id: row.legacy_id,
       requesterUserId: row.requester_user_id ?? row.data?.requesterUserId ?? undefined,
       memberId: row.data?.memberId ?? null,
+    })),
+    condominiumWorks: (condominiumWorks.data ?? []).map((row: any) => ({
+      ...(row.data && typeof row.data === "object" ? row.data : {}),
+      id: row.id,
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      title: row.title ?? row.data?.title ?? "",
+      category: row.category ?? row.data?.category ?? "Manutenzione",
+      description: row.description ?? row.data?.description ?? "",
+      status: row.status ?? row.data?.status ?? "Da programmare",
+      priority: row.priority ?? row.data?.priority ?? "Media",
+      supplierId: row.data?.supplierId ?? null,
+      startDate: row.start_date ?? row.data?.startDate ?? "",
+      expectedEndDate: row.expected_end_date ?? row.data?.expectedEndDate ?? "",
+      actualEndDate: row.actual_end_date ?? row.data?.actualEndDate ?? "",
+      estimatedAmount: Number(row.estimated_amount ?? row.data?.estimatedAmount ?? 0),
+      approvedAmount: Number(row.approved_amount ?? row.data?.approvedAmount ?? 0),
+      actualAmount: Number(row.actual_amount ?? row.data?.actualAmount ?? 0),
+      progressPercent: Number(row.progress_percent ?? row.data?.progressPercent ?? 0),
+      activityId: row.data?.activityId ?? null,
+      documentIds: Array.isArray(row.data?.documentIds) ? row.data.documentIds : [],
+      notes: row.notes ?? row.data?.notes ?? "",
     })),
     fiscalYears: fiscalYears.data ?? [],
     ledgerEntries: ledgerEntries.data ?? [],
@@ -343,6 +367,25 @@ async function syncBackendStateNow(
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
     }))] : null,
+    canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).map((item: any) => ({
+      id: item.id,
+      workspace_id: workspaceId,
+      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      title: item.title,
+      category: item.category ?? "Manutenzione",
+      description: item.description ?? "",
+      status: item.status ?? "Da programmare",
+      priority: item.priority ?? "Media",
+      start_date: item.startDate || null,
+      expected_end_date: item.expectedEndDate || null,
+      actual_end_date: item.actualEndDate || null,
+      estimated_amount: Number(item.estimatedAmount || 0),
+      approved_amount: Number(item.approvedAmount || 0),
+      actual_amount: Number(item.actualAmount || 0),
+      progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
+      notes: item.notes ?? "",
+      data: item,
+    })).filter((row: any) => row.condominium_id && row.title)] : null,
   ].filter((entry): entry is [string, any[]] => Boolean(entry));
 
   for (const [table, rows] of rowsByTable) {
@@ -980,6 +1023,18 @@ export function syncBackendState(
   return enqueueBackendSync(() =>
     syncBackendStateNow(workspaceId, state, allowedModules)
   );
+}
+
+export async function deleteCondominiumWork(workspaceId: string, id: string) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  return enqueueBackendSync(async () => {
+    const { error } = await supabase
+      .from("condominium_works")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("id", id);
+    if (error) throw error;
+  });
 }
 
 export async function deleteWorkspaceRecord(
