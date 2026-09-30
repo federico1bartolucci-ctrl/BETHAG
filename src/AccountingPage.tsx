@@ -1231,7 +1231,7 @@ function AccountingPage({
     for(const line of lines.slice(1)){
       const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
       const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit) continue;
-      const toNum=(v:string)=>v.trim()===""?null:Number(v.replace(".","").replace(",","."));
+      const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\\./g,"").replace(",", ".")):Number(s);};
       const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy) continue;
       const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"]));
       rows.push({workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:fy.id,unit_id:unit.id,service_type:find(row,["servizio","service_type"]).trim()||"Riscaldamento",meter_code:find(row,["matricola","meter_code"]).trim(),period_start:find(row,["periodo_inizio","period_start"]).trim()||null,period_end:find(row,["periodo_fine","period_end"]).trim()||null,previous_reading:previous,current_reading:current,consumption:toNum(find(row,["consumo","consumption"]))??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh:toNum(find(row,["kwh"])),allocation_value:toNum(find(row,["valore_riparto","allocation_value","valore"])),charge_amount:toNum(find(row,["importo","charge_amount","quota"])),source:"Importazione CSV",notes:find(row,["note","notes"]),data:{}});
