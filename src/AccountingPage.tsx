@@ -32,6 +32,7 @@ type LedgerEntry = {
   unit_id: string | null;
   member_id: string | null;
   document_id: string | null;
+  fund_id: string | null;
   notes: string;
 };
 
@@ -108,6 +109,7 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   unit_id: null,
   member_id: null,
   document_id: null,
+  fund_id: null,
   notes: "",
 };
 
@@ -706,6 +708,7 @@ function AccountingPage({
         unit_id: ledgerForm.unit_id || null,
         member_id: ledgerForm.member_id || null,
         document_id: ledgerForm.document_id || null,
+        fund_id: ledgerForm.fund_id || null,
         notes: ledgerForm.notes,
       };
       const query = editingLedger
