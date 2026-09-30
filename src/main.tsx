@@ -5499,6 +5499,10 @@ function App() {
       if (supabaseConfigured && supabase && profile.workspaceId) savedProgress = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
       const work = condominiumWorks.find(w => w.id === f.workId);
       if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount > 0 ? f.amount : w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status === "Completato" ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : null } : w));
+      if (savedProgress?.budgetWarning) {
+        const warning = savedProgress.budgetWarning;
+        alert("Attenzione: il totale cumulativo dei SAL supera " + (warning.type === "approved_amount_exceeded" ? "l'importo approvato" : "l'importo stimato") + " di € " + Number(warning.exceededBy || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 }) + ". Il SAL è stato comunque registrato: verifica eventuali varianti o integrazioni.");
+      }
       setWorkProgressForm(emptyWorkProgress); setSelectedWorkProgress(null); closeModal();
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL."); }
   };
@@ -5513,6 +5517,10 @@ function App() {
       const savedProgress: any = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: true });
       const work = condominiumWorks.find(w => w.id === f.workId);
       if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: f.percentage, actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount || w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
+      if (savedProgress?.budgetWarning) {
+        const warning = savedProgress.budgetWarning;
+        alert("Attenzione: il totale cumulativo dei SAL supera " + (warning.type === "approved_amount_exceeded" ? "l'importo approvato" : "l'importo stimato") + " di € " + Number(warning.exceededBy || 0).toLocaleString("it-IT", { minimumFractionDigits: 2 }) + ". Il SAL è stato comunque registrato: verifica eventuali varianti o integrazioni.");
+      }
       setWorkProgressForm(emptyWorkProgress); closeModal();
       alert("SAL registrato e imputato in Contabilità senza creare una seconda voce per lo stesso SAL.");
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL in Contabilità."); }
