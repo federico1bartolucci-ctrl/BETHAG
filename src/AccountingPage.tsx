@@ -972,7 +972,7 @@ function AccountingPage({
         p_workspace_id:workspaceId,
         p_condominium_id:dbCondominiumId,
         p_ledger_entry_id:expense.id,
-        p_table_id:autoAllocationForm.table_id || allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(r.expense_type&&r.expense_type===expense.expense_type || r.category&&r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0]?.allocation_table_id,
+        p_table_id:autoAllocationForm.table_id || allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(!r.expense_type||r.expense_type===expense.expense_type)&&(!r.category||r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0]?.allocation_table_id,
         p_due_date:autoAllocationForm.due_date || expense.due_date || null
       });
       if (rpcError) throw rpcError;
