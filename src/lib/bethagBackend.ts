@@ -397,11 +397,6 @@ async function syncBackendStateNow(
           condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(existing.condominium_id)}`, existing.id);
           continue;
         }
-          (state.condominiumWorks ?? [])
-            .filter((work: any) => Number(work.supplierId) === legacySupplierId)
-            .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
-            .filter(Boolean)
-        ));
 
         for (const workCondominiumId of workCondominiumIds) {
           const { data: created, error: createError } = await supabase
