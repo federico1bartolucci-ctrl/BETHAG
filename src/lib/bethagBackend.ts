@@ -1159,6 +1159,42 @@ export async function deleteCondominiumMember(
 }
 
 
+export async function storeWorkspaceDocuments(
+  workspaceId: string,
+  files: File[]
+): Promise<any[]> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  if (!files.length) return [];
+
+  const stored: any[] = [];
+  for (const file of files) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = workspaceId + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
+    const { error } = await supabase.storage.from("bethag-documents").upload(path, file, {
+      upsert: false,
+      contentType: file.type || "application/octet-stream",
+      cacheControl: "3600",
+    });
+    if (error) throw new Error(`Impossibile memorizzare "${file.name}": ${error.message}`);
+    stored.push({
+      name: file.name,
+      path,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+      lastModified: file.lastModified,
+    });
+  }
+  return stored;
+}
+
+export async function deleteWorkspaceStoredFile(path: string): Promise<void> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!path) return;
+  const { error } = await supabase.storage.from("bethag-documents").remove([path]);
+  if (error) throw new Error(`Impossibile eliminare il file memorizzato: ${error.message}`);
+}
+
 export async function storeCondominiumDocuments(
   workspaceId: string,
   files: File[]
