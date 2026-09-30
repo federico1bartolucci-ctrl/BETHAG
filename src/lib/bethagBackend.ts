@@ -1265,7 +1265,19 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
         const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount, payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
         if (ledgerUpdateError) throw ledgerUpdateError;
       } else {
-        const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+        const { data: existingWorkLinks, error: existingWorkLinksError } = await supabase
+      .from("condominium_work_documents").select("id,work_id")
+      .eq("workspace_id", workspaceId).eq("document_id", payload.documentLegacyId).limit(10);
+    if (existingWorkLinksError) throw existingWorkLinksError;
+    const existingWorkIds = (existingWorkLinks ?? []).map((row: any) => String(row.work_id));
+    if (existingWorkIds.length && !workId) {
+      throw new Error("La fattura è già collegata a un lavoro. Per confermarla senza lavoro occorre prima rimuovere esplicitamente il collegamento esistente.");
+    }
+    if (workId && existingWorkIds.some((existingId: string) => existingId !== String(workId))) {
+      throw new Error("La fattura è già collegata a un altro lavoro. Rimuovi prima il collegamento precedente oppure verifica manualmente l'associazione.");
+    }
+
+    const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
         if (fiscalYearError) throw fiscalYearError;
         if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto per questo condominio. Apri l'esercizio prima di registrare il SAL.");
         const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").insert({
@@ -1943,21 +1955,15 @@ export async function confirmCondominiumInvoice(
       ledgerEntryId = created.id;
     }
 
-    if (workId) {
-      const { data: linked, error: linkedError } = await supabase.from("condominium_work_documents").select("id,work_id")
-        .eq("workspace_id", workspaceId).eq("document_id", payload.documentLegacyId).limit(10);
-      if (linkedError) throw linkedError;
-      const conflictingLink = (linked ?? []).find((row: any) => String(row.work_id) !== String(workId));
-      if (conflictingLink) {
-        throw new Error("La fattura è già collegata a un altro lavoro. Rimuovi prima il collegamento precedente oppure verifica manualmente l'associazione.");
-      }
-      if (!(linked ?? []).some((row: any) => String(row.work_id) === String(workId))) {
-        const { error } = await supabase.from("condominium_work_documents").insert({
-          workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: payload.documentLegacyId,
-          title: document.title ?? "Fattura", notes: invoiceNumber ? `Fattura ${invoiceNumber}` : "Fattura collegata dall'analisi AI.",
-        });
-        if (error) throw error;
-      }
+    if (workId && !existingWorkIds.includes(String(workId))) {
+      const { error } = await supabase.from("condominium_work_documents").insert({
+        workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: payload.documentLegacyId,
+        title: document.title ?? "Fattura", notes: invoiceNumber ? `Fattura ${invoiceNumber}` : "Fattura collegata dall'analisi AI.",
+      });
+      if (error) throw error;
+    }
+
+    if (workId && !existingWorkIds.includes(String(workId))) {
       const { error: eventError } = await supabase.from("condominium_work_events").insert({
         workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, event_type: "invoice_linked",
         event_date: invoiceDate, title: invoiceNumber ? `Fattura ${invoiceNumber} collegata` : "Fattura collegata",
