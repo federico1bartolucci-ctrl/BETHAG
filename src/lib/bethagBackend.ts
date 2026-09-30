@@ -1213,9 +1213,22 @@ export async function recordCondominiumWorkEvent(workspaceId: string, workId: st
 export async function saveCondominiumWorkProgress(workspaceId: string, workId: string, input: { progressNo: number; progressDate: string; title: string; status: string; percentage: number; amount: number; paidAmount: number; notes: string; registerAccounting: boolean; }) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
-    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,condominium_id,supplier_id,title,category").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
+    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,condominium_id,supplier_id,title,category,data").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
     if (workError) throw workError;
     if (!work) throw new Error("Lavoro non trovato sul server.");
+
+    let ledgerSupplierId: string | null = null;
+    const legacySupplierId = Number(work.data?.supplierId);
+    if (Number.isFinite(legacySupplierId) && legacySupplierId > 0) {
+      const { data: supplier, error: supplierError } = await supabase
+        .from("suppliers")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("legacy_id", legacySupplierId)
+        .maybeSingle();
+      if (supplierError) throw supplierError;
+      ledgerSupplierId = supplier?.id ?? null;
+    }
 
     let ledgerEntryId: string | null = null;
     if (input.registerAccounting && input.amount > 0) {
@@ -1233,7 +1246,7 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
           entry_date: input.progressDate, direction: "Uscita", category: work.category || "Lavori e manutenzioni",
           description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
           amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
-          supplier_id: work.supplier_id ?? null, notes: input.notes || null,
+          supplier_id: ledgerSupplierId, notes: input.notes || null,
           data: { source: "condominium_work_progress", workId, progressNo: input.progressNo }
         }).select("id").single();
         if (ledgerError) throw ledgerError;
