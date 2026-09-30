@@ -1337,6 +1337,38 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
     }
 
     const { data: existingProgress } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id,amount,paid_amount,progress_date,title,notes").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+
+    const { data: neighbouringProgress, error: neighbouringProgressError } = await supabase
+      .from("condominium_work_progress")
+      .select("progress_no,progress_date,percentage")
+      .eq("workspace_id", workspaceId)
+      .eq("work_id", workId)
+      .neq("progress_no", input.progressNo)
+      .order("progress_no", { ascending: true });
+    if (neighbouringProgressError) throw neighbouringProgressError;
+
+    const previousProgress = (neighbouringProgress ?? [])
+      .filter((row: any) => Number(row.progress_no) < Number(input.progressNo))
+      .sort((a: any, b: any) => Number(b.progress_no) - Number(a.progress_no))[0];
+    const nextProgress = (neighbouringProgress ?? [])
+      .filter((row: any) => Number(row.progress_no) > Number(input.progressNo))
+      .sort((a: any, b: any) => Number(a.progress_no) - Number(b.progress_no))[0];
+
+    if (!existingProgress && previousProgress && Number(input.progressNo) !== Number(previousProgress.progress_no) + 1) {
+      throw new Error("La numerazione dei SAL deve essere progressiva. Inserisci prima il SAL n. " + (Number(previousProgress.progress_no) + 1) + ".");
+    }
+    if (previousProgress?.progress_date && String(input.progressDate) < String(previousProgress.progress_date).slice(0, 10)) {
+      throw new Error("La data del SAL non può essere precedente a quella del SAL precedente.");
+    }
+    if (nextProgress?.progress_date && String(input.progressDate) > String(nextProgress.progress_date).slice(0, 10)) {
+      throw new Error("La data del SAL non può essere successiva a quella del SAL seguente.");
+    }
+    if (previousProgress && Number(input.percentage) + 0.000001 < Number(previousProgress.percentage || 0)) {
+      throw new Error("La percentuale del SAL non può essere inferiore a quella del SAL precedente.");
+    }
+    if (nextProgress && Number(input.percentage) - 0.000001 > Number(nextProgress.percentage || 0)) {
+      throw new Error("La percentuale del SAL non può essere superiore a quella del SAL seguente.");
+
     let ledgerEntryId: string | null = existingProgress?.ledger_entry_id ?? null;
     if (existingProgress?.ledger_entry_id && !input.registerAccounting) {
       const accountingFieldsChanged =
