@@ -1177,7 +1177,7 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
       actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : undefined
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
-    return progress;
+    return { ...progress, cumulativeActualAmount };
   });
 }
 
