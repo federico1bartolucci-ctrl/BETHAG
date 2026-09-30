@@ -3002,8 +3002,7 @@ function App() {
     );
   }
 
-  if (requiresPasswordSetup) {
-    const restoreWorkspaceBackup = async (file: File) => {
+  const restoreWorkspaceBackup = async (file: File) => {
     if (!isAdministrator) {
       alert("Il ripristino del backup è riservato all'Amministratore.");
       return;
@@ -3174,7 +3173,8 @@ function App() {
     }
   };
 
-  return (
+  if (requiresPasswordSetup) {
+    return (
       <>
         <style>{styles}</style>
         <PasswordSetupPage onComplete={completePasswordSetup} />
