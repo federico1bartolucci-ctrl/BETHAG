@@ -1158,17 +1158,28 @@ function AccountingPage({
       try { extracted = JSON.parse(selectedDocument.extractedData); } catch { extracted = null; }
     }
     const extractedRows = Array.isArray(extracted?.rows) ? extracted.rows : [];
-    const sourceRows = extractedRows.length ? extractedRows.map((r:any) => ({
-      unit_id: String(r.unit_id || r.unitId || ""),
-      millesimi: Number(r.millesimi ?? r.millesimal ?? 0),
-      amount: Number(r.amount ?? r.importo ?? 0)
-    })).filter((r:any) => r.unit_id) : units
+    const extractedScope = String(extracted?.scope || extracted?.ambito || "").trim();
+    const extractedTotalMillesimi = Number(extracted?.total_millesimi ?? extracted?.totalMillesimi ?? 0);
+    const scopedUnits = units
       .filter(u => u.condominium_id === dbCondominiumId)
-      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))
+      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())));
+    const sourceRows = extractedRows.length ? extractedRows.map((r:any) => {
+      const byId = units.find(u => u.id === String(r.unit_id || r.unitId || ""));
+      const byCode = units.find(u => u.condominium_id === dbCondominiumId && String(u.unit_code).trim().toLowerCase() === String(r.unit_code || r.unitCode || "").trim().toLowerCase());
+      return {
+        unit_id: String(r.unit_id || r.unitId || byCode?.id || ""),
+        millesimi: Number(r.millesimi ?? r.millesimal ?? 0),
+        amount: Number(r.amount ?? r.importo ?? 0)
+      };
+    }).filter((r:any) => r.unit_id && scopedUnits.some(u => u.id === r.unit_id)) : scopedUnits
       .map(u => ({ unit_id:u.id, millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===table.id && v.unit_id===u.id)?.value || 0), amount:0 }));
 
     const totalMillesimi = sourceRows.reduce((sum:any,r:any)=>sum + Math.max(0, Number(r.millesimi || 0)), 0);
+    const scopeMismatch = extractedTotalMillesimi > 0 && Math.abs(extractedTotalMillesimi - totalMillesimi) > 0.01;
     if (!totalMillesimi) { setError("Non risultano millesimi disponibili per costruire la proposta."); return; }
+    const validationNote = scopeMismatch
+      ? `Attenzione: il documento indica ${extractedTotalMillesimi} millesimi, mentre l'ambito della tabella selezionata ne comprende ${totalMillesimi}. Verificare tabella e unità partecipanti.`
+      : extractedScope ? `Ambito rilevato dal documento: ${extractedScope}.` : "Ambito determinato dalla tabella millesimale selezionata.";
     const expenseAmount = Number(extracted?.expense_amount ?? extracted?.amount ?? expense.amount ?? 0);
     const rows = sourceRows.map((r:any) => ({
       unit_id:r.unit_id,
@@ -1185,7 +1196,7 @@ function AccountingPage({
       description: selectedDocument ? `Proposta generata dal documento: ${selectedDocument.name}.` : "Proposta generata dai dati contabili e dalla tabella millesimale.",
       expense_amount: expenseAmount,
       rows,
-      notes: "Proposta automatica da verificare. Nessuna quota è definitiva prima della conferma."
+      notes: `Proposta automatica da verificare. Nessuna quota è definitiva prima della conferma. ${validationNote}`
     }));
     setMessage("Proposta AI costruita: controlla unità, millesimi e importi prima della conferma.");
   }
