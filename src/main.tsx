@@ -6362,7 +6362,7 @@ function App() {
           {page === "registro" && (
             <RegisterPage
               workspaceId={profile.workspaceId}
-              condominiums={condominiums.map((c) => ({ id: c.id, name: c.name }))}
+              condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
             />
           )}
