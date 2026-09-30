@@ -1847,6 +1847,9 @@ export async function confirmCondominiumInvoice(
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("L'importo della fattura non è stato riconosciuto con sufficiente certezza. Verificalo prima della conferma.");
 
     const invoiceDate = parseBethagDate(payload.extractedData?.documentDate ?? payload.extractedData?.invoiceDate);
+    if (!invoiceDate) {
+      throw new Error("La data della fattura non è stata riconosciuta con sufficiente certezza. Verificala prima della conferma.");
+    }
     const invoiceNumber = String(payload.extractedData?.invoiceNumber ?? payload.extractedData?.numeroFattura ?? "").trim();
     const supplierName = String(payload.extractedData?.supplier ?? "").trim();
     const supplierVatNumber = String(
