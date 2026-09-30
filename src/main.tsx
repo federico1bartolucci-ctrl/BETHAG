@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { analyzeCondominiumDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { analyzeCondominiumDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -335,6 +335,8 @@ type DocumentItem = {
   extractedData: string;
   aiDocumentType?: "Riparto spese" | "Fattura" | "Verbale" | "Convocazione" | "Regolamento" | "Altro";
   aiConfidence?: number;
+  fileSizeBytes?: number;
+  storagePath?: string;
 };
 
 type Assembly = {
@@ -4647,7 +4649,7 @@ function App() {
      DOCUMENTI
      ======================================================= */
 
-  const saveDocument = (
+  const saveDocument = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
     if (!requireModulePermission("documenti", "La gestione dei documenti")) return;
@@ -4674,14 +4676,27 @@ function App() {
       return;
     }
 
-    const documentData = {
+    let documentData: DocumentItem = {
       ...documentForm,
       name: documentForm.name.trim(),
-      size: selectedFileName
-        ? documentForm.size ||
-          "File locale"
-        : documentForm.size,
+      size: selectedFileName ? documentForm.size || "File locale" : documentForm.size,
     };
+
+    if (selectedDocumentFile && supabaseConfigured && profile.workspaceId) {
+      try {
+        const stored = await storeWorkspaceDocuments(profile.workspaceId, [selectedDocumentFile]);
+        const uploaded = stored[0];
+        documentData = {
+          ...documentData,
+          storagePath: uploaded?.path ?? "",
+          fileSizeBytes: selectedDocumentFile.size,
+          mimeType: selectedDocumentFile.type || "application/octet-stream",
+        };
+      } catch (error: any) {
+        alert(error?.message || "Impossibile memorizzare il file.");
+        return;
+      }
+    }
 
     if (selectedDocument) {
       setDocuments((current) =>
@@ -4712,6 +4727,7 @@ function App() {
 
     setSelectedDocument(null);
     setSelectedFileName("");
+    setSelectedDocumentFile(null);
     closeModal();
   };
 
@@ -4729,6 +4745,10 @@ function App() {
     if (!requireModulePermission("documenti", "L'eliminazione del documento")) return;
     if (!confirm("Eliminare questo documento?")) return;
     try {
+      const documentToDelete = documents.find((item) => item.id === id);
+      if (documentToDelete?.storagePath && supabaseConfigured) {
+        await deleteWorkspaceStoredFile(documentToDelete.storagePath);
+      }
       if (supabaseConfigured && supabase && profile.workspaceId) {
         await deleteWorkspaceRecordBackend(profile.workspaceId, "documents", id);
       }
@@ -14620,6 +14640,7 @@ function DocumentForm({
   onCancel,
   selectedFileName,
   setSelectedFileName,
+  setSelectedDocumentFile,
   editing,
 }: any) {
   return (
@@ -14660,28 +14681,25 @@ function DocumentForm({
                   file.type
                 );
 
-              setSelectedFileName(
-                file.name
-              );
+              setSelectedFileName(file.name);
+              setSelectedDocumentFile(file);
 
               setValue({
                 ...value,
                 name: file.name,
-                size: `${Math.round(
-                  file.size / 1024
-                )} KB`,
+                size: `${Math.round(file.size / 1024)} KB`,
                 source,
-                mimeType:
-                  file.type,
+                mimeType: file.type,
                 fileSizeBytes: file.size,
               });
 
               if (file.size >= 25 * 1024 * 1024) {
                 const proceed = window.confirm(
-                  `Il documento "${file.name}" è molto grande (${(file.size / 1024 / 1024).toFixed(1)} MB).\\n\\nPuoi comunque memorizzarlo. Vuoi procedere con la memorizzazione del documento?`
+                  `Il documento "${file.name}" è molto grande (${(file.size / 1024 / 1024).toFixed(1)} MB).\\n\\nIl file non è bloccato: verrà memorizzato in archivio privato quando confermerai il documento. Vuoi procedere?`
                 );
                 if (!proceed) {
                   setSelectedFileName("");
+                  setSelectedDocumentFile(null);
                   return;
                 }
               }
