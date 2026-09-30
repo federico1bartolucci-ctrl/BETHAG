@@ -1584,6 +1584,130 @@ export async function cancelCondominiumCreationIntake(
   });
 }
 
+export async function confirmCondominiumInvoice(
+  workspaceId: string,
+  payload: {
+    documentLegacyId: number;
+    condominiumLegacyId: number;
+    extractedData: Record<string, any>;
+    supplierId?: string | null;
+    workId?: string | null;
+  }
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase
+      .from("condominiums").select("id").eq("workspace_id", workspaceId)
+      .eq("legacy_id", payload.condominiumLegacyId).maybeSingle();
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) throw new Error("Condominio associato alla fattura non trovato.");
+
+    const { data: document, error: documentError } = await supabase
+      .from("documents").select("id,data,title").eq("workspace_id", workspaceId)
+      .eq("legacy_id", payload.documentLegacyId).maybeSingle();
+    if (documentError) throw documentError;
+    if (!document?.id) throw new Error("Documento fattura non trovato nel database.");
+
+    const rawAmount = String(payload.extractedData?.expenseAmount ?? payload.extractedData?.amount ?? payload.extractedData?.totalAmount ?? "");
+    const amount = Number(rawAmount.replace(/[^0-9,.-]/g, "").replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("L'importo della fattura non è stato riconosciuto con sufficiente certezza. Verificalo prima della conferma.");
+
+    const invoiceDate = String(payload.extractedData?.documentDate ?? payload.extractedData?.invoiceDate ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+    const invoiceNumber = String(payload.extractedData?.invoiceNumber ?? payload.extractedData?.numeroFattura ?? "").trim();
+    const supplierName = String(payload.extractedData?.supplier ?? "").trim();
+
+    let supplierId = payload.supplierId ?? null;
+    if (!supplierId && supplierName) {
+      const { data: supplierRows, error: suppliersError } = await supabase
+        .from("suppliers").select("id,name").eq("workspace_id", workspaceId)
+        .or(`condominium_id.eq.${condominium.id},condominium_id.is.null`);
+      if (suppliersError) throw suppliersError;
+      const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+      const target = normalize(supplierName);
+      const exact = (supplierRows ?? []).find((item: any) => normalize(String(item.name ?? "")) === target);
+      const contained = exact ?? (supplierRows ?? []).find((item: any) => {
+        const candidate = normalize(String(item.name ?? ""));
+        return candidate && target && (candidate.includes(target) || target.includes(candidate));
+      });
+      supplierId = contained?.id ?? null;
+    }
+    if (!supplierId) throw new Error(supplierName ? `Il fornitore "${supplierName}" non è stato associato automaticamente. Seleziona/crea il fornitore in Anagrafica prima di confermare la fattura.` : "Il fornitore della fattura non è stato riconosciuto. Verificalo prima della conferma.");
+
+    const workId = payload.workId ?? null;
+    if (workId) {
+      const { data: work, error: workError } = await supabase.from("condominium_works").select("id")
+        .eq("workspace_id", workspaceId).eq("condominium_id", condominium.id).eq("id", workId).maybeSingle();
+      if (workError) throw workError;
+      if (!work?.id) throw new Error("Il lavoro proposto non appartiene al condominio della fattura.");
+    }
+
+    const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years")
+      .select("id").eq("workspace_id", workspaceId).eq("condominium_id", condominium.id)
+      .eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+    if (fiscalYearError) throw fiscalYearError;
+    if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto per questo condominio. Apri l'esercizio prima di confermare la fattura.");
+
+    const dataPayload = { source: "ai_invoice_confirmation", invoiceNumber, invoiceDate, supplierName, workId, confirmedAt: new Date().toISOString(), aiExtractedData: payload.extractedData };
+    const { data: existingEntry, error: existingEntryError } = await supabase.from("condominium_ledger_entries")
+      .select("id").eq("workspace_id", workspaceId).eq("document_id", document.id).eq("direction", "Uscita").limit(1).maybeSingle();
+    if (existingEntryError) throw existingEntryError;
+
+    let ledgerEntryId: string;
+    const ledgerPayload = {
+      fiscal_year_id: fiscalYear.id, entry_date: invoiceDate, category: "Fattura",
+      description: invoiceNumber ? `Fattura ${invoiceNumber} - ${supplierName || "Fornitore"}` : `Fattura - ${supplierName || "Fornitore"}`,
+      amount, supplier_id: supplierId, document_id: document.id,
+      notes: "Registrazione confermata dall'amministratore a partire dall'analisi AI.",
+      data: dataPayload, updated_at: new Date().toISOString(),
+    };
+    if (existingEntry?.id) {
+      const { data: updated, error } = await supabase.from("condominium_ledger_entries").update(ledgerPayload)
+        .eq("workspace_id", workspaceId).eq("id", existingEntry.id).select("id").single();
+      if (error) throw error;
+      ledgerEntryId = updated.id;
+    } else {
+      const { data: created, error } = await supabase.from("condominium_ledger_entries").insert({
+        workspace_id: workspaceId, condominium_id: condominium.id, ...ledgerPayload,
+        direction: "Uscita", payment_status: "Da pagare",
+      }).select("id").single();
+      if (error) throw error;
+      ledgerEntryId = created.id;
+    }
+
+    if (workId) {
+      const { data: linked, error: linkedError } = await supabase.from("condominium_work_documents").select("id")
+        .eq("workspace_id", workspaceId).eq("work_id", workId).eq("document_id", document.id).limit(1).maybeSingle();
+      if (linkedError) throw linkedError;
+      if (!linked?.id) {
+        const { error } = await supabase.from("condominium_work_documents").insert({
+          workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: document.id,
+          title: document.title ?? "Fattura", notes: invoiceNumber ? `Fattura ${invoiceNumber}` : "Fattura collegata dall'analisi AI.",
+        });
+        if (error) throw error;
+      }
+      const { error: eventError } = await supabase.from("condominium_work_events").insert({
+        workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, event_type: "invoice_linked",
+        event_date: invoiceDate, title: invoiceNumber ? `Fattura ${invoiceNumber} collegata` : "Fattura collegata",
+        description: `Fattura ${supplierName || "fornitore"} registrata in Contabilità per ${amount.toFixed(2)} €.`,
+        amount, data: { documentId: document.id, ledgerEntryId, supplierId },
+      });
+      if (eventError) throw eventError;
+    }
+
+    const currentDocumentData = document.data && typeof document.data === "object" ? document.data : {};
+    const { error: documentUpdateError } = await supabase.from("documents").update({
+      data: { ...currentDocumentData, invoiceConfirmation: { status: "Confermato", invoiceNumber, invoiceDate, amount, supplierId, supplierName, workId, ledgerEntryId, confirmedAt: new Date().toISOString() } },
+      updated_at: new Date().toISOString(),
+    }).eq("workspace_id", workspaceId).eq("id", document.id);
+    if (documentUpdateError) throw documentUpdateError;
+
+    return { ledgerEntryId, supplierId, workId, amount, invoiceNumber, invoiceDate };
+  });
+}
+
+
 export async function updateCondominiumRequestStatus(
   workspaceId: string,
   request: any
