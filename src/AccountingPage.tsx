@@ -194,7 +194,7 @@ function AccountingPage({
   const [autoAllocationForm, setAutoAllocationForm] = useState({ ledger_entry_id:"", table_id:"", due_date:"" });
   const [autoPreview, setAutoPreview] = useState<AllocationPreviewRow[]>([]);
   const [showInstallmentsFromAllocation, setShowInstallmentsFromAllocation] = useState(false);
-  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"", installment_count:1, due_dates:Array(1).fill("") as string[], percentages:[100] as number[] });
+  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"", installment_count:1, due_dates:Array(1).fill("") as string[], percentages:[100] as number[], unifyByMember:false });
   const [allocationForm, setAllocationForm] = useState({
     ledger_entry_id: "",
     unit_id: "",
@@ -1105,7 +1105,20 @@ function AccountingPage({
     if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
     const percentages=allocationInstallmentForm.percentages.slice(0,installmentCount).map(Number);
     if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
-    if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata?")) return;
+    const memberIds = new Set(selectedAllocations.map(a => a.member_id).filter(Boolean));
+    const hasAmbiguousMembers = selectedAllocations.some(a => !a.member_id);
+    if (allocationInstallmentForm.unifyByMember && hasAmbiguousMembers) {
+      setError("Non è possibile unificare automaticamente le rate: almeno una quota non ha un unico proprietario/responsabile associato.");
+      return;
+    }
+    if (allocationInstallmentForm.unifyByMember && memberIds.size < 1) {
+      setError("Non sono stati individuati soggetti univoci per l'unificazione delle rate.");
+      return;
+    }
+    const confirmText = allocationInstallmentForm.unifyByMember
+      ? "Confermi la generazione delle rate unificate per ciascun proprietario/responsabile? Le singole quote delle unità resteranno comunque conservate."
+      : "Confermi la generazione delle rate disgiunte per tutte le quote delle unità?";
+    if (!window.confirm(confirmText)) return;
     setSaving(true);
     setError("");
     try {
@@ -1117,6 +1130,50 @@ function AccountingPage({
         p_due_dates: dueDates,
         p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null,
         p_percentages:percentages
+      });
+      if (allocationInstallmentForm.unifyByMember) {
+        const generatedCount = Number(data || 0);
+        if (generatedCount !== selectedAllocations.length * installmentCount) {
+          throw new Error("Il risultato della generazione non corrisponde alle quote previste.");
+        }
+        const generated = await supabase
+          .from("condominium_installments")
+          .select("id,member_id,unit_id,amount,title,due_date,paid_amount,status,notes")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", dbCondominiumId)
+          .eq("ledger_entry_id", allocationInstallmentForm.ledger_entry_id);
+        if (generated.error) throw generated.error;
+        const grouped = new Map<string, any[]>();
+        for (const row of generated.data || []) {
+          const key = String(row.member_id || "");
+          if (!key) continue;
+          if (!grouped.has(key + "|" + row.due_date)) grouped.set(key + "|" + row.due_date, []);
+          grouped.get(key + "|" + row.due_date)!.push(row);
+        }
+        // L'unificazione è eseguita solo quando ogni gruppo contiene un solo membro.
+        // Le rate originali restano tracciate per unità; le rate aggregate vengono
+        // create come nuove righe con unit_id nullo e lo stesso ledger_entry_id.
+        for (const [key, rows] of grouped) {
+          if (rows.length < 2) continue;
+          const amount = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+          const first = rows[0];
+          const unitIds = rows.map(row => row.unit_id).filter(Boolean);
+          const { error: insertError } = await supabase.from("condominium_installments").insert({
+            workspace_id: workspaceId,
+            condominium_id: dbCondominiumId,
+            fiscal_year_id: allocationInstallmentForm.fiscal_year_id || null,
+            ledger_entry_id: allocationInstallmentForm.ledger_entry_id,
+            member_id: first.member_id,
+            unit_id: null,
+            title: allocationInstallmentForm.title.trim() + " - unificata",
+            amount,
+            paid_amount: 0,
+            status: "Da pagare",
+            due_date: first.due_date,
+            notes: "Rata unificata facoltativamente. Quote originarie per unità: " + unitIds.join(", ")
+          });
+          if (insertError) throw insertError;
+        }
       });
       if (rpcError) throw rpcError;
       setShowInstallmentsFromAllocation(false);
