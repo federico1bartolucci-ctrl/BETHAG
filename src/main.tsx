@@ -6205,7 +6205,7 @@ function App() {
                 filteredCondominiums
               }
               allCount={
-                condominiums.length
+                condominiums.filter((item) => !item.archivedAt).length
               }
               search={
                 search
