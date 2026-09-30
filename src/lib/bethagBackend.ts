@@ -377,10 +377,16 @@ async function syncBackendStateNow(
       for (const legacySupplierId of selectedSupplierIds) {
         const supplier = genericSuppliersByLegacyId.get(legacySupplierId);
         if (!supplier) continue;
+        const workCondominiumIds = Array.from(new Set(
+          (state.condominiumWorks ?? [])
+            .filter((work: any) => Number(work.supplierId) === legacySupplierId)
+            .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
+            .filter(Boolean)
+        ));
         const condominiumDbId = condominiumDbIdByLegacyId.get(Number(supplier.condominiumId));
-        const candidateCondominiumIds = condominiumDbId
-          ? [condominiumDbId]
-          : Array.from(condominiumDbIdByLegacyId.values());
+        const candidateCondominiumIds = workCondominiumIds.length
+          ? workCondominiumIds
+          : (condominiumDbId ? [condominiumDbId] : Array.from(condominiumDbIdByLegacyId.values()));
         const name = normalizeSupplierName(supplier.name);
         const existing = (condominiumSuppliers ?? []).find((row: any) =>
           candidateCondominiumIds.includes(row.condominium_id) &&
@@ -391,8 +397,6 @@ async function syncBackendStateNow(
           condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(existing.condominium_id)}`, existing.id);
           continue;
         }
-
-        const workCondominiumIds = Array.from(new Set(
           (state.condominiumWorks ?? [])
             .filter((work: any) => Number(work.supplierId) === legacySupplierId)
             .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
