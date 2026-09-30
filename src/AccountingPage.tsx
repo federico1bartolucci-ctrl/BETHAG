@@ -547,6 +547,11 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("category"),
+          supabase
+            .from("condominium_fiscal_carryovers")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("created_at"),
         ]);
       for (const result of [
         yearsResult,
