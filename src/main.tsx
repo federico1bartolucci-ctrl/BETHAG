@@ -5484,9 +5484,10 @@ function App() {
     const f = workProgressForm;
     if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
     try {
-      if (supabaseConfigured && supabase && profile.workspaceId) await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
+      let savedProgress: any = null;
+      if (supabaseConfigured && supabase && profile.workspaceId) savedProgress = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
       const work = condominiumWorks.find(w => w.id === f.workId);
-      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: f.amount > 0 ? f.amount : w.actualAmount, status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
+      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount > 0 ? f.amount : w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
       setWorkProgressForm(emptyWorkProgress); setSelectedWorkProgress(null); closeModal();
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL."); }
   };
@@ -5496,9 +5497,9 @@ function App() {
     const f = workProgressForm;
     try {
       if (!supabaseConfigured || !supabase || !profile.workspaceId) throw new Error("Per registrare il SAL in contabilità è necessario il collegamento al server.");
-      await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: true });
+      const savedProgress: any = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: true });
       const work = condominiumWorks.find(w => w.id === f.workId);
-      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: f.percentage, actualAmount: f.amount || w.actualAmount, status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status } : w));
+      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: f.percentage, actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount || w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
       setWorkProgressForm(emptyWorkProgress); closeModal();
       alert("SAL registrato e imputato in Contabilità senza creare una seconda voce per lo stesso SAL.");
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL in Contabilità."); }
