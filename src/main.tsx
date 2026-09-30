@@ -2788,7 +2788,17 @@ function App() {
     const applySupabaseSession = async (
       session: { user: { id: string; email?: string | null } } | null
     ) => {
-      if (!session?.user || cancelled) return;
+      if (cancelled) return;
+      if (!session?.user) {
+        setSessionRole(null);
+        setSessionEmail("");
+        setServerCollaboratorPermissions([]);
+        localStorage.removeItem(KEYS.session);
+        localStorage.removeItem(KEYS.sessionEmail);
+        localStorage.removeItem(KEYS.page);
+        setPage("homepage");
+        return;
+      }
 
       try {
         const normalizedEmail = (session.user.email || "").trim();
