@@ -144,6 +144,20 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     ownerIdsByUnit.set(String(member.unitId), current);
   });
 
+  const condominiumSupplierLegacyByDbId = new Map<string, number>();
+  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } = await supabase
+    .from("condominium_suppliers")
+    .select("id,condominium_id,business_name,data")
+    .eq("workspace_id", workspaceId);
+  if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
+
+  (condominiumSuppliersForWorks ?? []).forEach((supplier: any) => {
+    const storedLegacyId = Number(supplier.data?.legacySupplierId ?? supplier.data?.supplierId);
+    if (Number.isFinite(storedLegacyId) && storedLegacyId > 0) {
+      condominiumSupplierLegacyByDbId.set(String(supplier.id), storedLegacyId);
+    }
+  });
+
   const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
     const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
     const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
@@ -208,7 +222,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       description: row.description ?? row.data?.description ?? "",
       status: row.status ?? row.data?.status ?? "Da programmare",
       priority: row.priority ?? row.data?.priority ?? "Media",
-      supplierId: row.data?.supplierId ?? null,
+      supplierId: row.supplier_id ? (condominiumSupplierLegacyByDbId.get(String(row.supplier_id)) ?? row.data?.supplierId ?? null) : (row.data?.supplierId ?? null),
       startDate: row.start_date ?? row.data?.startDate ?? "",
       expectedEndDate: row.expected_end_date ?? row.data?.expectedEndDate ?? "",
       actualEndDate: row.actual_end_date ?? row.data?.actualEndDate ?? "",
