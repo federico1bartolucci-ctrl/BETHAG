@@ -10634,6 +10634,33 @@ function DocumentsPage({
                 </div>
               )}
 
+              {d.aiDocumentType === "Fattura" && d.extractedData && (
+                <div className="ai-summary">
+                  <b>Proposta fattura AI</b>
+                  {(() => {
+                    try {
+                      const invoice = JSON.parse(d.extractedData);
+                      const invoiceAmount = Number(String(invoice.expenseAmount ?? invoice.amount ?? invoice.totalAmount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+                      return (
+                        <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                          <span><strong>Fornitore:</strong> {invoice.supplier || "non riconosciuto"}</span>
+                          <span><strong>N. fattura:</strong> {invoice.invoiceNumber || invoice.numeroFattura || "non rilevato"}</span>
+                          <span><strong>Data:</strong> {invoice.documentDate || invoice.invoiceDate || "non rilevata"}</span>
+                          <span><strong>Importo:</strong> {Number.isFinite(invoiceAmount) && invoiceAmount > 0 ? currency(String(invoiceAmount)) : "non rilevato"}</span>
+                          {invoice.workReference && <span><strong>Riferimento lavoro:</strong> {invoice.workReference}</span>}
+                          {Array.isArray(invoice.warnings) && invoice.warnings.length > 0 && (
+                            <small>⚠️ {invoice.warnings.join(" · ")}</small>
+                          )}
+                          <small>La registrazione contabile e l'eventuale collegamento al lavoro vengono eseguiti solo dopo la conferma dell'amministratore.</small>
+                        </div>
+                      );
+                    } catch {
+                      return <small>Dati AI della fattura non leggibili: è necessaria una nuova analisi.</small>;
+                    }
+                  })()}
+                </div>
+              )}
+
 
               {isAdministrator && (
                 <div className="button-row">
