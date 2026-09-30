@@ -4829,14 +4829,10 @@ function App() {
         throw new Error("Questo documento non dispone del file originale memorizzato. Ricaricalo dal modulo Documenti prima di avviare l'analisi AI.");
       }
 
-      const { data: blob, error } = await supabase!.storage.from("bethag-documents").download(item.storagePath);
-      if (error) throw error;
-      if (!blob) throw new Error("File originale non disponibile.");
-
       const draft = await analyzeWorkspaceStoredDocumentsWithAI(workspaceId, [{
         filename: item.name,
         storagePath: item.storagePath,
-        mimeType: item.mimeType || blob.type || "application/octet-stream",
+        mimeType: item.mimeType || "application/octet-stream",
       }]);
 
       setDocuments((current) =>
