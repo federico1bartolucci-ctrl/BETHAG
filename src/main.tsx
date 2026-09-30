@@ -158,6 +158,35 @@ type CommunicationAudience =
   | "Condomino"
   | "Consiglio";
 
+type CondominiumStructureScale = {
+  id: string;
+  label: string;
+  interiors: number;
+};
+
+type CondominiumStructureBuilding = {
+  id: string;
+  label: string;
+  scales: CondominiumStructureScale[];
+};
+
+type CondominiumStructureCivic = {
+  id: string;
+  label: string;
+  buildings: CondominiumStructureBuilding[];
+};
+
+type CondominiumStructure = {
+  configured: boolean;
+  civics: CondominiumStructureCivic[];
+  autonomous: {
+    garages: number;
+    cantine: number;
+    postiAuto: number;
+    altre: number;
+  };
+};
+
 type Condominium = {
   id: number;
   name: string;
@@ -173,6 +202,7 @@ type Condominium = {
   iban: string;
   bank: string;
   notes: string;
+  structure?: CondominiumStructure;
   archivedAt?: string;
   archivedBy?: string;
 };
@@ -192,10 +222,12 @@ type CondominiumUnit = {
   id: string;
   condominiumId: number;
   unitCode: string;
-  unitType: "Abitazione" | "Garage" | "Cantina" | "Altro";
+  unitType: "Abitazione" | "Garage" | "Cantina" | "Posto auto" | "Altro";
   cadastralCategory: string;
   cadastralAutonomous: boolean;
   millesimi: string;
+  civicCode?: string;
+  staircaseCode?: string;
   incorporatedInUnitId?: string;
   relationshipToResidentialUnit: "Nessuna" | "Pertinenza" | "Incorporata";
   ownerMode: "condominium_member" | "external" | "mixed" | "inherited";
@@ -887,6 +919,11 @@ const emptyCondominium: Condominium = {
   iban: "",
   bank: "",
   notes: "",
+  structure: {
+    configured: false,
+    civics: [],
+    autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 },
+  },
 };
 
 const emptyDeadline: Deadline = {
@@ -13376,6 +13413,98 @@ function CondominiumForm({
       [key]: val,
     });
 
+  const structure: CondominiumStructure = value.structure ?? {
+    configured: false,
+    civics: [],
+    autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 },
+  };
+
+  const makeStructureId = (prefix: string, index: number) => `${prefix}-${index + 1}`;
+
+  const updateStructure = (next: CondominiumStructure) => {
+    const totalInteriors = next.civics.reduce(
+      (total, civic) => total + civic.buildings.reduce(
+        (buildingTotal, building) => buildingTotal + building.scales.reduce((scaleTotal, scale) => scaleTotal + Math.max(0, Number(scale.interiors) || 0), 0),
+        0
+      ),
+      0
+    );
+    const autonomous = next.autonomous;
+    const autonomousTotal =
+      Math.max(0, Number(autonomous.garages) || 0) +
+      Math.max(0, Number(autonomous.cantine) || 0) +
+      Math.max(0, Number(autonomous.postiAuto) || 0) +
+      Math.max(0, Number(autonomous.altre) || 0);
+    onChange({ ...value, structure: next, units: String(totalInteriors + autonomousTotal) });
+  };
+
+  const setCivicCount = (count: number) => {
+    const safe = Math.max(0, Math.min(100, Math.floor(count || 0)));
+    const civics = Array.from({ length: safe }, (_, index) =>
+      structure.civics[index] ?? {
+        id: makeStructureId("civico", index),
+        label: `Civico ${index + 1}`,
+        buildings: [{
+          id: `civico-${index + 1}-palazzina-1`,
+          label: "Palazzina A",
+          scales: [{ id: `civico-${index + 1}-palazzina-1-scala-1`, label: "Scala A", interiors: 0 }],
+        }],
+      }
+    );
+    updateStructure({ ...structure, configured: safe > 0, civics });
+  };
+
+  const setBuildingCount = (civicIndex: number, count: number) => {
+    const safe = Math.max(1, Math.min(100, Math.floor(count || 1)));
+    const civic = structure.civics[civicIndex];
+    if (!civic) return;
+    const buildings = Array.from({ length: safe }, (_, index) =>
+      civic.buildings[index] ?? {
+        id: `${civic.id}-palazzina-${index + 1}`,
+        label: `Palazzina ${String.fromCharCode(65 + index)}`,
+        scales: [{ id: `${civic.id}-palazzina-${index + 1}-scala-1`, label: "Scala A", interiors: 0 }],
+      }
+    );
+    const civics = structure.civics.map((item, index) => index === civicIndex ? { ...item, buildings } : item);
+    updateStructure({ ...structure, civics });
+  };
+
+  const setScaleCount = (civicIndex: number, buildingIndex: number, count: number) => {
+    const safe = Math.max(1, Math.min(100, Math.floor(count || 1)));
+    const civic = structure.civics[civicIndex];
+    const building = civic?.buildings[buildingIndex];
+    if (!building) return;
+    const scales = Array.from({ length: safe }, (_, index) =>
+      building.scales[index] ?? {
+        id: `${building.id}-scala-${index + 1}`,
+        label: `Scala ${String.fromCharCode(65 + index)}`,
+        interiors: 0,
+      }
+    );
+    const civics = structure.civics.map((item, ci) => ci !== civicIndex ? item : {
+      ...item,
+      buildings: item.buildings.map((b, bi) => bi === buildingIndex ? { ...b, scales } : b),
+    });
+    updateStructure({ ...structure, civics });
+  };
+
+  const setInteriorCount = (civicIndex: number, buildingIndex: number, scaleIndex: number, count: number) => {
+    const civics = structure.civics.map((item, ci) => ci !== civicIndex ? item : {
+      ...item,
+      buildings: item.buildings.map((building, bi) => bi !== buildingIndex ? building : {
+        ...building,
+        scales: building.scales.map((scale, si) => si === scaleIndex ? { ...scale, interiors: Math.max(0, Math.min(999, Math.floor(count || 0))) } : scale),
+      }),
+    });
+    updateStructure({ ...structure, civics });
+  };
+
+  const setAutonomous = (key: keyof CondominiumStructure["autonomous"], count: number) =>
+    updateStructure({
+      ...structure,
+      autonomous: { ...structure.autonomous, [key]: Math.max(0, Math.min(9999, Math.floor(count || 0))) },
+    });
+
   const capLookupRef = useRef(0);
   useEffect(() => {
     const cap = String(value.cap || "").replace(/\D/g, "").slice(0, 5);
@@ -13515,6 +13644,60 @@ function CondominiumForm({
           }
           type="number"
         />
+
+        <section className="field full" style={{ marginTop: 6, padding: 18, border: "1px solid #dbe4f3", borderRadius: 16, background: "#f8faff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ marginBottom: 5 }}>Struttura del condominio</label>
+              <div className="form-help">Definisci la struttura fisica. Le autorimesse, cantine, posti auto e altre pertinenze autonome restano fuori dalla gerarchia civico → palazzina → scala → interno.</div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#3857d6" }}>{Number(value.units || 0)} unità/pertinenze censite</span>
+          </div>
+
+          <div className="form-grid" style={{ marginTop: 14 }}>
+            <Field label="Numero civici" type="number" value={String(structure.civics.length)} onChange={(v: string) => setCivicCount(Number(v))} />
+            <div className="field">
+              <label>Unità autonome</label>
+              <div className="form-help">I conteggi qui sotto non richiedono civico, palazzina o scala.</div>
+            </div>
+          </div>
+
+          {structure.civics.map((civic, civicIndex) => (
+            <div key={civic.id} style={{ marginTop: 14, padding: 14, border: "1px solid #e2e8f0", borderRadius: 14, background: "#fff" }}>
+              <div className="form-grid">
+                <Field label="Civico" value={civic.label} onChange={(v: string) => updateStructure({ ...structure, civics: structure.civics.map((item, i) => i === civicIndex ? { ...item, label: v } : item) })} />
+                <Field label="Numero palazzine" type="number" value={String(civic.buildings.length)} onChange={(v: string) => setBuildingCount(civicIndex, Number(v))} />
+              </div>
+              {civic.buildings.map((building, buildingIndex) => (
+                <div key={building.id} style={{ marginTop: 10, padding: 12, borderLeft: "3px solid #dbe4f3", background: "#fbfcff", borderRadius: 10 }}>
+                  <div className="form-grid">
+                    <Field label="Palazzina" value={building.label} onChange={(v: string) => updateStructure({ ...structure, civics: structure.civics.map((item, ci) => ci !== civicIndex ? item : { ...item, buildings: item.buildings.map((b, bi) => bi === buildingIndex ? { ...b, label: v } : b) }) })} />
+                    <Field label="Numero scale" type="number" value={String(building.scales.length)} onChange={(v: string) => setScaleCount(civicIndex, buildingIndex, Number(v))} />
+                  </div>
+                  {building.scales.map((scale, scaleIndex) => (
+                    <div key={scale.id} style={{ marginTop: 9 }}>
+                      <div className="form-grid">
+                        <Field label="Scala" value={scale.label} onChange={(v: string) => updateStructure({ ...structure, civics: structure.civics.map((item, ci) => ci !== civicIndex ? item : { ...item, buildings: item.buildings.map((b, bi) => bi !== buildingIndex ? b : { ...b, scales: b.scales.map((s, si) => si === scaleIndex ? { ...s, label: v } : s) }) }) })} />
+                        <Field label="Numero interni" type="number" value={String(scale.interiors)} onChange={(v: string) => setInteriorCount(civicIndex, buildingIndex, scaleIndex, Number(v))} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
+            <strong style={{ fontSize: 13 }}>Pertinenze / unità autonome</strong>
+            <div className="form-grid" style={{ marginTop: 10 }}>
+              <Field label="Autorimesse / box" type="number" value={String(structure.autonomous.garages)} onChange={(v: string) => setAutonomous("garages", Number(v))} />
+              <Field label="Cantine" type="number" value={String(structure.autonomous.cantine)} onChange={(v: string) => setAutonomous("cantine", Number(v))} />
+              <Field label="Posti auto" type="number" value={String(structure.autonomous.postiAuto)} onChange={(v: string) => setAutonomous("postiAuto", Number(v))} />
+              <Field label="Altre pertinenze" type="number" value={String(structure.autonomous.altre)} onChange={(v: string) => setAutonomous("altre", Number(v))} />
+            </div>
+            <div className="form-help" style={{ marginTop: 8 }}>Le pertinenze catastalmente comprese in un interno non vengono conteggiate qui: saranno collegate direttamente all'unità principale e non avranno millesimi autonomi.</div>
+          </div>
+        </section>
 
         <Field
           full
