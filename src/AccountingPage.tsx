@@ -1032,11 +1032,16 @@ function AccountingPage({
   async function saveMillesimalTable(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !millesimalForm.name.trim()) return;
+    const totalMillesimi = Number(millesimalForm.total_millesimi);
+    if (!Number.isFinite(totalMillesimi) || totalMillesimi <= 0) {
+      setError("Il totale dei millesimi deve essere un numero maggiore di zero.");
+      return;
+    }
     setSaving(true); setError("");
     try {
       const { error: saveError } = await supabase.from("condominium_millesimal_tables").insert({
         workspace_id: workspaceId, condominium_id: dbCondominiumId, name:millesimalForm.name.trim(),
-        description:millesimalForm.description, total_millesimi:Number(millesimalForm.total_millesimi),
+        description:millesimalForm.description, total_millesimi:totalMillesimi,
         active:millesimalForm.active, notes:millesimalForm.notes
       });
       if (saveError) throw saveError;
@@ -1076,12 +1081,23 @@ function AccountingPage({
     if (!supabase || !dbCondominiumId || !millesimalValueForm.table_id || !millesimalValueForm.unit_id) {
       setError("Seleziona tabella e unità."); return;
     }
+    const millesimalValue = Number(millesimalValueForm.value);
+    if (!Number.isFinite(millesimalValue) || millesimalValue < 0) {
+      setError("Il valore millesimale deve essere un numero non negativo.");
+      return;
+    }
+    const selectedTable = scopedMillesimalTables.find(t => t.id === millesimalValueForm.table_id);
+    const selectedUnit = units.find(u => u.id === millesimalValueForm.unit_id && u.condominium_id === dbCondominiumId);
+    if (!selectedTable || !selectedUnit || selectedTable.condominium_id !== dbCondominiumId) {
+      setError("Tabella o unità non appartenenti al condominio selezionato.");
+      return;
+    }
     setSaving(true); setError("");
     try {
       const payload = {
         workspace_id:workspaceId, condominium_id:dbCondominiumId,
         table_id:millesimalValueForm.table_id, unit_id:millesimalValueForm.unit_id,
-        value:Number(millesimalValueForm.value), excluded:millesimalValueForm.excluded,
+        value:millesimalValue, excluded:millesimalValueForm.excluded,
         notes:millesimalValueForm.notes
       };
       const { error: saveError } = await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"table_id,unit_id"});
