@@ -94,6 +94,7 @@ type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit
 type ConsumptionReading = { id:string; condominium_id:string; fiscal_year_id:string|null; unit_id:string; service_type:string; period_start:string|null; period_end:string|null; meter_code:string; previous_reading:number|null; current_reading:number|null; consumption:number|null; kwh:number|null; allocation_value:number|null; charge_amount:number|null; source:string; notes:string; data:any };
 type AllocationRule = { id:string; condominium_id:string; name:string; expense_type:string|null; category:string|null; allocation_table_id:string; priority:number; active:boolean; notes:string };
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
+type AllocationIntake = { id:string; condominium_id:string; source:"Manuale"|"AI"|"Importazione"; status:"Bozza"|"Da verificare"|"Confermato"|"Annullato"; document_id:string|null; ledger_entry_id:string|null; allocation_table_id:string|null; title:string; description:string; expense_amount:number|null; extracted_data:any; rows:any[]; validation_errors:any[]; notes:string; created_by:string|null; confirmed_by:string|null; confirmed_at:string|null; created_at:string; };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
@@ -145,6 +146,9 @@ function AccountingPage({
   const [taxes, setTaxes] = useState<TaxObligation[]>([]);
   const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [allocationIntakes, setAllocationIntakes] = useState<AllocationIntake[]>([]);
+  const [showAllocationIntakeForm, setShowAllocationIntakeForm] = useState(false);
+  const [allocationIntakeForm, setAllocationIntakeForm] = useState({ source:"Manuale" as "Manuale"|"AI"|"Importazione", title:"", description:"", ledger_entry_id:"", allocation_table_id:"", expense_amount:0, rows:[] as Array<{unit_id:string;millesimi:number;amount:number}>, notes:"" });
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
@@ -507,7 +511,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
-      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult] =
+      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult] =
         await Promise.all([
           supabase
             .from("condominium_fiscal_years")
@@ -539,6 +543,11 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("due_date"),
+          supabase
+            .from("condominium_allocation_intakes")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("created_at", { ascending: false }),
           supabase
             .from("condominium_units")
             .select("id, condominium_id, unit_code, data")
@@ -595,6 +604,7 @@ function AccountingPage({
       setTaxes((taxResult.data ?? []) as TaxObligation[]);
       setLegalCases((caseResult.data ?? []) as LegalCase[]);
       setAllocations((allocationsResult.data ?? []) as Allocation[]);
+      setAllocationIntakes((allocationIntakesResult.data ?? []) as AllocationIntake[]);
       setUnits((unitsResult.data ?? []) as UnitOption[]);
       setMillesimalTables((millesimalTablesResult.data ?? []) as MillesimalTable[]);
       setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
@@ -1118,6 +1128,55 @@ function AccountingPage({
     }
   }
 
+  function openManualAllocationIntake() {
+    if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
+    const firstExpense = scopedLedger.find(e => e.direction === "Uscita");
+    const firstTable = scopedMillesimalTables.find(t => t.active);
+    const rows = firstTable ? units.filter(u => u.condominium_id === dbCondominiumId && (firstTable.scope_mode === "all" || (firstTable.scope_mode === "units" && firstTable.scope_unit_ids.includes(u.id)) || (firstTable.scope_mode === "buildings" && firstTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))).map(u => ({unit_id:u.id,millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===firstTable.id&&v.unit_id===u.id)?.value||0),amount:0})) : [];
+    setAllocationIntakeForm({source:"Manuale",title:"",description:"",ledger_entry_id:firstExpense?.id||"",allocation_table_id:firstTable?.id||"",expense_amount:Number(firstExpense?.amount||0),rows,notes:""});
+    setShowAllocationIntakeForm(true);
+  }
+  function openAIAllocationIntake() {
+    if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
+    setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:scopedMillesimalTables.find(t=>t.active)?.id||"",expense_amount:0,rows:[],notes:"L'AI produrrà una proposta da verificare prima della conferma."});
+    setShowAllocationIntakeForm(true);
+  }
+  async function saveAllocationIntake() {
+    if (!supabase || !dbCondominiumId) return;
+    if (!allocationIntakeForm.title.trim()) { setError("Inserisci un titolo per l'acquisizione."); return; }
+    if (!allocationIntakeForm.ledger_entry_id) { setError("Collega una spesa del registro contabile."); return; }
+    if (allocationIntakeForm.source === "Manuale" && allocationIntakeForm.rows.length === 0) { setError("Inserisci almeno una quota."); return; }
+    const total = allocationIntakeForm.rows.reduce((s,r)=>s+Number(r.amount||0),0);
+    if (allocationIntakeForm.source === "Manuale" && Math.abs(total-Number(allocationIntakeForm.expense_amount||0))>0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
+    setSaving(true); setError("");
+    try {
+      const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert({
+        workspace_id:workspaceId, condominium_id:dbCondominiumId, source:allocationIntakeForm.source,
+        status:allocationIntakeForm.source==="AI" ? "Da verificare" : "Bozza",
+        ledger_entry_id:allocationIntakeForm.ledger_entry_id || null, allocation_table_id:allocationIntakeForm.allocation_table_id || null,
+        title:allocationIntakeForm.title.trim(), description:allocationIntakeForm.description, expense_amount:Number(allocationIntakeForm.expense_amount||0),
+        rows:allocationIntakeForm.rows, extracted_data:{}, validation_errors:[], notes:allocationIntakeForm.notes
+      });
+      if (saveError) throw saveError;
+      setShowAllocationIntakeForm(false);
+      flash(allocationIntakeForm.source==="AI" ? "Acquisizione AI creata: dati da verificare." : "Acquisizione manuale salvata come bozza.");
+      await load();
+    } catch(e:any) { setError(e?.message||"Impossibile salvare l'acquisizione."); }
+    finally { setSaving(false); }
+  }
+  async function confirmAllocationIntake(intake: AllocationIntake) {
+    if (!supabase) return;
+    if (!window.confirm("Confermi l'acquisizione? Le quote saranno trasferite nel riparto contabile definitivo.")) return;
+    setSaving(true); setError("");
+    try {
+      const { error: rpcError } = await supabase.rpc("confirm_allocation_intake",{p_workspace_id:workspaceId,p_intake_id:intake.id});
+      if (rpcError) throw rpcError;
+      flash("Acquisizione confermata e riparto contabile aggiornato.");
+      await load();
+    } catch(e:any) { setError(e?.message||"Impossibile confermare l'acquisizione."); }
+    finally { setSaving(false); }
+  }
+
   async function saveMillesimalTable(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !millesimalForm.name.trim()) return;
@@ -1623,6 +1682,20 @@ function AccountingPage({
             {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { (()=>{ const firstExpense=scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id)); const useOrd=firstExpense?.expense_type==="Ordinaria"; const dates=useOrd ? (accountingSettings?.ordinary_due_dates??[]) : []; setAllocationInstallmentForm({ ledger_entry_id:firstExpense?.id??"", title:firstExpense?.expense_type==="Straordinaria"?"Rate lavoro straordinario":"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id??"", installment_count:dates.length||accountingSettings?.ordinary_installment_count||1, due_dates:dates.join(", ") }); setShowInstallmentsFromAllocation(true); })(); }}>Genera rate</button><button className="secondary-button" onClick={() => { const firstExpense = scopedLedger.find((e) => e.direction === "Uscita"); setAutoAllocationForm({ ledger_entry_id: firstExpense?.id ?? "", table_id: scopedMillesimalTables.find(t => t.active)?.id ?? "", due_date: firstExpense?.due_date ?? "" }); setAutoPreview([]); setError(""); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
           </div>
           {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (<>
+            <div className="permission-box" style={{marginBottom:12}}>
+              <b>Acquisizione del riparto</b>
+              <span>Inserimento manuale sempre disponibile. L'AI, quando inclusa nel piano o sbloccata come componente aggiuntivo, crea una proposta da verificare.</span>
+              <div className="row-actions" style={{marginTop:8}}>
+                {isAdministrator && <button className="secondary-button" onClick={openManualAllocationIntake}>＋ Inserimento manuale</button>}
+                {isAdministrator && <button className="secondary-button" onClick={openAIAllocationIntake}>✦ Acquisisci con AI</button>}
+              </div>
+            </div>
+            {allocationIntakes.length > 0 && <div className="cards-list" style={{marginBottom:12}}>
+              {allocationIntakes.slice(0,10).map(intake => <article className="row-card" key={intake.id}>
+                <div><b>{intake.title || "Acquisizione riparto"}</b><small>{intake.source} · {intake.status} · {intake.expense_amount != null ? money(intake.expense_amount) : "Importo non indicato"}</small>{intake.description && <span>{intake.description}</span>}</div>
+                {isAdministrator && intake.status !== "Confermato" && intake.status !== "Annullato" && <button className="primary-button small" disabled={saving} onClick={()=>confirmAllocationIntake(intake)}>{intake.status==="Da verificare" ? "Verifica e conferma" : "Conferma riparto"}</button>}
+              </article>)}
+            </div>}
             <div className="cards-list">
               {allocationReconciliation.map(x => <article className="row-card" key={"reconciliation-"+x.id}><div><b>{x.description}</b><small>Spesa {money(x.amount)} · Ripartito {money(x.allocated)}</small><span>{x.balanced ? "✓ Ripartizione quadrata" : `⚠ Differenza ${money(x.difference)}`}</span></div></article>)}
             </div>
