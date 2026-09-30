@@ -1944,10 +1944,14 @@ export async function confirmCondominiumInvoice(
     }
 
     if (workId) {
-      const { data: linked, error: linkedError } = await supabase.from("condominium_work_documents").select("id")
-        .eq("workspace_id", workspaceId).eq("work_id", workId).eq("document_id", payload.documentLegacyId).limit(1).maybeSingle();
+      const { data: linked, error: linkedError } = await supabase.from("condominium_work_documents").select("id,work_id")
+        .eq("workspace_id", workspaceId).eq("document_id", payload.documentLegacyId).limit(10);
       if (linkedError) throw linkedError;
-      if (!linked?.id) {
+      const conflictingLink = (linked ?? []).find((row: any) => String(row.work_id) !== String(workId));
+      if (conflictingLink) {
+        throw new Error("La fattura è già collegata a un altro lavoro. Rimuovi prima il collegamento precedente oppure verifica manualmente l'associazione.");
+      }
+      if (!(linked ?? []).some((row: any) => String(row.work_id) === String(workId))) {
         const { error } = await supabase.from("condominium_work_documents").insert({
           workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, document_id: payload.documentLegacyId,
           title: document.title ?? "Fattura", notes: invoiceNumber ? `Fattura ${invoiceNumber}` : "Fattura collegata dall'analisi AI.",
