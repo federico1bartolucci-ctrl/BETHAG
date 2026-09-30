@@ -129,7 +129,13 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   const ownerIdsByUnit = new Map<string, number[]>();
   mappedCondominiumMembers.forEach((member: any) => {
-    if (member.role !== "Proprietario" || !member.unitId) return;
+    // La colonna tecnica role identifica il ruolo di accesso al portale
+    // (es. resident), mentre la qualifica condominiale è conservata nel
+    // JSON anagrafico. I proprietari devono quindi essere ricavati dalla
+    // qualifica condominiale, altrimenti un refresh può perdere i proprietari
+    // associati all'unità.
+    const condominiumRole = String(member.data?.role ?? member.role ?? "").trim();
+    if (condominiumRole !== "Proprietario" || !member.unitId) return;
     const current = ownerIdsByUnit.get(String(member.unitId)) ?? [];
     if (!current.includes(member.id)) current.push(member.id);
     ownerIdsByUnit.set(String(member.unitId), current);
