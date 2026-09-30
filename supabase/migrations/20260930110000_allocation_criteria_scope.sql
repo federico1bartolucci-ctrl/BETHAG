@@ -153,3 +153,5 @@ begin
             condominium_expense_allocations.amount;
 end;
 $$;
+
+revoke execute on function public.sync_condominium_fund_usage() from anon, authenticated;
