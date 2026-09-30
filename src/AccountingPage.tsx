@@ -94,7 +94,8 @@ type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
-type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso";
+type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni";
+type AccountingSettings = { id:string; condominium_id:string; accounting_start_date:string; accounting_end_date:string; ordinary_installment_count:number; ordinary_due_dates:string[]; extraordinary_mode:"integrata"|"separata"; extraordinary_allow_multi_year:boolean; };
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   fiscal_year_id: null,
@@ -146,6 +147,8 @@ function AccountingPage({
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [carryovers, setCarryovers] = useState<FiscalCarryover[]>([]);
+  const [accountingSettings, setAccountingSettings] = useState<AccountingSettings | null>(null);
+  const [accountingSettingsForm, setAccountingSettingsForm] = useState({ accounting_start_date:new Date().getFullYear()+"-01-01", accounting_end_date:new Date().getFullYear()+"-12-31", ordinary_installment_count:12, ordinary_due_dates:"", extraordinary_mode:"separata" as "integrata"|"separata", extraordinary_allow_multi_year:true });
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [budgetForm, setBudgetForm] = useState({ fiscal_year_id:"", category:"Manutenzione", description:"", amount:0, notes:"" });
@@ -554,6 +557,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("created_at"),
+          supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
         ]);
       for (const result of [
         yearsResult,
@@ -568,6 +572,7 @@ function AccountingPage({
         installmentsResult,
         budgetsResult,
         carryoversResult,
+        settingsResult,
       ]) {
         if (result.error) throw result.error;
       }
@@ -583,6 +588,8 @@ function AccountingPage({
       setInstallments((installmentsResult.data ?? []) as Installment[]);
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
+      const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
+      if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -622,6 +629,17 @@ function AccountingPage({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveAccountingSettings(e: React.FormEvent) {
+    e.preventDefault(); if(!supabase||!dbCondominiumId)return;
+    const count=Number(accountingSettingsForm.ordinary_installment_count); const dates=accountingSettingsForm.ordinary_due_dates.split(/[,;\\n]+/).map(s=>s.trim()).filter(Boolean);
+    if(accountingSettingsForm.accounting_start_date>accountingSettingsForm.accounting_end_date){setError("La data di inizio contabilità non può essere successiva alla data di fine.");return;}
+    if(!Number.isInteger(count)||count<1||count>12){setError("Il numero di rate ordinarie deve essere compreso tra 1 e 12.");return;}
+    if(dates.length&&dates.length!==count){setError("Le scadenze ordinarie devono corrispondere al numero di rate.");return;}
+    if(dates.some((d,i,a)=>!/^\\d{4}-\\d{2}-\\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
+    if(dates.some(d=>d<accountingSettingsForm.accounting_start_date||d>accountingSettingsForm.accounting_end_date)){setError("Le scadenze ordinarie devono ricadere nell'esercizio configurato.");return;}
+    setSaving(true);setError(""); try{const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,accounting_start_date:accountingSettingsForm.accounting_start_date,accounting_end_date:accountingSettingsForm.accounting_end_date,ordinary_installment_count:count,ordinary_due_dates:dates,extraordinary_mode:accountingSettingsForm.extraordinary_mode,extraordinary_allow_multi_year:accountingSettingsForm.extraordinary_allow_multi_year}; const {data,error}=await supabase.from("condominium_accounting_settings").upsert(payload,{onConflict:"workspace_id,condominium_id"}).select("*").single(); if(error)throw error; setAccountingSettings(data as AccountingSettings);flash("Impostazioni contabilità salvate.");await load();}catch(e:any){setError(e?.message||"Impossibile salvare le impostazioni.");}finally{setSaving(false);}
   }
 
   async function saveYear(e: React.FormEvent) {
@@ -1362,6 +1380,7 @@ function AccountingPage({
           ["fondi", "Fondi e riserve"],
           ["fiscale", "Adempimenti fiscali"],
           ["contenzioso", "Contenzioso"],
+          ["impostazioni", "Impostazioni contabilità"],
         ] as [Tab, string][]).map(([value, label]) => (
           <button
             key={value}
@@ -1588,6 +1607,13 @@ function AccountingPage({
             </article>
           ))}
         </section>
+      ) : tab === "impostazioni" ? (
+        <section className="cards-grid"><article className="card"><div className="section-heading"><div><h2>Impostazioni contabilità</h2><p>Configura calendario, rate ordinarie e criteri per le spese straordinarie.</p></div></div>
+          <form onSubmit={saveAccountingSettings}><h3>Esercizio contabile</h3><div className="form-grid"><label>Data inizio<input type="date" value={accountingSettingsForm.accounting_start_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_start_date:e.target.value})}/></label><label>Data fine<input type="date" value={accountingSettingsForm.accounting_end_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_end_date:e.target.value})}/></label></div>
+          <h3>Spese ordinarie</h3><div className="form-grid"><label>Numero rate<input type="number" min="1" max="12" value={accountingSettingsForm.ordinary_installment_count} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_installment_count:Math.max(1,Math.min(12,Number(e.target.value)||1))})}/></label><label>Scadenze<textarea placeholder="2026-01-31, 2026-02-28, ..." value={accountingSettingsForm.ordinary_due_dates} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_due_dates:e.target.value})}/></label></div>
+          <h3>Spese straordinarie</h3><label>Modalità<select value={accountingSettingsForm.extraordinary_mode} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_mode:e.target.value as "integrata"|"separata"})}><option value="separata">Gestione separata dalle ordinarie</option><option value="integrata">Integrare nelle rate ordinarie</option></select></label><label className="check-row"><input type="checkbox" checked={accountingSettingsForm.extraordinary_allow_multi_year} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_allow_multi_year:e.target.checked})}/> Consentire rate straordinarie su più esercizi</label>
+          <div className="permission-box"><b>Regola</b><span>Massimo 12 rate per esercizio; i piani straordinari separati possono attraversare più annualità.</span></div><div className="form-actions"><button className="primary-button" disabled={saving}>Salva impostazioni</button></div></form>
+        </article><article className="card"><h2>Gestione criteri</h2><p>Le impostazioni diventano il criterio predefinito del condominio. I piani straordinari separati restano collegati alla spesa originaria.</p></article></section>
       ) : (
         <section className="card">
           <div className="section-heading">
