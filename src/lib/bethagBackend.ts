@@ -1184,6 +1184,36 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
 export async function deleteCondominiumWork(workspaceId: string, id: string) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
+    const { data: work, error: workError } = await supabase
+      .from("condominium_works")
+      .select("id,title")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    if (workError) throw workError;
+    if (!work) return;
+
+    const { data: progressRows, error: progressError } = await supabase
+      .from("condominium_work_progress")
+      .select("progress_no,ledger_entry_id")
+      .eq("workspace_id", workspaceId)
+      .eq("work_id", id);
+    if (progressError) throw progressError;
+
+    const hasAccountingProgress = (progressRows ?? []).some((row: any) => Boolean(row.ledger_entry_id));
+    const { data: linkedLedger, error: ledgerError } = await supabase
+      .from("condominium_ledger_entries")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("direction", "Uscita")
+      .contains("data", { workId: id })
+      .limit(1);
+    if (ledgerError) throw ledgerError;
+
+    if (hasAccountingProgress || (linkedLedger ?? []).length > 0) {
+      throw new Error("Il lavoro non può essere eliminato perché presenta registrazioni contabili collegate. Prima occorre gestire o stornare le scritture contabili; in questo modo BETHAG evita di lasciare movimenti finanziari senza il relativo lavoro.");
+    }
+
     const { error } = await supabase
       .from("condominium_works")
       .delete()
