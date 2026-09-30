@@ -389,7 +389,8 @@ async function syncBackendStateNow(
   ].filter((entry): entry is [string, any[]] => Boolean(entry));
 
   for (const [table, rows] of rowsByTable) {
-    if (rows.length) await upsertRows(table, rows);
+    if (!rows.length) continue;
+    await upsertRows(table, rows, table === "condominium_works" ? "id" : undefined);
   }
 
   const collaboratorRows =
