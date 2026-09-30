@@ -4730,7 +4730,7 @@ function App() {
 
     if (selectedDocumentFile && supabaseConfigured && profile.workspaceId) {
       try {
-        const stored = await storeWorkspaceDocuments(profile.workspaceId, [selectedDocumentFile]);
+        const stored = await storeWorkspaceDocuments(profile.workspaceId, [selectedDocumentFile], documentForm.condominiumId);
         const uploaded = stored[0];
         documentData = {
           ...documentData,
