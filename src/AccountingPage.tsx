@@ -961,9 +961,17 @@ function AccountingPage({
       setError("Indica esattamente una scadenza YYYY-MM-DD per ciascuna rata, in ordine cronologico.");
       return;
     }
-    const dueYearCounts = dueDates.reduce((map, date) => map.set(date.slice(0, 4), (map.get(date.slice(0, 4)) || 0) + 1), new Map<string, number>());
-    if ([...dueYearCounts.values()].some(count => count > 12)) {
-      setError("Per ogni esercizio contabile sono consentite al massimo 12 rate. I lavori straordinari possono comunque proseguire su più esercizi.");
+    const dueFiscalYearCounts = new Map<string, number>();
+    for (const date of dueDates) {
+      const fiscalYear = scopedYears.find(y => date >= y.start_date && date <= y.end_date);
+      if (!fiscalYear) {
+        setError("Esiste una scadenza senza un esercizio contabile corrispondente. Crea prima l'esercizio necessario.");
+        return;
+      }
+      dueFiscalYearCounts.set(fiscalYear.id, (dueFiscalYearCounts.get(fiscalYear.id) || 0) + 1);
+    }
+    if ([...dueFiscalYearCounts.values()].some(count => count > 12)) {
+      setError("Per ogni esercizio contabile sono consentite al massimo 12 rate. I lavori straordinari possono proseguire su più esercizi.");
       return;
     }
     const selectedExpense = scopedLedger.find(e => e.id === allocationInstallmentForm.ledger_entry_id);
