@@ -1052,6 +1052,11 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
       }
     }
 
+    const { data: previousProgressRows, error: previousProgressError } = await supabase.from("condominium_work_progress").select("progress_no,amount").eq("workspace_id", workspaceId).eq("work_id", workId);
+    if (previousProgressError) throw previousProgressError;
+    const previousAmount = (previousProgressRows ?? []).filter((row: any) => Number(row.progress_no) !== Number(input.progressNo)).reduce((sum: number, row: any) => sum + (Number(row.amount) || 0), 0);
+    const cumulativeActualAmount = previousAmount + Math.max(0, Number(input.amount) || 0);
+
     const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").upsert({
       workspace_id: workspaceId, condominium_id: work.condominium_id, work_id: work.id,
       progress_no: input.progressNo, progress_date: input.progressDate, title: input.title || ("SAL " + input.progressNo),
@@ -1062,7 +1067,7 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
 
     const { error: workUpdateError } = await supabase.from("condominium_works").update({
       progress_percent: Math.max(0, Math.min(100, Number(input.percentage) || 0)),
-      actual_amount: Math.max(0, Number(input.amount) || 0) > 0 ? Math.max(0, Number(input.amount) || 0) : undefined,
+      actual_amount: cumulativeActualAmount,
       status: Number(input.percentage) >= 100 ? "Completato" : Number(input.percentage) > 0 ? "In corso" : work.status,
       actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : null
     }).eq("workspace_id", workspaceId).eq("id", workId);
