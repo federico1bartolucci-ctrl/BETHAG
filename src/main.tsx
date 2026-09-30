@@ -2793,6 +2793,8 @@ function App() {
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
+        setRequiresPasswordSetup(false);
+        setPasswordRecoveryMode(false);
         localStorage.removeItem(KEYS.session);
         localStorage.removeItem(KEYS.sessionEmail);
         localStorage.removeItem(KEYS.page);
@@ -2839,6 +2841,9 @@ function App() {
         if (!access || cancelled) {
           setSessionRole(null);
           setSessionEmail("");
+          setServerCollaboratorPermissions([]);
+          setRequiresPasswordSetup(false);
+          setPasswordRecoveryMode(false);
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
           setPage("homepage");
