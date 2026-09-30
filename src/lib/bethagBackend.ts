@@ -350,7 +350,7 @@ async function syncBackendStateNow(
     if (selectedSupplierIds.length) {
       const { data: condominiumSuppliers, error: condominiumSuppliersError } = await supabase
         .from("condominium_suppliers")
-        .select("id,condominium_id,business_name,vendor_code,data")
+        .select("id,condominium_id,business_name,data")
         .eq("workspace_id", workspaceId);
       if (condominiumSuppliersError) throw condominiumSuppliersError;
 
