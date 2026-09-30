@@ -939,6 +939,21 @@ export async function deleteWorkspaceRecord(
   });
 }
 
+
+export async function deletePortalMember(workspaceId: string, legacyId: number) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { error } = await supabase
+      .from("portal_access")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", legacyId);
+
+    if (error) throw error;
+  });
+}
+
 export async function deleteCondominium(workspaceId: string, legacyId: number) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
