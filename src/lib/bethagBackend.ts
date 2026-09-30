@@ -1862,6 +1862,21 @@ export async function confirmCondominiumInvoice(
     }
     if (!supplierId) throw new Error(supplierName ? `Il fornitore "${supplierName}" non è stato associato automaticamente. Seleziona/crea il fornitore in Anagrafica prima di confermare la fattura.` : "Il fornitore della fattura non è stato riconosciuto. Verificalo prima della conferma.");
 
+    const { data: selectedSupplier, error: selectedSupplierError } = await supabase
+      .from("suppliers").select("id,name,data,condominium_id").eq("workspace_id", workspaceId).eq("id", supplierId).maybeSingle();
+    if (selectedSupplierError) throw selectedSupplierError;
+    if (!selectedSupplier?.id) throw new Error("Il fornitore selezionato non appartiene al workspace corrente.");
+    if (selectedSupplier.condominium_id && String(selectedSupplier.condominium_id) !== String(condominium.id)) {
+      throw new Error("Il fornitore selezionato non appartiene al condominio della fattura.");
+    }
+    if (supplierVatNumber) {
+      const supplierData = selectedSupplier.data && typeof selectedSupplier.data === "object" ? selectedSupplier.data : {};
+      const storedVat = String(supplierData.vatNumber ?? supplierData.partitaIva ?? supplierData.vat ?? supplierData.supplierVatNumber ?? supplierData.piva ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      if (storedVat && storedVat !== supplierVatNumber) {
+        throw new Error(`La partita IVA rilevata (${supplierVatNumber}) non coincide con quella del fornitore selezionato "${selectedSupplier.name}". Verifica il documento prima di confermare la fattura.`);
+      }
+    }
+
     const workId = payload.workId ?? null;
     if (workId) {
       const { data: work, error: workError } = await supabase.from("condominium_works").select("id")
