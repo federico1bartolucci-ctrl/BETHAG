@@ -154,4 +154,4 @@ begin
 end;
 $$;
 
-revoke execute on function public.sync_condominium_fund_usage() from anon, authenticated;
+revoke execute on function public.sync_condominium_fund_usage() from public;
