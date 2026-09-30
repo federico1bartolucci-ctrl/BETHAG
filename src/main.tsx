@@ -14643,7 +14643,18 @@ function DocumentForm({
                 source,
                 mimeType:
                   file.type,
+                fileSizeBytes: file.size,
               });
+
+              if (file.size >= 25 * 1024 * 1024) {
+                const proceed = window.confirm(
+                  `Il documento "${file.name}" è molto grande (${(file.size / 1024 / 1024).toFixed(1)} MB).\\n\\nPuoi comunque memorizzarlo. Vuoi procedere con la memorizzazione del documento?`
+                );
+                if (!proceed) {
+                  setSelectedFileName("");
+                  return;
+                }
+              }
 
             }}
           />
