@@ -1105,7 +1105,6 @@ function AccountingPage({
     if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
     const percentages=allocationInstallmentForm.percentages.slice(0,installmentCount).map(Number);
     if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
-    let resolvedMemberByUnit = new Map<string, string>();
     if (allocationInstallmentForm.unifyByMember) {
       const unitIds = [...new Set(selectedAllocations.map(a => a.unit_id).filter(Boolean))];
       const { data: unitMembers, error: unitMembersError } = await supabase
@@ -1125,10 +1124,9 @@ function AccountingPage({
       }
       const ambiguousUnits = unitIds.filter(unitId => (byUnit.get(unitId) || []).length !== 1);
       if (ambiguousUnits.length) {
-        setError("L'unificazione è disponibile solo per unità con un unico proprietario attivo. Le unità con più proprietari o senza proprietario identificato restano disgiunte.");
+        setError("L'unificazione non è disponibile per questa generazione: almeno un'unità non ha un unico proprietario attivo esplicitamente identificato. Disattiva l'unificazione per generare tutte le rate separatamente.");
         return;
       }
-      resolvedMemberByUnit = new Map(unitIds.map(unitId => [unitId, byUnit.get(unitId)![0].id]));
     }
     const confirmText = allocationInstallmentForm.unifyByMember
       ? "Confermi la generazione delle rate unificate per ciascun proprietario/responsabile? Le singole quote delle unità resteranno comunque conservate."
