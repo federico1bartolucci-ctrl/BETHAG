@@ -1219,12 +1219,50 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
 export async function syncCondominiumWorkDocuments(workspaceId: string, workId: string, condominiumId: string, legacyDocumentIds: number[]) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
-    const { data: docs, error: docsError } = await supabase.from("documents").select("id,legacy_id,title").eq("workspace_id", workspaceId).in("legacy_id", legacyDocumentIds.length ? legacyDocumentIds : [-1]);
+    const requestedDocumentIds = Array.from(new Set((legacyDocumentIds ?? []).map(Number).filter((id) => Number.isFinite(id))));
+    const { data: docs, error: docsError } = await supabase
+      .from("documents")
+      .select("id,legacy_id,title,data,category")
+      .eq("workspace_id", workspaceId)
+      .in("legacy_id", requestedDocumentIds.length ? requestedDocumentIds : [-1]);
     if (docsError) throw docsError;
-    const { error: deleteError } = await supabase.from("condominium_work_documents").delete().eq("workspace_id", workspaceId).eq("work_id", workId);
+
+    const { data: existingLinks, error: existingLinksError } = await supabase
+      .from("condominium_work_documents")
+      .select("document_id")
+      .eq("workspace_id", workspaceId)
+      .eq("work_id", workId);
+    if (existingLinksError) throw existingLinksError;
+
+    const requestedSet = new Set(requestedDocumentIds);
+    const protectedDocuments = (existingLinks ?? []).map((row: any) => Number(row.document_id)).filter((id) => Number.isFinite(id)).filter((legacyId) => {
+      const doc = docs?.find((item: any) => Number(item.legacy_id) === legacyId);
+      const data = doc?.data && typeof doc.data === "object" ? doc.data : {};
+      const confirmed = String(data.invoiceConfirmation?.status ?? "").toLowerCase() === "confermato";
+      const isInvoice = String(doc?.category ?? "").toLowerCase().includes("fattur") || confirmed;
+      return isInvoice;
+    });
+    const removedProtected = protectedDocuments.filter((legacyId) => !requestedSet.has(legacyId));
+    if (removedProtected.length) {
+      throw new Error("Il lavoro contiene una fattura già confermata e contabilizzata: il collegamento non può essere rimosso con un semplice salvataggio del lavoro. Gestisci prima la fattura e la relativa scrittura contabile.");
+    }
+
+    const missingRequested = requestedDocumentIds.filter((legacyId) => !(docs ?? []).some((doc: any) => Number(doc.legacy_id) === legacyId));
+    if (missingRequested.length) {
+      throw new Error("Uno o più documenti selezionati per il lavoro non sono più disponibili nel workspace. Il salvataggio è stato annullato per evitare di perdere collegamenti esistenti.");
+    }
+
+    const { error: deleteError } = await supabase
+      .from("condominium_work_documents")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("work_id", workId);
     if (deleteError) throw deleteError;
     if (!docs?.length) return [];
-    const rows = docs.map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.legacy_id, title: doc.title || null }));
+    const rows = docs
+      .filter((doc: any) => requestedSet.has(Number(doc.legacy_id)))
+      .map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.legacy_id, title: doc.title || null }));
+    if (!rows.length) return [];
     const { data, error } = await supabase.from("condominium_work_documents").insert(rows).select("*");
     if (error) throw error;
     return data ?? [];
