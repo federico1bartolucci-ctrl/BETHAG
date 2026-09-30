@@ -1159,6 +1159,41 @@ export async function deleteCondominiumMember(
 }
 
 
+export async function analyzeCondominiumDocumentsWithAI(
+  workspaceId: string,
+  files: File[]
+): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!files.length) throw new Error("Nessun documento selezionato.");
+
+  const preparedFiles = [];
+  for (const file of files) {
+    if (file.size > 15 * 1024 * 1024) {
+      throw new Error(`Il file "${file.name}" supera il limite di 15 MB per l'analisi AI.`);
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error(`Impossibile leggere "${file.name}".`));
+      reader.readAsDataURL(file);
+    });
+    preparedFiles.push({
+      filename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      data: dataUrl,
+    });
+  }
+
+  const { data, error } = await supabase.functions.invoke("bethag-ai-condominium", {
+    body: { workspaceId, files: preparedFiles },
+  });
+
+  if (error) throw error;
+  if (!data?.draft) throw new Error(data?.error ?? "L'AI non ha restituito una proposta.");
+  return data.draft;
+}
+
+
 export async function createCondominiumCreationIntake(
   workspaceId: string,
   payload: {
