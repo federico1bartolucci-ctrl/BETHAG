@@ -1,0 +1,272 @@
+-- Correct installment rounding so the final installment absorbs the exact
+-- cent remainder after all previous installments have already been rounded.
+-- Also preserve the optional owner-unification behavior.
+create or replace function public.generate_installments_from_allocations_schedule(
+  p_workspace_id uuid,
+  p_condominium_id uuid,
+  p_ledger_entry_id uuid,
+  p_title text,
+  p_due_dates date[],
+  p_fiscal_year_id uuid default null,
+  p_percentages numeric[] default null,
+  p_unify_by_member boolean default false
+) returns integer
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+  a record;
+  m record;
+  i int;
+  n int;
+  part numeric;
+  group_sum numeric;
+  prior numeric;
+  created_count integer := 0;
+begin
+  if not private.can_manage_workspace_module(p_workspace_id,'contabilita') then
+    raise exception 'Autorizzazione gestione contabilità richiesta';
+  end if;
+  if trim(coalesce(p_title,''))='' then
+    raise exception 'Il titolo delle rate è obbligatorio';
+  end if;
+
+  n := coalesce(array_length(p_due_dates,1),0);
+
+  if p_fiscal_year_id is not null and not exists (
+    select 1 from public.condominium_fiscal_years fy
+    where fy.id=p_fiscal_year_id
+      and fy.workspace_id=p_workspace_id
+      and fy.condominium_id=p_condominium_id
+  ) then
+    raise exception 'Esercizio contabile selezionato non valido';
+  end if;
+
+  if exists (
+    select 1 from unnest(p_due_dates) d
+    where (
+      select count(*) from public.condominium_fiscal_years fy
+      where fy.workspace_id=p_workspace_id
+        and fy.condominium_id=p_condominium_id
+        and d between fy.start_date and fy.end_date
+    ) <> 1
+  ) then
+    raise exception 'Ogni scadenza deve ricadere in un solo esercizio contabile valido';
+  end if;
+
+  if p_fiscal_year_id is not null and exists (
+    select 1 from public.condominium_fiscal_years fy
+    where fy.id=p_fiscal_year_id and fy.status='Chiuso'
+  ) then
+    raise exception 'Esercizio contabile di riferimento della spesa chiuso';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(p_due_dates) d
+    join public.condominium_fiscal_years fy
+      on fy.workspace_id=p_workspace_id
+     and fy.condominium_id=p_condominium_id
+     and d between fy.start_date and fy.end_date
+    where fy.status='Chiuso'
+  ) then
+    raise exception 'Una o più scadenze ricadono in un esercizio contabile chiuso';
+  end if;
+
+  if n<1 or n>12 then
+    raise exception 'Indicare da 1 a 12 scadenze';
+  end if;
+
+  for i in 1..n loop
+    if p_due_dates[i] is null or (i>1 and p_due_dates[i]<=p_due_dates[i-1]) then
+      raise exception 'Le scadenze devono essere valide, cronologiche e non duplicate';
+    end if;
+  end loop;
+
+  if p_percentages is not null and (
+    array_length(p_percentages,1)<>n
+    or abs((select sum(x) from unnest(p_percentages) x)-100)>0.001
+    or exists(select 1 from unnest(p_percentages) x where x<=0)
+  ) then
+    raise exception 'Percentuali rate non valide';
+  end if;
+
+  if not exists (
+    select 1 from public.condominium_ledger_entries
+    where id=p_ledger_entry_id
+      and workspace_id=p_workspace_id
+      and condominium_id=p_condominium_id
+      and direction='Uscita'
+      and amount>0
+  ) then
+    raise exception 'Spesa non valida';
+  end if;
+
+  if exists (
+    select 1 from public.condominium_installments
+    where workspace_id=p_workspace_id
+      and condominium_id=p_condominium_id
+      and ledger_entry_id=p_ledger_entry_id
+  ) then
+    raise exception 'La spesa ha già rate collegate';
+  end if;
+
+  if not exists (
+    select 1 from public.condominium_expense_allocations
+    where workspace_id=p_workspace_id
+      and condominium_id=p_condominium_id
+      and ledger_entry_id=p_ledger_entry_id
+      and amount>0
+  ) then
+    raise exception 'La spesa non ha ripartizioni';
+  end if;
+
+  if p_unify_by_member and exists (
+    select 1
+    from public.condominium_expense_allocations a
+    where a.workspace_id=p_workspace_id
+      and a.condominium_id=p_condominium_id
+      and a.ledger_entry_id=p_ledger_entry_id
+      and (
+        select count(*)
+        from public.condominium_members cm
+        where cm.condominium_id=p_condominium_id
+          and cm.unit_id=a.unit_id
+          and cm.active
+          and trim(coalesce(cm.data->>'role',''))='Proprietario'
+      )<>1
+  ) then
+    raise exception 'Unificazione non consentita: ogni unità deve avere un unico proprietario attivo esplicitamente identificato';
+  end if;
+
+  for i in 1..n loop
+    if p_unify_by_member then
+      for m in
+        select cm.id
+        from public.condominium_members cm
+        where cm.condominium_id=p_condominium_id
+          and cm.active
+          and trim(coalesce(cm.data->>'role',''))='Proprietario'
+          and exists (
+            select 1
+            from public.condominium_expense_allocations a
+            where a.workspace_id=p_workspace_id
+              and a.condominium_id=p_condominium_id
+              and a.ledger_entry_id=p_ledger_entry_id
+              and a.unit_id=cm.unit_id
+          )
+      loop
+        group_sum := 0;
+
+        for a in
+          select ea.*
+          from public.condominium_expense_allocations ea
+          where ea.workspace_id=p_workspace_id
+            and ea.condominium_id=p_condominium_id
+            and ea.ledger_entry_id=p_ledger_entry_id
+            and (
+              select cm2.id
+              from public.condominium_members cm2
+              where cm2.condominium_id=p_condominium_id
+                and cm2.unit_id=ea.unit_id
+                and cm2.active
+                and trim(coalesce(cm2.data->>'role',''))='Proprietario'
+            )=m.id
+          order by ea.id
+        loop
+          if i=n then
+            if p_percentages is null then
+              part:=round(a.amount-round(a.amount/n,2)*(n-1),2);
+            else
+              prior:=coalesce((
+                select sum(round(a.amount*x/100,2))
+                from unnest(p_percentages[1:n-1]) x
+              ),0);
+              part:=round(a.amount-prior,2);
+            end if;
+          else
+            if p_percentages is null then
+              part:=round(a.amount/n,2);
+            else
+              part:=round(a.amount*p_percentages[i]/100,2);
+            end if;
+          end if;
+          group_sum := group_sum + part;
+        end loop;
+
+        if group_sum>0 then
+          insert into public.condominium_installments(
+            workspace_id,condominium_id,fiscal_year_id,ledger_entry_id,
+            member_id,unit_id,title,amount,paid_amount,status,due_date,notes
+          )
+          select
+            p_workspace_id,p_condominium_id,y.id,p_ledger_entry_id,
+            m.id,null,trim(p_title)||' - rata '||i||'/'||n,
+            round(group_sum,2),0,'Da pagare',p_due_dates[i],
+            'Rata unificata per proprietario'
+          from public.condominium_fiscal_years y
+          where y.workspace_id=p_workspace_id
+            and y.condominium_id=p_condominium_id
+            and p_due_dates[i] between y.start_date and y.end_date
+          order by y.start_date
+          limit 1;
+
+          created_count:=created_count+1;
+        end if;
+      end loop;
+    else
+      for a in
+        select *
+        from public.condominium_expense_allocations
+        where workspace_id=p_workspace_id
+          and condominium_id=p_condominium_id
+          and ledger_entry_id=p_ledger_entry_id
+          and amount>0
+        order by id
+      loop
+        if i=n then
+          if p_percentages is null then
+            part:=round(a.amount-round(a.amount/n,2)*(n-1),2);
+          else
+            prior:=coalesce((
+              select sum(round(a.amount*x/100,2))
+              from unnest(p_percentages[1:n-1]) x
+            ),0);
+            part:=round(a.amount-prior,2);
+          end if;
+        else
+          if p_percentages is null then
+            part:=round(a.amount/n,2);
+          else
+            part:=round(a.amount*p_percentages[i]/100,2);
+          end if;
+        end if;
+
+        insert into public.condominium_installments(
+          workspace_id,condominium_id,fiscal_year_id,ledger_entry_id,
+          member_id,unit_id,title,amount,paid_amount,status,due_date,notes
+        )
+        select
+          p_workspace_id,p_condominium_id,y.id,p_ledger_entry_id,
+          a.member_id,a.unit_id,trim(p_title)||' - rata '||i||'/'||n,
+          part,0,'Da pagare',p_due_dates[i],coalesce(a.notes,'')
+        from public.condominium_fiscal_years y
+        where y.workspace_id=p_workspace_id
+          and y.condominium_id=p_condominium_id
+          and p_due_dates[i] between y.start_date and y.end_date
+        order by y.start_date
+        limit 1;
+
+        created_count:=created_count+1;
+      end loop;
+    end if;
+  end loop;
+
+  return created_count;
+end;
+$function$;
+
+revoke execute on function public.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean) from anon;
+revoke execute on function public.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean) from public;
+grant execute on function public.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean) to authenticated;
