@@ -12608,6 +12608,92 @@ function SecuritySettingsCard() {
   </section>;
 }
 
+function DeleteAccountCard() {
+  const [loading, setLoading] = useState(false);
+
+  const deleteAccount = async () => {
+    if (!supabase) {
+      alert("Servizio account non disponibile.");
+      return;
+    }
+
+    const confirmation = window.prompt(
+      'Questa operazione è irreversibile. Digita esattamente "ELIMINA" per confermare la cancellazione definitiva del profilo.'
+    );
+    if (confirmation !== "ELIMINA") {
+      if (confirmation !== null) alert("Cancellazione annullata: la conferma non è corretta.");
+      return;
+    }
+
+    let securityCode: string | undefined;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) throw new Error("Sessione BETHAG non disponibile.");
+
+      const { data: security, error: securityError } = await supabase
+        .from("user_security_settings")
+        .select("personal_code_enabled")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (securityError) throw securityError;
+
+      if (security?.personal_code_enabled) {
+        securityCode = window.prompt("Inserisci il codice personale di sicurezza per confermare la cancellazione definitiva:");
+        if (!securityCode) return;
+      }
+
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        body: { confirmation: "ELIMINA", securityCode },
+      });
+
+      if (error) {
+        let message = error.message || "Impossibile eliminare il profilo.";
+        try {
+          if (error.context) {
+            const payload = await error.context.json();
+            if (payload?.error) message = payload.error;
+          }
+        } catch {
+          // Mantieni il messaggio originale della funzione.
+        }
+        throw new Error(message);
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Impossibile completare la cancellazione del profilo.");
+      }
+
+      await supabase.auth.signOut({ scope: "local" });
+      localStorage.clear();
+      sessionStorage.clear();
+      alert("Profilo eliminato definitivamente. I dati del workspace restano conservati se la gestione è stata trasferita a un altro amministratore.");
+      window.location.reload();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Impossibile eliminare il profilo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="card" style={{ marginBottom: 18, borderColor: "#fecaca", background: "#fffafa" }}>
+      <span className="eyebrow" style={{ color: "#b42318" }}>Zona irreversibile</span>
+      <h2>Elimina profilo</h2>
+      <p className="section-subtitle">
+        Elimina definitivamente il tuo account BETHAG. I condomini e i dati del workspace non vengono cancellati automaticamente.
+        Se sei l'unico amministratore di un workspace, prima dovrai trasferire la gestione a un altro amministratore.
+      </p>
+      <button className="danger-button" type="button" onClick={() => void deleteAccount()} disabled={loading}>
+        {loading ? "Eliminazione in corso…" : "Elimina definitivamente il mio profilo"}
+      </button>
+    </section>
+  );
+}
+
+
 function ProfilePage({
   profile,
   setProfile,
@@ -12850,6 +12936,7 @@ function ProfilePage({
 
 
       <SecuritySettingsCard />
+      <DeleteAccountCard />
 
       <section className="card" style={{marginBottom:18}}>
         <span className="eyebrow">Sicurezza e continuità operativa</span>
