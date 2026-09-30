@@ -388,17 +388,19 @@ async function syncBackendStateNow(
           ? workCondominiumIds
           : (condominiumDbId ? [condominiumDbId] : Array.from(condominiumDbIdByLegacyId.values()));
         const name = normalizeSupplierName(supplier.name);
-        const existing = (condominiumSuppliers ?? []).find((row: any) =>
-          candidateCondominiumIds.includes(row.condominium_id) &&
-          normalizeSupplierName(row.business_name) === name
-        );
+        for (const workCondominiumId of candidateCondominiumIds) {
+          const existing = (condominiumSuppliers ?? []).find((row: any) =>
+            String(row.condominium_id) === String(workCondominiumId) &&
+            normalizeSupplierName(row.business_name) === name
+          );
 
-        if (existing) {
-          condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(existing.condominium_id)}`, existing.id);
-          continue;
-        }
+          if (existing) {
+            condominiumSupplierIdByLegacySupplierKey.set(legacySupplierId + "::" + String(workCondominiumId), existing.id);
+            continue;
+          }
 
-        for (const workCondominiumId of workCondominiumIds) {
+          if (!workCondominiumIds.includes(workCondominiumId)) continue;
+
           const { data: created, error: createError } = await supabase
             .from("condominium_suppliers")
             .insert({
@@ -413,9 +415,22 @@ async function syncBackendStateNow(
             .select("id")
             .single();
           if (createError) throw createError;
-          condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(workCondominiumId)}`, created.id);
-          break;
+          condominiumSupplierIdByLegacySupplierKey.set(legacySupplierId + "::" + String(workCondominiumId), created.id);
         }
+      }
+    }
+  }
+
+  let cumulativeWorkActualAmountById = new Map<string, number>();
+  if (canSyncModule("attivita")) {
+    const workIds = (state.condominiumWorks ?? []).map((item: any) => String(item.id)).filter(Boolean);
+    if (workIds.length) {
+      const { data: progressRows, error: progressRowsError } = await supabase
+        .from("condominium_work_progress").select("work_id,amount").eq("workspace_id", workspaceId).in("work_id", workIds);
+      if (progressRowsError) throw progressRowsError;
+      for (const row of progressRows ?? []) {
+        const key = String(row.work_id);
+        cumulativeWorkActualAmountById.set(key, (cumulativeWorkActualAmountById.get(key) ?? 0) + Math.max(0, Number(row.amount) || 0));
       }
     }
   }
@@ -461,7 +476,9 @@ async function syncBackendStateNow(
       actual_end_date: item.actualEndDate || null,
       estimated_amount: Number(item.estimatedAmount || 0),
       approved_amount: Number(item.approvedAmount || 0),
-      actual_amount: Number(item.actualAmount || 0),
+      actual_amount: cumulativeWorkActualAmountById.has(String(item.id))
+        ? cumulativeWorkActualAmountById.get(String(item.id))
+        : Number(item.actualAmount || 0),
       progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
       supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(condominiumDbIdByLegacyId.get(item.condominiumId) ?? "")}`) ?? null) : null,
       notes: item.notes ?? "",
