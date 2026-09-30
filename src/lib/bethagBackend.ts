@@ -732,7 +732,7 @@ export async function saveCondominiumMember(
 
     const { data: previousMemberRow, error: previousMemberError } = await supabase
       .from("condominium_members")
-      .select("id, email, user_id, name, data")
+      .select("id, email, user_id, name, data, unit_id")
       .eq("condominium_id", condominium.id)
       .eq("legacy_id", item.id)
       .maybeSingle();
@@ -760,6 +760,52 @@ export async function saveCondominiumMember(
       .single();
 
     if (error) throw error;
+
+    // L'elenco proprietari appartiene alle unità e non alle persone.
+    // Quando un condòmino viene trasferito, oppure cambia qualifica,
+    // riallineiamo ownerMemberIds sulle unità coinvolte senza mai riscrivere
+    // i millesimi: questi ultimi restano esclusivamente nei dati dell'unità.
+    const previousUnitId = previousMemberRow?.unit_id ?? null;
+    const affectedUnitIds = Array.from(
+      new Set([previousUnitId, unitId].filter(Boolean).map(String))
+    );
+
+    if (affectedUnitIds.length) {
+      const { data: affectedUnits, error: affectedUnitsError } = await supabase
+        .from("condominium_units")
+        .select("id, data")
+        .eq("condominium_id", condominium.id)
+        .in("id", affectedUnitIds);
+
+      if (affectedUnitsError) throw affectedUnitsError;
+
+      for (const unit of affectedUnits ?? []) {
+        const currentOwners = Array.isArray(unit.data?.ownerMemberIds)
+          ? unit.data.ownerMemberIds.map((id: any) => Number(id)).filter(Number.isFinite)
+          : [];
+        const withoutMember = currentOwners.filter((id: number) => id !== Number(item.id));
+        const shouldOwnThisUnit = String(unit.id) === String(unitId) && item.role === "Proprietario";
+        const nextOwners = shouldOwnThisUnit
+          ? Array.from(new Set([...withoutMember, Number(item.id)]))
+          : withoutMember;
+
+        if (JSON.stringify(currentOwners) !== JSON.stringify(nextOwners)) {
+          const { error: ownerSyncError } = await supabase
+            .from("condominium_units")
+            .update({
+              data: {
+                ...(unit.data ?? {}),
+                ownerMemberIds: nextOwners,
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", unit.id)
+            .eq("condominium_id", condominium.id);
+
+          if (ownerSyncError) throw ownerSyncError;
+        }
+      }
+    }
 
     // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
     // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
