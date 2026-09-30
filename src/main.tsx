@@ -6691,6 +6691,9 @@ function App() {
                 portalMembers
               }
               isAdministrator={isAdministrator}
+              onExportBackup={exportWorkspaceBackup}
+              onRestoreBackup={restoreWorkspaceBackup}
+              onLogout={logout}
             />
           )}
 
@@ -12593,7 +12596,7 @@ function SecuritySettingsCard() {
       </div>
       <div className="info-card">
         <b>🛡️ Autenticazione a due fattori</b>
-        <p>{mfaFactors.length ? "Attiva: il login richiede anche il codice del secondo fattore." : "Disattivata: il login continua con il normale metodo di autenticazione."}</p>
+        <p>{mfaFactors.length ? "Attiva: il secondo fattore viene richiesto al login. Puoi disattivarlo in qualsiasi momento." : "Disattivata: il login continua con e-mail e password. L'attivazione della 2FA è facoltativa."}</p>
         {!mfaFactors.length && <button className="secondary-button" type="button" disabled={loading} onClick={() => void startMfaEnrollment()}>Attiva 2FA</button>}
         {mfaFactors.map((factor) => <div key={factor.id} style={{marginTop:10}}><span>{factor.factor_type === "totp" ? "Authenticator TOTP" : "Telefono"}</span> <button className="danger-button" type="button" disabled={loading} onClick={() => void disableMfa(factor)}>Disattiva</button></div>)}
       </div>
@@ -12702,6 +12705,7 @@ function ProfilePage({
   isAdministrator = false,
   onExportBackup,
   onRestoreBackup,
+  onLogout,
 }: any) {
   const [saved, setSaved] =
     useState(false);
@@ -12743,6 +12747,19 @@ function ProfilePage({
         eyebrow="Impostazioni"
         title="Amministratore"
       />
+
+      <section className="card" style={{ marginBottom: 18 }}>
+        <span className="eyebrow">Profilo e accesso</span>
+        <h2>Gestione dell'accesso</h2>
+        <p className="section-subtitle">
+          Da questa sezione puoi uscire da BETHAG in qualsiasi momento. La verifica a due fattori e il codice personale di sicurezza sono funzionalità opzionali: restano disattivati finché non vengono attivati dall'utente.
+        </p>
+        <div className="form-actions">
+          <button className="secondary-button" type="button" onClick={() => onLogout?.()}>
+            Esci da BETHAG
+          </button>
+        </div>
+      </section>
 
 
       <div className="profile-plan-card">
