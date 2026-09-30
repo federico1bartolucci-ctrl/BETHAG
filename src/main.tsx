@@ -12650,7 +12650,7 @@ function SecuritySettingsCard() {
       if (error) throw error;
       setEnrolling(false); setQrCode(""); setVerificationCode("");
       await refreshSecurity();
-      alert("Autenticazione a due fattori attivata. Dal prossimo accesso BETHAG richiederà anche il secondo fattore.");
+      alert("Autenticazione a due fattori attivata. Dal prossimo accesso BETHAG proporrà il secondo fattore, ma potrai scegliere di accedere senza utilizzarlo.");
     } catch (error) { alert(error instanceof Error ? error.message : "Codice MFA non valido."); }
     finally { setLoading(false); }
   };
