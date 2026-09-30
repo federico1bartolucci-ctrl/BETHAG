@@ -1320,6 +1320,69 @@ function AccountingPage({
   }
   async function confirmAllocationIntake(intake: AllocationIntake) {
     if (!supabase) return;
+
+    if (!intake.ledger_entry_id) {
+      const candidates = scopedLedger.filter((entry) =>
+        entry.direction === "Uscita" &&
+        (intake.expense_amount == null || Math.abs(Number(entry.amount || 0) - Number(intake.expense_amount || 0)) <= 0.005)
+      );
+
+      if (candidates.length === 1) {
+        const candidate = candidates[0];
+        const shouldLink = window.confirm(
+          "BETHAG ha trovato una sola spesa contabile compatibile (" +
+          candidate.description +
+          " · " +
+          money(candidate.amount) +
+          "). Vuoi collegarla automaticamente a questa acquisizione?"
+        );
+        if (!shouldLink) return;
+
+        setSaving(true); setError("");
+        try {
+          const { error: updateError } = await supabase
+            .from("condominium_allocation_intakes")
+            .update({
+              ledger_entry_id: candidate.id,
+              expense_amount: Number(candidate.amount || 0),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", intake.id)
+            .eq("workspace_id", workspaceId);
+          if (updateError) throw updateError;
+          intake = { ...intake, ledger_entry_id: candidate.id, expense_amount: Number(candidate.amount || 0) };
+        } catch(e:any) {
+          setError(e?.message || "Impossibile collegare la spesa contabile.");
+          return;
+        } finally {
+          setSaving(false);
+        }
+      } else {
+        setAllocationIntakeForm({
+          source: intake.source,
+          title: intake.title || "",
+          description: intake.description || "",
+          document_id: intake.document_id || "",
+          ledger_entry_id: "",
+          allocation_table_id: intake.allocation_table_id || "",
+          expense_amount: Number(intake.expense_amount || 0),
+          rows: Array.isArray(intake.rows) ? intake.rows.map((row:any) => ({
+            unit_id: String(row.unit_id || ""),
+            millesimi: Number(row.millesimi || 0),
+            amount: Number(row.amount || 0),
+          })) : [],
+          notes: intake.notes || "",
+        });
+        setShowAllocationIntakeForm(true);
+        setError(
+          candidates.length === 0
+            ? "Prima della conferma devi collegare la spesa contabile corrispondente."
+            : "Sono presenti più spese compatibili: seleziona manualmente quella corretta."
+        );
+        return;
+      }
+    }
+
     if (!window.confirm("Confermi l'acquisizione? Le quote saranno trasferite nel riparto contabile definitivo.")) return;
     setSaving(true); setError("");
     try {
