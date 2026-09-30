@@ -2520,17 +2520,46 @@ function App() {
         if (supabase.auth.mfa) {
           const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
           if (aalError) throw aalError;
+
+          // MFA completamente opzionale: se l'utente ha un fattore verificato,
+          // BETHAG propone la verifica ma non blocca il login se l'utente decide
+          // di proseguire senza utilizzare il secondo fattore.
           if (aalData?.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
             const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
             if (factorsError) throw factorsError;
-            const factor = [...(factors?.totp ?? []), ...(factors?.phone ?? [])].find((item: any) => item.status === "verified");
-            if (!factor) throw new Error("È richiesto il secondo fattore, ma non è disponibile un fattore verificato.");
-            const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
-            if (challengeError) throw challengeError;
-            const code = window.prompt("Autenticazione a due fattori: inserisci il codice ricevuto o generato dall'app autenticatrice.");
-            if (!code) { await supabase.auth.signOut({ scope: "local" }); throw new Error("Verifica a due fattori annullata."); }
-            const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code: code.trim() });
-            if (verifyError) { await supabase.auth.signOut({ scope: "local" }); throw new Error("Codice di autenticazione a due fattori non valido."); }
+
+            const factor = [...(factors?.totp ?? []), ...(factors?.phone ?? [])]
+              .find((item: any) => item.status === "verified");
+
+            if (factor) {
+              const useMfa = window.confirm(
+                "È disponibile l'autenticazione a due fattori. Vuoi usarla per questo accesso?\n\nPuoi scegliere No e accedere normalmente."
+              );
+
+              if (useMfa) {
+                const { data: challenge, error: challengeError } =
+                  await supabase.auth.mfa.challenge({ factorId: factor.id });
+                if (challengeError) throw challengeError;
+
+                const code = window.prompt(
+                  "Inserisci il codice generato dall'app autenticatrice."
+                );
+
+                // Il codice di conferma non è obbligatorio: annullando la richiesta
+                // l'accesso prosegue con la normale autenticazione e-mail/password.
+                if (code?.trim()) {
+                  const { error: verifyError } = await supabase.auth.mfa.verify({
+                    factorId: factor.id,
+                    challengeId: challenge.id,
+                    code: code.trim(),
+                  });
+
+                  if (verifyError) {
+                    throw new Error("Codice di autenticazione a due fattori non valido.");
+                  }
+                }
+              }
+            }
           }
         }
 
