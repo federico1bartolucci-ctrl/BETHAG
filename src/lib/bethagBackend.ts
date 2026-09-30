@@ -1235,9 +1235,16 @@ export async function syncCondominiumWorkDocuments(workspaceId: string, workId: 
     if (existingLinksError) throw existingLinksError;
 
     const existingLegacyIds = (existingLinks ?? []).map((row: any) => Number(row.document_id)).filter((id) => Number.isFinite(id));
-    const existingDocs = existingLegacyIds.length
-      ? (await supabase.from("documents").select("id,legacy_id,title,data,category").eq("workspace_id", workspaceId).in("legacy_id", existingLegacyIds)).data ?? []
-      : [];
+    let existingDocs: any[] = [];
+    if (existingLegacyIds.length) {
+      const { data: existingDocsRows, error: existingDocsError } = await supabase
+        .from("documents")
+        .select("id,legacy_id,title,data,category")
+        .eq("workspace_id", workspaceId)
+        .in("legacy_id", existingLegacyIds);
+      if (existingDocsError) throw existingDocsError;
+      existingDocs = existingDocsRows ?? [];
+    }
     const requestedSet = new Set(requestedDocumentIds);
     const protectedDocuments = existingLegacyIds.filter((legacyId) => {
       const doc = existingDocs.find((item: any) => Number(item.legacy_id) === legacyId);
@@ -1256,17 +1263,22 @@ export async function syncCondominiumWorkDocuments(workspaceId: string, workId: 
       throw new Error("Uno o più documenti selezionati per il lavoro non sono più disponibili nel workspace. Il salvataggio è stato annullato per evitare di perdere collegamenti esistenti.");
     }
 
-    const { error: deleteError } = await supabase
-      .from("condominium_work_documents")
-      .delete()
-      .eq("workspace_id", workspaceId)
-      .eq("work_id", workId);
-    if (deleteError) throw deleteError;
-    if (!docs?.length) return [];
-    const rows = docs
-      .filter((doc: any) => requestedSet.has(Number(doc.legacy_id)))
+    const existingSet = new Set(existingLegacyIds);
+    const documentsToRemove = existingLegacyIds.filter((legacyId) => !requestedSet.has(legacyId));
+    if (documentsToRemove.length) {
+      const { error: deleteError } = await supabase
+        .from("condominium_work_documents")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("work_id", workId)
+        .in("document_id", documentsToRemove);
+      if (deleteError) throw deleteError;
+    }
+
+    const rows = (docs ?? [])
+      .filter((doc: any) => requestedSet.has(Number(doc.legacy_id)) && !existingSet.has(Number(doc.legacy_id)))
       .map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.legacy_id, title: doc.title || null }));
-    if (!rows.length) return [];
+    if (!rows.length) return (docs ?? []).filter((doc: any) => requestedSet.has(Number(doc.legacy_id)));
     const { data, error } = await supabase.from("condominium_work_documents").insert(rows).select("*");
     if (error) throw error;
     return data ?? [];
