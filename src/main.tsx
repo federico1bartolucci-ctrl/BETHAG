@@ -2517,6 +2517,23 @@ function App() {
       }
 
       try {
+        if (supabase.auth.mfa) {
+          const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aalError) throw aalError;
+          if (aalData?.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
+            const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+            if (factorsError) throw factorsError;
+            const factor = [...(factors?.totp ?? []), ...(factors?.phone ?? [])].find((item: any) => item.status === "verified");
+            if (!factor) throw new Error("È richiesto il secondo fattore, ma non è disponibile un fattore verificato.");
+            const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+            if (challengeError) throw challengeError;
+            const code = window.prompt("Autenticazione a due fattori: inserisci il codice ricevuto o generato dall'app autenticatrice.");
+            if (!code) { await supabase.auth.signOut({ scope: "local" }); throw new Error("Verifica a due fattori annullata."); }
+            const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code: code.trim() });
+            if (verifyError) { await supabase.auth.signOut({ scope: "local" }); throw new Error("Codice di autenticazione a due fattori non valido."); }
+          }
+        }
+
         const access = await resolveSupabaseAccess(
           data.user.id,
           data.user.email || email
@@ -12463,6 +12480,134 @@ function CollaboratorsPage({
    PROFILO / WORKSPACE
    ========================================================= */
 
+
+function SecuritySettingsCard() {
+  const [codeEnabled, setCodeEnabled] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState<any[]>([]);
+  const [enrolling, setEnrolling] = useState(false);
+  const [qrCode, setQrCode] = useState("");
+  const [factorId, setFactorId] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const refreshSecurity = async () => {
+    if (!supabase) return;
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+    const { data } = await supabase.from("user_security_settings").select("personal_code_enabled").eq("user_id", userId).maybeSingle();
+    setCodeEnabled(Boolean(data?.personal_code_enabled));
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    setMfaFactors([...(factors?.totp ?? []), ...(factors?.phone ?? [])].filter((factor: any) => factor.status === "verified"));
+  };
+
+  useEffect(() => { void refreshSecurity(); }, []);
+
+  const configureCode = async () => {
+    if (!supabase) return;
+    const code = window.prompt("Imposta un codice personale di sicurezza (almeno 6 caratteri):");
+    if (!code) return;
+    const confirmation = window.prompt("Ripeti il codice personale:");
+    if (code !== confirmation) { alert("I due codici non coincidono."); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.rpc("set_personal_security_code", { p_code: code, p_enabled: true });
+      if (error) throw error;
+      setCodeEnabled(true);
+      alert("Codice personale attivato. Verrà richiesto prima delle operazioni irreversibili protette.");
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile attivare il codice personale."); }
+    finally { setLoading(false); }
+  };
+
+  const disableCode = async () => {
+    if (!supabase) return;
+    const code = window.prompt("Inserisci il codice personale attuale per disattivarlo:");
+    if (!code) return;
+    setLoading(true);
+    try {
+      const { data: valid, error: verifyError } = await supabase.rpc("verify_personal_security_code", { p_code: code });
+      if (verifyError) throw verifyError;
+      if (!valid) { alert("Codice personale non valido."); return; }
+      const { error } = await supabase.rpc("set_personal_security_code", { p_code: null, p_enabled: false });
+      if (error) throw error;
+      setCodeEnabled(false);
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile disattivare il codice personale."); }
+    finally { setLoading(false); }
+  };
+
+  const startMfaEnrollment = async () => {
+    if (!supabase) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "BETHAG Authenticator" });
+      if (error) throw error;
+      setFactorId(data.id);
+      setQrCode(data.totp?.qr_code ?? "");
+      setEnrolling(true);
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile attivare la verifica a due fattori."); }
+    finally { setLoading(false); }
+  };
+
+  const verifyMfaEnrollment = async () => {
+    if (!supabase || !factorId || !verificationCode.trim()) return;
+    setLoading(true);
+    try {
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
+      if (challengeError) throw challengeError;
+      const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code: verificationCode.trim() });
+      if (error) throw error;
+      setEnrolling(false); setQrCode(""); setVerificationCode("");
+      await refreshSecurity();
+      alert("Autenticazione a due fattori attivata. Dal prossimo accesso BETHAG richiederà anche il secondo fattore.");
+    } catch (error) { alert(error instanceof Error ? error.message : "Codice MFA non valido."); }
+    finally { setLoading(false); }
+  };
+
+  const disableMfa = async (factor: any) => {
+    if (!supabase) return;
+    const code = window.prompt("Inserisci il codice del secondo fattore per confermare la disattivazione:");
+    if (!code) return;
+    setLoading(true);
+    try {
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code: code.trim() });
+      if (verifyError) throw verifyError;
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (error) throw error;
+      await supabase.auth.refreshSession();
+      await refreshSecurity();
+    } catch (error) { alert(error instanceof Error ? error.message : "Impossibile disattivare il secondo fattore."); }
+    finally { setLoading(false); }
+  };
+
+  return <section className="card" style={{marginBottom:18}}>
+    <span className="eyebrow">Sicurezza dell'account</span>
+    <h2>Protezione opzionale</h2>
+    <p className="section-subtitle">Entrambe le protezioni sono facoltative. Se le abiliti, BETHAG le utilizzerà senza modificare l'accesso degli utenti che scelgono di non attivarle.</p>
+    <div className="workspace-grid">
+      <div className="info-card">
+        <b>🔢 Codice personale</b>
+        <p>{codeEnabled ? "Attivo: richiesto prima delle operazioni irreversibili protette." : "Disattivato: nessun codice aggiuntivo viene richiesto."}</p>
+        <button className={codeEnabled ? "danger-button" : "secondary-button"} type="button" disabled={loading} onClick={() => void (codeEnabled ? disableCode() : configureCode())}>{codeEnabled ? "Disattiva codice" : "Attiva codice"}</button>
+      </div>
+      <div className="info-card">
+        <b>🛡️ Autenticazione a due fattori</b>
+        <p>{mfaFactors.length ? "Attiva: il login richiede anche il codice del secondo fattore." : "Disattivata: il login continua con il normale metodo di autenticazione."}</p>
+        {!mfaFactors.length && <button className="secondary-button" type="button" disabled={loading} onClick={() => void startMfaEnrollment()}>Attiva 2FA</button>}
+        {mfaFactors.map((factor) => <div key={factor.id} style={{marginTop:10}}><span>{factor.factor_type === "totp" ? "Authenticator TOTP" : "Telefono"}</span> <button className="danger-button" type="button" disabled={loading} onClick={() => void disableMfa(factor)}>Disattiva</button></div>)}
+      </div>
+    </div>
+    {enrolling && <div className="form-card" style={{marginTop:16}}>
+      <h3>Configura Authenticator</h3>
+      <p>Scansiona il QR code con un'app autenticatrice e inserisci il codice generato per confermare.</p>
+      {qrCode && <img src={qrCode} alt="QR code per autenticazione a due fattori" style={{width:220,height:220,maxWidth:"100%"}} />}
+      <input value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} inputMode="numeric" placeholder="Codice a 6 cifre" />
+      <div className="form-actions"><button className="primary-button" type="button" disabled={loading} onClick={() => void verifyMfaEnrollment()}>Conferma 2FA</button><button className="secondary-button" type="button" onClick={() => { setEnrolling(false); setQrCode(""); setFactorId(""); }}>Annulla</button></div>
+    </div>}
+  </section>;
+}
+
 function ProfilePage({
   profile,
   setProfile,
@@ -12703,6 +12848,8 @@ function ProfilePage({
 
       </form>
 
+
+      <SecuritySettingsCard />
 
       <section className="card" style={{marginBottom:18}}>
         <span className="eyebrow">Sicurezza e continuità operativa</span>
