@@ -154,6 +154,7 @@ function AccountingPage({
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [allocationIntakes, setAllocationIntakes] = useState<AllocationIntake[]>([]);
   const [showAllocationIntakeForm, setShowAllocationIntakeForm] = useState(false);
+  const [editingAllocationIntakeId, setEditingAllocationIntakeId] = useState<string | null>(null);
   const [allocationIntakeForm, setAllocationIntakeForm] = useState({ source:"Manuale" as "Manuale"|"AI"|"Importazione", title:"", description:"", document_id:"", ledger_entry_id:"", allocation_table_id:"", expense_amount:0, rows:[] as Array<{unit_id:string;millesimi:number;amount:number}>, notes:"" });
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
@@ -1215,11 +1216,13 @@ function AccountingPage({
     const firstExpense = scopedLedger.find(e => e.direction === "Uscita");
     const firstTable = scopedMillesimalTables.find(t => t.active);
     const rows = firstTable ? units.filter(u => u.condominium_id === dbCondominiumId && (firstTable.scope_mode === "all" || (firstTable.scope_mode === "units" && firstTable.scope_unit_ids.includes(u.id)) || (firstTable.scope_mode === "buildings" && firstTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))).map(u => ({unit_id:u.id,millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===firstTable.id&&v.unit_id===u.id)?.value||0),amount:0})) : [];
+    setEditingAllocationIntakeId(null);
     setAllocationIntakeForm({source:"Manuale",title:"",description:"",document_id:"",ledger_entry_id:firstExpense?.id||"",allocation_table_id:firstTable?.id||"",expense_amount:Number(firstExpense?.amount||0),rows,notes:""});
     setShowAllocationIntakeForm(true);
   }
   function openAIAllocationIntake() {
     if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
+    setEditingAllocationIntakeId(null);
     setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",document_id:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:"",expense_amount:0,rows:[],notes:"L'AI proporrà la tabella secondo le regole di riparto; il risultato resta da verificare prima della conferma."});
     setShowAllocationIntakeForm(true);
   }
@@ -1303,21 +1306,32 @@ function AccountingPage({
         backendDocumentId = documentRow?.id ?? null;
         if (!backendDocumentId) throw new Error("Il documento selezionato non è ancora presente nel database.");
       }
-      const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert({
-        workspace_id:workspaceId, condominium_id:dbCondominiumId, source:allocationIntakeForm.source,
-        status:allocationIntakeForm.source==="AI" ? "Da verificare" : "Bozza",
-        document_id:backendDocumentId,
-        ledger_entry_id:allocationIntakeForm.ledger_entry_id || null, allocation_table_id:allocationIntakeForm.allocation_table_id || null,
-        title:allocationIntakeForm.title.trim(), description:allocationIntakeForm.description, expense_amount:Number(allocationIntakeForm.expense_amount||0),
-        rows:allocationIntakeForm.rows, extracted_data:{}, validation_errors:[], notes:allocationIntakeForm.notes
-      });
-      if (saveError) throw saveError;
+      const payload = {
+        workspace_id: workspaceId, condominium_id: dbCondominiumId, source: allocationIntakeForm.source,
+        status: allocationIntakeForm.source==="AI" ? "Da verificare" : "Bozza",
+        document_id:backendDocumentId, ledger_entry_id:allocationIntakeForm.ledger_entry_id || null,
+        allocation_table_id:allocationIntakeForm.allocation_table_id || null,
+        title:allocationIntakeForm.title.trim(), description:allocationIntakeForm.description,
+        expense_amount:Number(allocationIntakeForm.expense_amount||0), rows:allocationIntakeForm.rows,
+        extracted_data:{}, validation_errors:[], notes:allocationIntakeForm.notes,
+        updated_at:new Date().toISOString()
+      };
+      if (editingAllocationIntakeId) {
+        const { error: updateError } = await supabase.from("condominium_allocation_intakes").update(payload).eq("id",editingAllocationIntakeId).eq("workspace_id",workspaceId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert(payload);
+        if (saveError) throw saveError;
+      }
+      const wasEditing = Boolean(editingAllocationIntakeId);
+      setEditingAllocationIntakeId(null);
       setShowAllocationIntakeForm(false);
-      flash(allocationIntakeForm.source==="AI" ? "Acquisizione AI creata: dati da verificare." : "Acquisizione manuale salvata come bozza.");
+      flash(wasEditing ? "Proposta aggiornata. Ora può essere verificata e confermata." : (allocationIntakeForm.source==="AI" ? "Acquisizione AI creata: dati da verificare." : "Acquisizione manuale salvata come bozza."));
       await load();
     } catch(e:any) { setError(e?.message||"Impossibile salvare l'acquisizione."); }
     finally { setSaving(false); }
   }
+
   async function confirmAllocationIntake(intake: AllocationIntake) {
     if (!supabase) return;
 
@@ -1358,6 +1372,7 @@ function AccountingPage({
           setSaving(false);
         }
       } else {
+        setEditingAllocationIntakeId(intake.id);
         setAllocationIntakeForm({
           source: intake.source,
           title: intake.title || "",
