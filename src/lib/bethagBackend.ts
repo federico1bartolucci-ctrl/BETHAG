@@ -1368,6 +1368,7 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
     }
     if (nextProgress && Number(input.percentage) - 0.000001 > Number(nextProgress.percentage || 0)) {
       throw new Error("La percentuale del SAL non può essere superiore a quella del SAL seguente.");
+    }
 
     let ledgerEntryId: string | null = existingProgress?.ledger_entry_id ?? null;
     if (existingProgress?.ledger_entry_id && !input.registerAccounting) {
