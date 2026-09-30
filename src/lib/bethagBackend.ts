@@ -1168,8 +1168,17 @@ export async function analyzeCondominiumDocumentsWithAI(
 
   const preparedFiles = [];
   for (const file of files) {
-    if (file.size > 15 * 1024 * 1024) {
-      throw new Error(`Il file "${file.name}" supera il limite di 15 MB per l'analisi AI.`);
+    const mime = String(file.type ?? "").toLowerCase();
+    const isAudio = mime.startsWith("audio/");
+    const isImage = mime.startsWith("image/");
+    const maxBytes = isAudio
+      ? 100 * 1024 * 1024
+      : isImage
+        ? 20 * 1024 * 1024
+        : 50 * 1024 * 1024;
+    const maxLabel = isAudio ? "100 MB" : isImage ? "20 MB" : "50 MB";
+    if (file.size > maxBytes) {
+      throw new Error(`Il file "${file.name}" (${Math.ceil(file.size / 1024 / 1024)} MB) supera il limite di ${maxLabel} per l'analisi AI.`);
     }
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
