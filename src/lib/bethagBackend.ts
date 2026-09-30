@@ -1231,28 +1231,56 @@ export async function storeCondominiumDocuments(
   return stored;
 }
 
+export async function analyzeWorkspaceStoredDocumentsWithAI(
+  workspaceId: string,
+  files: Array<{ filename: string; storagePath: string; mimeType?: string }>
+): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId || !files.length) throw new Error("Workspace o documenti mancanti.");
+
+  const { data, error } = await supabase.functions.invoke("bethag-ai-document", {
+    body: { workspaceId, files },
+  });
+  if (error) throw error;
+  if (!data?.draft) throw new Error(data?.error ?? "L'AI non ha restituito una proposta.");
+  return data.draft;
+}
+
 export async function analyzeWorkspaceDocumentsWithAI(
   workspaceId: string,
   files: File[]
 ): Promise<any> {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!workspaceId || !files.length) throw new Error("Workspace o documenti mancanti.");
-  const preparedFiles = [];
-  for (const file of files) {
-    const data = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error(`Impossibile leggere "${file.name}".`));
-      reader.readAsDataURL(file);
-    });
-    preparedFiles.push({
-      filename: file.name,
-      mimeType: file.type || "application/octet-stream",
-      data,
-    });
+
+  const stored = await storeWorkspaceDocuments(workspaceId, files);
+  try {
+    return await analyzeWorkspaceStoredDocumentsWithAI(
+      workspaceId,
+      stored.map((item: any) => ({
+        filename: item.name,
+        storagePath: item.path,
+        mimeType: item.type,
+      }))
+    );
+  } finally {
+    await Promise.all(
+      stored.map((item: any) =>
+        deleteWorkspaceStoredFile(item.path).catch(() => undefined)
+      )
+    );
   }
-  const { data, error } = await supabase.functions.invoke("bethag-ai-document", {
-    body: { workspaceId, files: preparedFiles },
+}
+
+export async function analyzeCondominiumStoredDocumentsWithAI(
+  workspaceId: string,
+  files: Array<{ filename: string; storagePath: string; mimeType?: string }>
+): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId || !files.length) throw new Error("Workspace o documenti mancanti.");
+
+  const { data, error } = await supabase.functions.invoke("bethag-ai-condominium", {
+    body: { workspaceId, files },
   });
   if (error) throw error;
   if (!data?.draft) throw new Error(data?.error ?? "L'AI non ha restituito una proposta.");
@@ -1266,33 +1294,23 @@ export async function analyzeCondominiumDocumentsWithAI(
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!files.length) throw new Error("Nessun documento selezionato.");
 
-  const preparedFiles = [];
-  for (const file of files) {
-    const mime = String(file.type ?? "").toLowerCase();
-    // Non imponiamo un limite applicativo arbitrario alla dimensione del file.
-    // La piattaforma segnala i file molto grandi all'interfaccia, che può chiedere
-    // se conservarli, analizzarli o eseguire entrambe le operazioni. Gli eventuali
-    // limiti tecnici del singolo canale vengono gestiti dal livello di elaborazione.
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error(`Impossibile leggere "${file.name}".`));
-      reader.readAsDataURL(file);
-    });
-    preparedFiles.push({
-      filename: file.name,
-      mimeType: file.type || "application/octet-stream",
-      data: dataUrl,
-    });
+  const stored = await storeCondominiumDocuments(workspaceId, files);
+  try {
+    return await analyzeCondominiumStoredDocumentsWithAI(
+      workspaceId,
+      stored.map((item: any) => ({
+        filename: item.name,
+        storagePath: item.path,
+        mimeType: item.type,
+      }))
+    );
+  } finally {
+    await Promise.all(
+      stored.map((item: any) =>
+        deleteWorkspaceStoredFile(item.path).catch(() => undefined)
+      )
+    );
   }
-
-  const { data, error } = await supabase.functions.invoke("bethag-ai-condominium", {
-    body: { workspaceId, files: preparedFiles },
-  });
-
-  if (error) throw error;
-  if (!data?.draft) throw new Error(data?.error ?? "L'AI non ha restituito una proposta.");
-  return data.draft;
 }
 
 
