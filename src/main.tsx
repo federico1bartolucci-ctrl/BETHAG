@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -5493,22 +5493,24 @@ function App() {
     );
   };
 
-  const deletePortalMember = (
+  const deletePortalMember = async (
     id: number
   ) => {
     if (!requireModulePermission("portale", "L'eliminazione dell'accesso al Portale condomini")) return;
-    if (
-      !confirm(
-        "Eliminare l'accesso del condomino?"
-      )
-    )
-      return;
+    if (!confirm("Eliminare l'accesso del condomino?")) return;
 
-    setPortalMembers((current) =>
-      current.filter(
-        (member) => member.id !== id
-      )
-    );
+    const previousPortalMembers = portalMembers;
+    setPortalMembers((current) => current.filter((member) => member.id !== id));
+
+    if (!supabaseConfigured || !supabase || !profile.workspaceId) return;
+
+    try {
+      await deletePortalMemberBackend(profile.workspaceId, id);
+    } catch (error) {
+      console.error("BETHAG portal member deletion failed", error);
+      setPortalMembers(previousPortalMembers);
+      alert(error instanceof Error ? "L'accesso al Portale non è stato eliminato dal server.\\n\\n" + error.message : "L'accesso al Portale non è stato eliminato dal server.");
+    }
   };
 
 
