@@ -1203,8 +1203,6 @@ export async function analyzeCondominiumDocumentsWithAI(
   const preparedFiles = [];
   for (const file of files) {
     const mime = String(file.type ?? "").toLowerCase();
-    const isAudio = mime.startsWith("audio/");
-    const isImage = mime.startsWith("image/");
     // Non imponiamo un limite applicativo arbitrario alla dimensione del file.
     // La piattaforma segnala i file molto grandi all'interfaccia, che può chiedere
     // se conservarli, analizzarli o eseguire entrambe le operazioni. Gli eventuali
