@@ -901,7 +901,7 @@ function AccountingPage({
       return;
     }
     const expense = scopedLedger.find(e => e.id === autoAllocationForm.ledger_entry_id);
-    const matchingRule = expense ? allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(r.expense_type&&r.expense_type===expense.expense_type || r.category&&r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0] : undefined;
+    const matchingRule = expense ? allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(!r.expense_type||r.expense_type===expense.expense_type)&&(!r.category||r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0] : undefined;
     const resolvedTableId = autoAllocationForm.table_id || matchingRule?.allocation_table_id || "";
     const table = scopedMillesimalTables.find(t => t.id === resolvedTableId);
     if (!expense || expense.direction !== "Uscita" || !table) {
