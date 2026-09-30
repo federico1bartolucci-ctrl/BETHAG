@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -4938,11 +4938,7 @@ function App() {
           if (existingIntakeError) throw existingIntakeError;
           if (existingIntake?.id) {
             operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
-            setDocuments((current) =>
-              current.map((doc) =>
-                doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc
-              )
-            );
+            setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
             alert(operationalMessage);
             return;
           }
@@ -4957,56 +4953,85 @@ function App() {
 
         const rows = rawRows.map((row: any) => {
           const unitCode = String(row.unitCode ?? "").trim();
-          const matched = (dbUnits ?? []).find((unit: any) =>
-            String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase()
-          );
+          const matched = (dbUnits ?? []).find((unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase());
           const amount = Number(String(row.amount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
           const millesimi = Number(String(row.millesimi ?? "").replace(",", "."));
-          return {
-            unit_id: matched?.id ?? "",
-            unit_code: unitCode,
-            description: row.description ?? "",
-            amount: Number.isFinite(amount) ? amount : 0,
-            millesimi: Number.isFinite(millesimi) ? millesimi : 0,
-            owner: row.owner ?? "",
-            matched: Boolean(matched),
-          };
+          return { unit_id: matched?.id ?? "", unit_code: unitCode, description: row.description ?? "", amount: Number.isFinite(amount) ? amount : 0, millesimi: Number.isFinite(millesimi) ? millesimi : 0, owner: row.owner ?? "", matched: Boolean(matched) };
         });
 
-        const validationErrors = rows
-          .filter((row: any) => !row.unit_id)
-          .map((row: any) => "Unità non trovata in BETHAG: " + (row.unit_code || "senza codice"));
-
-        const expenseAmount = Number(
-          String(extracted.expenseAmount ?? "").replace(/[^0-9,.-]/g, "").replace(",", ".")
-        );
+        const validationErrors = rows.filter((row: any) => !row.unit_id).map((row: any) => "Unità non trovata in BETHAG: " + (row.unit_code || "senza codice"));
+        const expenseAmount = Number(String(extracted.expenseAmount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
 
         const { error } = await supabase.from("condominium_allocation_intakes").insert({
-          workspace_id: workspaceId,
-          condominium_id: condominium.id,
-          source: "AI",
-          status: "Da verificare",
-          document_id: dbDocument?.id ?? null,
-          title: document.name,
+          workspace_id: workspaceId, condominium_id: condominium.id, source: "AI", status: "Da verificare",
+          document_id: dbDocument?.id ?? null, title: document.name,
           description: extracted.summary ?? "Riparto spese estratto automaticamente.",
           expense_amount: Number.isFinite(expenseAmount) ? expenseAmount : null,
-          extracted_data: extracted,
-          rows,
-          validation_errors: validationErrors,
+          extracted_data: extracted, rows, validation_errors: validationErrors,
           notes: "Proposta generata dall'AI e confermata dall'amministratore. Le imputazioni contabili definitive richiedono l'applicazione esplicita dalla sezione Contabilità.",
         });
-
         if (error) throw error;
         operationalMessage = validationErrors.length
           ? "Dati AI confermati. Il riparto è stato trasferito in Contabilità come proposta da verificare; alcune unità non sono state associate automaticamente."
           : "Dati AI confermati. Il riparto è stato trasferito in Contabilità come proposta da verificare.";
       }
 
-      setDocuments((current) =>
-        current.map((doc) =>
-          doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc
-        )
-      );
+      if (document.aiDocumentType === "Fattura" && extracted) {
+        const parseAmount = (value: any) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+        const normalize = (value: any) => String(value ?? "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+        const supplierName = String(extracted.supplier ?? "").trim();
+        const amount = parseAmount(extracted.expenseAmount ?? extracted.amount ?? extracted.totalAmount);
+        const invoiceNumber = String(extracted.invoiceNumber ?? extracted.numeroFattura ?? "").trim();
+        const invoiceDate = String(extracted.documentDate ?? extracted.invoiceDate ?? "").trim();
+
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error("La fattura è stata riconosciuta, ma l'importo non è sufficientemente determinato.");
+        if (!supplierName) throw new Error("La fattura è stata riconosciuta, ma il fornitore non è sufficientemente determinato.");
+
+        const candidateSuppliers = suppliers
+          .filter((supplier) => supplier.condominiumId === document.condominiumId || supplier.condominiumId === null)
+          .map((supplier) => ({ supplier, score: normalize(supplier.name) === normalize(supplierName) ? 100 : (normalize(supplier.name).includes(normalize(supplierName)) || normalize(supplierName).includes(normalize(supplier.name)) ? 70 : 0) }))
+          .filter((item) => item.score > 0)
+          .sort((x, y) => y.score - x.score);
+        const selectedSupplier = candidateSuppliers[0]?.supplier;
+
+        const workCandidates = condominiumWorks
+          .filter((work) => work.condominiumId === document.condominiumId)
+          .map((work) => {
+            const supplierScore = selectedSupplier && work.supplierId === selectedSupplier.id ? 60 : 0;
+            const text = normalize(`${work.title} ${work.category} ${work.description}`);
+            const supplierText = normalize(supplierName);
+            const keywordScore = supplierText.split(" ").filter((word: string) => word.length > 3 && text.includes(word)).length * 10;
+            return { work, score: supplierScore + keywordScore };
+          })
+          .sort((x, y) => y.score - x.score);
+        const selectedWork = workCandidates[0]?.score > 0 ? workCandidates[0].work : null;
+
+        if (!selectedSupplier) {
+          throw new Error(`Il fornitore "${supplierName}" non è stato associato automaticamente. Prima della conferma inserisci il fornitore in Anagrafica o correggi il nome estratto dall'AI.`);
+        }
+
+        const result = await confirmCondominiumInvoiceBackend(workspaceId, {
+          documentLegacyId: document.id,
+          condominiumLegacyId: document.condominiumId,
+          extractedData: extracted,
+          supplierId: null,
+          workId: selectedWork?.id ?? null,
+        });
+
+        operationalMessage = selectedWork
+          ? `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità e collegati al lavoro "${selectedWork.title}".`
+          : `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità. Nessun lavoro è stato collegato automaticamente.`;
+
+        if (result.workId) {
+          setCondominiumWorks((current) => current.map((work) => work.id === result.workId ? { ...work, documentIds: Array.from(new Set([...(work.documentIds ?? []), document.id])) } : work));
+        }
+
+        if (invoiceDate) {
+          setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, date: invoiceDate } : doc));
+        }
+      }
+
+      setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
       alert(operationalMessage);
     } catch (error: any) {
       console.error("BETHAG AI confirmation failed", error);
