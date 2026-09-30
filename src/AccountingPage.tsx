@@ -1201,6 +1201,19 @@ function AccountingPage({
       setError("Una nuova ripartizione deve partire da pagato pari a zero.");
       return;
     }
+    if (editingAllocation) {
+      const { count: linkedInstallments, error: linkedInstallmentsError } = await supabase
+        .from("condominium_installments")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", dbCondominiumId)
+        .eq("ledger_entry_id", editingAllocation.ledger_entry_id);
+      if (linkedInstallmentsError) { setError(linkedInstallmentsError.message); return; }
+      if ((linkedInstallments || 0) > 0 && (Number(amount) !== Number(editingAllocation.amount) || allocationForm.unit_id !== editingAllocation.unit_id)) {
+        setError("Questa ripartizione è collegata a rate generate. Per mantenere la quadratura, unità e importo non possono essere modificati finché esistono rate collegate.");
+        return;
+      }
+    }
     const otherAllocated = allocations
       .filter(a => a.ledger_entry_id === selectedExpense.id && a.id !== editingAllocation?.id && (!dbCondominiumId || a.condominium_id === dbCondominiumId))
       .reduce((sum, a) => sum + Number(a.amount || 0), 0);
