@@ -5,6 +5,7 @@ type Condominium = {
   id: number;
   name: string;
 };
+type DocumentOption = { id:number; name:string; condominiumId:number; category:string; aiStatus:string; extractedData:string; aiSummary:string; };
 
 type FiscalYear = {
   id: string;
@@ -131,11 +132,13 @@ function AccountingPage({
   condominiums,
   isAdministrator = false,
   aiEnabled = false,
+  documents = [],
 }: {
   workspaceId: string;
   condominiums: Condominium[];
   isAdministrator?: boolean;
   aiEnabled?: boolean;
+  documents?: DocumentOption[];
 }) {
   const [tab, setTab] = useState<Tab>("rendiconto");
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<number | "all">(
@@ -150,7 +153,7 @@ function AccountingPage({
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [allocationIntakes, setAllocationIntakes] = useState<AllocationIntake[]>([]);
   const [showAllocationIntakeForm, setShowAllocationIntakeForm] = useState(false);
-  const [allocationIntakeForm, setAllocationIntakeForm] = useState({ source:"Manuale" as "Manuale"|"AI"|"Importazione", title:"", description:"", ledger_entry_id:"", allocation_table_id:"", expense_amount:0, rows:[] as Array<{unit_id:string;millesimi:number;amount:number}>, notes:"" });
+  const [allocationIntakeForm, setAllocationIntakeForm] = useState({ source:"Manuale" as "Manuale"|"AI"|"Importazione", title:"", description:"", document_id:"", ledger_entry_id:"", allocation_table_id:"", expense_amount:0, rows:[] as Array<{unit_id:string;millesimi:number;amount:number}>, notes:"" });
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
@@ -1135,12 +1138,12 @@ function AccountingPage({
     const firstExpense = scopedLedger.find(e => e.direction === "Uscita");
     const firstTable = scopedMillesimalTables.find(t => t.active);
     const rows = firstTable ? units.filter(u => u.condominium_id === dbCondominiumId && (firstTable.scope_mode === "all" || (firstTable.scope_mode === "units" && firstTable.scope_unit_ids.includes(u.id)) || (firstTable.scope_mode === "buildings" && firstTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))).map(u => ({unit_id:u.id,millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===firstTable.id&&v.unit_id===u.id)?.value||0),amount:0})) : [];
-    setAllocationIntakeForm({source:"Manuale",title:"",description:"",ledger_entry_id:firstExpense?.id||"",allocation_table_id:firstTable?.id||"",expense_amount:Number(firstExpense?.amount||0),rows,notes:""});
+    setAllocationIntakeForm({source:"Manuale",title:"",description:"",document_id:"",ledger_entry_id:firstExpense?.id||"",allocation_table_id:firstTable?.id||"",expense_amount:Number(firstExpense?.amount||0),rows,notes:""});
     setShowAllocationIntakeForm(true);
   }
   function openAIAllocationIntake() {
     if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
-    setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:scopedMillesimalTables.find(t=>t.active)?.id||"",expense_amount:0,rows:[],notes:"L'AI produrrà una proposta da verificare prima della conferma."});
+    setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",document_id:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:scopedMillesimalTables.find(t=>t.active)?.id||"",expense_amount:0,rows:[],notes:"L'AI produrrà una proposta da verificare prima della conferma."});
     setShowAllocationIntakeForm(true);
   }
   async function saveAllocationIntake() {
@@ -1155,6 +1158,7 @@ function AccountingPage({
       const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert({
         workspace_id:workspaceId, condominium_id:dbCondominiumId, source:allocationIntakeForm.source,
         status:allocationIntakeForm.source==="AI" ? "Da verificare" : "Bozza",
+        document_id:allocationIntakeForm.document_id ? Number(allocationIntakeForm.document_id) : null,
         ledger_entry_id:allocationIntakeForm.ledger_entry_id || null, allocation_table_id:allocationIntakeForm.allocation_table_id || null,
         title:allocationIntakeForm.title.trim(), description:allocationIntakeForm.description, expense_amount:Number(allocationIntakeForm.expense_amount||0),
         rows:allocationIntakeForm.rows, extracted_data:{}, validation_errors:[], notes:allocationIntakeForm.notes
