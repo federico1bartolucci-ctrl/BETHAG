@@ -1067,7 +1067,7 @@ export async function deleteCondominiumMember(
 
     const { data: member, error: memberLookupError } = await supabase
       .from("condominium_members")
-      .select("email, user_id, name, data")
+      .select("email, user_id, name, data, unit_id")
       .eq("condominium_id", condominium.id)
       .eq("legacy_id", legacyId)
       .maybeSingle();
@@ -1109,6 +1109,42 @@ export async function deleteCondominiumMember(
       .eq("legacy_id", legacyId);
 
     if (error) throw error;
+
+    // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
+    // di tutte le unità del medesimo condominio. I millesimi restano
+    // esclusivamente nell'oggetto unità e non vengono mai modificati.
+    const { data: condominiumUnits, error: unitsError } = await supabase
+      .from("condominium_units")
+      .select("id, data")
+      .eq("workspace_id", workspaceId)
+      .eq("condominium_id", condominium.id);
+
+    if (unitsError) throw unitsError;
+
+    for (const unit of condominiumUnits ?? []) {
+      const currentData =
+        unit.data && typeof unit.data === "object" ? unit.data : {};
+      const currentOwners = Array.isArray((currentData as any).ownerMemberIds)
+        ? (currentData as any).ownerMemberIds
+        : [];
+      const nextOwners = currentOwners.filter(
+        (ownerId: unknown) => String(ownerId) !== String(legacyId)
+      );
+
+      if (nextOwners.length !== currentOwners.length) {
+        const nextData = {
+          ...currentData,
+          ownerMemberIds: nextOwners,
+        };
+        const { error: unitUpdateError } = await supabase
+          .from("condominium_units")
+          .update({ data: nextData })
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", condominium.id)
+          .eq("id", unit.id);
+        if (unitUpdateError) throw unitUpdateError;
+      }
+    }
   });
 }
 
