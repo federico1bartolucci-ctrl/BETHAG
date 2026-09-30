@@ -5498,7 +5498,7 @@ function App() {
       let savedProgress: any = null;
       if (supabaseConfigured && supabase && profile.workspaceId) savedProgress = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
       const work = condominiumWorks.find(w => w.id === f.workId);
-      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount > 0 ? f.amount : w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : w.actualEndDate } : w));
+      if (work) setCondominiumWorks(current => current.map(w => w.id === work.id ? { ...w, progressPercent: Math.max(0, Math.min(100, f.percentage)), actualAmount: Number(savedProgress?.cumulativeActualAmount ?? (f.amount > 0 ? f.amount : w.actualAmount)), status: f.percentage >= 100 ? "Completato" : f.percentage > 0 ? "In corso" : w.status === "Completato" ? "In corso" : w.status, actualEndDate: f.percentage >= 100 ? f.progressDate : null } : w));
       setWorkProgressForm(emptyWorkProgress); setSelectedWorkProgress(null); closeModal();
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL."); }
   };
@@ -5526,8 +5526,8 @@ function App() {
     const updated = {
       ...current,
       progressPercent: progress,
-      status: progress >= 100 ? "Completato" : progress > 0 && current.status === "Da programmare" ? "In corso" : current.status,
-      actualEndDate: progress >= 100 && !current.actualEndDate ? localISODate() : current.actualEndDate,
+      status: progress >= 100 ? "Completato" : progress > 0 ? "In corso" : current.status === "Completato" ? "In corso" : current.status,
+      actualEndDate: progress >= 100 ? (current.actualEndDate || localISODate()) : null,
     };
     setCondominiumWorks(items => items.map(item => item.id === id ? updated : item));
     try {
