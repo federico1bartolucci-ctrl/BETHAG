@@ -5493,6 +5493,7 @@ function App() {
     event.preventDefault();
     const f = workProgressForm;
     if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
+    if (Number(f.paidAmount || 0) > Number(f.amount || 0) + 0.000001) { alert("L'importo pagato non può essere superiore all'importo del SAL."); return; }
     try {
       let savedProgress: any = null;
       if (supabaseConfigured && supabase && profile.workspaceId) savedProgress = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: false });
@@ -5505,6 +5506,8 @@ function App() {
     if (!requireModulePermission("attivita", "La registrazione contabile del SAL")) return;
     event.preventDefault();
     const f = workProgressForm;
+    if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
+    if (Number(f.paidAmount || 0) > Number(f.amount || 0) + 0.000001) { alert("L'importo pagato non può essere superiore all'importo del SAL."); return; }
     try {
       if (!supabaseConfigured || !supabase || !profile.workspaceId) throw new Error("Per registrare il SAL in contabilità è necessario il collegamento al server.");
       const savedProgress: any = await saveCondominiumWorkProgressBackend(profile.workspaceId, f.workId, { ...f, registerAccounting: true });
