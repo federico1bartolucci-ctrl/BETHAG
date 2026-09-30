@@ -91,11 +91,12 @@ type UnitOption = { id: string; condominium_id: string; unit_code: string; data:
 
 type MillesimalTable = { id:string; condominium_id:string; name:string; description:string; total_millesimi:number; active:boolean; notes:string; basis_type:"Millesimi"|"Quote personalizzate"|"Consumo"|"Misto"; scope_mode:"all"|"units"|"buildings"; scope_unit_ids:string[]; scope_building_codes:string[] };
 type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
+type ConsumptionReading = { id:string; condominium_id:string; fiscal_year_id:string|null; unit_id:string; service_type:string; period_start:string|null; period_end:string|null; meter_code:string; previous_reading:number|null; current_reading:number|null; consumption:number|null; kwh:number|null; allocation_value:number|null; charge_amount:number|null; source:string; notes:string; data:any };
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
-type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni";
+type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "consumi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni";
 type AccountingSettings = { id:string; condominium_id:string; accounting_start_date:string; accounting_end_date:string; ordinary_installment_count:number; ordinary_due_dates:string[]; extraordinary_mode:"integrata"|"separata"; extraordinary_allow_multi_year:boolean; };
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
@@ -146,6 +147,9 @@ function AccountingPage({
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
+  const [consumptionReadings, setConsumptionReadings] = useState<ConsumptionReading[]>([]);
+  const [consumptionForm, setConsumptionForm] = useState({ fiscal_year_id:"", unit_id:"", service_type:"Riscaldamento", meter_code:"", period_start:"", period_end:"", previous_reading:"", current_reading:"", consumption:"", kwh:"", allocation_value:"", charge_amount:"", source:"Manuale", notes:"" });
+  const [consumptionExpenseForm, setConsumptionExpenseForm] = useState({ ledger_entry_id:"", fiscal_year_id:"", service_type:"Riscaldamento" });
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [carryovers, setCarryovers] = useState<FiscalCarryover[]>([]);
@@ -172,7 +176,7 @@ function AccountingPage({
   const [autoAllocationForm, setAutoAllocationForm] = useState({ ledger_entry_id:"", table_id:"", due_date:"" });
   const [autoPreview, setAutoPreview] = useState<AllocationPreviewRow[]>([]);
   const [showInstallmentsFromAllocation, setShowInstallmentsFromAllocation] = useState(false);
-  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"", installment_count:1, due_dates:Array(1).fill("") as string[] });
+  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"", installment_count:1, due_dates:Array(1).fill("") as string[], percentages:[100] as number[] });
   const [allocationForm, setAllocationForm] = useState({
     ledger_entry_id: "",
     unit_id: "",
@@ -292,6 +296,7 @@ function AccountingPage({
     return { id:t.id, total:Number(t.total_millesimi||0), sum, count:values.length, missingCount:missing.length, complete:scopedUnits.length>0 && missing.length===0 && Math.abs(sum-Number(t.total_millesimi||0))<0.001 };
   }), [scopedMillesimalTables, scopedMillesimalValues, units, dbCondominiumId]);
   const scopedInstallments = useMemo(() => dbCondominiumId ? installments.filter(i=>i.condominium_id===dbCondominiumId) : installments,[dbCondominiumId,installments]);
+  const scopedConsumptionReadings = useMemo(() => dbCondominiumId ? consumptionReadings.filter(r=>r.condominium_id===dbCondominiumId) : consumptionReadings,[dbCondominiumId,consumptionReadings]);
   const scopedBudgets = useMemo(() => dbCondominiumId ? budgets.filter(b=>b.condominium_id===dbCondominiumId) : budgets,[dbCondominiumId,budgets]);
 
   const scopedCases = useMemo(
@@ -572,6 +577,7 @@ function AccountingPage({
         unitsResult,
         millesimalTablesResult,
         millesimalValuesResult,
+        consumptionReadingsResult,
         installmentsResult,
         budgetsResult,
         carryoversResult,
@@ -588,6 +594,7 @@ function AccountingPage({
       setUnits((unitsResult.data ?? []) as UnitOption[]);
       setMillesimalTables((millesimalTablesResult.data ?? []) as MillesimalTable[]);
       setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
+      setConsumptionReadings((consumptionReadingsResult.data ?? []) as ConsumptionReading[]);
       setInstallments((installmentsResult.data ?? []) as Installment[]);
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
@@ -1010,7 +1017,9 @@ function AccountingPage({
       return;
     }
     if (!guardOpenFiscalYear(allocationInstallmentForm.fiscal_year_id || selectedExpense.fiscal_year_id)) return;
-    if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata? Le rate già identiche non verranno duplicate.")) return;
+    const percentages=allocationInstallmentForm.percentages.slice(0,installmentCount).map(Number);
+    if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
+    if (!window.confirm("Confermi la generazione delle rate per tutte le quote della ripartizione selezionata?")) return;
     setSaving(true);
     setError("");
     try {
@@ -1020,7 +1029,8 @@ function AccountingPage({
         p_ledger_entry_id:allocationInstallmentForm.ledger_entry_id,
         p_title:allocationInstallmentForm.title.trim(),
         p_due_dates: dueDates,
-        p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null
+        p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null,
+        p_percentages:percentages
       });
       if (rpcError) throw rpcError;
       setShowInstallmentsFromAllocation(false);
@@ -1185,6 +1195,62 @@ function AccountingPage({
       flash("Quota millesimale salvata."); await load();
     } catch(e:any){setError(e?.message || "Impossibile salvare il valore millesimale.");}
     finally{setSaving(false);}
+  }
+
+
+  async function saveConsumptionReading(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase || !dbCondominiumId || !consumptionForm.fiscal_year_id || !consumptionForm.unit_id) { setError("Indica esercizio e unità."); return; }
+    if (!guardOpenFiscalYear(consumptionForm.fiscal_year_id)) return;
+    const num=(v:string)=>v.trim()===""?null:Number(v);
+    const previous=num(consumptionForm.previous_reading), current=num(consumptionForm.current_reading), consumption=num(consumptionForm.consumption), kwh=num(consumptionForm.kwh), allocationValue=num(consumptionForm.allocation_value), chargeAmount=num(consumptionForm.charge_amount);
+    if ([previous,current,consumption,kwh,allocationValue,chargeAmount].some(v=>v!==null&&(!Number.isFinite(v)||v<0))) { setError("I valori di consumo devono essere numerici e non negativi."); return; }
+    if (previous!==null&&current!==null&&current<previous) { setError("La lettura attuale non può essere inferiore alla precedente."); return; }
+    setSaving(true); setError("");
+    try {
+      const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:consumptionForm.fiscal_year_id,unit_id:consumptionForm.unit_id,service_type:consumptionForm.service_type.trim()||"Riscaldamento",period_start:consumptionForm.period_start||null,period_end:consumptionForm.period_end||null,meter_code:consumptionForm.meter_code.trim(),previous_reading:previous,current_reading:current,consumption:consumption??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh,allocation_value:allocationValue,charge_amount:chargeAmount,source:consumptionForm.source.trim()||"Manuale",notes:consumptionForm.notes.trim(),data:{}};
+      const {error:saveError}=await supabase.from("condominium_consumption_readings").upsert(payload,{onConflict:"workspace_id,condominium_id,fiscal_year_id,unit_id,service_type,meter_code,period_start,period_end"});
+      if(saveError) throw saveError;
+      setConsumptionForm({fiscal_year_id:"",unit_id:"",service_type:"Riscaldamento",meter_code:"",period_start:"",period_end:"",previous_reading:"",current_reading:"",consumption:"",kwh:"",allocation_value:"",charge_amount:"",source:"Manuale",notes:""});
+      flash("Dato di consumo salvato."); await load();
+    } catch(e:any) { setError(e?.message||"Impossibile salvare il dato di consumo."); } finally { setSaving(false); }
+  }
+
+  function parseCsvLine(line:string) {
+    const out:string[]=[]; let current=""; let quoted=false;
+    for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(quoted&&line[i+1]==='"'){current+='"';i++;}else quoted=!quoted;}else if(ch===';'&&!quoted){out.push(current.trim());current="";}else if(ch===','&&!quoted){out.push(current.trim());current="";}else current+=ch;} out.push(current.trim()); return out;
+  }
+
+  async function importConsumptionCsv(event: React.ChangeEvent<HTMLInputElement>) {
+    const file=event.target.files?.[0]; if(!file||!dbCondominiumId) return;
+    const text=await file.text(); const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(lines.length<2){setError("Il CSV non contiene righe dati.");return;}
+    const headers=parseCsvLine(lines[0]).map(h=>h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""));
+    const find=(row:string[],names:string[])=>{const idx=headers.findIndex(h=>names.includes(h));return idx>=0?row[idx]||"":"";};
+    const rows:any[]=[];
+    for(const line of lines.slice(1)){
+      const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
+      const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit) continue;
+      const toNum=(v:string)=>v.trim()===""?null:Number(v.replace(".","").replace(",","."));
+      const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy) continue;
+      const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"]));
+      rows.push({workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:fy.id,unit_id:unit.id,service_type:find(row,["servizio","service_type"]).trim()||"Riscaldamento",meter_code:find(row,["matricola","meter_code"]).trim(),period_start:find(row,["periodo_inizio","period_start"]).trim()||null,period_end:find(row,["periodo_fine","period_end"]).trim()||null,previous_reading:previous,current_reading:current,consumption:toNum(find(row,["consumo","consumption"]))??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh:toNum(find(row,["kwh"])),allocation_value:toNum(find(row,["valore_riparto","allocation_value","valore"])),charge_amount:toNum(find(row,["importo","charge_amount","quota"])),source:"Importazione CSV",notes:find(row,["note","notes"]),data:{}});
+    }
+    if(!rows.length){setError("Nessuna riga CSV riconosciuta. Verifica il codice unità e l'esercizio.");return;}
+    setSaving(true);setError("");
+    try{const {error:saveError}=await supabase.from("condominium_consumption_readings").upsert(rows,{onConflict:"workspace_id,condominium_id,fiscal_year_id,unit_id,service_type,meter_code,period_start,period_end"});if(saveError)throw saveError;flash("Importazione consumi completata: "+rows.length+" righe.");await load();}catch(e:any){setError(e?.message||"Impossibile importare il CSV.");}finally{setSaving(false);event.target.value="";}
+  }
+
+  async function generateConsumptionAllocation() {
+    if(!supabase||!dbCondominiumId||!consumptionExpenseForm.ledger_entry_id||!consumptionExpenseForm.fiscal_year_id||!consumptionExpenseForm.service_type.trim()){setError("Indica spesa, esercizio e servizio.");return;}
+    const expense=scopedLedger.find(e=>e.id===consumptionExpenseForm.ledger_entry_id);
+    if(!expense||expense.direction!=="Uscita"){setError("Seleziona una spesa di uscita.");return;}
+    if(!guardOpenFiscalYear(expense.fiscal_year_id||consumptionExpenseForm.fiscal_year_id))return;
+    const rows=scopedConsumptionReadings.filter(r=>r.fiscal_year_id===consumptionExpenseForm.fiscal_year_id&&r.service_type.toLowerCase().trim()===consumptionExpenseForm.service_type.toLowerCase().trim());
+    if(!rows.length){setError("Non ci sono dati di consumo per il servizio selezionato.");return;}
+    if(!window.confirm("Generare il riparto automatico della spesa usando i dati di consumo?"))return;
+    setSaving(true);setError("");
+    try{const {data,error:rpcError}=await supabase.rpc("generate_consumption_allocations",{p_workspace_id:workspaceId,p_condominium_id:dbCondominiumId,p_ledger_entry_id:expense.id,p_fiscal_year_id:consumptionExpenseForm.fiscal_year_id,p_service_type:consumptionExpenseForm.service_type.trim()});if(rpcError)throw rpcError;flash("Riparto da consumi generato: "+Number(data||0)+" quote.");await load();}catch(e:any){setError(e?.message||"Impossibile generare il riparto da consumi.");}finally{setSaving(false);}
   }
 
   async function saveBudget(e: React.FormEvent) {
@@ -1387,6 +1453,7 @@ function AccountingPage({
           ["movimenti", "Registro contabile"],
           ["ripartizioni", "Ripartizioni"],
           ["millesimi", "Tabelle millesimali"],
+          ["consumi", "Consumi e riparti"],
           ["rate", "Rate e morosità"],
           ["fondi", "Fondi e riserve"],
           ["fiscale", "Adempimenti fiscali"],
@@ -1568,6 +1635,31 @@ function AccountingPage({
           </article>
           <article className="card"><div className="section-heading"><div><h2>Valori per unità</h2><p>{scopedMillesimalValues.length} valori registrati. I millesimi sono associati esclusivamente alle unità immobiliari.</p>{scopedMillesimalTables.length>0 && <p><b>Totale tabella:</b> {scopedMillesimalTables.reduce((s,t)=>s+Number(t.total_millesimi||0),0)} millesimi</p>}{isAdministrator && dbCondominiumId && scopedMillesimalTables.length>0 && <><button className="primary-button" onClick={()=>{const t=scopedMillesimalTables[0];const initial:Record<string,number>={};units.filter(u=>u.condominium_id===dbCondominiumId).forEach(u=>{initial[u.id]=scopedMillesimalValues.find(v=>v.table_id===t.id&&v.unit_id===u.id)?.value??0});setBulkMillesimalTableId(t.id);setBulkMillesimalValues(initial);setShowBulkMillesimalForm(true)}}>+ Compila quote</button><button className="secondary-button" onClick={()=>{setMillesimalValueForm({table_id:scopedMillesimalTables[0]?.id||"",unit_id:units.find(u=>u.condominium_id===dbCondominiumId)?.id||"",value:0,excluded:false,notes:""});setShowMillesimalValueForm(true)}}>+ Assegna quota</button></>}</div></div>{scopedMillesimalTables.length===0 ? <p>Nessuna tabella disponibile.</p> : scopedMillesimalTables.flatMap(t=>units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=>({t,u,v:scopedMillesimalValues.find(v=>v.table_id===t.id&&v.unit_id===u.id)}))).map(({t,u,v})=><div className="row-card" key={t.id+"-"+u.id}><div><b>Unità {u.unit_code}</b><small>{t.name}</small><span>{v ? (v.excluded ? "Esclusa" : v.value + " millesimi") : "Quota non ancora inserita"}</span></div></div>)}</article>
         </section>
+      ) : tab === "consumi" ? (
+        <section className="cards-grid">
+          <article className="card">
+            <div className="section-heading"><div><h2>Consumi e contabilizzazione</h2><p>Importa o inserisci i dati forniti dal gestore per riscaldamento, ACS e altri servizi a consumo.</p></div>{isAdministrator&&dbCondominiumId&&<label className="secondary-button" style={{cursor:"pointer"}}>Importa CSV<input type="file" accept=".csv,text/csv" onChange={importConsumptionCsv} style={{display:"none"}} /></label>}</div>
+            <form onSubmit={saveConsumptionReading}><div className="form-grid">
+              <label>Esercizio<select required value={consumptionForm.fiscal_year_id} onChange={e=>setConsumptionForm({...consumptionForm,fiscal_year_id:e.target.value})}><option value="">Seleziona</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label>
+              <label>Unità<select required value={consumptionForm.unit_id} onChange={e=>setConsumptionForm({...consumptionForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label>
+              <label>Servizio<input value={consumptionForm.service_type} onChange={e=>setConsumptionForm({...consumptionForm,service_type:e.target.value})} placeholder="Riscaldamento / ACS"/></label>
+              <label>Matricola<input value={consumptionForm.meter_code} onChange={e=>setConsumptionForm({...consumptionForm,meter_code:e.target.value})}/></label>
+              <label>Periodo inizio<input type="date" value={consumptionForm.period_start} onChange={e=>setConsumptionForm({...consumptionForm,period_start:e.target.value})}/></label>
+              <label>Periodo fine<input type="date" value={consumptionForm.period_end} onChange={e=>setConsumptionForm({...consumptionForm,period_end:e.target.value})}/></label>
+              <label>Lettura precedente<input type="number" step="0.0001" min="0" value={consumptionForm.previous_reading} onChange={e=>setConsumptionForm({...consumptionForm,previous_reading:e.target.value})}/></label>
+              <label>Lettura attuale<input type="number" step="0.0001" min="0" value={consumptionForm.current_reading} onChange={e=>setConsumptionForm({...consumptionForm,current_reading:e.target.value})}/></label>
+              <label>Consumo<input type="number" step="0.0001" min="0" value={consumptionForm.consumption} onChange={e=>setConsumptionForm({...consumptionForm,consumption:e.target.value})}/></label>
+              <label>kWh<input type="number" step="0.0001" min="0" value={consumptionForm.kwh} onChange={e=>setConsumptionForm({...consumptionForm,kwh:e.target.value})}/></label>
+              <label>Valore di riparto<input type="number" step="0.0001" min="0" value={consumptionForm.allocation_value} onChange={e=>setConsumptionForm({...consumptionForm,allocation_value:e.target.value})} placeholder="Se fornito dal gestore"/></label>
+              <label>Importo quota<input type="number" step="0.01" min="0" value={consumptionForm.charge_amount} onChange={e=>setConsumptionForm({...consumptionForm,charge_amount:e.target.value})} placeholder="Se fornito dal gestore"/></label>
+            </div><div className="form-grid"><label>Fonte<input value={consumptionForm.source} onChange={e=>setConsumptionForm({...consumptionForm,source:e.target.value})}/></label><label>Note<textarea value={consumptionForm.notes} onChange={e=>setConsumptionForm({...consumptionForm,notes:e.target.value})}/></label></div><div className="form-actions"><button className="primary-button" disabled={saving}>Salva rilevazione</button></div></form>
+          </article>
+          <article className="card"><div className="section-heading"><div><h2>Genera riparto da consumi</h2><p>BETHAG utilizza il valore di riparto/importo fornito dal gestore; in assenza, usa consumo o kWh come base proporzionale. Non sostituisce la verifica tecnica prevista dalla disciplina applicabile.</p></div></div>
+            <div className="form-grid"><label>Spesa<select value={consumptionExpenseForm.ledger_entry_id} onChange={e=>setConsumptionExpenseForm({...consumptionExpenseForm,ledger_entry_id:e.target.value})}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita").map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label><label>Esercizio<select value={consumptionExpenseForm.fiscal_year_id} onChange={e=>setConsumptionExpenseForm({...consumptionExpenseForm,fiscal_year_id:e.target.value})}><option value="">Seleziona</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label><label>Servizio<input value={consumptionExpenseForm.service_type} onChange={e=>setConsumptionExpenseForm({...consumptionExpenseForm,service_type:e.target.value})}/></label></div>
+            {isAdministrator&&<button className="primary-button" onClick={generateConsumptionAllocation} disabled={saving}>Genera riparto automatico</button>}
+          </article>
+          <article className="card"><div className="section-heading"><div><h2>Rilevazioni registrate</h2><p>{scopedConsumptionReadings.length} righe nel condominio selezionato.</p></div></div>{scopedConsumptionReadings.length===0?<p>Nessun dato di consumo registrato.</p>:scopedConsumptionReadings.map(r=><article className="row-card" key={r.id}><div><b>{units.find(u=>u.id===r.unit_id)?.unit_code||"Unità"}</b><small>{r.service_type} · {r.period_start||"periodo non indicato"} → {r.period_end||""} · {r.source}</small><span>{r.charge_amount!=null?money(r.charge_amount):"Quota gestore non indicata"} · consumo {r.consumption??"—"} · kWh {r.kwh??"—"}</span>{r.notes&&<small>{r.notes}</small>}</div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_consumption_readings",r.id,"la rilevazione di consumo")}>×</button>}</article>)}</article>
+        </section>
       ) : tab === "rate" ? (
         <section className="card">
           <div className="section-heading"><div><h2>Rate e morosità</h2><p>Posizioni individuali, scadenze, pagamenti e residui da incassare.</p></div>{isAdministrator&&dbCondominiumId&&<button className="primary-button" onClick={()=>setShowInstallmentForm(true)}>+ Nuova rata</button>}</div>
@@ -1698,7 +1790,7 @@ function AccountingPage({
 
       {showInstallmentForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveInstallment}><h2>Nuova rata</h2><label>Titolo<input required value={installmentForm.title} onChange={e=>setInstallmentForm({...installmentForm,title:e.target.value})} placeholder="Rata ordinaria 1/4"/></label><label>Unità<select value={installmentForm.unit_id} onChange={e=>setInstallmentForm({...installmentForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label><div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={installmentForm.amount} onChange={e=>setInstallmentForm({...installmentForm,amount:Number(e.target.value)})}/></label><label>Pagato<input type="number" min="0" step="0.01" value={0} readOnly disabled /></label></div><div className="form-grid"><label>Scadenza<input type="date" value={installmentForm.due_date} onChange={e=>setInstallmentForm({...installmentForm,due_date:e.target.value})}/></label><label>Stato<select value="Da pagare" disabled><option>Da pagare</option></select></label></div><p style={{margin:"6px 0 0",fontSize:13,opacity:.75}}>La rata viene creata non pagata. I pagamenti si registrano successivamente dal pulsante <b>Registra pagamento</b>.</p><label>Note<textarea value={installmentForm.notes} onChange={e=>setInstallmentForm({...installmentForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentForm(false)}>Annulla</button><button className="primary-button">Salva</button></div></form></div>}
 
-      {showInstallmentsFromAllocation && <div className="modal-backdrop"><div className="modal-card"><h2>Genera rate dal riparto</h2><p>Viene creata una rata per ogni quota della spesa. Le spese straordinarie possono essere separate e distribuire le scadenze su più esercizi. Le rate identiche già presenti non vengono duplicate.</p><label>Spesa<select value={allocationInstallmentForm.ledger_entry_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,ledger_entry_id:e.target.value})}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita"&&allocations.some(a=>a.ledger_entry_id===e.id)).map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label><label>Titolo<input value={allocationInstallmentForm.title} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,title:e.target.value})}/></label><div className="form-grid"><label>Numero rate complessive<input type="number" min="1" max="12" value={allocationInstallmentForm.installment_count} onChange={e=>{const count=Math.max(1,Math.min(12,Number(e.target.value)||1));setAllocationInstallmentForm({...allocationInstallmentForm,installment_count:count,due_dates:Array.from({length:count},(_,i)=>allocationInstallmentForm.due_dates[i]||"")})}}/></label><label>Esercizio<select value={allocationInstallmentForm.fiscal_year_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,fiscal_year_id:e.target.value})}><option value="">Nessuno</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label></div><div className="permission-box"><b>Scadenze</b><div className="form-grid">{Array.from({length:Math.max(1,Math.min(12,Number(allocationInstallmentForm.installment_count)||1))},(_,index)=><label key={index}>Rata {index+1}<input type="date" value={allocationInstallmentForm.due_dates[index]||""} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,due_dates:allocationInstallmentForm.due_dates.map((date,i)=>i===index?e.target.value:date)})}/></label>)}</div><p style={{margin:"6px 0 0",fontSize:13,opacity:.75}}>Inserisci una data per ogni rata. Le scadenze devono essere crescenti e rientrare nell'esercizio selezionato.</p></div><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentsFromAllocation(false)}>Annulla</button><button type="button" className="primary-button" disabled={saving} onClick={generateInstallmentsFromAllocation}>Genera rate</button></div></div></div>}
+      {showInstallmentsFromAllocation && <div className="modal-backdrop"><div className="modal-card"><h2>Genera rate dal riparto</h2><p>Viene creata una rata per ogni quota della spesa. Le spese straordinarie possono essere separate e distribuire le scadenze su più esercizi. Le rate identiche già presenti non vengono duplicate.</p><label>Spesa<select value={allocationInstallmentForm.ledger_entry_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,ledger_entry_id:e.target.value})}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita"&&allocations.some(a=>a.ledger_entry_id===e.id)).map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label><label>Titolo<input value={allocationInstallmentForm.title} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,title:e.target.value})}/></label><div className="form-grid"><label>Numero rate complessive<input type="number" min="1" max="12" value={allocationInstallmentForm.installment_count} onChange={e=>{const count=Math.max(1,Math.min(12,Number(e.target.value)||1));setAllocationInstallmentForm({...allocationInstallmentForm,installment_count:count,due_dates:Array.from({length:count},(_,i)=>allocationInstallmentForm.due_dates[i]||""),percentages:Array.from({length:count},()=>Number((100/count).toFixed(4)))})}}/></label><label>Esercizio<select value={allocationInstallmentForm.fiscal_year_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,fiscal_year_id:e.target.value})}><option value="">Nessuno</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label></div><div className="permission-box"><b>Scadenze e percentuali</b><div className="form-grid">{Array.from({length:Math.max(1,Math.min(12,Number(allocationInstallmentForm.installment_count)||1))},(_,index)=><div key={index}><label>Rata {index+1} — scadenza<input type="date" value={allocationInstallmentForm.due_dates[index]||""} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,due_dates:allocationInstallmentForm.due_dates.map((date,i)=>i===index?e.target.value:date)})}/></label><label>Percentuale %<input type="number" min="0.01" step="0.01" value={allocationInstallmentForm.percentages[index]??0} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,percentages:allocationInstallmentForm.percentages.map((p,i)=>i===index?Number(e.target.value):p)})}/></label></div>)}</div><p style={{margin:"6px 0 0",fontSize:13,opacity:.75}}>Le percentuali devono sommare a 100%. È quindi possibile gestire, ad esempio, 30% + 30% + 40%.</p></div><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentsFromAllocation(false)}>Annulla</button><button type="button" className="primary-button" disabled={saving} onClick={generateInstallmentsFromAllocation}>Genera rate</button></div></div></div>}
 
       {showAutoAllocationForm && <div className="modal-backdrop"><div className="modal-card">
         <h2>Riparto millesimale</h2>
