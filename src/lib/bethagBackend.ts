@@ -1299,7 +1299,7 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       progress_percent: Math.max(0, Math.min(100, percentage)),
       actual_amount: cumulativeActualAmount,
       status: Number(percentage) >= 100 ? "Completato" : Number(percentage) > 0 ? "In corso" : work.status,
-      actual_end_date: Number(percentage) >= 100 ? input.progressDate : undefined
+      actual_end_date: Number(percentage) >= 100 ? input.progressDate : null
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
     return { ...progress, cumulativeActualAmount };
