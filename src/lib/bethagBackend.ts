@@ -1747,7 +1747,8 @@ export async function deleteCondominiumMember(
 
 export async function storeWorkspaceDocuments(
   workspaceId: string,
-  files: File[]
+  files: File[],
+  condominiumId?: string
 ): Promise<any[]> {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!workspaceId) throw new Error("Workspace non disponibile.");
@@ -1756,7 +1757,8 @@ export async function storeWorkspaceDocuments(
   const stored: any[] = [];
   for (const file of files) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = workspaceId + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
+    const pathPrefix = condominiumId ? workspaceId + "/" + condominiumId : workspaceId;
+    const path = pathPrefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 10) + "-" + safeName;
     const { error } = await supabase.storage.from("bethag-documents").upload(path, file, {
       upsert: false,
       contentType: file.type || "application/octet-stream",
