@@ -187,6 +187,20 @@ type CondominiumStructure = {
   };
 };
 
+type CondominiumCreationDraft = {
+  name?: string;
+  address?: string;
+  cap?: string;
+  city?: string;
+  province?: string;
+  fiscalCode?: string;
+  units?: number;
+  structure?: CondominiumStructure;
+  confidence?: number;
+  sourceDocuments: string[];
+  warnings: string[];
+};
+
 type Condominium = {
   id: number;
   name: string;
@@ -2261,6 +2275,9 @@ function App() {
   ] = useState<Condominium | null>(
     null
   );
+  const [condominiumAiDraft, setCondominiumAiDraft] = useState<CondominiumCreationDraft | null>(null);
+  const [condominiumAiFiles, setCondominiumAiFiles] = useState<string[]>([]);
+  const [condominiumAiProcessing, setCondominiumAiProcessing] = useState(false);
 
   // La selezione viene mantenuta al refresh, ma solo dopo che Supabase
   // ha completato l'hydration: in questo modo non viene mai renderizzata
@@ -3673,6 +3690,36 @@ function App() {
   const openModal = (type: string) => {
     setModalType(type);
     setShowModal(true);
+  };
+  const openCondominiumAiCreation = () => {
+    if (!requirePlan("professional", "La creazione automatica del condominio con AI", "ai")) return;
+    setCondominiumAiDraft(null);
+    setCondominiumAiFiles([]);
+    setCondominiumAiProcessing(false);
+    openModal("condominium-ai");
+  };
+
+  const analyzeCondominiumDocuments = (files: FileList | null) => {
+    if (!files?.length) return;
+    if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
+    setCondominiumAiFiles(Array.from(files).map((file) => file.name));
+    setCondominiumAiProcessing(true);
+    window.setTimeout(() => {
+      setCondominiumAiDraft({
+        sourceDocuments: Array.from(files).map((file) => file.name),
+        confidence: 0,
+        warnings: [
+          "La proposta deve essere verificata dall'amministratore.",
+          "Nessun proprietario, millesimo o dato contabile viene creato senza conferma.",
+        ],
+        structure: {
+          configured: false,
+          civics: [],
+          autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 },
+        },
+      });
+      setCondominiumAiProcessing(false);
+    }, 900);
   };
 
   const closeModal = () => {
@@ -7217,6 +7264,31 @@ function App() {
           onClose={closeModal}
         >
 
+          {modalType === "condominium-ai" && (
+            <CondominiumAiCreationForm
+              draft={condominiumAiDraft}
+              files={condominiumAiFiles}
+              processing={condominiumAiProcessing}
+              onFiles={analyzeCondominiumDocuments}
+              onConfirm={(draft) => {
+                setEditingCondominium({
+                  ...emptyCondominium,
+                  name: draft.name ?? "",
+                  address: draft.address ?? "",
+                  cap: draft.cap ?? "",
+                  city: draft.city ?? "",
+                  province: draft.province ?? "",
+                  fiscalCode: draft.fiscalCode ?? "",
+                  units: String(draft.units ?? ""),
+                  structure: draft.structure,
+                });
+                setCondominiumAiDraft(null);
+                setModalType("condominium");
+              }}
+              onCancel={closeModal}
+            />
+          )}
+
           {modalType ===
             "condominium" && (
             <CondominiumForm
@@ -8643,6 +8715,12 @@ function CondominiumsPage(
         action={canManageCondominium ? "+ Nuovo condominio" : undefined}
         onAction={canManageCondominium ? onNew : undefined}
       />
+
+      {canManageCondominium && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button type="button" className="secondary-button" onClick={openCondominiumAiCreation}>✦ Crea condominio con AI</button>
+        </div>
+      )}
 
       <SearchBox
         value={search}
@@ -13534,6 +13612,51 @@ function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubm
 /* =========================================================
    FORM CONDOMINIO
    ========================================================= */
+
+function CondominiumAiCreationForm({
+  draft, files, processing, onFiles, onConfirm, onCancel,
+}: {
+  draft: CondominiumCreationDraft | null;
+  files: string[];
+  processing: boolean;
+  onFiles: (files: FileList | null) => void;
+  onConfirm: (draft: CondominiumCreationDraft) => void;
+  onCancel: () => void;
+}) {
+  const [edited, setEdited] = useState<CondominiumCreationDraft>(draft ?? {
+    sourceDocuments: [], warnings: [],
+    structure: { configured: false, civics: [], autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 } },
+  });
+  useEffect(() => { if (draft) setEdited(draft); }, [draft]);
+  return (
+    <div>
+      <ModalTitle title="Nuovo condominio con AI" />
+      <p className="form-help">Carica i documenti disponibili. BETHAG prepara una proposta; nessun dato definitivo viene creato prima della conferma dell'amministratore.</p>
+      <div className="field full">
+        <label>Documenti</label>
+        <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.odt,image/*" onChange={(e) => onFiles(e.target.files)} />
+        {files.length > 0 && <small>{files.join(" · ")}</small>}
+      </div>
+      {processing && <div className="login-success">Analisi documentale in corso…</div>}
+      {draft && !processing && <>
+        <div className="form-grid">
+          <Field full label="Nome condominio" value={edited.name ?? ""} onChange={(v: string) => setEdited({ ...edited, name: v })} />
+          <Field full label="Indirizzo" value={edited.address ?? ""} onChange={(v: string) => setEdited({ ...edited, address: v })} />
+          <Field label="CAP" value={edited.cap ?? ""} onChange={(v: string) => setEdited({ ...edited, cap: v })} />
+          <Field label="Comune" value={edited.city ?? ""} onChange={(v: string) => setEdited({ ...edited, city: v })} />
+          <Field label="Provincia" value={edited.province ?? ""} onChange={(v: string) => setEdited({ ...edited, province: v })} />
+          <Field label="Codice fiscale" value={edited.fiscalCode ?? ""} onChange={(v: string) => setEdited({ ...edited, fiscalCode: v })} />
+          <Field label="Unità rilevate" type="number" value={String(edited.units ?? "")} onChange={(v: string) => setEdited({ ...edited, units: Number(v) || 0 })} />
+        </div>
+        <div className="help-detail"><strong>Verifica obbligatoria</strong><p>Controlla i dati estratti e correggili prima di procedere. I campi non presenti nei documenti restano vuoti.</p>{edited.warnings.map((w) => <div className="form-help" key={w}>• {w}</div>)}</div>
+        <div className="form-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
+          <button type="button" className="primary-button" onClick={() => onConfirm(edited)}>Conferma proposta e continua</button>
+        </div>
+      </>}
+    </div>
+  );
+}
 
 function CondominiumForm({
   value,
