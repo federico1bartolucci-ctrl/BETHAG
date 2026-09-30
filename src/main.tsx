@@ -12591,7 +12591,7 @@ function SecuritySettingsCard() {
     <div className="workspace-grid">
       <div className="info-card">
         <b>🔢 Codice personale</b>
-        <p>{codeEnabled ? "Attivo: richiesto prima delle operazioni irreversibili protette." : "Disattivato: nessun codice aggiuntivo viene richiesto."}</p>
+        <p>{codeEnabled ? "Attivo: viene richiesto solo per le operazioni ad alta sicurezza protette. Puoi disattivarlo in qualsiasi momento." : "Disattivato: nessun codice personale aggiuntivo viene richiesto. L'attivazione è facoltativa."}</p>
         <button className={codeEnabled ? "danger-button" : "secondary-button"} type="button" disabled={loading} onClick={() => void (codeEnabled ? disableCode() : configureCode())}>{codeEnabled ? "Disattiva codice" : "Attiva codice"}</button>
       </div>
       <div className="info-card">
