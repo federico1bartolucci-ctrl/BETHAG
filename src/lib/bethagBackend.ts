@@ -954,13 +954,14 @@ export async function deletePortalMember(workspaceId: string, legacyId: number) 
   });
 }
 
-export async function deleteCondominium(workspaceId: string, legacyId: number) {
+export async function deleteCondominium(workspaceId: string, legacyId: number, securityCode?: string) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
     const { error } = await supabase.rpc("delete_condominium", {
       p_workspace_id: workspaceId,
       p_legacy_id: legacyId,
+      p_security_code: securityCode ?? null,
     });
 
     if (error) throw error;
