@@ -7362,6 +7362,16 @@ function App() {
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
+              aiEnabled={hasEntitlement(subscription, "plus", "ai")}
+              documents={documents.map((d) => ({
+                id: d.id,
+                name: d.name,
+                condominiumId: d.condominiumId,
+                category: d.category,
+                aiStatus: d.aiStatus,
+                extractedData: d.extractedData,
+                aiSummary: d.aiSummary,
+              }))}
             />
           )}
 
