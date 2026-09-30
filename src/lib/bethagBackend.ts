@@ -180,7 +180,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     })),
     condominiumUnits: mappedCondominiumUnits,
     condominiumMembers: mappedCondominiumMembers,
-    documents: (documents.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    documents: (documents.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      storagePath: row.file_path ?? row.data?.storagePath ?? undefined,
+    })),
     deadlines: (deadlines.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     assemblies: (assemblies.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     suppliers: (suppliers.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
