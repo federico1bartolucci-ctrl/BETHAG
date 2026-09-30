@@ -654,6 +654,12 @@ function AccountingPage({
         opening_balance: 0,
         notes: "",
       });
+      const savedYear = (await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId).eq("start_date", yearForm.start_date).eq("end_date", yearForm.end_date).single()).data;
+      const previousYear = fiscalYears.filter(y => y.condominium_id === dbCondominiumId && y.status === "Chiuso" && y.end_date < yearForm.start_date).sort((a,b) => b.end_date.localeCompare(a.end_date))[0];
+      if (previousYear && savedYear?.id) {
+        const { error: carryError } = await supabase.rpc("generate_fiscal_year_carryovers", { p_workspace_id: workspaceId, p_condominium_id: dbCondominiumId, p_source_fiscal_year_id: previousYear.id, p_target_fiscal_year_id: savedYear.id });
+        if (carryError) throw carryError;
+      }
       flash("Esercizio salvato.");
       await load();
     } catch (e: any) {
