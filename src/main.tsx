@@ -266,6 +266,8 @@ type DocumentItem = {
   publication: PublicationStatus;
   aiSummary: string;
   extractedData: string;
+  aiDocumentType?: "Riparto spese" | "Fattura" | "Verbale" | "Convocazione" | "Regolamento" | "Altro";
+  aiConfidence?: number;
 };
 
 type Assembly = {
@@ -4343,8 +4345,17 @@ function App() {
                   "Da verificare",
                 aiSummary:
                   "Analisi automatica predisposta. Il contenuto dovrà essere verificato dall'amministratore prima della conferma.",
-                extractedData:
-                  "Dati strutturati predisposti per la successiva integrazione con il servizio AI.",
+                extractedData: JSON.stringify({
+                  document_type: "Riparto spese",
+                  expense_amount: null,
+                  total_millesimi: null,
+                  scope: "",
+                  rows: [],
+                  source_status: "Da verificare",
+                  extraction_note: "Nessun dato contabile viene considerato definitivo senza verifica."
+                }),
+                aiDocumentType: "Riparto spese",
+                aiConfidence: 0,
               }
             : doc
         )
