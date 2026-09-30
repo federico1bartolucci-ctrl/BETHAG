@@ -704,15 +704,17 @@ function AccountingPage({
     setSaving(true);
     setError("");
     try {
-      const { error: closeError } = await supabase.from("condominium_fiscal_years").update({ status: "Chiuso" }).eq("id", year.id).eq("workspace_id", workspaceId);
-      if (closeError) throw closeError;
+      const { data: carryCount, error: transitionError } = await supabase.rpc("close_fiscal_year_and_generate_carryovers", {
+        p_workspace_id: workspaceId,
+        p_condominium_id: year.condominium_id,
+        p_source_fiscal_year_id: year.id,
+      });
+      if (transitionError) throw transitionError;
       const nextYear = fiscalYears.filter(y => y.condominium_id === year.condominium_id && y.id !== year.id && y.start_date > year.end_date).sort((a,b) => a.start_date.localeCompare(b.start_date))[0];
       if (nextYear) {
-        const { data: carryCount, error: carryError } = await supabase.rpc("generate_fiscal_year_carryovers", { p_workspace_id: workspaceId, p_condominium_id: year.condominium_id, p_source_fiscal_year_id: year.id, p_target_fiscal_year_id: nextYear.id });
-        if (carryError) throw carryError;
-        flash("Esercizio chiuso. Partite riportate: " + Number(carryCount || 0) + ".");
+        flash("Esercizio chiuso. Saldo iniziale del nuovo esercizio allineato al saldo finale precedente. Partite riportate: " + Number(carryCount || 0) + ".");
       } else {
-        flash("Esercizio chiuso. Il riporto sarà generato quando esisterà l'esercizio successivo.");
+        flash("Esercizio chiuso. Il saldo iniziale verrà collegato quando esisterà l'esercizio successivo.");
       }
       await load();
     } catch (e:any) {
