@@ -1878,11 +1878,36 @@ export async function confirmCondominiumInvoice(
     }
 
     const workId = payload.workId ?? null;
+    const aiWorkReference = String(
+      payload.extractedData?.workReference ??
+      payload.extractedData?.riferimentoLavoro ??
+      ""
+    ).trim();
     if (workId) {
-      const { data: work, error: workError } = await supabase.from("condominium_works").select("id")
+      const { data: work, error: workError } = await supabase.from("condominium_works")
+        .select("id,title,category,status,supplier_id,data")
         .eq("workspace_id", workspaceId).eq("condominium_id", condominium.id).eq("id", workId).maybeSingle();
       if (workError) throw workError;
       if (!work?.id) throw new Error("Il lavoro proposto non appartiene al condominio della fattura.");
+
+      if (aiWorkReference) {
+        const normalizeWorkReference = (value: unknown) =>
+          String(value ?? "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+        const reference = normalizeWorkReference(aiWorkReference);
+        const workText = normalizeWorkReference([
+          work.title,
+          work.category,
+          work.data?.title,
+          work.data?.description,
+          work.data?.notes
+        ].filter(Boolean).join(" "));
+        const referenceTokens = reference.split(/\s+/).filter((token: string) => token.length >= 4);
+        const matchedTokens = referenceTokens.filter((token: string) => workText.includes(token));
+        const referenceHasUsefulEvidence = referenceTokens.length > 0 && matchedTokens.length > 0;
+        if (!referenceHasUsefulEvidence) {
+          throw new Error(`Il riferimento al lavoro rilevato dall'AI ("${aiWorkReference}") non trova riscontro nel lavoro selezionato. Verifica manualmente il collegamento prima di confermare la fattura.`);
+        }
+      }
     }
 
     const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years")
