@@ -5001,6 +5001,21 @@ function App() {
         current.filter((item) => item.id !== id)
       );
 
+      // Manteniamo sincronizzato anche lo stato locale delle unità:
+      // la proprietà appartiene all'unità e i millesimi non vengono toccati.
+      setCondominiumUnits((current) =>
+        current.map((unit) =>
+          unit.condominiumId === member.condominiumId
+            ? {
+                ...unit,
+                ownerMemberIds: Array.isArray(unit.ownerMemberIds)
+                  ? unit.ownerMemberIds.filter((ownerId) => String(ownerId) !== String(id))
+                  : [],
+              }
+            : unit
+        )
+      );
+
       if (linkedPortalAccess) {
         setPortalMembers((current) =>
           current.filter((portalMember) => {
