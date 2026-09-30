@@ -340,7 +340,7 @@ async function syncBackendStateNow(
 
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
-  let condominiumSupplierIdByLegacySupplierId = new Map<number, string>();
+  let condominiumSupplierIdByLegacySupplierKey = new Map<string, string>();
   if (canSyncModule("attivita")) {
     const selectedSupplierIds = Array.from(new Set(
       (state.condominiumWorks ?? [])
@@ -374,7 +374,7 @@ async function syncBackendStateNow(
         );
 
         if (existing) {
-          condominiumSupplierIdByLegacySupplierId.set(legacySupplierId, existing.id);
+          condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(existing.condominium_id)}`, existing.id);
           continue;
         }
 
@@ -400,7 +400,7 @@ async function syncBackendStateNow(
             .select("id")
             .single();
           if (createError) throw createError;
-          condominiumSupplierIdByLegacySupplierId.set(legacySupplierId, created.id);
+          condominiumSupplierIdByLegacySupplierKey.set(`${legacySupplierId}::${String(workCondominiumId)}`, created.id);
           break;
         }
       }
@@ -450,7 +450,7 @@ async function syncBackendStateNow(
       approved_amount: Number(item.approvedAmount || 0),
       actual_amount: Number(item.actualAmount || 0),
       progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
-      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierId.get(Number(item.supplierId)) ?? null) : null,
+      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(condominiumDbIdByLegacyId.get(item.condominiumId) ?? "")}`) ?? null) : null,
       notes: item.notes ?? "",
       data: item,
     })).filter((row: any) => row.condominium_id && row.title)] : null,
