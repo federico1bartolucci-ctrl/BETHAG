@@ -1149,9 +1149,18 @@ function AccountingPage({
   function buildAIAllocationProposal() {
     const selectedDocument = documents.find(d => d.id === Number(allocationIntakeForm.document_id) && d.condominiumId === selectedCondominiumId);
     const expense = scopedLedger.find(e => e.id === allocationIntakeForm.ledger_entry_id);
-    const table = scopedMillesimalTables.find(x => x.id === allocationIntakeForm.allocation_table_id);
+    const matchingRule = expense
+      ? allocationRules
+          .filter(r=>r.active && r.condominium_id===dbCondominiumId && (!r.expense_type || r.expense_type===expense.expense_type) && (!r.category || r.category.toLowerCase()===expense.category.toLowerCase()))
+          .sort((a,b)=>a.priority-b.priority)[0]
+      : undefined;
+    const resolvedTableId = allocationIntakeForm.allocation_table_id || matchingRule?.allocation_table_id || "";
+    const table = scopedMillesimalTables.find(x => x.id === resolvedTableId);
     if (!expense) { setError("Seleziona la spesa da ripartire."); return; }
     if (!table) { setError("Seleziona la tabella millesimale."); return; }
+    if (!allocationIntakeForm.allocation_table_id && matchingRule) {
+      setAllocationIntakeForm(current => ({...current, allocation_table_id: matchingRule.allocation_table_id}));
+    }
 
     let extracted:any = null;
     if (selectedDocument?.extractedData?.trim()) {
