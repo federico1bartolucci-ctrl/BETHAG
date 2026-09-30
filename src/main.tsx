@@ -3083,22 +3083,46 @@ function App() {
         "workspace_members", "portal_registration_requests"
       ];
       const errors: string[] = [];
+      const skippedSecurityRows: string[] = [];
       if (supabase) {
         for (const table of restoreOrder) {
           const rows = Array.isArray(backup.backend?.[table]) ? backup.backend[table] : [];
           if (!rows.length) continue;
+
+          // Le membership sono dati di autorizzazione, non semplici dati anagrafici:
+          // un backup modificato manualmente non deve poter creare un nuovo
+          // amministratore. Il restore può aggiornare solo membership non-admin.
+          if (table === "workspace_members") {
+            const safeRows = rows.filter((row: any) => {
+              const role = String(row?.role || "").toLowerCase();
+              if (role === "admin") {
+                skippedSecurityRows.push("workspace_members:admin");
+                return false;
+              }
+              return role === "collaborator" || role === "resident";
+            });
+            if (!safeRows.length) continue;
+            const normalized = safeRows.map((row: any) => ({
+              ...row,
+              workspace_id: profile.workspaceId,
+              role: String(row.role).toLowerCase() as "collaborator" | "resident",
+            }));
+            const { error } = await supabase
+              .from(table)
+              .upsert(normalized, { onConflict: "workspace_id,user_id" });
+            if (error) errors.push(table + ": " + error.message);
+            continue;
+          }
+
           const normalized = rows.map((row: any) => ({...row, workspace_id: profile.workspaceId}));
-          const onConflict = table === "workspace_members"
-            ? "workspace_id,user_id"
-            : "id";
-          const { error } = await supabase.from(table).upsert(normalized, { onConflict });
+          const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
           if (error) errors.push(table + ": " + error.message);
         }
       }
       if (errors.length) {
-        alert("Ripristino completato parzialmente. Le tabelle non ripristinate sono state segnalate: " + errors.join(" | "));
+        alert("Ripristino completato parzialmente. Le tabelle non ripristinate sono state segnalate: " + errors.join(" | ") + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
       } else {
-        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati.");
+        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
       }
       window.location.reload();
     } catch (e: any) {
