@@ -46,6 +46,7 @@ import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend
 type Page =
   | "homepage"
   | "condomini"
+  | "archivio"
   | "contabilita"
   | "registro"
   | "documenti"
@@ -172,6 +173,8 @@ type Condominium = {
   iban: string;
   bank: string;
   notes: string;
+  archivedAt?: string;
+  archivedBy?: string;
 };
 
 type ExternalUnitOwner = {
@@ -3521,12 +3524,10 @@ function App() {
 
   const filteredCondominiums =
     useMemo(() => {
-      const q =
-        search.trim().toLowerCase();
-
-      if (!q) return condominiums;
-
-      return condominiums.filter((c) =>
+      const q = search.trim().toLowerCase();
+      const activeCondominiums = condominiums.filter((item) => !item.archivedAt);
+      if (!q) return activeCondominiums;
+      return activeCondominiums.filter((c) =>
         [
           c.name,
           c.address,
@@ -3859,6 +3860,53 @@ function App() {
     closeModal();
   };
 
+
+  const archiveCondominium = async (item: Condominium) => {
+    if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
+    if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
+    const archived = { ...item, archivedAt: new Date().toISOString() };
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await saveCondominiumBackend(profile.workspaceId, archived);
+      }
+      setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
+      setSelectedCondominium(null);
+      localStorage.removeItem(KEYS.selectedCondominium);
+    } catch (error) {
+      console.error("BETHAG condominium archive failed", error);
+      alert(error instanceof Error ? "Il condominio non è stato archiviato.\\n\\n" + error.message : "Il condominio non è stato archiviato.");
+    }
+  };
+
+  const restoreCondominium = async (item: Condominium) => {
+    if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
+    if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
+    const restored = { ...item, archivedAt: undefined, archivedBy: undefined };
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await saveCondominiumBackend(profile.workspaceId, restored);
+      }
+      setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
+    } catch (error) {
+      console.error("BETHAG condominium restore failed", error);
+      alert(error instanceof Error ? "Il condominio non è stato ripristinato.\\n\\n" + error.message : "Il condominio non è stato ripristinato.");
+    }
+  };
+
+  const requestPersonalSecurityCode = async (): Promise<string | undefined> => {
+    if (!supabaseConfigured || !supabase || !profile.workspaceId) return undefined;
+    const { data, error } = await supabase
+      .from("user_security_settings")
+      .select("personal_code_enabled")
+      .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data?.personal_code_enabled) return undefined;
+    const code = window.prompt("Operazione ad alta sicurezza. Inserisci il tuo codice personale:");
+    if (!code) throw new Error("Codice personale richiesto.");
+    return code;
+  };
+
   const deleteCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "L'eliminazione del condominio")) return;
 
@@ -3879,6 +3927,14 @@ function App() {
 
     if (!window.confirm(message)) return;
 
+    let securityCode: string | undefined;
+    try {
+      securityCode = await requestPersonalSecurityCode();
+    } catch (securityError) {
+      alert(securityError instanceof Error ? securityError.message : "Verifica di sicurezza non completata.");
+      return;
+    }
+
     if (supabaseConfigured && supabase && (sessionRole === "admin" || sessionRole === "collaborator")) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -3887,7 +3943,7 @@ function App() {
         const workspaceId = profile.workspaceId || await getActiveWorkspaceId(session.user.id, null);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
-        await deleteCondominiumBackend(workspaceId, item.id);
+        await deleteCondominiumBackend(workspaceId, item.id, securityCode);
       } catch (error) {
         console.error("BETHAG condominium deletion failed", error);
         alert(error instanceof Error ? "Il condominio non è stato cancellato dal server.\n\n" + error.message : "Il condominio non è stato cancellato dal server. Riprova.");
@@ -5846,6 +5902,12 @@ function App() {
               <span>Condomini</span>
               {!canAccessPage("condomini") && <span className="nav-lock">PRO</span>}
             </NavButton>
+            {isAdministrator && (
+              <NavButton active={page === "archivio"} onClick={() => navigate("archivio")}>
+                <span className="nav-icon"><AppIcon name="folder" size={18} /></span>
+                <span>Archivio</span>
+              </NavButton>
+            )}
 
             {isAdministrator && (
             <NavButton
@@ -6536,6 +6598,29 @@ function App() {
             />
           )}
 
+
+
+          {page === "archivio" && (
+            <section>
+              <PageHeader eyebrow="Condomini" title="Archivio" />
+              <div className="section-subtitle">Condomini archiviati: i dati restano disponibili e possono essere ripristinati in qualsiasi momento.</div>
+              <div className="card-grid">
+                {condominiums.filter((item) => Boolean(item.archivedAt)).map((item) => (
+                  <article className="card" key={item.id}>
+                    <div className="eyebrow">Archiviato</div>
+                    <h2>{item.name}</h2>
+                    <p>{item.address}{item.city ? `, ${item.city}` : ""}{item.province ? ` (${item.province})` : ""}</p>
+                    <small className="muted-text">Archiviato il {item.archivedAt ? new Date(item.archivedAt).toLocaleString("it-IT") : ""}</small>
+                    <div className="form-actions" style={{marginTop:12}}>
+                      <button className="primary-button" type="button" onClick={() => void restoreCondominium(item)}>Ripristina</button>
+                      <button className="danger-button" type="button" onClick={() => void deleteCondominium(item)}>Elimina definitivamente</button>
+                    </div>
+                  </article>
+                ))}
+                {!condominiums.some((item) => item.archivedAt) && <div className="card"><h2>Archivio vuoto</h2><p>Nessun condominio è stato archiviato.</p></div>}
+              </div>
+            </section>
+          )}
 
           {page === "contabilita" && (
             <AccountingPage
@@ -7947,6 +8032,7 @@ function CondominiumsPage(
     onNew,
     onEdit,
     onDelete,
+    onArchive,
     deadlines,
     documents,
     assemblies,
@@ -8071,6 +8157,13 @@ function CondominiumsPage(
                   }
                 >
                   <><AppIcon name="settings" size={16} /> Modifica</>
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={() => onArchive(selected)}
+                >
+                  <><AppIcon name="folder" size={16} /> Archivia</>
                 </button>
 
                 <button
