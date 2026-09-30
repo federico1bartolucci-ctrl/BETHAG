@@ -1234,12 +1234,12 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
 if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1) {
       throw new Error("Il numero del SAL deve essere un intero maggiore o uguale a 1.");
     }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(input.progressDate || ""))) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.progressDate || ""))) {
       throw new Error("La data del SAL non è valida.");
     }
-    const amount = Math.max(0, amount);
-    const paidAmount = Math.max(0, paidAmount);
-    const percentage = Math.max(0, Math.min(100, percentage));
+    const amount = Math.max(0, Number(input.amount) || 0);
+    const paidAmount = Math.max(0, Number(input.paidAmount) || 0);
+    const percentage = Math.max(0, Math.min(100, Number(input.percentage) || 0));
     if (paidAmount > amount + 0.000001) {
       throw new Error("L'importo pagato non può essere superiore all'importo del SAL.");
     }
