@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2298,6 +2298,7 @@ function App() {
   );
   const [condominiumAiDraft, setCondominiumAiDraft] = useState<CondominiumCreationDraft | null>(null);
   const [condominiumAiFiles, setCondominiumAiFiles] = useState<string[]>([]);
+  const [condominiumAiIntakeId, setCondominiumAiIntakeId] = useState<string | null>(null);
   const [condominiumAiProcessing, setCondominiumAiProcessing] = useState(false);
   const [condominiumAiConfirmedUnits, setCondominiumAiConfirmedUnits] = useState<CondominiumCreationUnitDraft[]>([]);
 
@@ -3722,28 +3723,70 @@ function App() {
     openModal("condominium-ai");
   };
 
-  const analyzeCondominiumDocuments = (files: FileList | null) => {
+  const analyzeCondominiumDocuments = async (files: FileList | null) => {
     if (!files?.length) return;
     if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
-    setCondominiumAiFiles(Array.from(files).map((file) => file.name));
+
+    const selectedFiles = Array.from(files);
+    const sourceDocuments = selectedFiles.map((file) => ({
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+      lastModified: file.lastModified,
+    }));
+
+    setCondominiumAiFiles(selectedFiles.map((file) => file.name));
     setCondominiumAiProcessing(true);
-    window.setTimeout(() => {
-      setCondominiumAiDraft({
-        sourceDocuments: Array.from(files).map((file) => file.name),
+    setCondominiumAiIntakeId(null);
+
+    try {
+      const draft: CondominiumCreationDraft = {
+        sourceDocuments: selectedFiles.map((file) => file.name),
         confidence: 0,
         unitRecords: [],
         warnings: [
-          "La proposta deve essere verificata dall'amministratore.",
-          "Proprietari e millesimi, quando rilevati dai documenti, saranno proposti per unità e richiederanno conferma.",
+          "La proposta deve essere verificata e confermata dall'amministratore.",
+          "La pipeline OCR/AI documentale definitiva deve essere collegata prima di considerare compilati automaticamente i dati estratti.",
+          "Proprietari e millesimi, quando rilevati dai documenti, saranno sempre proposti per unità e non diventeranno definitivi senza conferma.",
         ],
         structure: {
           configured: false,
           civics: [],
           autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 },
         },
-      });
+      };
+
+      setCondominiumAiDraft(draft);
+
+      const workspaceId = await getActiveWorkspaceId();
+      if (workspaceId) {
+        const intakeId = await createCondominiumCreationIntake(workspaceId, {
+          source: "AI",
+          sourceDocuments,
+          extractedData: {
+            name: draft.name ?? "",
+            address: draft.address ?? "",
+            cap: draft.cap ?? "",
+            city: draft.city ?? "",
+            province: draft.province ?? "",
+            fiscalCode: draft.fiscalCode ?? "",
+            units: draft.units ?? 0,
+            unitRecords: draft.unitRecords ?? [],
+          },
+          structure: draft.structure ?? {},
+          validationErrors: [],
+          warnings: draft.warnings ?? [],
+          notes: "Proposta iniziale generata dal flusso di creazione assistita. Nessun dato definitivo è stato creato.",
+        });
+        setCondominiumAiIntakeId(intakeId);
+      }
+    } catch (error: any) {
+      console.error("BETHAG condominium AI intake error", error);
+      alert(error?.message || "Impossibile salvare la proposta AI.");
+      setCondominiumAiDraft(null);
+    } finally {
       setCondominiumAiProcessing(false);
-    }, 900);
+    }
   };
 
   const closeModal = () => {
@@ -7396,20 +7439,45 @@ function App() {
               files={condominiumAiFiles}
               processing={condominiumAiProcessing}
               onFiles={analyzeCondominiumDocuments}
-              onConfirm={(draft) => {
-                setEditingCondominium({
-                  ...emptyCondominium,
-                  name: draft.name ?? "",
-                  address: draft.address ?? "",
-                  cap: draft.cap ?? "",
-                  city: draft.city ?? "",
-                  province: draft.province ?? "",
-                  fiscalCode: draft.fiscalCode ?? "",
-                  structure: draft.structure,
-                });
-                setCondominiumAiConfirmedUnits(Array.isArray(draft.unitRecords) ? draft.unitRecords : []);
-                setCondominiumAiDraft(null);
-                setModalType("condominium");
+              onConfirm={async (draft) => {
+                try {
+                  const workspaceId = await getActiveWorkspaceId();
+                  if (workspaceId && condominiumAiIntakeId) {
+                    await confirmCondominiumCreationIntake(workspaceId, condominiumAiIntakeId, {
+                      extractedData: {
+                        name: draft.name ?? "",
+                        address: draft.address ?? "",
+                        cap: draft.cap ?? "",
+                        city: draft.city ?? "",
+                        province: draft.province ?? "",
+                        fiscalCode: draft.fiscalCode ?? "",
+                        units: draft.units ?? 0,
+                        unitRecords: Array.isArray(draft.unitRecords) ? draft.unitRecords : [],
+                      },
+                      structure: draft.structure ?? {},
+                      validationErrors: [],
+                      warnings: draft.warnings ?? [],
+                      notes: "Proposta verificata e confermata dall'amministratore; salvataggio definitivo ancora da eseguire nel modulo condominio.",
+                    });
+                  }
+
+                  setEditingCondominium({
+                    ...emptyCondominium,
+                    name: draft.name ?? "",
+                    address: draft.address ?? "",
+                    cap: draft.cap ?? "",
+                    city: draft.city ?? "",
+                    province: draft.province ?? "",
+                    fiscalCode: draft.fiscalCode ?? "",
+                    structure: draft.structure,
+                  });
+                  setCondominiumAiConfirmedUnits(Array.isArray(draft.unitRecords) ? draft.unitRecords : []);
+                  setCondominiumAiDraft(null);
+                  setModalType("condominium");
+                } catch (error: any) {
+                  console.error("BETHAG condominium AI confirmation error", error);
+                  alert(error?.message || "Impossibile confermare la proposta AI.");
+                }
               }}
               onCancel={closeModal}
             />
