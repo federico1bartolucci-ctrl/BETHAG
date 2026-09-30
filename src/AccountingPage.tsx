@@ -130,10 +130,12 @@ function AccountingPage({
   workspaceId,
   condominiums,
   isAdministrator = false,
+  aiEnabled = false,
 }: {
   workspaceId: string;
   condominiums: Condominium[];
   isAdministrator?: boolean;
+  aiEnabled?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("rendiconto");
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<number | "all">(
@@ -1687,7 +1689,8 @@ function AccountingPage({
               <span>Inserimento manuale sempre disponibile. L'AI, quando inclusa nel piano o sbloccata come componente aggiuntivo, crea una proposta da verificare.</span>
               <div className="row-actions" style={{marginTop:8}}>
                 {isAdministrator && <button className="secondary-button" onClick={openManualAllocationIntake}>＋ Inserimento manuale</button>}
-                {isAdministrator && <button className="secondary-button" onClick={openAIAllocationIntake}>✦ Acquisisci con AI</button>}
+                {isAdministrator && aiEnabled && <button className="secondary-button" onClick={openAIAllocationIntake}>✦ Acquisisci con AI</button>}
+                {isAdministrator && !aiEnabled && <span className="small-note">Acquisizione AI disponibile con il modulo AI.</span>}
               </div>
             </div>
             {allocationIntakes.length > 0 && <div className="cards-list" style={{marginBottom:12}}>
