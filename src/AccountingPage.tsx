@@ -92,6 +92,7 @@ type UnitOption = { id: string; condominium_id: string; unit_code: string; data:
 type MillesimalTable = { id:string; condominium_id:string; name:string; description:string; total_millesimi:number; active:boolean; notes:string; basis_type:"Millesimi"|"Quote personalizzate"|"Consumo"|"Misto"; scope_mode:"all"|"units"|"buildings"; scope_unit_ids:string[]; scope_building_codes:string[] };
 type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
 type ConsumptionReading = { id:string; condominium_id:string; fiscal_year_id:string|null; unit_id:string; service_type:string; period_start:string|null; period_end:string|null; meter_code:string; previous_reading:number|null; current_reading:number|null; consumption:number|null; kwh:number|null; allocation_value:number|null; charge_amount:number|null; source:string; notes:string; data:any };
+type AllocationRule = { id:string; condominium_id:string; name:string; expense_type:string|null; category:string|null; allocation_table_id:string; priority:number; active:boolean; notes:string };
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
@@ -148,6 +149,8 @@ function AccountingPage({
   const [millesimalTables, setMillesimalTables] = useState<MillesimalTable[]>([]);
   const [millesimalValues, setMillesimalValues] = useState<MillesimalValue[]>([]);
   const [consumptionReadings, setConsumptionReadings] = useState<ConsumptionReading[]>([]);
+  const [allocationRules, setAllocationRules] = useState<AllocationRule[]>([]);
+  const [allocationRuleForm, setAllocationRuleForm] = useState({name:"",expense_type:"",category:"",allocation_table_id:"",priority:100,active:true,notes:""});
   const [consumptionForm, setConsumptionForm] = useState({ fiscal_year_id:"", unit_id:"", service_type:"Riscaldamento", meter_code:"", period_start:"", period_end:"", previous_reading:"", current_reading:"", consumption:"", kwh:"", allocation_value:"", charge_amount:"", source:"Manuale", notes:"" });
   const [consumptionExpenseForm, setConsumptionExpenseForm] = useState({ ledger_entry_id:"", fiscal_year_id:"", service_type:"Riscaldamento" });
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -578,6 +581,7 @@ function AccountingPage({
         millesimalTablesResult,
         millesimalValuesResult,
         consumptionReadingsResult,
+        allocationRulesResult,
         installmentsResult,
         budgetsResult,
         carryoversResult,
@@ -595,6 +599,7 @@ function AccountingPage({
       setMillesimalTables((millesimalTablesResult.data ?? []) as MillesimalTable[]);
       setMillesimalValues((millesimalValuesResult.data ?? []) as MillesimalValue[]);
       setConsumptionReadings((consumptionReadingsResult.data ?? []) as ConsumptionReading[]);
+      setAllocationRules((allocationRulesResult.data ?? []) as AllocationRule[]);
       setInstallments((installmentsResult.data ?? []) as Installment[]);
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
@@ -896,12 +901,14 @@ function AccountingPage({
       return;
     }
     const expense = scopedLedger.find(e => e.id === autoAllocationForm.ledger_entry_id);
-    const table = scopedMillesimalTables.find(t => t.id === autoAllocationForm.table_id);
+    const matchingRule = expense ? allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(r.expense_type&&r.expense_type===expense.expense_type || r.category&&r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0] : undefined;
+    const resolvedTableId = autoAllocationForm.table_id || matchingRule?.allocation_table_id || "";
+    const table = scopedMillesimalTables.find(t => t.id === resolvedTableId);
     if (!expense || expense.direction !== "Uscita" || !table) {
       setAutoPreview([]);
       return;
     }
-    const selectedTableCheck = millesimalTableChecks.find(x => x.id === autoAllocationForm.table_id);
+    const selectedTableCheck = millesimalTableChecks.find(x => x.id === resolvedTableId);
     if (!selectedTableCheck?.complete) {
       setAutoPreview([]);
       setError("Il riparto non può essere calcolato: completare le quote millesimali di tutte le unità e verificare che la somma coincida con il totale della tabella.");
@@ -965,7 +972,7 @@ function AccountingPage({
         p_workspace_id:workspaceId,
         p_condominium_id:dbCondominiumId,
         p_ledger_entry_id:expense.id,
-        p_table_id:autoAllocationForm.table_id,
+        p_table_id:autoAllocationForm.table_id || allocationRules.filter(r=>r.active&&r.condominium_id===dbCondominiumId&&(r.expense_type&&r.expense_type===expense.expense_type || r.category&&r.category.toLowerCase()===expense.category.toLowerCase())).sort((a,b)=>a.priority-b.priority)[0]?.allocation_table_id,
         p_due_date:autoAllocationForm.due_date || expense.due_date || null
       });
       if (rpcError) throw rpcError;
@@ -1251,6 +1258,19 @@ function AccountingPage({
     if(!window.confirm("Generare il riparto automatico della spesa usando i dati di consumo?"))return;
     setSaving(true);setError("");
     try{const {data,error:rpcError}=await supabase.rpc("generate_consumption_allocations",{p_workspace_id:workspaceId,p_condominium_id:dbCondominiumId,p_ledger_entry_id:expense.id,p_fiscal_year_id:consumptionExpenseForm.fiscal_year_id,p_service_type:consumptionExpenseForm.service_type.trim()});if(rpcError)throw rpcError;flash("Riparto da consumi generato: "+Number(data||0)+" quote.");await load();}catch(e:any){setError(e?.message||"Impossibile generare il riparto da consumi.");}finally{setSaving(false);}
+  }
+
+
+  async function saveAllocationRule(e: React.FormEvent) {
+    e.preventDefault();
+    if(!supabase||!dbCondominiumId||!allocationRuleForm.name.trim()||!allocationRuleForm.allocation_table_id){setError("Indica nome e tabella del criterio automatico.");return;}
+    if(!allocationRuleForm.expense_type.trim()&&!allocationRuleForm.category.trim()){setError("Indica almeno il tipo di spesa o la categoria.");return;}
+    setSaving(true);setError("");
+    try{
+      const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,name:allocationRuleForm.name.trim(),expense_type:allocationRuleForm.expense_type.trim()||null,category:allocationRuleForm.category.trim()||null,allocation_table_id:allocationRuleForm.allocation_table_id,priority:Math.max(0,Math.floor(Number(allocationRuleForm.priority)||100)),active:allocationRuleForm.active,notes:allocationRuleForm.notes.trim()};
+      const {error:saveError}=await supabase.from("condominium_allocation_rules").insert(payload);if(saveError)throw saveError;
+      setAllocationRuleForm({name:"",expense_type:"",category:"",allocation_table_id:"",priority:100,active:true,notes:""});flash("Regola di riparto salvata.");await load();
+    }catch(e:any){setError(e?.message||"Impossibile salvare la regola di riparto.");}finally{setSaving(false);}
   }
 
   async function saveBudget(e: React.FormEvent) {
@@ -1716,7 +1736,9 @@ function AccountingPage({
           <h3>Spese ordinarie</h3><div className="form-grid"><label>Numero rate<input type="number" min="1" max="12" value={accountingSettingsForm.ordinary_installment_count} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_installment_count:Math.max(1,Math.min(12,Number(e.target.value)||1))})}/></label><label>Scadenze<textarea placeholder="2026-01-31, 2026-02-28, ..." value={accountingSettingsForm.ordinary_due_dates} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_due_dates:e.target.value})}/></label></div>
           <h3>Spese straordinarie</h3><label>Modalità<select value={accountingSettingsForm.extraordinary_mode} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_mode:e.target.value as "integrata"|"separata"})}><option value="separata">Gestione separata dalle ordinarie</option><option value="integrata">Integrare nelle rate ordinarie</option></select></label><label className="check-row"><input type="checkbox" checked={accountingSettingsForm.extraordinary_allow_multi_year} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_allow_multi_year:e.target.checked})}/> Consentire rate straordinarie su più esercizi</label>
           <div className="permission-box"><b>Regola</b><span>Massimo 12 rate per esercizio; i piani straordinari separati possono attraversare più annualità.</span></div><div className="form-actions"><button className="primary-button" disabled={saving}>Salva impostazioni</button></div></form>
-        </article><article className="card"><h2>Gestione criteri</h2><p>Le impostazioni diventano il criterio predefinito del condominio. I piani straordinari separati restano collegati alla spesa originaria.</p></article></section>
+        </article><article className="card"><h2>Regole automatiche di riparto</h2><p>Associa una categoria o un tipo di spesa a una tabella. Se nel riparto automatico non viene scelta una tabella, BETHAG utilizzerà la regola attiva con priorità più alta.</p>
+<form onSubmit={saveAllocationRule}><div className="form-grid"><label>Nome<input required value={allocationRuleForm.name} onChange={e=>setAllocationRuleForm({...allocationRuleForm,name:e.target.value})} placeholder="Riscaldamento"/></label><label>Priorità<input type="number" min="0" value={allocationRuleForm.priority} onChange={e=>setAllocationRuleForm({...allocationRuleForm,priority:Number(e.target.value)})}/></label><label>Tipo spesa<select value={allocationRuleForm.expense_type} onChange={e=>setAllocationRuleForm({...allocationRuleForm,expense_type:e.target.value})}><option value="">Qualsiasi</option><option>Ordinaria</option><option>Straordinaria</option></select></label><label>Categoria<input value={allocationRuleForm.category} onChange={e=>setAllocationRuleForm({...allocationRuleForm,category:e.target.value})} placeholder="Ascensore"/></label><label>Tabella<select required value={allocationRuleForm.allocation_table_id} onChange={e=>setAllocationRuleForm({...allocationRuleForm,allocation_table_id:e.target.value})}><option value="">Seleziona</option>{scopedMillesimalTables.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label></div><label>Note<textarea value={allocationRuleForm.notes} onChange={e=>setAllocationRuleForm({...allocationRuleForm,notes:e.target.value})}/></label><div className="form-actions"><button className="primary-button" disabled={saving}>Salva regola</button></div></form>
+{allocationRules.filter(r=>!dbCondominiumId||r.condominium_id===dbCondominiumId).map(r=><article className="row-card" key={r.id}><div><b>{r.name}</b><small>{r.expense_type||"Qualsiasi tipo"} · {r.category||"Qualsiasi categoria"} · priorità {r.priority}</small><span>{scopedMillesimalTables.find(t=>t.id===r.allocation_table_id)?.name||"Tabella non trovata"} · {r.active?"Attiva":"Disattivata"}</span></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_allocation_rules",r.id,"la regola di riparto")}>×</button>}</article>)}</article></section>
       ) : (
         <section className="card">
           <div className="section-heading">
@@ -1795,7 +1817,7 @@ function AccountingPage({
       {showAutoAllocationForm && <div className="modal-backdrop"><div className="modal-card">
         <h2>Riparto millesimale</h2>
         <label>Spesa<select value={autoAllocationForm.ledger_entry_id} onChange={e=>{setAutoAllocationForm({...autoAllocationForm,ledger_entry_id:e.target.value});setAutoPreview([])}}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita").map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label>
-        <label>Tabella<select value={autoAllocationForm.table_id} onChange={e=>{setAutoAllocationForm({...autoAllocationForm,table_id:e.target.value});setAutoPreview([])}}><option value="">Seleziona</option>{scopedMillesimalTables.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+        <label>Tabella<select value={autoAllocationForm.table_id} onChange={e=>{setAutoAllocationForm({...autoAllocationForm,table_id:e.target.value});setAutoPreview([])}}><option value="">Automatico da regola</option>{scopedMillesimalTables.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
         <button type="button" className="secondary-button" onClick={calculateAutomaticPreview}>Calcola anteprima</button>
         {autoPreview.length>0 && <div className="cards-list">{autoPreview.map(r=><div className="row-card" key={r.unit_id}><b>{r.unit_code}</b><span>{r.millesimi} · {money(r.amount)}</span></div>)}<div className="permission-box"><b>Totale</b><span>{money(autoPreview.reduce((s,r)=>s+r.amount,0))}</span></div></div>}
         <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>{setShowAutoAllocationForm(false);setAutoPreview([])}}>Annulla</button><button type="button" className="primary-button" disabled={saving||!autoPreview.length} onClick={generateAutomaticAllocation}>Conferma</button></div>
