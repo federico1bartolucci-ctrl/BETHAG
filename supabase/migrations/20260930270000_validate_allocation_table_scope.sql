@@ -99,9 +99,9 @@ begin
         if not exists(
           select 1
           from public.condominium_millesimal_tables t
+          cross join lateral unnest(t.scope_building_codes) as codes(code)
           where t.id=v_intake.allocation_table_id
-            and lower(trim(code))=v_building_code
-            for share
+            and lower(trim(codes.code))=v_building_code
         ) then
           raise exception 'L''unità % non rientra nell''ambito per fabbricato/civico della tabella selezionata',v_unit_id;
         end if;
