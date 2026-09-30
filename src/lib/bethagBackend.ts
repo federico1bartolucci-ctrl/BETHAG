@@ -1817,21 +1817,48 @@ export async function confirmCondominiumInvoice(
     const invoiceDate = parseBethagDate(payload.extractedData?.documentDate ?? payload.extractedData?.invoiceDate);
     const invoiceNumber = String(payload.extractedData?.invoiceNumber ?? payload.extractedData?.numeroFattura ?? "").trim();
     const supplierName = String(payload.extractedData?.supplier ?? "").trim();
+    const supplierVatNumber = String(
+      payload.extractedData?.supplierVatNumber ??
+      payload.extractedData?.partitaIva ??
+      payload.extractedData?.vatNumber ??
+      payload.extractedData?.vat ??
+      ""
+    ).replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
     let supplierId = payload.supplierId ?? null;
-    if (!supplierId && supplierName) {
+    if (!supplierId) {
       const { data: supplierRows, error: suppliersError } = await supabase
-        .from("suppliers").select("id,name").eq("workspace_id", workspaceId)
+        .from("suppliers").select("id,name,data,condominium_id").eq("workspace_id", workspaceId)
         .or(`condominium_id.eq.${condominium.id},condominium_id.is.null`);
       if (suppliersError) throw suppliersError;
       const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+      const normalizeTaxId = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const target = normalize(supplierName);
-      const exact = (supplierRows ?? []).find((item: any) => normalize(String(item.name ?? "")) === target);
-      const contained = exact ?? (supplierRows ?? []).find((item: any) => {
-        const candidate = normalize(String(item.name ?? ""));
-        return candidate && target && (candidate.includes(target) || target.includes(candidate));
-      });
-      supplierId = contained?.id ?? null;
+      const byVat = supplierVatNumber
+        ? (supplierRows ?? []).find((item: any) => {
+            const data = item.data && typeof item.data === "object" ? item.data : {};
+            const candidateVat = normalizeTaxId(data.vatNumber ?? data.partitaIva ?? data.vat ?? data.supplierVatNumber ?? data.piva);
+            return candidateVat && candidateVat === supplierVatNumber;
+          })
+        : null;
+      if (byVat) {
+        supplierId = byVat.id;
+      } else if (supplierName) {
+        const exact = (supplierRows ?? []).find((item: any) => normalize(String(item.name ?? "")) === target);
+        const exactNameHasConflictingVat = Boolean(exact && supplierVatNumber && (() => {
+          const data = exact.data && typeof exact.data === "object" ? exact.data : {};
+          const exactVat = normalizeTaxId(data.vatNumber ?? data.partitaIva ?? data.vat ?? data.supplierVatNumber ?? data.piva);
+          return exactVat && exactVat !== supplierVatNumber;
+        })());
+        if (exactNameHasConflictingVat) {
+          throw new Error(`La partita IVA rilevata (${supplierVatNumber}) non coincide con quella del fornitore "${exact.name}". Verifica il fornitore prima di confermare la fattura.`);
+        }
+        const contained = exact ?? (supplierRows ?? []).find((item: any) => {
+          const candidate = normalize(String(item.name ?? ""));
+          return candidate && target && (candidate.includes(target) || target.includes(candidate));
+        });
+        supplierId = contained?.id ?? null;
+      }
     }
     if (!supplierId) throw new Error(supplierName ? `Il fornitore "${supplierName}" non è stato associato automaticamente. Seleziona/crea il fornitore in Anagrafica prima di confermare la fattura.` : "Il fornitore della fattura non è stato riconosciuto. Verificalo prima della conferma.");
 
