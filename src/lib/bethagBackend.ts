@@ -143,6 +143,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       id: row.id,
       condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
       unitCode: row.unit_code,
+      buildingCode: row.building_code ?? row.data?.buildingCode ?? "",
       unitType: row.data?.unitType ?? "Abitazione",
       cadastralCategory: row.data?.cadastralCategory ?? "",
       cadastralAutonomous: row.data?.cadastralAutonomous ?? (row.data?.unitType !== "Abitazione"),
@@ -583,7 +584,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // può inferire un indice espresso da (condominium_id, unit_code).
     const { data: existingUnits, error: existingUnitError } = await supabase
       .from("condominium_units")
-      .select("id, unit_code")
+      .select("id, unit_code, building_code")
       .eq("condominium_id", condominium.id);
 
     if (existingUnitError) throw existingUnitError;
@@ -615,6 +616,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
       externalOwners: Array.isArray(item.externalOwners) ? item.externalOwners : [],
       notes: item.notes ?? "",
       active: item.active ?? true,
+      building_code: String(item.buildingCode ?? "").trim(),
     };
 
     if (existingUnit?.id) {
@@ -625,6 +627,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
           workspace_id: workspaceId,
           condominium_id: condominium.id,
           unit_code: unitCode,
+          building_code: String(item.buildingCode ?? "").trim(),
           data: unitData,
           updated_at: new Date().toISOString(),
         })
@@ -673,6 +676,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
         workspace_id: workspaceId,
         condominium_id: condominium.id,
         unit_code: unitCode,
+        building_code: String(item.buildingCode ?? "").trim(),
         data: unitData,
       })
       .select("id, unit_code, data")
