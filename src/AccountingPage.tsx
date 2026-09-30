@@ -1110,20 +1110,22 @@ function AccountingPage({
       const unitIds = [...new Set(selectedAllocations.map(a => a.unit_id).filter(Boolean))];
       const { data: unitMembers, error: unitMembersError } = await supabase
         .from("condominium_members")
-        .select("id,unit_id,role,active")
+        .select("id,unit_id,role,active,data")
         .eq("condominium_id", dbCondominiumId)
         .eq("active", true)
         .in("unit_id", unitIds);
       if (unitMembersError) throw unitMembersError;
       const byUnit = new Map<string, any[]>();
       for (const member of unitMembers || []) {
+        const condominiumRole = String(member.data?.role || "").trim();
+        if (condominiumRole !== "Proprietario") continue;
         const list = byUnit.get(member.unit_id) || [];
         list.push(member);
         byUnit.set(member.unit_id, list);
       }
       const ambiguousUnits = unitIds.filter(unitId => (byUnit.get(unitId) || []).length !== 1);
       if (ambiguousUnits.length) {
-        setError("L'unificazione è disponibile solo per unità con un unico proprietario/responsabile attivo. Le altre rate resteranno disgiunte.");
+        setError("L'unificazione è disponibile solo per unità con un unico proprietario attivo. Le unità con più proprietari o senza proprietario identificato restano disgiunte.");
         return;
       }
       resolvedMemberByUnit = new Map(unitIds.map(unitId => [unitId, byUnit.get(unitId)![0].id]));
