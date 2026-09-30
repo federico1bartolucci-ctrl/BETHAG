@@ -3724,23 +3724,29 @@ function App() {
     openModal("condominium-ai");
   };
 
-  const analyzeCondominiumDocuments = async (files: FileList | null) => {
-    if (!files?.length) return;
-    if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
-
-    const selectedFiles = Array.from(files);
+  const processCondominiumDocuments = async (
+    selectedFiles: File[],
+    storageMode: "both" | "analysis" | "storage"
+  ) => {
+    if (!selectedFiles.length) return;
     setCondominiumAiFiles(selectedFiles.map((file) => file.name));
     setCondominiumAiProcessing(true);
     setCondominiumAiIntakeId(null);
-
     try {
       const workspaceId = await getActiveWorkspaceId();
       if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
 
+      let storedDocuments: any[] = [];
+      if (storageMode !== "analysis") {
+        storedDocuments = await storeCondominiumDocuments(workspaceId, selectedFiles);
+      }
+      if (storageMode === "storage") {
+        alert("Documenti memorizzati correttamente. L'analisi AI non è stata eseguita.");
+        return;
+      }
+
       const draft = await analyzeCondominiumDocumentsWithAI(workspaceId, selectedFiles);
-
       setCondominiumAiDraft(draft);
-
       const intakeId = await createCondominiumCreationIntake(workspaceId, {
         source: "AI",
         sourceDocuments: selectedFiles.map((file) => ({
@@ -3748,6 +3754,8 @@ function App() {
           type: file.type || "application/octet-stream",
           size: file.size,
           lastModified: file.lastModified,
+          stored: storageMode !== "analysis",
+          storagePath: storedDocuments.find((item) => item.name === file.name)?.path ?? null,
         })),
         extractedData: {
           name: draft.name ?? "",
@@ -3762,18 +3770,40 @@ function App() {
         structure: draft.structure ?? {},
         validationErrors: [],
         warnings: draft.warnings ?? [],
-        notes: "Proposta estratta automaticamente dai documenti e sottoposta alla verifica obbligatoria dell'amministratore.",
+        notes: storageMode === "analysis"
+          ? "Proposta estratta automaticamente senza memorizzazione permanente del file originale."
+          : "Proposta estratta automaticamente e documento originale memorizzato.",
       });
       setCondominiumAiIntakeId(intakeId);
     } catch (error: any) {
       console.error("BETHAG condominium AI analysis error", error);
-      alert(error?.message || "Impossibile analizzare i documenti con l'AI.");
+      alert(error?.message || "Impossibile elaborare i documenti.");
       setCondominiumAiDraft(null);
     } finally {
       setCondominiumAiProcessing(false);
+      setCondominiumAiLargeFiles([]);
     }
   };
 
+  const analyzeCondominiumDocuments = async (files: FileList | null) => {
+    if (!files?.length) return;
+    if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
+    const selectedFiles = Array.from(files);
+    const largeFiles = selectedFiles.filter((file) => file.size >= 25 * 1024 * 1024);
+    if (largeFiles.length) {
+      setCondominiumAiFiles(selectedFiles.map((file) => file.name));
+      setCondominiumAiLargeFiles(selectedFiles);
+      return;
+    }
+    await processCondominiumDocuments(selectedFiles, "both");
+  };
+
+  const handleLargeCondominiumFiles = async (
+    mode: "both" | "analysis" | "storage"
+  ) => {
+    if (!condominiumAiLargeFiles.length) return;
+    await processCondominiumDocuments(condominiumAiLargeFiles, mode);
+  };
   const closeModal = () => {
     setShowModal(false);
     setModalType("");
