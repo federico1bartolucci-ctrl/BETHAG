@@ -5802,7 +5802,7 @@ function App() {
         <style>{styles}</style>
         <ResidentPortalView
           email={sessionEmail}
-          condominiums={condominiums}
+          condominiums={condominiums.filter((c) => !c.archivedAt)}
           portalMembers={portalMembers}
           condominiumMembers={condominiumMembers}
           documents={documents}
@@ -7084,11 +7084,11 @@ function App() {
           )}
 
           {modalType === "condominium-member" && (
-            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums} members={condominiumMembers} units={condominiumUnits} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
+            <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums.filter((c) => !c.archivedAt)} members={condominiumMembers} units={condominiumUnits} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
           )}
 
           {modalType === "condominium-request" && (
-            <CondominiumRequestForm value={condominiumRequestForm} setValue={setCondominiumRequestForm} condominiums={condominiums} members={condominiumMembers} suppliers={suppliers} activities={activities} onSubmit={saveCondominiumRequest} onCancel={closeModal} editing={!!selectedCondominiumRequest} />
+            <CondominiumRequestForm value={condominiumRequestForm} setValue={setCondominiumRequestForm} condominiums={condominiums.filter((c) => !c.archivedAt)} members={condominiumMembers} suppliers={suppliers} activities={activities} onSubmit={saveCondominiumRequest} onCancel={closeModal} editing={!!selectedCondominiumRequest} />
           )}
 
           {modalType ===
