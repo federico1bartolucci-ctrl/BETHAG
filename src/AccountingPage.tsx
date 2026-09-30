@@ -99,6 +99,7 @@ type AllocationIntake = { id:string; condominium_id:string; source:"Manuale"|"AI
 type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
+type CarryoverCompensation = { id:string; condominium_id:string; carryover_id:string; target_installment_id:string|null; amount:number; notes:string; created_at:string };
 type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "consumi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni";
 type AccountingSettings = { id:string; condominium_id:string; accounting_start_date:string; accounting_end_date:string; ordinary_installment_count:number; ordinary_due_dates:string[]; extraordinary_mode:"integrata"|"separata"; extraordinary_allow_multi_year:boolean; };
 
@@ -165,6 +166,10 @@ function AccountingPage({
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [carryovers, setCarryovers] = useState<FiscalCarryover[]>([]);
+  const [carryoverCompensations, setCarryoverCompensations] = useState<CarryoverCompensation[]>([]);
+  const [showCarryoverCompensation, setShowCarryoverCompensation] = useState(false);
+  const [compensationCarryover, setCompensationCarryover] = useState<FiscalCarryover | null>(null);
+  const [compensationForm, setCompensationForm] = useState({ amount:0, target_installment_id:"", notes:"" });
   const [accountingSettings, setAccountingSettings] = useState<AccountingSettings | null>(null);
   const [accountingSettingsForm, setAccountingSettingsForm] = useState({ accounting_start_date:new Date().getFullYear()+"-01-01", accounting_end_date:new Date().getFullYear()+"-12-31", ordinary_installment_count:12, ordinary_due_dates:"", extraordinary_mode:"separata" as "integrata"|"separata", extraordinary_allow_multi_year:true });
   const [showBudgetForm, setShowBudgetForm] = useState(false);
@@ -521,7 +526,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
-      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult] =
+      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
             .from("condominium_fiscal_years")
@@ -588,6 +593,7 @@ function AccountingPage({
             .eq("workspace_id", workspaceId)
             .order("created_at"),
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
+          supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
         ]);
       for (const result of [
         yearsResult,
@@ -605,6 +611,7 @@ function AccountingPage({
         budgetsResult,
         carryoversResult,
         settingsResult,
+        carryoverCompensationsResult,
       ]) {
         if (result.error) throw result.error;
       }
@@ -623,6 +630,7 @@ function AccountingPage({
       setInstallments((installmentsResult.data ?? []) as Installment[]);
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
+      setCarryoverCompensations((carryoverCompensationsResult.data ?? []) as CarryoverCompensation[]);
       const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
       if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
@@ -635,6 +643,41 @@ function AccountingPage({
   useEffect(() => {
     void load();
   }, [workspaceId, selectedCondominiumId]);
+
+  async function compensateCarryover() {
+    if (!supabase || !compensationCarryover || !dbCondominiumId) return;
+    const amount = Number(compensationForm.amount || 0);
+    if (!(amount > 0)) { setError("Inserisci un importo di compensazione maggiore di zero."); return; }
+    const residual = Math.abs(Number(compensationCarryover.balance || 0));
+    if (amount > residual + 0.005) { setError("L'importo supera il residuo della partita riportata."); return; }
+    if (compensationCarryover.kind === "Credito" && compensationForm.target_installment_id) {
+      const target = installments.find(i => i.id === compensationForm.target_installment_id);
+      if (!target) { setError("Rata di destinazione non trovata."); return; }
+      const already = carryoverCompensations.filter(x => x.target_installment_id === target.id).reduce((s,x)=>s+Number(x.amount||0),0);
+      const targetResidual = Number(target.amount||0)-Number(target.paid_amount||0)-already;
+      if (amount > targetResidual + 0.005) { setError("La compensazione supera il residuo effettivo della rata."); return; }
+    }
+    if (compensationCarryover.kind === "Debito" && compensationForm.target_installment_id) {
+      setError("Un debito riportato non può essere applicato come credito a una rata corrente."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      const { error: rpcError } = await supabase.rpc("compensate_fiscal_carryover", {
+        p_workspace_id: workspaceId,
+        p_condominium_id: dbCondominiumId,
+        p_carryover_id: compensationCarryover.id,
+        p_amount: Math.round(amount*100)/100,
+        p_target_installment_id: compensationForm.target_installment_id || null,
+        p_notes: compensationForm.notes.trim(),
+      });
+      if (rpcError) throw rpcError;
+      setShowCarryoverCompensation(false); setCompensationCarryover(null);
+      setCompensationForm({amount:0,target_installment_id:"",notes:""});
+      flash("Compensazione registrata correttamente.");
+      await load();
+    } catch (e:any) { setError(e?.message || "Impossibile registrare la compensazione."); }
+    finally { setSaving(false); }
+  }
 
   function flash(text: string) {
     setMessage(text);
@@ -1930,7 +1973,19 @@ function AccountingPage({
         </section>
       )}
 
-      <div className="card"><div className="section-heading"><div><h2>Partite riportate</h2><p>Crediti e debiti individuali provenienti dagli esercizi precedenti.</p></div></div>{rendicontoCarryovers.length===0 ? <p>Nessuna partita riportata.</p> : <div className="cards-list">{rendicontoCarryovers.map(c=>{const unit=units.find(u=>u.id===c.unit_id); const source=scopedYears.find(y=>y.id===c.source_fiscal_year_id); return <article className="row-card" key={c.id}><div><b>{unit?.unit_code || "Unità non associata"} · {c.kind}</b><small>Da {source?.name || "esercizio precedente"} · {c.status}</small><span>{money(Math.abs(Number(c.balance||0)))}</span></div></article>})}</div>}<div className="permission-box"><span>Debiti riportati: {money(carryoverDebt)}</span><span>Crediti riportati: {money(carryoverCredit)}</span></div></div>
+      <div className="card"><div className="section-heading"><div><h2>Partite riportate</h2><p>Crediti e debiti individuali provenienti dagli esercizi precedenti.</p></div></div>{rendicontoCarryovers.length===0 ? <p>Nessuna partita riportata.</p> : <div className="cards-list">{rendicontoCarryovers.map(c=>{const unit=units.find(u=>u.id===c.unit_id); const source=scopedYears.find(y=>y.id===c.source_fiscal_year_id); const residual=Math.abs(Number(c.balance||0)); return <article className="row-card" key={c.id}><div><b>{unit?.unit_code || "Unità non associata"} · {c.kind}</b><small>Da {source?.name || "esercizio precedente"} · {c.status}</small><span>Residuo {money(residual)}</span>{c.status!=="Compensato" && isAdministrator && <button className="secondary-button small" onClick={()=>{setCompensationCarryover(c);setCompensationForm({amount:residual,target_installment_id:"",notes:""});setShowCarryoverCompensation(true);}}>Compensa</button>}</div></article>})}</div>}<div className="permission-box"><span>Debiti riportati: {money(carryoverDebt)}</span><span>Crediti riportati: {money(carryoverCredit)}</span></div></div>
+
+      {showCarryoverCompensation && compensationCarryover && (
+        <div className="modal-backdrop"><form className="modal-card" onSubmit={(e)=>{e.preventDefault();void compensateCarryover();}}>
+          <h2>Compensa partita riportata</h2>
+          <p><b>{compensationCarryover.kind}</b> · Residuo {money(Math.abs(Number(compensationCarryover.balance||0)))}</p>
+          <label>Importo<input type="number" min="0.01" step="0.01" required value={compensationForm.amount} onChange={e=>setCompensationForm({...compensationForm,amount:Number(e.target.value)})}/></label>
+          {compensationCarryover.kind==="Credito" && <label>Applica a rata corrente<select value={compensationForm.target_installment_id} onChange={e=>setCompensationForm({...compensationForm,target_installment_id:e.target.value})}><option value="">Nessuna rata specifica</option>{installments.filter(i=>i.unit_id===compensationCarryover.unit_id && Number(i.amount)>Number(i.paid_amount)).map(i=><option key={i.id} value={i.id}>{i.title} · {i.due_date || "senza scadenza"} · residuo {money(Math.max(0,Number(i.amount)-Number(i.paid_amount)-carryoverCompensations.filter(x=>x.target_installment_id===i.id).reduce((s,x)=>s+Number(x.amount||0),0)))}</option>)}</select></label>}
+          {compensationCarryover.kind==="Debito" && <p className="small-note">Il debito viene compensato come partita autonoma e non viene registrato come pagamento di una rata corrente.</p>}
+          <label>Note<textarea value={compensationForm.notes} onChange={e=>setCompensationForm({...compensationForm,notes:e.target.value})}/></label>
+          <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowCarryoverCompensation(false)}>Annulla</button><button className="primary-button" disabled={saving}>Conferma compensazione</button></div>
+        </form></div>
+      )}
 
       {showYearForm && (
         <div className="modal-backdrop"><form className="modal-card" onSubmit={saveYear}>
