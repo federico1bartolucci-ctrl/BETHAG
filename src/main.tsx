@@ -3986,6 +3986,78 @@ function App() {
 
         await saveCondominiumBackend(workspaceId, savedItem);
 
+        // Alla prima creazione, la struttura configurata dal wizard genera
+        // le sole unità anagrafiche. Proprietari e millesimi restano vuoti:
+        // non vengono mai inventati dal configuratore.
+        if (!isEditing && savedItem.structure?.configured) {
+          const structure = savedItem.structure;
+          const generatedUnits: CondominiumUnit[] = [];
+
+          structure.civics.forEach((civic) => {
+            civic.buildings.forEach((building) => {
+              building.scales.forEach((scale) => {
+                for (let interior = 1; interior <= Math.max(0, Number(scale.interiors) || 0); interior += 1) {
+                  generatedUnits.push({
+                    id: "",
+                    condominiumId: savedItem.id,
+                    unitCode: `${civic.label} - ${building.label} - ${scale.label} - Int. ${interior}`,
+                    unitType: "Abitazione",
+                    cadastralCategory: "",
+                    cadastralAutonomous: true,
+                    millesimi: "",
+                    civicCode: civic.label,
+                    buildingCode: building.label,
+                    staircaseCode: scale.label,
+                    incorporatedInUnitId: "",
+                    relationshipToResidentialUnit: "Nessuna",
+                    ownerMode: "condominium_member",
+                    ownerMemberIds: [],
+                    externalOwners: [],
+                    notes: "",
+                    active: true,
+                  });
+                }
+              });
+            });
+          });
+
+          const autonomousDefinitions: Array<[CondominiumUnit["unitType"], string, number]> = [
+            ["Garage", "Box", structure.autonomous.garages],
+            ["Cantina", "Cantina", structure.autonomous.cantine],
+            ["Posto auto", "Posto auto", structure.autonomous.postiAuto],
+            ["Altro", "Altra pertinenza", structure.autonomous.altre],
+          ];
+
+          autonomousDefinitions.forEach(([unitType, prefix, count]) => {
+            for (let index = 1; index <= Math.max(0, Number(count) || 0); index += 1) {
+              generatedUnits.push({
+                id: "",
+                condominiumId: savedItem.id,
+                unitCode: `${prefix} ${index}`,
+                unitType,
+                cadastralCategory: unitType === "Garage" ? "C/6" : unitType === "Cantina" ? "C/2" : "",
+                cadastralAutonomous: true,
+                millesimi: "",
+                civicCode: "",
+                buildingCode: "",
+                staircaseCode: "",
+                incorporatedInUnitId: "",
+                relationshipToResidentialUnit: "Nessuna",
+                ownerMode: "condominium_member",
+                ownerMemberIds: [],
+                externalOwners: [],
+                notes: "",
+                active: true,
+              });
+            }
+          });
+
+          for (const generatedUnit of generatedUnits) {
+            const savedUnit = await saveCondominiumUnitBackend(workspaceId, generatedUnit);
+            generatedUnit.id = String(savedUnit?.id || generatedUnit.id || ("local-" + makeId()));
+          }
+        }
+
         const refreshedBackend = await loadBackendState(workspaceId);
         setCondominiumUnits(
           Array.isArray(refreshedBackend.condominiumUnits)
@@ -4011,6 +4083,68 @@ function App() {
         );
         return;
       }
+    }
+
+    if (!isEditing && savedItem.structure?.configured && !(supabaseConfigured && supabase)) {
+      const structure = savedItem.structure;
+      const generatedUnits: CondominiumUnit[] = [];
+      structure.civics.forEach((civic) => {
+        civic.buildings.forEach((building) => {
+          building.scales.forEach((scale) => {
+            for (let interior = 1; interior <= Math.max(0, Number(scale.interiors) || 0); interior += 1) {
+              generatedUnits.push({
+                id: "local-" + makeId(),
+                condominiumId: savedItem.id,
+                unitCode: `${civic.label} - ${building.label} - ${scale.label} - Int. ${interior}`,
+                unitType: "Abitazione",
+                cadastralCategory: "",
+                cadastralAutonomous: true,
+                millesimi: "",
+                civicCode: civic.label,
+                buildingCode: building.label,
+                staircaseCode: scale.label,
+                incorporatedInUnitId: "",
+                relationshipToResidentialUnit: "Nessuna",
+                ownerMode: "condominium_member",
+                ownerMemberIds: [],
+                externalOwners: [],
+                notes: "",
+                active: true,
+              });
+            }
+          });
+        });
+      });
+      const autonomousDefinitions: Array<[CondominiumUnit["unitType"], string, number]> = [
+        ["Garage", "Box", structure.autonomous.garages],
+        ["Cantina", "Cantina", structure.autonomous.cantine],
+        ["Posto auto", "Posto auto", structure.autonomous.postiAuto],
+        ["Altro", "Altra pertinenza", structure.autonomous.altre],
+      ];
+      autonomousDefinitions.forEach(([unitType, prefix, count]) => {
+        for (let index = 1; index <= Math.max(0, Number(count) || 0); index += 1) {
+          generatedUnits.push({
+            id: "local-" + makeId(),
+            condominiumId: savedItem.id,
+            unitCode: `${prefix} ${index}`,
+            unitType,
+            cadastralCategory: unitType === "Garage" ? "C/6" : unitType === "Cantina" ? "C/2" : "",
+            cadastralAutonomous: true,
+            millesimi: "",
+            civicCode: "",
+            buildingCode: "",
+            staircaseCode: "",
+            incorporatedInUnitId: "",
+            relationshipToResidentialUnit: "Nessuna",
+            ownerMode: "condominium_member",
+            ownerMemberIds: [],
+            externalOwners: [],
+            notes: "",
+            active: true,
+          });
+        }
+      });
+      setCondominiumUnits((current) => [...current, ...generatedUnits]);
     }
 
     setCondominiums(nextCondominiums);
