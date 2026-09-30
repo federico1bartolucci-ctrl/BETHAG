@@ -802,6 +802,19 @@ function AccountingPage({
       setError("La data del movimento non rientra nell'esercizio contabile selezionato.");
       return;
     }
+    if (editingLedger) {
+      const { count: linkedInstallments, error: linkedInstallmentsError } = await supabase
+        .from("condominium_installments")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", dbCondominiumId)
+        .eq("ledger_entry_id", editingLedger.id);
+      if (linkedInstallmentsError) { setError(linkedInstallmentsError.message); return; }
+      if ((linkedInstallments || 0) > 0 && (Number(ledgerForm.amount) !== Number(editingLedger.amount) || ledgerForm.direction !== editingLedger.direction)) {
+        setError("La voce contabile è collegata a rate generate dal riparto. Per mantenere la quadratura, importo e natura della spesa non possono essere modificati finché esistono rate collegate.");
+        return;
+      }
+    }
     setSaving(true);
     setError("");
     try {
