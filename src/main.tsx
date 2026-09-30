@@ -14801,6 +14801,10 @@ function DocumentForm({
                 if (!proceed) {
                   setSelectedFileName("");
                   setSelectedDocumentFile(null);
+                  setValue({
+                    ...value,
+                    fileSizeBytes: undefined,
+                  });
                   return;
                 }
               }
