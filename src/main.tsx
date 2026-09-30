@@ -6599,6 +6599,7 @@ function App() {
                   "condominium"
                 );
               }}
+              onNewCondominiumAi={openCondominiumAiCreation}
               onEdit={(
                 item: Condominium
               ) => {
@@ -8475,6 +8476,7 @@ function CondominiumsPage(
     onNewCommunication,
     onPrepareEmail,
     openCondominiumEmailComposer,
+    onNewCondominiumAi,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
@@ -8718,7 +8720,7 @@ function CondominiumsPage(
 
       {canManageCondominium && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-          <button type="button" className="secondary-button" onClick={openCondominiumAiCreation}>✦ Crea condominio con AI</button>
+          <button type="button" className="secondary-button" onClick={onNewCondominiumAi}>✦ Crea condominio con AI</button>
         </div>
       )}
 
