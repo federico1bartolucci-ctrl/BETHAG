@@ -300,7 +300,7 @@ function AccountingPage({
   const scopedMillesimalValues = useMemo(() => dbCondominiumId ? millesimalValues.filter(v=>v.condominium_id===dbCondominiumId) : millesimalValues,[dbCondominiumId,millesimalValues]);
   const millesimalTableChecks = useMemo(() => scopedMillesimalTables.map(t => {
     const allUnits = units.filter(u => !dbCondominiumId || u.condominium_id === dbCondominiumId);
-    const scopedUnits = allUnits.filter(u => t.scope_mode === "all" || (t.scope_mode === "units" && t.scope_unit_ids.includes(u.id)) || (t.scope_mode === "buildings" && t.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())));
+    const scopedUnits = allUnits.filter(u => t.scope_mode === "all" || (t.scope_mode === "units" && t.scope_unit_ids.includes(u.id)) || (t.scope_mode === "buildings" && t.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || (u as any).data?.building_code || (u as any).data?.civic_code || (u as any).data?.fabbricato || "").trim().toLowerCase())));
     const values = scopedUnits.map(u => scopedMillesimalValues.find(v => v.table_id === t.id && v.unit_id === u.id)).filter(Boolean) as MillesimalValue[];
     const eligible = values.filter(v => !v.excluded);
     const sum = eligible.reduce((s,v) => s + Number(v.value || 0), 0);
@@ -911,7 +911,7 @@ function AccountingPage({
   }
 
   function calculateAutomaticPreview() {
-    if (!dbCondominiumId || !autoAllocationForm.ledger_entry_id || !autoAllocationForm.table_id) {
+    if (!dbCondominiumId || !autoAllocationForm.ledger_entry_id) {
       setAutoPreview([]);
       return;
     }
@@ -959,7 +959,7 @@ function AccountingPage({
   }
 
   async function generateAutomaticAllocation() {
-    if (!supabase || !dbCondominiumId || !autoAllocationForm.ledger_entry_id || !autoAllocationForm.table_id) {
+    if (!supabase || !dbCondominiumId || !autoAllocationForm.ledger_entry_id) {
       setError("Seleziona una spesa e una tabella millesimale.");
       return;
     }
@@ -1756,7 +1756,7 @@ function AccountingPage({
         <section className="card">
           <div className="section-heading">
             <div><h2>Ripartizione delle spese</h2><p>Associa una spesa alle unità e registra base di riparto, millesimi, importo e stato.</p></div>
-            {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { (()=>{ const firstExpense=scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id)); const useOrd=firstExpense?.expense_type==="Ordinaria"; const dates=useOrd ? (accountingSettings?.ordinary_due_dates??[]) : []; setAllocationInstallmentForm({ ledger_entry_id:firstExpense?.id??"", title:firstExpense?.expense_type==="Straordinaria"?"Rate lavoro straordinario":"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id??"", installment_count:dates.length||accountingSettings?.ordinary_installment_count||1, due_dates:dates.join(", ") }); setShowInstallmentsFromAllocation(true); })(); }}>Genera rate</button><button className="secondary-button" onClick={() => { const firstExpense = scopedLedger.find((e) => e.direction === "Uscita"); setAutoAllocationForm({ ledger_entry_id: firstExpense?.id ?? "", table_id: scopedMillesimalTables.find(t => t.active)?.id ?? "", due_date: firstExpense?.due_date ?? "" }); setAutoPreview([]); setError(""); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
+            {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { (()=>{ const firstExpense=scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id)); const useOrd=firstExpense?.expense_type==="Ordinaria"; const dates=useOrd ? (accountingSettings?.ordinary_due_dates??[]) : []; setAllocationInstallmentForm({ ledger_entry_id:firstExpense?.id??"", title:firstExpense?.expense_type==="Straordinaria"?"Rate lavoro straordinario":"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id??"", installment_count:dates.length||accountingSettings?.ordinary_installment_count||1, due_dates:dates.join(", ") }); setShowInstallmentsFromAllocation(true); })(); }}>Genera rate</button><button className="secondary-button" onClick={() => { const firstExpense = scopedLedger.find((e) => e.direction === "Uscita"); setAutoAllocationForm({ ledger_entry_id: firstExpense?.id ?? "", table_id: "", due_date: firstExpense?.due_date ?? "" }); setAutoPreview([]); setError(""); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
           </div>
           {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (<>
             <div className="permission-box" style={{marginBottom:12}}>
