@@ -4849,23 +4849,105 @@ function App() {
     }
   };
 
-  const confirmDocumentAI = (
+  const confirmDocumentAI = async (
     id: number
   ) => {
     if (!isAdministrator) {
       alert("La conferma dell'analisi AI è riservata all'Amministratore.");
       return;
     }
-    setDocuments((current) =>
-      current.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              aiStatus: "Confermato",
-            }
-          : doc
-      )
-    );
+
+    const document = documents.find((item) => item.id === id);
+    if (!document) return;
+
+    try {
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId || !supabase) throw new Error("Workspace o Supabase non disponibili.");
+
+      let operationalMessage = "Dati AI confermati.";
+      const extracted = document.extractedData ? JSON.parse(document.extractedData) : null;
+
+      if (document.aiDocumentType === "Riparto spese" && extracted) {
+        const { data: condominium } = await supabase
+          .from("condominiums")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("legacy_id", document.condominiumId)
+          .maybeSingle();
+
+        if (!condominium?.id) throw new Error("Condominio associato al documento non trovato.");
+
+        const { data: dbDocument } = await supabase
+          .from("documents")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("legacy_id", document.id)
+          .maybeSingle();
+
+        const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];
+        const { data: dbUnits } = await supabase
+          .from("condominium_units")
+          .select("id,unit_code,data")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", condominium.id);
+
+        const rows = rawRows.map((row: any) => {
+          const unitCode = String(row.unitCode ?? "").trim();
+          const matched = (dbUnits ?? []).find((unit: any) =>
+            String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase()
+          );
+          const amount = Number(String(row.amount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+          const millesimi = Number(String(row.millesimi ?? "").replace(",", "."));
+          return {
+            unit_id: matched?.id ?? "",
+            unit_code: unitCode,
+            description: row.description ?? "",
+            amount: Number.isFinite(amount) ? amount : 0,
+            millesimi: Number.isFinite(millesimi) ? millesimi : 0,
+            owner: row.owner ?? "",
+            matched: Boolean(matched),
+          };
+        });
+
+        const validationErrors = rows
+          .filter((row: any) => !row.unit_id)
+          .map((row: any) => "Unità non trovata in BETHAG: " + (row.unit_code || "senza codice"));
+
+        const expenseAmount = Number(
+          String(extracted.expenseAmount ?? "").replace(/[^0-9,.-]/g, "").replace(",", ".")
+        );
+
+        const { error } = await supabase.from("condominium_allocation_intakes").insert({
+          workspace_id: workspaceId,
+          condominium_id: condominium.id,
+          source: "AI",
+          status: "Da verificare",
+          document_id: dbDocument?.id ?? null,
+          title: document.name,
+          description: extracted.summary ?? "Riparto spese estratto automaticamente.",
+          expense_amount: Number.isFinite(expenseAmount) ? expenseAmount : null,
+          extracted_data: extracted,
+          rows,
+          validation_errors: validationErrors,
+          notes: "Proposta generata dall'AI e confermata dall'amministratore. Le imputazioni contabili definitive richiedono l'applicazione esplicita dalla sezione Contabilità.",
+        });
+
+        if (error) throw error;
+        operationalMessage = validationErrors.length
+          ? "Dati AI confermati. Il riparto è stato trasferito in Contabilità come proposta da verificare; alcune unità non sono state associate automaticamente."
+          : "Dati AI confermati. Il riparto è stato trasferito in Contabilità come proposta da verificare.";
+      }
+
+      setDocuments((current) =>
+        current.map((doc) =>
+          doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc
+        )
+      );
+      alert(operationalMessage);
+    } catch (error: any) {
+      console.error("BETHAG AI confirmation failed", error);
+      alert(error?.message || "Impossibile confermare e trasferire i dati AI.");
+    }
   };
 
 
