@@ -3731,9 +3731,10 @@ function App() {
       setCondominiumAiDraft({
         sourceDocuments: Array.from(files).map((file) => file.name),
         confidence: 0,
+        unitRecords: [],
         warnings: [
           "La proposta deve essere verificata dall'amministratore.",
-          "Nessun proprietario, millesimo o dato contabile viene creato senza conferma.",
+          "Proprietari e millesimi, quando rilevati dai documenti, saranno proposti per unità e richiederanno conferma.",
         ],
         structure: {
           configured: false,
@@ -14047,23 +14048,6 @@ function CondominiumForm({
               v
             )
           }
-        />
-
-        <Field
-          label="Unità immobiliari *"
-          value={value.units}
-          onChange={(
-            v: string
-          ) =>
-            set(
-              "units",
-              v.replace(
-                /\D/g,
-                ""
-              )
-            )
-          }
-          type="number"
         />
 
         <section className="field full" style={{ marginTop: 6, padding: 18, border: "1px solid #dbe4f3", borderRadius: 16, background: "#f8faff" }}>
