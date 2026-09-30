@@ -4286,6 +4286,40 @@ function App() {
           });
         }
       });
+      if (condominiumAiConfirmedUnits.length > 0) {
+        const aiMembers: CondominiumMember[] = [];
+        for (const draftUnit of condominiumAiConfirmedUnits) {
+          const target = generatedUnits.find((unit) =>
+            unit.unitCode.trim().toLowerCase() === draftUnit.unitCode.trim().toLowerCase()
+          );
+          if (!target) continue;
+          const ownerIds: number[] = [];
+          for (const owner of draftUnit.owners ?? []) {
+            const member: CondominiumMember = {
+              id: makeId(),
+              condominiumId: savedItem.id,
+              firstName: owner.firstName,
+              lastName: owner.lastName,
+              fiscalCode: owner.fiscalCode ?? "",
+              phone: owner.phone ?? "",
+              email: owner.email ?? "",
+              apartment: target.unitCode,
+              role: "Proprietario",
+              notes: "Inserito tramite acquisizione documentale AI e confermato dall'amministratore.",
+              active: true,
+              unitId: target.id,
+            };
+            aiMembers.push(member);
+            ownerIds.push(member.id);
+          }
+          target.millesimi = draftUnit.millesimi ?? "";
+          target.ownerMemberIds = ownerIds;
+          target.ownerMode = ownerIds.length ? "condominium_member" : target.ownerMode;
+        }
+        if (aiMembers.length > 0) {
+          setCondominiumMembers((current) => [...current, ...aiMembers]);
+        }
+      }
       setCondominiumUnits((current) => [...current, ...generatedUnits]);
     }
 
