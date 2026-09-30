@@ -1143,7 +1143,7 @@ function AccountingPage({
   }
   function openAIAllocationIntake() {
     if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
-    setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",document_id:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:scopedMillesimalTables.find(t=>t.active)?.id||"",expense_amount:0,rows:[],notes:"L'AI produrrà una proposta da verificare prima della conferma."});
+    setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",document_id:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:"",expense_amount:0,rows:[],notes:"L'AI proporrà la tabella secondo le regole di riparto; il risultato resta da verificare prima della conferma."});
     setShowAllocationIntakeForm(true);
   }
   function buildAIAllocationProposal() {
