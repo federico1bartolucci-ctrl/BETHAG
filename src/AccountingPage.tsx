@@ -447,20 +447,46 @@ function AccountingPage({
       map.set(a.unit_id, row);
     }
     const installmentUnits = new Set<string>();
+    const addInstallmentToUnit = (unitId:string, amount:number, paid:number) => {
+      installmentUnits.add(unitId);
+      const unit = units.find((u) => u.id === unitId);
+      const row = map.get(unitId) ?? { unitId, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
+      row.installments += amount;
+      row.paid += paid;
+      map.set(unitId, row);
+    };
     for (const i of rendicontoInstallments) {
-      if (!i.unit_id) continue;
-      installmentUnits.add(i.unit_id);
-      const unit = units.find((u) => u.id === i.unit_id);
-      const row = map.get(i.unit_id) ?? { unitId:i.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
-      row.installments += Number(i.amount || 0);
-      row.paid += Number(i.paid_amount || 0);
-      map.set(i.unit_id, row);
+      if (i.unit_id) {
+        addInstallmentToUnit(i.unit_id, Number(i.amount || 0), Number(i.paid_amount || 0));
+        continue;
+      }
+      if (!i.member_id || !i.ledger_entry_id) continue;
+      const ownerUnitIds = members
+        .filter((m) => m.id === i.member_id && m.active && m.unit_id)
+        .map((m) => m.unit_id as string);
+      if (!ownerUnitIds.length) continue;
+      const ownerAllocations = rendicontoAllocations
+        .filter((a) => a.ledger_entry_id === i.ledger_entry_id && ownerUnitIds.includes(a.unit_id))
+        .sort((a,b) => a.id.localeCompare(b.id));
+      const allocationTotal = ownerAllocations.reduce((s,a) => s + Number(a.amount || 0), 0);
+      if (allocationTotal <= 0) continue;
+      let allocatedInstallments = 0;
+      let allocatedPaid = 0;
+      ownerAllocations.forEach((a,index) => {
+        const isLast = index === ownerAllocations.length - 1;
+        const amount = isLast
+          ? Math.round((Number(i.amount || 0) - allocatedInstallments) * 100) / 100
+          : Math.round((Number(i.amount || 0) * Number(a.amount || 0) / allocationTotal) * 100) / 100;
+        const paid = isLast
+          ? Math.round((Number(i.paid_amount || 0) - allocatedPaid) * 100) / 100
+          : Math.round((Number(i.paid_amount || 0) * Number(a.amount || 0) / allocationTotal) * 100) / 100;
+        allocatedInstallments += amount;
+        allocatedPaid += paid;
+        addInstallmentToUnit(a.unit_id, amount, paid);
+      });
     }
     return Array.from(map.values()).map((row) => {
-      const installmentPaid = rendicontoInstallments
-        .filter((i) => i.unit_id === row.unitId)
-        .reduce((s,i) => s + Number(i.paid_amount || 0), 0);
-      const paid = installmentUnits.has(row.unitId) ? installmentPaid : row.paid;
+      const paid = row.paid;
       const unitCarryovers = rendicontoYearId === "all" ? [] : rendicontoCarryovers.filter(c => c.unit_id === row.unitId);
       const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Number(c.balance || 0) : -Math.abs(Number(c.balance || 0))), 0);
       const residual = installmentUnits.has(row.unitId)
@@ -474,7 +500,7 @@ function AccountingPage({
         balance: Math.round((residual + carryover) * 100) / 100
       };
     }).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
-  }, [rendicontoAllocations, rendicontoInstallments, units, rendicontoCarryovers, rendicontoYearId]);
+  }, [rendicontoAllocations, rendicontoInstallments, units, members, rendicontoCarryovers, rendicontoYearId]);
 
   const totals = useMemo(() => {
     const income = scopedLedger
@@ -585,6 +611,11 @@ function AccountingPage({
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
           supabase
+            .from("condominium_members")
+            .select("id, condominium_id, unit_id, active, data")
+            .eq("workspace_id", workspaceId)
+            .order("created_at"),
+          supabase
             .from("condominium_millesimal_tables")
             .select("*")
             .eq("workspace_id", workspaceId)
@@ -593,6 +624,16 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
+          supabase
+            .from("condominium_consumption_readings")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("period_end", { ascending:false }),
+          supabase
+            .from("condominium_allocation_rules")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("priority", { ascending:false }),
           supabase
             .from("condominium_installments")
             .select("*")
