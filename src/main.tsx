@@ -4052,7 +4052,8 @@ function App() {
         Math.max(0, Number(data.structure.autonomous.altre) || 0)
       : 0;
 
-    if (!isEditing && structureUnitCount <= 0) {
+    const hasConfirmedAiUnits = Boolean(dataOverride && aiConfirmedUnitsOverride && aiConfirmedUnitsOverride.length > 0);
+    if (!isEditing && structureUnitCount <= 0 && !hasConfirmedAiUnits) {
       alert("Indica nella struttura almeno un interno o una pertinenza autonoma.");
       return;
     }
@@ -4181,6 +4182,31 @@ function App() {
               });
             }
           });
+
+          const confirmedAiUnitsForCreation = aiConfirmedUnitsOverride ?? condominiumAiConfirmedUnits;
+          if (generatedUnits.length === 0 && confirmedAiUnitsForCreation.length > 0) {
+            for (const draftUnit of confirmedAiUnitsForCreation) {
+              generatedUnits.push({
+                id: "",
+                condominiumId: savedItem.id,
+                unitCode: draftUnit.unitCode,
+                unitType: draftUnit.unitType,
+                cadastralCategory: draftUnit.unitType === "Garage" ? "C/6" : draftUnit.unitType === "Cantina" ? "C/2" : "",
+                cadastralAutonomous: draftUnit.unitType !== "Abitazione",
+                millesimi: draftUnit.millesimi ?? "",
+                civicCode: draftUnit.civicCode ?? "",
+                buildingCode: draftUnit.buildingCode ?? "",
+                staircaseCode: draftUnit.staircaseCode ?? "",
+                incorporatedInUnitId: "",
+                relationshipToResidentialUnit: "Nessuna",
+                ownerMode: "condominium_member",
+                ownerMemberIds: [],
+                externalOwners: [],
+                notes: "Unità acquisita dai documenti e confermata dall'amministratore.",
+                active: true,
+              });
+            }
+          }
 
           for (const generatedUnit of generatedUnits) {
             const savedUnit = await saveCondominiumUnitBackend(workspaceId, generatedUnit);
@@ -4333,6 +4359,30 @@ function App() {
           });
         }
       });
+      const confirmedAiUnitsForCreation = aiConfirmedUnitsOverride ?? condominiumAiConfirmedUnits;
+      if (generatedUnits.length === 0 && confirmedAiUnitsForCreation.length > 0) {
+        for (const draftUnit of confirmedAiUnitsForCreation) {
+          generatedUnits.push({
+            id: "local-" + makeId(),
+            condominiumId: savedItem.id,
+            unitCode: draftUnit.unitCode,
+            unitType: draftUnit.unitType,
+            cadastralCategory: draftUnit.unitType === "Garage" ? "C/6" : draftUnit.unitType === "Cantina" ? "C/2" : "",
+            cadastralAutonomous: draftUnit.unitType !== "Abitazione",
+            millesimi: draftUnit.millesimi ?? "",
+            civicCode: draftUnit.civicCode ?? "",
+            buildingCode: draftUnit.buildingCode ?? "",
+            staircaseCode: draftUnit.staircaseCode ?? "",
+            incorporatedInUnitId: "",
+            relationshipToResidentialUnit: "Nessuna",
+            ownerMode: "condominium_member",
+            ownerMemberIds: [],
+            externalOwners: [],
+            notes: "Unità acquisita dai documenti e confermata dall'amministratore.",
+            active: true,
+          });
+        }
+      }
       const confirmedAiUnits = aiConfirmedUnitsOverride ?? condominiumAiConfirmedUnits;
       if (confirmedAiUnits.length > 0) {
         const aiMembers: CondominiumMember[] = [];
@@ -13927,11 +13977,8 @@ function CondominiumAiCreationForm({
         <div className="help-detail"><strong>Verifica obbligatoria dell'amministratore</strong><p>Proprietari e millesimi possono essere acquisiti automaticamente dai documenti, ma restano dati proposti dall'AI: nessun dato viene reso definitivo senza la conferma dell'amministratore.</p>{edited.warnings.map((w) => <div className="form-help" key={w}>• {w}</div>)}</div>
         <div className="form-actions">
           <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
-          <div className="form-actions">
-          <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
           <button type="button" className="secondary-button" onClick={() => onConfirm(edited, false)}>Conferma e modifica manualmente</button>
           <button type="button" className="primary-button" onClick={() => onConfirm(edited, true)}>Conferma e crea automaticamente</button>
-        </div>
         </div>
       </>}
     </div>
