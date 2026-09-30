@@ -1458,6 +1458,25 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
     }, { onConflict: "work_id,progress_no" }).select("*").single();
     if (progressError) throw progressError;
 
+    const { data: budgetReference, error: budgetReferenceError } = await supabase
+      .from("condominium_works")
+      .select("estimated_amount,approved_amount")
+      .eq("workspace_id", workspaceId)
+      .eq("id", workId)
+      .maybeSingle();
+    if (budgetReferenceError) throw budgetReferenceError;
+    const approvedAmount = Number(budgetReference?.approved_amount || 0);
+    const estimatedAmount = Number(budgetReference?.estimated_amount || 0);
+    const budgetReferenceAmount = approvedAmount > 0 ? approvedAmount : estimatedAmount;
+    const budgetWarning = budgetReferenceAmount > 0 && cumulativeActualAmount > budgetReferenceAmount + 0.01
+      ? {
+          type: approvedAmount > 0 ? "approved_amount_exceeded" : "estimated_amount_exceeded",
+          referenceAmount: budgetReferenceAmount,
+          cumulativeActualAmount,
+          exceededBy: cumulativeActualAmount - budgetReferenceAmount,
+        }
+      : null;
+
     const { error: workUpdateError } = await supabase.from("condominium_works").update({
       progress_percent: Math.max(0, Math.min(100, percentage)),
       actual_amount: cumulativeActualAmount,
@@ -1471,7 +1490,7 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       actual_end_date: Number(percentage) >= 100 ? input.progressDate : null
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
-    return { ...progress, cumulativeActualAmount };
+    return { ...progress, cumulativeActualAmount, budgetWarning };
   });
 }
 
