@@ -203,6 +203,7 @@ type CondominiumUnit = {
   externalOwners: ExternalUnitOwner[];
   notes: string;
   active: boolean;
+  buildingCode?: string;
 };
 
 type CondominiumMember = {
@@ -2150,6 +2151,7 @@ function App() {
     externalOwners: [],
     notes: "",
     active: true,
+    buildingCode: "",
   });
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
@@ -13269,7 +13271,8 @@ function CondominiumUnitForm({ value, setValue, units = [], members = [], onSubm
     <form onSubmit={onSubmit}>
       <ModalTitle title={editing ? "Modifica unità immobiliare" : "Nuova unità immobiliare"} />
       <div className="form-grid">
-        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Interno 1, Garage G1, Cantina C1" />
+        <Field full label="Codice / identificativo *" value={value.unitCode} onChange={(v: string) => set("unitCode", v)} placeholder="Es. Interno 1, Garage G1, Cantina C1" /> 
+        <Field label="Fabbricato / civico" value={value.buildingCode ?? ""} onChange={(v: string) => set("buildingCode", v)} placeholder="Es. 8, 10, 12" />
         <SelectField label="Tipologia" value={value.unitType} onChange={(v: string) => set("unitType", v)} options={[
           ["Abitazione","Abitazione"],["Garage","Garage / autorimessa"],["Cantina","Cantina / deposito"],["Altro","Altra unità"],
         ]} />
