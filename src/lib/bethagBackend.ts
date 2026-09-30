@@ -1243,7 +1243,7 @@ export async function recordCondominiumWorkEvent(workspaceId: string, workId: st
 export async function saveCondominiumWorkProgress(workspaceId: string, workId: string, input: { progressNo: number; progressDate: string; title: string; status: string; percentage: number; amount: number; paidAmount: number; notes: string; registerAccounting: boolean; }) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
-    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,condominium_id,supplier_id,title,category,data").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
+    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,condominium_id,supplier_id,title,category,data,start_date,expected_end_date").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
     if (workError) throw workError;
     if (!work) throw new Error("Lavoro non trovato sul server.");
 
@@ -1253,6 +1253,15 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.progressDate || ""))) {
       throw new Error("La data del SAL non è valida.");
     }
+    const startDate = work.start_date ? String(work.start_date).slice(0, 10) : "";
+    const expectedEndDate = work.expected_end_date ? String(work.expected_end_date).slice(0, 10) : "";
+    if (startDate && String(input.progressDate) < startDate) {
+      throw new Error("La data del SAL non può essere precedente alla data di inizio del lavoro.");
+    }
+    if (expectedEndDate && String(input.progressDate) > expectedEndDate) {
+      throw new Error("La data del SAL supera la data di fine prevista del lavoro. Verifica la data prima di confermare.");
+    }
+
     const amount = Math.max(0, Number(input.amount) || 0);
     const paidAmount = Math.max(0, Number(input.paidAmount) || 0);
     const percentage = Math.max(0, Math.min(100, Number(input.percentage) || 0));
@@ -1314,7 +1323,13 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
     const { error: workUpdateError } = await supabase.from("condominium_works").update({
       progress_percent: Math.max(0, Math.min(100, percentage)),
       actual_amount: cumulativeActualAmount,
-      status: Number(percentage) >= 100 ? "Completato" : Number(percentage) > 0 ? "In corso" : work.status,
+      status: Number(percentage) >= 100
+        ? "Completato"
+        : Number(percentage) > 0
+          ? "In corso"
+          : work.status === "Completato"
+            ? "In corso"
+            : work.status,
       actual_end_date: Number(percentage) >= 100 ? input.progressDate : null
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
