@@ -4895,6 +4895,28 @@ function App() {
           .eq("legacy_id", document.id)
           .maybeSingle();
 
+        if (dbDocument?.id) {
+          const { data: existingIntake, error: existingIntakeError } = await supabase
+            .from("condominium_allocation_intakes")
+            .select("id,status")
+            .eq("workspace_id", workspaceId)
+            .eq("document_id", dbDocument.id)
+            .neq("status", "Annullato")
+            .limit(1)
+            .maybeSingle();
+          if (existingIntakeError) throw existingIntakeError;
+          if (existingIntake?.id) {
+            operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
+            setDocuments((current) =>
+              current.map((doc) =>
+                doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc
+              )
+            );
+            alert(operationalMessage);
+            return;
+          }
+        }
+
         const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];
         const { data: dbUnits } = await supabase
           .from("condominium_units")
