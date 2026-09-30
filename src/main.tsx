@@ -2624,6 +2624,12 @@ function App() {
           ...current,
           workspaceId: access.workspaceId,
           email: normalizedEmail || current.email,
+          name: session.user.user_metadata?.full_name || current.name,
+          company: session.user.user_metadata?.company || current.company,
+          phone: session.user.user_metadata?.phone || current.phone,
+          address: session.user.user_metadata?.address || current.address,
+          fiscalCode: session.user.user_metadata?.fiscal_code || current.fiscalCode,
+          vat: session.user.user_metadata?.vat || current.vat,
         }));
 
         localStorage.setItem(KEYS.session, JSON.stringify(access.role));
@@ -12800,7 +12806,7 @@ function ProfilePage({
   const [saved, setSaved] =
     useState(false);
 
-  const save = (
+  const save = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     if (!isAdministrator) {
@@ -12821,13 +12827,37 @@ function ProfilePage({
       return;
     }
 
-    setSaved(true);
+    try {
+      if (supabaseConfigured && supabase) {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!userData.user) throw new Error("Sessione BETHAG non disponibile.");
 
-    setTimeout(
-      () =>
-        setSaved(false),
-      1800
-    );
+        const currentAuthEmail = (userData.user.email || "").trim().toLowerCase();
+        const profileEmail = (profile.email || "").trim().toLowerCase();
+
+        if (profileEmail && profileEmail !== currentAuthEmail) {
+          throw new Error("Per modificare l'e-mail di accesso utilizza la procedura dedicata di Supabase Auth, che richiede la verifica del nuovo indirizzo. Il resto del profilo può essere salvato normalmente.");
+        }
+
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            full_name: profile.name || "",
+            company: profile.company || "",
+            phone: profile.phone || "",
+            address: profile.address || "",
+            fiscal_code: profile.fiscalCode || "",
+            vat: profile.vat || "",
+          },
+        });
+        if (error) throw error;
+      }
+
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 1800);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Impossibile salvare il profilo.");
+    }
   };
 
   return (
