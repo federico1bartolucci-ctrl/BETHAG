@@ -2299,6 +2299,7 @@ function App() {
   const [condominiumAiDraft, setCondominiumAiDraft] = useState<CondominiumCreationDraft | null>(null);
   const [condominiumAiFiles, setCondominiumAiFiles] = useState<string[]>([]);
   const [condominiumAiProcessing, setCondominiumAiProcessing] = useState(false);
+  const [condominiumAiConfirmedUnits, setCondominiumAiConfirmedUnits] = useState<CondominiumCreationUnitDraft[]>([]);
 
   // La selezione viene mantenuta al refresh, ma solo dopo che Supabase
   // ha completato l'hydration: in questo modo non viene mai renderizzata
@@ -3717,6 +3718,7 @@ function App() {
     setCondominiumAiDraft(null);
     setCondominiumAiFiles([]);
     setCondominiumAiProcessing(false);
+    setCondominiumAiConfirmedUnits([]);
     openModal("condominium-ai");
   };
 
@@ -4136,6 +4138,64 @@ function App() {
           for (const generatedUnit of generatedUnits) {
             const savedUnit = await saveCondominiumUnitBackend(workspaceId, generatedUnit);
             generatedUnit.id = String(savedUnit?.id || generatedUnit.id || ("local-" + makeId()));
+          }
+
+          // Se la creazione è partita da documenti, applichiamo solo i dati
+          // esplicitamente confermati dall'amministratore. I millesimi restano
+          // sempre proprietà dell'unità; i proprietari vengono registrati
+          // nell'anagrafica e collegati all'unità.
+          if (condominiumAiConfirmedUnits.length > 0) {
+            for (const draftUnit of condominiumAiConfirmedUnits) {
+              const target = generatedUnits.find((unit) =>
+                unit.unitCode.trim().toLowerCase() === draftUnit.unitCode.trim().toLowerCase()
+              );
+              if (!target) continue;
+
+              const ownerMemberIds: number[] = [];
+              for (const owner of draftUnit.owners ?? []) {
+                const legacyId = makeId();
+                const existingMember = condominiumMembers.find((member) => {
+                  const sameFiscalCode = owner.fiscalCode && member.fiscalCode &&
+                    owner.fiscalCode.replace(/\\s/g, "").toUpperCase() === member.fiscalCode.replace(/\\s/g, "").toUpperCase();
+                  const sameEmail = owner.email && member.email &&
+                    owner.email.trim().toLowerCase() === member.email.trim().toLowerCase();
+                  return Boolean(sameFiscalCode || sameEmail);
+                });
+
+                if (existingMember) {
+                  ownerMemberIds.push(existingMember.id);
+                  continue;
+                }
+
+                const savedMember = await saveCondominiumMemberBackend(workspaceId, {
+                  id: legacyId,
+                  condominiumId: savedItem.id,
+                  firstName: owner.firstName,
+                  lastName: owner.lastName,
+                  fiscalCode: owner.fiscalCode ?? "",
+                  phone: owner.phone ?? "",
+                  email: owner.email ?? "",
+                  apartment: target.unitCode,
+                  role: "Proprietario",
+                  notes: "Inserito tramite acquisizione documentale AI e confermato dall'amministratore.",
+                  active: true,
+                  unitId: target.id,
+                });
+                ownerMemberIds.push(Number(savedMember?.legacy_id ?? legacyId));
+              }
+
+              const updatedUnit = {
+                ...target,
+                millesimi: draftUnit.millesimi ?? "",
+                ownerMemberIds,
+                ownerMode: ownerMemberIds.length ? "condominium_member" : target.ownerMode,
+              };
+              const savedUnit = await saveCondominiumUnitBackend(workspaceId, updatedUnit);
+              target.millesimi = updatedUnit.millesimi;
+              target.ownerMemberIds = ownerMemberIds;
+              target.ownerMode = updatedUnit.ownerMode;
+              target.id = String(savedUnit?.id || target.id);
+            }
           }
         }
 
@@ -7310,9 +7370,9 @@ function App() {
                   city: draft.city ?? "",
                   province: draft.province ?? "",
                   fiscalCode: draft.fiscalCode ?? "",
-                  units: String(draft.units ?? ""),
                   structure: draft.structure,
                 });
+                setCondominiumAiConfirmedUnits(Array.isArray(draft.unitRecords) ? draft.unitRecords : []);
                 setCondominiumAiDraft(null);
                 setModalType("condominium");
               }}
