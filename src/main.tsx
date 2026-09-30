@@ -4705,26 +4705,26 @@ function App() {
 
       setPortalMembers((current) => {
         const previousEmail = previousMember.email.trim().toLowerCase();
-        const nextEmail = persistedData.email.trim().toLowerCase();
+        const previousUserId = previousMember.userId ?? "";
+
+        const matchesPortalMember = (portalMember: PortalMember) =>
+          portalMember.condominiumId === previousMember.condominiumId &&
+          (previousUserId
+            ? portalMember.userId === previousUserId
+            : portalMember.email.trim().toLowerCase() === previousEmail &&
+              portalMember.name.trim().toLowerCase() ===
+                `${previousMember.firstName} ${previousMember.lastName}`.trim().toLowerCase() &&
+              portalMember.apartment.trim().toLowerCase() === previousMember.apartment.trim().toLowerCase());
 
         if (!persistedData.active) {
-          return current.filter(
-            (portalMember) =>
-              !(
-                portalMember.condominiumId === previousMember.condominiumId &&
-                portalMember.email.trim().toLowerCase() === previousEmail
-              )
-          );
+          return current.filter((portalMember) => !matchesPortalMember(portalMember));
         }
 
         return current.map((portalMember) =>
-          portalMember.condominiumId === previousMember.condominiumId &&
-          (
-            portalMember.email.trim().toLowerCase() === previousEmail ||
-            portalMember.email.trim().toLowerCase() === nextEmail
-          )
+          matchesPortalMember(portalMember)
             ? {
                 ...portalMember,
+                userId: persistedData.userId ?? portalMember.userId,
                 name: `${persistedData.firstName} ${persistedData.lastName}`.trim(),
                 email: persistedData.email,
                 condominiumId: persistedData.condominiumId,
@@ -4862,7 +4862,12 @@ function App() {
     const linkedPortalAccess = portalMembers.some(
       (portalMember) =>
         portalMember.condominiumId === member.condominiumId &&
-        portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+        (member.userId
+          ? portalMember.userId === member.userId
+          : portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase() &&
+            portalMember.name.trim().toLowerCase() ===
+              `${member.firstName} ${member.lastName}`.trim().toLowerCase() &&
+            portalMember.apartment.trim().toLowerCase() === member.apartment.trim().toLowerCase())
     );
 
     const confirmationMessage = linkedPortalAccess
@@ -4886,13 +4891,16 @@ function App() {
 
       if (linkedPortalAccess) {
         setPortalMembers((current) =>
-          current.filter(
-            (portalMember) =>
-              !(
-                portalMember.condominiumId === member.condominiumId &&
-                portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase()
-              )
-          )
+          current.filter((portalMember) => {
+            const samePerson = member.userId
+              ? portalMember.userId === member.userId
+              : portalMember.condominiumId === member.condominiumId &&
+                portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase() &&
+                portalMember.name.trim().toLowerCase() ===
+                  `${member.firstName} ${member.lastName}`.trim().toLowerCase() &&
+                portalMember.apartment.trim().toLowerCase() === member.apartment.trim().toLowerCase();
+            return !samePerson;
+          })
         );
       }
     } catch (error) {
