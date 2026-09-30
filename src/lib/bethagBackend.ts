@@ -1231,6 +1231,19 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
     if (workError) throw workError;
     if (!work) throw new Error("Lavoro non trovato sul server.");
 
+if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1) {
+      throw new Error("Il numero del SAL deve essere un intero maggiore o uguale a 1.");
+    }
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(input.progressDate || ""))) {
+      throw new Error("La data del SAL non è valida.");
+    }
+    const amount = Math.max(0, amount);
+    const paidAmount = Math.max(0, paidAmount);
+    const percentage = Math.max(0, Math.min(100, percentage));
+    if (paidAmount > amount + 0.000001) {
+      throw new Error("L'importo pagato non può essere superiore all'importo del SAL.");
+    }
+
     let ledgerSupplierId: string | null = null;
     const legacySupplierId = Number(work.data?.supplierId);
     if (Number.isFinite(legacySupplierId) && legacySupplierId > 0) {
@@ -1245,11 +1258,11 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
     }
 
     let ledgerEntryId: string | null = null;
-    if (input.registerAccounting && input.amount > 0) {
+    if (input.registerAccounting && amount > 0) {
       const { data: existing } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
       if (existing?.ledger_entry_id) {
         ledgerEntryId = existing.ledger_entry_id;
-        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
+        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount, payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
         if (ledgerUpdateError) throw ledgerUpdateError;
       } else {
         const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
@@ -1259,7 +1272,7 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
           workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear.id,
           entry_date: input.progressDate, direction: "Uscita", category: work.category || "Lavori e manutenzioni",
           description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
-          amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
+          amount, payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
           supplier_id: ledgerSupplierId, notes: input.notes || null,
           data: { source: "condominium_work_progress", workId, progressNo: input.progressNo }
         }).select("id").single();
@@ -1271,21 +1284,21 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
     const { data: previousProgressRows, error: previousProgressError } = await supabase.from("condominium_work_progress").select("progress_no,amount").eq("workspace_id", workspaceId).eq("work_id", workId);
     if (previousProgressError) throw previousProgressError;
     const previousAmount = (previousProgressRows ?? []).filter((row: any) => Number(row.progress_no) !== Number(input.progressNo)).reduce((sum: number, row: any) => sum + (Number(row.amount) || 0), 0);
-    const cumulativeActualAmount = previousAmount + Math.max(0, Number(input.amount) || 0);
+    const cumulativeActualAmount = previousAmount + Math.max(0, amount);
 
     const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").upsert({
       workspace_id: workspaceId, condominium_id: work.condominium_id, work_id: work.id,
       progress_no: input.progressNo, progress_date: input.progressDate, title: input.title || ("SAL " + input.progressNo),
-      status: input.status, percentage: Math.max(0, Math.min(100, Number(input.percentage) || 0)), amount: Math.max(0, Number(input.amount) || 0),
-      paid_amount: Math.max(0, Number(input.paidAmount) || 0), notes: input.notes || null, ledger_entry_id: ledgerEntryId
+      status: input.status, percentage: Math.max(0, Math.min(100, percentage)), amount: Math.max(0, amount),
+      paid_amount: Math.max(0, paidAmount), notes: input.notes || null, ledger_entry_id: ledgerEntryId
     }, { onConflict: "work_id,progress_no" }).select("*").single();
     if (progressError) throw progressError;
 
     const { error: workUpdateError } = await supabase.from("condominium_works").update({
-      progress_percent: Math.max(0, Math.min(100, Number(input.percentage) || 0)),
+      progress_percent: Math.max(0, Math.min(100, percentage)),
       actual_amount: cumulativeActualAmount,
-      status: Number(input.percentage) >= 100 ? "Completato" : Number(input.percentage) > 0 ? "In corso" : work.status,
-      actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : undefined
+      status: Number(percentage) >= 100 ? "Completato" : Number(percentage) > 0 ? "In corso" : work.status,
+      actual_end_date: Number(percentage) >= 100 ? input.progressDate : undefined
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
     return { ...progress, cumulativeActualAmount };
