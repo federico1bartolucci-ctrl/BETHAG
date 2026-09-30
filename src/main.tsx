@@ -5504,7 +5504,25 @@ function App() {
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL in Contabilità."); }
   };
   const deleteCondominiumWork = async (id: string) => { if (!requireModulePermission("attivita", "L'eliminazione di un lavoro")) return; if (!confirm("Eliminare definitivamente questo lavoro?")) return; const previous = condominiumWorks; setCondominiumWorks(current => current.filter(item => item.id !== id)); if (supabaseConfigured && supabase && profile.workspaceId) { try { await deleteCondominiumWorkBackend(profile.workspaceId, id); } catch (error) { setCondominiumWorks(previous); alert(error instanceof Error ? "Il lavoro non è stato eliminato dal server.\n\n" + error.message : "Il lavoro non è stato eliminato dal server."); } } };
-  const updateCondominiumWorkProgress = (id: string, progressPercent: number) => { if (!requireModulePermission("attivita", "L'aggiornamento dell'avanzamento lavori")) return; const progress = Math.max(0, Math.min(100, Number(progressPercent) || 0)); setCondominiumWorks(current => current.map(item => item.id === id ? { ...item, progressPercent: progress, status: progress >= 100 ? "Completato" : progress > 0 && item.status === "Da programmare" ? "In corso" : item.status, actualEndDate: progress >= 100 && !item.actualEndDate ? localISODate() : item.actualEndDate } : item)); };
+  const updateCondominiumWorkProgress = async (id: string, progressPercent: number) => {
+    if (!requireModulePermission("attivita", "L'aggiornamento dell'avanzamento lavori")) return;
+    const progress = Math.max(0, Math.min(100, Number(progressPercent) || 0));
+    const current = condominiumWorks.find(item => item.id === id);
+    if (!current) return;
+    const updated = {
+      ...current,
+      progressPercent: progress,
+      status: progress >= 100 ? "Completato" : progress > 0 && current.status === "Da programmare" ? "In corso" : current.status,
+      actualEndDate: progress >= 100 && !current.actualEndDate ? localISODate() : current.actualEndDate,
+    };
+    setCondominiumWorks(items => items.map(item => item.id === id ? updated : item));
+    try {
+      await saveCondominiumWork(updated);
+    } catch (error) {
+      setCondominiumWorks(items => items.map(item => item.id === id ? current : item));
+      alert(error instanceof Error ? "L'avanzamento non è stato salvato sul server.\n\n" + error.message : "L'avanzamento non è stato salvato sul server.");
+    }
+  };
 
   const editActivity = (
     item: Activity
