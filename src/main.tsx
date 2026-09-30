@@ -3010,7 +3010,9 @@ function App() {
         "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies", "condominium_ledger_entries",
         "condominium_expense_allocations", "condominium_installments", "condominium_payment_movements",
         "condominium_works", "condominium_work_documents", "condominium_work_progress",
-        "condominium_work_events", "condominium_audit_log", "condominium_requests"
+        "condominium_work_events", "condominium_audit_log", "condominium_requests",
+        "deadlines", "assemblies", "communications", "portal_access",
+        "workspace_members", "portal_registration_requests"
       ];
       const errors: string[] = [];
       if (supabase) {
@@ -3044,7 +3046,9 @@ function App() {
       "condominium_installments", "condominium_payment_movements", "condominium_budgets", "condominium_tax_obligations",
       "condominium_legal_cases", "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies",
       "condominium_register_items", "condominium_suppliers", "condominium_works", "condominium_work_documents",
-      "condominium_work_progress", "condominium_work_events", "condominium_audit_log", "condominium_requests"
+      "condominium_work_progress", "condominium_work_events", "condominium_audit_log", "condominium_requests",
+      "deadlines", "assemblies", "communications", "portal_access",
+      "workspace_members", "portal_registration_requests"
     ];
     const backend: Record<string, unknown> = {};
     const errors: Record<string, string> = {};
