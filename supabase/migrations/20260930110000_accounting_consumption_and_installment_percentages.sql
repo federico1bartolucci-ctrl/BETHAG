@@ -20,6 +20,8 @@ create table if not exists public.condominium_allocation_rules (
 
 create index if not exists condominium_allocation_rules_lookup_idx
   on public.condominium_allocation_rules(workspace_id, condominium_id, active, priority, category, expense_type);
+create index if not exists condominium_allocation_rules_condominium_fk_idx on public.condominium_allocation_rules(condominium_id);
+create index if not exists condominium_allocation_rules_table_fk_idx on public.condominium_allocation_rules(allocation_table_id);
 
 alter table public.condominium_allocation_rules enable row level security;
 drop policy if exists "managers manage allocation rules" on public.condominium_allocation_rules;
@@ -62,6 +64,9 @@ create index if not exists condominium_consumption_readings_lookup_idx
   on public.condominium_consumption_readings(workspace_id, condominium_id, fiscal_year_id, service_type, unit_id);
 create unique index if not exists condominium_consumption_readings_unique_idx
   on public.condominium_consumption_readings(workspace_id, condominium_id, fiscal_year_id, unit_id, service_type, meter_code, period_start, period_end);
+create index if not exists condominium_consumption_readings_condominium_fk_idx on public.condominium_consumption_readings(condominium_id);
+create index if not exists condominium_consumption_readings_fiscal_year_fk_idx on public.condominium_consumption_readings(fiscal_year_id);
+create index if not exists condominium_consumption_readings_unit_fk_idx on public.condominium_consumption_readings(unit_id);
 
 alter table public.condominium_consumption_readings enable row level security;
 drop policy if exists "managers manage consumption readings" on public.condominium_consumption_readings;
