@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(20);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -247,6 +247,35 @@ select ok(
      and tablename = 'assemblies'
      and policyname = 'authorized users read assemblies'),
   'La lettura delle assemblee deve rispettare il condominio del residente'
+);
+
+-- I vincoli economici devono impedire duplicazioni di collegamenti lavoro/documento
+-- e di registrazioni contabili di uscita per la stessa fattura.
+select is(
+  (select count(*)::integer
+   from pg_indexes
+   where schemaname = 'public'
+     and indexname = 'condominium_work_documents_work_document_key'),
+  1,
+  'Il collegamento lavoro/documento deve avere un vincolo UNIQUE'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_indexes
+   where schemaname = 'public'
+     and indexname = 'condominium_ledger_entries_outgoing_document_key'),
+  1,
+  'Una fattura non deve poter generare due uscite contabili'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_indexes
+   where schemaname = 'public'
+     and indexname = 'condominium_work_documents_workspace_document_idx'),
+  1,
+  'La ricerca dei documenti collegati al lavoro deve avere l'indice di workspace'
 );
 
 select * from finish();
