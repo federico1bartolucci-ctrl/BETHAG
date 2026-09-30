@@ -165,7 +165,7 @@ function AccountingPage({
   const [autoAllocationForm, setAutoAllocationForm] = useState({ ledger_entry_id:"", table_id:"", due_date:"" });
   const [autoPreview, setAutoPreview] = useState<AllocationPreviewRow[]>([]);
   const [showInstallmentsFromAllocation, setShowInstallmentsFromAllocation] = useState(false);
-  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"" });
+  const [allocationInstallmentForm, setAllocationInstallmentForm] = useState({ ledger_entry_id:"", title:"", due_date:"", fiscal_year_id:"", installment_count:1, due_dates:"" });
   const [allocationForm, setAllocationForm] = useState({
     ledger_entry_id: "",
     unit_id: "",
@@ -948,8 +948,14 @@ function AccountingPage({
   }
 
   async function generateInstallmentsFromAllocation() {
-    if (!supabase || !dbCondominiumId || !allocationInstallmentForm.ledger_entry_id || !allocationInstallmentForm.title.trim() || !allocationInstallmentForm.due_date) {
-      setError("Indica spesa, titolo e scadenza delle rate.");
+    if (!supabase || !dbCondominiumId || !allocationInstallmentForm.ledger_entry_id || !allocationInstallmentForm.title.trim()) {
+      setError("Indica spesa e titolo delle rate.");
+      return;
+    }
+    const installmentCount = Math.max(1, Math.min(120, Math.floor(Number(allocationInstallmentForm.installment_count) || 0)));
+    const dueDates = allocationInstallmentForm.due_dates.split(/[\\n,;]+/).map(v => v.trim()).filter(Boolean);
+    if (dueDates.length !== installmentCount || dueDates.some((d, i, arr) => !/^\\d{4}-\\d{2}-\\d{2}$/.test(d) || (i > 0 && d < arr[i - 1]))) {
+      setError("Indica esattamente una scadenza YYYY-MM-DD per ciascuna rata, in ordine cronologico.");
       return;
     }
     const selectedExpense = scopedLedger.find(e => e.id === allocationInstallmentForm.ledger_entry_id);
@@ -969,12 +975,12 @@ function AccountingPage({
     setSaving(true);
     setError("");
     try {
-      const { data, error: rpcError } = await supabase.rpc("generate_installments_from_allocations", {
+      const { data, error: rpcError } = await supabase.rpc("generate_installments_from_allocations_schedule", {
         p_workspace_id:workspaceId,
         p_condominium_id:dbCondominiumId,
         p_ledger_entry_id:allocationInstallmentForm.ledger_entry_id,
         p_title:allocationInstallmentForm.title.trim(),
-        p_due_date:allocationInstallmentForm.due_date,
+        p_due_dates: dueDates,
         p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null
       });
       if (rpcError) throw rpcError;
@@ -1481,7 +1487,7 @@ function AccountingPage({
         <section className="card">
           <div className="section-heading">
             <div><h2>Ripartizione delle spese</h2><p>Associa una spesa alle unità e registra base di riparto, millesimi, importo e stato.</p></div>
-            {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { setAllocationInstallmentForm({ ledger_entry_id: scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id))?.id ?? "", title:"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id ?? "" }); setShowInstallmentsFromAllocation(true); }}>Genera rate</button><button className="secondary-button" onClick={() => { const firstExpense = scopedLedger.find((e) => e.direction === "Uscita"); setAutoAllocationForm({ ledger_entry_id: firstExpense?.id ?? "", table_id: scopedMillesimalTables.find(t => t.active)?.id ?? "", due_date: firstExpense?.due_date ?? "" }); setAutoPreview([]); setError(""); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
+            {isAdministrator && dbCondominiumId && <div className="row-actions"><button className="secondary-button" onClick={() => { setAllocationInstallmentForm({ ledger_entry_id: scopedLedger.find(e=>e.direction==="Uscita" && allocations.some(a=>a.ledger_entry_id===e.id))?.id ?? "", title:"Rate condominiali", due_date:"", fiscal_year_id:scopedYears[0]?.id ?? "", installment_count:1, due_dates:"" }); setShowInstallmentsFromAllocation(true); }}>Genera rate</button><button className="secondary-button" onClick={() => { const firstExpense = scopedLedger.find((e) => e.direction === "Uscita"); setAutoAllocationForm({ ledger_entry_id: firstExpense?.id ?? "", table_id: scopedMillesimalTables.find(t => t.active)?.id ?? "", due_date: firstExpense?.due_date ?? "" }); setAutoPreview([]); setError(""); setShowAutoAllocationForm(true); }}>Riparto automatico</button><button className="primary-button" onClick={() => { setEditingAllocation(null); setAllocationForm({ ledger_entry_id: scopedLedger.find((e) => e.direction === "Uscita")?.id ?? "", unit_id: units.find((u) => u.condominium_id === dbCondominiumId)?.id ?? "", allocation_basis: "Millesimi generali", millesimi: 0, amount: 0, paid_amount: 0, due_date: "", status: "Da pagare", notes: "" }); setShowAllocationForm(true); }}>+ Nuova ripartizione</button></div>}
           </div>
           {scopedLedger.filter((e) => e.direction === "Uscita").length === 0 ? <p>Registra prima una spesa nel registro contabile.</p> : (<>
             <div className="cards-list">
@@ -1639,7 +1645,7 @@ function AccountingPage({
 
       {showInstallmentForm && <div className="modal-backdrop"><form className="modal-card" onSubmit={saveInstallment}><h2>Nuova rata</h2><label>Titolo<input required value={installmentForm.title} onChange={e=>setInstallmentForm({...installmentForm,title:e.target.value})} placeholder="Rata ordinaria 1/4"/></label><label>Unità<select value={installmentForm.unit_id} onChange={e=>setInstallmentForm({...installmentForm,unit_id:e.target.value})}><option value="">Seleziona</option>{units.filter(u=>!dbCondominiumId||u.condominium_id===dbCondominiumId).map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label><div className="form-grid"><label>Importo<input type="number" min="0.01" step="0.01" value={installmentForm.amount} onChange={e=>setInstallmentForm({...installmentForm,amount:Number(e.target.value)})}/></label><label>Pagato<input type="number" min="0" step="0.01" value={0} readOnly disabled /></label></div><div className="form-grid"><label>Scadenza<input type="date" value={installmentForm.due_date} onChange={e=>setInstallmentForm({...installmentForm,due_date:e.target.value})}/></label><label>Stato<select value="Da pagare" disabled><option>Da pagare</option></select></label></div><p style={{margin:"6px 0 0",fontSize:13,opacity:.75}}>La rata viene creata non pagata. I pagamenti si registrano successivamente dal pulsante <b>Registra pagamento</b>.</p><label>Note<textarea value={installmentForm.notes} onChange={e=>setInstallmentForm({...installmentForm,notes:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentForm(false)}>Annulla</button><button className="primary-button">Salva</button></div></form></div>}
 
-      {showInstallmentsFromAllocation && <div className="modal-backdrop"><div className="modal-card"><h2>Genera rate dal riparto</h2><p>Viene creata una rata per ogni quota della spesa. Le rate identiche già presenti non vengono duplicate.</p><label>Spesa<select value={allocationInstallmentForm.ledger_entry_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,ledger_entry_id:e.target.value})}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita"&&allocations.some(a=>a.ledger_entry_id===e.id)).map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label><label>Titolo<input value={allocationInstallmentForm.title} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,title:e.target.value})}/></label><div className="form-grid"><label>Scadenza<input type="date" value={allocationInstallmentForm.due_date} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,due_date:e.target.value})}/></label><label>Esercizio<select value={allocationInstallmentForm.fiscal_year_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,fiscal_year_id:e.target.value})}><option value="">Nessuno</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label></div><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentsFromAllocation(false)}>Annulla</button><button type="button" className="primary-button" disabled={saving} onClick={generateInstallmentsFromAllocation}>Genera rate</button></div></div></div>}
+      {showInstallmentsFromAllocation && <div className="modal-backdrop"><div className="modal-card"><h2>Genera rate dal riparto</h2><p>Viene creata una rata per ogni quota della spesa. Le rate identiche già presenti non vengono duplicate.</p><label>Spesa<select value={allocationInstallmentForm.ledger_entry_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,ledger_entry_id:e.target.value})}><option value="">Seleziona</option>{scopedLedger.filter(e=>e.direction==="Uscita"&&allocations.some(a=>a.ledger_entry_id===e.id)).map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label><label>Titolo<input value={allocationInstallmentForm.title} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,title:e.target.value})}/></label><div className="form-grid"><label>Numero rate<input type="number" min="1" max="120" value={allocationInstallmentForm.installment_count} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,installment_count:Math.max(1,Math.min(120,Number(e.target.value)||1))})}/></label><label>Esercizio<select value={allocationInstallmentForm.fiscal_year_id} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,fiscal_year_id:e.target.value})}><option value="">Nessuno</option>{scopedYears.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label></div><label>Scadenze<input placeholder="YYYY-MM-DD, YYYY-MM-DD, ..." value={allocationInstallmentForm.due_dates} onChange={e=>setAllocationInstallmentForm({...allocationInstallmentForm,due_dates:e.target.value})}/></label><div className="form-actions"><button type="button" className="secondary-button" onClick={()=>setShowInstallmentsFromAllocation(false)}>Annulla</button><button type="button" className="primary-button" disabled={saving} onClick={generateInstallmentsFromAllocation}>Genera rate</button></div></div></div>}
 
       {showAutoAllocationForm && <div className="modal-backdrop"><div className="modal-card">
         <h2>Riparto millesimale</h2>
