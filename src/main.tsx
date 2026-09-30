@@ -3612,6 +3612,23 @@ function App() {
           ...data,
           id: String(saved?.id || data.id || ("local-" + makeId())),
         };
+
+        // La rinumerazione dell'unità viene applicata anche allo stato locale
+        // dei condòmini collegati. Il backend aggiorna già il campo legacy
+        // "apartment" dei record associati; senza questo allineamento React
+        // potrebbe inviare al successivo sync il vecchio codice e ripristinarlo.
+        if (!String(next.id).startsWith("local-")) {
+          setCondominiumMembers((current) =>
+            current.map((member) =>
+              member.condominiumId === next.condominiumId &&
+              (String(member.unitId ?? "") === String(next.id) ||
+                (data.id && String(member.unitId ?? "") === String(data.id)))
+                ? { ...member, apartment: next.unitCode }
+                : member
+            )
+          );
+        }
+
         setCondominiumUnits((current) => {
           // In modifica l'ID dell'unità è stabile anche quando cambia il codice.
           const existingById = current.find((unit) => String(unit.id) === String(next.id));
