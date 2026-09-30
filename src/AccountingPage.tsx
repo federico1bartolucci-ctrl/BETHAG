@@ -417,10 +417,10 @@ function AccountingPage({
   }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoYear, scopedFunds]);
 
   const rendicontoByUnit = useMemo(() => {
-    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; paid:number; residual:number }>();
+    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; paid:number; residual:number; carryover:number; balance:number }>();
     for (const a of rendicontoAllocations) {
       const unit = units.find((u) => u.id === a.unit_id);
-      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0 };
+      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
       row.allocated += Number(a.amount || 0);
       row.paid += Number(a.paid_amount || 0);
       map.set(a.unit_id, row);
@@ -430,7 +430,7 @@ function AccountingPage({
       if (!i.unit_id) continue;
       installmentUnits.add(i.unit_id);
       const unit = units.find((u) => u.id === i.unit_id);
-      const row = map.get(i.unit_id) ?? { unitId:i.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0 };
+      const row = map.get(i.unit_id) ?? { unitId:i.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
       row.installments += Number(i.amount || 0);
       row.paid += Number(i.paid_amount || 0);
       map.set(i.unit_id, row);
@@ -440,15 +440,20 @@ function AccountingPage({
         .filter((i) => i.unit_id === row.unitId)
         .reduce((s,i) => s + Number(i.paid_amount || 0), 0);
       const paid = installmentUnits.has(row.unitId) ? installmentPaid : row.paid;
+      const unitCarryovers = rendicontoYearId === "all" ? [] : rendicontoCarryovers.filter(c => c.unit_id === row.unitId);
+      const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Number(c.balance || 0) : -Math.abs(Number(c.balance || 0))), 0);
+      const residual = installmentUnits.has(row.unitId)
+        ? Math.max(0,row.installments-paid)
+        : Math.max(0,row.allocated-paid);
       return {
         ...row,
         paid,
-        residual: installmentUnits.has(row.unitId)
-          ? Math.max(0,row.installments-paid)
-          : Math.max(0,row.allocated-paid)
+        residual,
+        carryover,
+        balance: Math.round((residual + carryover) * 100) / 100
       };
     }).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
-  }, [rendicontoAllocations, rendicontoInstallments, units]);
+  }, [rendicontoAllocations, rendicontoInstallments, units, rendicontoCarryovers, rendicontoYearId]);
 
   const totals = useMemo(() => {
     const income = scopedLedger
