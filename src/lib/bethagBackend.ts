@@ -1026,6 +1026,51 @@ export function syncBackendState(
   );
 }
 
+export async function saveCondominiumWorkProgress(workspaceId: string, workId: string, input: { progressNo: number; progressDate: string; title: string; status: string; percentage: number; amount: number; paidAmount: number; notes: string; registerAccounting: boolean; }) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  return enqueueBackendSync(async () => {
+    const { data: work, error: workError } = await supabase.from("condominium_works").select("id,condominium_id,supplier_id,title,category").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
+    if (workError) throw workError;
+    if (!work) throw new Error("Lavoro non trovato sul server.");
+
+    let ledgerEntryId: string | null = null;
+    if (input.registerAccounting && input.amount > 0) {
+      const { data: existing } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+      if (existing?.ledger_entry_id) ledgerEntryId = existing.ledger_entry_id;
+      else {
+        const { data: fiscalYear } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+        const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").insert({
+          workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear?.id ?? null,
+          entry_date: input.progressDate, direction: "Uscita", category: work.category || "Lavori e manutenzioni",
+          description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
+          amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
+          supplier_id: work.supplier_id ?? null, notes: input.notes || null,
+          data: { source: "condominium_work_progress", workId, progressNo: input.progressNo }
+        }).select("id").single();
+        if (ledgerError) throw ledgerError;
+        ledgerEntryId = ledger.id;
+      }
+    }
+
+    const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").upsert({
+      workspace_id: workspaceId, condominium_id: work.condominium_id, work_id: work.id,
+      progress_no: input.progressNo, progress_date: input.progressDate, title: input.title || ("SAL " + input.progressNo),
+      status: input.status, percentage: Math.max(0, Math.min(100, Number(input.percentage) || 0)), amount: Math.max(0, Number(input.amount) || 0),
+      paid_amount: Math.max(0, Number(input.paidAmount) || 0), notes: input.notes || null, ledger_entry_id: ledgerEntryId
+    }, { onConflict: "work_id,progress_no" }).select("*").single();
+    if (progressError) throw progressError;
+
+    const { error: workUpdateError } = await supabase.from("condominium_works").update({
+      progress_percent: Math.max(0, Math.min(100, Number(input.percentage) || 0)),
+      actual_amount: Math.max(0, Number(input.amount) || 0) > 0 ? Math.max(0, Number(input.amount) || 0) : undefined,
+      status: Number(input.percentage) >= 100 ? "Completato" : Number(input.percentage) > 0 ? "In corso" : work.status,
+      actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : null
+    }).eq("workspace_id", workspaceId).eq("id", workId);
+    if (workUpdateError) throw workUpdateError;
+    return progress;
+  });
+}
+
 export async function deleteCondominiumWork(workspaceId: string, id: string) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
