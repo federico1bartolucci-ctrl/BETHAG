@@ -1060,8 +1060,11 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
     let ledgerEntryId: string | null = null;
     if (input.registerAccounting && input.amount > 0) {
       const { data: existing } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
-      if (existing?.ledger_entry_id) ledgerEntryId = existing.ledger_entry_id;
-      else {
+      if (existing?.ledger_entry_id) {
+        ledgerEntryId = existing.ledger_entry_id;
+        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
+        if (ledgerUpdateError) throw ledgerUpdateError;
+      } else {
         const { data: fiscalYear } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
         const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").insert({
           workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear?.id ?? null,
@@ -1093,7 +1096,7 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
       progress_percent: Math.max(0, Math.min(100, Number(input.percentage) || 0)),
       actual_amount: cumulativeActualAmount,
       status: Number(input.percentage) >= 100 ? "Completato" : Number(input.percentage) > 0 ? "In corso" : work.status,
-      actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : null
+      actual_end_date: Number(input.percentage) >= 100 ? input.progressDate : undefined
     }).eq("workspace_id", workspaceId).eq("id", workId);
     if (workUpdateError) throw workUpdateError;
     return progress;
