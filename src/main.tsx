@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { analyzeCondominiumDocumentsWithAI, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -3728,61 +3728,45 @@ function App() {
     if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
 
     const selectedFiles = Array.from(files);
-    const sourceDocuments = selectedFiles.map((file) => ({
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      lastModified: file.lastModified,
-    }));
-
     setCondominiumAiFiles(selectedFiles.map((file) => file.name));
     setCondominiumAiProcessing(true);
     setCondominiumAiIntakeId(null);
 
     try {
-      const draft: CondominiumCreationDraft = {
-        sourceDocuments: selectedFiles.map((file) => file.name),
-        confidence: 0,
-        unitRecords: [],
-        warnings: [
-          "La proposta deve essere verificata e confermata dall'amministratore.",
-          "La pipeline OCR/AI documentale definitiva deve essere collegata prima di considerare compilati automaticamente i dati estratti.",
-          "Proprietari e millesimi, quando rilevati dai documenti, saranno sempre proposti per unità e non diventeranno definitivi senza conferma.",
-        ],
-        structure: {
-          configured: false,
-          civics: [],
-          autonomous: { garages: 0, cantine: 0, postiAuto: 0, altre: 0 },
-        },
-      };
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+
+      const draft = await analyzeCondominiumDocumentsWithAI(workspaceId, selectedFiles);
 
       setCondominiumAiDraft(draft);
 
-      const workspaceId = await getActiveWorkspaceId();
-      if (workspaceId) {
-        const intakeId = await createCondominiumCreationIntake(workspaceId, {
-          source: "AI",
-          sourceDocuments,
-          extractedData: {
-            name: draft.name ?? "",
-            address: draft.address ?? "",
-            cap: draft.cap ?? "",
-            city: draft.city ?? "",
-            province: draft.province ?? "",
-            fiscalCode: draft.fiscalCode ?? "",
-            units: draft.units ?? 0,
-            unitRecords: draft.unitRecords ?? [],
-          },
-          structure: draft.structure ?? {},
-          validationErrors: [],
-          warnings: draft.warnings ?? [],
-          notes: "Proposta iniziale generata dal flusso di creazione assistita. Nessun dato definitivo è stato creato.",
-        });
-        setCondominiumAiIntakeId(intakeId);
-      }
+      const intakeId = await createCondominiumCreationIntake(workspaceId, {
+        source: "AI",
+        sourceDocuments: selectedFiles.map((file) => ({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          lastModified: file.lastModified,
+        })),
+        extractedData: {
+          name: draft.name ?? "",
+          address: draft.address ?? "",
+          cap: draft.cap ?? "",
+          city: draft.city ?? "",
+          province: draft.province ?? "",
+          fiscalCode: draft.fiscalCode ?? "",
+          units: draft.units ?? draft.unitRecords?.length ?? 0,
+          unitRecords: draft.unitRecords ?? [],
+        },
+        structure: draft.structure ?? {},
+        validationErrors: [],
+        warnings: draft.warnings ?? [],
+        notes: "Proposta estratta automaticamente dai documenti e sottoposta alla verifica obbligatoria dell'amministratore.",
+      });
+      setCondominiumAiIntakeId(intakeId);
     } catch (error: any) {
-      console.error("BETHAG condominium AI intake error", error);
-      alert(error?.message || "Impossibile salvare la proposta AI.");
+      console.error("BETHAG condominium AI analysis error", error);
+      alert(error?.message || "Impossibile analizzare i documenti con l'AI.");
       setCondominiumAiDraft(null);
     } finally {
       setCondominiumAiProcessing(false);
