@@ -392,17 +392,30 @@ function AccountingPage({
     const installments = rendicontoInstallments.reduce((s,i) => s + Number(i.amount || 0), 0);
     const paidInstallments = rendicontoInstallments.reduce((s,i) => s + Number(i.paid_amount || 0), 0);
     const budget = rendicontoBudgets.reduce((s,b) => s + Number(b.amount || 0), 0);
+    const creditsApplied = rendicontoYearId === "all"
+      ? 0
+      : rendicontoCarryovers
+          .filter(c => c.kind === "Credito")
+          .reduce((sum, c) => sum + carryoverCompensations
+            .filter(x => x.carryover_id === c.id)
+            .reduce((inner, x) => inner + Number(x.amount || 0), 0), 0);
+    const creditsRemaining = rendicontoYearId === "all"
+      ? 0
+      : rendicontoCarryovers
+          .filter(c => c.kind === "Credito")
+          .reduce((sum, c) => sum + Math.abs(Number(c.balance || 0)), 0);
     const allocationGap = expenses - allocated;
     const installmentGap = allocated - installments;
     const collectionGap = installments - paidInstallments;
     const budgetVariance = budget - expenses;
     return {
       expenses, allocated, installments, paidInstallments, budget,
+      creditsApplied, creditsRemaining,
       allocationGap, installmentGap, collectionGap, budgetVariance,
       balancedAllocations: Math.abs(allocationGap) < 0.01,
       balancedInstallments: Math.abs(installmentGap) < 0.01,
     };
-  }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoBudgets]);
+  }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoBudgets, rendicontoCarryovers, carryoverCompensations, rendicontoYearId]);
 
   const rendicontoSummary = useMemo(() => {
     const income = rendicontoLedger.filter((e) => e.direction === "Entrata").reduce((s,e) => s + Number(e.amount || 0), 0);
@@ -1694,6 +1707,7 @@ function AccountingPage({
             <div className="permission-box"><b>Movimenti</b><span>{rendicontoLedger.length} registrati · pagato {money(rendicontoSummary.paidExpenses)} · da pagare {money(rendicontoSummary.unpaidExpenses)}</span></div>
             <div className="permission-box"><b>Ripartizioni</b><span>{money(rendicontoSummary.allocated)} attribuiti alle unità · pagato {money(rendicontoSummary.allocatedPaid)}</span></div>
             <div className="permission-box"><b>Rate</b><span>{money(rendicontoSummary.installmentsAmount)} dovuto · {money(rendicontoSummary.installmentsPaid)} pagato · residuo {money(rendicontoSummary.installmentsResidual)}</span></div>
+            {rendicontoYearId !== "all" && <div className="permission-box"><b>Crediti riportati</b><span>{money(quadratura.creditsApplied)} già compensati · {money(quadratura.creditsRemaining)} ancora disponibili. Il credito applicato riduce il saldo della posizione, non gli incassi del registro.</span></div>}
           </article>
 
           <article className="card">
@@ -1736,6 +1750,7 @@ function AccountingPage({
             <div className="permission-box"><b>Registro → Ripartizioni</b><span>Spese {money(quadratura.expenses)} · Ripartito {money(quadratura.allocated)} · Differenza {money(quadratura.allocationGap)}</span></div>
             <div className="permission-box"><b>Ripartizioni → Rate</b><span>Ripartito {money(quadratura.allocated)} · Rate {money(quadratura.installments)} · Differenza {money(quadratura.installmentGap)}</span></div>
             <div className="permission-box"><b>Rate → Incassi</b><span>Dovuto {money(quadratura.installments)} · Incassato {money(quadratura.paidInstallments)} · Residuo {money(quadratura.collectionGap)}</span></div>
+            <div className="permission-box"><b>Crediti riportati → Compensazioni</b><span>Compensato {money(quadratura.creditsApplied)} · Credito residuo {money(quadratura.creditsRemaining)} · Le compensazioni non sono conteggiate come incassi.</span></div>
             <div className="permission-box"><b>Preventivo → Consuntivo</b><span>Preventivo {money(quadratura.budget)} · Consuntivo {money(quadratura.expenses)} · Scostamento {money(quadratura.budgetVariance)}</span></div>
             <div className="status-line">{quadratura.balancedAllocations ? "✓ Ripartizioni quadrate" : "⚠ Verificare ripartizioni"} · {quadratura.balancedInstallments ? "✓ Rate quadrate" : "⚠ Verificare rate"}</div>
           </article>
