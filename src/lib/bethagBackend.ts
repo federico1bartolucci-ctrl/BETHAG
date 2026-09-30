@@ -1092,13 +1092,29 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
     if (progressError) throw progressError;
     const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").select("id,amount,payment_status,description,data,document_id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("direction", "Uscita");
     if (ledgerError) throw ledgerError;
-    const linkedLedger = (ledger ?? []).filter((entry: any) => entry.data?.workId === workId || (progress ?? []).some((p: any) => p.ledger_entry_id === entry.id));
+    const invoiceDocumentIds = new Set((docs ?? []).filter((doc: any) => (invoices as any[]).some((invoice: any) => invoice.id === doc.id)).map((doc: any) => doc.id));
+    const invoiceLedger = (ledger ?? []).filter((entry: any) => entry.document_id && invoiceDocumentIds.has(entry.document_id));
+    const salLedger = (ledger ?? []).filter((entry: any) =>
+      (progress ?? []).some((p: any) => p.ledger_entry_id === entry.id) ||
+      (entry.data?.source === "condominium_work_progress" && entry.data?.workId === workId)
+    );
+    const linkedLedger = [...invoiceLedger, ...salLedger.filter((entry: any) => !invoiceLedger.some((invoiceEntry: any) => invoiceEntry.id === entry.id))];
     const invoiceAmount = (invoices as any[]).reduce((sum, x) => sum + Number(x.amount || 0), 0);
     const salAmount = (progress ?? []).reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
-    const accountingAmount = linkedLedger.reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
+    const invoiceAccountingAmount = invoiceLedger.reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
+    const salAccountingAmount = salLedger.reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0);
+    const accountingAmount = invoiceAccountingAmount || salAccountingAmount;
     const approvedAmount = Number(work.approved_amount || 0);
     const expectedAmount = approvedAmount || Number(work.estimated_amount || 0);
-    return { workId, title: work.title, invoiceCount: (invoices as any[]).length, invoiceAmount, salAmount, accountingAmount, approvedAmount, estimatedAmount: Number(work.estimated_amount || 0), expectedAmount, residualToInvoices: invoiceAmount - salAmount, residualToAccounting: invoiceAmount - accountingAmount, residualToExpected: expectedAmount - invoiceAmount, documents: invoices, progress: progress ?? [], ledger: linkedLedger };
+    return {
+      workId, title: work.title, invoiceCount: (invoices as any[]).length, invoiceAmount, salAmount,
+      accountingAmount, invoiceAccountingAmount, salAccountingAmount, approvedAmount,
+      estimatedAmount: Number(work.estimated_amount || 0), expectedAmount,
+      residualToInvoices: invoiceAmount - salAmount,
+      residualToAccounting: invoiceAmount - (invoiceAccountingAmount || salAccountingAmount),
+      residualToExpected: expectedAmount - invoiceAmount,
+      documents: invoices, progress: progress ?? [], ledger: linkedLedger
+    };
   });
 }
 
