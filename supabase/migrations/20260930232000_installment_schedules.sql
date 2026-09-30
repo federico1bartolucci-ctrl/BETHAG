@@ -24,7 +24,7 @@ begin
  if coalesce(trim(p_title),'')='' then raise exception 'Il titolo delle rate è obbligatorio'; end if;
  if p_due_dates is null or coalesce(array_length(p_due_dates,1),0)<1 then raise exception 'Indicare almeno una scadenza'; end if;
  v_count:=array_length(p_due_dates,1);
- if v_count>120 then raise exception 'Il numero massimo di rate è 120'; end if;
+ if v_count>12 then raise exception 'Il numero massimo di rate annuali è 12'; end if;
  for v_idx in 1..v_count loop
    v_due:=p_due_dates[v_idx];
    if v_due is null then raise exception 'Ogni rata deve avere una scadenza'; end if;
