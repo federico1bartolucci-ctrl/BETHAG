@@ -1282,18 +1282,69 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       ledgerSupplierId = supplier?.id ?? null;
     }
 
-    const { data: existingProgress } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+    const { data: existingProgress } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id,amount,paid_amount,progress_date,title,notes").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
     let ledgerEntryId: string | null = existingProgress?.ledger_entry_id ?? null;
-    if (input.registerAccounting && amount > 0) {
-      const existing = existingProgress;
-      if (existing?.ledger_entry_id) {
-        ledgerEntryId = existing.ledger_entry_id;
-        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount, payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
+    if (existingProgress?.ledger_entry_id && !input.registerAccounting) {
+      const accountingFieldsChanged =
+        Math.abs(Number(existingProgress.amount || 0) - amount) > 0.000001 ||
+        Math.abs(Number(existingProgress.paid_amount || 0) - paidAmount) > 0.000001 ||
+        String(existingProgress.progress_date || "").slice(0, 10) !== String(input.progressDate) ||
+        String(existingProgress.title || "") !== String(input.title || ("SAL " + input.progressNo)) ||
+        String(existingProgress.notes || "") !== String(input.notes || "");
+      if (accountingFieldsChanged) {
+        throw new Error("Il SAL è già contabilizzato: per modificare importo, pagato, data o descrizione devi usare «Salva + Contabilità», così BETHAG mantiene allineata la scrittura contabile.");
+      }
+    }
+    if (input.registerAccounting) {
+      if (existingProgress?.ledger_entry_id) {
+        if (amount <= 0) {
+          throw new Error("Un SAL già contabilizzato non può essere portato a zero. Occorre gestire lo storno della scrittura contabile prima di azzerarlo.");
+        }
+        const { data: existingLedger, error: existingLedgerError } = await supabase
+          .from("condominium_ledger_entries")
+          .select("id,fiscal_year_id")
+          .eq("workspace_id", workspaceId)
+          .eq("id", existingProgress.ledger_entry_id)
+          .maybeSingle();
+        if (existingLedgerError) throw existingLedgerError;
+        if (!existingLedger?.id) throw new Error("La scrittura contabile collegata al SAL non è più disponibile.");
+        const { data: fiscalYear, error: fiscalYearError } = await supabase
+          .from("condominium_fiscal_years")
+          .select("id,status")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", work.condominium_id)
+          .lte("start_date", input.progressDate)
+          .gte("end_date", input.progressDate)
+          .maybeSingle();
+        if (fiscalYearError) throw fiscalYearError;
+        if (!fiscalYear?.id) throw new Error("La data del SAL non ricade in alcun esercizio contabile del condominio.");
+        if (String(fiscalYear.id) !== String(existingLedger.fiscal_year_id)) {
+          throw new Error("La modifica della data del SAL sposterebbe la scrittura in un esercizio diverso. Gestisci la scrittura contabile nel relativo esercizio prima di modificare la data.");
+        }
+        if (fiscalYear.status !== "Aperto") {
+          throw new Error("L'esercizio contabile del SAL è chiuso: la scrittura non può essere modificata.");
+        }
+        ledgerEntryId = existingProgress.ledger_entry_id;
+        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({
+          amount,
+          entry_date: input.progressDate,
+          payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
+          description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
+          notes: input.notes || null
+        }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
         if (ledgerUpdateError) throw ledgerUpdateError;
       } else {
-        const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+        const { data: fiscalYear, error: fiscalYearError } = await supabase
+          .from("condominium_fiscal_years")
+          .select("id,status")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", work.condominium_id)
+          .eq("status", "Aperto")
+          .lte("start_date", input.progressDate)
+          .gte("end_date", input.progressDate)
+          .maybeSingle();
         if (fiscalYearError) throw fiscalYearError;
-        if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto per questo condominio. Apri l'esercizio prima di registrare il SAL.");
+        if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto che comprenda la data del SAL. Apri l'esercizio corretto prima di registrare il SAL.");
         const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").insert({
           workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear.id,
           entry_date: input.progressDate, direction: "Uscita", category: work.category || "Lavori e manutenzioni",
