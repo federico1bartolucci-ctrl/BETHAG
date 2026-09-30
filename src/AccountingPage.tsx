@@ -1702,7 +1702,7 @@ function AccountingPage({
             <p>Quote ripartite e rate registrate per ciascuna unità dell'esercizio.</p>
             {rendicontoByUnit.length === 0 ? <p>Nessuna posizione individuale disponibile.</p> : rendicontoByUnit.map((row) => (
               <div className="row-card" key={row.unitId}>
-                <div><b>{row.unitCode}</b><small>Ripartito {money(row.allocated)} · Rate {money(row.installments)}</small><span>Pagato {money(row.paid)} · Residuo rate {money(row.residual)}</span></div>
+                <div><b>{row.unitCode}</b><small>Ripartito {money(row.allocated)} · Rate {money(row.installments)}</small><span>Pagato {money(row.paid)} · Residuo rate {money(row.residual)} · Riportato {money(row.carryover)}</span><span><b>Saldo posizione {money(row.balance)}</b></span></div>
               </div>
             ))}
           </article>
