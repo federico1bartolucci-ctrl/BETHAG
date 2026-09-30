@@ -3083,6 +3083,7 @@ function App() {
       },
       backend,
       backendReadErrors: errors,
+      localStorageData,
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
