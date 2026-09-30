@@ -1065,7 +1065,7 @@ export async function syncCondominiumWorkDocuments(workspaceId: string, workId: 
     const { error: deleteError } = await supabase.from("condominium_work_documents").delete().eq("workspace_id", workspaceId).eq("work_id", workId);
     if (deleteError) throw deleteError;
     if (!docs?.length) return [];
-    const rows = docs.map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.id, title: doc.title || null }));
+    const rows = docs.map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.legacy_id, title: doc.title || null }));
     const { data, error } = await supabase.from("condominium_work_documents").insert(rows).select("*");
     if (error) throw error;
     return data ?? [];
@@ -1096,9 +1096,11 @@ export async function saveCondominiumWorkProgress(workspaceId: string, workId: s
         const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({ amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare", description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo), notes: input.notes || null }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
         if (ledgerUpdateError) throw ledgerUpdateError;
       } else {
-        const { data: fiscalYear } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+        const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years").select("id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
+        if (fiscalYearError) throw fiscalYearError;
+        if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto per questo condominio. Apri l'esercizio prima di registrare il SAL.");
         const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").insert({
-          workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear?.id ?? null,
+          workspace_id: workspaceId, condominium_id: work.condominium_id, fiscal_year_id: fiscalYear.id,
           entry_date: input.progressDate, direction: "Uscita", category: work.category || "Lavori e manutenzioni",
           description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
           amount: input.amount, payment_status: input.paidAmount >= input.amount ? "Pagato" : input.paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
