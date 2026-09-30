@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -5411,13 +5411,35 @@ function App() {
     closeModal();
   };
 
-  const saveCondominiumWork = (event: React.FormEvent<HTMLFormElement>) => {
+  const saveCondominiumWork = async (event: React.FormEvent<HTMLFormElement>) => {
     if (!requireModulePermission("attivita", "La gestione dei lavori e delle manutenzioni")) return;
     event.preventDefault();
     if (!condominiumWorkForm.title.trim() || !condominiumWorkForm.condominiumId) { alert("Inserisci almeno condominio e titolo del lavoro."); return; }
-    const normalized = { ...condominiumWorkForm, title: condominiumWorkForm.title.trim(), category: condominiumWorkForm.category.trim() || "Manutenzione", description: condominiumWorkForm.description.trim(), notes: condominiumWorkForm.notes.trim(), estimatedAmount: Math.max(0, Number(condominiumWorkForm.estimatedAmount) || 0), approvedAmount: Math.max(0, Number(condominiumWorkForm.approvedAmount) || 0), actualAmount: Math.max(0, Number(condominiumWorkForm.actualAmount) || 0), progressPercent: Math.max(0, Math.min(100, Number(condominiumWorkForm.progressPercent) || 0)), documentIds: Array.from(new Set(condominiumWorkForm.documentIds || [])) };
-    if (selectedCondominiumWork) setCondominiumWorks(current => current.map(item => item.id === selectedCondominiumWork.id ? { ...normalized, id: selectedCondominiumWork.id } : item)); else setCondominiumWorks(current => [...current, { ...normalized, id: normalized.id || crypto.randomUUID() }]);
-    setSelectedCondominiumWork(null); setCondominiumWorkForm(emptyCondominiumWork); closeModal();
+    const normalized: CondominiumWork = { ...condominiumWorkForm, title: condominiumWorkForm.title.trim(), category: condominiumWorkForm.category.trim() || "Manutenzione", description: condominiumWorkForm.description.trim(), notes: condominiumWorkForm.notes.trim(), estimatedAmount: Math.max(0, Number(condominiumWorkForm.estimatedAmount) || 0), approvedAmount: Math.max(0, Number(condominiumWorkForm.approvedAmount) || 0), actualAmount: Math.max(0, Number(condominiumWorkForm.actualAmount) || 0), progressPercent: Math.max(0, Math.min(100, Number(condominiumWorkForm.progressPercent) || 0)), documentIds: Array.from(new Set(condominiumWorkForm.documentIds || [])) };
+    const workId = selectedCondominiumWork?.id || normalized.id || crypto.randomUUID();
+    const previous = condominiumWorks;
+    const saved = { ...normalized, id: workId };
+    setCondominiumWorks(current => selectedCondominiumWork ? current.map(item => item.id === workId ? saved : item) : [...current, saved]);
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        const { data: condominiumRow, error: condominiumError } = await supabase.from("condominiums").select("id").eq("workspace_id", profile.workspaceId).eq("legacy_id", normalized.condominiumId).maybeSingle();
+        if (condominiumError) throw condominiumError;
+        if (!condominiumRow?.id) throw new Error("Condominio non trovato sul server.");
+        await syncCondominiumWorkDocumentsBackend(profile.workspaceId, workId, condominiumRow.id, normalized.documentIds);
+        const changed = !selectedCondominiumWork || selectedCondominiumWork.status !== saved.status || selectedCondominiumWork.progressPercent !== saved.progressPercent || selectedCondominiumWork.actualAmount !== saved.actualAmount || selectedCondominiumWork.supplierId !== saved.supplierId;
+        if (changed) await recordCondominiumWorkEventBackend(profile.workspaceId, workId, condominiumRow.id, {
+          eventType: selectedCondominiumWork ? "work_updated" : "work_created",
+          title: selectedCondominiumWork ? "Lavoro aggiornato" : "Lavoro creato",
+          description: selectedCondominiumWork ? "Sono stati modificati dati operativi del lavoro." : "Il lavoro è stato creato in BETHAG.",
+          amount: saved.actualAmount || saved.approvedAmount || saved.estimatedAmount || 0,
+          data: { status: saved.status, progressPercent: saved.progressPercent, supplierId: saved.supplierId, documentIds: saved.documentIds }
+        });
+      }
+      setSelectedCondominiumWork(null); setCondominiumWorkForm(emptyCondominiumWork); closeModal();
+    } catch (error) {
+      setCondominiumWorks(previous);
+      alert(error instanceof Error ? "Il lavoro non è stato sincronizzato completamente.\n\n" + error.message : "Impossibile sincronizzare il lavoro.");
+    }
   };
   const editCondominiumWork = (item: CondominiumWork) => { if (!requireModulePermission("attivita", "La modifica di un lavoro")) return; setSelectedCondominiumWork(item); setCondominiumWorkForm(item); openModal("condominium-work"); };
   const newWorkProgress = (work: CondominiumWork) => { if (!requireModulePermission("attivita", "La gestione degli stati di avanzamento")) return; setSelectedWorkProgress(null); setWorkProgressForm({ ...emptyWorkProgress, workId: work.id, progressNo: 1, title: "SAL " + 1, percentage: work.progressPercent, amount: 0, paidAmount: 0 }); openModal("work-progress"); };
