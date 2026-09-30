@@ -1155,10 +1155,17 @@ function AccountingPage({
     if (allocationIntakeForm.source === "Manuale" && Math.abs(total-Number(allocationIntakeForm.expense_amount||0))>0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
     setSaving(true); setError("");
     try {
+      let backendDocumentId: string | null = null;
+      if (allocationIntakeForm.document_id) {
+        const { data: documentRow, error: documentLookupError } = await supabase.from("documents").select("id").eq("workspace_id", workspaceId).eq("legacy_id", Number(allocationIntakeForm.document_id)).maybeSingle();
+        if (documentLookupError) throw documentLookupError;
+        backendDocumentId = documentRow?.id ?? null;
+        if (!backendDocumentId) throw new Error("Il documento selezionato non è ancora presente nel database.");
+      }
       const { error: saveError } = await supabase.from("condominium_allocation_intakes").insert({
         workspace_id:workspaceId, condominium_id:dbCondominiumId, source:allocationIntakeForm.source,
         status:allocationIntakeForm.source==="AI" ? "Da verificare" : "Bozza",
-        document_id:allocationIntakeForm.document_id ? Number(allocationIntakeForm.document_id) : null,
+        document_id:backendDocumentId,
         ledger_entry_id:allocationIntakeForm.ledger_entry_id || null, allocation_table_id:allocationIntakeForm.allocation_table_id || null,
         title:allocationIntakeForm.title.trim(), description:allocationIntakeForm.description, expense_amount:Number(allocationIntakeForm.expense_amount||0),
         rows:allocationIntakeForm.rows, extracted_data:{}, validation_errors:[], notes:allocationIntakeForm.notes
