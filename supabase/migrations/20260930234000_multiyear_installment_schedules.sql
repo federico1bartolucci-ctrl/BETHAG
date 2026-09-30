@@ -9,7 +9,7 @@ declare
  v_source_year public.condominium_fiscal_years%rowtype;
  v_year public.condominium_fiscal_years%rowtype;
  v_count integer; v_idx integer; v_alloc public.condominium_expense_allocations%rowtype;
- v_base numeric; v_amount numeric; v_sum numeric; v_year_id uuid; v_year_count integer;
+ v_base numeric; v_amount numeric; v_sum numeric; v_year_id uuid; v_year_count integer; v_year_start date; v_year_end date;
 begin
  if not private.can_manage_workspace_module(p_workspace_id,'contabilita') then raise exception 'Autorizzazione gestione contabilità richiesta'; end if;
  if coalesce(trim(p_title),'')='' then raise exception 'Il titolo delle rate è obbligatorio'; end if;
@@ -34,8 +34,8 @@ begin
   if v_year.status='Chiuso' then raise exception 'La scadenza % ricade in un esercizio contabile chiuso',p_due_dates[v_idx]; end if;
  end loop;
  for v_idx in 1..v_count loop
-  select id,start_date,end_date into v_year_id,v_year.start_date,v_year.end_date from public.condominium_fiscal_years where workspace_id=p_workspace_id and condominium_id=p_condominium_id and p_due_dates[v_idx] between start_date and end_date order by start_date limit 1;
-  select count(*) into v_year_count from unnest(p_due_dates) d where d between v_year.start_date and v_year.end_date;
+  select id,start_date,end_date into v_year_id,v_year_start,v_year_end from public.condominium_fiscal_years where workspace_id=p_workspace_id and condominium_id=p_condominium_id and p_due_dates[v_idx] between start_date and end_date order by start_date limit 1;
+  select count(*) into v_year_count from unnest(p_due_dates) d where d between v_year_start and v_year_end;
   if v_year_count>12 then raise exception 'Non sono consentite più di 12 rate nello stesso esercizio contabile'; end if;
  end loop;
  select count(*) into v_count from public.condominium_expense_allocations where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id;
