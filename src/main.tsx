@@ -4924,14 +4924,23 @@ function App() {
     }
 
     const portalMember = !isAdministrator
-      ? portalMembers.find((member) => member.active && member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
+      ? portalMembers.find((member) =>
+          member.active &&
+          (member.userId === sessionUserId ||
+            (!member.userId &&
+              member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()))
+        )
       : null;
     const portalCondominiumMember = portalMember
       ? condominiumMembers.find(
           (member) =>
             member.active &&
             member.condominiumId === portalMember.condominiumId &&
-            member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
+            (portalMember.userId && member.userId
+              ? member.userId === portalMember.userId
+              : member.email.trim().toLowerCase() === portalMember.email.trim().toLowerCase() &&
+                member.firstName.trim().toLowerCase() ===
+                  portalMember.name.trim().split(/\s+/)[0]?.toLowerCase())
         )
       : null;
     if (!isAdministrator && (!portalMember || !portalMember.condominiumId)) {
