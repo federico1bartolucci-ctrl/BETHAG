@@ -5472,8 +5472,18 @@ function App() {
     try {
       const result = await reconcileCondominiumWorkBackend(profile.workspaceId, work.id);
       const fmt = (n:number) => "€ " + Number(n || 0).toLocaleString("it-IT",{minimumFractionDigits:2});
-      const status = Math.abs(Number(result.residualToInvoices || 0)) < 0.01 && Math.abs(Number(result.residualToAccounting || 0)) < 0.01 ? "RICONCILIATO" : "DA VERIFICARE";
-      alert("Riconciliazione " + status + "\n\n" + work.title + "\n\nDocumenti/fatture: " + result.invoiceCount + " · " + fmt(result.invoiceAmount) + "\nSAL: " + fmt(result.salAmount) + "\nContabilità collegata: " + fmt(result.accountingAmount) + "\n\nResiduo fatture − SAL: " + fmt(result.residualToInvoices) + "\nResiduo fatture − Contabilità: " + fmt(result.residualToAccounting) + (result.expectedAmount ? "\nScostamento dal preventivo approvato/stimato: " + fmt(result.residualToExpected) : "") + (status === "DA VERIFICARE" ? "\n\nControlla le fatture o i SAL prima di procedere con ulteriori imputazioni." : ""));
+      const invoiceAccountingAmount = Number(result.invoiceAccountingAmount ?? result.accountingAmount ?? 0);
+      const status = Math.abs(Number(result.residualToInvoices || 0)) < 0.01 &&
+        (Number(result.invoiceCount || 0) === 0 || Math.abs(invoiceAccountingAmount - Number(result.invoiceAmount || 0)) < 0.01)
+        ? "RICONCILIATO" : "DA VERIFICARE";
+      alert("Riconciliazione " + status + "\n\n" + work.title + "\n\nDocumenti/fatture: " + result.invoiceCount + " · " + fmt(result.invoiceAmount) +
+        "\nSAL: " + fmt(result.salAmount) +
+        "\nContabilità fatture: " + fmt(invoiceAccountingAmount) +
+        "\nContabilità SAL: " + fmt(result.salAccountingAmount ?? 0) +
+        "\n\nResiduo fatture − SAL: " + fmt(result.residualToInvoices) +
+        "\nResiduo fatture − Contabilità: " + fmt(Number(result.invoiceAmount || 0) - invoiceAccountingAmount) +
+        (result.expectedAmount ? "\nScostamento dal preventivo approvato/stimato: " + fmt(result.residualToExpected) : "") +
+        (status === "DA VERIFICARE" ? "\n\nControlla le fatture e i SAL prima di procedere con ulteriori imputazioni." : ""));
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile eseguire la riconciliazione."); }
   };
   const editCondominiumWork = (item: CondominiumWork) => { if (!requireModulePermission("attivita", "La modifica di un lavoro")) return; setSelectedCondominiumWork(item); setCondominiumWorkForm(item); openModal("condominium-work"); };
