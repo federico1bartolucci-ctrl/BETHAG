@@ -1229,6 +1229,34 @@ export async function storeCondominiumDocuments(
   return stored;
 }
 
+export async function analyzeWorkspaceDocumentsWithAI(
+  workspaceId: string,
+  files: File[]
+): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId || !files.length) throw new Error("Workspace o documenti mancanti.");
+  const preparedFiles = [];
+  for (const file of files) {
+    const data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error(`Impossibile leggere "${file.name}".`));
+      reader.readAsDataURL(file);
+    });
+    preparedFiles.push({
+      filename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      data,
+    });
+  }
+  const { data, error } = await supabase.functions.invoke("bethag-ai-document", {
+    body: { workspaceId, files: preparedFiles },
+  });
+  if (error) throw error;
+  if (!data?.draft) throw new Error(data?.error ?? "L'AI non ha restituito una proposta.");
+  return data.draft;
+}
+
 export async function analyzeCondominiumDocumentsWithAI(
   workspaceId: string,
   files: File[]
