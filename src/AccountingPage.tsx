@@ -1681,6 +1681,19 @@ function AccountingPage({
 
   async function remove(table: string, id: string, label: string) {
     if (!supabase) return;
+    if (table === "condominium_installments") {
+      const { data: installmentRow, error: installmentLookupError } = await supabase
+        .from("condominium_installments")
+        .select("id,ledger_entry_id,status,paid_amount")
+        .eq("id", id)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+      if (installmentLookupError) { setError(installmentLookupError.message); return; }
+      if (installmentRow?.ledger_entry_id) {
+        setError("Questa rata è collegata a un riparto contabile. Per evitare di lasciare incoerenti la rata aggregata e le quote delle unità, le rate generate dal riparto non possono essere eliminate singolarmente.");
+        return;
+      }
+    }
     if (!window.confirm("Sei sicuro di voler cancellare " + label + "?")) return;
     const { error: deleteError } = await supabase
       .from(table)
