@@ -4014,7 +4014,9 @@ function App() {
   };
 
   const saveCondominium = async (
-    event: React.FormEvent<HTMLFormElement>
+    event: React.FormEvent<HTMLFormElement>,
+    dataOverride?: Condominium,
+    aiConfirmedUnitsOverride?: CondominiumCreationUnitDraft[],
   ) => {
     event.preventDefault();
 
@@ -4024,6 +4026,7 @@ function App() {
       Boolean(editingCondominium && editingCondominium.id !== 0);
 
     const data =
+      dataOverride ||
       editingCondominium ||
       emptyCondominium;
 
@@ -4188,8 +4191,9 @@ function App() {
           // esplicitamente confermati dall'amministratore. I millesimi restano
           // sempre proprietà dell'unità; i proprietari vengono registrati
           // nell'anagrafica e collegati all'unità.
-          if (condominiumAiConfirmedUnits.length > 0) {
-            for (const draftUnit of condominiumAiConfirmedUnits) {
+          const confirmedAiUnits = aiConfirmedUnitsOverride ?? condominiumAiConfirmedUnits;
+          if (confirmedAiUnits.length > 0) {
+            for (const draftUnit of confirmedAiUnits) {
               const target = generatedUnits.find((unit) =>
                 unit.unitCode.trim().toLowerCase() === draftUnit.unitCode.trim().toLowerCase()
               );
@@ -4329,9 +4333,10 @@ function App() {
           });
         }
       });
-      if (condominiumAiConfirmedUnits.length > 0) {
+      const confirmedAiUnits = aiConfirmedUnitsOverride ?? condominiumAiConfirmedUnits;
+      if (confirmedAiUnits.length > 0) {
         const aiMembers: CondominiumMember[] = [];
-        for (const draftUnit of condominiumAiConfirmedUnits) {
+        for (const draftUnit of confirmedAiUnits) {
           const target = generatedUnits.find((unit) =>
             unit.unitCode.trim().toLowerCase() === draftUnit.unitCode.trim().toLowerCase()
           );
@@ -7439,7 +7444,7 @@ function App() {
               files={condominiumAiFiles}
               processing={condominiumAiProcessing}
               onFiles={analyzeCondominiumDocuments}
-              onConfirm={async (draft) => {
+              onConfirm={async (draft, automatic = false) => {
                 try {
                   const workspaceId = await getActiveWorkspaceId();
                   if (workspaceId && condominiumAiIntakeId) {
@@ -7461,7 +7466,8 @@ function App() {
                     });
                   }
 
-                  setEditingCondominium({
+                  const confirmedUnits = Array.isArray(draft.unitRecords) ? draft.unitRecords : [];
+                  const autoData: Condominium = {
                     ...emptyCondominium,
                     name: draft.name ?? "",
                     address: draft.address ?? "",
@@ -7469,9 +7475,16 @@ function App() {
                     city: draft.city ?? "",
                     province: draft.province ?? "",
                     fiscalCode: draft.fiscalCode ?? "",
+                    units: String(confirmedUnits.length),
                     structure: draft.structure,
-                  });
-                  setCondominiumAiConfirmedUnits(Array.isArray(draft.unitRecords) ? draft.unitRecords : []);
+                  };
+                  setCondominiumAiConfirmedUnits(confirmedUnits);
+                  if (automatic) {
+                    await saveCondominium({ preventDefault: () => undefined } as React.FormEvent<HTMLFormElement>, autoData, confirmedUnits);
+                    setCondominiumAiDraft(null);
+                    return;
+                  }
+                  setEditingCondominium(autoData);
                   setCondominiumAiDraft(null);
                   setModalType("condominium");
                 } catch (error: any) {
@@ -13862,7 +13875,7 @@ function CondominiumAiCreationForm({
   files: string[];
   processing: boolean;
   onFiles: (files: FileList | null) => void;
-  onConfirm: (draft: CondominiumCreationDraft) => void;
+  onConfirm: (draft: CondominiumCreationDraft, automatic?: boolean) => void;
   onCancel: () => void;
 }) {
   const [edited, setEdited] = useState<CondominiumCreationDraft>(draft ?? {
@@ -13914,7 +13927,11 @@ function CondominiumAiCreationForm({
         <div className="help-detail"><strong>Verifica obbligatoria dell'amministratore</strong><p>Proprietari e millesimi possono essere acquisiti automaticamente dai documenti, ma restano dati proposti dall'AI: nessun dato viene reso definitivo senza la conferma dell'amministratore.</p>{edited.warnings.map((w) => <div className="form-help" key={w}>• {w}</div>)}</div>
         <div className="form-actions">
           <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
-          <button type="button" className="primary-button" onClick={() => onConfirm(edited)}>Conferma proposta e continua</button>
+          <div className="form-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
+          <button type="button" className="secondary-button" onClick={() => onConfirm(edited, false)}>Conferma e modifica manualmente</button>
+          <button type="button" className="primary-button" onClick={() => onConfirm(edited, true)}>Conferma e crea automaticamente</button>
+        </div>
         </div>
       </>}
     </div>
