@@ -187,6 +187,27 @@ type CondominiumStructure = {
   };
 };
 
+type CondominiumCreationUnitDraft = {
+  unitCode: string;
+  unitType: CondominiumUnit["unitType"];
+  civicCode?: string;
+  buildingCode?: string;
+  staircaseCode?: string;
+  interior?: number;
+  millesimi?: string;
+  owners: Array<{
+    firstName: string;
+    lastName: string;
+    fiscalCode?: string;
+    email?: string;
+    phone?: string;
+    ownershipShare?: string;
+  }>;
+  confidence?: number;
+  sourceDocument?: string;
+  warnings?: string[];
+};
+
 type CondominiumCreationDraft = {
   name?: string;
   address?: string;
@@ -194,8 +215,8 @@ type CondominiumCreationDraft = {
   city?: string;
   province?: string;
   fiscalCode?: string;
-  units?: number;
   structure?: CondominiumStructure;
+  unitRecords?: CondominiumCreationUnitDraft[];
   confidence?: number;
   sourceDocuments: string[];
   warnings: string[];
@@ -3960,28 +3981,37 @@ function App() {
       editingCondominium ||
       emptyCondominium;
 
-    if (
-      !data.name.trim() ||
-      !data.address.trim() ||
-      !data.units.trim()
-    ) {
-      alert(
-        "Nome, indirizzo e numero di unità immobiliari sono obbligatori."
-      );
+    if (!data.name.trim() || !data.address.trim()) {
+      alert("Nome e indirizzo del condominio sono obbligatori.");
       return;
     }
 
-    const units = Number(data.units);
+    const structureUnitCount = data.structure?.configured
+      ? data.structure.civics.reduce(
+          (total, civic) => total + civic.buildings.reduce(
+            (buildingTotal, building) => buildingTotal + building.scales.reduce(
+              (scaleTotal, scale) => scaleTotal + Math.max(0, Number(scale.interiors) || 0),
+              0
+            ),
+            0
+          ),
+          0
+        ) +
+        Math.max(0, Number(data.structure.autonomous.garages) || 0) +
+        Math.max(0, Number(data.structure.autonomous.cantine) || 0) +
+        Math.max(0, Number(data.structure.autonomous.postiAuto) || 0) +
+        Math.max(0, Number(data.structure.autonomous.altre) || 0)
+      : 0;
 
-    if (
-      !Number.isInteger(units) ||
-      units <= 0
-    ) {
-      alert(
-        "Il numero di unità immobiliari deve essere un numero intero positivo."
-      );
+    if (!isEditing && structureUnitCount <= 0) {
+      alert("Indica nella struttura almeno un interno o una pertinenza autonoma.");
       return;
     }
+
+    const normalizedData = {
+      ...data,
+      units: String(data.structure?.configured ? structureUnitCount : Math.max(0, Number(data.units) || 0)),
+    };
 
     if (!validateEmail(data.email)) {
       alert("Controlla l'indirizzo email.");
@@ -3991,13 +4021,13 @@ function App() {
     const nextCondominiums = isEditing
       ? condominiums.map((item) =>
           item.id === editingCondominium!.id
-            ? { ...data, id: editingCondominium!.id }
+            ? { ...normalizedData, id: editingCondominium!.id }
             : item
         )
       : [
           ...condominiums,
           {
-            ...data,
+            ...normalizedData,
             id: makeId(),
           },
         ];
@@ -13648,9 +13678,30 @@ function CondominiumAiCreationForm({
           <Field label="Comune" value={edited.city ?? ""} onChange={(v: string) => setEdited({ ...edited, city: v })} />
           <Field label="Provincia" value={edited.province ?? ""} onChange={(v: string) => setEdited({ ...edited, province: v })} />
           <Field label="Codice fiscale" value={edited.fiscalCode ?? ""} onChange={(v: string) => setEdited({ ...edited, fiscalCode: v })} />
-          <Field label="Unità rilevate" type="number" value={String(edited.units ?? "")} onChange={(v: string) => setEdited({ ...edited, units: Number(v) || 0 })} />
+          <div className="field full">
+            <label>Struttura e unità</label>
+            <div className="form-help">Il numero delle unità viene ricavato automaticamente dalla struttura fisica del condominio.</div>
+          </div>
         </div>
-        <div className="help-detail"><strong>Verifica obbligatoria</strong><p>Controlla i dati estratti e correggili prima di procedere. I campi non presenti nei documenti restano vuoti.</p>{edited.warnings.map((w) => <div className="form-help" key={w}>• {w}</div>)}</div>
+        {edited.unitRecords && edited.unitRecords.length > 0 && (
+          <div className="field full">
+            <label>Unità, proprietari e millesimi rilevati dall'AI</label>
+            <div className="related-list">
+              {edited.unitRecords.map((unit, index) => (
+                <div className="request-card" key={unit.unitCode + "-" + index}>
+                  <div className="request-main">
+                    <b>{unit.unitCode}</b>
+                    <span>{unit.unitType} · {unit.millesimi ? unit.millesimi + " millesimi" : "Millesimi non rilevati"}</span>
+                    <small>{[unit.civicCode, unit.buildingCode, unit.staircaseCode, unit.interior ? "Interno " + unit.interior : ""].filter(Boolean).join(" · ")}</small>
+                    <p>{unit.owners.length ? <><strong>{unit.owners.length}</strong> proprietari rilevati: {unit.owners.map((owner) => (owner.firstName + " " + owner.lastName).trim()).filter(Boolean).join(", ")}</> : "Nessun proprietario rilevato"}</p>
+                  </div>
+                  <span className="badge">{Math.round((unit.confidence ?? edited.confidence ?? 0) * 100)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="help-detail"><strong>Verifica obbligatoria dell'amministratore</strong><p>Proprietari e millesimi possono essere acquisiti automaticamente dai documenti, ma restano dati proposti dall'AI: nessun dato viene reso definitivo senza la conferma dell'amministratore.</p>{edited.warnings.map((w) => <div className="form-help" key={w}>• {w}</div>)}</div>
         <div className="form-actions">
           <button type="button" className="secondary-button" onClick={onCancel}>Annulla</button>
           <button type="button" className="primary-button" onClick={() => onConfirm(edited)}>Conferma proposta e continua</button>
