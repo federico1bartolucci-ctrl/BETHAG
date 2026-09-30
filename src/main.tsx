@@ -8923,6 +8923,36 @@ function CondominiumDetails(
   const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active);
   const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
+  const unitCollator = new Intl.Collator("it-IT", { numeric: true, sensitivity: "base" });
+  const orderedActiveUnits = condominiumUnits
+    .filter((unit: CondominiumUnit) => unit.active)
+    .slice()
+    .sort((a: CondominiumUnit, b: CondominiumUnit) => {
+      const aAutonomous = !a.civicCode && !a.buildingCode && !a.staircaseCode;
+      const bAutonomous = !b.civicCode && !b.buildingCode && !b.staircaseCode;
+      if (aAutonomous !== bAutonomous) return aAutonomous ? 1 : -1;
+      if (!aAutonomous) {
+        const hierarchy = [
+          a.civicCode || "",
+          a.buildingCode || "",
+          a.staircaseCode || "",
+        ];
+        const otherHierarchy = [
+          b.civicCode || "",
+          b.buildingCode || "",
+          b.staircaseCode || "",
+        ];
+        for (let index = 0; index < hierarchy.length; index += 1) {
+          const result = unitCollator.compare(hierarchy[index], otherHierarchy[index]);
+          if (result !== 0) return result;
+        }
+        const aInterior = Number((a.unitCode.match(/(?:Int\.?|Interno)\s*(\d+)/i) || [])[1] || 0);
+        const bInterior = Number((b.unitCode.match(/(?:Int\.?|Interno)\s*(\d+)/i) || [])[1] || 0);
+        if (aInterior !== bInterior) return aInterior - bInterior;
+      }
+      return unitCollator.compare(a.unitCode, b.unitCode);
+    });
+
   return (
     <section className="detail-card">
 
@@ -9166,9 +9196,16 @@ function CondominiumDetails(
           {condominiumUnits.filter((unit: CondominiumUnit) => unit.active).length === 0 ? (
             <Empty text="Nessuna unità immobiliare disponibile." />
           ) : (
-            condominiumUnits
-              .filter((unit: CondominiumUnit) => unit.active)
-              .map((unit: CondominiumUnit) => {
+            orderedActiveUnits
+              .map((unit: CondominiumUnit, unitIndex: number) => {
+                const previousUnit = unitIndex > 0 ? orderedActiveUnits[unitIndex - 1] : null;
+                const hierarchyKey = [unit.civicCode || "", unit.buildingCode || "", unit.staircaseCode || ""].join("|");
+                const previousHierarchyKey = previousUnit
+                  ? [previousUnit.civicCode || "", previousUnit.buildingCode || "", previousUnit.staircaseCode || ""].join("|")
+                  : "";
+                const showHierarchyHeader = hierarchyKey !== previousHierarchyKey;
+                const hierarchyTitle = [unit.civicCode, unit.buildingCode, unit.staircaseCode].filter(Boolean).join(" · ");
+                const isAutonomous = !unit.civicCode && !unit.buildingCode && !unit.staircaseCode;
                 const linkedMembers = activeMembers.filter(
                   (member: CondominiumMember) =>
                     member.unitId === unit.id ||
@@ -9192,7 +9229,16 @@ function CondominiumDetails(
                 ];
 
                 return (
-                  <div className="request-card" key={unit.id}>
+                  <React.Fragment key={unit.id}>
+                    {showHierarchyHeader && (
+                      <div className="section-title" style={{ marginTop: unitIndex === 0 ? 0 : 18, marginBottom: 8 }}>
+                        <div>
+                          <div className="eyebrow">{isAutonomous ? "Pertinenze autonome" : "Struttura condominiale"}</div>
+                          <strong>{isAutonomous ? "Box, cantine, posti auto e altre pertinenze" : hierarchyTitle}</strong>
+                        </div>
+                      </div>
+                    )}
+                  <div className="request-card">
                     <div className="request-main">
                       <b>
                         {unit.unitType === "Garage"
@@ -9282,6 +9328,7 @@ function CondominiumDetails(
                       )}
                     </div>
                   </div>
+                  </React.Fragment>
                 );
               })
           )}
