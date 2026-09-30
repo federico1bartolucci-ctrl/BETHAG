@@ -315,7 +315,9 @@ async function syncBackendStateNow(
   const rowsByTable: Array<[string, any[]]> = [
     canSyncModule("documenti") ? ["documents", (state.documents ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.name, category: item.category, status: item.publication, data: item,
+      title: item.name, category: item.category, status: item.publication,
+      file_path: item.storagePath ?? null,
+      data: item,
     }))] : null,
     canSyncModule("scadenze") ? ["deadlines", (state.deadlines ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
