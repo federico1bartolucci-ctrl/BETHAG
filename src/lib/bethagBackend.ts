@@ -1026,6 +1026,49 @@ export function syncBackendState(
   );
 }
 
+function parseBethagAmount(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const raw = String(value ?? "").trim();
+  if (!raw) return 0;
+  const cleaned = raw.replace(/[^0-9,.-]/g, "");
+  if (!cleaned) return 0;
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  let normalized = cleaned;
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if ((cleaned.match(/\./g) ?? []).length > 1) {
+    normalized = cleaned.replace(/\./g, "");
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseBethagDate(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return new Date().toISOString().slice(0, 10);
+  const match = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})$/);
+  if (match) {
+    const day = match[1].padStart(2, "0");
+    const month = match[2].padStart(2, "0");
+    return `${match[3]}-${month}-${day}`;
+  }
+  const iso = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+  return iso ? iso[1] : new Date(raw).toISOString().slice(0, 10);
+}
+
+function extractBethagDocumentData(data: unknown): Record<string, any> {
+  const root = data && typeof data === "object" ? data as Record<string, any> : {};
+  const nested = typeof root.extractedData === "string"
+    ? (() => { try { return JSON.parse(root.extractedData); } catch { return {}; } })()
+    : (root.extractedData && typeof root.extractedData === "object" ? root.extractedData : {});
+  return { ...root, ...nested };
+}
+
 export async function reconcileCondominiumWork(workspaceId: string, workId: string) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
@@ -1034,14 +1077,16 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
     if (!work) throw new Error("Lavoro non trovato.");
     const { data: links, error: linksError } = await supabase.from("condominium_work_documents").select("document_id,title").eq("workspace_id", workspaceId).eq("work_id", workId);
     if (linksError) throw linksError;
-    const documentIds = (links ?? []).map((x: any) => x.document_id).filter(Boolean);
-    const { data: docs, error: docsError } = documentIds.length ? await supabase.from("documents").select("id,title,category,data").eq("workspace_id", workspaceId).in("id", documentIds) : { data: [], error: null } as any;
+    const documentLegacyIds = (links ?? []).map((x: any) => Number(x.document_id)).filter((id: number) => Number.isFinite(id));
+    const { data: docs, error: docsError } = documentLegacyIds.length ? await supabase.from("documents").select("id,legacy_id,title,category,data").eq("workspace_id", workspaceId).in("legacy_id", documentLegacyIds) : { data: [], error: null } as any;
     if (docsError) throw docsError;
     const invoices = (docs ?? []).map((doc: any) => {
-      const d = doc.data ?? {};
-      const amount = Number(d.invoiceAmount ?? d.amount ?? d.totalAmount ?? d.importo ?? d.importoTotale ?? d.expenseAmount ?? 0);
-      const isInvoice = String(doc.category ?? "").toLowerCase().includes("fattur") || String(d.documentType ?? d.aiDocumentType ?? "").toLowerCase().includes("fattur") || amount > 0;
-      return isInvoice ? { id: doc.id, title: doc.title, amount: Number.isFinite(amount) ? amount : 0 } : null;
+      const d = extractBethagDocumentData(doc.data);
+      const amount = parseBethagAmount(d.invoiceAmount ?? d.amount ?? d.totalAmount ?? d.importo ?? d.importoTotale ?? d.expenseAmount);
+      const type = String(doc.category ?? "").toLowerCase() + " " + String(d.documentType ?? d.aiDocumentType ?? "").toLowerCase();
+      const confirmed = String(d.invoiceConfirmation?.status ?? "").toLowerCase() === "confermato";
+      const isInvoice = type.includes("fattur") || confirmed;
+      return isInvoice ? { id: doc.id, legacyId: doc.legacy_id, title: doc.title, amount } : null;
     }).filter(Boolean);
     const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").select("progress_no,title,amount,paid_amount,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).order("progress_no");
     if (progressError) throw progressError;
@@ -1612,11 +1657,10 @@ export async function confirmCondominiumInvoice(
     if (documentError) throw documentError;
     if (!document?.id) throw new Error("Documento fattura non trovato nel database.");
 
-    const rawAmount = String(payload.extractedData?.expenseAmount ?? payload.extractedData?.amount ?? payload.extractedData?.totalAmount ?? "");
-    const amount = Number(rawAmount.replace(/[^0-9,.-]/g, "").replace(",", "."));
+    const amount = parseBethagAmount(payload.extractedData?.expenseAmount ?? payload.extractedData?.amount ?? payload.extractedData?.totalAmount);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("L'importo della fattura non è stato riconosciuto con sufficiente certezza. Verificalo prima della conferma.");
 
-    const invoiceDate = String(payload.extractedData?.documentDate ?? payload.extractedData?.invoiceDate ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+    const invoiceDate = parseBethagDate(payload.extractedData?.documentDate ?? payload.extractedData?.invoiceDate);
     const invoiceNumber = String(payload.extractedData?.invoiceNumber ?? payload.extractedData?.numeroFattura ?? "").trim();
     const supplierName = String(payload.extractedData?.supplier ?? "").trim();
 
