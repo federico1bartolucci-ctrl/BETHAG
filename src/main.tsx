@@ -4923,14 +4923,21 @@ function App() {
       if (!requireModulePermission("condomini", "La gestione delle segnalazioni o richieste")) return;
     }
 
+    let currentAuthUserId = "";
+    if (!isAdministrator && supabaseConfigured && supabase) {
+      const { data: authState } = await supabase.auth.getUser();
+      currentAuthUserId = authState.user?.id ?? "";
+    }
+
     const portalMember = !isAdministrator
       ? portalMembers.find((member) =>
           member.active &&
-          (portalMember.userId
-            ? member.userId === portalMember.userId
-            : member.email.trim().toLowerCase() === portalMember.email.trim().toLowerCase() &&              member.firstName.trim().toLowerCase() === portalMember.name.trim().split(/\s+/)[0]?.toLowerCase() &&              member.apartment.trim().toLowerCase() === portalMember.apartment.trim().toLowerCase())
+          (currentAuthUserId
+            ? member.userId === currentAuthUserId
+            : member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase())
         )
       : null;
+
     const portalCondominiumMember = portalMember
       ? condominiumMembers.find(
           (member) =>
@@ -4940,7 +4947,9 @@ function App() {
               ? member.userId === portalMember.userId
               : member.email.trim().toLowerCase() === portalMember.email.trim().toLowerCase() &&
                 member.firstName.trim().toLowerCase() ===
-                  portalMember.name.trim().split(/\s+/)[0]?.toLowerCase())
+                  portalMember.name.trim().split(/\s+/)[0]?.toLowerCase() &&
+                member.apartment.trim().toLowerCase() ===
+                  portalMember.apartment.trim().toLowerCase())
         )
       : null;
     if (!isAdministrator && (!portalMember || !portalMember.condominiumId)) {
