@@ -2008,16 +2008,19 @@ export async function confirmCondominiumInvoice(
       throw new Error("La fattura è già collegata a un altro lavoro. Rimuovi prima il collegamento precedente oppure verifica manualmente l'associazione.");
     }
 
-    const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years")
-      .select("id").eq("workspace_id", workspaceId).eq("condominium_id", condominium.id)
-      .eq("status", "Aperto").order("start_date", { ascending: false }).limit(1).maybeSingle();
-    if (fiscalYearError) throw fiscalYearError;
-    if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto per questo condominio. Apri l'esercizio prima di confermare la fattura.");
-
     const dataPayload = { source: "ai_invoice_confirmation", invoiceNumber, invoiceDate, supplierName, workId, confirmedAt: new Date().toISOString(), aiExtractedData: payload.extractedData };
     const { data: existingEntry, error: existingEntryError } = await supabase.from("condominium_ledger_entries")
-      .select("id").eq("workspace_id", workspaceId).eq("document_id", document.id).eq("direction", "Uscita").limit(1).maybeSingle();
+      .select("id,fiscal_year_id").eq("workspace_id", workspaceId).eq("document_id", document.id).eq("direction", "Uscita").limit(1).maybeSingle();
     if (existingEntryError) throw existingEntryError;
+
+    const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years")
+      .select("id,status").eq("workspace_id", workspaceId).eq("condominium_id", condominium.id)
+      .eq("status", "Aperto").lte("start_date", invoiceDate).gte("end_date", invoiceDate).maybeSingle();
+    if (fiscalYearError) throw fiscalYearError;
+    if (!fiscalYear?.id) throw new Error("Non esiste un esercizio contabile aperto che comprenda la data della fattura. Apri l'esercizio corretto prima di confermarla.");
+    if (existingEntry?.id && String(existingEntry.fiscal_year_id) !== String(fiscalYear.id)) {
+      throw new Error("La fattura è già contabilizzata in un esercizio diverso da quello della data indicata. Gestisci prima la scrittura contabile esistente.");
+    }
 
     let ledgerEntryId: string;
     const ledgerPayload = {
