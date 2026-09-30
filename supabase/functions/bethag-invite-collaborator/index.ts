@@ -61,10 +61,26 @@ Deno.serve(async (req: Request) => {
     const legacyId = Number(body.legacyId || 0);
     const name = String(body.name || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
-    const permissions = Array.isArray(body.permissions) ? body.permissions : [];
+    const allowedPermissions = new Set([
+      "condomini",
+      "documenti",
+      "scadenze",
+      "assemblee",
+      "fornitori",
+      "attivita",
+      "comunicazioni",
+      "ai",
+      "portale",
+    ]);
+    const permissions = Array.isArray(body.permissions)
+      ? [...new Set(body.permissions.map((value) => String(value)).filter((value) => allowedPermissions.has(value)))]
+      : [];
 
     if (!workspaceId || !legacyId || !name || !email) {
       return json({ error: "Dati collaboratore incompleti." }, 400);
+    }
+    if (permissions.length === 0) {
+      return json({ error: "È necessario assegnare almeno un permesso valido al collaboratore." }, 400);
     }
 
     const { data: membership, error: membershipError } = await userClient
@@ -90,6 +106,18 @@ Deno.serve(async (req: Request) => {
 
     let targetUserId = existing?.user_id || null;
     let invited = false;
+
+    if (targetUserId) {
+      const { data: existingUserData, error: existingUserError } =
+        await adminClient.auth.admin.getUserById(targetUserId);
+      if (existingUserError) throw existingUserError;
+      const existingEmail = existingUserData.user?.email?.trim().toLowerCase() || "";
+      if (!existingEmail || existingEmail !== email) {
+        return json({
+          error: "Il codice interno del collaboratore è già associato a un account diverso. Genera un nuovo identificativo prima di procedere.",
+        }, 409);
+      }
+    }
 
     if (!targetUserId) {
       const { data: invitedUser, error: inviteError } =
