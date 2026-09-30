@@ -1171,15 +1171,10 @@ export async function analyzeCondominiumDocumentsWithAI(
     const mime = String(file.type ?? "").toLowerCase();
     const isAudio = mime.startsWith("audio/");
     const isImage = mime.startsWith("image/");
-    const maxBytes = isAudio
-      ? 100 * 1024 * 1024
-      : isImage
-        ? 20 * 1024 * 1024
-        : 50 * 1024 * 1024;
-    const maxLabel = isAudio ? "100 MB" : isImage ? "20 MB" : "50 MB";
-    if (file.size > maxBytes) {
-      throw new Error(`Il file "${file.name}" (${Math.ceil(file.size / 1024 / 1024)} MB) supera il limite di ${maxLabel} per l'analisi AI.`);
-    }
+    // Non imponiamo un limite applicativo arbitrario alla dimensione del file.
+    // La piattaforma segnala i file molto grandi all'interfaccia, che può chiedere
+    // se conservarli, analizzarli o eseguire entrambe le operazioni. Gli eventuali
+    // limiti tecnici del singolo canale vengono gestiti dal livello di elaborazione.
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result ?? ""));
