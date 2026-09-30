@@ -1026,6 +1026,30 @@ export function syncBackendState(
   );
 }
 
+export async function syncCondominiumWorkDocuments(workspaceId: string, workId: string, condominiumId: string, legacyDocumentIds: number[]) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  return enqueueBackendSync(async () => {
+    const { data: docs, error: docsError } = await supabase.from("documents").select("id,legacy_id,title").eq("workspace_id", workspaceId).in("legacy_id", legacyDocumentIds.length ? legacyDocumentIds : [-1]);
+    if (docsError) throw docsError;
+    const { error: deleteError } = await supabase.from("condominium_work_documents").delete().eq("workspace_id", workspaceId).eq("work_id", workId);
+    if (deleteError) throw deleteError;
+    if (!docs?.length) return [];
+    const rows = docs.map((doc: any) => ({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, document_id: doc.id, title: doc.title || null }));
+    const { data, error } = await supabase.from("condominium_work_documents").insert(rows).select("*");
+    if (error) throw error;
+    return data ?? [];
+  });
+}
+
+export async function recordCondominiumWorkEvent(workspaceId: string, workId: string, condominiumId: string, event: { eventType: string; title: string; description?: string; amount?: number; data?: any }) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.from("condominium_work_events").insert({ workspace_id: workspaceId, condominium_id: condominiumId, work_id: workId, event_type: event.eventType, event_date: new Date().toISOString(), title: event.title, description: event.description ?? null, amount: event.amount ?? null, data: event.data ?? {} }).select("*").single();
+    if (error) throw error;
+    return data;
+  });
+}
+
 export async function saveCondominiumWorkProgress(workspaceId: string, workId: string, input: { progressNo: number; progressDate: string; title: string; status: string; percentage: number; amount: number; paidAmount: number; notes: string; registerAccounting: boolean; }) {
   if (!supabase) throw new Error("Supabase non configurato.");
   return enqueueBackendSync(async () => {
