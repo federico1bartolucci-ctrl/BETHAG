@@ -4926,9 +4926,9 @@ function App() {
     const portalMember = !isAdministrator
       ? portalMembers.find((member) =>
           member.active &&
-          (member.userId === portalMember?.userId ||
-            (!member.userId &&
-              member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()))
+          (portalMember.userId
+            ? member.userId === portalMember.userId
+            : member.email.trim().toLowerCase() === portalMember.email.trim().toLowerCase() &&              member.firstName.trim().toLowerCase() === portalMember.name.trim().split(/\s+/)[0]?.toLowerCase() &&              member.apartment.trim().toLowerCase() === portalMember.apartment.trim().toLowerCase())
         )
       : null;
     const portalCondominiumMember = portalMember
