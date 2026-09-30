@@ -1234,9 +1234,13 @@ export async function syncCondominiumWorkDocuments(workspaceId: string, workId: 
       .eq("work_id", workId);
     if (existingLinksError) throw existingLinksError;
 
+    const existingLegacyIds = (existingLinks ?? []).map((row: any) => Number(row.document_id)).filter((id) => Number.isFinite(id));
+    const existingDocs = existingLegacyIds.length
+      ? (await supabase.from("documents").select("id,legacy_id,title,data,category").eq("workspace_id", workspaceId).in("legacy_id", existingLegacyIds)).data ?? []
+      : [];
     const requestedSet = new Set(requestedDocumentIds);
-    const protectedDocuments = (existingLinks ?? []).map((row: any) => Number(row.document_id)).filter((id) => Number.isFinite(id)).filter((legacyId) => {
-      const doc = docs?.find((item: any) => Number(item.legacy_id) === legacyId);
+    const protectedDocuments = existingLegacyIds.filter((legacyId) => {
+      const doc = existingDocs.find((item: any) => Number(item.legacy_id) === legacyId);
       const data = doc?.data && typeof doc.data === "object" ? doc.data : {};
       const confirmed = String(data.invoiceConfirmation?.status ?? "").toLowerCase() === "confermato";
       const isInvoice = String(doc?.category ?? "").toLowerCase().includes("fattur") || confirmed;
