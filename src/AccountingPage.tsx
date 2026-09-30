@@ -1146,6 +1146,50 @@ function AccountingPage({
     setAllocationIntakeForm({source:"AI",title:"Acquisizione AI",description:"",document_id:"",ledger_entry_id:scopedLedger.find(e=>e.direction==="Uscita")?.id||"",allocation_table_id:scopedMillesimalTables.find(t=>t.active)?.id||"",expense_amount:0,rows:[],notes:"L'AI produrrà una proposta da verificare prima della conferma."});
     setShowAllocationIntakeForm(true);
   }
+  function buildAIAllocationProposal() {
+    const selectedDocument = documents.find(d => d.id === Number(allocationIntakeForm.document_id) && d.condominiumId === selectedCondominiumId);
+    const expense = scopedLedger.find(e => e.id === allocationIntakeForm.ledger_entry_id);
+    const table = scopedMillesimalTables.find(x => x.id === allocationIntakeForm.allocation_table_id);
+    if (!expense) { setError("Seleziona la spesa da ripartire."); return; }
+    if (!table) { setError("Seleziona la tabella millesimale."); return; }
+
+    let extracted:any = null;
+    if (selectedDocument?.extractedData?.trim()) {
+      try { extracted = JSON.parse(selectedDocument.extractedData); } catch { extracted = null; }
+    }
+    const extractedRows = Array.isArray(extracted?.rows) ? extracted.rows : [];
+    const sourceRows = extractedRows.length ? extractedRows.map((r:any) => ({
+      unit_id: String(r.unit_id || r.unitId || ""),
+      millesimi: Number(r.millesimi ?? r.millesimal ?? 0),
+      amount: Number(r.amount ?? r.importo ?? 0)
+    })).filter((r:any) => r.unit_id) : units
+      .filter(u => u.condominium_id === dbCondominiumId)
+      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))
+      .map(u => ({ unit_id:u.id, millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===table.id && v.unit_id===u.id)?.value || 0), amount:0 }));
+
+    const totalMillesimi = sourceRows.reduce((sum:any,r:any)=>sum + Math.max(0, Number(r.millesimi || 0)), 0);
+    if (!totalMillesimi) { setError("Non risultano millesimi disponibili per costruire la proposta."); return; }
+    const expenseAmount = Number(extracted?.expense_amount ?? extracted?.amount ?? expense.amount ?? 0);
+    const rows = sourceRows.map((r:any) => ({
+      unit_id:r.unit_id,
+      millesimi:Number(r.millesimi || 0),
+      amount:Number(r.amount || 0) > 0 ? Number(r.amount) : Number(((expenseAmount * Number(r.millesimi || 0)) / totalMillesimi).toFixed(2))
+    }));
+    const roundedTotal = rows.reduce((sum:any,r:any)=>sum + r.amount, 0);
+    const difference = Number((expenseAmount - roundedTotal).toFixed(2));
+    if (rows.length && Math.abs(difference) >= 0.01) rows[rows.length - 1].amount = Number((rows[rows.length - 1].amount + difference).toFixed(2));
+
+    setAllocationIntakeForm(current => ({
+      ...current,
+      title: current.title || `Riparto AI · ${expense.description}`,
+      description: selectedDocument ? `Proposta generata dal documento: ${selectedDocument.name}.` : "Proposta generata dai dati contabili e dalla tabella millesimale.",
+      expense_amount: expenseAmount,
+      rows,
+      notes: "Proposta automatica da verificare. Nessuna quota è definitiva prima della conferma."
+    }));
+    setMessage("Proposta AI costruita: controlla unità, millesimi e importi prima della conferma.");
+  }
+
   async function saveAllocationIntake() {
     if (!supabase || !dbCondominiumId) return;
     if (!allocationIntakeForm.title.trim()) { setError("Inserisci un titolo per l'acquisizione."); return; }
@@ -1704,6 +1748,19 @@ function AccountingPage({
                 {isAdministrator && !aiEnabled && <span className="small-note">Acquisizione AI disponibile con il modulo AI.</span>}
               </div>
             </div>
+            {showAllocationIntakeForm && <div className="permission-box" style={{marginBottom:12}}>
+              <b>{allocationIntakeForm.source === "AI" ? "Acquisizione AI — proposta da verificare" : "Inserimento manuale del riparto"}</b>
+              <div className="form-grid" style={{marginTop:10}}>
+                <label>Titolo<input value={allocationIntakeForm.title} onChange={e=>setAllocationIntakeForm({...allocationIntakeForm,title:e.target.value})}/></label>
+                <label>Documento collegato<select value={allocationIntakeForm.document_id} onChange={e=>setAllocationIntakeForm({...allocationIntakeForm,document_id:e.target.value})}><option value="">Nessun documento</option>{documents.filter(d=>d.condominiumId===selectedCondominiumId).map(d=><option key={d.id} value={d.id}>{d.name} · {d.category}</option>)}</select></label>
+                <label>Spesa<select value={allocationIntakeForm.ledger_entry_id} onChange={e=>{const x=scopedLedger.find(v=>v.id===e.target.value);setAllocationIntakeForm({...allocationIntakeForm,ledger_entry_id:e.target.value,expense_amount:Number(x?.amount||0)})}}>{scopedLedger.filter(e=>e.direction==="Uscita").map(e=><option key={e.id} value={e.id}>{e.description} · {money(e.amount)}</option>)}</select></label>
+                <label>Tabella<select value={allocationIntakeForm.allocation_table_id} onChange={e=>setAllocationIntakeForm({...allocationIntakeForm,allocation_table_id:e.target.value})}>{scopedMillesimalTables.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name} · {t.total_millesimi} millesimi</option>)}</select></label>
+                <label>Importo<input type="number" min="0" step="0.01" value={allocationIntakeForm.expense_amount} onChange={e=>setAllocationIntakeForm({...allocationIntakeForm,expense_amount:Number(e.target.value)})}/></label>
+              </div>
+              {allocationIntakeForm.source==="AI" && <div className="row-actions" style={{marginTop:10}}><button className="secondary-button" onClick={buildAIAllocationProposal}>✦ Genera proposta</button></div>}
+              {allocationIntakeForm.rows.length>0 && <div className="cards-list" style={{marginTop:10}}>{allocationIntakeForm.rows.map((row,i)=>{const unit=units.find(u=>u.id===row.unit_id);return <article className="row-card" key={row.unit_id}><div><b>{unit?.unit_code||row.unit_id}</b><small>Millesimi: {row.millesimi}</small><input type="number" min="0" step="0.01" value={row.amount} onChange={e=>setAllocationIntakeForm(f=>({...f,rows:f.rows.map((r,j)=>j===i?{...r,amount:Number(e.target.value)}:r)}))}/></div></article>})}</div>}
+              <div className="row-actions" style={{marginTop:10}}><button className="primary-button" disabled={saving} onClick={saveAllocationIntake}>Salva proposta</button><button className="secondary-button" onClick={()=>setShowAllocationIntakeForm(false)}>Annulla</button></div>
+            </div>}
             {allocationIntakes.length > 0 && <div className="cards-list" style={{marginBottom:12}}>
               {allocationIntakes.slice(0,10).map(intake => <article className="row-card" key={intake.id}>
                 <div><b>{intake.title || "Acquisizione riparto"}</b><small>{intake.source} · {intake.status} · {intake.expense_amount != null ? money(intake.expense_amount) : "Importo non indicato"}</small>{intake.description && <span>{intake.description}</span>}</div>
