@@ -1144,66 +1144,9 @@ function AccountingPage({
         p_title:allocationInstallmentForm.title.trim(),
         p_due_dates: dueDates,
         p_fiscal_year_id:allocationInstallmentForm.fiscal_year_id || null,
-        p_percentages:percentages
+        p_percentages:percentages,
+        p_unify_by_member:allocationInstallmentForm.unifyByMember
       });
-      if (allocationInstallmentForm.unifyByMember) {
-        const generatedCount = Number(data || 0);
-        if (generatedCount !== selectedAllocations.length * installmentCount) {
-          throw new Error("Il risultato della generazione non corrisponde alle quote previste.");
-        }
-        const generated = await supabase
-          .from("condominium_installments")
-          .select("id,member_id,unit_id,amount,title,due_date,paid_amount,status,notes")
-          .eq("workspace_id", workspaceId)
-          .eq("condominium_id", dbCondominiumId)
-          .eq("ledger_entry_id", allocationInstallmentForm.ledger_entry_id);
-        if (generated.error) throw generated.error;
-        const grouped = new Map<string, any[]>();
-        for (const row of generated.data || []) {
-          const resolvedMemberId = String(row.member_id || resolvedMemberByUnit.get(String(row.unit_id)) || "");
-          if (!resolvedMemberId) continue;
-          const key = resolvedMemberId;
-          if (!grouped.has(key + "|" + row.due_date)) grouped.set(key + "|" + row.due_date, []);
-          grouped.get(key + "|" + row.due_date)!.push({ ...row, resolvedMemberId });
-        }
-        // L'unificazione è eseguita solo quando ogni gruppo contiene un solo membro.
-        // Le rate originali restano tracciate per unità; le rate aggregate vengono
-        // create come nuove righe con unit_id nullo e lo stesso ledger_entry_id.
-        for (const [key, rows] of grouped) {
-          if (rows.length < 2) continue;
-          const amount = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-          const first = rows[0];
-          const unitIds = rows.map(row => row.unit_id).filter(Boolean);
-          const { error: insertError } = await supabase.from("condominium_installments").insert({
-            workspace_id: workspaceId,
-            condominium_id: dbCondominiumId,
-            fiscal_year_id: allocationInstallmentForm.fiscal_year_id || null,
-            ledger_entry_id: allocationInstallmentForm.ledger_entry_id,
-            member_id: first.resolvedMemberId,
-            unit_id: null,
-            title: allocationInstallmentForm.title.trim() + " - unificata",
-            amount,
-            paid_amount: 0,
-            status: "Da pagare",
-            due_date: first.due_date,
-            notes: "Rata unificata facoltativamente. Quote originarie per unità: " + unitIds.join(", ")
-          });
-          if (insertError) throw insertError;
-          const generatedIds = rows.map(row => row.id).filter(Boolean);
-          if (generatedIds.length) {
-            const { error: archiveError } = await supabase
-              .from("condominium_installments")
-              .update({
-                status: "Accorpata",
-                notes: "Quota originaria mantenuta per tracciabilità; accorpata nella rata aggregata."
-              })
-              .in("id", generatedIds)
-              .eq("workspace_id", workspaceId)
-              .eq("condominium_id", dbCondominiumId);
-            if (archiveError) throw archiveError;
-          }
-        }
-      }
       if (rpcError) throw rpcError;
       setShowInstallmentsFromAllocation(false);
       flash("Rate generate: " + Number(data || 0) + ".");
