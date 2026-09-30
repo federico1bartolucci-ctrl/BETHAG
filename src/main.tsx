@@ -5758,7 +5758,29 @@ function App() {
      DASHBOARD
      ======================================================= */
 
-  const upcoming = [...deadlines]
+  const activeCondominiumIds = new Set(
+    condominiums
+      .filter((condominium) => !condominium.archivedAt)
+      .map((condominium) => condominium.id)
+  );
+
+  const activeDeadlines = deadlines.filter((deadline) =>
+    activeCondominiumIds.has(deadline.condominiumId)
+  );
+  const activeActivities = activities.filter((activity) =>
+    activeCondominiumIds.has(activity.condominiumId)
+  );
+  const activeCommunications = communications.filter((communication) =>
+    activeCondominiumIds.has(communication.condominiumId)
+  );
+  const activeRequests = condominiumRequests.filter((request) =>
+    activeCondominiumIds.has(request.condominiumId)
+  );
+  const activeDocuments = documents.filter((document) =>
+    activeCondominiumIds.has(document.condominiumId)
+  );
+
+  const upcoming = [...activeDeadlines]
     .filter(
       (d) =>
         d.status !==
@@ -5772,47 +5794,47 @@ function App() {
     .slice(0, 5);
 
   const openActivities =
-    activities.filter(
+    activeActivities.filter(
       (a) =>
         a.status !==
         "Completata"
     ).length;
 
   const urgentDeadlines =
-    deadlines.filter(
+    activeDeadlines.filter(
       (d) =>
         d.status ===
         "In scadenza"
     ).length;
 
   const completedDeadlines =
-    deadlines.filter(
+    activeDeadlines.filter(
       (d) =>
         d.status ===
         "Completata"
     ).length;
 
   const completedActivities =
-    activities.filter(
+    activeActivities.filter(
       (a) =>
         a.status ===
         "Completata"
     ).length;
 
   const visibleCommunications =
-    communications.filter(
+    activeCommunications.filter(
       (c) =>
         c.publishedToPortal
     ).length;
 
   const todayISO = localISODate();
-  const overdueDeadlines = deadlines.filter(
+  const overdueDeadlines = activeDeadlines.filter(
     (d) => d.status !== "Completata" && d.dueDate && d.dueDate < todayISO
   ).length;
-  const pendingRequests = condominiumRequests.filter(
+  const pendingRequests = activeRequests.filter(
     (request) => request.status !== "Risolta" && request.status !== "Chiusa"
   ).length;
-  const documentsToVerify = documents.filter(
+  const documentsToVerify = activeDocuments.filter(
     (document) => document.aiStatus === "Da verificare"
   ).length;
 
