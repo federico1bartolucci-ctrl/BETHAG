@@ -37,6 +37,7 @@ begin
    select * into v_year from public.condominium_fiscal_years where id=p_fiscal_year_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id;
    if not found then raise exception 'Esercizio contabile non valido'; end if;
    if v_year.status='Chiuso' then raise exception 'L''esercizio contabile è chiuso'; end if;
+   if exists(select 1 from unnest(p_due_dates) d where d<v_year.start_date or d>v_year.end_date) then raise exception 'Tutte le scadenze devono rientrare nell''esercizio contabile selezionato'; end if;
  end if;
  select count(*) into v_count from public.condominium_expense_allocations where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id;
  if v_count=0 then raise exception 'La spesa non ha ripartizioni'; end if;
