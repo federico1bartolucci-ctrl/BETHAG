@@ -743,7 +743,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // può inferire un indice espresso da (condominium_id, unit_code).
     const { data: existingUnits, error: existingUnitError } = await supabase
       .from("condominium_units")
-      .select("id, unit_code, building_code")
+      .select("id, unit_code, building_code, lifecycle_status")
       .eq("condominium_id", condominium.id);
 
     if (existingUnitError) throw existingUnitError;
@@ -754,8 +754,13 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     const existingUnitById = item.id
       ? (existingUnits ?? []).find((unit: any) => String(unit.id) === String(item.id))
       : null;
+    if (existingUnitById && (existingUnitById.lifecycle_status ?? "Attiva") !== "Attiva") {
+      throw new Error("Le unità storiche o soppresse sono consultabili ma non modificabili come unità attive.");
+    }
     const existingUnitByCode = (existingUnits ?? []).find(
-      (unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === normalizedUnitCode
+      (unit: any) =>
+        (unit.lifecycle_status ?? "Attiva") === "Attiva" &&
+        String(unit.unit_code ?? "").trim().toLowerCase() === normalizedUnitCode
     );
     const existingUnit = existingUnitById ?? existingUnitByCode;
 
