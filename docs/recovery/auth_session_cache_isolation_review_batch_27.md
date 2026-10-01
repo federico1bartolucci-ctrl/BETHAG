@@ -42,3 +42,12 @@ Before implementing, map all `KEYS` usages and state setters, especially backup/
 ## Additional render-gate finding (batch 27 follow-up)
 
 The app returns `PublicHome` only while `sessionRole` is falsy. Once an authenticated role is set, the main application renders immediately; the separate backend hydration effect then runs asynchronously. The render path inspected does not additionally require a successful hydration flag. Consequently, authenticated dashboard rendering can begin with the state initialized from global local-storage keys or fixture arrays, before the workspace data fetch completes. This establishes a concrete stale/fixture-render window in the source flow, though it does not establish that a particular user's data was exposed or synced. The background sync has its own `backendHydrated.current` gate, but that does not itself prevent initial rendering. A future fix should gate authenticated manager views on a matching identity/workspace hydration state, not simply add a delay or clear storage.
+
+
+## Persistence-effect ordering — final static check
+
+The domain state hooks initialize synchronously from `load(KEYS.*, initial*Array)`, and the reviewed persistence effects are ordinary React effects that serialize state when their dependencies change. They are not uniformly guarded by an authenticated hydration-ready condition. Therefore initial fixture/cache values may be written back to the global local-storage keys on mount, before the asynchronous backend hydration completes. This makes “just hide the dashboard until hydration” insufficient by itself: the fix must also suppress pre-hydration persistence and prevent stale state from being treated as a new workspace write. This is a source-level ordering risk; no runtime trace was collected.
+
+### Implementation hold point
+
+A safe change now requires updating the initialization and persistence lifecycle together, not only adding a render conditional. Because `src/main.tsx` is a 583 KB single-file application and no local test toolchain (test/lint/typecheck scripts, lockfile, or tsconfig in the reviewed branch) is established, this audit does not make a speculative bulk edit. The current GitHub checks provide no status for the documentation commit, so the source change would have no verified build/test result at this point. Keep this finding as a code-change prerequisite; do not call it fixed.
