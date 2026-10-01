@@ -148,13 +148,22 @@ Deno.serve(async (req: Request) => {
 
     if (!targetUserId) return json({ error: "Impossibile determinare l'utente invitato." }, 500);
 
+    const { data: existingProfile, error: existingProfileError } = await adminClient
+      .from("profiles")
+      .select("role")
+      .eq("id", targetUserId)
+      .maybeSingle();
+    if (existingProfileError) throw existingProfileError;
+
+    const preservedRole = existingProfile?.role === "admin" ? "admin" : "collaborator";
+
     const { error: profileError } = await adminClient
       .from("profiles")
       .upsert({
         id: targetUserId,
         full_name: name,
         email,
-        role: "collaborator",
+        role: preservedRole,
         active: true,
       }, { onConflict: "id" });
     if (profileError) throw profileError;
