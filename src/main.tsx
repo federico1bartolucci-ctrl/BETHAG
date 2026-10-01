@@ -277,6 +277,9 @@ type CondominiumUnit = {
   notes: string;
   active: boolean;
   buildingCode?: string;
+  lifecycleStatus?: "Attiva" | "Storica" | "Soppressa";
+  lifecycleEffectiveDate?: string | null;
+  supersededAt?: string | null;
 };
 
 type CondominiumMember = {
