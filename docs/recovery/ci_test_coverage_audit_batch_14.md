@@ -46,3 +46,7 @@ Il file non crea identità sintetiche né esegue flussi applicativi sotto ruoli 
 - **QA baseline e lancio:** ancora bloccati dai prerequisiti di ricostruzione/replay già registrati.
 
 Questa nota documenta esclusivamente la configurazione statica osservata; non modifica codice, pipeline, database o ambiente di produzione.
+
+## Esito CI osservato successivamente
+
+È stata consultata la run GitHub Actions `36904227069` associata al commit `53185c8b78f406c9e0ed6f08f21c4014d131c9c8` sul branch di recupero. La job `build` si è conclusa con esito `success`; gli step di installazione dipendenze e `npm run build` risultano completati con successo. Questo certifica soltanto la build per quello specifico commit, non i test funzionali, il replay Supabase, la sicurezza runtime o il rilascio in produzione. [Dettaglio run](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/36904227069).
