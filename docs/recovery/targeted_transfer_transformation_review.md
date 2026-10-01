@@ -35,3 +35,14 @@ Because both constraints are active, a row cannot satisfy a transition to `Chius
 3. Exercise transfer scenarios with synthetic data: same-day transfer, unpaid/part-paid installments, prior fiscal years, outgoing portal access, duplicate/concurrent confirmation, and cancellation/closure.
 4. Exercise transformation preview/confirmation with manager, collaborator, resident, and unrelated workspace accounts; verify RLS and personal-data visibility.
 5. Reconcile the resulting SQL against production definitions before any production change request.
+
+
+## Source trace — conflicting status constraints
+
+The recovery branch migration source confirms the origin of the production catalog conflict:
+
+- `20261001104500_add_condominium_member_transfer.sql` creates `condominium_member_transfers_status_ck` with the allowed values `Bozza`, `Confermato`, and `Annullato`.
+- `20261001120000_transfer_lifecycle_keep_outgoing_active.sql` drops/recreates `condominium_member_transfers_status_check` to include `Chiuso`, but does not drop or replace the earlier `status_ck`.
+- The production catalog independently shows both validated constraints active, matching this source-level explanation.
+
+This establishes a concrete migration defect, not merely a filename mismatch. It remains a finding only: no SQL was executed to change the constraint. The correction must preserve the intended lifecycle and be validated on an isolated, reconstructed QA baseline before a production change is considered.
