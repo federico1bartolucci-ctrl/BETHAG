@@ -2155,6 +2155,7 @@ function App() {
     useState<"admin" | "collaborator" | "resident" | null>(() =>
       supabaseConfigured ? null : load(KEYS.session, null)
     );
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
 
   const [sessionEmail, setSessionEmail] =
     useState<string>(() =>
@@ -2856,7 +2857,8 @@ function App() {
     if (supabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
-    setSessionRole(null);
+setSessionRole(null);
+    setSessionUserId(null);
     setSessionEmail("");
     setServerCollaboratorPermissions([]);
     localStorage.removeItem(KEYS.session);
@@ -2940,7 +2942,8 @@ function App() {
     ) => {
       if (cancelled) return;
       if (!session?.user) {
-        setSessionRole(null);
+setSessionRole(null);
+        setSessionUserId(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
         setRequiresPasswordSetup(false);
@@ -2989,7 +2992,8 @@ function App() {
         );
 
         if (!access || cancelled) {
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
           setRequiresPasswordSetup(false);
@@ -3001,7 +3005,8 @@ function App() {
         }
 
         setBackendHydrationStatus("loading");
-            setSessionRole(access.role);
+            setSessionUserId(session.user.id);
+        setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
         localStorage.setItem(KEYS.session, JSON.stringify(access.role));
         localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
@@ -3016,7 +3021,8 @@ function App() {
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
         if (!cancelled) {
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
@@ -3340,7 +3346,8 @@ function App() {
 
         if (!authorized && !cancelled) {
           await supabase.auth.signOut();
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
@@ -3374,7 +3381,7 @@ function App() {
       backendHydrated.current = true;
       return;
     }
-    if (!sessionRole) {
+    if (!sessionRole || !sessionUserId) {
       backendHydrated.current = false;
       setBackendHydrationStatus("loading");
       return;
@@ -3391,6 +3398,9 @@ function App() {
 
         if (cancelled) return;
         if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente.");
+        if (session.user.id !== sessionUserId) {
+          throw new Error("L'identità della sessione è cambiata. Aggiorna l'accesso e riprova.");
+        }
 
         let workspaceId = profile.workspaceId;
 
@@ -3455,7 +3465,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionRole, backendHydrationRetry]);
+  }, [sessionRole, sessionUserId, backendHydrationRetry]);
 
   useEffect(() => {
     if (
