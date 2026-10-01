@@ -68,3 +68,11 @@ Raccogliere i blocchi ricorrenti emersi dalle revisioni statiche in un ordine di
 ## Limiti e protezioni
 
 Questo registro consolida documenti statici esistenti e non afferma che l'intera history sia già stata analizzata semanticamente. Nessun SQL è stato eseguito, nessun database QA è stato resettato, nessuna scrittura o migrazione è stata eseguita in produzione, nessuna modifica è stata fatta a `main`, e non sono stati eseguiti merge o deploy. Il replay QA, eventuali correzioni SQL e il rilascio richiedono autorizzazione e revisione specifiche.
+
+## Aggiornamento verifica repository e CI (1 ottobre 2026)
+
+La branch `bethag-migration-repair` punta al commit `88ba1d290bb4ae21d5e92061828c73a220421acf`. La branch risulta non protetta (`protected: false`; required status checks disattivati nell'endpoint consultato). La pull request #1 verso `main` risulta aperta e in bozza; non è stata fusa. Questi elementi non dimostrano da soli una pubblicazione possibile o avvenuta, ma indicano che non è dimostrato un gate di protezione del branch di recupero. Prima di un rilascio vanno verificati e configurati esplicitamente branch protection, required checks e approvazioni, evitando di modificare le impostazioni senza revisione.
+
+La GitHub Actions run `36904227069` per il commit `53185c8b78f406c9e0ed6f08f21c4014d131c9c8` si è conclusa con `success` per la sola job `build`. L'esito è utile come prova di compilazione di quel commit, ma non certifica il commit successivo `88ba1d2`, il replay Supabase, RLS runtime o flussi end-to-end.
+
+Riferimenti: [branch di recupero](https://github.com/federico1bartolucci-ctrl/BETHAG/tree/bethag-migration-repair), [pull request #1](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/1), [run CI](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/36904227069).
