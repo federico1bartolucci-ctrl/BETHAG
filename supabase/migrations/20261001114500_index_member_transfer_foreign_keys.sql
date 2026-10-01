@@ -1,0 +1,4 @@
+create index if not exists condominium_member_transfers_created_by_idx on public.condominium_member_transfers(created_by);
+create index if not exists condominium_member_transfers_incoming_member_id_idx on public.condominium_member_transfers(incoming_member_id);
+create index if not exists condominium_member_transfers_outgoing_member_id_idx on public.condominium_member_transfers(outgoing_member_id);
+create index if not exists condominium_member_transfers_workspace_id_idx on public.condominium_member_transfers(workspace_id);
