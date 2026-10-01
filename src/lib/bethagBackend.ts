@@ -165,6 +165,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       ...row.data,
       id: row.id,
       condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      // Lo stato strutturato del ciclo di vita prevale sui campi legacy nel JSON.
+      // Le unità storiche restano disponibili per la genealogia, ma non sono attive.
+      lifecycleStatus: row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva",
+      lifecycleEffectiveDate: row.lifecycle_effective_date ?? row.data?.lifecycleEffectiveDate ?? null,
+      supersededAt: row.superseded_at ?? row.data?.supersededAt ?? null,
       unitCode: row.unit_code,
       buildingCode: row.building_code ?? row.data?.buildingCode ?? "",
       unitType: row.data?.unitType ?? "Abitazione",
@@ -177,7 +182,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
-      active: row.data?.active ?? true,
+      active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
     };
   });
 
