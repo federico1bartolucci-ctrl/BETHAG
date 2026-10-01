@@ -3383,9 +3383,6 @@ function App() {
     backendHydrated.current = false;
     setBackendHydrationStatus("loading");
 
-    let cancelled = false;
-    backendHydrated.current = false;
-
     const hydrateFromBackend = async () => {
       try {
         const {
