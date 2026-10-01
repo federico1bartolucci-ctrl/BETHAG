@@ -51,3 +51,27 @@ alter table public.portal_access enable row level security;
 
 grant select, insert, update, delete on table public.portal_access to authenticated;
 grant select, insert, update, delete on table public.portal_access to service_role;
+
+-- Restore the two production policies captured from pg_policies.
+create policy "authorized managers manage portal access"
+  on public.portal_access for all to authenticated
+  using (private.can_manage_workspace_module(workspace_id, 'portale'::text))
+  with check (private.can_manage_workspace_module(workspace_id, 'portale'::text));
+
+create policy "residents read own portal access"
+  on public.portal_access for select to authenticated
+  using (
+    active = true
+    and exists (
+      select 1 from public.condominiums c
+      where c.id = portal_access.condominium_id
+        and c.archived_at is null
+    )
+    and (
+      user_id = (select auth.uid())
+      or (
+        user_id is null
+        and lower(email) = lower(coalesce((select auth.jwt())->>'email', ''))
+      )
+    )
+  );
