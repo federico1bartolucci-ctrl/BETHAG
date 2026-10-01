@@ -37,3 +37,8 @@ Before implementing, map all `KEYS` usages and state setters, especially backup/
 ## Status
 
 **Static review complete; fix not applied; runtime behavior unverified.** No production database changes, migrations, Edge Function invocations, emails, or deployments occurred. Existing QA certification remains blocked.
+
+
+## Additional render-gate finding (batch 27 follow-up)
+
+The app returns `PublicHome` only while `sessionRole` is falsy. Once an authenticated role is set, the main application renders immediately; the separate backend hydration effect then runs asynchronously. The render path inspected does not additionally require a successful hydration flag. Consequently, authenticated dashboard rendering can begin with the state initialized from global local-storage keys or fixture arrays, before the workspace data fetch completes. This establishes a concrete stale/fixture-render window in the source flow, though it does not establish that a particular user's data was exposed or synced. The background sync has its own `backendHydrated.current` gate, but that does not itself prevent initial rendering. A future fix should gate authenticated manager views on a matching identity/workspace hydration state, not simply add a delay or clear storage.
