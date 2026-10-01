@@ -2702,6 +2702,7 @@ function App() {
               email: data.user.email || current.email,
               name: data.user.user_metadata?.full_name || current.name,
             }));
+            setBackendHydrationStatus("loading");
             setSessionRole(bootstrappedAccess.role);
             setServerCollaboratorPermissions(
               bootstrappedAccess.permissions ?? []
@@ -2723,7 +2724,8 @@ function App() {
         }
 
         const normalizedEmail = (data.user.email || email).trim();
-        setSessionRole(access.role);
+        setBackendHydrationStatus("loading");
+            setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
         setServerCollaboratorPermissions(
           access.permissions ?? []
@@ -2790,7 +2792,8 @@ function App() {
       return;
     }
 
-    setSessionRole(role);
+    setBackendHydrationStatus("loading");
+            setSessionRole(role);
     setSessionEmail(normalizedEmail);
     localStorage.setItem(KEYS.session, JSON.stringify(role));
     localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
@@ -2832,7 +2835,8 @@ function App() {
       throw new Error("Account attivato, ma l'associazione al portale non è disponibile.");
     }
 
-    setSessionRole(access.role);
+    setBackendHydrationStatus("loading");
+            setSessionRole(access.role);
     setSessionEmail(user.email || "");
     setServerCollaboratorPermissions(
       access.permissions ?? []
@@ -2847,6 +2851,8 @@ function App() {
   };
 
   const logout = async () => {
+    backendHydrated.current = false;
+    setBackendHydrationStatus(supabaseConfigured ? "loading" : "ready");
     if (supabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
@@ -2994,7 +3000,8 @@ function App() {
           return;
         }
 
-        setSessionRole(access.role);
+        setBackendHydrationStatus("loading");
+            setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
         localStorage.setItem(KEYS.session, JSON.stringify(access.role));
         localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
