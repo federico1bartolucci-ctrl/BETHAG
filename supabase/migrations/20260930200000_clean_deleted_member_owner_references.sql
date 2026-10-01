@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION public.clean_deleted_member_owner_references()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_workspace uuid;
 BEGIN
