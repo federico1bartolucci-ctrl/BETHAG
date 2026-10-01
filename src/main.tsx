@@ -3374,20 +3374,24 @@ setSessionRole(null);
     supabaseConfigured ? "loading" : "ready"
   );
   const [backendHydrationRetry, setBackendHydrationRetry] = useState(0);
+  const [backendHydratedFor, setBackendHydratedFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase) {
       setBackendHydrationStatus("ready");
       backendHydrated.current = true;
+      setBackendHydratedFor(null);
       return;
     }
     if (!sessionRole || !sessionUserId) {
       backendHydrated.current = false;
+      setBackendHydratedFor(null);
       setBackendHydrationStatus("loading");
       return;
     }
     let cancelled = false;
     backendHydrated.current = false;
+    setBackendHydratedFor(null);
     setBackendHydrationStatus("loading");
 
     const hydrateFromBackend = async () => {
@@ -3453,6 +3457,7 @@ setSessionRole(null);
           email: session.user.email || current.email,
         }));
         backendHydrated.current = true;
+        setBackendHydratedFor(`${sessionUserId}::${workspaceId}`);
         setBackendHydrationStatus("ready");
       } catch (error) {
         console.error("BETHAG backend hydration failed", error);
@@ -3465,7 +3470,7 @@ setSessionRole(null);
     return () => {
       cancelled = true;
     };
-  }, [sessionRole, sessionUserId, backendHydrationRetry]);
+  }, [sessionRole, sessionUserId, profile.workspaceId, backendHydrationRetry]);
 
   useEffect(() => {
     if (
@@ -6748,7 +6753,13 @@ setSessionRole(null);
     );
   }
 
-  if (supabaseConfigured && backendHydrationStatus !== "ready") {
+  const backendHydrationMatchesCurrentIdentity = Boolean(
+    sessionUserId &&
+    profile.workspaceId &&
+    backendHydratedFor === `${sessionUserId}::${profile.workspaceId}`
+  );
+
+  if (supabaseConfigured && (backendHydrationStatus !== "ready" || !backendHydrationMatchesCurrentIdentity)) {
     const hydrationFailed = backendHydrationStatus === "error";
     return (
       <>
