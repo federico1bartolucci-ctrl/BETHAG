@@ -1,5 +1,9 @@
 -- Restore the missing base schema for condominium units on the development branch.
 -- Keep production untouched; later migrations add lifecycle and financial safeguards.
+alter table public.condominiums add column if not exists archived_at timestamptz;
+alter table public.condominiums add column if not exists archived_by uuid;
+alter table public.condominiums add column if not exists archive_reason text;
+
 create table if not exists public.condominium_units (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
