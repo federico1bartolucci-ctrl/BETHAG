@@ -3356,9 +3356,25 @@ function App() {
   ]);
 
   const backendHydrated = useRef(false);
+  const [backendHydrationStatus, setBackendHydrationStatus] = useState<"loading" | "ready" | "error">(
+    supabaseConfigured ? "loading" : "ready"
+  );
+  const [backendHydrationRetry, setBackendHydrationRetry] = useState(0);
 
   useEffect(() => {
-    if (!supabaseConfigured || !supabase || !sessionRole) return;
+    if (!supabaseConfigured || !supabase) {
+      setBackendHydrationStatus("ready");
+      backendHydrated.current = true;
+      return;
+    }
+    if (!sessionRole) {
+      backendHydrated.current = false;
+      setBackendHydrationStatus("loading");
+      return;
+    }
+    let cancelled = false;
+    backendHydrated.current = false;
+    setBackendHydrationStatus("loading");
 
     let cancelled = false;
     backendHydrated.current = false;
@@ -3369,7 +3385,8 @@ function App() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session?.user || cancelled) return;
+        if (cancelled) return;
+        if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente.");
 
         let workspaceId = profile.workspaceId;
 
@@ -3391,7 +3408,8 @@ function App() {
           workspaceId = portalAccess?.workspace_id ?? null;
         }
 
-        if (!workspaceId || cancelled) return;
+        if (cancelled) return;
+        if (!workspaceId) throw new Error("Nessun workspace attivo associato a questo account.");
 
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
@@ -3415,15 +3433,16 @@ function App() {
         setCollaborators(
           Array.isArray(backend.collaborators) ? backend.collaborators : []
         );
-        backendHydrated.current = true;
-
         setProfile((current) => ({
           ...current,
           workspaceId,
           email: session.user.email || current.email,
         }));
+        backendHydrated.current = true;
+        setBackendHydrationStatus("ready");
       } catch (error) {
         console.error("BETHAG backend hydration failed", error);
+        if (!cancelled) setBackendHydrationStatus("error");
       }
     };
 
@@ -3432,7 +3451,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionRole]);
+  }, [sessionRole, backendHydrationRetry]);
 
   useEffect(() => {
     if (
@@ -6711,6 +6730,27 @@ function App() {
       <>
         <style>{styles}</style>
         <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} onRegisterResident={handleRegisterResident} onResetPassword={resetPassword} />
+      </>
+    );
+  }
+
+  if (supabaseConfigured && backendHydrationStatus !== "ready") {
+    const hydrationFailed = backendHydrationStatus === "error";
+    return (
+      <>
+        <style>{styles}</style>
+        <main role="status" aria-live="polite" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f5f7fb", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+          <section style={{ width: "min(460px,100%)", padding: 28, borderRadius: 18, background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 36px rgba(20,31,55,.08)", textAlign: "center" }}>
+            <h1 style={{ margin: "0 0 10px", color: "#17233f", fontSize: 22 }}>{hydrationFailed ? "Caricamento non completato" : "Caricamento del workspace…"}</h1>
+            <p style={{ color: "#64748b", lineHeight: 1.6 }}>{hydrationFailed ? "Non mostriamo dati locali perché non è stato possibile verificare i dati del server. Controlla la connessione e riprova." : "Stiamo verificando la sessione e caricando i dati associati al tuo workspace."}</p>
+            {hydrationFailed ? (
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+                <button type="button" className="primary-button" onClick={() => setBackendHydrationRetry((value) => value + 1)}>Riprova</button>
+                <button type="button" className="secondary-button" onClick={() => void logout()}>Esci</button>
+              </div>
+            ) : null}
+          </section>
+        </main>
       </>
     );
   }
