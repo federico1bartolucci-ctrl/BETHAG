@@ -2345,6 +2345,7 @@ function App() {
   }, [page, condominiums, sessionRole]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     if (selectedCondominium) {
       localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
     } else if (selectedCondominiumPersistenceReady.current) {
@@ -3490,6 +3491,7 @@ function App() {
   ]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.condominiums,
       JSON.stringify(condominiums)
@@ -3497,6 +3499,7 @@ function App() {
   }, [condominiums]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.deadlines,
       JSON.stringify(deadlines)
@@ -3504,6 +3507,7 @@ function App() {
   }, [deadlines]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.documents,
       JSON.stringify(documents)
@@ -3511,6 +3515,7 @@ function App() {
   }, [documents]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.assemblies,
       JSON.stringify(assemblies)
@@ -3518,6 +3523,7 @@ function App() {
   }, [assemblies]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.suppliers,
       JSON.stringify(suppliers)
@@ -3525,6 +3531,7 @@ function App() {
   }, [suppliers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.activities,
       JSON.stringify(activities)
@@ -3532,10 +3539,12 @@ function App() {
   }, [activities]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
   }, [condominiumWorks]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.communications,
       JSON.stringify(communications)
@@ -3543,14 +3552,17 @@ function App() {
   }, [communications]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
   }, [condominiumMembers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
   }, [condominiumRequests]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.profile,
       JSON.stringify(profile)
@@ -3558,6 +3570,7 @@ function App() {
   }, [profile]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.portalMembers,
       JSON.stringify(portalMembers)
@@ -3565,6 +3578,7 @@ function App() {
   }, [portalMembers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.subscription,
       JSON.stringify(subscription)
@@ -3572,6 +3586,7 @@ function App() {
   }, [subscription]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.collaborators,
       JSON.stringify(collaborators)
