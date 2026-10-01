@@ -46,3 +46,25 @@ The four former timestamp-collision filenames from `main` are absent under their
 2. Review each of the 11 additional SQL files and build a dependency/order matrix.
 3. Recover the complete trusted baseline, then replay all migrations in a disposable isolated environment.
 4. Run schema parity, runtime RLS, accounting, transfer, and frontend E2E tests before release approval.
+
+
+## Follow-up: SQL content comparison and added migrations
+
+### Duplicate-version collision files
+The eight main/repair migration pairs were fetched and compared by SQL body. Seven pairs are byte-identical (Git blob SHA identical); their only distinction is filename timestamp for four renamed collisions. The pair `clean_deleted_member_owner_references` is not byte-identical: the repair-branch version adds a lookup of `workspace_id` from `condominiums`, declares `v_workspace uuid`, and returns safely if the workspace cannot be resolved before updating unit owner references. This addresses an undeclared variable in the main-branch body and scopes the update to the member's workspace. It is a substantive correction, not just a rename. It still requires isolated PostgreSQL replay and trigger-behavior tests before acceptance.
+
+### Ten post-baseline repair additions reviewed by object references
+The repair branch adds these ten migrations beyond the reconstructed baseline fragment:
+
+- `20261001130000_validate_unit_transformation_preview_inputs.sql` — defines the transformation preview RPC; reads units, members, installments, expense allocations, and millesimal values/tables.
+- `20261001133000_guard_confirmed_unit_transformation_integrity.sql` — adds a confirmed-integrity CHECK on transformation records.
+- `20261001140000_lock_confirmed_unit_transformation_audit.sql` — adds immutability guards for confirmed transformation records and their items.
+- `20261001145000_create_portal_access_registry.sql` — creates `portal_access`, indexes, and enables RLS; depends on workspaces, condominiums, profiles, and condominium members.
+- `20261001150000_require_trusted_unit_transformation_confirmation.sql` — blocks untrusted direct confirmation transitions.
+- `20261001153000_require_confirmed_genealogy_for_unit_lifecycle.sql` — guards unit lifecycle transitions against missing confirmed genealogy.
+- `20261001160000_validate_confirmed_unit_transformation_genealogy.sql` — validates genealogy rows before confirmation.
+- `20261001170000_require_active_units_for_transformation_confirmation.sql` — strengthens genealogy validation by requiring active source/destination units at confirmation.
+- `20261001173000_require_resolved_reviews_for_confirmed_unit_transformations.sql` — adds a constraint requiring accounting/millesimal reviews resolved before confirmation.
+- `20261001180000_restore_condominium_units_base.sql` — restores unit base schema, membership `unit_id`, indexes, and RLS policies.
+
+This was a source-level review of migration text and referenced objects, not an execution or proof of dependency-complete replay. In particular, ordering and assumptions about objects created by earlier migrations still need to be checked against a trusted complete baseline; RLS policy behavior and SECURITY DEFINER/trigger ownership require isolated tests. No migration was applied to any Supabase project.
