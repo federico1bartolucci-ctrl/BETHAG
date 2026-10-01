@@ -146,3 +146,29 @@ as $function$ select private.reverse_condominium_installment_payment($1,$2,$3,$4
 revoke execute on function private.reverse_condominium_installment_payment(uuid,uuid,uuid,text) from anon,public;
 revoke execute on function public.reverse_condominium_installment_payment(uuid,uuid,uuid,text) from anon,public;
 grant execute on function public.reverse_condominium_installment_payment(uuid,uuid,uuid,text) to authenticated;
+
+
+create or replace function public.prevent_payment_core_mutation()
+returns trigger
+language plpgsql
+set search_path=public
+as $function$
+begin
+  if new.amount is distinct from old.amount
+     or new.payment_date is distinct from old.payment_date
+     or new.installment_id is distinct from old.installment_id
+     or new.workspace_id is distinct from old.workspace_id
+     or new.condominium_id is distinct from old.condominium_id then
+    raise exception 'Importo, data e collegamento del pagamento sono immutabili: utilizzare lo storno con motivazione';
+  end if;
+  return new;
+end;
+$function$;
+
+revoke execute on function public.prevent_payment_core_mutation() from anon, public;
+drop trigger if exists trg_prevent_payment_core_mutation on public.condominium_payment_movements;
+create trigger trg_prevent_payment_core_mutation
+before update on public.condominium_payment_movements
+for each row execute function public.prevent_payment_core_mutation();
+
+grant execute on function public.reverse_condominium_installment_payment(uuid,uuid,uuid,text) to authenticated;
