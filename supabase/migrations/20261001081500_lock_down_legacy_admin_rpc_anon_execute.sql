@@ -1,0 +1,10 @@
+revoke execute on function public.archive_condominium(uuid, uuid, text) from anon;
+revoke execute on function public.archive_condominium(uuid, uuid, text) from public;
+revoke execute on function public.close_condominium_fiscal_year(uuid, uuid) from anon;
+revoke execute on function public.close_condominium_fiscal_year(uuid, uuid) from public;
+revoke execute on function public.delete_condominium(uuid, bigint, text) from anon;
+revoke execute on function public.delete_condominium(uuid, bigint, text) from public;
+revoke execute on function public.generate_consumption_allocations(uuid, uuid, uuid, uuid, text) from anon;
+revoke execute on function public.generate_consumption_allocations(uuid, uuid, uuid, uuid, text) from public;
+revoke execute on function public.list_archived_condominiums(uuid) from anon;
+revoke execute on function public.list_archived_condominiums(uuid) from public;
