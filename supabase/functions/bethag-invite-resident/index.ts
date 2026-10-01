@@ -166,13 +166,25 @@ Deno.serve(async (req: Request) => {
 
     if (!targetUserId) return json({ error: "Impossibile determinare l'utente condòmino." }, 500);
 
+    const { data: existingProfile, error: existingProfileError } = await adminClient
+      .from("profiles")
+      .select("role")
+      .eq("id", targetUserId)
+      .maybeSingle();
+    if (existingProfileError) throw existingProfileError;
+
+    const preservedRole =
+      existingProfile?.role === "admin" || existingProfile?.role === "collaborator"
+        ? existingProfile.role
+        : "resident";
+
     const { error: profileError } = await adminClient
       .from("profiles")
       .upsert({
         id: targetUserId,
         full_name: name,
         email,
-        role: "resident",
+        role: preservedRole,
         active: true,
       }, { onConflict: "id" });
     if (profileError) throw profileError;
@@ -213,7 +225,7 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "workspace_id,legacy_id" });
     if (portalError) throw portalError;
 
-    if (!invited) {
+    if (invited) {
       await adminClient.auth.admin.updateUserById(targetUserId, {
         user_metadata: {
           full_name: name,
