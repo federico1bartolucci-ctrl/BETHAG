@@ -1,0 +1,435 @@
+# BETHAG — Metadati di integrità Production
+
+Fotografia read-only del database Production, rilevata il 1 ottobre 2026. Estratto per le 27 tabelle assenti dal ramo `bethag-develop`. Questo catalogo documenta definizioni lette dal database, ma non è uno script di migrazione.
+
+- Vincoli acquisiti: 198 (c: 60, f: 106, p: 27, u: 4, x: 1).
+- Indici acquisiti: 153.
+- Policy RLS acquisite: 62 (ALL: 13, SELECT: 19, DELETE: 10, INSERT: 10, UPDATE: 10).
+
+## Vincoli
+
+- `communication_recipients` · `communication_recipients_delivery_consistency_chk` · CHECK: `CHECK ((((status <> ALL (ARRAY['sent'::text, 'delivered'::text])) OR (provider_message_id IS NOT NULL)) AND ((status <> 'delivered'::text) OR (delivered_at IS NOT NULL)) AND ((status <> 'queued'::text) OR (queued_at IS NOT NULL))))`
+- `communication_recipients` · `communication_recipients_email_chk` · CHECK: `CHECK ((POSITION(('@'::text) IN (email)) > 1))`
+- `communication_recipients` · `communication_recipients_role_chk` · CHECK: `CHECK ((recipient_role = ANY (ARRAY['resident'::text, 'council'::text, 'owner'::text, 'tenant'::text])))`
+- `communication_recipients` · `communication_recipients_status_check` · CHECK: `CHECK ((status = ANY (ARRAY['pending'::text, 'queued'::text, 'sent'::text, 'delivered'::text, 'failed'::text, 'skipped'::text])))`
+- `communication_recipients` · `communication_recipients_status_chk` · CHECK: `CHECK ((status = ANY (ARRAY['pending'::text, 'queued'::text, 'sent'::text, 'delivered'::text, 'failed'::text, 'skipped'::text])))`
+- `communication_recipients` · `communication_recipients_communication_id_fkey` · FK: `FOREIGN KEY (communication_id) REFERENCES communications(id) ON DELETE CASCADE`
+- `communication_recipients` · `communication_recipients_condominium_fk` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `communication_recipients` · `communication_recipients_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `communication_recipients` · `communication_recipients_member_fk` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `communication_recipients` · `communication_recipients_member_id_fkey` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `communication_recipients` · `communication_recipients_user_fk` · FK: `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL`
+- `communication_recipients` · `communication_recipients_user_id_fkey` · FK: `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL`
+- `communication_recipients` · `communication_recipients_workspace_fk` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `communication_recipients` · `communication_recipients_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `communication_recipients` · `communication_recipients_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_accounting_settings` · `condominium_accounting_setting_ordinary_installment_count_check` · CHECK: `CHECK (((ordinary_installment_count >= 1) AND (ordinary_installment_count <= 12)))`
+- `condominium_accounting_settings` · `condominium_accounting_settings_check` · CHECK: `CHECK ((accounting_start_date <= accounting_end_date))`
+- `condominium_accounting_settings` · `condominium_accounting_settings_extraordinary_mode_check` · CHECK: `CHECK ((extraordinary_mode = ANY (ARRAY['integrata'::text, 'separata'::text])))`
+- `condominium_accounting_settings` · `condominium_accounting_settings_ordinary_due_dates_check` · CHECK: `CHECK ((COALESCE(array_length(ordinary_due_dates, 1), 0) <= 12))`
+- `condominium_accounting_settings` · `condominium_accounting_settings_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_accounting_settings` · `condominium_accounting_settings_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_accounting_settings` · `condominium_accounting_settings_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_accounting_settings` · `condominium_accounting_settings_workspace_id_condominium_id_key` · UNIQUE: `UNIQUE (workspace_id, condominium_id)`
+- `condominium_allocation_intakes` · `allocation_intake_amount_ck` · CHECK: `CHECK (((expense_amount IS NULL) OR (expense_amount >= (0)::numeric)))`
+- `condominium_allocation_intakes` · `allocation_intake_source_ck` · CHECK: `CHECK ((source = ANY (ARRAY['Manuale'::text, 'AI'::text, 'Importazione'::text])))`
+- `condominium_allocation_intakes` · `allocation_intake_status_ck` · CHECK: `CHECK ((status = ANY (ARRAY['Bozza'::text, 'Da verificare'::text, 'Confermato'::text, 'Annullato'::text])))`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_allocation_table_id_fkey` · FK: `FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_confirmed_by_fkey` · FK: `FOREIGN KEY (confirmed_by) REFERENCES auth.users(id) ON DELETE SET NULL`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_created_by_fkey` · FK: `FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_document_id_fkey` · FK: `FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_ledger_entry_id_fkey` · FK: `FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_allocation_rules` · `allocation_rules_priority_ck` · CHECK: `CHECK ((priority >= 0))`
+- `condominium_allocation_rules` · `allocation_rules_scope_ck` · CHECK: `CHECK (((NULLIF(TRIM(BOTH FROM COALESCE(expense_type, ''::text)), ''::text) IS NOT NULL) OR (NULLIF(TRIM(BOTH FROM COALESCE(category, ''::text)), ''::text) IS NOT NULL)))`
+- `condominium_allocation_rules` · `condominium_allocation_rules_allocation_table_id_fkey` · FK: `FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE RESTRICT`
+- `condominium_allocation_rules` · `condominium_allocation_rules_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_allocation_rules` · `condominium_allocation_rules_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_allocation_rules` · `condominium_allocation_rules_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_audit_log` · `condominium_audit_log_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_audit_log` · `condominium_audit_log_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_audit_log` · `condominium_audit_log_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_budgets` · `condominium_budgets_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_budgets` · `condominium_budgets_fiscal_year_id_fkey` · FK: `FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL`
+- `condominium_budgets` · `condominium_budgets_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_budgets` · `condominium_budgets_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_consumption_readings` · `consumption_nonnegative_ck` · CHECK: `CHECK (((COALESCE(previous_reading, (0)::numeric) >= (0)::numeric) AND (COALESCE(current_reading, (0)::numeric) >= (0)::numeric) AND (COALESCE(consumption, (0)::numeric) >= (0)::numeric) AND (COALESCE(kwh, (0)::numeric) >= (0)::numeric) AND (COALESCE(allocation_value, (0)::numeric) >= (0)::numeric) AND (COALESCE(charge_amount, (0)::numeric) >= (0)::numeric)))`
+- `condominium_consumption_readings` · `consumption_period_ck` · CHECK: `CHECK (((period_start IS NULL) OR (period_end IS NULL) OR (period_start <= period_end)))`
+- `condominium_consumption_readings` · `consumption_reading_ck` · CHECK: `CHECK (((current_reading IS NULL) OR (previous_reading IS NULL) OR (current_reading >= previous_reading)))`
+- `condominium_consumption_readings` · `condominium_consumption_readings_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_consumption_readings` · `condominium_consumption_readings_fiscal_year_id_fkey` · FK: `FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL`
+- `condominium_consumption_readings` · `condominium_consumption_readings_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE CASCADE`
+- `condominium_consumption_readings` · `condominium_consumption_readings_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_consumption_readings` · `condominium_consumption_readings_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_amount_nonnegative_chk` · CHECK: `CHECK ((amount >= (0)::numeric))`
+- `condominium_expense_allocations` · `condominium_expense_allocations_amounts_valid` · CHECK: `CHECK (((amount >= (0)::numeric) AND (paid_amount >= (0)::numeric) AND (paid_amount <= amount)))`
+- `condominium_expense_allocations` · `condominium_expense_allocations_paid_amount_valid_chk` · CHECK: `CHECK (((paid_amount >= (0)::numeric) AND (paid_amount <= amount)))`
+- `condominium_expense_allocations` · `condominium_expense_allocations_status_amount_consistent` · CHECK: `CHECK ((((status = 'Da pagare'::text) AND (paid_amount = (0)::numeric)) OR ((status = 'Parzialmente pagato'::text) AND (paid_amount > (0)::numeric) AND (paid_amount < amount)) OR ((status = 'Pagato'::text) AND (abs((paid_amount - amount)) <= 0.005)) OR ((status = 'Scaduto'::text) AND (paid_amount >= (0)::numeric) AND (paid_amount < amount))))`
+- `condominium_expense_allocations` · `condominium_expense_allocations_allocation_table_id_fkey` · FK: `FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL`
+- `condominium_expense_allocations` · `condominium_expense_allocations_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_expense_allocations` · `condominium_expense_allocations_ledger_entry_id_fkey` · FK: `FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE CASCADE`
+- `condominium_expense_allocations` · `condominium_expense_allocations_member_id_fkey` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `condominium_expense_allocations` · `condominium_expense_allocations_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL`
+- `condominium_expense_allocations` · `condominium_expense_allocations_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_expense_allocations` · `condominium_expense_allocations_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_amount_positive` · CHECK: `CHECK ((amount > (0)::numeric))`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compens_target_installment_id_fkey` · FK: `FOREIGN KEY (target_installment_id) REFERENCES condominium_installments(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_carryover_id_fkey` · FK: `FOREIGN KEY (carryover_id) REFERENCES condominium_fiscal_carryovers(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_created_by_fkey` · FK: `FOREIGN KEY (created_by) REFERENCES auth.users(id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_kind_check` · CHECK: `CHECK ((kind = ANY (ARRAY['Debito'::text, 'Credito'::text])))`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_status_check` · CHECK: `CHECK ((status = ANY (ARRAY['Da riportare'::text, 'Parzialmente compensato'::text, 'Compensato'::text])))`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_balance_kind` · CHECK: `CHECK ((((kind = 'Debito'::text) AND (balance > (0)::numeric)) OR ((kind = 'Credito'::text) AND (balance < (0)::numeric))))`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_balance_nonzero` · CHECK: `CHECK ((abs(balance) >= 0.01))`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_condominium_fk` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_member_fk` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_source_year_fk` · FK: `FOREIGN KEY (source_fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_target_year_fk` · FK: `FOREIGN KEY (target_fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_unit_fk` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE RESTRICT`
+- `condominium_fiscal_carryovers` · `fiscal_carryovers_workspace_fk` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_check` · CHECK: `CHECK ((end_date >= start_date))`
+- `condominium_fiscal_years` · `condominium_fiscal_years_opening_balance_finite` · CHECK: `CHECK ((opening_balance = opening_balance))`
+- `condominium_fiscal_years` · `condominium_fiscal_years_valid_dates` · CHECK: `CHECK ((start_date <= end_date))`
+- `condominium_fiscal_years` · `condominium_fiscal_years_valid_range` · CHECK: `CHECK ((start_date <= end_date))`
+- `condominium_fiscal_years` · `condominium_fiscal_years_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_fiscal_years` · `condominium_fiscal_years_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_fiscal_years` · `condominium_fiscal_years_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_no_overlap` · EXCLUDE: `EXCLUDE USING gist (workspace_id WITH =, condominium_id WITH =, daterange(start_date, end_date, '[]'::text) WITH &&)`
+- `condominium_funds` · `condominium_funds_nonnegative_amounts` · CHECK: `CHECK (((target_amount >= (0)::numeric) AND (allocated_amount >= (0)::numeric) AND (used_amount >= (0)::numeric)))`
+- `condominium_funds` · `condominium_funds_used_lte_allocated` · CHECK: `CHECK ((used_amount <= allocated_amount))`
+- `condominium_funds` · `condominium_funds_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_funds` · `condominium_funds_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_funds` · `condominium_funds_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_installments` · `condominium_installments_amount_positive_chk` · CHECK: `CHECK ((amount > (0)::numeric))`
+- `condominium_installments` · `condominium_installments_amounts_valid` · CHECK: `CHECK (((amount >= (0)::numeric) AND (paid_amount >= (0)::numeric) AND (paid_amount <= amount)))`
+- `condominium_installments` · `condominium_installments_paid_amount_valid_chk` · CHECK: `CHECK (((paid_amount >= (0)::numeric) AND (paid_amount <= amount)))`
+- `condominium_installments` · `condominium_installments_status_amount_consistent` · CHECK: `CHECK ((((status = 'Da pagare'::text) AND (paid_amount = (0)::numeric)) OR ((status = 'Parzialmente pagato'::text) AND (paid_amount > (0)::numeric) AND (paid_amount < amount)) OR ((status = 'Pagato'::text) AND (abs((paid_amount - amount)) <= 0.005)) OR ((status = 'Scaduto'::text) AND (paid_amount >= (0)::numeric) AND (paid_amount < amount)) OR ((status = 'Accorpata'::text) AND (paid_amount >= (0)::numeric) AND (paid_amount <= amount))))`
+- `condominium_installments` · `condominium_installments_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_installments` · `condominium_installments_fiscal_year_id_fkey` · FK: `FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL`
+- `condominium_installments` · `condominium_installments_ledger_entry_id_fkey` · FK: `FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE RESTRICT`
+- `condominium_installments` · `condominium_installments_member_id_fkey` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `condominium_installments` · `condominium_installments_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL`
+- `condominium_installments` · `condominium_installments_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_installments` · `condominium_installments_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_amount_check` · CHECK: `CHECK ((amount >= (0)::numeric))`
+- `condominium_ledger_entries` · `condominium_ledger_entries_direction_check` · CHECK: `CHECK ((direction = ANY (ARRAY['Entrata'::text, 'Uscita'::text])))`
+- `condominium_ledger_entries` · `condominium_ledger_entries_expense_type_check` · CHECK: `CHECK ((expense_type = ANY (ARRAY['Ordinaria'::text, 'Straordinaria'::text])))`
+- `condominium_ledger_entries` · `condominium_ledger_entries_payment_status_check` · CHECK: `CHECK ((payment_status = ANY (ARRAY['Registrato'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text, 'Scaduto'::text])))`
+- `condominium_ledger_entries` · `condominium_ledger_entries_assembly_fk` · FK: `FOREIGN KEY (assembly_id) REFERENCES assemblies(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_ledger_entries` · `condominium_ledger_entries_document_id_fkey` · FK: `FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_fiscal_year_id_fkey` · FK: `FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_fund_id_fkey` · FK: `FOREIGN KEY (fund_id) REFERENCES condominium_funds(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_member_id_fkey` · FK: `FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_supplier_id_fkey` · FK: `FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL`
+- `condominium_ledger_entries` · `condominium_ledger_entries_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_ledger_entries` · `condominium_ledger_entries_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_legal_cases` · `condominium_legal_cases_dates_valid` · CHECK: `CHECK (((closed_date IS NULL) OR (opened_date IS NULL) OR (closed_date >= opened_date)))`
+- `condominium_legal_cases` · `condominium_legal_cases_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_legal_cases` · `condominium_legal_cases_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_legal_cases` · `condominium_legal_cases_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_member_transfers` · `condominium_member_transfers_status_check` · CHECK: `CHECK ((status = ANY (ARRAY['Bozza'::text, 'Confermato'::text, 'Chiuso'::text, 'Annullato'::text])))`
+- `condominium_member_transfers` · `condominium_member_transfers_status_ck` · CHECK: `CHECK ((status = ANY (ARRAY['Bozza'::text, 'Confermato'::text, 'Annullato'::text])))`
+- `condominium_member_transfers` · `condominium_member_transfers_type_ck` · CHECK: `CHECK ((transfer_type = ANY (ARRAY['Vendita'::text, 'Acquisto'::text, 'Donazione'::text, 'Successione'::text, 'Altro'::text])))`
+- `condominium_member_transfers` · `condominium_member_transfers_closed_by_fkey` · FK: `FOREIGN KEY (closed_by) REFERENCES auth.users(id)`
+- `condominium_member_transfers` · `condominium_member_transfers_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_member_transfers` · `condominium_member_transfers_created_by_fkey` · FK: `FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL`
+- `condominium_member_transfers` · `condominium_member_transfers_incoming_member_id_fkey` · FK: `FOREIGN KEY (incoming_member_id) REFERENCES condominium_members(id) ON DELETE RESTRICT`
+- `condominium_member_transfers` · `condominium_member_transfers_outgoing_member_id_fkey` · FK: `FOREIGN KEY (outgoing_member_id) REFERENCES condominium_members(id) ON DELETE RESTRICT`
+- `condominium_member_transfers` · `condominium_member_transfers_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE RESTRICT`
+- `condominium_member_transfers` · `condominium_member_transfers_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_member_transfers` · `condominium_member_transfers_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_basis_type_check` · CHECK: `CHECK ((basis_type = ANY (ARRAY['Millesimi'::text, 'Quote personalizzate'::text, 'Consumo'::text, 'Misto'::text])))`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_scope_mode_check` · CHECK: `CHECK ((scope_mode = ANY (ARRAY['all'::text, 'units'::text, 'buildings'::text])))`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_total_positive` · CHECK: `CHECK ((total_millesimi > (0)::numeric))`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_value_nonnegative` · CHECK: `CHECK ((value >= (0)::numeric))`
+- `condominium_millesimal_values` · `condominium_millesimal_values_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_millesimal_values` · `condominium_millesimal_values_table_id_fkey` · FK: `FOREIGN KEY (table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE CASCADE`
+- `condominium_millesimal_values` · `condominium_millesimal_values_unit_id_fkey` · FK: `FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE CASCADE`
+- `condominium_millesimal_values` · `condominium_millesimal_values_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_millesimal_values` · `condominium_millesimal_values_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_table_id_unit_id_key` · UNIQUE: `UNIQUE (table_id, unit_id)`
+- `condominium_payment_movements` · `condominium_payment_movements_amount_valid` · CHECK: `CHECK ((amount > (0)::numeric))`
+- `condominium_payment_movements` · `condominium_payment_movements_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_payment_movements` · `condominium_payment_movements_installment_id_fkey` · FK: `FOREIGN KEY (installment_id) REFERENCES condominium_installments(id) ON DELETE CASCADE`
+- `condominium_payment_movements` · `condominium_payment_movements_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_payment_movements` · `condominium_payment_movements_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_payment_reversal_audit` · `condominium_payment_reversal_audit_amount_check` · CHECK: `CHECK ((amount > (0)::numeric))`
+- `condominium_payment_reversal_audit` · `condominium_payment_reversal_audit_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_payment_reversal_audit` · `condominium_payment_reversal_audit_original_payment_id_key` · UNIQUE: `UNIQUE (original_payment_id)`
+- `condominium_register_items` · `condominium_register_items_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_register_items` · `condominium_register_items_supplier_id_fkey` · FK: `FOREIGN KEY (supplier_id) REFERENCES condominium_suppliers(id) ON DELETE SET NULL`
+- `condominium_register_items` · `condominium_register_items_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_register_items` · `condominium_register_items_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_suppliers` · `condominium_suppliers_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_suppliers` · `condominium_suppliers_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_suppliers` · `condominium_suppliers_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_tax_obligations` · `condominium_tax_obligations_nonnegative_amount` · CHECK: `CHECK (((amount IS NULL) OR (amount >= (0)::numeric)))`
+- `condominium_tax_obligations` · `condominium_tax_obligations_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_tax_obligations` · `condominium_tax_obligations_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_tax_obligations` · `condominium_tax_obligations_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_work_documents` · `condominium_work_documents_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_work_documents` · `condominium_work_documents_work_id_fkey` · FK: `FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE`
+- `condominium_work_documents` · `condominium_work_documents_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_work_documents` · `condominium_work_documents_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_work_events` · `condominium_work_events_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_work_events` · `condominium_work_events_work_id_fkey` · FK: `FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE`
+- `condominium_work_events` · `condominium_work_events_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_work_events` · `condominium_work_events_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_work_progress` · `condominium_work_progress_amounts_chk` · CHECK: `CHECK (((amount >= (0)::numeric) AND (paid_amount >= (0)::numeric) AND (paid_amount <= amount)))`
+- `condominium_work_progress` · `condominium_work_progress_financial_consistency_chk` · CHECK: `CHECK (((progress_no > 0) AND (amount >= (0)::numeric) AND (paid_amount >= (0)::numeric) AND (paid_amount <= (amount + 0.005)) AND (percentage >= (0)::numeric) AND (percentage <= (100)::numeric)))`
+- `condominium_work_progress` · `condominium_work_progress_percentage_chk` · CHECK: `CHECK (((percentage >= (0)::numeric) AND (percentage <= (100)::numeric)))`
+- `condominium_work_progress` · `condominium_work_progress_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_work_progress` · `condominium_work_progress_ledger_entry_id_fkey` · FK: `FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL`
+- `condominium_work_progress` · `condominium_work_progress_payment_entry_id_fkey` · FK: `FOREIGN KEY (payment_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL`
+- `condominium_work_progress` · `condominium_work_progress_work_id_fkey` · FK: `FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE`
+- `condominium_work_progress` · `condominium_work_progress_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_work_progress` · `condominium_work_progress_pkey` · PK: `PRIMARY KEY (id)`
+- `condominium_work_progress` · `condominium_work_progress_work_id_progress_no_key` · UNIQUE: `UNIQUE (work_id, progress_no)`
+- `condominium_works` · `condominium_works_amounts_chk` · CHECK: `CHECK (((estimated_amount >= (0)::numeric) AND (approved_amount >= (0)::numeric) AND (actual_amount >= (0)::numeric)))`
+- `condominium_works` · `condominium_works_financial_consistency_chk` · CHECK: `CHECK (((estimated_amount >= (0)::numeric) AND (approved_amount >= (0)::numeric) AND (actual_amount >= (0)::numeric) AND (paid_amount >= (0)::numeric) AND (remaining_amount >= (0)::numeric) AND (paid_amount <= (actual_amount + 0.005)) AND (abs((remaining_amount - GREATEST((actual_amount - paid_amount), (0)::numeric))) <= 0.005)))`
+- `condominium_works` · `condominium_works_paid_amount_check` · CHECK: `CHECK ((paid_amount >= (0)::numeric))`
+- `condominium_works` · `condominium_works_payment_status_check` · CHECK: `CHECK ((payment_status = ANY (ARRAY['Nessun importo'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text])))`
+- `condominium_works` · `condominium_works_progress_chk` · CHECK: `CHECK (((progress_percent >= (0)::numeric) AND (progress_percent <= (100)::numeric)))`
+- `condominium_works` · `condominium_works_remaining_amount_check` · CHECK: `CHECK ((remaining_amount >= (0)::numeric))`
+- `condominium_works` · `condominium_works_condominium_id_fkey` · FK: `FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE`
+- `condominium_works` · `condominium_works_fund_id_fkey` · FK: `FOREIGN KEY (fund_id) REFERENCES condominium_funds(id) ON DELETE SET NULL`
+- `condominium_works` · `condominium_works_register_item_id_fkey` · FK: `FOREIGN KEY (register_item_id) REFERENCES condominium_register_items(id) ON DELETE SET NULL`
+- `condominium_works` · `condominium_works_supplier_id_fkey` · FK: `FOREIGN KEY (supplier_id) REFERENCES condominium_suppliers(id) ON DELETE SET NULL`
+- `condominium_works` · `condominium_works_workspace_id_fkey` · FK: `FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE`
+- `condominium_works` · `condominium_works_pkey` · PK: `PRIMARY KEY (id)`
+
+## Indici
+
+- `communication_recipients` · `communication_recipients_communication_email_uq`: `CREATE UNIQUE INDEX communication_recipients_communication_email_uq ON public.communication_recipients USING btree (communication_id, lower(btrim(email)))`
+- `communication_recipients` · `communication_recipients_condominium_id_idx`: `CREATE INDEX communication_recipients_condominium_id_idx ON public.communication_recipients USING btree (condominium_id)`
+- `communication_recipients` · `communication_recipients_member_idx`: `CREATE INDEX communication_recipients_member_idx ON public.communication_recipients USING btree (member_id)`
+- `communication_recipients` · `communication_recipients_pkey`: `CREATE UNIQUE INDEX communication_recipients_pkey ON public.communication_recipients USING btree (id)`
+- `communication_recipients` · `communication_recipients_provider_event_uq`: `CREATE UNIQUE INDEX communication_recipients_provider_event_uq ON public.communication_recipients USING btree (provider_event_id) WHERE (provider_event_id IS NOT NULL)`
+- `communication_recipients` · `communication_recipients_provider_message_idx`: `CREATE INDEX communication_recipients_provider_message_idx ON public.communication_recipients USING btree (provider_message_id) WHERE (provider_message_id IS NOT NULL)`
+- `communication_recipients` · `communication_recipients_stale_queued_idx`: `CREATE INDEX communication_recipients_stale_queued_idx ON public.communication_recipients USING btree (status, queued_at) WHERE (status = 'queued'::text)`
+- `communication_recipients` · `communication_recipients_status_idx`: `CREATE INDEX communication_recipients_status_idx ON public.communication_recipients USING btree (communication_id, status)`
+- `communication_recipients` · `communication_recipients_user_id_idx`: `CREATE INDEX communication_recipients_user_id_idx ON public.communication_recipients USING btree (user_id)`
+- `communication_recipients` · `communication_recipients_workspace_idx`: `CREATE INDEX communication_recipients_workspace_idx ON public.communication_recipients USING btree (workspace_id)`
+- `condominium_accounting_settings` · `condominium_accounting_settings_condo_idx`: `CREATE INDEX condominium_accounting_settings_condo_idx ON public.condominium_accounting_settings USING btree (condominium_id)`
+- `condominium_accounting_settings` · `condominium_accounting_settings_pkey`: `CREATE UNIQUE INDEX condominium_accounting_settings_pkey ON public.condominium_accounting_settings USING btree (id)`
+- `condominium_accounting_settings` · `condominium_accounting_settings_workspace_id_condominium_id_key`: `CREATE UNIQUE INDEX condominium_accounting_settings_workspace_id_condominium_id_key ON public.condominium_accounting_settings USING btree (workspace_id, condominium_id)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_allocation_table_id_idx`: `CREATE INDEX condominium_allocation_intakes_allocation_table_id_idx ON public.condominium_allocation_intakes USING btree (allocation_table_id)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_condominium_id_idx`: `CREATE INDEX condominium_allocation_intakes_condominium_id_idx ON public.condominium_allocation_intakes USING btree (condominium_id)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_confirmed_by_idx`: `CREATE INDEX condominium_allocation_intakes_confirmed_by_idx ON public.condominium_allocation_intakes USING btree (confirmed_by)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_created_by_idx`: `CREATE INDEX condominium_allocation_intakes_created_by_idx ON public.condominium_allocation_intakes USING btree (created_by)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_document_id_idx`: `CREATE INDEX condominium_allocation_intakes_document_id_idx ON public.condominium_allocation_intakes USING btree (document_id)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_ledger_entry_id_idx`: `CREATE INDEX condominium_allocation_intakes_ledger_entry_id_idx ON public.condominium_allocation_intakes USING btree (ledger_entry_id)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_lookup_idx`: `CREATE INDEX condominium_allocation_intakes_lookup_idx ON public.condominium_allocation_intakes USING btree (workspace_id, condominium_id, status, created_at DESC)`
+- `condominium_allocation_intakes` · `condominium_allocation_intakes_pkey`: `CREATE UNIQUE INDEX condominium_allocation_intakes_pkey ON public.condominium_allocation_intakes USING btree (id)`
+- `condominium_allocation_rules` · `condominium_allocation_rules_condominium_fk_idx`: `CREATE INDEX condominium_allocation_rules_condominium_fk_idx ON public.condominium_allocation_rules USING btree (condominium_id)`
+- `condominium_allocation_rules` · `condominium_allocation_rules_lookup_idx`: `CREATE INDEX condominium_allocation_rules_lookup_idx ON public.condominium_allocation_rules USING btree (workspace_id, condominium_id, active, priority, category, expense_type)`
+- `condominium_allocation_rules` · `condominium_allocation_rules_pkey`: `CREATE UNIQUE INDEX condominium_allocation_rules_pkey ON public.condominium_allocation_rules USING btree (id)`
+- `condominium_allocation_rules` · `condominium_allocation_rules_table_fk_idx`: `CREATE INDEX condominium_allocation_rules_table_fk_idx ON public.condominium_allocation_rules USING btree (allocation_table_id)`
+- `condominium_audit_log` · `condominium_audit_log_condominium_fk_idx`: `CREATE INDEX condominium_audit_log_condominium_fk_idx ON public.condominium_audit_log USING btree (condominium_id)`
+- `condominium_audit_log` · `condominium_audit_log_pkey`: `CREATE UNIQUE INDEX condominium_audit_log_pkey ON public.condominium_audit_log USING btree (id)`
+- `condominium_audit_log` · `condominium_audit_log_scope_idx`: `CREATE INDEX condominium_audit_log_scope_idx ON public.condominium_audit_log USING btree (workspace_id, condominium_id, created_at DESC)`
+- `condominium_budgets` · `condominium_budgets_condominium_fk_idx`: `CREATE INDEX condominium_budgets_condominium_fk_idx ON public.condominium_budgets USING btree (condominium_id)`
+- `condominium_budgets` · `condominium_budgets_fiscal_year_fk_idx`: `CREATE INDEX condominium_budgets_fiscal_year_fk_idx ON public.condominium_budgets USING btree (fiscal_year_id)`
+- `condominium_budgets` · `condominium_budgets_pkey`: `CREATE UNIQUE INDEX condominium_budgets_pkey ON public.condominium_budgets USING btree (id)`
+- `condominium_budgets` · `condominium_budgets_workspace_year_idx`: `CREATE INDEX condominium_budgets_workspace_year_idx ON public.condominium_budgets USING btree (workspace_id, condominium_id, fiscal_year_id)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_condominium_fk_idx`: `CREATE INDEX condominium_consumption_readings_condominium_fk_idx ON public.condominium_consumption_readings USING btree (condominium_id)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_fiscal_year_fk_idx`: `CREATE INDEX condominium_consumption_readings_fiscal_year_fk_idx ON public.condominium_consumption_readings USING btree (fiscal_year_id)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_lookup_idx`: `CREATE INDEX condominium_consumption_readings_lookup_idx ON public.condominium_consumption_readings USING btree (workspace_id, condominium_id, fiscal_year_id, service_type, unit_id)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_pkey`: `CREATE UNIQUE INDEX condominium_consumption_readings_pkey ON public.condominium_consumption_readings USING btree (id)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_unique_idx`: `CREATE UNIQUE INDEX condominium_consumption_readings_unique_idx ON public.condominium_consumption_readings USING btree (workspace_id, condominium_id, fiscal_year_id, unit_id, service_type, meter_code, period_start, period_end)`
+- `condominium_consumption_readings` · `condominium_consumption_readings_unit_fk_idx`: `CREATE INDEX condominium_consumption_readings_unit_fk_idx ON public.condominium_consumption_readings USING btree (unit_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_condominium_idx`: `CREATE INDEX condominium_expense_allocations_condominium_idx ON public.condominium_expense_allocations USING btree (condominium_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_ledger_idx`: `CREATE INDEX condominium_expense_allocations_ledger_idx ON public.condominium_expense_allocations USING btree (ledger_entry_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_member_idx`: `CREATE INDEX condominium_expense_allocations_member_idx ON public.condominium_expense_allocations USING btree (member_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_pkey`: `CREATE UNIQUE INDEX condominium_expense_allocations_pkey ON public.condominium_expense_allocations USING btree (id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_table_idx`: `CREATE INDEX condominium_expense_allocations_table_idx ON public.condominium_expense_allocations USING btree (allocation_table_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_unit_idx`: `CREATE INDEX condominium_expense_allocations_unit_idx ON public.condominium_expense_allocations USING btree (unit_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_workspace_idx`: `CREATE INDEX condominium_expense_allocations_workspace_idx ON public.condominium_expense_allocations USING btree (workspace_id)`
+- `condominium_expense_allocations` · `condominium_expense_allocations_workspace_ledger_idx`: `CREATE INDEX condominium_expense_allocations_workspace_ledger_idx ON public.condominium_expense_allocations USING btree (workspace_id, condominium_id, ledger_entry_id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_carryover_id_idx`: `CREATE INDEX condominium_fiscal_carryover_compensations_carryover_id_idx ON public.condominium_fiscal_carryover_compensations USING btree (carryover_id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_condominium_id_idx`: `CREATE INDEX condominium_fiscal_carryover_compensations_condominium_id_idx ON public.condominium_fiscal_carryover_compensations USING btree (condominium_id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_created_by_idx`: `CREATE INDEX condominium_fiscal_carryover_compensations_created_by_idx ON public.condominium_fiscal_carryover_compensations USING btree (created_by)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_pkey`: `CREATE UNIQUE INDEX condominium_fiscal_carryover_compensations_pkey ON public.condominium_fiscal_carryover_compensations USING btree (id)`
+- `condominium_fiscal_carryover_compensations` · `condominium_fiscal_carryover_compensations_target_installment_i`: `CREATE INDEX condominium_fiscal_carryover_compensations_target_installment_i ON public.condominium_fiscal_carryover_compensations USING btree (target_installment_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_condominium_id_idx`: `CREATE INDEX condominium_fiscal_carryovers_condominium_id_idx ON public.condominium_fiscal_carryovers USING btree (condominium_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_member_id_idx`: `CREATE INDEX condominium_fiscal_carryovers_member_id_idx ON public.condominium_fiscal_carryovers USING btree (member_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_pkey`: `CREATE UNIQUE INDEX condominium_fiscal_carryovers_pkey ON public.condominium_fiscal_carryovers USING btree (id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_source_fiscal_year_id_idx`: `CREATE INDEX condominium_fiscal_carryovers_source_fiscal_year_id_idx ON public.condominium_fiscal_carryovers USING btree (source_fiscal_year_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_target_fiscal_year_id_idx`: `CREATE INDEX condominium_fiscal_carryovers_target_fiscal_year_id_idx ON public.condominium_fiscal_carryovers USING btree (target_fiscal_year_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_target_idx`: `CREATE INDEX condominium_fiscal_carryovers_target_idx ON public.condominium_fiscal_carryovers USING btree (workspace_id, condominium_id, target_fiscal_year_id)`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_unique_period_position`: `CREATE UNIQUE INDEX condominium_fiscal_carryovers_unique_period_position ON public.condominium_fiscal_carryovers USING btree (workspace_id, condominium_id, source_fiscal_year_id, target_fiscal_year_id, unit_id, COALESCE(member_id, '00000000-0000-0000-0000-000000000000'::uuid))`
+- `condominium_fiscal_carryovers` · `condominium_fiscal_carryovers_unit_idx`: `CREATE INDEX condominium_fiscal_carryovers_unit_idx ON public.condominium_fiscal_carryovers USING btree (unit_id)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_condominium_idx`: `CREATE INDEX condominium_fiscal_years_condominium_idx ON public.condominium_fiscal_years USING btree (condominium_id)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_no_overlap`: `CREATE INDEX condominium_fiscal_years_no_overlap ON public.condominium_fiscal_years USING gist (workspace_id, condominium_id, daterange(start_date, end_date, '[]'::text))`
+- `condominium_fiscal_years` · `condominium_fiscal_years_pkey`: `CREATE UNIQUE INDEX condominium_fiscal_years_pkey ON public.condominium_fiscal_years USING btree (id)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_unique`: `CREATE UNIQUE INDEX condominium_fiscal_years_unique ON public.condominium_fiscal_years USING btree (condominium_id, start_date, end_date)`
+- `condominium_fiscal_years` · `condominium_fiscal_years_workspace_idx`: `CREATE INDEX condominium_fiscal_years_workspace_idx ON public.condominium_fiscal_years USING btree (workspace_id)`
+- `condominium_funds` · `condominium_funds_condominium_idx`: `CREATE INDEX condominium_funds_condominium_idx ON public.condominium_funds USING btree (condominium_id)`
+- `condominium_funds` · `condominium_funds_pkey`: `CREATE UNIQUE INDEX condominium_funds_pkey ON public.condominium_funds USING btree (id)`
+- `condominium_funds` · `condominium_funds_workspace_idx`: `CREATE INDEX condominium_funds_workspace_idx ON public.condominium_funds USING btree (workspace_id)`
+- `condominium_installments` · `condominium_installments_condominium_idx`: `CREATE INDEX condominium_installments_condominium_idx ON public.condominium_installments USING btree (condominium_id)`
+- `condominium_installments` · `condominium_installments_due_date_idx`: `CREATE INDEX condominium_installments_due_date_idx ON public.condominium_installments USING btree (due_date)`
+- `condominium_installments` · `condominium_installments_fiscal_year_fk_idx`: `CREATE INDEX condominium_installments_fiscal_year_fk_idx ON public.condominium_installments USING btree (fiscal_year_id)`
+- `condominium_installments` · `condominium_installments_member_idx`: `CREATE INDEX condominium_installments_member_idx ON public.condominium_installments USING btree (member_id)`
+- `condominium_installments` · `condominium_installments_pkey`: `CREATE UNIQUE INDEX condominium_installments_pkey ON public.condominium_installments USING btree (id)`
+- `condominium_installments` · `condominium_installments_unit_idx`: `CREATE INDEX condominium_installments_unit_idx ON public.condominium_installments USING btree (unit_id)`
+- `condominium_installments` · `condominium_installments_workspace_idx`: `CREATE INDEX condominium_installments_workspace_idx ON public.condominium_installments USING btree (workspace_id)`
+- `condominium_installments` · `idx_condominium_installments_ledger_entry_id`: `CREATE INDEX idx_condominium_installments_ledger_entry_id ON public.condominium_installments USING btree (ledger_entry_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_assembly_id_idx`: `CREATE INDEX condominium_ledger_entries_assembly_id_idx ON public.condominium_ledger_entries USING btree (assembly_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_condominium_idx`: `CREATE INDEX condominium_ledger_entries_condominium_idx ON public.condominium_ledger_entries USING btree (condominium_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_deliberation_date_idx`: `CREATE INDEX condominium_ledger_entries_deliberation_date_idx ON public.condominium_ledger_entries USING btree (condominium_id, deliberation_date) WHERE (deliberation_date IS NOT NULL)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_document_idx`: `CREATE INDEX condominium_ledger_entries_document_idx ON public.condominium_ledger_entries USING btree (document_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_fiscal_year_idx`: `CREATE INDEX condominium_ledger_entries_fiscal_year_idx ON public.condominium_ledger_entries USING btree (fiscal_year_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_fund_idx`: `CREATE INDEX condominium_ledger_entries_fund_idx ON public.condominium_ledger_entries USING btree (fund_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_lookup`: `CREATE INDEX condominium_ledger_entries_lookup ON public.condominium_ledger_entries USING btree (condominium_id, entry_date)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_member_idx`: `CREATE INDEX condominium_ledger_entries_member_idx ON public.condominium_ledger_entries USING btree (member_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_outgoing_document_key`: `CREATE UNIQUE INDEX condominium_ledger_entries_outgoing_document_key ON public.condominium_ledger_entries USING btree (document_id) WHERE ((direction = 'Uscita'::text) AND (document_id IS NOT NULL))`
+- `condominium_ledger_entries` · `condominium_ledger_entries_pkey`: `CREATE UNIQUE INDEX condominium_ledger_entries_pkey ON public.condominium_ledger_entries USING btree (id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_supplier_idx`: `CREATE INDEX condominium_ledger_entries_supplier_idx ON public.condominium_ledger_entries USING btree (supplier_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_unit_idx`: `CREATE INDEX condominium_ledger_entries_unit_idx ON public.condominium_ledger_entries USING btree (unit_id)`
+- `condominium_ledger_entries` · `condominium_ledger_entries_workspace_idx`: `CREATE INDEX condominium_ledger_entries_workspace_idx ON public.condominium_ledger_entries USING btree (workspace_id)`
+- `condominium_legal_cases` · `condominium_legal_cases_condominium_idx`: `CREATE INDEX condominium_legal_cases_condominium_idx ON public.condominium_legal_cases USING btree (condominium_id)`
+- `condominium_legal_cases` · `condominium_legal_cases_pkey`: `CREATE UNIQUE INDEX condominium_legal_cases_pkey ON public.condominium_legal_cases USING btree (id)`
+- `condominium_legal_cases` · `condominium_legal_cases_workspace_idx`: `CREATE INDEX condominium_legal_cases_workspace_idx ON public.condominium_legal_cases USING btree (workspace_id)`
+- `condominium_member_transfers` · `condominium_member_transfers_closed_by_idx`: `CREATE INDEX condominium_member_transfers_closed_by_idx ON public.condominium_member_transfers USING btree (closed_by)`
+- `condominium_member_transfers` · `condominium_member_transfers_condo_date_idx`: `CREATE INDEX condominium_member_transfers_condo_date_idx ON public.condominium_member_transfers USING btree (condominium_id, transfer_date DESC)`
+- `condominium_member_transfers` · `condominium_member_transfers_created_by_idx`: `CREATE INDEX condominium_member_transfers_created_by_idx ON public.condominium_member_transfers USING btree (created_by)`
+- `condominium_member_transfers` · `condominium_member_transfers_incoming_member_id_idx`: `CREATE INDEX condominium_member_transfers_incoming_member_id_idx ON public.condominium_member_transfers USING btree (incoming_member_id)`
+- `condominium_member_transfers` · `condominium_member_transfers_outgoing_member_id_idx`: `CREATE INDEX condominium_member_transfers_outgoing_member_id_idx ON public.condominium_member_transfers USING btree (outgoing_member_id)`
+- `condominium_member_transfers` · `condominium_member_transfers_pkey`: `CREATE UNIQUE INDEX condominium_member_transfers_pkey ON public.condominium_member_transfers USING btree (id)`
+- `condominium_member_transfers` · `condominium_member_transfers_unit_date_idx`: `CREATE INDEX condominium_member_transfers_unit_date_idx ON public.condominium_member_transfers USING btree (unit_id, transfer_date DESC)`
+- `condominium_member_transfers` · `condominium_member_transfers_workspace_id_idx`: `CREATE INDEX condominium_member_transfers_workspace_id_idx ON public.condominium_member_transfers USING btree (workspace_id)`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_active_one_uidx`: `CREATE UNIQUE INDEX condominium_millesimal_tables_active_one_uidx ON public.condominium_millesimal_tables USING btree (condominium_id) WHERE active`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_condominium_idx`: `CREATE INDEX condominium_millesimal_tables_condominium_idx ON public.condominium_millesimal_tables USING btree (condominium_id)`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_pkey`: `CREATE UNIQUE INDEX condominium_millesimal_tables_pkey ON public.condominium_millesimal_tables USING btree (id)`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_scope_mode_idx`: `CREATE INDEX condominium_millesimal_tables_scope_mode_idx ON public.condominium_millesimal_tables USING btree (workspace_id, condominium_id, scope_mode)`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_workspace_condominium_name_uidx`: `CREATE UNIQUE INDEX condominium_millesimal_tables_workspace_condominium_name_uidx ON public.condominium_millesimal_tables USING btree (workspace_id, condominium_id, lower(btrim(name)))`
+- `condominium_millesimal_tables` · `condominium_millesimal_tables_workspace_idx`: `CREATE INDEX condominium_millesimal_tables_workspace_idx ON public.condominium_millesimal_tables USING btree (workspace_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_condominium_fk_idx`: `CREATE INDEX condominium_millesimal_values_condominium_fk_idx ON public.condominium_millesimal_values USING btree (condominium_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_pkey`: `CREATE UNIQUE INDEX condominium_millesimal_values_pkey ON public.condominium_millesimal_values USING btree (id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_table_id_unit_id_key`: `CREATE UNIQUE INDEX condominium_millesimal_values_table_id_unit_id_key ON public.condominium_millesimal_values USING btree (table_id, unit_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_table_idx`: `CREATE INDEX condominium_millesimal_values_table_idx ON public.condominium_millesimal_values USING btree (table_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_unit_idx`: `CREATE INDEX condominium_millesimal_values_unit_idx ON public.condominium_millesimal_values USING btree (unit_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_workspace_idx`: `CREATE INDEX condominium_millesimal_values_workspace_idx ON public.condominium_millesimal_values USING btree (workspace_id)`
+- `condominium_millesimal_values` · `condominium_millesimal_values_workspace_table_unit_uidx`: `CREATE UNIQUE INDEX condominium_millesimal_values_workspace_table_unit_uidx ON public.condominium_millesimal_values USING btree (workspace_id, table_id, unit_id)`
+- `condominium_payment_movements` · `condominium_payment_movements_condominium_fk_idx`: `CREATE INDEX condominium_payment_movements_condominium_fk_idx ON public.condominium_payment_movements USING btree (condominium_id)`
+- `condominium_payment_movements` · `condominium_payment_movements_installment_idx`: `CREATE INDEX condominium_payment_movements_installment_idx ON public.condominium_payment_movements USING btree (installment_id)`
+- `condominium_payment_movements` · `condominium_payment_movements_pkey`: `CREATE UNIQUE INDEX condominium_payment_movements_pkey ON public.condominium_payment_movements USING btree (id)`
+- `condominium_payment_movements` · `condominium_payment_movements_workspace_idx`: `CREATE INDEX condominium_payment_movements_workspace_idx ON public.condominium_payment_movements USING btree (workspace_id)`
+- `condominium_payment_reversal_audit` · `condominium_payment_reversal_audit_original_payment_id_key`: `CREATE UNIQUE INDEX condominium_payment_reversal_audit_original_payment_id_key ON public.condominium_payment_reversal_audit USING btree (original_payment_id)`
+- `condominium_payment_reversal_audit` · `condominium_payment_reversal_audit_pkey`: `CREATE UNIQUE INDEX condominium_payment_reversal_audit_pkey ON public.condominium_payment_reversal_audit USING btree (id)`
+- `condominium_register_items` · `condominium_register_items_condominium_fk_idx`: `CREATE INDEX condominium_register_items_condominium_fk_idx ON public.condominium_register_items USING btree (condominium_id)`
+- `condominium_register_items` · `condominium_register_items_pkey`: `CREATE UNIQUE INDEX condominium_register_items_pkey ON public.condominium_register_items USING btree (id)`
+- `condominium_register_items` · `condominium_register_items_supplier_idx`: `CREATE INDEX condominium_register_items_supplier_idx ON public.condominium_register_items USING btree (supplier_id)`
+- `condominium_register_items` · `condominium_register_items_workspace_condo_idx`: `CREATE INDEX condominium_register_items_workspace_condo_idx ON public.condominium_register_items USING btree (workspace_id, condominium_id, item_type, expiry_date)`
+- `condominium_suppliers` · `condominium_suppliers_condominium_fk_idx`: `CREATE INDEX condominium_suppliers_condominium_fk_idx ON public.condominium_suppliers USING btree (condominium_id)`
+- `condominium_suppliers` · `condominium_suppliers_pkey`: `CREATE UNIQUE INDEX condominium_suppliers_pkey ON public.condominium_suppliers USING btree (id)`
+- `condominium_suppliers` · `condominium_suppliers_workspace_condo_idx`: `CREATE INDEX condominium_suppliers_workspace_condo_idx ON public.condominium_suppliers USING btree (workspace_id, condominium_id, category)`
+- `condominium_tax_obligations` · `condominium_tax_obligations_condominium_idx`: `CREATE INDEX condominium_tax_obligations_condominium_idx ON public.condominium_tax_obligations USING btree (condominium_id)`
+- `condominium_tax_obligations` · `condominium_tax_obligations_pkey`: `CREATE UNIQUE INDEX condominium_tax_obligations_pkey ON public.condominium_tax_obligations USING btree (id)`
+- `condominium_tax_obligations` · `condominium_tax_obligations_workspace_idx`: `CREATE INDEX condominium_tax_obligations_workspace_idx ON public.condominium_tax_obligations USING btree (workspace_id)`
+- `condominium_work_documents` · `condominium_work_documents_condominium_fk_idx`: `CREATE INDEX condominium_work_documents_condominium_fk_idx ON public.condominium_work_documents USING btree (condominium_id)`
+- `condominium_work_documents` · `condominium_work_documents_pkey`: `CREATE UNIQUE INDEX condominium_work_documents_pkey ON public.condominium_work_documents USING btree (id)`
+- `condominium_work_documents` · `condominium_work_documents_work_document_key`: `CREATE UNIQUE INDEX condominium_work_documents_work_document_key ON public.condominium_work_documents USING btree (work_id, document_id)`
+- `condominium_work_documents` · `condominium_work_documents_work_idx`: `CREATE INDEX condominium_work_documents_work_idx ON public.condominium_work_documents USING btree (work_id)`
+- `condominium_work_documents` · `condominium_work_documents_workspace_document_idx`: `CREATE INDEX condominium_work_documents_workspace_document_idx ON public.condominium_work_documents USING btree (workspace_id, document_id)`
+- `condominium_work_documents` · `condominium_work_documents_workspace_fk_idx`: `CREATE INDEX condominium_work_documents_workspace_fk_idx ON public.condominium_work_documents USING btree (workspace_id)`
+- `condominium_work_events` · `condominium_work_events_condominium_fk_idx`: `CREATE INDEX condominium_work_events_condominium_fk_idx ON public.condominium_work_events USING btree (condominium_id)`
+- `condominium_work_events` · `condominium_work_events_pkey`: `CREATE UNIQUE INDEX condominium_work_events_pkey ON public.condominium_work_events USING btree (id)`
+- `condominium_work_events` · `condominium_work_events_work_idx`: `CREATE INDEX condominium_work_events_work_idx ON public.condominium_work_events USING btree (work_id, event_date)`
+- `condominium_work_events` · `condominium_work_events_workspace_fk_idx`: `CREATE INDEX condominium_work_events_workspace_fk_idx ON public.condominium_work_events USING btree (workspace_id)`
+- `condominium_work_progress` · `condominium_work_progress_condominium_fk_idx`: `CREATE INDEX condominium_work_progress_condominium_fk_idx ON public.condominium_work_progress USING btree (condominium_id)`
+- `condominium_work_progress` · `condominium_work_progress_ledger_entry_idx`: `CREATE INDEX condominium_work_progress_ledger_entry_idx ON public.condominium_work_progress USING btree (ledger_entry_id) WHERE (ledger_entry_id IS NOT NULL)`
+- `condominium_work_progress` · `condominium_work_progress_ledger_idx`: `CREATE INDEX condominium_work_progress_ledger_idx ON public.condominium_work_progress USING btree (ledger_entry_id, payment_entry_id)`
+- `condominium_work_progress` · `condominium_work_progress_payment_entry_fk_idx`: `CREATE INDEX condominium_work_progress_payment_entry_fk_idx ON public.condominium_work_progress USING btree (payment_entry_id)`
+- `condominium_work_progress` · `condominium_work_progress_payment_entry_idx`: `CREATE INDEX condominium_work_progress_payment_entry_idx ON public.condominium_work_progress USING btree (payment_entry_id) WHERE (payment_entry_id IS NOT NULL)`
+- `condominium_work_progress` · `condominium_work_progress_pkey`: `CREATE UNIQUE INDEX condominium_work_progress_pkey ON public.condominium_work_progress USING btree (id)`
+- `condominium_work_progress` · `condominium_work_progress_work_id_progress_no_key`: `CREATE UNIQUE INDEX condominium_work_progress_work_id_progress_no_key ON public.condominium_work_progress USING btree (work_id, progress_no)`
+- `condominium_work_progress` · `condominium_work_progress_work_idx`: `CREATE INDEX condominium_work_progress_work_idx ON public.condominium_work_progress USING btree (work_id, progress_date)`
+- `condominium_work_progress` · `condominium_work_progress_workspace_fk_idx`: `CREATE INDEX condominium_work_progress_workspace_fk_idx ON public.condominium_work_progress USING btree (workspace_id)`
+- `condominium_works` · `condominium_works_condominium_fk_idx`: `CREATE INDEX condominium_works_condominium_fk_idx ON public.condominium_works USING btree (condominium_id)`
+- `condominium_works` · `condominium_works_fund_idx`: `CREATE INDEX condominium_works_fund_idx ON public.condominium_works USING btree (fund_id)`
+- `condominium_works` · `condominium_works_pkey`: `CREATE UNIQUE INDEX condominium_works_pkey ON public.condominium_works USING btree (id)`
+- `condominium_works` · `condominium_works_register_item_fk_idx`: `CREATE INDEX condominium_works_register_item_fk_idx ON public.condominium_works USING btree (register_item_id)`
+- `condominium_works` · `condominium_works_supplier_fk_idx`: `CREATE INDEX condominium_works_supplier_fk_idx ON public.condominium_works USING btree (supplier_id)`
+- `condominium_works` · `condominium_works_workspace_condo_idx`: `CREATE INDEX condominium_works_workspace_condo_idx ON public.condominium_works USING btree (workspace_id, condominium_id, status)`
+
+## Policy RLS
+
+- `communication_recipients` · `authorized managers manage communication recipients` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'comunicazioni'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'comunicazioni'::text)`
+- `communication_recipients` · `recipients read own communication delivery` · SELECT · ruoli `{authenticated}` · USING: `(user_id = ( SELECT auth.uid() AS uid))` · WITH CHECK: `—`
+- `condominium_accounting_settings` · `authorized users read accounting settings` · SELECT · ruoli `{authenticated}` · USING: `private.can_access_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_accounting_settings` · `managers manage accounting settings` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_allocation_intakes` · `authorized users read allocation intakes` · SELECT · ruoli `{authenticated}` · USING: `private.can_access_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_allocation_intakes` · `managers manage allocation intakes` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_allocation_rules` · `authorized users read allocation rules` · SELECT · ruoli `{authenticated}` · USING: `( SELECT private.can_access_workspace_module(condominium_allocation_rules.workspace_id, 'contabilita'::text) AS can_access_workspace_module)` · WITH CHECK: `—`
+- `condominium_allocation_rules` · `managers manage allocation rules` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_audit_log` · `condominium_audit_log_read_manager` · SELECT · ruoli `{public}` · USING: `private.is_workspace_manager(workspace_id)` · WITH CHECK: `—`
+- `condominium_budgets` · `condominium_budgets_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_consumption_readings` · `authorized users read consumption readings` · SELECT · ruoli `{authenticated}` · USING: `( SELECT private.can_access_workspace_module(condominium_consumption_readings.workspace_id, 'contabilita'::text) AS can_access_workspace_module)` · WITH CHECK: `—`
+- `condominium_consumption_readings` · `managers manage consumption readings` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_expense_allocations` · `Managers can delete condominium_expense_allocations` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_expense_allocations` · `Managers can insert condominium_expense_allocations` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_expense_allocations` · `Managers can read condominium_expense_allocations` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_expense_allocations` · `Managers can update condominium_expense_allocations` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_fiscal_carryover_compensations` · `carryover compensations managers select` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_fiscal_carryovers` · `authorized users read fiscal carryovers` · SELECT · ruoli `{authenticated}` · USING: `private.can_access_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_fiscal_years` · `Managers can delete condominium_fiscal_years` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_fiscal_years` · `Managers can insert condominium_fiscal_years` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_fiscal_years` · `Managers can read condominium_fiscal_years` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_fiscal_years` · `Managers can update condominium_fiscal_years` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_funds` · `Managers can delete condominium_funds` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_funds` · `Managers can insert condominium_funds` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_funds` · `Managers can read condominium_funds` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_funds` · `Managers can update condominium_funds` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_installments` · `Managers can delete condominium_installments` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_installments` · `Managers can insert condominium_installments` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_installments` · `Managers can read condominium_installments` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_installments` · `Managers can update condominium_installments` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_ledger_entries` · `Managers can delete condominium_ledger_entries` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_ledger_entries` · `Managers can insert condominium_ledger_entries` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_ledger_entries` · `Managers can read condominium_ledger_entries` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_ledger_entries` · `Managers can update condominium_ledger_entries` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_legal_cases` · `Managers can delete condominium_legal_cases` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_legal_cases` · `Managers can insert condominium_legal_cases` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_legal_cases` · `Managers can read condominium_legal_cases` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_legal_cases` · `Managers can update condominium_legal_cases` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_member_transfers` · `condominium_member_transfers_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'condomini'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'condomini'::text)`
+- `condominium_millesimal_tables` · `Managers can delete condominium_millesimal_tables` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_millesimal_tables` · `Managers can insert condominium_millesimal_tables` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_millesimal_tables` · `Managers can read condominium_millesimal_tables` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_millesimal_tables` · `Managers can update condominium_millesimal_tables` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_millesimal_values` · `Managers can delete condominium_millesimal_values` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_millesimal_values` · `Managers can insert condominium_millesimal_values` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_millesimal_values` · `Managers can read condominium_millesimal_values` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_millesimal_values` · `Managers can update condominium_millesimal_values` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_payment_movements` · `Managers can delete condominium_payment_movements` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_payment_movements` · `Managers can insert condominium_payment_movements` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_payment_movements` · `Managers can read condominium_payment_movements` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_payment_movements` · `Managers can update condominium_payment_movements` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_payment_reversal_audit` · `Managers can read payment reversal audit` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_register_items` · `condominium_register_items_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.is_workspace_admin(workspace_id)` · WITH CHECK: `private.is_workspace_admin(workspace_id)`
+- `condominium_suppliers` · `condominium_suppliers_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'fornitori'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'fornitori'::text)`
+- `condominium_tax_obligations` · `Managers can delete condominium_tax_obligations` · DELETE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_tax_obligations` · `Managers can insert condominium_tax_obligations` · INSERT · ruoli `{authenticated}` · USING: `—` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_tax_obligations` · `Managers can read condominium_tax_obligations` · SELECT · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `—`
+- `condominium_tax_obligations` · `Managers can update condominium_tax_obligations` · UPDATE · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'contabilita'::text)`
+- `condominium_work_documents` · `condominium_work_documents_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)`
+- `condominium_work_events` · `condominium_work_events_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)`
+- `condominium_work_progress` · `condominium_work_progress_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)`
+- `condominium_works` · `condominium_works_manager_all` · ALL · ruoli `{authenticated}` · USING: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)` · WITH CHECK: `private.can_manage_workspace_module(workspace_id, 'attivita'::text)`
+
+## Avvertenze
+
+- Alcune tabelle mostrano vincoli duplicati con nomi diversi e definizioni equivalenti; la ricostruzione dovrà preservare il comportamento, non replicare ciecamente duplicazioni.
+- Le policy vanno riesaminate con le funzioni autorizzative effettive e i privilegi SQL; la sola presenza di una policy non certifica la sicurezza.
+- Per completare lo schema riproducibile restano da acquisire e confrontare default, trigger, funzioni, grants, tipi enum, sequence e configurazione Storage.
