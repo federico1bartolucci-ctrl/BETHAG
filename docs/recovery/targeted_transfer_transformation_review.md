@@ -46,3 +46,16 @@ The recovery branch migration source confirms the origin of the production catal
 - The production catalog independently shows both validated constraints active, matching this source-level explanation.
 
 This establishes a concrete migration defect, not merely a filename mismatch. It remains a finding only: no SQL was executed to change the constraint. The correction must preserve the intended lifecycle and be validated on an isolated, reconstructed QA baseline before a production change is considered.
+
+
+## Additional source finding — outgoing portal access during transfer
+
+A static comparison of the transfer lifecycle migrations found a likely authorization regression in the recovery branch:
+
+- `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` explicitly deactivates `portal_access` for the outgoing member and disables that member's resident `workspace_members` record during transfer confirmation.
+- `20261001101500_fix_member_portal_workspace_transfer.sql` defines a member-change trigger that deactivates portal/workspace access when a member is made inactive or loses its user link.
+- The later `20261001120000_transfer_lifecycle_keep_outgoing_active.sql` replaces the confirmation function and keeps the outgoing member `active=true` with `position_status='In chiusura'`, but does not explicitly deactivate the outgoing member's `portal_access` or resident workspace membership. The trigger's inactive-member branch therefore is not activated by that update.
+
+This means the later function source does not preserve the explicit access revocation present in the earlier implementation. Treat this as a **source-level regression risk requiring runtime confirmation**, not a claim that an unauthorized user has accessed production data. Before launch, the final confirmation workflow must explicitly define and enforce portal/workspace access for the outgoing member while retaining their financial history. Test with synthetic outgoing and incoming accounts, including existing active portal sessions/tokens, in isolated QA.
+
+No production access records were changed and no runtime impersonation test was performed.
