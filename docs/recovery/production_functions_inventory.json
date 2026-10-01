@@ -1,0 +1,1150 @@
+[
+  {
+    "args": "p_request_id uuid, p_member_id uuid",
+    "name": "admin_approve_portal_registration",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "apply_portal_member_permissions",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_provider_message_id text, p_event_id text, p_event_type text, p_email text, p_event_at timestamp with time zone",
+    "name": "apply_resend_communication_event",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+    "name": "archive_condominium",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "target_condominium uuid",
+    "name": "can_access_condominium",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_condominium uuid",
+    "name": "can_access_resident_condominium",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_condominium uuid, required_permission text",
+    "name": "can_access_resident_condominium_module",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid, required_permission text",
+    "name": "can_access_workspace_module",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid, required_permission text",
+    "name": "can_manage_workspace_module",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid",
+    "name": "claim_first_workspace_admin",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_fiscal_year_id uuid",
+    "name": "close_condominium_fiscal_year",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_transfer_id uuid",
+    "name": "close_condominium_member_transfer",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+    "name": "close_fiscal_year_and_generate_carryovers",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+    "name": "compensate_fiscal_carryover",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+    "name": "complete_portal_registration",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_intake_id uuid, p_condominium_id uuid",
+    "name": "confirm_condominium_creation_intake",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+    "name": "confirm_condominium_member_transfer",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+    "name": "delete_condominium",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+    "name": "generate_fiscal_year_carryovers",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+    "name": "generate_installments_from_allocations",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+    "name": "generate_installments_from_allocations_schedule",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_confirmed_intake_immutability",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "handle_new_user",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid",
+    "name": "is_workspace_admin",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid",
+    "name": "is_workspace_manager",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid",
+    "name": "is_workspace_member",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "target_workspace uuid",
+    "name": "is_workspace_staff",
+    "schema": "private",
+    "language": "sql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid",
+    "name": "list_archived_condominiums",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_communication_id uuid",
+    "name": "prepare_communication_recipients",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "prevent_new_installment_for_closing_member",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+    "name": "register_condominium_installment_payment",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_communication_id uuid, p_age interval",
+    "name": "reset_stale_communication_recipients",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid",
+    "name": "restore_condominium",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+    "name": "reverse_condominium_installment_payment",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+    "name": "save_condominium",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_code text, p_enabled boolean",
+    "name": "set_personal_security_code",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "sync_portal_after_member_change",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "touch_condominium_request_updated_at",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_code text",
+    "name": "verify_personal_security_code",
+    "schema": "private",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_request_id uuid, p_member_id uuid",
+    "name": "admin_approve_portal_registration",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_provider_message_id text, p_event_id text, p_event_type text, p_email text, p_event_at timestamp with time zone",
+    "name": "apply_resend_communication_event",
+    "schema": "public",
+    "language": "sql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+    "name": "archive_condominium",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "audit_condominium_work_change",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "audit_condominium_work_progress_change",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "audit_document_ai_change",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid",
+    "name": "claim_first_workspace_admin",
+    "schema": "public",
+    "language": "sql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "clean_deleted_member_owner_references",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "clear_condominium_member_unit_legacy_fields",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_fiscal_year_id uuid",
+    "name": "close_condominium_fiscal_year",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_transfer_id uuid",
+    "name": "close_condominium_member_transfer",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+    "name": "close_fiscal_year_and_generate_carryovers",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+    "name": "compensate_fiscal_carryover",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+    "name": "complete_portal_registration",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_intake_id uuid",
+    "name": "confirm_allocation_intake",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_intake_id uuid, p_condominium_id uuid",
+    "name": "confirm_condominium_creation_intake",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+    "name": "confirm_condominium_member_transfer",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+    "name": "delete_condominium",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "ensure_table_millesimal_values",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "ensure_unit_millesimal_values",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date",
+    "name": "generate_condominium_expense_allocations",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text",
+    "name": "generate_consumption_allocations",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+    "name": "generate_fiscal_year_carryovers",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+    "name": "generate_installments_from_allocations",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+    "name": "generate_installments_from_allocations_schedule",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_transfer_id uuid",
+    "name": "get_member_transfer_accounting_snapshot",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_condominium_expense_allocation_total",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_confirmed_unit_transformation_immutable",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_confirmed_unit_transformation_items_immutable",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_consumption_reading_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_expense_allocation_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_fiscal_carryover_compensation_total",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_fiscal_year_opening_balance",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_fund_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_installment_paid_amount_update",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_installment_parent_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "guard_ledger_entry_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_ledger_parent_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_millesimal_table_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_millesimal_table_parent_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_millesimal_value_integrity",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "guard_unit_scope_changes",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "p_workspace_id uuid",
+    "name": "list_archived_condominiums",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "normalize_condominium_member_contact",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "normalize_condominium_member_names",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_communication_id uuid",
+    "name": "prepare_communication_recipients",
+    "schema": "public",
+    "language": "sql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_archived_condominium_mutation",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_condominium_accounting",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_fiscal_year_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_fiscal_year_payment_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_fiscal_year_record_mutation",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_fiscal_year_reopen",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "prevent_closed_fiscal_year_update",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_condominium_unit_delete_with_financial_data",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_condominium_unit_delete_with_members",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_financial_unit_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_fiscal_year_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "prevent_member_delete_with_financial_history",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_member_unit_reassignment_with_financial_history",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_paid_allocation_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_paid_installment_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_payment_core_mutation",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_profile_privilege_self_change",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "prevent_unsafe_condominium_unit_delete",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date",
+    "name": "preview_condominium_member_transfer",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[]",
+    "name": "preview_condominium_unit_transformation",
+    "schema": "public",
+    "language": "sql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+    "name": "register_condominium_installment_payment",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "require_confirmed_genealogy_for_unit_lifecycle",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "require_trusted_unit_transformation_confirmation",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_communication_id uuid, p_age interval",
+    "name": "reset_stale_communication_recipients",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid",
+    "name": "restore_condominium",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+    "name": "reverse_condominium_installment_payment",
+    "schema": "public",
+    "language": "sql",
+    "security_definer": false
+  },
+  {
+    "args": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+    "name": "save_condominium",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_code text, p_enabled boolean",
+    "name": "set_personal_security_code",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "sync_condominium_expense_payment_status",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "sync_condominium_fund_usage",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "sync_condominium_installment_from_payments",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "sync_condominium_member_unit_legacy_fields",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_work_id uuid",
+    "name": "sync_condominium_work_financial_summary",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "sync_condominium_work_financial_summary_trigger",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "touch_documents_updated_at",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_allocation_rule_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_audit_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_communication_recipient_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_communication_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_allocation_intake_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_budget_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_consumption_reading_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_creation_intake_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_expense_allocation_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_expense_payment_status",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_fiscal_year_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_fund_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_installment_paid_amount",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_installment_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_installment_total",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_ledger_fund_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_ledger_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_legal_case_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_member_unit_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_millesimal_table_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_millesimal_value_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_payment_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_request_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_request_status",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_tax_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_unit_relationship",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_unit_workspace_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_work_child_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_work_financial_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_work_progress_accounting_links",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_work_reference_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_condominium_work_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_confirmed_unit_transformation_genealogy",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_document_ai_transition",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_document_metadata",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_size_bytes bigint, p_warning_bytes bigint, p_max_bytes bigint",
+    "name": "validate_document_upload_size",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_fiscal_carryover_compensation_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_fiscal_carryover_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_ledger_entry_deliberation_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "",
+    "name": "validate_portal_access_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_portal_registration_request_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_unit_owner_member_refs",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": true
+  },
+  {
+    "args": "",
+    "name": "validate_workspace_condominium_scope",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  },
+  {
+    "args": "p_code text",
+    "name": "verify_personal_security_code",
+    "schema": "public",
+    "language": "plpgsql",
+    "security_definer": false
+  }
+]
