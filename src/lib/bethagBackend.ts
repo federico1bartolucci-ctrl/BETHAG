@@ -2349,11 +2349,35 @@ export async function previewCondominiumMemberTransfer(
     p_transfer_date: transferDate,
   });
   if (error) throw error;
-  if (!data || typeof data !== "object" || Array.isArray(data) ||
-      !Array.isArray(data.installments_before) ||
-      !Array.isArray(data.extraordinary_deliberated_before_due_after) ||
-      !Array.isArray(data.unit_expenses) ||
-      !data.review_flags || typeof data.review_flags !== "object") {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+  const isFiniteNumber = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value);
+  const flags = isRecord(data) ? data.review_flags : null;
+  const installmentsValid = isRecord(data) && Array.isArray(data.installments_before) &&
+    data.installments_before.every((item: unknown) => isRecord(item) &&
+      typeof item.id === "string" && typeof item.title === "string" &&
+      isFiniteNumber(item.amount) && isFiniteNumber(item.paid_amount) &&
+      isFiniteNumber(item.residual) && typeof item.due_date === "string" &&
+      typeof item.status === "string" &&
+      (item.fiscal_year_id === null || typeof item.fiscal_year_id === "string"));
+  const extraordinaryValid = isRecord(data) &&
+    Array.isArray(data.extraordinary_deliberated_before_due_after) &&
+    data.extraordinary_deliberated_before_due_after.every((item: unknown) => isRecord(item) &&
+      typeof item.id === "string" && isFiniteNumber(item.amount) &&
+      isFiniteNumber(item.paid_amount) &&
+      (item.due_date === null || typeof item.due_date === "string") &&
+      typeof item.status === "string" && typeof item.ledger_entry_id === "string" &&
+      (item.deliberation_date === null || typeof item.deliberation_date === "string") &&
+      (item.description === null || typeof item.description === "string"));
+  if (!isRecord(data) || data.transfer_date !== transferDate ||
+      data.unit_id !== unitDatabaseId || data.outgoing_member_id !== outgoingMemberDatabaseId ||
+      !isFiniteNumber(data.outstanding_before) || !isFiniteNumber(data.paid_before) ||
+      !installmentsValid || !extraordinaryValid || !Array.isArray(data.unit_expenses) ||
+      !data.unit_expenses.every(isRecord) || !isRecord(flags) ||
+      typeof flags.unpaid_before_transfer !== "boolean" ||
+      typeof flags.extraordinary_deliberated_before_due_after !== "boolean" ||
+      typeof flags.legal_liability_review_required !== "boolean") {
     throw new Error("La risposta di anteprima del subentro non rispetta il formato atteso.");
   }
   return data as MemberTransferPreview;
