@@ -2283,3 +2283,76 @@ export async function updateCondominiumRequestStatus(
     if (error) throw error;
   });
 }
+
+/**
+ * Registra il subentro di un nuovo titolare tramite la RPC autorizzata.
+ * Gli identificativi richiesti sono UUID del database, non ID legacy della UI.
+ * La RPC applica i controlli di ruolo e di coerenza lato server.
+ */
+export async function confirmCondominiumMemberTransfer(
+  workspaceId: string,
+  payload: {
+    unitId: string;
+    outgoingMemberId: string;
+    incomingName: string;
+    incomingEmail?: string | null;
+    incomingUserId?: string | null;
+    transferDate: string;
+    transferType?: string;
+    notes?: string;
+    data?: Record<string, any>;
+  }
+): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  if (!payload.unitId || !payload.outgoingMemberId) {
+    throw new Error("Unità e condòmino uscente sono obbligatori.");
+  }
+  if (!payload.incomingName.trim()) {
+    throw new Error("Il nominativo del nuovo titolare è obbligatorio.");
+  }
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.transferDate)) {
+    throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  }
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase!.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: payload.unitId,
+      p_outgoing_member_id: payload.outgoingMemberId,
+      p_incoming_name: payload.incomingName.trim(),
+      p_incoming_email: payload.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: payload.incomingUserId || null,
+      p_transfer_date: payload.transferDate,
+      p_transfer_type: payload.transferType?.trim() || "Vendita",
+      p_notes: payload.notes?.trim() || "",
+      p_data: payload.data ?? {},
+    });
+
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
+  });
+}
+
+/**
+ * Chiude un subentro già confermato. Il server rifiuta la chiusura finché
+ * permangono partite economiche aperte secondo le regole configurate.
+ */
+export async function closeCondominiumMemberTransfer(
+  workspaceId: string,
+  transferId: string
+): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase!.rpc("close_condominium_member_transfer", {
+      p_transfer_id: transferId,
+    });
+    if (error) throw error;
+    return data === true;
+  });
+}
