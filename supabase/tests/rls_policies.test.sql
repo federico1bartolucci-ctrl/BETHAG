@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(23);
+select plan(25);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -299,6 +299,36 @@ select ok(
     'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
   )) > 0,
   'La conferma del trasferimento deve riallineare i riferimenti legacy dei proprietari'
+);
+
+
+select ok(
+  position('TRANSFER_FINANCIAL_POSITIONS_OPEN' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_installments' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_expense_allocations' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_fiscal_carryovers' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'La chiusura deve bloccare il subentro finché rate, ripartizioni e riporti fiscali hanno residui'
+);
+
+select ok(
+  position('status=''Chiuso''' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('closed_at' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('closed_by' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'La chiusura deve registrare stato e audit temporale e utente'
 );
 
 select * from finish();
