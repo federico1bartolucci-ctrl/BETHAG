@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, previewCondominiumMemberTransfer, confirmCondominiumMemberTransfer, type MemberTransferPreview, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -9254,6 +9254,13 @@ function CondominiumsPage(
           onNewMember={onNewMember}
           onEditMember={onEditMember}
           onDeleteMember={onDeleteMember}
+          onTransferCompleted={async () => {
+            if (!profile.workspaceId) throw new Error("Workspace non disponibile per aggiornare i dati.");
+            const refreshedBackend = await loadBackendState(profile.workspaceId);
+            setCondominiumMembers(refreshedBackend.condominiumMembers || []);
+            setCondominiumUnits(Array.isArray(refreshedBackend.condominiumUnits) ? refreshedBackend.condominiumUnits : []);
+            setPortalMembers(refreshedBackend.portalMembers || []);
+          }}
           onNewRequest={onNewRequest}
           onEditRequest={onEditRequest}
           onDeleteRequest={onDeleteRequest}
@@ -9430,6 +9437,15 @@ function CondominiumDetails(
 ) {
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const [selectedMemberDetail, setSelectedMemberDetail] = useState<CondominiumMember | null>(null);
+  const [transferMember, setTransferMember] = useState<CondominiumMember | null>(null);
+  const [transferDate, setTransferDate] = useState("");
+  const [transferType, setTransferType] = useState("Vendita");
+  const [incomingName, setIncomingName] = useState("");
+  const [incomingEmail, setIncomingEmail] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferPreview, setTransferPreview] = useState<MemberTransferPreview | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferError, setTransferError] = useState("");
   const {
     item,
     onClose,
@@ -9449,6 +9465,7 @@ function CondominiumDetails(
     onNewMember,
     onEditMember,
     onDeleteMember,
+    onTransferCompleted,
     onNewRequest,
     onEditRequest,
     onDeleteRequest,
@@ -10001,6 +10018,11 @@ function CondominiumDetails(
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
                   Modifica
                 </button>
+                {isAdministrator && member.role === "Proprietario" && member.databaseId && condominiumUnits.some((unit: CondominiumUnit) => unit.id === member.unitId && unit.active) && (
+                  <button className="secondary-button small" type="button" onClick={() => {
+                    setTransferMember(member); setTransferDate(""); setTransferType("Vendita"); setIncomingName(""); setIncomingEmail(""); setTransferNotes(""); setTransferPreview(null); setTransferError("");
+                  }}>Subentro</button>
+                )}
                 <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)} aria-label="Elimina condòmino">
                   ×
                 </button>
@@ -10047,6 +10069,54 @@ function CondominiumDetails(
               Modifica condòmino
             </button>
           </div>
+        </Modal>
+      )}
+
+      {transferMember && (
+        <Modal onClose={() => { if (!transferLoading) setTransferMember(null); }}>
+          <ModalTitle title="Subentro del proprietario" />
+          <p className="section-subtitle">Unità: {condominiumUnits.find((u: CondominiumUnit) => u.id === transferMember.unitId)?.unitCode || transferMember.apartment}. Proprietario uscente: {transferMember.firstName} {transferMember.lastName}. Lo storico contabile resta associato al cedente.</p>
+          <form onSubmit={async (event: React.FormEvent<HTMLFormElement>) => {
+            event.preventDefault(); if (transferLoading) return;
+            const unit = condominiumUnits.find((u: CondominiumUnit) => u.id === transferMember.unitId && u.active);
+            if (!unit || !transferMember.databaseId) { setTransferError("Unità o proprietario non identificabile nel database."); return; }
+            setTransferLoading(true); setTransferError("");
+            try {
+              if (!transferPreview) { setTransferPreview(await previewCondominiumMemberTransfer(unit.id,transferMember.databaseId,transferDate)); return; }
+              if (!window.confirm("Confermi il subentro? Le partite pregresse non saranno eliminate o trasferite automaticamente.")) return;
+              await confirmCondominiumMemberTransfer({unitDatabaseId:unit.id,outgoingMemberDatabaseId:transferMember.databaseId,incomingName,incomingEmail,transferDate,transferType,notes:transferNotes});
+              if (typeof onTransferCompleted !== "function") throw new Error("Subentro registrato, ma aggiornamento scheda non disponibile. Ricarica i dati.");
+              await onTransferCompleted(); setTransferMember(null);
+            } catch(error) { setTransferError(error instanceof Error?error.message:"Operazione non riuscita."); }
+            finally { setTransferLoading(false); }
+          }}>
+            <div className="form-grid">
+              <label>Data del subentro<input type="date" required value={transferDate} onChange={e=>{setTransferDate(e.target.value);setTransferPreview(null);}} disabled={transferLoading}/></label>
+              <label>Tipo<select value={transferType} onChange={e=>{setTransferType(e.target.value);setTransferPreview(null);}} disabled={transferLoading}><option>Vendita</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
+              <label>Nome e cognome subentrante<input required maxLength={180} value={incomingName} onChange={e=>setIncomingName(e.target.value)} disabled={transferLoading}/></label>
+              <label>E-mail<input type="email" maxLength={254} value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} disabled={transferLoading}/></label>
+              <label style={{gridColumn:"1 / -1"}}>Note<textarea rows={3} maxLength={2000} value={transferNotes} onChange={e=>setTransferNotes(e.target.value)} disabled={transferLoading}/></label>
+            </div>
+            {transferPreview && <div className="notes">
+              <strong>Anteprima contabile al {transferPreview.transfer_date}</strong>
+              <div className="detail-grid">
+                <Detail label="Residuo rate scadute entro la data" value={new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(transferPreview.outstanding_before||0))}/>
+                <Detail label="Versato entro la data" value={new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(transferPreview.paid_before||0))}/>
+                <Detail label="Rate" value={String(transferPreview.installments_before.length)}/>
+                <Detail label="Straordinarie deliberate prima, dovute dopo" value={String(transferPreview.extraordinary_deliberated_before_due_after.length)}/>
+              </div>
+              {transferPreview.installments_before.map(i=><div className="request-card" key={i.id}><div className="request-main"><b>{i.title}</b><span>Scadenza: {i.due_date||"non indicata"} · {i.status}</span><small>Residuo: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(i.residual||0))}</small></div></div>)}
+              {transferPreview.review_flags.legal_liability_review_required && <p role="note">Verificare la responsabilità giuridica delle singole spese: l'anteprima non individua automaticamente il debitore.</p>}
+              {transferPreview.review_flags.extraordinary_deliberated_before_due_after && <p role="note">Sono presenti spese straordinarie deliberate prima del subentro e dovute successivamente; occorre verificarne l'imputazione.</p>}
+              <p role="note">La conferma registra il passaggio, senza chiudere o trasferire automaticamente le partite del cedente.</p>
+            </div>}
+            {transferError && <p role="alert" className="error-message">{transferError}</p>}
+            <div className="form-actions">
+              <button type="button" className="secondary-button" disabled={transferLoading} onClick={()=>setTransferMember(null)}>Annulla</button>
+              {transferPreview && <button type="button" className="secondary-button" disabled={transferLoading} onClick={()=>setTransferPreview(null)}>Modifica dati</button>}
+              <button type="submit" className="primary-button" disabled={transferLoading||!transferDate||!incomingName.trim()}>{transferLoading?"Elaborazione...":transferPreview?"Conferma subentro":"Calcola anteprima"}</button>
+            </div>
+          </form>
         </Modal>
       )}
 
