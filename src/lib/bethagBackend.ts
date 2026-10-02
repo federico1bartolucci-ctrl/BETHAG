@@ -121,6 +121,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     const { millesimi: _legacyMillesimi, ...memberData } = row.data ?? {};
     return {
       ...memberData,
+      dbId: row.id,
       id: row.legacy_id,
       condominiumId:
         condominiumLegacyByDbId.get(row.condominium_id) ??
