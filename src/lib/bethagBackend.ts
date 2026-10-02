@@ -122,6 +122,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     return {
       ...memberData,
       id: row.legacy_id,
+      // UUID persistente del record Supabase, distinto dall'ID legacy numerico usato dalla UI.
+      databaseId: row.id,
       condominiumId:
         condominiumLegacyByDbId.get(row.condominium_id) ??
         row.data?.condominiumId ??
