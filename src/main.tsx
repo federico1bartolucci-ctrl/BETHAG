@@ -10222,7 +10222,7 @@ function CondominiumDetails(
             <label>Note (facoltative)
               <textarea value={transferNotes} onChange={(event) => setTransferNotes(event.target.value)} rows={3} maxLength={2000} placeholder="Riferimenti dell'atto o annotazioni" />
             </label>
-            <p className="section-subtitle">La conferma registra il trasferimento e aggiorna l'anagrafica dal server. Per accedere al Portale, il nuovo proprietario dovrà creare un account con i propri dati; l'amministratore potrà poi verificare e autorizzare la richiesta dalla sezione Portale. Se i dati non coincidono con l'anagrafica, sarà necessaria una verifica manuale. La registrazione del subentro non attiva da sola l'accesso.</p>
+            <p className="section-subtitle">La conferma registra il trasferimento e aggiorna l'anagrafica dal server. Se l'unità è in comproprietà, viene trasferita la posizione del solo titolare selezionato: le quote percentuali non sono calcolate né ripartite automaticamente e richiedono verifica documentale e contabile. Per accedere al Portale, il nuovo proprietario dovrà creare un account con i propri dati; l'amministratore potrà poi verificare e autorizzare la richiesta dalla sezione Portale. Se i dati non coincidono con l'anagrafica, sarà necessaria una verifica manuale. La registrazione del subentro non attiva da sola l'accesso.</p>
             <div className="form-actions">
               <button className="secondary-button" type="button" disabled={transferSaving} onClick={() => setTransferOpen(false)}>Annulla</button>
               <button className="primary-button" type="submit" disabled={transferSaving || typeof onTransferMember !== "function"}>{transferSaving ? "Registrazione..." : "Conferma subentro"}</button>
