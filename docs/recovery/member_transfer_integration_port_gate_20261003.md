@@ -4,7 +4,7 @@ Ramo analizzato: `bethag-migration-repair`
 Rami di confronto: `feature/subentro-rpc-client-20261002`, `feature/preserve-member-database-uuid`
 
 ## Esito della verifica
-Al primo audit il ramo `bethag-migration-repair` non conteneva l'integrazione frontend del subentro. In seguito è stato aggiunto `databaseId` al mapping del membro e al tipo `CondominiumMember`; il salvataggio anagrafico ora conserva inoltre l'UUID restituito da Supabase sia per un nuovo membro sia dopo una modifica. In `src/lib/bethagBackend.ts` sono stati introdotti i client helper validati per anteprima, conferma e chiusura delle RPC live. Questi interventi sono stati verificati nel sorgente remoto; l'interfaccia `src/main.tsx` non richiama ancora i helper, quindi il flusso utente non è ancora operativo.
+Al primo audit il ramo `bethag-migration-repair` non conteneva l'integrazione frontend del subentro. In seguito è stato aggiunto `databaseId` al mapping del membro e al tipo `CondominiumMember`; il salvataggio anagrafico ora conserva inoltre l'UUID restituito da Supabase sia per un nuovo membro sia dopo una modifica. In `src/lib/bethagBackend.ts` sono stati introdotti i client helper validati per anteprima, conferma e chiusura delle RPC live. Questi interventi sono stati verificati nel sorgente remoto. È stata ora portata nel dettaglio condominio la schermata di subentro con anteprima contabile, conferma esplicita e refresh dei dati dopo il commit; il comando è esposto soltanto agli amministratori e solo per proprietari attivi con UUID database e unità attiva associata. Il tipo di trasferimento è ristretto ai valori ammessi dal client RPC. Il flusso UI è quindi collegato nel codice, ma non è ancora certificato con build, QA browser o chiamate di prova contro l'ambiente.
 
 La variante `feature/subentro-rpc-client-20261002` integra conferma e chiusura, ma non espone nel client l'anteprima contabile strutturata presente nella variante `feature/preserve-member-database-uuid`. Quest'ultima introduce `databaseId?: string` nel modello UI, le validazioni della risposta di anteprima e la schermata che mostra rate scadute, versamenti, spese straordinarie deliberate prima e dovute dopo e movimenti dell'unità.
 
@@ -20,7 +20,7 @@ La variante `feature/subentro-rpc-client-20261002` integra conferma e chiusura, 
 - Campo UUID database aggiunto e verificato nel mapping; il salvataggio ora conserva l'UUID restituito da Supabase. Resta da verificare il dato nel flusso UI e durante il refresh.
 - Portare il client RPC con validazione stretta di UUID, data ISO reale, tipi e forma dei dati.
 - Integrare l'anteprima contabile e distinguere esplicitamente valori informativi da importi imputabili al debitore.
-- Collegare il flusso nel dettaglio condominio, limitando la capacità di conferma/chiusura alla regola di ruolo decisa.
+- Flusso UI collegato nel dettaglio condominio con anteprima, conferma e refresh post-commit; resta da verificare in build/QA e allineare il gate autorizzativo UI/RPC con la regola di ruolo definitiva.
 - Risolvere lato database i controlli su identità, collegamenti preesistenti e concorrenza; poi sincronizzare i membri/unità/portale da dati server.
 - Solo dopo il completamento di tutti i blocchi, eseguire build e collaudo end-to-end in un ambiente QA ripetibile.
 
