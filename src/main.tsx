@@ -10062,7 +10062,7 @@ function CondominiumDetails(
             <div className="form-grid">
               <label>Nome nuovo proprietario<input required value={transferFirstName} onChange={(e) => setTransferFirstName(e.target.value)} autoComplete="given-name" /></label>
               <label>Cognome nuovo proprietario<input required value={transferLastName} onChange={(e) => setTransferLastName(e.target.value)} autoComplete="family-name" /></label>
-              <label>E-mail (facoltativa)<input type="email" value={transferEmail} onChange={(e) => setTransferEmail(e.target.value)} autoComplete="email" /></label>
+              <label>E-mail (facoltativa; non invia un invito)<input type="email" value={transferEmail} onChange={(e) => setTransferEmail(e.target.value)} autoComplete="email" /></label>
               <label>Data del subentro<input type="date" required value={transferDate} onChange={(e) => setTransferDate(e.target.value)} /></label>
               <label>Tipo di subentro<select value={transferType} onChange={(e) => setTransferType(e.target.value)}><option>Vendita</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
               <label>Note<textarea value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)} rows={3} /></label>
