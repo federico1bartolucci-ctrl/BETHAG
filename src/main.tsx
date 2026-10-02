@@ -2935,7 +2935,7 @@ function App() {
       return true;
     } catch (error) {
       console.error("BETHAG ownership transfer failed", error);
-      alert(error instanceof Error ? "Subentro non confermato dal server.\\n\\n" + error.message : "Subentro non confermato dal server.");
+      alert(error instanceof Error ? "Subentro non confermato dal server.\n\n" + error.message : "Subentro non confermato dal server.");
       return false;
     }
   };
