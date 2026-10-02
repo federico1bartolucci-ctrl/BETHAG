@@ -30,3 +30,10 @@ L'advisor security segnala due RPC pubbliche `SECURITY DEFINER` eseguibili da ut
 ## Stato
 
 Revisione statica delle definizioni runtime osservate; non sono stati eseguiti test con identità sintetiche o dati di QA. Nessuna migrazione è stata applicata a produzione, nessun reset, merge in `main` o deploy è stato effettuato. La riconciliazione delle migrazioni resta incompleta: questo documento non autorizza il replay né certifica il sistema.
+
+
+## Integrazione catalogo — vincoli e unicità (verifica 2026-10-03)
+
+La lettura di `pg_constraint` conferma PK su `id`, FK per workspace, condominio, unità, membri entrante/uscente e utenti che confermano/chiudono, oltre ai CHECK ammessi per stato e tipologia. È presente l'indice univoco parziale `condominium_member_transfers_unit_date_confirmed_uidx` su `(unit_id, transfer_date)` limitato agli stati `Confermato` e `Chiuso`. Quindi il vincolo DB impedisce più trasferimenti confermati/chiusi per la stessa unità e data, anche in caso di chiamate concorrenti; le bozze e gli annullati non sono limitati da questo indice. Il controllo applicativo e l'indice risultano coerenti per i trasferimenti confermati/chiusi.
+
+La presenza del vincolo non risolve i rischi di identità del subentrante né la semantica contabile. Inoltre, le FK confermano i riferimenti, non la correttezza semantica di workspace/condominio/unità tra tutte le righe collegate: tale coerenza deve risultare dai controlli transazionali e dai test. Nessuna riga o schema è stato modificato durante questa verifica.
