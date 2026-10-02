@@ -2311,7 +2311,7 @@ export async function confirmCondominiumMemberTransfer(
   if (!payload.incomingName.trim()) {
     throw new Error("Il nominativo del nuovo titolare è obbligatorio.");
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.transferDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.transferDate)) {
     throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
   }
 
