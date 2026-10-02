@@ -2286,3 +2286,80 @@ export async function updateCondominiumRequestStatus(
     if (error) throw error;
   });
 }
+
+/**
+ * Anteprima contabile del subentro. Gli identificativi richiesti sono UUID
+ * Supabase, non gli ID legacy numerici mostrati nell'interfaccia.
+ */
+export async function previewCondominiumMemberTransfer(
+  unitDatabaseId: string,
+  outgoingMemberDatabaseId: string,
+  transferDate: string
+): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!unitDatabaseId || !outgoingMemberDatabaseId || !transferDate) {
+    throw new Error("Unità, condòmino cedente e data del subentro sono obbligatori.");
+  }
+  const { data, error } = await supabase.rpc("preview_condominium_member_transfer", {
+    p_unit_id: unitDatabaseId,
+    p_outgoing_member_id: outgoingMemberDatabaseId,
+    p_transfer_date: transferDate,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Registra il subentro tramite la RPC transazionale protetta lato database.
+ * Non trasferisce né riscrive automaticamente le poste contabili pregresse.
+ */
+export async function confirmCondominiumMemberTransfer(input: {
+  unitDatabaseId: string;
+  outgoingMemberDatabaseId: string;
+  incomingName: string;
+  incomingEmail?: string | null;
+  incomingUserId?: string | null;
+  transferDate: string;
+  transferType?: string;
+  notes?: string;
+  data?: Record<string, unknown>;
+}): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!input.unitDatabaseId || !input.outgoingMemberDatabaseId || !input.transferDate || !input.incomingName.trim()) {
+    throw new Error("Unità, cedente, nominativo del subentrante e data sono obbligatori.");
+  }
+  const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
+    p_unit_id: input.unitDatabaseId,
+    p_outgoing_member_id: input.outgoingMemberDatabaseId,
+    p_incoming_name: input.incomingName.trim(),
+    p_incoming_email: input.incomingEmail?.trim().toLowerCase() || null,
+    p_incoming_user_id: input.incomingUserId || null,
+    p_transfer_date: input.transferDate,
+    p_transfer_type: input.transferType || "Vendita",
+    p_notes: input.notes || "",
+    p_data: input.data || {},
+  });
+  if (error) throw error;
+  if (typeof data !== "string" || !data) throw new Error("Supabase non ha restituito l'identificativo del subentro.");
+  return data;
+}
+
+export async function getMemberTransferAccountingSnapshot(transferId: string): Promise<any> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+  const { data, error } = await supabase.rpc("get_member_transfer_accounting_snapshot", {
+    p_transfer_id: transferId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+  const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
+    p_transfer_id: transferId,
+  });
+  if (error) throw error;
+  return data === true;
+}
