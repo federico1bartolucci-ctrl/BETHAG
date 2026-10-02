@@ -127,6 +127,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      // Lo stato effettivo è una colonna strutturata e deve prevalere
+      // sull'eventuale copia legacy contenuta nel JSON.
+      active: row.active ?? row.data?.active ?? true,
     };
   });
 
