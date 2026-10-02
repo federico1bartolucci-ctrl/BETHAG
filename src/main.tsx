@@ -9548,6 +9548,8 @@ function CondominiumDetails(
     onNewMember,
     onEditMember,
     onDeleteMember,
+    onTransferCompleted,
+    canTransferOwnership = false,
     onNewRequest,
     onEditRequest,
     onDeleteRequest,
