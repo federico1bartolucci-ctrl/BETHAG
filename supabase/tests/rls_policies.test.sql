@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(23);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -276,6 +276,29 @@ select is(
      and indexname = 'condominium_work_documents_workspace_document_idx'),
   1,
   'La ricerca dei documenti collegati al lavoro deve avere l'indice di workspace'
+);
+
+
+-- Member-transfer RPC must allow a share transfer while preserving security and serialization.
+select ok(
+  position('ACTIVE_INCOMING_OWNER_ALREADY_PRESENT' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) = 0,
+  'Il trasferimento di una quota non deve essere bloccato dalla presenza di altri comproprietari'
+);
+
+select ok(
+  position('for update' in lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  ))) > 0,
+  'La conferma del trasferimento deve serializzare le operazioni sulla stessa unità'
+);
+
+select ok(
+  position('ownerMemberIds' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'La conferma del trasferimento deve riallineare i riferimenti legacy dei proprietari'
 );
 
 select * from finish();
