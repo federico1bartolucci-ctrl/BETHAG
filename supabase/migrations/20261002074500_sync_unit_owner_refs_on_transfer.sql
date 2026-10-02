@@ -23,7 +23,6 @@ declare
   v_incoming_id uuid;
   v_outgoing_legacy_id bigint;
   v_incoming_legacy_id bigint;
-  v_existing_count int;
   v_snapshot jsonb;
   v_out_data jsonb;
 begin
@@ -41,27 +40,18 @@ begin
   from public.condominium_members m
   where m.id=p_outgoing_member_id and m.condominium_id=v_condominium
     and m.unit_id=p_unit_id and m.active
+    and trim(coalesce(m.data->>'role',''))='Proprietario'
+    and coalesce(m.data->>'current_owner','true')='true'
+    and coalesce(m.data->>'position_status','Attivo') <> 'In chiusura'
   for update;
 
-  if not found then raise exception 'OUTGOING_MEMBER_NOT_ACTIVE_ON_UNIT'; end if;
+  if not found then raise exception 'OUTGOING_MEMBER_NOT_ACTIVE_CURRENT_OWNER_ON_UNIT'; end if;
 
   if exists(
     select 1 from public.condominium_member_transfers t
     where t.unit_id=p_unit_id and t.transfer_date=p_transfer_date
       and t.status in ('Confermato','Chiuso')
   ) then raise exception 'TRANSFER_ALREADY_EXISTS'; end if;
-
-  select count(*) into v_existing_count
-  from public.condominium_members m
-  where m.condominium_id=v_condominium
-    and m.unit_id=p_unit_id
-    and m.active
-    and m.id<>p_outgoing_member_id
-    and coalesce(m.data->>'current_owner','true')='true'
-    and coalesce(m.data->>'position_status','Attivo') <> 'In chiusura'
-    and trim(coalesce(m.data->>'role',''))='Proprietario';
-
-  if v_existing_count>0 then raise exception 'ACTIVE_INCOMING_OWNER_ALREADY_PRESENT'; end if;
 
   v_snapshot := jsonb_build_object(
     'captured_at',now(),
