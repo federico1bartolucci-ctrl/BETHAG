@@ -2371,7 +2371,9 @@ export async function previewCondominiumMemberTransfer(
       (item.deliberation_date === null || typeof item.deliberation_date === "string") &&
       (item.description === null || typeof item.description === "string"));
   if (!isRecord(data) || data.transfer_date !== transferDate ||
-      data.unit_id !== unitDatabaseId || data.outgoing_member_id !== outgoingMemberDatabaseId ||
+      typeof data.unit_id !== "string" || data.unit_id.toLowerCase() !== unitDatabaseId.toLowerCase() ||
+      typeof data.outgoing_member_id !== "string" ||
+      data.outgoing_member_id.toLowerCase() !== outgoingMemberDatabaseId.toLowerCase() ||
       !isFiniteNumber(data.outstanding_before) || !isFiniteNumber(data.paid_before) ||
       !installmentsValid || !extraordinaryValid || !Array.isArray(data.unit_expenses) ||
       !data.unit_expenses.every(isRecord) || !isRecord(flags) ||
