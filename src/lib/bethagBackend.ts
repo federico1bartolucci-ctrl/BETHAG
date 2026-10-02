@@ -2421,7 +2421,7 @@ export async function confirmCondominiumMemberTransfer(input: {
 
 export async function getMemberTransferAccountingSnapshot(transferId: string): Promise<any> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+  if (!isUuid(transferId)) throw new Error("Identificativo Supabase del subentro non valido.");
   const { data, error } = await supabase.rpc("get_member_transfer_accounting_snapshot", {
     p_transfer_id: transferId,
   });
@@ -2431,7 +2431,7 @@ export async function getMemberTransferAccountingSnapshot(transferId: string): P
 
 export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+  if (!isUuid(transferId)) throw new Error("Identificativo Supabase del subentro non valido.");
   const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
     p_transfer_id: transferId,
   });
