@@ -2471,8 +2471,9 @@ export async function getMemberTransferAccountingSnapshot(
     throw new Error("La risposta del riepilogo contabile del subentro non è valida.");
   }
   const { transfer, outgoing, post_transfer: postTransfer } = data;
-  if (transfer.id !== transferId || !isUuid(transfer.unit_id) ||
-      !isUuid(transfer.outgoing_member_id) || !isUuid(transfer.incoming_member_id) ||
+  if (typeof transfer.id !== "string" || transfer.id.toLowerCase() !== transferId.toLowerCase() ||
+      !isUuid(transfer.unit_id) || !isUuid(transfer.outgoing_member_id) ||
+      (transfer.incoming_member_id !== null && !isUuid(transfer.incoming_member_id)) ||
       typeof transfer.transfer_date !== "string" || !isIsoDate(transfer.transfer_date) ||
       typeof transfer.transfer_type !== "string" || typeof transfer.status !== "string" ||
       !["Confermato", "Chiuso", "Annullato", "Bozza"].includes(transfer.status) ||
