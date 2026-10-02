@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(34);
+select plan(35);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -409,6 +409,19 @@ select ok(
     'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
   )) = 0,
   'Il subentro del singolo comproprietario non deve essere bloccato dalla presenza degli altri titolari'
+);
+
+select ok(
+  position('position_status' in pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  )) > 0
+  and position('current_owner' in pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  )) > 0
+  and position('active=false' in lower(pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  ))) > 0,
+  'Il trigger Portal deve disattivare l’accesso dei titolari trasferiti o archiviati'
 );
 
 select * from finish();
