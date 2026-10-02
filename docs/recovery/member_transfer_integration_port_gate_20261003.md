@@ -4,7 +4,7 @@ Ramo analizzato: `bethag-migration-repair`
 Rami di confronto: `feature/subentro-rpc-client-20261002`, `feature/preserve-member-database-uuid`
 
 ## Esito della verifica
-Il ramo `bethag-migration-repair` non contiene l'integrazione frontend del subentro nei moduli esaminati: `src/main.tsx` non importa né richiama le RPC `confirm_condominium_member_transfer`, `preview_condominium_member_transfer` o `close_condominium_member_transfer`; il tipo `CondominiumMember` non espone un identificativo UUID DB separato dal suo ID numerico legacy.
+Al primo audit il ramo `bethag-migration-repair` non conteneva l'integrazione frontend del subentro. In seguito è stato aggiunto `databaseId` al mapping del membro e al tipo `CondominiumMember`, e in `src/lib/bethagBackend.ts` sono stati introdotti i client helper validati per anteprima, conferma e chiusura delle RPC live. I helper sono stati verificati come presenti nel file remoto; l'interfaccia `src/main.tsx` non li richiama ancora, quindi il flusso utente non è ancora operativo.
 
 La variante `feature/subentro-rpc-client-20261002` integra conferma e chiusura, ma non espone nel client l'anteprima contabile strutturata presente nella variante `feature/preserve-member-database-uuid`. Quest'ultima introduce `databaseId?: string` nel modello UI, le validazioni della risposta di anteprima e la schermata che mostra rate scadute, versamenti, spese straordinarie deliberate prima e dovute dopo e movimenti dell'unità.
 
