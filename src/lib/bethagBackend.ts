@@ -2376,7 +2376,15 @@ export async function previewCondominiumMemberTransfer(
       data.outgoing_member_id.toLowerCase() !== outgoingMemberDatabaseId.toLowerCase() ||
       !isFiniteNumber(data.outstanding_before) || !isFiniteNumber(data.paid_before) ||
       !installmentsValid || !extraordinaryValid || !Array.isArray(data.unit_expenses) ||
-      !data.unit_expenses.every(isRecord) || !isRecord(flags) ||
+      !data.unit_expenses.every((item: unknown) => isRecord(item) &&
+        typeof item.id === "string" && isUuid(item.id) &&
+        typeof item.description === "string" && typeof item.expense_type === "string" &&
+        typeof item.entry_date === "string" && isIsoDate(item.entry_date) &&
+        (item.deliberation_date === null ||
+          (typeof item.deliberation_date === "string" && isIsoDate(item.deliberation_date))) &&
+        isFiniteNumber(item.amount) &&
+        (item.assembly_id === null || (typeof item.assembly_id === "string" && isUuid(item.assembly_id)))) ||
+      !isRecord(flags) ||
       typeof flags.unpaid_before_transfer !== "boolean" ||
       typeof flags.extraordinary_deliberated_before_due_after !== "boolean" ||
       typeof flags.legal_liability_review_required !== "boolean") {
