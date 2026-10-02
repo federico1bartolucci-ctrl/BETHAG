@@ -2311,8 +2311,12 @@ export async function confirmCondominiumMemberTransfer(
   if (!payload.incomingName.trim()) {
     throw new Error("Il nominativo del nuovo titolare è obbligatorio.");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.transferDate)) {
-    throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(payload.transferDate) ||
+    !Number.isFinite(Date.parse(`${payload.transferDate}T00:00:00Z`)) ||
+    new Date(`${payload.transferDate}T00:00:00Z`).toISOString().slice(0, 10) !== payload.transferDate
+  ) {
+    throw new Error("Inserisci una data di subentro valida nel formato AAAA-MM-GG.");
   }
 
   return enqueueBackendSync(async () => {
