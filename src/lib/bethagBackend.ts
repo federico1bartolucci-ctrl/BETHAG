@@ -2304,7 +2304,7 @@ export async function confirmCondominiumMemberTransfer(input: {
   if (!input.unitId || !input.outgoingMemberId) {
     throw new Error("Unita e titolare uscente sono obbligatori.");
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.transferDate)) {
     throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
   }
   if (!input.incomingName.trim()) {
