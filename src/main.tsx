@@ -5694,6 +5694,7 @@ setSessionRole(null);
           const saved = await saveCondominiumMemberBackend(profile.workspaceId, data);
           persistedData = {
             ...data,
+            databaseId: saved?.id ?? data.databaseId,
             unitId: saved?.unit_id ?? data.unitId ?? "",
           };
         } catch (syncError) {
@@ -5755,6 +5756,7 @@ setSessionRole(null);
           const saved = await saveCondominiumMemberBackend(profile.workspaceId, newMember);
           newMember = {
             ...newMember,
+            databaseId: saved?.id ?? newMember.databaseId,
             unitId: saved?.unit_id ?? newMember.unitId ?? "",
           };
 
