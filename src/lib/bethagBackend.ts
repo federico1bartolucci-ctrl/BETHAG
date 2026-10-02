@@ -134,7 +134,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const ownerIdsByUnit = new Map<string, number[]>();
+  const unitsWithStructuredMembers = new Set<string>();
   mappedCondominiumMembers.forEach((member: any) => {
+    if (member.unitId) unitsWithStructuredMembers.add(String(member.unitId));
     // La colonna tecnica role identifica il ruolo di accesso al portale
     // (es. resident), mentre la qualifica condominiale è conservata nel
     // JSON anagrafico. I proprietari devono quindi essere ricavati dalla
@@ -187,7 +189,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       ownerMode: row.data?.ownerMode ?? "condominium_member",
       // Quando esistono anagrafiche strutturate, queste prevalgono sul
       // vecchio array JSON: evita che il precedente proprietario resti titolare.
-      ownerMemberIds: linkedOwnerIds.length ? linkedOwnerIds : storedOwnerIds,
+      ownerMemberIds: unitsWithStructuredMembers.has(String(row.id)) ? linkedOwnerIds : storedOwnerIds,
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
