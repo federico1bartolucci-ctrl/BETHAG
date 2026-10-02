@@ -1,1 +1,48 @@
--- Keep unit owner references consistent when a condominium member is deleted.\nCREATE OR REPLACE FUNCTION public.clean_deleted_member_owner_references()\nRETURNS trigger\nLANGUAGE plpgsql\nSET search_path = public\nAS $$\nBEGIN\n  UPDATE public.condominium_units u\n  SET data = jsonb_set(\n    COALESCE(u.data,'{}'::jsonb),\n    '{ownerMemberIds}',\n    COALESCE((\n      SELECT jsonb_agg(elem ORDER BY ord)\n      FROM jsonb_array_elements(COALESCE(u.data->'ownerMemberIds','[]'::jsonb)) WITH ORDINALITY AS e(elem,ord)\n      WHERE elem #>> '{}' <> OLD.legacy_id::text\n    ), '[]'::jsonb),\n    true\n  ),\n  updated_at = now()\n  WHERE u.workspace_id = v_workspace\n    AND u.condominium_id = OLD.condominium_id\n    AND jsonb_typeof(u.data->'ownerMemberIds')='array'\n    AND EXISTS (\n      SELECT 1\n      FROM jsonb_array_elements(COALESCE(u.data->'ownerMemberIds','[]'::jsonb)) e(elem)\n      WHERE elem #>> '{}' = OLD.legacy_id::text\n    );\n\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS trg_clean_deleted_member_owner_references ON public.condominium_members;\nCREATE TRIGGER trg_clean_deleted_member_owner_references\nAFTER DELETE ON public.condominium_members\nFOR EACH ROW EXECUTE FUNCTION public.clean_deleted_member_owner_references();\n\nREVOKE EXECUTE ON FUNCTION public.clean_deleted_member_owner_references() FROM public, anon, authenticated;\n
+-- Keep unit owner references consistent when a condominium member is deleted.
+CREATE OR REPLACE FUNCTION public.clean_deleted_member_owner_references()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_workspace uuid;
+BEGIN
+  SELECT c.workspace_id INTO v_workspace
+  FROM public.condominiums c
+  WHERE c.id = OLD.condominium_id;
+
+  IF v_workspace IS NULL THEN
+    RETURN OLD;
+  END IF;
+
+  UPDATE public.condominium_units u
+  SET data = jsonb_set(
+    COALESCE(u.data,'{}'::jsonb),
+    '{ownerMemberIds}',
+    COALESCE((
+      SELECT jsonb_agg(elem ORDER BY ord)
+      FROM jsonb_array_elements(COALESCE(u.data->'ownerMemberIds','[]'::jsonb)) WITH ORDINALITY AS e(elem,ord)
+      WHERE elem #>> '{}' <> OLD.legacy_id::text
+    ), '[]'::jsonb),
+    true
+  ),
+  updated_at = now()
+  WHERE u.workspace_id = v_workspace
+    AND u.condominium_id = OLD.condominium_id
+    AND jsonb_typeof(u.data->'ownerMemberIds')='array'
+    AND EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(COALESCE(u.data->'ownerMemberIds','[]'::jsonb)) e(elem)
+      WHERE elem #>> '{}' = OLD.legacy_id::text
+    );
+
+  RETURN OLD;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_clean_deleted_member_owner_references ON public.condominium_members;
+CREATE TRIGGER trg_clean_deleted_member_owner_references
+AFTER DELETE ON public.condominium_members
+FOR EACH ROW EXECUTE FUNCTION public.clean_deleted_member_owner_references();
+
+REVOKE EXECUTE ON FUNCTION public.clean_deleted_member_owner_references() FROM public, anon, authenticated;

@@ -2155,6 +2155,7 @@ function App() {
     useState<"admin" | "collaborator" | "resident" | null>(() =>
       supabaseConfigured ? null : load(KEYS.session, null)
     );
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
 
   const [sessionEmail, setSessionEmail] =
     useState<string>(() =>
@@ -2345,6 +2346,7 @@ function App() {
   }, [page, condominiums, sessionRole]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     if (selectedCondominium) {
       localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
     } else if (selectedCondominiumPersistenceReady.current) {
@@ -2701,6 +2703,7 @@ function App() {
               email: data.user.email || current.email,
               name: data.user.user_metadata?.full_name || current.name,
             }));
+            setBackendHydrationStatus("loading");
             setSessionRole(bootstrappedAccess.role);
             setServerCollaboratorPermissions(
               bootstrappedAccess.permissions ?? []
@@ -2722,7 +2725,8 @@ function App() {
         }
 
         const normalizedEmail = (data.user.email || email).trim();
-        setSessionRole(access.role);
+        setBackendHydrationStatus("loading");
+            setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
         setServerCollaboratorPermissions(
           access.permissions ?? []
@@ -2789,7 +2793,8 @@ function App() {
       return;
     }
 
-    setSessionRole(role);
+    setBackendHydrationStatus("loading");
+            setSessionRole(role);
     setSessionEmail(normalizedEmail);
     localStorage.setItem(KEYS.session, JSON.stringify(role));
     localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
@@ -2831,7 +2836,8 @@ function App() {
       throw new Error("Account attivato, ma l'associazione al portale non è disponibile.");
     }
 
-    setSessionRole(access.role);
+    setBackendHydrationStatus("loading");
+            setSessionRole(access.role);
     setSessionEmail(user.email || "");
     setServerCollaboratorPermissions(
       access.permissions ?? []
@@ -2846,10 +2852,13 @@ function App() {
   };
 
   const logout = async () => {
+    backendHydrated.current = false;
+    setBackendHydrationStatus(supabaseConfigured ? "loading" : "ready");
     if (supabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
-    setSessionRole(null);
+setSessionRole(null);
+    setSessionUserId(null);
     setSessionEmail("");
     setServerCollaboratorPermissions([]);
     localStorage.removeItem(KEYS.session);
@@ -2933,7 +2942,8 @@ function App() {
     ) => {
       if (cancelled) return;
       if (!session?.user) {
-        setSessionRole(null);
+setSessionRole(null);
+        setSessionUserId(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
         setRequiresPasswordSetup(false);
@@ -2982,7 +2992,8 @@ function App() {
         );
 
         if (!access || cancelled) {
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
           setRequiresPasswordSetup(false);
@@ -2993,6 +3004,8 @@ function App() {
           return;
         }
 
+        setBackendHydrationStatus("loading");
+            setSessionUserId(session.user.id);
         setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
         localStorage.setItem(KEYS.session, JSON.stringify(access.role));
@@ -3008,7 +3021,8 @@ function App() {
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
         if (!cancelled) {
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
@@ -3332,7 +3346,8 @@ function App() {
 
         if (!authorized && !cancelled) {
           await supabase.auth.signOut();
-          setSessionRole(null);
+setSessionRole(null);
+          setSessionUserId(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
@@ -3355,12 +3370,29 @@ function App() {
   ]);
 
   const backendHydrated = useRef(false);
+  const [backendHydrationStatus, setBackendHydrationStatus] = useState<"loading" | "ready" | "error">(
+    supabaseConfigured ? "loading" : "ready"
+  );
+  const [backendHydrationRetry, setBackendHydrationRetry] = useState(0);
+  const [backendHydratedFor, setBackendHydratedFor] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabaseConfigured || !supabase || !sessionRole) return;
-
+    if (!supabaseConfigured || !supabase) {
+      setBackendHydrationStatus("ready");
+      backendHydrated.current = true;
+      setBackendHydratedFor(null);
+      return;
+    }
+    if (!sessionRole || !sessionUserId) {
+      backendHydrated.current = false;
+      setBackendHydratedFor(null);
+      setBackendHydrationStatus("loading");
+      return;
+    }
     let cancelled = false;
     backendHydrated.current = false;
+    setBackendHydratedFor(null);
+    setBackendHydrationStatus("loading");
 
     const hydrateFromBackend = async () => {
       try {
@@ -3368,7 +3400,11 @@ function App() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session?.user || cancelled) return;
+        if (cancelled) return;
+        if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente.");
+        if (session.user.id !== sessionUserId) {
+          throw new Error("L'identità della sessione è cambiata. Aggiorna l'accesso e riprova.");
+        }
 
         let workspaceId = profile.workspaceId;
 
@@ -3390,7 +3426,8 @@ function App() {
           workspaceId = portalAccess?.workspace_id ?? null;
         }
 
-        if (!workspaceId || cancelled) return;
+        if (cancelled) return;
+        if (!workspaceId) throw new Error("Nessun workspace attivo associato a questo account.");
 
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
@@ -3414,15 +3451,17 @@ function App() {
         setCollaborators(
           Array.isArray(backend.collaborators) ? backend.collaborators : []
         );
-        backendHydrated.current = true;
-
         setProfile((current) => ({
           ...current,
           workspaceId,
           email: session.user.email || current.email,
         }));
+        backendHydrated.current = true;
+        setBackendHydratedFor(`${sessionUserId}::${workspaceId}`);
+        setBackendHydrationStatus("ready");
       } catch (error) {
         console.error("BETHAG backend hydration failed", error);
+        if (!cancelled) setBackendHydrationStatus("error");
       }
     };
 
@@ -3431,7 +3470,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionRole]);
+  }, [sessionRole, sessionUserId, profile.workspaceId, backendHydrationRetry]);
 
   useEffect(() => {
     if (
@@ -3490,6 +3529,7 @@ function App() {
   ]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.condominiums,
       JSON.stringify(condominiums)
@@ -3497,6 +3537,7 @@ function App() {
   }, [condominiums]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.deadlines,
       JSON.stringify(deadlines)
@@ -3504,6 +3545,7 @@ function App() {
   }, [deadlines]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.documents,
       JSON.stringify(documents)
@@ -3511,6 +3553,7 @@ function App() {
   }, [documents]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.assemblies,
       JSON.stringify(assemblies)
@@ -3518,6 +3561,7 @@ function App() {
   }, [assemblies]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.suppliers,
       JSON.stringify(suppliers)
@@ -3525,6 +3569,7 @@ function App() {
   }, [suppliers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.activities,
       JSON.stringify(activities)
@@ -3532,10 +3577,12 @@ function App() {
   }, [activities]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
   }, [condominiumWorks]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.communications,
       JSON.stringify(communications)
@@ -3543,14 +3590,17 @@ function App() {
   }, [communications]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
   }, [condominiumMembers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
   }, [condominiumRequests]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.profile,
       JSON.stringify(profile)
@@ -3558,6 +3608,7 @@ function App() {
   }, [profile]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.portalMembers,
       JSON.stringify(portalMembers)
@@ -3565,6 +3616,7 @@ function App() {
   }, [portalMembers]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.subscription,
       JSON.stringify(subscription)
@@ -3572,6 +3624,7 @@ function App() {
   }, [subscription]);
 
   useEffect(() => {
+    if (supabaseConfigured && !backendHydrated.current) return;
     localStorage.setItem(
       KEYS.collaborators,
       JSON.stringify(collaborators)
@@ -6696,6 +6749,33 @@ function App() {
       <>
         <style>{styles}</style>
         <PublicHome onLogin={handleLogin} onRegisterAdmin={handleRegisterAdmin} onRegisterResident={handleRegisterResident} onResetPassword={resetPassword} />
+      </>
+    );
+  }
+
+  const backendHydrationMatchesCurrentIdentity = Boolean(
+    sessionUserId &&
+    profile.workspaceId &&
+    backendHydratedFor === `${sessionUserId}::${profile.workspaceId}`
+  );
+
+  if (supabaseConfigured && (backendHydrationStatus !== "ready" || !backendHydrationMatchesCurrentIdentity)) {
+    const hydrationFailed = backendHydrationStatus === "error";
+    return (
+      <>
+        <style>{styles}</style>
+        <main role="status" aria-live="polite" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f5f7fb", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+          <section style={{ width: "min(460px,100%)", padding: 28, borderRadius: 18, background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 12px 36px rgba(20,31,55,.08)", textAlign: "center" }}>
+            <h1 style={{ margin: "0 0 10px", color: "#17233f", fontSize: 22 }}>{hydrationFailed ? "Caricamento non completato" : "Caricamento del workspace…"}</h1>
+            <p style={{ color: "#64748b", lineHeight: 1.6 }}>{hydrationFailed ? "Non mostriamo dati locali perché non è stato possibile verificare i dati del server. Controlla la connessione e riprova." : "Stiamo verificando la sessione e caricando i dati associati al tuo workspace."}</p>
+            {hydrationFailed ? (
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+                <button type="button" className="primary-button" onClick={() => setBackendHydrationRetry((value) => value + 1)}>Riprova</button>
+                <button type="button" className="secondary-button" onClick={() => void logout()}>Esci</button>
+              </div>
+            ) : null}
+          </section>
+        </main>
       </>
     );
   }
