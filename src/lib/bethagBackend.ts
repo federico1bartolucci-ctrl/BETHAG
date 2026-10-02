@@ -2386,6 +2386,12 @@ export async function confirmCondominiumMemberTransferByLegacyIds(
   const apartment = payload.apartment.trim();
   if (!apartment) throw new Error("L'unità immobiliare è obbligatoria.");
 
+  if (!payload.incomingName.trim()) throw new Error("Il nome del nuovo proprietario è obbligatorio.");
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(payload.transferDate);
+  if (!dateMatch) throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  const transferDate = new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])));
+  if (transferDate.getUTCFullYear() !== Number(dateMatch[1]) || transferDate.getUTCMonth() !== Number(dateMatch[2]) - 1 || transferDate.getUTCDate() !== Number(dateMatch[3])) throw new Error("La data del subentro non è valida.");
+
   return enqueueBackendSync(async () => {
     const { data: condominium, error: condominiumError } = await supabase!
       .from("condominiums")
