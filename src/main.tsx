@@ -10116,6 +10116,19 @@ function CondominiumDetails(
               </div>
               {transferPreview.review_flags.unpaid_before_transfer && <p role="note">Sono presenti importi non saldati con scadenza entro la data indicata. Le posizioni rimangono attribuite al proprietario uscente e richiedono verifica amministrativa.</p>}
               {transferPreview.installments_before.map(i=><div className="request-card" key={i.id}><div className="request-main"><b>{i.title}</b><span>Scadenza: {i.due_date||"non indicata"} · {i.status}</span><small>Importo: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(i.amount||0))} · Versato: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(i.paid_amount||0))} · Residuo: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(i.residual||0))}</small></div></div>)}
+              {transferPreview.unit_expenses.length > 0 && <div className="notes">
+                <strong>Movimenti contabili dell'unità rilevanti alla data</strong>
+                <p>Elenco informativo delle registrazioni collegate all'unità; gli importi non sono sommati al residuo rate per evitare doppi conteggi.</p>
+                {transferPreview.unit_expenses.map((expense, index) => {
+                  const entry = expense as Record<string, unknown>;
+                  const amount = typeof entry.amount === "number" && Number.isFinite(entry.amount) ? new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(entry.amount) : "Importo non disponibile";
+                  const date = typeof entry.deliberation_date === "string" ? entry.deliberation_date : typeof entry.entry_date === "string" ? entry.entry_date : "Data non indicata";
+                  const description = typeof entry.description === "string" && entry.description.trim() ? entry.description : "Registrazione contabile";
+                  const type = typeof entry.expense_type === "string" ? entry.expense_type : "Tipologia non indicata";
+                  const id = typeof entry.id === "string" ? entry.id : String(index);
+                  return <div className="request-card" key={id}><div className="request-main"><b>{description}</b><span>{type} · Data: {date}</span><small>Importo registrato: {amount}</small></div></div>;
+                })}
+              </div>}
               {transferPreview.extraordinary_deliberated_before_due_after.map(e=><div className="request-card" key={e.id}><div className="request-main"><b>{e.description || "Spesa straordinaria"}</b><span>Delibera: {e.deliberation_date || "non indicata"} · Scadenza: {e.due_date || "non indicata"} · {e.status}</span><small>Importo: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(e.amount||0))} · Versato: {new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(Number(e.paid_amount||0))}</small></div></div>)}
               {transferPreview.review_flags.legal_liability_review_required && <p role="note">Verificare la responsabilità giuridica delle singole spese: l'anteprima non individua automaticamente il debitore.</p>}
               {transferPreview.review_flags.extraordinary_deliberated_before_due_after && <p role="note">Sono presenti spese straordinarie deliberate prima del subentro e dovute successivamente; occorre verificarne l'imputazione.</p>}
