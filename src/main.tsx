@@ -284,6 +284,8 @@ type CondominiumUnit = {
 
 type CondominiumMember = {
   id: number;
+  /** UUID del record in Supabase; id resta l'identificativo legacy UI. */
+  databaseId?: string;
   userId?: string;
   condominiumId: number;
   firstName: string;
