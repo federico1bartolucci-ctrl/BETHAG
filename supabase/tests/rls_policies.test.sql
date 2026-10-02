@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(22);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -276,6 +276,19 @@ select is(
      and indexname = 'condominium_work_documents_workspace_document_idx'),
   1,
   'La ricerca dei documenti collegati al lavoro deve avere l'indice di workspace'
+);
+
+-- Il subentro deve accettare soltanto un titolare attuale e deve serializzare
+-- le conferme concorrenti sulla medesima unità.
+select ok(
+  position('Proprietario' in pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure)) > 0
+  and position('current_owner' in pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure)) > 0,
+  'La RPC di subentro deve verificare la qualifica e lo stato del proprietario uscente'
+);
+
+select ok(
+  position('FOR UPDATE' in upper(pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure))) > 0,
+  'La RPC di subentro deve bloccare la riga dell’unità durante la conferma'
 );
 
 select * from finish();
