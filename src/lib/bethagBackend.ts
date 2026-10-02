@@ -2394,23 +2394,39 @@ export async function confirmCondominiumMemberTransfer(input: {
   incomingEmail?: string | null;
   incomingUserId?: string | null;
   transferDate: string;
-  transferType?: string;
+  transferType?: "Vendita" | "Acquisto" | "Donazione" | "Successione" | "Altro";
   notes?: string;
   data?: Record<string, unknown>;
 }): Promise<string> {
   if (!supabase) throw new Error("Supabase non configurato.");
+  const incomingName = input.incomingName.trim();
+  const incomingEmail = input.incomingEmail?.trim().toLowerCase() || null;
+  const transferType = input.transferType || "Vendita";
   if (!isUuid(input.unitDatabaseId) || !isUuid(input.outgoingMemberDatabaseId) ||
-      !isIsoDate(input.transferDate) || !input.incomingName.trim()) {
+      !isIsoDate(input.transferDate) || !incomingName) {
     throw new Error("Inserisci UUID Supabase validi, nominativo del subentrante e data nel formato AAAA-MM-GG.");
+  }
+  if (incomingName.length > 180 || (incomingEmail !== null &&
+      (incomingEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(incomingEmail)))) {
+    throw new Error("Controlla il nominativo e l'indirizzo e-mail del subentrante.");
+  }
+  if (input.incomingUserId && !isUuid(input.incomingUserId)) {
+    throw new Error("L'identificativo utente del subentrante non è valido.");
+  }
+  if (input.notes && input.notes.length > 2000) {
+    throw new Error("Le note del subentro non possono superare 2.000 caratteri.");
+  }
+  if (input.data !== undefined && (!input.data || typeof input.data !== "object" || Array.isArray(input.data))) {
+    throw new Error("I dati aggiuntivi del subentro non sono validi.");
   }
   const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
     p_unit_id: input.unitDatabaseId,
     p_outgoing_member_id: input.outgoingMemberDatabaseId,
-    p_incoming_name: input.incomingName.trim(),
-    p_incoming_email: input.incomingEmail?.trim().toLowerCase() || null,
+    p_incoming_name: incomingName,
+    p_incoming_email: incomingEmail,
     p_incoming_user_id: input.incomingUserId || null,
     p_transfer_date: input.transferDate,
-    p_transfer_type: input.transferType || "Vendita",
+    p_transfer_type: transferType,
     p_notes: input.notes || "",
     p_data: input.data || {},
   });
