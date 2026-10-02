@@ -2492,11 +2492,12 @@ export async function getMemberTransferAccountingSnapshot(
         .every((key) => isFiniteNumber(outgoing[key])) ||
       !["installments_after", "allocations_after"].every((key) => isFiniteNumber(postTransfer[key])) ||
       !data.unit_expenses.every((item: unknown) => isRecord(item) &&
-        typeof item.id === "string" && typeof item.description === "string" &&
-        typeof item.expense_type === "string" && typeof item.entry_date === "string" &&
-        (item.deliberation_date === null || typeof item.deliberation_date === "string") &&
+        typeof item.id === "string" && isUuid(item.id) && typeof item.description === "string" &&
+        typeof item.expense_type === "string" && typeof item.entry_date === "string" && isIsoDate(item.entry_date) &&
+        (item.deliberation_date === null ||
+          (typeof item.deliberation_date === "string" && isIsoDate(item.deliberation_date))) &&
         isFiniteNumber(item.amount) &&
-        (item.assembly_id === null || typeof item.assembly_id === "string") &&
+        (item.assembly_id === null || (typeof item.assembly_id === "string" && isUuid(item.assembly_id))) &&
         typeof item.deliberation_before_transfer === "boolean")) {
     throw new Error("La risposta del riepilogo contabile del subentro contiene dati incompleti o incoerenti.");
   }
