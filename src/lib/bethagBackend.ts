@@ -2418,17 +2418,6 @@ export async function confirmCondominiumMemberTransferByLegacyIds(
       throw new Error("Il condòmino selezionato non risulta associato all'unità indicata. Verifica l'anagrafica prima del subentro.");
     }
 
-    const { data: workspaceMembership, error: membershipError } = await supabase!
-      .from("workspace_members")
-      .select("user_id")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id)
-      .eq("legacy_id", payload.outgoingMemberLegacyId)
-      .limit(1);
-    if (membershipError) throw membershipError;
-    // Non si richiede una riga workspace_members: alcuni utenti non hanno
-    // accesso al portale. L'autorizzazione effettiva è verificata dalla RPC.
-
     const { data, error } = await supabase!.rpc("confirm_condominium_member_transfer", {
       p_unit_id: unit.id,
       p_outgoing_member_id: outgoing.id,
