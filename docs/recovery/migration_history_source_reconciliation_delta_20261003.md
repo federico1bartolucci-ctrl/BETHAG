@@ -29,3 +29,11 @@ Questa attività ha letto la cronologia Supabase e l'albero GitHub. Non ha esegu
 
 ## Verifica aggiuntiva dei branch storici
 Sono stati letti anche gli alberi delle migrazioni dei branch `main` e `backup/pre-rollback-20261001`: entrambi espongono 129 file nella directory `supabase/migrations/`. In entrambi la sequenza visibile parte da `20260928060000_expose_first_admin_bootstrap.sql`; non è emerso un file sorgente con il nome/versione dell'iniziale `20260928021707_initial_bethag_backend` né una migrazione che corrisponda in modo identificabile a `20260928043547_restrict_data_api_table_grants`. Questo rafforza il rilievo di fonte non recuperata nei branch Git esaminati, ma non esclude backup o artefatti esterni non consultati.
+
+## Ricerca su ulteriori branch e pipeline CI
+È stata estesa la verifica agli altri branch Git visibili (`bethag-migration-repair-clean`, branch di client transfer/subentro, co-owner, workspace lookup, portal reactivation e invio email). Le rispettive directory `supabase/migrations/` contengono da 121 a 134 file; nessuno presenta un file denominato `initial_bethag_backend`. I branch esaminati non costituiscono quindi una fonte della migrazione iniziale mancante. La ricerca per commit GitHub dei due nomi esatti `initial_bethag_backend` e `restrict_data_api_table_grants` non ha restituito commit corrispondenti.
+
+Le pipeline presenti in `.github/workflows/` eseguono `npm install` e `npm run build`; il workflow di deploy pubblica `dist` su GitHub Pages. Nei file ispezionati non è configurato un passaggio di dump/esportazione dello schema o di archiviazione del SQL delle migrazioni applicate. Non è pertanto emersa una copia del database SQL negli artefatti descritti da queste pipeline. Questa conclusione riguarda i workflow letti, non eventuali artefatti manuali o backup esterni.
+
+## Esito della ricerca estesa
+La ricerca interna ai branch e ai workflow disponibili non ha recuperato le due sorgenti storiche mancanti. Il prossimo recupero utile richiede una fonte esterna al normale albero Git esaminato: backup locale, archivio del vecchio ambiente di sviluppo, esportazione autorizzata del database, log di deploy o artefatto di CI che contenga il SQL effettivo. Fino ad allora, la baseline rimane non certificata e nessun replay o patch SQL è autorizzato da queste evidenze.
