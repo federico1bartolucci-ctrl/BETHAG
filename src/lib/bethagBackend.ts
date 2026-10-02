@@ -2399,21 +2399,29 @@ export async function confirmCondominiumMemberTransfer(input: {
   data?: Record<string, unknown>;
 }): Promise<string> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  const incomingName = input.incomingName.trim();
-  const incomingEmail = input.incomingEmail?.trim().toLowerCase() || null;
+  const incomingName = typeof input.incomingName === "string" ? input.incomingName.trim() : "";
+  const incomingEmail = typeof input.incomingEmail === "string"
+    ? input.incomingEmail.trim().toLowerCase() || null
+    : null;
+  const incomingUserId = typeof input.incomingUserId === "string"
+    ? input.incomingUserId.trim() || null
+    : null;
+  const notes = typeof input.notes === "string" ? input.notes.trim() : "";
   const transferType = input.transferType || "Vendita";
+  const validTransferTypes = ["Vendita", "Acquisto", "Donazione", "Successione", "Altro"];
   if (!isUuid(input.unitDatabaseId) || !isUuid(input.outgoingMemberDatabaseId) ||
-      !isIsoDate(input.transferDate) || !incomingName) {
-    throw new Error("Inserisci UUID Supabase validi, nominativo del subentrante e data nel formato AAAA-MM-GG.");
+      !isIsoDate(input.transferDate) || !incomingName ||
+      !validTransferTypes.includes(transferType)) {
+    throw new Error("Inserisci UUID Supabase validi, nominativo, tipo di operazione e data del subentro corretti.");
   }
   if (incomingName.length > 180 || (incomingEmail !== null &&
       (incomingEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail)))) {
     throw new Error("Controlla il nominativo e l'indirizzo e-mail del subentrante.");
   }
-  if (input.incomingUserId && !isUuid(input.incomingUserId)) {
+  if (incomingUserId !== null && !isUuid(incomingUserId)) {
     throw new Error("L'identificativo utente del subentrante non è valido.");
   }
-  if (input.notes && input.notes.length > 2000) {
+  if (notes.length > 2000) {
     throw new Error("Le note del subentro non possono superare 2.000 caratteri.");
   }
   if (input.data !== undefined && (!input.data || typeof input.data !== "object" || Array.isArray(input.data))) {
@@ -2424,10 +2432,10 @@ export async function confirmCondominiumMemberTransfer(input: {
     p_outgoing_member_id: input.outgoingMemberDatabaseId,
     p_incoming_name: incomingName,
     p_incoming_email: incomingEmail,
-    p_incoming_user_id: input.incomingUserId || null,
+    p_incoming_user_id: incomingUserId,
     p_transfer_date: input.transferDate,
     p_transfer_type: transferType,
-    p_notes: input.notes || "",
+    p_notes: notes,
     p_data: input.data || {},
   });
   if (error) throw error;
