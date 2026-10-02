@@ -26,3 +26,6 @@ Continuare la matrice con le fonti disponibili: cercare gli artefatti storici (b
 
 ## Salvaguardie
 Questa attività ha letto la cronologia Supabase e l'albero GitHub. Non ha eseguito SQL, modificato schema o dati, cambiato la cronologia Supabase, fatto merge, né effettuato deploy. Il collaudo QA complessivo resta sospeso fino alla risoluzione dei blocker già registrati.
+
+## Verifica aggiuntiva dei branch storici
+Sono stati letti anche gli alberi delle migrazioni dei branch `main` e `backup/pre-rollback-20261001`: entrambi espongono 129 file nella directory `supabase/migrations/`. In entrambi la sequenza visibile parte da `20260928060000_expose_first_admin_bootstrap.sql`; non è emerso un file sorgente con il nome/versione dell'iniziale `20260928021707_initial_bethag_backend` né una migrazione che corrisponda in modo identificabile a `20260928043547_restrict_data_api_table_grants`. Questo rafforza il rilievo di fonte non recuperata nei branch Git esaminati, ma non esclude backup o artefatti esterni non consultati.
