@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, closeCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -9463,6 +9463,10 @@ function CondominiumDetails(
   const [transferType, setTransferType] = useState("Vendita");
   const [transferNotes, setTransferNotes] = useState("");
   const [transferSaving, setTransferSaving] = useState(false);
+  const [memberTransfers, setMemberTransfers] = useState<any[]>([]);
+  const [transferReload, setTransferReload] = useState(0);
+  const [closingTransferId, setClosingTransferId] = useState<string | null>(null);
+  const [transferLoadError, setTransferLoadError] = useState("");
   const {
     item,
     onClose,
@@ -9541,6 +9545,51 @@ function CondominiumDetails(
     ).length;
 
   const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active);
+  const transferUnitKey = condominiumUnits.map((unit: CondominiumUnit) => unit.id).filter(Boolean).join("|");
+  useEffect(() => {
+    let cancelled = false;
+    const unitIds = transferUnitKey ? transferUnitKey.split("|") : [];
+    if (!supabase || unitIds.length === 0) {
+      setMemberTransfers([]);
+      setTransferLoadError("");
+      return () => { cancelled = true; };
+    }
+    const loadTransfers = async () => {
+      const { data, error } = await supabase
+        .from("condominium_member_transfers")
+        .select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,created_at,closed_at")
+        .in("unit_id", unitIds)
+        .order("transfer_date", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.error("BETHAG transfer history load failed", error);
+        setTransferLoadError("Impossibile caricare lo storico dei subentri. Verifica i permessi e riprova.");
+        setMemberTransfers([]);
+        return;
+      }
+      setTransferLoadError("");
+      setMemberTransfers(data ?? []);
+    };
+    void loadTransfers();
+    return () => { cancelled = true; };
+  }, [transferUnitKey, transferReload]);
+  const closeMemberTransfer = async (transferId: string) => {
+    if (closingTransferId) return;
+    const confirmed = window.confirm("Confermi la chiusura contabile del titolare uscente? Il server verificherà che non restino partite aperte.");
+    if (!confirmed) return;
+    setClosingTransferId(transferId);
+    try {
+      const closed = await closeCondominiumMemberTransfer(transferId);
+      if (!closed) throw new Error("Il server non ha confermato la chiusura.");
+      setTransferReload((current) => current + 1);
+      alert("Chiusura contabile registrata.");
+    } catch (error) {
+      console.error("BETHAG transfer closure failed", error);
+      alert(error instanceof Error ? "Chiusura non eseguita.\\n\\n" + error.message : "Chiusura non eseguita.");
+    } finally {
+      setClosingTransferId(null);
+    }
+  };
   const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
   const unitCollator = new Intl.Collator("it-IT", { numeric: true, sensitivity: "base" });
@@ -9996,6 +10045,39 @@ function CondominiumDetails(
           </Modal>
         );
       })()}
+
+      {isAdministrator && (
+        <section className="condominium-section-card">
+          <div className="section-title">
+            <div><div className="eyebrow">Continuità amministrativa</div><h2>Storico subentri</h2><p className="section-subtitle">Consulta i trasferimenti registrati e completa la chiusura contabile quando le verifiche sulle partite aperte sono superate.</p></div>
+          </div>
+          {transferLoadError && <p role="alert" className="section-subtitle">{transferLoadError}</p>}
+          {memberTransfers.length === 0 ? <Empty text={transferLoadError ? "Storico non disponibile." : "Nessun subentro registrato per le unità di questo condominio."} /> : (
+            <div className="related-list">
+              {memberTransfers.map((transfer: any) => {
+                const unit = condominiumUnits.find((candidate: CondominiumUnit) => candidate.id === transfer.unit_id);
+                const outgoing = condominiumMembers.find((member: CondominiumMember) => member.dbId === transfer.outgoing_member_id);
+                const incoming = condominiumMembers.find((member: CondominiumMember) => member.dbId === transfer.incoming_member_id);
+                const outgoingName = outgoing ? `${outgoing.firstName} ${outgoing.lastName}`.trim() : "Titolare uscente";
+                const incomingName = incoming ? `${incoming.firstName} ${incoming.lastName}`.trim() : "Nuovo titolare";
+                const isOpen = transfer.status === "Confermato";
+                return <div className="request-card" key={transfer.id}>
+                  <div className="request-main">
+                    <b>{unit?.unitCode || "Unità"} · {transfer.transfer_type || "Subentro"}</b>
+                    <span>{outgoingName} → {incomingName} · {formatDate(transfer.transfer_date)}</span>
+                    {transfer.notes && <p>{transfer.notes}</p>}
+                    {transfer.closed_at && <small>Chiuso il {formatDate(String(transfer.closed_at).slice(0, 10))}</small>}
+                  </div>
+                  <div className="request-actions">
+                    <Badge value={transfer.status || "Stato non disponibile"} />
+                    {isOpen && <button type="button" className="secondary-button small" disabled={Boolean(closingTransferId)} onClick={() => void closeMemberTransfer(transfer.id)}>{closingTransferId === transfer.id ? "Verifica..." : "Verifica e chiudi"}</button>}
+                  </div>
+                </div>;
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="condominium-section-card">
         <div className="section-title">
