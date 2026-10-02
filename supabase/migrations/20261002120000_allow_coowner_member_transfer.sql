@@ -76,11 +76,11 @@ begin
 
     if length(v_definition)-length(replace(v_definition,
       E'  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;',
-      v_new_owner_sync)) <> length('  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;') then
+      v_new_owner_sync)) <> length(E'  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;') then
       raise exception 'Expected outgoing member lock lookup not found uniquely';
     end if;
     v_definition := replace(v_definition,
-      '  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;',
+      E'  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;',
       v_new_owner_sync);
 
     if length(v_definition)-length(replace(v_definition,'  returning id into v_incoming_id;','')) <> length('  returning id into v_incoming_id;') then
