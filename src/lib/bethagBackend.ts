@@ -2283,3 +2283,67 @@ export async function updateCondominiumRequestStatus(
     if (error) throw error;
   });
 }
+
+/**
+ * Registra il subentro del titolare di un'unita tramite la RPC transazionale
+ * Supabase. La procedura server valida autorizzazioni e coerenza dei dati.
+ * Non crea autonomamente l'accesso al Portale per il nuovo titolare.
+ */
+export async function confirmCondominiumMemberTransfer(input: {
+  unitId: string;
+  outgoingMemberId: string;
+  incomingName: string;
+  incomingEmail?: string | null;
+  incomingUserId?: string | null;
+  transferDate: string;
+  transferType?: string;
+  notes?: string;
+  data?: Record<string, unknown>;
+}): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!input.unitId || !input.outgoingMemberId) {
+    throw new Error("Unita e titolare uscente sono obbligatori.");
+  }
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)) {
+    throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  }
+  if (!input.incomingName.trim()) {
+    throw new Error("Il nominativo del nuovo titolare e obbligatorio.");
+  }
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: input.unitId,
+      p_outgoing_member_id: input.outgoingMemberId,
+      p_incoming_name: input.incomingName.trim(),
+      p_incoming_email: input.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: input.incomingUserId || null,
+      p_transfer_date: input.transferDate,
+      p_transfer_type: input.transferType || "Vendita",
+      p_notes: input.notes || "",
+      p_data: input.data || {},
+    });
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
+  });
+}
+
+/**
+ * Chiude il rapporto contabile del titolare uscente dopo aver verificato
+ * che non restino partite aperte. La verifica finale e svolta dal database.
+ */
+export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
+      p_transfer_id: transferId,
+    });
+    if (error) throw error;
+    return data === true;
+  });
+}
