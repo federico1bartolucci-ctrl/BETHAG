@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2915,6 +2915,29 @@ function App() {
       console.error("BETHAG registration approval refresh failed", refreshError);
     }
     alert("Accesso condòmino autorizzato e collegato.");
+  };
+
+  const executeMemberTransfer = async (input: {
+    unitId: string; outgoingMemberId: string; incomingName: string;
+    incomingEmail?: string | null; transferDate: string; transferType: string; notes?: string;
+  }) => {
+    if (!requireModulePermission("condomini", "La registrazione del subentro")) return false;
+    if (!supabaseConfigured || !supabase || !profile.workspaceId) {
+      alert("Il subentro richiede una sessione BETHAG collegata al server.");
+      return false;
+    }
+    try {
+      await confirmCondominiumMemberTransfer(input);
+      const refreshed = await loadBackendState(profile.workspaceId);
+      setCondominiumMembers(refreshed.condominiumMembers || []);
+      setCondominiumUnits(Array.isArray(refreshed.condominiumUnits) ? refreshed.condominiumUnits : []);
+      setPortalMembers(refreshed.portalMembers || []);
+      return true;
+    } catch (error) {
+      console.error("BETHAG ownership transfer failed", error);
+      alert(error instanceof Error ? "Subentro non confermato dal server.\\n\\n" + error.message : "Subentro non confermato dal server.");
+      return false;
+    }
   };
 
   /* =======================================================
@@ -7244,6 +7267,7 @@ function App() {
               condominiumRequests={condominiumRequests}
               onNewMember={newCondominiumMember}
               onEditMember={editCondominiumMember}
+              onTransferMember={executeMemberTransfer}
               onDeleteMember={deleteCondominiumMember}
               onNewRequest={newCondominiumRequest}
               onEditRequest={editCondominiumRequest}
@@ -9082,6 +9106,7 @@ function CondominiumsPage(
     condominiumRequests,
     onNewMember,
     onEditMember,
+    onTransferMember,
     onDeleteMember,
     onNewRequest,
     onEditRequest,
@@ -9251,6 +9276,7 @@ function CondominiumsPage(
           condominiumRequests={condominiumRequests.filter((x: CondominiumRequest) => x.condominiumId === selected.id)}
           onNewMember={onNewMember}
           onEditMember={onEditMember}
+          onTransferMember={onTransferMember}
           onDeleteMember={onDeleteMember}
           onNewRequest={onNewRequest}
           onEditRequest={onEditRequest}
