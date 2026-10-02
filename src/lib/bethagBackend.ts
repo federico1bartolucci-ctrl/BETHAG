@@ -121,6 +121,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     const { millesimi: _legacyMillesimi, ...memberData } = row.data ?? {};
     return {
       ...memberData,
+      // Manteniamo l'UUID DB oltre all'ID legacy usato dall'interfaccia.
+      // Le RPC transazionali (es. subentro) richiedono l'UUID reale.
+      databaseId: row.id,
       id: row.legacy_id,
       condominiumId:
         condominiumLegacyByDbId.get(row.condominium_id) ??
