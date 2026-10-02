@@ -2399,6 +2399,14 @@ export async function confirmCondominiumMemberTransfer(input: {
   data?: Record<string, unknown>;
 }): Promise<string> {
   if (!supabase) throw new Error("Supabase non configurato.");
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("I dati del subentro non sono validi.");
+  }
+  if ((input.incomingEmail != null && typeof input.incomingEmail !== "string") ||
+      (input.incomingUserId != null && typeof input.incomingUserId !== "string") ||
+      (input.notes != null && typeof input.notes !== "string")) {
+    throw new Error("E-mail, identificativo utente o note del subentrante non hanno un formato valido.");
+  }
   const incomingName = typeof input.incomingName === "string" ? input.incomingName.trim() : "";
   const incomingEmail = typeof input.incomingEmail === "string"
     ? input.incomingEmail.trim().toLowerCase() || null
@@ -2407,7 +2415,7 @@ export async function confirmCondominiumMemberTransfer(input: {
     ? input.incomingUserId.trim() || null
     : null;
   const notes = typeof input.notes === "string" ? input.notes.trim() : "";
-  const transferType = input.transferType || "Vendita";
+  const transferType = input.transferType ?? "Vendita";
   const validTransferTypes = ["Vendita", "Acquisto", "Donazione", "Successione", "Altro"];
   if (!isUuid(input.unitDatabaseId) || !isUuid(input.outgoingMemberDatabaseId) ||
       !isIsoDate(input.transferDate) || !incomingName ||
