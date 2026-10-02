@@ -2360,3 +2360,90 @@ export async function closeCondominiumMemberTransfer(
     return data === true;
   });
 }
+
+
+/**
+ * Variante per l'interfaccia legacy: risolve gli ID numerici del gestionale
+ * in UUID del database e verifica che la persona sia associata all'unità.
+ */
+export async function confirmCondominiumMemberTransferByLegacyIds(
+  workspaceId: string,
+  payload: {
+    condominiumLegacyId: number;
+    outgoingMemberLegacyId: number;
+    apartment: string;
+    incomingName: string;
+    incomingEmail?: string | null;
+    incomingUserId?: string | null;
+    transferDate: string;
+    transferType?: string;
+    notes?: string;
+    data?: Record<string, any>;
+  }
+): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  const apartment = payload.apartment.trim();
+  if (!apartment) throw new Error("L'unità immobiliare è obbligatoria.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase!
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", payload.condominiumLegacyId)
+      .maybeSingle();
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) throw new Error("Condominio non trovato nel workspace.");
+
+    const { data: outgoing, error: outgoingError } = await supabase!
+      .from("condominium_members")
+      .select("id, condominium_id, unit_id, legacy_id")
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", payload.outgoingMemberLegacyId)
+      .maybeSingle();
+    if (outgoingError) throw outgoingError;
+    if (!outgoing?.id) throw new Error("Condòmino uscente non trovato.");
+
+    const { data: units, error: unitsError } = await supabase!
+      .from("condominium_units")
+      .select("id, unit_code")
+      .eq("condominium_id", condominium.id);
+    if (unitsError) throw unitsError;
+    const unit = (units ?? []).find(
+      (candidate: any) => String(candidate.unit_code ?? "").trim().toLowerCase() === apartment.toLowerCase()
+    );
+    if (!unit?.id) throw new Error("Unità non trovata nel condominio.");
+    if (outgoing.unit_id !== unit.id) {
+      throw new Error("Il condòmino selezionato non risulta associato all'unità indicata. Verifica l'anagrafica prima del subentro.");
+    }
+
+    const { data: workspaceMembership, error: membershipError } = await supabase!
+      .from("workspace_members")
+      .select("user_id")
+      .eq("workspace_id", workspaceId)
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", payload.outgoingMemberLegacyId)
+      .limit(1);
+    if (membershipError) throw membershipError;
+    // Non si richiede una riga workspace_members: alcuni utenti non hanno
+    // accesso al portale. L'autorizzazione effettiva è verificata dalla RPC.
+
+    const { data, error } = await supabase!.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: unit.id,
+      p_outgoing_member_id: outgoing.id,
+      p_incoming_name: payload.incomingName.trim(),
+      p_incoming_email: payload.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: payload.incomingUserId || null,
+      p_transfer_date: payload.transferDate,
+      p_transfer_type: payload.transferType?.trim() || "Vendita",
+      p_notes: payload.notes?.trim() || "",
+      p_data: payload.data ?? {},
+    });
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
+  });
+}
