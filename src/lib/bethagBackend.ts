@@ -2356,19 +2356,20 @@ export async function previewCondominiumMemberTransfer(
   const flags = isRecord(data) ? data.review_flags : null;
   const installmentsValid = isRecord(data) && Array.isArray(data.installments_before) &&
     data.installments_before.every((item: unknown) => isRecord(item) &&
-      typeof item.id === "string" && typeof item.title === "string" &&
+      typeof item.id === "string" && isUuid(item.id) && typeof item.title === "string" &&
       isFiniteNumber(item.amount) && isFiniteNumber(item.paid_amount) &&
-      isFiniteNumber(item.residual) && typeof item.due_date === "string" &&
+      isFiniteNumber(item.residual) && typeof item.due_date === "string" && isIsoDate(item.due_date) &&
       typeof item.status === "string" &&
-      (item.fiscal_year_id === null || typeof item.fiscal_year_id === "string"));
+      (item.fiscal_year_id === null || (typeof item.fiscal_year_id === "string" && isUuid(item.fiscal_year_id)));
   const extraordinaryValid = isRecord(data) &&
     Array.isArray(data.extraordinary_deliberated_before_due_after) &&
     data.extraordinary_deliberated_before_due_after.every((item: unknown) => isRecord(item) &&
-      typeof item.id === "string" && isFiniteNumber(item.amount) &&
+      typeof item.id === "string" && isUuid(item.id) && isFiniteNumber(item.amount) &&
       isFiniteNumber(item.paid_amount) &&
-      (item.due_date === null || typeof item.due_date === "string") &&
-      typeof item.status === "string" && typeof item.ledger_entry_id === "string" &&
-      (item.deliberation_date === null || typeof item.deliberation_date === "string") &&
+      (item.due_date === null || (typeof item.due_date === "string" && isIsoDate(item.due_date))) &&
+      typeof item.status === "string" && typeof item.ledger_entry_id === "string" && isUuid(item.ledger_entry_id) &&
+      (item.deliberation_date === null ||
+        (typeof item.deliberation_date === "string" && isIsoDate(item.deliberation_date))) &&
       (item.description === null || typeof item.description === "string"));
   if (!isRecord(data) || data.transfer_date !== transferDate ||
       typeof data.unit_id !== "string" || data.unit_id.toLowerCase() !== unitDatabaseId.toLowerCase() ||
