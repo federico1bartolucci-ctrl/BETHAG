@@ -283,6 +283,8 @@ type CondominiumUnit = {
 };
 
 type CondominiumMember = {
+  /** Internal Supabase UUID used by transactional ownership-transfer RPCs. */
+  dbId?: string;
   id: number;
   userId?: string;
   condominiumId: number;
