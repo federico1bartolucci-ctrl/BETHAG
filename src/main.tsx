@@ -10101,7 +10101,7 @@ function CondominiumDetails(
           }}>
             <div className="form-grid">
               <label>Data del subentro<input type="date" required value={transferDate} onChange={e=>{setTransferDate(e.target.value);setTransferPreview(null);}} disabled={transferLoading}/></label>
-              <label>Tipo<select value={transferType} onChange={e=>{setTransferType(e.target.value);setTransferPreview(null);}} disabled={transferLoading}><option>Vendita</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
+              <label>Tipo<select value={transferType} onChange={e=>{setTransferType(e.target.value);setTransferPreview(null);}} disabled={transferLoading}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
               <label>Nome e cognome subentrante<input required maxLength={180} value={incomingName} onChange={e=>setIncomingName(e.target.value)} disabled={transferLoading}/></label>
               <label>E-mail<input type="email" maxLength={254} value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} disabled={transferLoading}/></label>
               <label style={{gridColumn:"1 / -1"}}>Note<textarea rows={3} maxLength={2000} value={transferNotes} onChange={e=>setTransferNotes(e.target.value)} disabled={transferLoading}/></label>
