@@ -72,10 +72,10 @@ begin
     if length(v_definition)-length(replace(v_definition,'  v_out_data jsonb;','')) <> length('  v_out_data jsonb;') then
       raise exception 'Expected outgoing data declaration not found uniquely';
     end if;
-    v_definition := replace(v_definition,'  v_out_data jsonb;','  v_out_data jsonb;\n  v_outgoing_legacy_id bigint;\n  v_incoming_legacy_id bigint;');
+    v_definition := replace(v_definition,'  v_out_data jsonb;',E'  v_out_data jsonb;\n  v_outgoing_legacy_id bigint;\n  v_incoming_legacy_id bigint;');
 
     if length(v_definition)-length(replace(v_definition,
-      '  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;',
+      E'  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;',
       v_new_owner_sync)) <> length('  select coalesce(m.data,''{}''::jsonb) into v_out_data\n  from public.condominium_members m where m.id=p_outgoing_member_id for update;') then
       raise exception 'Expected outgoing member lock lookup not found uniquely';
     end if;
