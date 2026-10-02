@@ -9585,7 +9585,7 @@ function CondominiumDetails(
       alert("Chiusura contabile registrata.");
     } catch (error) {
       console.error("BETHAG transfer closure failed", error);
-      alert(error instanceof Error ? "Chiusura non eseguita.\\n\\n" + error.message : "Chiusura non eseguita.");
+      alert(error instanceof Error ? "Chiusura non eseguita.\n\n" + error.message : "Chiusura non eseguita.");
     } finally {
       setClosingTransferId(null);
     }
