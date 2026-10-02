@@ -9529,6 +9529,7 @@ function CondominiumDetails(
   const [transferPreview, setTransferPreview] = useState<MemberTransferPreview | null>(null);
   const [transferLoading, setTransferLoading] = useState(false);
   const [transferError, setTransferError] = useState("");
+  const [transferLiabilityAcknowledged, setTransferLiabilityAcknowledged] = useState(false);
   const {
     item,
     onClose,
@@ -10104,7 +10105,7 @@ function CondominiumDetails(
                 </button>
                 {canTransferOwnership && member.role === "Proprietario" && member.databaseId && condominiumUnits.some((unit: CondominiumUnit) => unit.id === member.unitId && unit.active) && (
                   <button className="secondary-button small" type="button" onClick={() => {
-                    setTransferMember(member); setTransferDate(""); setTransferType("Vendita"); setIncomingName(""); setIncomingEmail(""); setTransferNotes(""); setTransferPreview(null); setTransferError("");
+                    setTransferMember(member); setTransferDate(""); setTransferType("Vendita"); setIncomingName(""); setIncomingEmail(""); setTransferNotes(""); setTransferPreview(null); setTransferError(""); setTransferLiabilityAcknowledged(false);
                   }}>Subentro</button>
                 )}
                 <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)} aria-label="Elimina condòmino">
@@ -10182,8 +10183,8 @@ function CondominiumDetails(
             finally { setTransferLoading(false); }
           }}>
             <div className="form-grid">
-              <label>Data del subentro<input type="date" required value={transferDate} onChange={e=>{setTransferDate(e.target.value);setTransferPreview(null);}} disabled={transferLoading}/></label>
-              <label>Tipo<select value={transferType} onChange={e=>{setTransferType(e.target.value as typeof transferType);setTransferPreview(null);}} disabled={transferLoading}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
+              <label>Data del subentro<input type="date" required value={transferDate} onChange={e=>{setTransferDate(e.target.value);setTransferPreview(null);setTransferLiabilityAcknowledged(false);}} disabled={transferLoading}/></label>
+              <label>Tipo<select value={transferType} onChange={e=>{setTransferType(e.target.value as typeof transferType);setTransferPreview(null);setTransferLiabilityAcknowledged(false);}} disabled={transferLoading}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
               <label>Nome e cognome subentrante<input required maxLength={180} value={incomingName} onChange={e=>setIncomingName(e.target.value)} disabled={transferLoading}/></label>
               <label>E-mail<input type="email" maxLength={254} value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} disabled={transferLoading}/></label>
               <label style={{gridColumn:"1 / -1"}}>Note<textarea rows={3} maxLength={2000} value={transferNotes} onChange={e=>setTransferNotes(e.target.value)} disabled={transferLoading}/></label>
@@ -10215,12 +10216,16 @@ function CondominiumDetails(
               {transferPreview.review_flags.legal_liability_review_required && <p role="note">Verificare la responsabilità giuridica delle singole spese: l'anteprima non individua automaticamente il debitore.</p>}
               {transferPreview.review_flags.extraordinary_deliberated_before_due_after && <p role="note">Sono presenti spese straordinarie deliberate prima del subentro e dovute successivamente; occorre verificarne l'imputazione.</p>}
               <p role="note">La conferma registra il passaggio, senza chiudere o trasferire automaticamente le partite del cedente.</p>
+              {transferPreview.review_flags.legal_liability_review_required && <label className="checkbox-row" style={{display:"flex",alignItems:"flex-start",gap:10,marginTop:12}}>
+                <input type="checkbox" checked={transferLiabilityAcknowledged} onChange={e=>setTransferLiabilityAcknowledged(e.target.checked)} disabled={transferLoading}/>
+                <span>Ho esaminato l'anteprima e prendo atto che la ripartizione delle responsabilità contabili e giuridiche richiede una verifica separata. La conferma non trasferisce automaticamente i debiti pregressi.</span>
+              </label>}
             </div>}
             {transferError && <p role="alert" className="error-message">{transferError}</p>}
             <div className="form-actions">
               <button type="button" className="secondary-button" disabled={transferLoading} onClick={()=>setTransferMember(null)}>Annulla</button>
               {transferPreview && <button type="button" className="secondary-button" disabled={transferLoading} onClick={()=>setTransferPreview(null)}>Modifica dati</button>}
-              <button type="submit" className="primary-button" disabled={transferLoading||!transferDate||!incomingName.trim()}>{transferLoading?"Elaborazione...":transferPreview?"Conferma subentro":"Calcola anteprima"}</button>
+              <button type="submit" className="primary-button" disabled={transferLoading||!transferDate||!incomingName.trim()||(!!transferPreview?.review_flags.legal_liability_review_required&&!transferLiabilityAcknowledged)}>{transferLoading?"Elaborazione...":transferPreview?"Conferma subentro":"Calcola anteprima"}</button>
             </div>
           </form>
         </Modal>
