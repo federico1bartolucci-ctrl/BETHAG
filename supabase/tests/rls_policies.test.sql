@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(30);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -299,6 +299,22 @@ select ok(
     'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
   )) > 0,
   'La conferma del trasferimento deve riallineare i riferimenti legacy dei proprietari'
+);
+
+select ok(
+  (length(lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  ))) - length(replace(lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )), '(i.due_date is null or i.due_date<=p_transfer_date)', ''))) > 0,
+  'Il riepilogo contabile del subentro deve includere rate senza data certa'
+);
+
+select ok(
+  position('allocations_residual' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'Il riepilogo contabile deve registrare il residuo delle ripartizioni'
 );
 
 
