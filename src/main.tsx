@@ -7268,6 +7268,13 @@ function App() {
               onNewMember={newCondominiumMember}
               onEditMember={editCondominiumMember}
               onTransferMember={executeMemberTransfer}
+              onRefreshMembers={async () => {
+                if (!supabaseConfigured || !supabase || !profile.workspaceId) return;
+                const refreshed = await loadBackendState(profile.workspaceId);
+                setCondominiumMembers(refreshed.condominiumMembers || []);
+                setCondominiumUnits(Array.isArray(refreshed.condominiumUnits) ? refreshed.condominiumUnits : []);
+                setPortalMembers(refreshed.portalMembers || []);
+              }}
               onDeleteMember={deleteCondominiumMember}
               onNewRequest={newCondominiumRequest}
               onEditRequest={editCondominiumRequest}
@@ -9107,6 +9114,7 @@ function CondominiumsPage(
     onNewMember,
     onEditMember,
     onTransferMember,
+    onRefreshMembers,
     onDeleteMember,
     onNewRequest,
     onEditRequest,
@@ -9277,6 +9285,7 @@ function CondominiumsPage(
           onNewMember={onNewMember}
           onEditMember={onEditMember}
           onTransferMember={onTransferMember}
+          onRefreshMembers={onRefreshMembers}
           onDeleteMember={onDeleteMember}
           onNewRequest={onNewRequest}
           onEditRequest={onEditRequest}
@@ -9486,6 +9495,7 @@ function CondominiumDetails(
     onNewMember,
     onEditMember,
     onTransferMember,
+    onRefreshMembers,
     onDeleteMember,
     onNewRequest,
     onEditRequest,
@@ -9581,6 +9591,8 @@ function CondominiumDetails(
     try {
       const closed = await closeCondominiumMemberTransfer(transferId);
       if (!closed) throw new Error("Il server non ha confermato la chiusura.");
+      // Refresh shared member, unit and portal state after the server archives the outgoing member.
+      if (typeof onRefreshMembers === "function") await onRefreshMembers();
       setTransferReload((current) => current + 1);
       alert("Chiusura contabile registrata.");
     } catch (error) {
