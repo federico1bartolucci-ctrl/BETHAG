@@ -10087,8 +10087,15 @@ function CondominiumDetails(
               if (!transferPreview) { setTransferPreview(await previewCondominiumMemberTransfer(unit.id,transferMember.databaseId,transferDate)); return; }
               if (!window.confirm("Confermi il subentro? Le partite pregresse non saranno eliminate o trasferite automaticamente.")) return;
               await confirmCondominiumMemberTransfer({unitDatabaseId:unit.id,outgoingMemberDatabaseId:transferMember.databaseId,incomingName,incomingEmail,transferDate,transferType,notes:transferNotes});
-              if (typeof onTransferCompleted !== "function") throw new Error("Subentro registrato, ma aggiornamento scheda non disponibile. Ricarica i dati.");
-              await onTransferCompleted(); setTransferMember(null);
+              // The database transaction has committed: close the form before refreshing so a
+              // refresh failure cannot leave a retryable form that could duplicate the transfer.
+              setTransferMember(null);
+              if (typeof onTransferCompleted !== "function") {
+                window.alert("Subentro registrato correttamente. Aggiornamento automatico non disponibile: ricarica i dati.");
+              } else {
+                try { await onTransferCompleted(); }
+                catch { window.alert("Subentro registrato correttamente, ma non è stato possibile aggiornare la scheda. Ricarica i dati: non ripetere l'operazione."); }
+              }
             } catch(error) { setTransferError(error instanceof Error?error.message:"Operazione non riuscita."); }
             finally { setTransferLoading(false); }
           }}>
