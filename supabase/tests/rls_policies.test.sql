@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(27);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -316,6 +316,26 @@ select ok(
     'private.close_condominium_member_transfer(uuid)'::regprocedure
   )) > 0,
   'La chiusura deve bloccare il subentro finché rate, ripartizioni e riporti fiscali hanno residui'
+);
+
+select ok(
+  position('v_transfer_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0
+  and position('i.due_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0
+  and position('a.due_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0,
+  'La chiusura deve applicare la data di subentro al controllo di rate e ripartizioni'
+);
+
+select ok(
+  position('undated_allocations_and_fiscal_carryovers_reconciled' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'Le posizioni prive di data certa devono essere riconciliate prima della chiusura'
 );
 
 select ok(
