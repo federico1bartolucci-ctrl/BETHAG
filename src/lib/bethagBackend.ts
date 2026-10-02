@@ -128,6 +128,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      active: row.active ?? true,
     };
   });
 
@@ -171,6 +172,10 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
     const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
     const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
+    const currentOwnerIds = new Set(linkedOwnerIds.map((id) => String(id)));
+    // I riferimenti legacy non devono reintrodurre ex proprietari o anagrafiche
+    // inattive dopo un refresh: conserviamo solo titolari correnti verificati.
+    const verifiedStoredOwnerIds = storedOwnerIds.filter((id: unknown) => currentOwnerIds.has(String(id)));
     return {
       ...row.data,
       id: row.id,
@@ -189,7 +194,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      ownerMemberIds: Array.from(new Set([...verifiedStoredOwnerIds, ...linkedOwnerIds])),
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
