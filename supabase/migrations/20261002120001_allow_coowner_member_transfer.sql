@@ -35,7 +35,7 @@ $new$;
     raise exception 'MEMBER_LEGACY_ID_MISSING';
   end if;
 
-  -- Keep legacy ownerMemberIds synchronized while retaining all other co-owners.
+  -- unit_owner_references_updated: keep legacy ownerMemberIds synchronized while retaining all other co-owners.
   update public.condominium_units u
   set data=jsonb_set(
     coalesce(u.data,'{}'::jsonb),
