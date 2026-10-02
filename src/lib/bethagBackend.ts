@@ -2285,3 +2285,119 @@ export async function updateCondominiumRequestStatus(
     if (error) throw error;
   });
 }
+
+/** UUID Supabase persistente del record; distinto dall'identificativo legacy UI. */
+const isMemberTransferUuid = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const isMemberTransferIsoDate = (value: unknown): value is string => {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
+
+export type MemberTransferPreview = {
+  transfer_date: string;
+  unit_id: string;
+  outgoing_member_id: string;
+  outstanding_before: number;
+  paid_before: number;
+  installments_before: Array<{
+    id: string; title: string; amount: number; paid_amount: number; residual: number;
+    due_date: string; status: string; fiscal_year_id: string | null;
+  }>;
+  extraordinary_deliberated_before_due_after: Array<{
+    id: string; amount: number; paid_amount: number; due_date: string | null;
+    status: string; ledger_entry_id: string; deliberation_date: string | null; description: string | null;
+  }>;
+  unit_expenses: Array<Record<string, unknown>>;
+  review_flags: {
+    unpaid_before_transfer: boolean;
+    extraordinary_deliberated_before_due_after: boolean;
+    legal_liability_review_required: boolean;
+  };
+};
+
+/** Anteprima informativa calcolata dal database; non determina da sola il debitore. */
+export async function previewCondominiumMemberTransfer(
+  unitDatabaseId: string, outgoingMemberDatabaseId: string, transferDate: string
+): Promise<MemberTransferPreview> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!isMemberTransferUuid(unitDatabaseId) || !isMemberTransferUuid(outgoingMemberDatabaseId) ||
+      !isMemberTransferIsoDate(transferDate)) {
+    throw new Error("Per l’anteprima servono UUID Supabase validi e una data nel formato AAAA-MM-GG.");
+  }
+  const { data, error } = await supabase.rpc("preview_condominium_member_transfer", {
+    p_unit_id: unitDatabaseId, p_outgoing_member_id: outgoingMemberDatabaseId, p_transfer_date: transferDate,
+  });
+  if (error) throw error;
+  const record = (v: unknown): v is Record<string, any> => !!v && typeof v === "object" && !Array.isArray(v);
+  const finite = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  if (!record(data) || data.transfer_date !== transferDate ||
+      typeof data.unit_id !== "string" || data.unit_id.toLowerCase() !== unitDatabaseId.toLowerCase() ||
+      typeof data.outgoing_member_id !== "string" || data.outgoing_member_id.toLowerCase() !== outgoingMemberDatabaseId.toLowerCase() ||
+      !finite(data.outstanding_before) || !finite(data.paid_before) ||
+      !Array.isArray(data.installments_before) || !data.installments_before.every((v: unknown) =>
+        record(v) && isMemberTransferUuid(v.id) && typeof v.title === "string" &&
+        finite(v.amount) && finite(v.paid_amount) && finite(v.residual) &&
+        isMemberTransferIsoDate(v.due_date) && typeof v.status === "string" &&
+        (v.fiscal_year_id === null || isMemberTransferUuid(v.fiscal_year_id))) ||
+      !Array.isArray(data.extraordinary_deliberated_before_due_after) ||
+      !data.extraordinary_deliberated_before_due_after.every((v: unknown) =>
+        record(v) && isMemberTransferUuid(v.id) && finite(v.amount) && finite(v.paid_amount) &&
+        (v.due_date === null || isMemberTransferIsoDate(v.due_date)) && typeof v.status === "string" &&
+        isMemberTransferUuid(v.ledger_entry_id) &&
+        (v.deliberation_date === null || isMemberTransferIsoDate(v.deliberation_date)) &&
+        (v.description === null || typeof v.description === "string")) ||
+      !Array.isArray(data.unit_expenses) || !data.unit_expenses.every(record) ||
+      !record(data.review_flags) || typeof data.review_flags.unpaid_before_transfer !== "boolean" ||
+      typeof data.review_flags.extraordinary_deliberated_before_due_after !== "boolean" ||
+      typeof data.review_flags.legal_liability_review_required !== "boolean") {
+    throw new Error("La risposta di anteprima del subentro non rispetta il formato atteso.");
+  }
+  return data as MemberTransferPreview;
+}
+
+/** Registra il subentro senza spostare o cancellare le poste contabili pregresse. */
+export async function confirmCondominiumMemberTransfer(input: {
+  unitDatabaseId: string; outgoingMemberDatabaseId: string; incomingName: string;
+  incomingEmail?: string | null; incomingUserId?: string | null; transferDate: string;
+  transferType?: "Vendita" | "Acquisto" | "Donazione" | "Successione" | "Altro";
+  notes?: string; data?: Record<string, unknown>;
+}): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("I dati del subentro non sono validi.");
+  const name = typeof input.incomingName === "string" ? input.incomingName.trim() : "";
+  const email = typeof input.incomingEmail === "string" ? input.incomingEmail.trim().toLowerCase() || null : null;
+  const userId = typeof input.incomingUserId === "string" ? input.incomingUserId.trim() || null : null;
+  const notes = typeof input.notes === "string" ? input.notes.trim() : "";
+  const type = input.transferType ?? "Vendita";
+  if (!isMemberTransferUuid(input.unitDatabaseId) || !isMemberTransferUuid(input.outgoingMemberDatabaseId) ||
+      !isMemberTransferIsoDate(input.transferDate) || !name ||
+      !["Vendita", "Acquisto", "Donazione", "Successione", "Altro"].includes(type)) {
+    throw new Error("Inserisci identificativi, nominativo, tipo e data del subentro validi.");
+  }
+  if (name.length > 180 || (email !== null && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) ||
+      (userId !== null && !isMemberTransferUuid(userId)) || notes.length > 2000 ||
+      (input.data !== undefined && (!input.data || typeof input.data !== "object" || Array.isArray(input.data)))) {
+    throw new Error("Controlla i dati del subentrante e le note inserite.");
+  }
+  const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
+    p_unit_id: input.unitDatabaseId, p_outgoing_member_id: input.outgoingMemberDatabaseId,
+    p_incoming_name: name, p_incoming_email: email, p_incoming_user_id: userId,
+    p_transfer_date: input.transferDate, p_transfer_type: type, p_notes: notes, p_data: input.data || {},
+  });
+  if (error) throw error;
+  if (typeof data !== "string" || !isMemberTransferUuid(data)) throw new Error("Supabase non ha restituito un identificativo valido del subentro.");
+  return data;
+}
+
+/** La chiusura resta soggetta alle verifiche contabili definitive lato database. */
+export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!isMemberTransferUuid(transferId)) throw new Error("Identificativo Supabase del subentro non valido.");
+  const { data, error } = await supabase.rpc("close_condominium_member_transfer", { p_transfer_id: transferId });
+  if (error) throw error;
+  return data === true;
+}
