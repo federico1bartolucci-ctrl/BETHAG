@@ -122,8 +122,8 @@ begin
         case when jsonb_typeof(u.data->'ownerMemberIds')='array'
           then u.data->'ownerMemberIds' else '[]'::jsonb end
       ) with ordinality as e(value,ordinality)
-      where e.value <> to_jsonb(v_outgoing_legacy_id)
-        and e.value <> to_jsonb(v_incoming_legacy_id)
+      where coalesce(e.value #>> '{}','') <> v_outgoing_legacy_id::text
+        and coalesce(e.value #>> '{}','') <> v_incoming_legacy_id::text
     ) || jsonb_build_array(v_incoming_legacy_id),
     true
   ),
