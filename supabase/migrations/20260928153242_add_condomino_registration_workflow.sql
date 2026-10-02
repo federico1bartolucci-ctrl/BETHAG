@@ -21,7 +21,9 @@ create or replace function private.is_workspace_manager(target_workspace uuid)
 returns boolean language sql stable security definer set search_path=''
 as $$ select exists (select 1 from public.workspace_members wm where wm.workspace_id=target_workspace and wm.user_id=auth.uid() and wm.active=true and wm.role in ('admin','collaborator')); $$;
 revoke execute on function private.is_workspace_manager(uuid) from public,anon,authenticated;
+drop policy if exists "managers read portal registration requests" on public.portal_registration_requests;
 create policy "managers read portal registration requests" on public.portal_registration_requests for select to authenticated using ((select private.is_workspace_manager(workspace_id)));
+drop policy if exists "managers update portal registration requests" on public.portal_registration_requests;
 create policy "managers update portal registration requests" on public.portal_registration_requests for update to authenticated using ((select private.is_workspace_manager(workspace_id))) with check ((select private.is_workspace_manager(workspace_id)));
 create or replace function public.complete_portal_registration(p_full_name text,p_fiscal_code text default null,p_condominium_name text default null)
 returns jsonb language plpgsql security definer set search_path='' as $$ begin raise exception 'Replaced by subsequent registration migration'; end; $$;
