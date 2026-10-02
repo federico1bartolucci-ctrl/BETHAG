@@ -9588,16 +9588,25 @@ function CondominiumDetails(
     const confirmed = window.confirm("Confermi la chiusura contabile del titolare uscente? Il server verificherà che non restino partite aperte.");
     if (!confirmed) return;
     setClosingTransferId(transferId);
+    let closureConfirmed = false;
     try {
       const closed = await closeCondominiumMemberTransfer(transferId);
       if (!closed) throw new Error("Il server non ha confermato la chiusura.");
+      closureConfirmed = true;
       // Refresh shared member, unit and portal state after the server archives the outgoing member.
-      if (typeof onRefreshMembers === "function") await onRefreshMembers();
-      setTransferReload((current) => current + 1);
-      alert("Chiusura contabile registrata.");
+      try {
+        if (typeof onRefreshMembers === "function") await onRefreshMembers();
+        setTransferReload((current) => current + 1);
+        alert("Chiusura contabile registrata.");
+      } catch (refreshError) {
+        console.error("BETHAG member refresh after transfer closure failed", refreshError);
+        alert("La chiusura contabile è stata registrata dal server, ma non è stato possibile aggiornare la schermata. Ricarica la pagina per visualizzare lo stato aggiornato.");
+      }
     } catch (error) {
       console.error("BETHAG transfer closure failed", error);
-      alert(error instanceof Error ? "Chiusura non eseguita.\n\n" + error.message : "Chiusura non eseguita.");
+      alert(closureConfirmed
+        ? "La chiusura contabile è stata registrata, ma si è verificato un errore successivo. Ricarica la pagina."
+        : error instanceof Error ? "Chiusura non eseguita.\n\n" + error.message : "Chiusura non eseguita.");
     } finally {
       setClosingTransferId(null);
     }
