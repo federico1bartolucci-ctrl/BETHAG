@@ -182,7 +182,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      // Quando esistono anagrafiche strutturate, queste prevalgono sul
+      // vecchio array JSON: evita che il precedente proprietario resti titolare.
+      ownerMemberIds: linkedOwnerIds.length ? linkedOwnerIds : storedOwnerIds,
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
