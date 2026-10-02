@@ -9454,6 +9454,15 @@ function CondominiumDetails(
 ) {
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const [selectedMemberDetail, setSelectedMemberDetail] = useState<CondominiumMember | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferUnitId, setTransferUnitId] = useState("");
+  const [transferOutgoingId, setTransferOutgoingId] = useState("");
+  const [transferIncomingName, setTransferIncomingName] = useState("");
+  const [transferIncomingEmail, setTransferIncomingEmail] = useState("");
+  const [transferDate, setTransferDate] = useState("");
+  const [transferType, setTransferType] = useState("Vendita");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferSaving, setTransferSaving] = useState(false);
   const {
     item,
     onClose,
@@ -9472,6 +9481,7 @@ function CondominiumDetails(
     condominiumRequests,
     onNewMember,
     onEditMember,
+    onTransferMember,
     onDeleteMember,
     onNewRequest,
     onEditRequest,
@@ -9991,6 +10001,7 @@ function CondominiumDetails(
         <div className="section-title">
           <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno e qualifica.</p></div>
           <div className="button-row compact condominium-members-actions">
+            {isAdministrator && <button className="secondary-button" type="button" onClick={() => setTransferOpen(true)}>↔ Registra subentro</button>}
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>📢 Nuova comunicazione</button>
             <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
               ✉️ Scrivi a tutti
@@ -10071,6 +10082,70 @@ function CondominiumDetails(
               Modifica condòmino
             </button>
           </div>
+        </Modal>
+      )}
+
+      {transferOpen && (
+        <Modal onClose={() => { if (!transferSaving) setTransferOpen(false); }}>
+          <ModalTitle title="Subentro nella titolarità dell'unità" />
+          <form onSubmit={async (event) => {
+            event.preventDefault();
+            const unit = condominiumUnits.find((candidate: CondominiumUnit) => candidate.id === transferUnitId);
+            const outgoing = condominiumMembers.find((candidate: CondominiumMember) => candidate.dbId === transferOutgoingId && candidate.active && candidate.role === "Proprietario");
+            if (!unit || !outgoing || !unit.id || !outgoing.dbId || outgoing.unitId !== unit.id) {
+              alert("Il proprietario uscente deve essere attivo e associato all'unità selezionata tramite il database. Verifica l'anagrafica.");
+              return;
+            }
+            setTransferSaving(true);
+            try {
+              const ok = await onTransferMember({
+                unitId: unit.id, outgoingMemberId: outgoing.dbId,
+                incomingName: transferIncomingName.trim(),
+                incomingEmail: transferIncomingEmail.trim() || null,
+                transferDate, transferType, notes: transferNotes.trim(),
+              });
+              if (ok) {
+                setTransferOpen(false); setTransferUnitId(""); setTransferOutgoingId("");
+                setTransferIncomingName(""); setTransferIncomingEmail(""); setTransferDate("");
+                setTransferNotes("");
+              }
+            } finally { setTransferSaving(false); }
+          }} className="form-stack">
+            <label>Unità immobiliare
+              <select required value={transferUnitId} onChange={(event) => { setTransferUnitId(event.target.value); setTransferOutgoingId(""); }}>
+                <option value="">Seleziona unità</option>
+                {condominiumUnits.filter((unit: CondominiumUnit) => unit.active && unit.lifecycleStatus !== "Soppressa").map((unit: CondominiumUnit) => <option key={unit.id} value={unit.id}>{unit.unitCode} · {unit.unitType}</option>)}
+              </select>
+            </label>
+            <label>Proprietario uscente
+              <select required value={transferOutgoingId} onChange={(event) => setTransferOutgoingId(event.target.value)} disabled={!transferUnitId}>
+                <option value="">Seleziona proprietario</option>
+                {condominiumMembers.filter((member: CondominiumMember) => member.active && member.role === "Proprietario" && member.unitId === transferUnitId && member.dbId).map((member: CondominiumMember) => <option key={member.dbId} value={member.dbId}>{member.firstName} {member.lastName}{member.email ? ` · ${member.email}` : ""}</option>)}
+              </select>
+            </label>
+            <label>Nuovo proprietario
+              <input required value={transferIncomingName} onChange={(event) => setTransferIncomingName(event.target.value)} maxLength={160} placeholder="Nome e cognome" />
+            </label>
+            <label>E-mail (facoltativa)
+              <input type="email" value={transferIncomingEmail} onChange={(event) => setTransferIncomingEmail(event.target.value)} maxLength={254} placeholder="nome@esempio.it" />
+            </label>
+            <label>Data del rogito / decorrenza
+              <input required type="date" value={transferDate} onChange={(event) => setTransferDate(event.target.value)} />
+            </label>
+            <label>Tipo di trasferimento
+              <select value={transferType} onChange={(event) => setTransferType(event.target.value)}>
+                {["Vendita","Acquisto","Donazione","Successione","Altro"].map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>
+            <label>Note (facoltative)
+              <textarea value={transferNotes} onChange={(event) => setTransferNotes(event.target.value)} rows={3} maxLength={2000} placeholder="Riferimenti dell'atto o annotazioni" />
+            </label>
+            <p className="section-subtitle">La conferma registra il trasferimento e aggiorna l'anagrafica dal server. L'accesso al Portale del nuovo proprietario non viene attivato automaticamente.</p>
+            <div className="form-actions">
+              <button className="secondary-button" type="button" disabled={transferSaving} onClick={() => setTransferOpen(false)}>Annulla</button>
+              <button className="primary-button" type="submit" disabled={transferSaving || typeof onTransferMember !== "function"}>{transferSaving ? "Registrazione..." : "Conferma subentro"}</button>
+            </div>
+          </form>
         </Modal>
       )}
 
