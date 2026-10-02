@@ -2288,17 +2288,60 @@ export async function updateCondominiumRequestStatus(
 }
 
 /**
- * Anteprima contabile del subentro. Gli identificativi richiesti sono UUID
- * Supabase, non gli ID legacy numerici mostrati nell'interfaccia.
+ * Struttura restituita dalla RPC di anteprima contabile del subentro.
+ * Gli identificativi sono UUID Supabase, non ID legacy numerici.
  */
+export type MemberTransferPreview = {
+  transfer_date: string;
+  unit_id: string;
+  outgoing_member_id: string;
+  outstanding_before: number;
+  paid_before: number;
+  installments_before: Array<{
+    id: string;
+    title: string;
+    amount: number;
+    paid_amount: number;
+    residual: number;
+    due_date: string;
+    status: string;
+    fiscal_year_id: string | null;
+  }>;
+  extraordinary_deliberated_before_due_after: Array<{
+    id: string;
+    amount: number;
+    paid_amount: number;
+    due_date: string | null;
+    status: string;
+    ledger_entry_id: string;
+    deliberation_date: string | null;
+    description: string | null;
+  }>;
+  unit_expenses: Array<Record<string, unknown>>;
+  review_flags: {
+    unpaid_before_transfer: boolean;
+    extraordinary_deliberated_before_due_after: boolean;
+    legal_liability_review_required: boolean;
+  };
+};
+
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const isIsoDate = (value: string) => {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
+
 export async function previewCondominiumMemberTransfer(
   unitDatabaseId: string,
   outgoingMemberDatabaseId: string,
   transferDate: string
-): Promise<any> {
+): Promise<MemberTransferPreview> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!unitDatabaseId || !outgoingMemberDatabaseId || !transferDate) {
-    throw new Error("Unità, condòmino cedente e data del subentro sono obbligatori.");
+  if (!isUuid(unitDatabaseId) || !isUuid(outgoingMemberDatabaseId) || !isIsoDate(transferDate)) {
+    throw new Error("Per l’anteprima servono UUID Supabase validi e una data nel formato AAAA-MM-GG.");
   }
   const { data, error } = await supabase.rpc("preview_condominium_member_transfer", {
     p_unit_id: unitDatabaseId,
@@ -2306,7 +2349,14 @@ export async function previewCondominiumMemberTransfer(
     p_transfer_date: transferDate,
   });
   if (error) throw error;
-  return data;
+  if (!data || typeof data !== "object" || Array.isArray(data) ||
+      !Array.isArray(data.installments_before) ||
+      !Array.isArray(data.extraordinary_deliberated_before_due_after) ||
+      !Array.isArray(data.unit_expenses) ||
+      !data.review_flags || typeof data.review_flags !== "object") {
+    throw new Error("La risposta di anteprima del subentro non rispetta il formato atteso.");
+  }
+  return data as MemberTransferPreview;
 }
 
 /**
@@ -2325,8 +2375,9 @@ export async function confirmCondominiumMemberTransfer(input: {
   data?: Record<string, unknown>;
 }): Promise<string> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!input.unitDatabaseId || !input.outgoingMemberDatabaseId || !input.transferDate || !input.incomingName.trim()) {
-    throw new Error("Unità, cedente, nominativo del subentrante e data sono obbligatori.");
+  if (!isUuid(input.unitDatabaseId) || !isUuid(input.outgoingMemberDatabaseId) ||
+      !isIsoDate(input.transferDate) || !input.incomingName.trim()) {
+    throw new Error("Inserisci UUID Supabase validi, nominativo del subentrante e data nel formato AAAA-MM-GG.");
   }
   const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
     p_unit_id: input.unitDatabaseId,
