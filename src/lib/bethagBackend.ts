@@ -2407,7 +2407,7 @@ export async function confirmCondominiumMemberTransfer(input: {
     throw new Error("Inserisci UUID Supabase validi, nominativo del subentrante e data nel formato AAAA-MM-GG.");
   }
   if (incomingName.length > 180 || (incomingEmail !== null &&
-      (incomingEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(incomingEmail)))) {
+      (incomingEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail)))) {
     throw new Error("Controlla il nominativo e l'indirizzo e-mail del subentrante.");
   }
   if (input.incomingUserId && !isUuid(input.incomingUserId)) {
