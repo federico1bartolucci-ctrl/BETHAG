@@ -9325,6 +9325,7 @@ function CondominiumsPage(
             isAdministrator ||
             (isCollaborator && collaboratorPermissions.includes("condomini"))
           }
+          canTransferOwnership={isAdministrator}
         />
 
       </div>
@@ -9494,6 +9495,7 @@ function CondominiumDetails(
     onStatusAssembly,
     onStatusActivity,
     isAdministrator = false,
+    canTransferOwnership = false,
   } = props;
 
   const openDeadlines =
@@ -10018,7 +10020,7 @@ function CondominiumDetails(
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
                   Modifica
                 </button>
-                {isAdministrator && member.role === "Proprietario" && member.databaseId && condominiumUnits.some((unit: CondominiumUnit) => unit.id === member.unitId && unit.active) && (
+                {canTransferOwnership && member.role === "Proprietario" && member.databaseId && condominiumUnits.some((unit: CondominiumUnit) => unit.id === member.unitId && unit.active) && (
                   <button className="secondary-button small" type="button" onClick={() => {
                     setTransferMember(member); setTransferDate(""); setTransferType("Vendita"); setIncomingName(""); setIncomingEmail(""); setTransferNotes(""); setTransferPreview(null); setTransferError("");
                   }}>Subentro</button>
