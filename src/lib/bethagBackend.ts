@@ -2347,7 +2347,9 @@ export async function confirmCondominiumMemberTransfer(input: {
  */
 export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transferId)) {
+    throw new Error("Identificativo del subentro non valido.");
+  }
 
   return enqueueBackendSync(async () => {
     const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
