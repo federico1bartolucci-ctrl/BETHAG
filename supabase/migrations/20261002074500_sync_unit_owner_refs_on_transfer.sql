@@ -46,6 +46,9 @@ begin
   for update;
 
   if not found then raise exception 'OUTGOING_MEMBER_NOT_ACTIVE_CURRENT_OWNER_ON_UNIT'; end if;
+  if v_outgoing_legacy_id is null then
+    raise exception 'OUTGOING_MEMBER_LEGACY_ID_MISSING';
+  end if;
 
   if exists(
     select 1 from public.condominium_member_transfers t
