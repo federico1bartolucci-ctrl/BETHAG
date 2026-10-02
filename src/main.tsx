@@ -5641,6 +5641,7 @@ function App() {
           const saved = await saveCondominiumMemberBackend(profile.workspaceId, data);
           persistedData = {
             ...data,
+            databaseId: previousMember.databaseId ?? saved?.id ?? undefined,
             unitId: saved?.unit_id ?? data.unitId ?? "",
           };
         } catch (syncError) {
@@ -5702,6 +5703,7 @@ function App() {
           const saved = await saveCondominiumMemberBackend(profile.workspaceId, newMember);
           newMember = {
             ...newMember,
+            databaseId: saved?.id ?? newMember.databaseId,
             unitId: saved?.unit_id ?? newMember.unitId ?? "",
           };
 
