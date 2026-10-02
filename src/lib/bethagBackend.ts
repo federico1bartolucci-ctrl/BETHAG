@@ -2302,11 +2302,20 @@ export async function confirmCondominiumMemberTransfer(input: {
   data?: Record<string, unknown>;
 }): Promise<string> {
   if (!supabase) throw new Error("Supabase non configurato.");
-  if (!input.unitId || !input.outgoingMemberId) {
-    throw new Error("Unita e titolare uscente sono obbligatori.");
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  if (!isUuid(input.unitId) || !isUuid(input.outgoingMemberId)) {
+    throw new Error("Identificativo dell'unita o del titolare uscente non valido.");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.transferDate)) {
-    throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  if (input.incomingUserId && !isUuid(input.incomingUserId)) {
+    throw new Error("Identificativo dell'account del nuovo titolare non valido.");
+  }
+  const parsedTransferDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)
+    ? new Date(`${input.transferDate}T00:00:00.000Z`)
+    : null;
+  if (!parsedTransferDate || Number.isNaN(parsedTransferDate.getTime()) ||
+      parsedTransferDate.toISOString().slice(0, 10) !== input.transferDate) {
+    throw new Error("La data del subentro non e una data valida nel formato AAAA-MM-GG.");
   }
   if (!input.incomingName.trim()) {
     throw new Error("Il nominativo del nuovo titolare e obbligatorio.");
