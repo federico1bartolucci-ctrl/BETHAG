@@ -2310,7 +2310,7 @@ export async function confirmCondominiumMemberTransfer(input: {
   if (input.incomingUserId && !isUuid(input.incomingUserId)) {
     throw new Error("Identificativo dell'account del nuovo titolare non valido.");
   }
-  const parsedTransferDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)
+  const parsedTransferDate = /^\d{4}-\d{2}-\d{2}$/.test(input.transferDate)
     ? new Date(`${input.transferDate}T00:00:00.000Z`)
     : null;
   if (!parsedTransferDate || Number.isNaN(parsedTransferDate.getTime()) ||
