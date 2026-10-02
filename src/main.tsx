@@ -10053,9 +10053,13 @@ function CondominiumDetails(
                 incomingEmail: transferEmail.trim() || null, transferDate, transferType, notes: transferNotes.trim(),
                 data: { firstName, lastName, role: "Proprietario", apartment: transferMember.apartment, fiscalCode: "", phone: "", notes: transferNotes.trim() },
               });
-              await props.onMemberTransferCompleted?.();
               setSelectedMemberDetail(null); setTransferMember(null);
-              alert("Subentro registrato. Verifica ora la continuità contabile e l’accesso del nuovo proprietario.");
+              try {
+                await props.onMemberTransferCompleted?.();
+                alert("Subentro registrato. Verifica ora la continuità contabile e l’accesso del nuovo proprietario.");
+              } catch (refreshError: any) {
+                alert("Subentro registrato correttamente, ma l'aggiornamento della schermata non è riuscito. Ricarica i dati prima di ripetere l'operazione. " + (refreshError?.message || ""));
+              }
             } catch (error: any) { alert(error?.message || "Impossibile registrare il subentro."); }
             finally { setTransferBusy(false); }
           }}>
