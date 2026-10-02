@@ -1,6 +1,6 @@
 -- Close only the outgoing member's financial positions attributable by due date
--- to the transfer date. Undated allocations and fiscal carryovers remain conservative
--- blockers because the schema does not carry a reliable effective date for them.
+-- to the transfer date. Undated installments/allocations and fiscal carryovers remain
+-- conservative blockers because the schema lacks a reliable effective date for them.
 create or replace function private.close_condominium_member_transfer(p_transfer_id uuid)
 returns boolean
 language plpgsql
@@ -34,7 +34,7 @@ begin
     into v_open_installments
   from public.condominium_installments i
   where i.member_id=v_outgoing
-    and i.due_date<=v_transfer_date
+    and (i.due_date is null or i.due_date<=v_transfer_date)
     and i.amount-i.paid_amount>0.005;
 
   select coalesce(sum(a.amount-a.paid_amount),0)
