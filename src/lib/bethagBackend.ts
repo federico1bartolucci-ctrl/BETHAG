@@ -2451,13 +2451,43 @@ export async function confirmCondominiumMemberTransfer(input: {
   return data;
 }
 
-export async function getMemberTransferAccountingSnapshot(transferId: string): Promise<any> {
+export async function getMemberTransferAccountingSnapshot(
+  transferId: string
+): Promise<Record<string, unknown>> {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!isUuid(transferId)) throw new Error("Identificativo Supabase del subentro non valido.");
   const { data, error } = await supabase.rpc("get_member_transfer_accounting_snapshot", {
     p_transfer_id: transferId,
   });
   if (error) throw error;
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+  const isFiniteNumber = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value);
+  if (!isRecord(data) || !isRecord(data.transfer) ||
+      !isRecord(data.outgoing) || !isRecord(data.post_transfer) ||
+      !Array.isArray(data.unit_expenses)) {
+    throw new Error("La risposta del riepilogo contabile del subentro non è valida.");
+  }
+  const { transfer, outgoing, post_transfer: postTransfer } = data;
+  if (transfer.id !== transferId || !isUuid(transfer.unit_id) ||
+      !isUuid(transfer.outgoing_member_id) || !isUuid(transfer.incoming_member_id) ||
+      typeof transfer.transfer_date !== "string" || !isIsoDate(transfer.transfer_date) ||
+      typeof transfer.transfer_type !== "string" || typeof transfer.status !== "string" ||
+      !["Confermato", "Chiuso", "Annullato", "Bozza"].includes(transfer.status) ||
+      !["installments_due_before", "installments_paid_before", "installments_residual", "allocations_before"]
+        .every((key) => isFiniteNumber(outgoing[key])) ||
+      !["installments_after", "allocations_after"].every((key) => isFiniteNumber(postTransfer[key])) ||
+      !data.unit_expenses.every((item: unknown) => isRecord(item) &&
+        typeof item.id === "string" && typeof item.description === "string" &&
+        typeof item.expense_type === "string" && typeof item.entry_date === "string" &&
+        (item.deliberation_date === null || typeof item.deliberation_date === "string") &&
+        isFiniteNumber(item.amount) &&
+        (item.assembly_id === null || typeof item.assembly_id === "string") &&
+        typeof item.deliberation_before_transfer === "boolean")) {
+    throw new Error("La risposta del riepilogo contabile del subentro contiene dati incompleti o incoerenti.");
+  }
   return data;
 }
 
@@ -2468,5 +2498,8 @@ export async function closeCondominiumMemberTransfer(transferId: string): Promis
     p_transfer_id: transferId,
   });
   if (error) throw error;
-  return data === true;
+  if (typeof data !== "boolean") {
+    throw new Error("La risposta della chiusura del subentro non è valida.");
+  }
+  return data;
 }
