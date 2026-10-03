@@ -2559,6 +2559,21 @@ function App() {
   ) => {
     if (!supabase) return null;
 
+    // Access is resolved only for the verified Auth identity. This protects
+    // both workspace membership and the email-based portal fallback.
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    const authenticatedUser = authData.user;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (
+      !authenticatedUser ||
+      authenticatedUser.id !== userId ||
+      !authenticatedUser.email_confirmed_at ||
+      authenticatedUser.email?.trim().toLowerCase() !== normalizedEmail
+    ) {
+      return null;
+    }
+
     const membershipResult = await supabase
       .from("workspace_members")
       .select("workspace_id, role, active, permissions")
