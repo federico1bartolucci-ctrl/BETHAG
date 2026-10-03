@@ -14,7 +14,9 @@ begin
     if (length(v_def)-length(replace(v_def,'v_open_unit_installments numeric;','')))<>length('v_open_unit_installments numeric;')
        or (length(v_def)-length(replace(v_def,v_query,'')))<>length(v_query)
        or (length(v_def)-length(replace(v_def,'or v_open_unit_installments>0.005','')))<>length('or v_open_unit_installments>0.005')
-       or position(v_anchor in v_def)>0 then
+       or (length(v_def)-length(replace(v_def,v_anchor,'')))<>length(v_anchor)
+       or position(v_condition in v_def)=0
+       or (length(v_def)-length(replace(v_def,v_condition,'')))<>length(v_condition) then
       raise exception 'Unit-level installment guard is incomplete, duplicated, or mixed';
     end if;
     return;
