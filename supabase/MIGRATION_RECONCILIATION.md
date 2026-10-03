@@ -404,3 +404,7 @@ Corrected `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql`: t
 ## Unit carryover idempotency occurrence correction — 2026-10-03
 
 Further review of `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` found that the scoped carryover predicate is expected twice after transformation: once in the original carryover query and once in the inserted snapshot aggregation. Corrected the already-installed guard to require exactly two occurrences, rather than one. Updated migration fetched back and verified. Source-level verification only; no database execution or production changes; full QA/collaudo remains deferred.
+
+## Captured snapshot migration source repair — 2026-10-03
+
+Static review found that `20261003052000_expose_captured_transfer_snapshot.sql` had a malformed `v_new` dollar-quoted string: part of the migration body had been inserted inside the replacement text, leaving the PL/pgSQL block structurally invalid. Reconstructed the replacement as the captured snapshot JSON key/source followed by the existing transfer JSON object anchor, and restored the intended executable block. The corrected file was committed to the feature branch and fetched back from GitHub with exact content equality. This is source-level verification only; no SQL was run against Supabase, production remains unchanged, and comprehensive QA/collaudo is still deferred.
