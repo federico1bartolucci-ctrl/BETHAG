@@ -421,3 +421,8 @@ A fresh full-file read of `20261003052000_expose_captured_transfer_snapshot.sql`
 ## Transfer close financial tenant/unit scope — 2026-10-04
 
 Added `20261003079000_scope_transfer_close_financial_positions.sql` after the live-schema review found that the close function's outgoing-owner installment, expense-allocation, and fiscal-carryover checks filtered only by member ID. The migration now binds each check to the transfer's workspace, condominium, and unit, with exact-anchor counts and fail-closed mixed-state handling. The new migration was fetched back from GitHub and its blob SHA recorded. Source-level change only: no migration was executed, production was not modified, and full QA/collaudo remains deferred.
+
+
+## Extraordinary allocation scope migration ordering correction — 2026-10-04
+
+Review of the migration patches identified an ordering defect: `20261003076000_scope_transfer_allocation_totals.sql` scopes outgoing allocation predicates before `20261003077000_scope_preview_extraordinary_allocations.sql` runs, so the latter's original unscoped anchor could not match. Updated 0770 to require the tenant-scoped allocation anchor created by 0760, then add the ledger workspace/condominium predicates. The migration retains two-occurrence checks and rejects partial/mixed states. File was fetched back from GitHub after the change. This is source-level reconciliation only; no SQL was executed against production.
