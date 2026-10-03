@@ -343,7 +343,7 @@ function AccountingPage({
 
   const scopedCarryovers = useMemo(() => dbCondominiumId ? carryovers.filter(c => c.condominium_id === dbCondominiumId) : carryovers,[dbCondominiumId,carryovers]);
   const rendicontoCarryovers = useMemo(() => rendicontoYearId === "all" ? scopedCarryovers : scopedCarryovers.filter(c => c.target_fiscal_year_id === rendicontoYearId), [scopedCarryovers, rendicontoYearId]);
-  const carryoverDebt = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Debito").reduce((s,c)=>s+Number(c.balance||0),0),[rendicontoCarryovers]);
+  const carryoverDebt = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Debito").reduce((s,c)=>s+Math.abs(Number(c.balance||0)),0),[rendicontoCarryovers]);
   const carryoverCredit = useMemo(() => rendicontoCarryovers.filter(c => c.kind === "Credito").reduce((s,c)=>s+Math.abs(Number(c.balance||0)),0),[rendicontoCarryovers]);
 
   const rendicontoLedger = useMemo(
@@ -484,6 +484,21 @@ function AccountingPage({
         allocatedInstallments += amount;
         allocatedPaid += paid;
         addInstallmentToUnit(a.unit_id, amount, paid);
+      });
+    }
+    // Ensure units with only opening carryovers are still represented in the statement.
+    for (const carryover of rendicontoYearId === "all" ? [] : rendicontoCarryovers) {
+      if (!carryover.unit_id || map.has(carryover.unit_id)) continue;
+      const unit = units.find(u => u.id === carryover.unit_id);
+      map.set(carryover.unit_id, {
+        unitId: carryover.unit_id,
+        unitCode: unit?.unit_code || "Unità non trovata",
+        allocated: 0,
+        installments: 0,
+        paid: 0,
+        residual: 0,
+        carryover: 0,
+        balance: 0
       });
     }
     return Array.from(map.values()).map((row) => {
