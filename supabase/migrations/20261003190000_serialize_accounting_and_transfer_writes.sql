@@ -70,6 +70,11 @@ create trigger trg_serialize_accounting_allocation_write
 before insert or update or delete on public.condominium_expense_allocations
 for each row execute function private.serialize_accounting_write();
 
+drop trigger if exists trg_serialize_accounting_ledger_write on public.condominium_ledger_entries;
+create trigger trg_serialize_accounting_ledger_write
+before insert or update or delete on public.condominium_ledger_entries
+for each row execute function private.serialize_accounting_write();
+
 drop trigger if exists trg_serialize_accounting_carryover_write on public.condominium_fiscal_carryovers;
 create trigger trg_serialize_accounting_carryover_write
 before insert or update or delete on public.condominium_fiscal_carryovers
