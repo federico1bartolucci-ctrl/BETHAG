@@ -66,3 +66,10 @@ L'ispezione delle funzioni runtime `private.complete_portal_registration(text,te
 Queste evidenze confermano che non è sufficiente eliminare `p_incoming_user_id` dal client di subentro: l'identità deve essere governata coerentemente in tutti i percorsi di collegamento, inclusa l'approvazione amministrativa e la registrazione automatica. La correzione deve definire prima la regola per account che legittimamente accedono a più unità o condomìni, quindi introdurre controlli di conflitto compatibili con comproprietà e multi-associazione, senza imporre un vincolo globale uno-a-uno non previsto dal prodotto.
 
 Il risultato è un rilievo statico delle definizioni runtime; nessuna richiesta o associazione utente è stata modificata e nessun test con account sintetici è stato eseguito.
+
+
+## Patch SQL preparata sul ramo di riparazione (non applicata) — 2026-10-03
+
+È stata aggiunta `supabase/migrations/20261003150000_block_unverified_member_transfer_identity.sql`. La migrazione ricrea soltanto il wrapper pubblico `public.confirm_condominium_member_transfer(...)`, mantenendone firma, valore di ritorno, `SECURITY DEFINER` e `search_path` vuoto. Il wrapper rifiuta con `INCOMING_IDENTITY_REQUIRES_VERIFICATION` ogni `p_incoming_user_id` non nullo e inoltra esplicitamente `NULL` alla funzione privata. La logica privata runtime non viene riscritta. La migrazione ribadisce l'EXECUTE per `authenticated` sul wrapper e revoca l'EXECUTE diretto alla funzione privata da `anon`, `public` e `authenticated`.
+
+La migrazione è stata salvata sul ramo `bethag-migration-repair` (commit `55c6c33e56927ca6576c8c11654b1ca45d48d767`), ma **non è stata eseguita su Supabase**. La patch è una barriera server-side per l'associazione account durante il subentro, non implementa ancora il flusso verificato di invito/accettazione né risolve i rilievi contabili. Prima dell'applicazione occorre validare la migrazione su un database QA isolato, controllare le ACL effettive dopo la migrazione e testare il percorso UI attuale e le chiamate dirette con UUID nullo/non nullo.
