@@ -12,6 +12,15 @@ Il Security Advisor Supabase ha rilevato tre funzioni `SECURITY DEFINER` eseguib
 
 L'avviso conferma la raggiungibilità delle tre RPC nello schema `public`, non dimostra da solo un bypass di autorizzazione. Le routine contengono controlli applicativi descritti sotto; resta necessario verificare i percorsi negativi e che non esistano varianti invocabili con argomenti manipolati. Nessuna revoca automatica è stata applicata.
 
+## Verifica ACL effettiva dello schema privato
+
+Una query PostgreSQL di sola lettura eseguita il 2026-10-03 ha restituito `authenticated_has_usage = true` per lo schema `private`. La verifica specifica dei privilegi EXECUTE sulle tre implementazioni private ha però restituito `false` per tutte:
+- `private.admin_approve_portal_registration`: authenticated non può eseguire.
+- `private.close_condominium_member_transfer`: authenticated non può eseguire.
+- `private.confirm_condominium_member_transfer`: authenticated non può eseguire.
+
+Quindi, pur avendo USAGE sullo schema, il ruolo autenticato non ha EXECUTE su queste tre implementazioni private. Questo riduce il rischio di invocazione diretta per queste specifiche firme. L'advisor segnala invece le tre RPC pubbliche come eseguibili via REST: restano da mantenere e verificare i controlli applicativi dei wrapper pubblici. Non è stata applicata alcuna modifica ai privilegi.
+
 ## Approvazione accesso portale
 
 Sono presenti due livelli:
