@@ -309,3 +309,8 @@ Also corrected the declaration anchor in 20261003064000_block_transfer_close_wit
 ## Incoming allocation mixed-state guard — 2026-10-03
 
 Hardened `20261003076000_scope_transfer_allocation_totals.sql`: the incoming-member allocation predicate in the accounting snapshot reader now explicitly rejects a mixed state containing both scoped and unscoped predicates, and requires exactly one anchor when the unscoped form remains. The revised migration was fetched back from GitHub and its blob SHA verified. This remains a branch-only SQL change; no production migration, overall QA, or merge was performed.
+
+
+## Idempotence completeness checks — 2026-10-03
+
+Strengthened `20261003077000_scope_preview_extraordinary_allocations.sql` so its already-scoped path requires both expected predicate occurrences, not merely one. Strengthened `20261003078000_scope_snapshot_installment_totals.sql` to verify that all three outgoing and the single incoming snapshot installment predicates are scoped, with no unscoped remnants, before returning successfully. Both files were fetched back and their blob hashes verified. These are branch-only textual safeguards; production remains unchanged and full QA/collaudo remains deferred.
