@@ -436,3 +436,8 @@ Cross-review of 0740 and 0760 found that 0740 already scopes the confirmation fu
 ## Follow-up correction: 0740 anchor formatting and 0760 counts — 2026-10-04
 
 A deeper comparison against the live `private.confirm_condominium_member_transfer` definition showed that 0740's multiline anchor did not match the deployed function's single-line predicate. Rewrote 0740's old/new predicate strings to match the function text. With the resulting single-line fully scoped predicate, 0760 correctly sees two outgoing allocation predicates in confirmation (ordinary plus extraordinary), so restored its expected count to two. Both files were fetched back from the branch after the updates. This resolves the source-anchor/count mismatch found in static cross-review; it is not a live migration test, and production was not changed.
+
+
+## Follow-up correction: ordered partial allocation scope — 2026-10-04
+
+The prior 0760 count adjustment alone was insufficient: because 0740 scopes the extraordinary confirmation predicate before 0760, the function intentionally contains one scoped and one unscoped outgoing allocation predicate at that intermediate point. Updated 0760 to recognize that exact state, scope the remaining ordinary predicate, and then require two scoped predicates; unexpected counts or mixed states still stop the migration. This replaces the earlier simplified occurrence-count logic. No SQL was executed against Supabase.
