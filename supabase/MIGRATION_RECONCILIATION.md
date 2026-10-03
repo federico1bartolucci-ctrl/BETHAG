@@ -269,3 +269,12 @@ Added forward migration `20261003076000_scope_transfer_allocation_totals.sql`. I
 ## Transfer preview extraordinary allocation scope — 2026-10-03
 
 Added `20261003077000_scope_preview_extraordinary_allocations.sql` to apply workspace/condominium predicates to extraordinary allocation rows and their linked ledger entries in the preview function. A read-only exact-anchor check against the current production function definition confirmed the migration's unscoped predicate is present. This verifies target text only; migration execution and behavior remain untested, and production was not modified.
+
+
+## Transfer snapshot installment scoping and anchor hardening — 2026-10-03
+
+Added forward migration `20261003078000_scope_snapshot_installment_totals.sql` to scope outgoing and incoming installment totals in `public.get_member_transfer_accounting_snapshot(uuid)` by the transfer's workspace and condominium. The exact unscoped query appears three times for outgoing totals and once for incoming totals in the inspected live definition; the migration verifies the expected occurrence counts before replacement. The branch file was re-read from GitHub and its blob verified. It is branch-only, not applied to production, and not runtime-tested.
+
+Further hardened `20261003075000_scope_transfer_installment_queries.sql` and `20261003076000_scope_transfer_allocation_totals.sql` with exact anchor-count checks before global replacements. Current read-only production definitions contain seven and six matching installment predicates in preview and confirmation respectively, and two outgoing allocation predicates in each function; the snapshot reader has one outgoing allocation predicate. Both revised files were re-read from GitHub and their blob hashes confirmed. These checks reduce the risk of silently rewriting unexpected function text but do not substitute for execution in a controlled test database.
+
+No migration was applied to Supabase production, no data or migration history was changed, and no overall QA/collaudo or PR merge was performed.
