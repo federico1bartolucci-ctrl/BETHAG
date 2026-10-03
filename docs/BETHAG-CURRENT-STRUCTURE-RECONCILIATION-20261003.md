@@ -127,3 +127,23 @@ Questa verifica è stata di sola lettura. La discrepanza di conteggio e contenut
 La definizione live di `private.close_condominium_member_transfer` controlla le rate aperte collegate al cedente tramite `member_id`, le allocazioni del cedente e i carryover del cedente. Controlla inoltre i carryover senza assegnatario associati all'unità. Non effettua però un controllo equivalente sulle rate aperte con `member_id IS NULL` associate alla stessa unità, pur essendo queste incluse nell'anteprima e nello snapshot del subentro. Di conseguenza, una chiusura potrebbe risultare consentita mentre rimangono rate unit-level non assegnate.
 
 La correzione necessaria è aggiungere alla guardia di chiusura un controllo delle rate non saldate per la stessa workspace, condominio e unità, con `member_id IS NULL`, e impedire lo stato `Chiuso` finché il residuo supera la tolleranza contabile già usata (`0.005`). La migrazione sostitutiva proposta non è stata salvata nel branch: il tentativo di creazione del file è stato rifiutato dal controllo di sicurezza dello strumento GitHub. Non è stato eseguito alcun DDL su Production. Questo punto resta quindi un difetto identificato ma non corretto nel codice.
+
+
+### Patch SQL circoscritta per la guardia di chiusura
+
+Nel corpo di `private.close_condominium_member_transfer(p_transfer_id uuid)`, acquisire anche `t.unit_id` e `t.condominium_id` nella SELECT iniziale (insieme a workspace, cedente e stato). Dichiarare `v_unit uuid`, `v_condominium uuid` e `v_open_unit_installments numeric`. Dopo il controllo delle rate del cedente, inserire il controllo seguente:
+
+```sql
+select coalesce(sum(i.amount-i.paid_amount),0)
+  into v_open_unit_installments
+from public.condominium_installments i
+where i.workspace_id=v_workspace
+  and i.condominium_id=v_condominium
+  and i.unit_id=v_unit
+  and i.member_id is null
+  and i.amount-i.paid_amount>0.005;
+```
+
+Aggiungere `or v_open_unit_installments>0.005` alla condizione che solleva `TRANSFER_FINANCIAL_POSITIONS_OPEN`. La query è intenzionalmente circoscritta a workspace, condominio e unità, esclude le rate assegnate a un membro e riusa la tolleranza già adottata dalla RPC. Il corpo live della funzione va mantenuto integralmente, inclusi `SECURITY DEFINER`, `search_path` vuoto, autorizzazione modulo, lock della riga trasferimento e aggiornamenti finali; evitare di sostituirlo con una versione parziale.
+
+**Stato della patch:** correzione SQL definita e documentata, ma non ancora registrata come file di migrazione eseguibile. La creazione del file SQL tramite GitHub è stata bloccata dal controllo di sicurezza. Prima dell'applicazione in un ambiente, verificare il residuo delle rate non assegnate e il corpo effettivo della funzione in quell'ambiente; non applicare direttamente su Production senza autorizzazione esplicita.
