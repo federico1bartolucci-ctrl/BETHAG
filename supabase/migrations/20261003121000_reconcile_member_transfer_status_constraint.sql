@@ -9,6 +9,17 @@ begin
     raise exception 'Required table public.condominium_member_transfers is missing; apply the transfer baseline first';
   end if;
 
+  -- Refuse to install the constraint if existing rows contain an unknown value.
+  -- Preserve records for explicit reconciliation rather than silently rewriting them.
+  if exists (
+    select 1
+    from public.condominium_member_transfers
+    where status is null
+       or status not in ('Bozza','Confermato','Chiuso','Annullato')
+  ) then
+    raise exception 'Unsupported transfer status values exist; inspect public.condominium_member_transfers.status before applying this migration';
+  end if;
+
   alter table public.condominium_member_transfers
     drop constraint if exists condominium_member_transfers_status_ck;
 
