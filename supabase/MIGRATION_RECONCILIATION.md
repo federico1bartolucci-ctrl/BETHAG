@@ -278,3 +278,10 @@ Added forward migration `20261003078000_scope_snapshot_installment_totals.sql` t
 Further hardened `20261003075000_scope_transfer_installment_queries.sql` and `20261003076000_scope_transfer_allocation_totals.sql` with exact anchor-count checks before global replacements. Current read-only production definitions contain seven and six matching installment predicates in preview and confirmation respectively, and two outgoing allocation predicates in each function; the snapshot reader has one outgoing allocation predicate. Both revised files were re-read from GitHub and their blob hashes confirmed. These checks reduce the risk of silently rewriting unexpected function text but do not substitute for execution in a controlled test database.
 
 No migration was applied to Supabase production, no data or migration history was changed, and no overall QA/collaudo or PR merge was performed.
+
+
+## Unit carryover anchor hardening — 2026-10-03
+
+Hardened `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` to require exactly one unscoped unit-carryover query before rewriting each existing preview/confirmation function, and to reject mixed scoped/unscoped variants. The snapshot insertion anchor is also required to be unique. Read-only inspection confirms the live preview and confirmation definitions each contain the expected unscoped carryover query and the snapshot key, so the repair branch is relevant to the observed schema. The updated file was committed and its GitHub blob verified. No production changes were made.
+
+The close-function inspection also confirms the unit-level fiscal carryover guard from the already-existing live definition, while the additional unit-unassigned installment closure guard from `20261003071000` is still absent. The latter remains a branch-only pending correction; migration execution and QA remain deferred until the full issue set is reconciled.
