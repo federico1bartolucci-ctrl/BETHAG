@@ -263,3 +263,16 @@ Correzione architetturale richiesta prima di implementare una migrazione:
 5. Verificare la soluzione su database isolato con transazioni concorrenti reali prima di promuovere le migrazioni.
 
 Questa matrice è un riscontro statico delle definizioni versionate, non prova esaustiva di ogni callsite né test di concorrenza eseguito. Le migrazioni non sono state applicate a Production; non viene dichiarato risolto il problema di concorrenza.
+
+
+### Inventario callsite frontend delle scritture contabili (03/10/2026)
+
+La lettura statica del branch ha individuato in `src/AccountingPage.tsx` scritture dirette Supabase, esterne alle RPC transazionali:
+
+- salvataggio/aggiornamento delle righe di `condominium_expense_allocations` tramite `.insert(payload)` e `.update(payload)` (area intorno alle righe 1350–1351 del file recuperato);
+- creazione diretta di `condominium_installments` tramite `.insert(...)` (area intorno alla riga 1810);
+- funzioni di eliminazione generiche che gestiscono anche `condominium_installments` e `condominium_expense_allocations`, con controlli applicativi di dipendenza ma non un mutex transazionale condiviso (area intorno alle righe 1828–1855).
+
+Le migrazioni individuano inoltre scritture RPC per generazione rate, generazione riparti, registrazione pagamenti, generazione carryover, compensazione carryover e transizione/chiusura esercizio. Questi percorsi usano funzioni e lock distinti; la sola presenza di controlli frontend o di lock locali alla singola RPC non coordina le scritture concorrenti tra loro.
+
+**Esito operativo:** l'inventario conferma almeno tre classi di mutazioni frontend che aggirano una futura serializzazione implementata soltanto nelle RPC di conferma/chiusura. Non introdurre ora un lock soltanto lato chiusura né considerare risolto il rischio: occorre migrare le mutazioni dirette contabili a RPC atomiche e poi applicare un protocollo di lock canonico a tutte le scritture coinvolte, compresi i trigger. Questa è una ricognizione statica mirata; non è ancora un inventario esaustivo di ogni callsite, trigger e ramo RPC e non costituisce collaudo concorrente. Nessuna modifica al codice runtime o a Production è stata effettuata in questo passaggio.
