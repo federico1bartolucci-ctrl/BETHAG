@@ -158,3 +158,18 @@ Prima di correggere, va verificata la definizione live completa e l'uso di `curr
 ### Dipendenza di bootstrap fuori ordine
 
 La migrazione `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` crea o sostituisce una funzione che interroga e aggiorna `public.condominium_member_transfers`, ma la migrazione che crea la tabella è `20261001104500_add_condominium_member_transfer.sql`, con timestamp successivo. Su un database vuoto, il replay in ordine lessicografico non può risolvere la dipendenza senza che la tabella sia già stata creata da una baseline precedente o da un'applicazione fuori registro. Non retrodatare né riscrivere la migrazione storica: il percorso di bootstrap va corretto in una baseline/installazione pulita separata e documentata, mentre gli ambienti esistenti richiedono riconciliazione catalogo/registro prima di ogni migrazione.
+
+
+### Supabase advisors: RPC pubbliche e policy permissive
+
+L'ultima lettura degli advisors Supabase (03/10/2026) segnala tre funzioni esposte nello schema `public` come `SECURITY DEFINER` ed eseguibili da `authenticated`:
+
+- `public.admin_approve_portal_registration(uuid, uuid)`;
+- `public.close_condominium_member_transfer(uuid)`;
+- `public.confirm_condominium_member_transfer(uuid, uuid, text, text, uuid, date, text, text, jsonb)`.
+
+Il warning non dimostra da solo un bypass: le RPC potrebbero essere endpoint intenzionali con controlli interni. Tuttavia, per le due RPC di subentro il risultato advisor diverge dalle migrazioni versionate che definiscono wrapper `SECURITY INVOKER`. Prima di modificare grant o sicurezza, acquisire da catalogo la definizione live completa, `prosecdef`, `proconfig`, privilegi EXECUTE per ruolo e chiamanti frontend/backend. Mantenere gli endpoint solo se il corpo privato applica autenticazione, autorizzazione sul workspace/modulo, coerenza unità/condominio e controlli anti-IDOR; in caso contrario preparare una correzione forward-only e test mirati. Nessun grant o funzione è stato modificato in Production.
+
+Gli advisors performance segnalano inoltre 20 casi di policy RLS permissive multiple (principalmente policy di gestione `ALL` sovrapposte a policy di lettura specifiche) e 69 indici mai utilizzati nel periodo/statistiche osservate. Le policy permissive si combinano, quindi non vanno eliminate automaticamente: occorre verificare equivalenza delle espressioni `USING/WITH CHECK`, ruoli e operazioni, quindi consolidare soltanto dove preserva l'accesso previsto. Gli indici “unused” non sono prova di inutilità, soprattutto in ambienti con carico ridotto o statistiche recenti; non rimuoverli senza analisi delle query, vincoli e carichi reali.
+
+Il file `supabase/tests/rls_policies.test.sql` contiene 22 asserzioni `is/ok`, coerenti con `plan(22)`; non è stata necessaria alcuna correzione del conteggio. La presenza del test nel repository non equivale a un'esecuzione superata.
