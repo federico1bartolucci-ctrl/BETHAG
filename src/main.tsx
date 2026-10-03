@@ -2989,10 +2989,12 @@ function App() {
       if (!window.confirm(previewMessage)) return false;
       const transferId = await confirmCondominiumMemberTransfer(input);
       transferConfirmed = true;
-      let accountingSnapshotAvailable = false;
+      let accountingSnapshot: Record<string, any> | null = null;
       try {
         const snapshot = await getMemberTransferAccountingSnapshot(transferId);
-        accountingSnapshotAvailable = Boolean(snapshot.transfer);
+        if (snapshot.transfer && typeof snapshot.transfer === "object") {
+          accountingSnapshot = snapshot;
+        }
       } catch (snapshotError) {
         console.warn("BETHAG transfer was registered, but its accounting snapshot could not be loaded", snapshotError);
       }
@@ -3000,10 +3002,23 @@ function App() {
       setCondominiumMembers(refreshed.condominiumMembers || []);
       setCondominiumUnits(Array.isArray(refreshed.condominiumUnits) ? refreshed.condominiumUnits : []);
       setPortalMembers(refreshed.portalMembers || []);
-      if (accountingSnapshotAvailable) {
-        alert("Subentro registrato e dati aggiornati. Quadro contabile associato al trasferimento disponibile.");
+      if (accountingSnapshot) {
+        const outgoing = accountingSnapshot.outgoing && typeof accountingSnapshot.outgoing === "object" ? accountingSnapshot.outgoing : {};
+        const postTransfer = accountingSnapshot.post_transfer && typeof accountingSnapshot.post_transfer === "object" ? accountingSnapshot.post_transfer : {};
+        const snapshotMessage = [
+          "Subentro registrato e dati aggiornati.",
+          "",
+          "RIEPILOGO CONTABILE STORICO",
+          `Rate residue del precedente proprietario: ${money(outgoing.installments_residual)}`,
+          `Riparti residui del precedente proprietario: ${money(outgoing.allocations_residual)}`,
+          `Rate successive attribuite al subentrante: ${money(postTransfer.installments_after)}`,
+          `Riparti successivi attribuiti al subentrante: ${money(postTransfer.allocations_after)}`,
+          "",
+          "Il riepilogo è informativo: la responsabilità giuridica va verificata sulla documentazione."
+        ].join("\\n");
+        alert(snapshotMessage);
       } else {
-        alert("Subentro registrato e dati aggiornati. Il quadro contabile storico non e stato caricato: verifica il dettaglio del trasferimento.");
+        alert("Subentro registrato e dati aggiornati. Il quadro contabile storico non è stato caricato: verifica il dettaglio del trasferimento.");
       }
       return true;
     } catch (error) {
