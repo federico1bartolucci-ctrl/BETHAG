@@ -3,7 +3,13 @@ declare
  v_def text;
 begin
  v_def:=pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
- if position('v_open_unit_carryovers' in v_def)>0 then return; end if;
+ if position('v_open_unit_carryovers' in v_def)>0 then
+   if position('into v_open_unit_carryovers' in v_def)=0
+      or position('or v_open_unit_carryovers>0.005' in v_def)=0 then
+     raise exception 'Unit-level carryover guard is only partially installed';
+   end if;
+   return;
+ end if;
  v_def:=replace(v_def,'v_open_carryovers numeric; v_out_data jsonb;','v_open_carryovers numeric; v_open_unit_carryovers numeric; v_out_data jsonb;');
  if position('v_open_unit_carryovers numeric' in v_def)=0 then raise exception 'Could not add unit carryover guard declaration'; end if;
  v_def:=replace(v_def,
