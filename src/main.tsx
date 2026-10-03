@@ -9594,7 +9594,7 @@ function CondominiumDetails(
         x.publishedToPortal
     ).length;
 
-  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active);
+  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active && (member as any).position_status !== "In chiusura" && (member as any).position_status !== "Archiviato");
   const transferUnitKey = condominiumUnits.map((unit: CondominiumUnit) => unit.id).filter(Boolean).join("|");
   useEffect(() => {
     let cancelled = false;
