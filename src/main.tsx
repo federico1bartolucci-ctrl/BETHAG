@@ -2903,7 +2903,7 @@ setSessionRole(null);
       .eq("legacy_id", localMemberId)
       .maybeSingle();
     if (dbMemberError || !dbMember?.id) {
-      alert("ERRORE");
+      alert(dbMemberError?.message || "Profilo condòmino non trovato nel database.");
       return;
     }
     const { error } = await supabase.rpc("admin_approve_portal_registration", {
@@ -2911,7 +2911,16 @@ setSessionRole(null);
       p_member_id: dbMember.id,
     });
     if (error) {
-      alert("ERRORE");
+      const message = String(error.message || "");
+      if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
+        alert("Collegamento sospeso: correggi prima l'e-mail nell'anagrafica del profilo individuato, affinché coincida con l'e-mail verificata dell'account.");
+      } else if (message.includes("MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER")) {
+        alert("La richiesta presenta un'incongruenza: seleziona il profilo originariamente individuato e verifica l'anagrafica prima di autorizzare.");
+      } else if (message.includes("ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH")) {
+        alert("L'e-mail dell'account non risulta verificata o non coincide con quella della richiesta. L'accesso non è stato collegato.");
+      } else {
+        alert(message || "Impossibile autorizzare il collegamento del profilo.");
+      }
       return;
     }
     setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
@@ -8343,7 +8352,7 @@ function PortalRegistrationRequestsPanel({
               <small style={{display:"block"}}>E-mail registrata: {request.email}</small>
               {mismatch && (
                 <div className="notice" style={{marginTop:8}}>
-                  ⚠️ <b>Incongruenza e-mail:</b> il profilo individuato nell'anagrafica contiene un indirizzo e-mail diverso. Verifica se vuoi procedere comunque oppure modificare l'associazione.
+                  ⚠️ <b>Incongruenza e-mail:</b> per proteggere l'identità, il collegamento resta sospeso. Verifica che la richiesta appartenga al profilo individuato e correggi l'e-mail nell'anagrafica solo dopo averne accertato la correttezza.
                 </div>
               )}
               {!mismatch && request.condominium_name && (
@@ -8373,16 +8382,15 @@ function PortalRegistrationRequestsPanel({
                   const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
                   const memberId = select?.value || "";
                   if (!memberId) return;
-                  if (mismatch && !confirm("L'e-mail dell'account è diversa da quella presente nel profilo condòmino. Vuoi procedere comunque con questa associazione?")) return;
                   void onApprove(request.id, memberId);
                 }}
               >
-                {mismatch ? "Procedi comunque" : "Autorizza"}
+                {mismatch ? "Verifica e autorizza" : "Autorizza"}
               </button>
 
               {mismatch && (
                 <span className="muted-text">
-                  Per modificare l'associazione, seleziona un altro profilo dall'elenco.
+                  Non associare un profilo diverso per aggirare l'incongruenza: verifica prima identità ed e-mail.
                 </span>
               )}
             </div>
