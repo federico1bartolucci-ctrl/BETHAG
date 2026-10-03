@@ -1727,7 +1727,7 @@ function AccountingPage({
   async function savePayment(e: React.FormEvent) {
     e.preventDefault();
     const paymentAmount = Number(paymentForm.amount);
-    if (!supabase || !dbCondominiumId || !paymentInstallment || paymentInstallment.condominium_id !== dbCondominiumId || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+    if (!supabase || !dbCondominiumId || !paymentInstallment || paymentInstallment.condominium_id !== dbCondominiumId || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || !Number.isFinite(paymentAmount) || Math.round(paymentAmount * 100) <= 0) {
       setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
     const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
