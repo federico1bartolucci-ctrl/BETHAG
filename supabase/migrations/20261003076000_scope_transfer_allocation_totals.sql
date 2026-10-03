@@ -19,13 +19,7 @@ begin
     if v_sig like 'public.preview_%' or v_sig like 'private.confirm_%' then
       v_old := 'where a.member_id=p_outgoing_member_id';
       v_new := 'where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.member_id=p_outgoing_member_id';
-      -- Confirmation's extraordinary allocation predicate is already scoped by 0740;
-      -- this migration scopes only the remaining ordinary outgoing allocation read.
-      if v_sig like 'private.confirm_%' then
-        v_expected := 1;
-      else
-        v_expected := 2;
-      end if;
+      v_expected := 2;
     else
       v_old := 'where a.member_id=t.outgoing_member_id';
       v_new := 'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.outgoing_member_id';
