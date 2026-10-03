@@ -15,7 +15,9 @@ begin
       raise exception 'Transfer-close context declaration anchor missing or ambiguous';
     end if;
     v_def := replace(v_def,v_old,v_new);
+  end if;
 
+  if position('select t.workspace_id,t.condominium_id,t.unit_id,t.outgoing_member_id,t.status into v_workspace,v_condominium,v_unit,v_outgoing,v_transfer_status' in v_def)=0 then
     v_old := 'select t.workspace_id,t.outgoing_member_id,t.status into v_workspace,v_outgoing,v_transfer_status';
     v_new := 'select t.workspace_id,t.condominium_id,t.unit_id,t.outgoing_member_id,t.status into v_workspace,v_condominium,v_unit,v_outgoing,v_transfer_status';
     if length(v_def)-length(replace(v_def,v_old,'')) <> length(v_old) then
