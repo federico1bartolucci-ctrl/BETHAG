@@ -324,3 +324,8 @@ Strengthened `20261003071000_block_transfer_close_with_unassigned_installments.s
 ## Future installment preview/snapshot idempotence — 2026-10-03
 
 Hardened `20261003060000_expand_member_transfer_preview_installments.sql` and `20261003061000_preserve_future_installments_transfer_snapshot.sql`. Their already-present paths now require exactly one occurrence of each expected JSON key and verify the relevant outgoing-member, future-date, and outstanding-balance predicates before returning. Both migration files were fetched back from GitHub and their blob SHAs verified. These remain branch-only changes; no production migration, merge, deployment, or full QA/collaudo was performed.
+
+
+## Carryover and expense snapshot guards — 2026-10-03
+
+Hardened `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` to require exactly one snapshot key and one scoped query, rejecting an unscoped remnant and checking the residual-balance filter. Hardened `20261003072000_capture_transfer_unit_expenses.sql` to reject duplicate keys and require source, tenant, unit, direction, and date filters. Hardened `20261003074000_scope_extraordinary_transfer_allocations.sql` to reject duplicate scoped predicates and mixed scoped/unscoped states. All three files were fetched back from GitHub and their blob SHAs verified. Branch-only; no production migration, merge, deployment, or overall QA/collaudo performed.
