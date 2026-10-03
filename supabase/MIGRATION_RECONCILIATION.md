@@ -259,3 +259,8 @@ The first compact single-line anchor drafted for `20261003074000` did not match 
 ## Transfer installment tenant scoping — 2026-10-03
 
 Added forward migration `20261003075000_scope_transfer_installment_queries.sql`. Read-only inspection of production function definitions showed that installment reads in `preview_condominium_member_transfer` and `confirm_condominium_member_transfer` matched outgoing-member or unit-unassigned records without an explicit workspace/condominium predicate. The new migration scopes those matching installment predicates to `v_workspace` and `v_condominium`, with guards against mixed scoped/unscoped variants. It is branch-only and has not been executed on production; controlled database validation remains pending.
+
+
+## Transfer allocation tenant scoping — 2026-10-03
+
+Added forward migration `20261003076000_scope_transfer_allocation_totals.sql`. It scopes allocation reads in the transfer preview, confirmation snapshot, and accounting snapshot reader by workspace and condominium. The snapshot reader also scopes incoming-member allocation totals. The migration checks for missing anchors and mixed scoped/unscoped variants before replacing function definitions. Branch-only; not executed against production. A controlled database run is still required to validate exact function formatting, behavior, and preservation of function metadata.
