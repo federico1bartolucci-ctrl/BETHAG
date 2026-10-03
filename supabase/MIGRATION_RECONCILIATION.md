@@ -141,3 +141,18 @@ Nel backend, le PR #5 e #6 modificano entrambe la ricostruzione di `ownerMemberI
 La #9 contiene inoltre correzioni nella sincronizzazione: associa i lavori ai fornitori solo se entrambi i moduli sono abilitati, normalizza i nomi fornitore con una regex di spazi corretta e filtra attività/lavori con riferimenti a condomìni o fornitori non disponibili nel workspace. Queste modifiche vanno mantenute nel ramo integrato, perché non sono sostituti del flusso di subentro e possono prevenire riferimenti non risolvibili durante la sincronizzazione.
 
 **Esito di questa passata:** i diff applicativi sono stati esaminati per individuare responsabilità e sovrapposizioni; non è stata fatta una sostituzione integrale di `main.tsx` o `bethagBackend.ts`, perché cancellerebbe modifiche non correlate presenti nella #9 o introdurrebbe una delle due varianti di ownership senza una verifica eseguibile. Nessuna PR è stata unita e nessuna migrazione è stata eseguita sul database.
+
+
+## Verifica live Supabase — 2026-10-03
+
+L'ispezione read-only del progetto Supabase `tctcgptrsmvgajqjgnev` ha restituito 170 migrazioni registrate. La coda applicata comprende `20261002050900_fix_member_transfer_archived_column_check`, `20261002073557_tighten_resident_portal_identity_binding`, `20261002074251_fix_member_transfer_status_constraint`, `20261002074541_prevent_duplicate_confirmed_member_transfers`, `20261002110808_validate_transfer_outgoing_owner`, le tre migrazioni di identità/accesso della PR #9 (`20261003021711`, `20261003022110`, `20261003022133`) e `20261003030800`. Non risultano applicate le migrazioni della PR #6 `20261002074500_sync_unit_owner_refs_on_transfer`, `20261002130000_close_transfer_financial_cutoff`, né le due migrazioni di preview/snapshot `20261001110000` e `20261001113000`.
+
+### Schema live e funzione effettiva
+
+Le tabelle live `condominium_members`, `condominium_units`, `condominium_member_transfers`, `portal_access` e `portal_registration_requests` risultano presenti con RLS abilitata. `condominium_members` contiene `id uuid`, `legacy_id bigint`, `unit_id uuid`, `active boolean` e `data jsonb`; i metadati `current_owner` e `position_status` sono quindi gestiti nel JSON e non come colonne strutturate. `condominium_units` conserva i riferimenti legacy nell'oggetto JSON `data`; la tabella trasferimenti dispone di stati Bozza/Confermato/Chiuso/Annullato e date di chiusura.
+
+La definizione live di `private.confirm_condominium_member_transfer` è ancora quella che rifiuta un trasferimento se esiste un altro proprietario corrente attivo sulla stessa unità (`ACTIVE_INCOMING_OWNER_ALREADY_PRESENT`). La funzione pubblica impedisce inoltre l'invio diretto di `p_incoming_user_id` non verificato, coerentemente con la migrazione di verifica identità già applicata. La funzione live di chiusura blocca il trasferimento finché risultano aperte rate, allocazioni o partite di riporto del cedente, senza applicare ancora il cutoff per data previsto dalla migrazione #6.
+
+### Esito operativo
+
+Questa verifica conferma che il ramo #9 contiene già alcune protezioni applicate in produzione, ma non completa la logica RPC del subentro e la riconciliazione contabile prevista dalla #6. Non applicare in produzione la migrazione #6 isolatamente: la sua funzione di conferma deve essere integrata e verificata insieme alla protezione identità live, alle regole per i comproprietari e alla sincronizzazione degli `ownerMemberIds` legacy. Restano necessarie prove mirate su comproprietari, ex titolari archiviati, identità entranti non verificate, unità senza legacy ID e partite contabili senza data certa. Nessun DDL è stato eseguito in questa verifica.
