@@ -319,3 +319,8 @@ Strengthened `20261003077000_scope_preview_extraordinary_allocations.sql` so its
 ## Close guard idempotence hardening — 2026-10-03
 
 Strengthened `20261003071000_block_transfer_close_with_unassigned_installments.sql`: the already-installed path now verifies exactly one declaration, the complete unit-installment query and condition, and rejects duplicates or coexistence with the unscoped unit-carryover anchor. The migration was fetched back from GitHub and its blob hash verified. This remains branch-only; no production migration or overall QA/collaudo was run.
+
+
+## Future installment preview/snapshot idempotence — 2026-10-03
+
+Hardened `20261003060000_expand_member_transfer_preview_installments.sql` and `20261003061000_preserve_future_installments_transfer_snapshot.sql`. Their already-present paths now require exactly one occurrence of each expected JSON key and verify the relevant outgoing-member, future-date, and outstanding-balance predicates before returning. Both migration files were fetched back from GitHub and their blob SHAs verified. These remain branch-only changes; no production migration, merge, deployment, or full QA/collaudo was performed.
