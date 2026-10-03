@@ -8264,7 +8264,6 @@ function PortalRegistrationRequestsPanel({
           member.active &&
           `${member.firstName} ${member.lastName}`.trim().toLowerCase() === request.full_name.trim().toLowerCase()
         );
-        const allMembers = condominiumMembers.filter((member) => member.active);
         const candidates = request.status === "email_mismatch"
           ? nameCandidates
           : condominiumMembers.filter((member) =>
