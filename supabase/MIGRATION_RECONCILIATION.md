@@ -359,3 +359,8 @@ Hardened `20261003076000_scope_transfer_allocation_totals.sql`: the already-scop
 ## Repair migration 0500 SQL construction — 2026-10-03
 
 Repaired `20261003050000_preserve_transfer_extraordinary_allocations.sql`: reconstructed the complete replacement string for the immutable extraordinary-allocation snapshot, restored the scoped allocation/ledger join and its tenant, condominium, expense-type, deliberation-date, and due-date filters, and retained a fail-closed idempotence path with unique key/source/scope checks. The updated migration was fetched back from GitHub and its exact content and blob SHA verified. This is a source-level correction only; SQL execution against a database has not been claimed, production remains unchanged, and full QA/collaudo remains deferred.
+
+
+## Unit expense scope idempotence — 2026-10-03
+
+Hardened `20261003073000_scope_transfer_unit_expenses.sql`: the already-scoped path now requires exactly one scoped predicate per target function and rejects any remaining unscoped variant. The file was fetched back from GitHub and the resulting blob SHA verified. This is a branch-only source change; no production DDL or data changes and no full QA/collaudo were performed.
