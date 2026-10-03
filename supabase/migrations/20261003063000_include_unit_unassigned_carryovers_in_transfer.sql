@@ -11,12 +11,21 @@ begin
     'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'
   ] loop
     v_def := pg_get_functiondef(v_sig::regprocedure);
-    if position(v_anchor in v_def)=0 then
-      if position('''unit_unassigned_carryovers''' in v_def)>0
-         and position('c.workspace_id=v_workspace and c.condominium_id=v_condominium and c.unit_id=p_unit_id' in v_def)>0 then
+    if position('''unit_unassigned_carryovers''' in v_def)>0 then
+      if position('c.workspace_id=v_workspace and c.condominium_id=v_condominium and c.unit_id=p_unit_id' in v_def)>0 then
         continue;
       end if;
-      raise exception 'Transfer snapshot insertion anchor missing or carryover scope incomplete for %',v_sig;
+      if position('from public.condominium_fiscal_carryovers c where c.unit_id=p_unit_id and c.member_id is null' in v_def)=0 then
+        raise exception 'Existing unit carryover snapshot query has an unexpected shape for %',v_sig;
+      end if;
+      v_def := replace(v_def,
+        'from public.condominium_fiscal_carryovers c where c.unit_id=p_unit_id and c.member_id is null',
+        'from public.condominium_fiscal_carryovers c where c.workspace_id=v_workspace and c.condominium_id=v_condominium and c.unit_id=p_unit_id and c.member_id is null');
+      execute v_def;
+      continue;
+    end if;
+    if position(v_anchor in v_def)=0 then
+      raise exception 'Transfer snapshot insertion anchor missing for %',v_sig;
     end if;
     v_def := replace(v_def,v_anchor,v_insert||v_anchor);
     execute v_def;
