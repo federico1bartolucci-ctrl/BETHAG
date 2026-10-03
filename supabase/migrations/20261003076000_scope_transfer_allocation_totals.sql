@@ -19,18 +19,24 @@ begin
       v_old := 'where a.member_id=t.outgoing_member_id';
       v_new := 'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.outgoing_member_id';
     end if;
-    if position(v_new in v_def)>0 then
-      if position(v_old in v_def)>0 then
-        raise exception 'Mixed scoped and unscoped allocation reads remain in %',v_sig;
+    if position(v_new in v_def)=0 then
+      if position(v_old in v_def)=0 then
+        raise exception 'Allocation total anchor missing in %',v_sig;
       end if;
-      continue;
+      v_def := replace(v_def,v_old,v_new);
+    elsif position(v_old in v_def)>0 then
+      raise exception 'Mixed scoped and unscoped allocation reads remain in %',v_sig;
     end if;
-    if position(v_old in v_def)=0 then
-      raise exception 'Allocation total anchor missing in %',v_sig;
+    if v_sig='public.get_member_transfer_accounting_snapshot(uuid)' then
+      if position('where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id' in v_def)=0 then
+        if position('where a.member_id=t.incoming_member_id' in v_def)=0 then
+          raise exception 'Incoming allocation anchor missing in snapshot reader';
+        end if;
+        v_def := replace(v_def,'where a.member_id=t.incoming_member_id','where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id');
+      end if;
     end if;
-    v_def := replace(v_def,v_old,v_new);
-    if position(v_new in v_def)=0 or position(v_old in v_def)>0 then
-      raise exception 'Could not fully scope allocation reads in %',v_sig;
+    if position(v_old in v_def)>0 then
+      raise exception 'Unscoped allocation reads remain in %',v_sig;
     end if;
     execute v_def;
   end loop;
