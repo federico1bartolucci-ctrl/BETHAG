@@ -451,3 +451,7 @@ Sequential review showed 0500 installs the extraordinary-allocation snapshot pre
 ## Unit carryover close guard exact-query validation — 2026-10-04
 
 Hardened `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql`: its idempotent path now validates the complete workspace-, condominium-, and unit-scoped unit-carryover query, rather than checking only for the `into` clause. The installation path reuses the same canonical query string. The migration source was fetched back from the branch and verified. This is static source validation only; no SQL execution, production mutation, merge, deployment, or full QA/collaudo was performed.
+
+## Allocation criteria unit-join tenant scoping — 2026-10-04
+
+Hardened `20260930110001_allocation_criteria_scope.sql` by constraining each join from millesimal values to condominium units by both workspace and condominium, in addition to unit ID. This keeps eligible-unit counts, quota totals, and generated allocation rows aligned to the requested tenant. The updated migration was fetched back from the feature branch and exact content equality verified. Static source review only; no SQL execution, production mutation, merge, deployment, or full QA/collaudo.
