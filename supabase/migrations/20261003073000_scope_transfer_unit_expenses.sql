@@ -13,11 +13,11 @@ begin
   ] loop
     v_def := pg_get_functiondef(v_sig::regprocedure);
     if v_sig like 'public.preview_%' then
-      v_old := 'where l.unit_id=p_unit_id and l.condominium_id=v_condominium and (';
-      v_new := 'where l.unit_id=p_unit_id and l.condominium_id=v_condominium and l.workspace_id=v_workspace and l.direction=''Uscita'' and (';
+      v_old := 'where l.unit_id=p_unit_id and l.condominium_id=v_condominium';
+      v_new := 'where l.unit_id=p_unit_id and l.condominium_id=v_condominium and l.workspace_id=v_workspace and l.direction=''Uscita''';
     else
-      v_old := 'where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id and (';
-      v_new := 'where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id and l.workspace_id=t.workspace_id and l.direction=''Uscita'' and (';
+      v_old := 'where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id';
+      v_new := 'where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id and l.workspace_id=t.workspace_id and l.direction=''Uscita''';
     end if;
     if position(v_new in v_def)>0 then
       continue;
