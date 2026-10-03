@@ -237,3 +237,10 @@ A subsequent read-only inspection of the live function definitions confirmed:
 - `private.confirm_condominium_member_transfer(...)` does not yet include the `unit_expenses` snapshot key proposed in `20261003072000`.
 
 These are observed differences between the live function definitions and the pending branch changes, not evidence that the pending migrations have executed successfully. Inspection was read-only; production schema and migration history were not changed. Content-level and dependency review remains pending before deployment eligibility can be determined.
+
+
+## Transfer migration anchor and function metadata check — 2026-10-03
+
+A read-only comparison against current production function definitions confirmed that the exact insertion anchors expected by the pending migrations are present: the accounting-snapshot insertion point in `private.confirm_condominium_member_transfer(...)`, the unit-ledger query in `public.preview_condominium_member_transfer(...)`, and the unit-ledger query in `public.get_member_transfer_accounting_snapshot(...)`. The confirmation function is currently `SECURITY DEFINER` with an empty search path; the two public readers are currently not `SECURITY DEFINER` and use a public search path. The proposed changes use `CREATE OR REPLACE` through `pg_get_functiondef`, so this metadata must be preserved and rechecked after migration in a controlled non-production environment.
+
+The date and direction predicates in the unit-expense snapshot proposal are aligned conceptually across confirmation, preview, and snapshot reader: outgoing expenses are selected when the entry date or deliberation date is on/before the transfer date, and direction is restricted to `Uscita`. Exact anchor presence is verified; runtime behavior, row-level authorization behavior, and full migration execution are not yet tested. No production changes were made.
