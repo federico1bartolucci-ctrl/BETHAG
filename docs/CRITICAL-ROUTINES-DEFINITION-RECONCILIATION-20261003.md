@@ -144,3 +144,10 @@ La lettura integrale dei file conferma inoltre che `20261001094000_index_transfe
 Questa dipendenza è quindi tripla: tabella, colonna `closed_by` e routine preesistenti. Non è correggibile rendendo idempotente il solo `CREATE INDEX`.
 
 **Intervento di riconciliazione registrato:** la futura sequenza canonica dovrà avere un bootstrap autosufficiente per la tabella trasferimenti (colonne, FK e check finali, incluso `Chiuso`), seguito dalle definizioni complete delle routine e dagli indici. Le migrazioni storiche già distribuite non vanno riscritte retroattivamente: per il percorso esistente occorre una nuova migrazione di riparazione compatibile con lo stato registrato; per installazioni nuove va preparato un percorso baseline coerente, senza eseguire in ordine file che dipendono da oggetti non ancora creati. Nessuna scrittura è stata effettuata sul database.
+
+
+### Riscontro catalogo Production: tabella dei subentri
+
+La verifica read-only del catalogo Production conferma che `public.condominium_member_transfers` contiene le 16 colonne attese dalla sequenza esaminata, incluse `closed_at` e `closed_by`. Sono presenti la FK `closed_by` verso `auth.users(id)`, il vincolo di stato finale con `Bozza`, `Confermato`, `Chiuso`, `Annullato` e gli indici attesi, incluso quello su `closed_by` e l'indice univoco parziale per unità/data sugli stati confermati o chiusi.
+
+Non risultano nel catalogo live né la constraint duplicata `condominium_member_transfers_status_ck` né una colonna mancante tra quelle elencate. Il difetto precedentemente individuato riguarda quindi la riproducibilità della catena storica da database vuoto, non la definizione attualmente osservata in Production. Questo riscontro non certifica da solo la correttezza di RLS, trigger, routine o dati preesistenti.
