@@ -1690,7 +1690,9 @@ function AccountingPage({
     if(!supabase||!dbCondominiumId||!consumptionExpenseForm.ledger_entry_id||!consumptionExpenseForm.fiscal_year_id||!consumptionExpenseForm.service_type.trim()){setError("Indica spesa, esercizio e servizio.");return;}
     const expense=scopedLedger.find(e=>e.id===consumptionExpenseForm.ledger_entry_id);
     if(!expense||expense.direction!=="Uscita"){setError("Seleziona una spesa di uscita.");return;}
-    if(!guardOpenFiscalYear(expense.fiscal_year_id||consumptionExpenseForm.fiscal_year_id))return;
+    if(!expense.fiscal_year_id||expense.fiscal_year_id!==consumptionExpenseForm.fiscal_year_id){setError("La spesa e i dati di consumo devono appartenere allo stesso esercizio contabile.");return;}
+    if(!scopedYears.some(y=>y.id===consumptionExpenseForm.fiscal_year_id&&y.condominium_id===dbCondominiumId)){setError("L'esercizio selezionato non appartiene al condominio.");return;}
+    if(!guardOpenFiscalYear(expense.fiscal_year_id))return;
     const rows=scopedConsumptionReadings.filter(r=>r.fiscal_year_id===consumptionExpenseForm.fiscal_year_id&&r.service_type.toLowerCase().trim()===consumptionExpenseForm.service_type.toLowerCase().trim());
     if(!rows.length){setError("Non ci sono dati di consumo per il servizio selezionato.");return;}
     if(!window.confirm("Generare il riparto automatico della spesa usando i dati di consumo?"))return;
@@ -1703,6 +1705,7 @@ function AccountingPage({
     e.preventDefault();
     if(!supabase||!dbCondominiumId||!allocationRuleForm.name.trim()||!allocationRuleForm.allocation_table_id){setError("Indica nome e tabella del criterio automatico.");return;}
     if(!allocationRuleForm.expense_type.trim()&&!allocationRuleForm.category.trim()){setError("Indica almeno il tipo di spesa o la categoria.");return;}
+    if(!scopedMillesimalTables.some(t=>t.id===allocationRuleForm.allocation_table_id&&t.condominium_id===dbCondominiumId)){setError("La tabella millesimale deve appartenere al condominio selezionato.");return;}
     setSaving(true);setError("");
     try{
       const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,name:allocationRuleForm.name.trim(),expense_type:allocationRuleForm.expense_type.trim()||null,category:allocationRuleForm.category.trim()||null,allocation_table_id:allocationRuleForm.allocation_table_id,priority:Math.max(0,Math.floor(Number(allocationRuleForm.priority)||100)),active:allocationRuleForm.active,notes:allocationRuleForm.notes.trim()};
@@ -1746,6 +1749,8 @@ function AccountingPage({
     if (!supabase || !dbCondominiumId || !paymentInstallment || paymentInstallment.condominium_id !== dbCondominiumId || !guardOpenFiscalYear(paymentInstallment.fiscal_year_id) || !Number.isFinite(paymentAmount) || Math.round(paymentAmount * 100) <= 0) {
       setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
+    if (!hasCentPrecision(paymentAmount)) { setError("L'importo del pagamento deve essere espresso in centesimi."); return; }
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(paymentForm.payment_date) || !Number.isFinite(Date.parse(paymentForm.payment_date)) || new Date(paymentForm.payment_date).toISOString().slice(0,10)!==paymentForm.payment_date) { setError("Inserisci una data di pagamento valida."); return; }
     const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
     if(paymentAmount > residual + 0.005){
       setError("Il pagamento supera il residuo della rata di " + money(residual) + ". Registrare un importo non superiore al residuo; un'eventuale eccedenza va gestita separatamente come credito.");
