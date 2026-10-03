@@ -220,3 +220,12 @@ La correzione forward-only da preparare deve:
 7. Aggiungere test isolati per rate personali aperte/chiuse, rate unit-level aperte/chiuse, workspace o condominio non corrispondenti, unità nulla/inesistente, importi residui entro e oltre la tolleranza di 0,005 e tentativo concorrente di chiusura/modifica.
 
 Questo è il requisito SQL e funzionale ricavato dallo schema live, non una migrazione già implementata o applicata. La scrittura di una migrazione eseguibile resta non effettuata; nessuna modifica a Production è stata eseguita.
+
+
+### Disallineamento rilevato tra test RLS e ACL live (03/10/2026)
+
+Il file versionato `supabase/tests/rls_policies.test.sql` contiene un'asserzione che richiede EXECUTE a `authenticated` per sette helper nello schema `private` (`can_access_condominium`, `can_access_workspace_module`, `can_access_resident_condominium`, `can_access_resident_condominium_module`, `is_workspace_admin`, `is_workspace_member`, `can_manage_workspace_module`). La lettura live precedente di `pg_proc.proacl/aclexplode` per gli helper privati delle procedure di subentro ha invece rilevato EXECUTE al solo proprietario `postgres`. Si tratta di insiemi di funzioni distinti: l'audit ACL specifico dei sette helper RLS deve essere ripetuto sul catalogo prima di concludere che il test contraddica Production.
+
+Se il catalogo conferma assenza di EXECUTE per `authenticated`, verificare una sessione autenticata che legge le tabelle le cui policy chiamano tali helper: una funzione invocata direttamente dalla policy richiede il privilegio EXECUTE al ruolo invocante, anche se la funzione è `SECURITY DEFINER`. La correzione va quindi decisa in base alle dipendenze effettive e al modello di esposizione: concedere EXECUTE solo al ruolo applicativo strettamente necessario, mantenere `search_path` sicuro e validare che gli helper non espongano dati autonomamente; in alternativa rifattorizzare le policy in modo compatibile e testato. Non modificare il test per farlo passare semplicemente invertendo l'aspettativa e non applicare grant in Production senza revisione esplicita.
+
+La migrazione di stato `20261003121000_reconcile_member_transfer_status_constraint.sql` è presente nella branch e rifiuta correttamente stati nulli o inattesi prima di sostituire i due possibili nomi del vincolo. Non risolve tuttavia l'ordine di bootstrap storico né dimostra che il replay pulito delle migrazioni sia eseguibile. Questi rimangono controlli separati e bloccanti per un rilascio sicuro.
