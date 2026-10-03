@@ -9,7 +9,7 @@ begin
   v_def := pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
 
   if position('v_open_unit_allocations' in v_def)>0 then
-    if position('a.member_id is null and a.unit_id=v_unit' in v_def)>0
+    if position('a.unit_id=v_unit and a.member_id is null' in v_def)>0
        and position('or v_open_unit_allocations>0.005' in v_def)>0
        and position('a.workspace_id=v_workspace and a.condominium_id=v_condominium' in v_def)>0 then
       return;
@@ -38,7 +38,7 @@ begin
   end if;
   v_def := replace(v_def,v_old,v_new);
 
-  if position('a.member_id is null and a.unit_id=v_unit' in v_def)=0
+  if position('a.unit_id=v_unit and a.member_id is null' in v_def)=0
      or position('v_open_unit_allocations>0.005' in v_def)=0 then
     raise exception 'Unit-level allocation close guard verification failed';
   end if;
