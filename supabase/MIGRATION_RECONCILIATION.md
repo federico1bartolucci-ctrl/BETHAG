@@ -334,3 +334,8 @@ Hardened `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` to 
 ## Captured accounting snapshot idempotence — 2026-10-03
 
 Hardened `20261003052000_expose_captured_transfer_snapshot.sql`: the already-installed path now requires exactly one captured-snapshot JSON key and exactly one expected source expression, rejecting missing, duplicate, or malformed states. The updated migration was fetched back from GitHub and its blob SHA verified. Branch-only change; no production migration, merge, deployment, or overall QA/collaudo was performed.
+
+
+## Extraordinary allocation snapshot idempotence — 2026-10-03
+
+Hardened `20261003050000_preserve_transfer_extraordinary_allocations.sql`: the already-present snapshot path now verifies a unique JSON key and the expected allocation/ledger workspace and condominium filters plus extraordinary-expense type. The updated migration was fetched back from GitHub and its blob SHA verified. This is a branch-only safeguard; no production migration, merge, deployment, or overall QA/collaudo was performed.
