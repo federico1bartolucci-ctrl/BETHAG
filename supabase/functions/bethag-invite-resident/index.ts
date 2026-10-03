@@ -131,6 +131,25 @@ Deno.serve(async (req: Request) => {
     let targetUserId = member.user_id || null;
     let invited = false;
 
+    // A pre-linked identity must still match the member's canonical address
+    // and have a verified email; never silently preserve a stale association.
+    if (targetUserId) {
+      const { data: linkedUserData, error: linkedUserError } =
+        await adminClient.auth.admin.getUserById(targetUserId);
+      if (linkedUserError) throw linkedUserError;
+      const linkedUser = linkedUserData.user;
+      if (
+        !linkedUser ||
+        linkedUser.email?.trim().toLowerCase() !== email ||
+        !linkedUser.email_confirmed_at
+      ) {
+        return json({
+          error: "Il profilo risulta già collegato a un account non verificato o con e-mail diversa. Verifica l'identità e correggi l'associazione prima di inviare un nuovo invito.",
+          code: "LINKED_ACCOUNT_VERIFICATION_REQUIRED",
+        }, 409);
+      }
+    }
+
     if (!targetUserId) {
       const { data: invitedUser, error: inviteError } =
         await adminClient.auth.admin.inviteUserByEmail(email, {
@@ -147,13 +166,30 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          // listUsers is paginated; search until the exact address is found or
+          // the API returns a short page. A first-page-only lookup can turn a
+          // recoverable retry into a false "user not found" once the workspace
+          // has more than 1,000 Auth users.
+          let existingUser: (typeof invitedUser.user) | null = null;
+          let page = 1;
+          const perPage = 1000;
+          while (!existingUser) {
+            const { data: users, error: usersError } =
+              await adminClient.auth.admin.listUsers({ page, perPage });
+            if (usersError) throw usersError;
+            existingUser = users.users.find(
+              (candidate) => candidate.email?.trim().toLowerCase() === email
+            ) ?? null;
+            if (existingUser || users.users.length < perPage) break;
+            page += 1;
+          }
           if (!existingUser) throw inviteError;
+          if (!existingUser.email_confirmed_at) {
+            return json({
+              error: "Esiste già un account con questa e-mail, ma l'indirizzo non risulta verificato. L'utente deve completare la verifica dell'account prima che l'amministratore possa collegarlo al profilo condominiale.",
+              code: "EXISTING_ACCOUNT_EMAIL_NOT_VERIFIED",
+            }, 409);
+          }
           targetUserId = existingUser.id;
         } else {
           throw inviteError;
@@ -230,6 +266,8 @@ Deno.serve(async (req: Request) => {
         user_metadata: {
           full_name: name,
           bethag_role: "resident",
+          bethag_invited: true,
+          bethag_password_set: false,
           workspace_id: workspaceId,
         },
       });
