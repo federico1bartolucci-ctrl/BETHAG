@@ -304,3 +304,8 @@ These changes only update SQL files in the working branch. No production migrati
 Corrected 20261003062000_include_unit_unassigned_installments_in_transfer.sql so it performs only the semantic expansion from member-assigned installments to member-assigned plus unit-unassigned installments. Workspace and condominium filtering is deliberately deferred to 20261003075000_scope_transfer_installment_queries.sql. This preserves a valid dependency chain: 0620 introduces the expanded predicate, and 0750 scopes that exact predicate. Previously, 0620 embedded tenant filters itself, which made the subsequent 0750 anchor impossible to match in sequence.
 
 Also corrected the declaration anchor in 20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql to target the unique v_open_carryovers numeric; declaration independently of other variables in the function's DECLARE list. The revised 0620 and 0640 files were fetched back from GitHub and their blob hashes verified. These corrections are branch-only; no production migration was run.
+
+
+## Incoming allocation mixed-state guard — 2026-10-03
+
+Hardened `20261003076000_scope_transfer_allocation_totals.sql`: the incoming-member allocation predicate in the accounting snapshot reader now explicitly rejects a mixed state containing both scoped and unscoped predicates, and requires exactly one anchor when the unscoped form remains. The revised migration was fetched back from GitHub and its blob SHA verified. This remains a branch-only SQL change; no production migration, overall QA, or merge was performed.
