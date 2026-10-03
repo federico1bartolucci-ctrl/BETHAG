@@ -441,3 +441,8 @@ A deeper comparison against the live `private.confirm_condominium_member_transfe
 ## Follow-up correction: ordered partial allocation scope — 2026-10-04
 
 The prior 0760 count adjustment alone was insufficient: because 0740 scopes the extraordinary confirmation predicate before 0760, the function intentionally contains one scoped and one unscoped outgoing allocation predicate at that intermediate point. Updated 0760 to recognize that exact state, scope the remaining ordinary predicate, and then require two scoped predicates; unexpected counts or mixed states still stop the migration. This replaces the earlier simplified occurrence-count logic. No SQL was executed against Supabase.
+
+
+## Formatting-independent validation for 0740 — 2026-10-04
+
+Sequential review showed 0500 installs the extraordinary-allocation snapshot predicate as a multiline SQL fragment, while 0740's idempotence check required a single-line byte-for-byte match. Updated 0740 to recognize the existing snapshot key and validate its source, allocation/ledger tenant predicates, type, and date filters independently of whitespace. This avoids a false migration stop after 0500 while retaining fail-closed checks. Verified the changed source was saved to the branch; no database migration was run.
