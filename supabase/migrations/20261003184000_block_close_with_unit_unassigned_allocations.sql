@@ -11,7 +11,8 @@ begin
   if position('v_open_unit_allocations' in v_def)>0 then
     if position('a.unit_id=v_unit and a.member_id is null' in v_def)>0
        and position('or v_open_unit_allocations>0.005' in v_def)>0
-       and position('a.workspace_id=v_workspace and a.condominium_id=v_condominium' in v_def)>0 then
+       and position('a.workspace_id=v_workspace and a.condominium_id=v_condominium' in v_def)>0
+       and position('a.amount-a.paid_amount>0.005' in v_def)>0 then
       return;
     end if;
     raise exception 'Partial unit-allocation close guard detected; refusing to patch';
