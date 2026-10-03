@@ -441,29 +441,29 @@ async function syncBackendStateNow(
   }
 
   const rowsByTable: Array<[string, any[]]> = [
-    canSyncModule("documenti") ? ["documents", (state.documents ?? []).map((item: any) => ({
+    canSyncModule("documenti") ? ["documents", (state.documents ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.name, category: item.category, status: item.publication,
       file_path: item.storagePath ?? null,
       data: item,
     }))] : null,
-    canSyncModule("scadenze") ? ["deadlines", (state.deadlines ?? []).map((item: any) => ({
+    canSyncModule("scadenze") ? ["deadlines", (state.deadlines ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, due_date: item.dueDate || null, status: item.status, data: item,
     }))] : null,
-    canSyncModule("assemblee") ? ["assemblies", (state.assemblies ?? []).map((item: any) => ({
+    canSyncModule("assemblee") ? ["assemblies", (state.assemblies ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, assembly_date: item.date ? new Date(item.date).toISOString() : null, status: item.status, data: item,
     }))] : null,
-    canSyncModule("fornitori") ? ["suppliers", (state.suppliers ?? []).map((item: any) => ({
+    canSyncModule("fornitori") ? ["suppliers", (state.suppliers ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       name: item.name, category: item.service, data: item,
     }))] : null,
-    canSyncModule("attivita") ? ["activities", (state.activities ?? []).map((item: any) => ({
+    canSyncModule("attivita") ? ["activities", (state.activities ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null, status: item.status, data: item,
     }))] : null,
-    canSyncModule("comunicazioni") ? ["communications", (state.communications ?? []).map((item: any) => ({
+    canSyncModule("comunicazioni") ? ["communications", (state.communications ?? []).filter((item: any) => !item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
     }))] : null,
