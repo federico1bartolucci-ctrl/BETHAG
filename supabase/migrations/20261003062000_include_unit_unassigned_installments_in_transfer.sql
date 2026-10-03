@@ -5,7 +5,7 @@ declare v_def text; v_old text; v_new text;
 begin
   v_def := pg_get_functiondef('public.preview_condominium_member_transfer(uuid,uuid,date)'::regprocedure);
   v_old := 'where i.member_id=p_outgoing_member_id';
-  v_new := 'where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id))';
+  v_new := 'where i.workspace_id=v_workspace and i.condominium_id=v_condominium and (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id))';
   if position(v_old in v_def)=0 then
     if position(v_new in v_def)>0 and position('''assignment_scope''' in v_def)>0 then
       null;
