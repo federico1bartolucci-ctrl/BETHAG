@@ -164,3 +164,18 @@ Dalla lettura integrale delle migrazioni successive emergono rischi di replay ag
 **Correzione di progetto registrata:** evitare ulteriori patch basate su sostituzioni di frammenti per le routine di trasferimento. La sequenza riconciliata dovrà installare definizioni complete e versionate delle funzioni di preview, conferma e chiusura, preservando esplicitamente le verifiche di autorizzazione, blocco per unità, controllo del proprietario uscente e snapshot contabile. Prima di preparare una migrazione incrementale per ambienti già aggiornati, va confrontata la definizione effettiva di ogni ambiente e gestita la divergenza in modo esplicito; non è sicuro applicare alla cieca una riscrittura generica.
 
 Questa è un'analisi statica dei file e non prova che tali sostituzioni abbiano danneggiato le routine in Production: le definizioni live osservate devono restare il riferimento per il percorso di riparazione. Nessuna DDL o modifica dei dati è stata eseguita.
+
+
+## Recupero degli errori reali nei branch QA — 2026-10-03
+
+Lettura read-only dei log PostgreSQL dei due branch QA ha permesso di recuperare errori concreti, non soltanto lo stato generico `MIGRATIONS_FAILED`:
+
+- `bethag-continuity-qa` (`srkucrdcoswlozifvztr`): il 2026-10-02 11:52:18 UTC una migrazione ha eseguito un `REVOKE` che include `public.portal_access`, ma la relazione non esiste ancora (`SQLSTATE 42P01`). Questo conferma un problema di dipendenza/ordine rispetto alla creazione della tabella, non un difetto della tabella presente in Production.
+- `bethag-member-transfer-qa` (`gcorwfvnslnehcxmtixn`): il 2026-10-02 05:55:03 UTC si ripete lo stesso errore `public.portal_access does not exist` durante `REVOKE`; alle 05:58:32 UTC un altro `REVOKE` fallisce per la stessa ragione. Alle 11:52:13 UTC una `CREATE POLICY` fallisce perché la policy `managers read portal registration requests` esiste già (`SQLSTATE 42710`).
+
+### Implicazioni operative
+
+1. La catena di migrazioni usata per inizializzare i branch non è idempotente rispetto allo stato realmente raggiunto: almeno un `REVOKE` assume l'esistenza anticipata di `portal_access`; almeno una `CREATE POLICY` non gestisce la policy già presente.
+2. L'errore di relazione mancante va corretto nella sequenza di bootstrap/migrazioni del branch (creazione/garanzia dell'oggetto prima dei grant), non con un `REVOKE` cieco o una modifica al database Production.
+3. La policy richiede una migrazione compatibile che controlli/rimuova la policy preesistente o usi una procedura condizionale supportata da PostgreSQL, dopo aver confrontato espressione e ruoli della policy effettiva. Non sostituire semplicemente con `DROP POLICY` senza verificare il comportamento previsto.
+4. I log restituiscono più errori ma non stabiliscono da soli l'intera sequenza di migrazioni né quale sia il primo errore fatale per ciascun branch. Non sono stati eseguiti reset, rebase, replay o DDL; QA complessivo resta rinviato.
