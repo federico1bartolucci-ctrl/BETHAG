@@ -74,7 +74,7 @@ begin
   if v_unit_count=0 then raise exception 'Il criterio di riparto non contiene unità eleggibili'; end if;
 
   v_value_count := (select count(*) from public.condominium_millesimal_values v
-    join public.condominium_units u on u.id=v.unit_id
+    join public.condominium_units u on u.id=v.unit_id and u.workspace_id=p_workspace_id and u.condominium_id=p_condominium_id
     where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id and v.table_id=p_table_id
       and case
         when v_table.scope_mode='all' then true
@@ -90,7 +90,7 @@ begin
   end if;
 
   v_total := (select coalesce(sum(v.value),0) from public.condominium_millesimal_values v
-    join public.condominium_units u on u.id=v.unit_id
+    join public.condominium_units u on u.id=v.unit_id and u.workspace_id=p_workspace_id and u.condominium_id=p_condominium_id
     where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id and v.table_id=p_table_id
       and v.excluded=false and v.value>0
       and case
@@ -116,7 +116,7 @@ begin
     select v.unit_id eligible_unit_id,v.value::numeric eligible_millesimi,
            v_expense*v.value::numeric/v_total exact_amount
     from public.condominium_millesimal_values v
-    join public.condominium_units u on u.id=v.unit_id
+    join public.condominium_units u on u.id=v.unit_id and u.workspace_id=p_workspace_id and u.condominium_id=p_condominium_id
     where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id
       and v.table_id=p_table_id and v.excluded=false and v.value>0
       and case
