@@ -131,6 +131,25 @@ Deno.serve(async (req: Request) => {
     let targetUserId = member.user_id || null;
     let invited = false;
 
+    // A pre-linked identity must still match the member's canonical address
+    // and have a verified email; never silently preserve a stale association.
+    if (targetUserId) {
+      const { data: linkedUserData, error: linkedUserError } =
+        await adminClient.auth.admin.getUserById(targetUserId);
+      if (linkedUserError) throw linkedUserError;
+      const linkedUser = linkedUserData.user;
+      if (
+        !linkedUser ||
+        linkedUser.email?.trim().toLowerCase() !== email ||
+        !linkedUser.email_confirmed_at
+      ) {
+        return json({
+          error: "Il profilo risulta già collegato a un account non verificato o con e-mail diversa. Verifica l'identità e correggi l'associazione prima di inviare un nuovo invito.",
+          code: "LINKED_ACCOUNT_VERIFICATION_REQUIRED",
+        }, 409);
+      }
+    }
+
     if (!targetUserId) {
       const { data: invitedUser, error: inviteError } =
         await adminClient.auth.admin.inviteUserByEmail(email, {
