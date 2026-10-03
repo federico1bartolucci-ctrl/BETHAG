@@ -9,7 +9,10 @@ declare
 begin
   v_definition := pg_get_functiondef('public.get_member_transfer_accounting_snapshot(uuid)'::regprocedure);
   if position('captured_accounting_snapshot' in v_definition)>0 then
-    raise notice 'Captured snapshot is already exposed';
+    if position('coalesce(t.data->''accounting_snapshot'',''{}''::jsonb)' in v_definition)=0 then
+      raise exception 'Captured snapshot key exists but is not sourced from transfer data.accounting_snapshot';
+    end if;
+    raise notice 'Captured snapshot is already exposed from the expected source';
     return;
   end if;
   if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
