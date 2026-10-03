@@ -39,6 +39,6 @@ $function$;
 revoke execute on function public.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)
   from public, anon;
 grant execute on function public.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)
-  to authenticated, service_role;
+  to authenticated;
 revoke execute on function private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)
-  from public, anon, authenticated;
+  from public, anon, authenticated, service_role;
