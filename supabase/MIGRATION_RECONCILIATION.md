@@ -329,3 +329,8 @@ Hardened `20261003060000_expand_member_transfer_preview_installments.sql` and `2
 ## Carryover and expense snapshot guards — 2026-10-03
 
 Hardened `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` to require exactly one snapshot key and one scoped query, rejecting an unscoped remnant and checking the residual-balance filter. Hardened `20261003072000_capture_transfer_unit_expenses.sql` to reject duplicate keys and require source, tenant, unit, direction, and date filters. Hardened `20261003074000_scope_extraordinary_transfer_allocations.sql` to reject duplicate scoped predicates and mixed scoped/unscoped states. All three files were fetched back from GitHub and their blob SHAs verified. Branch-only; no production migration, merge, deployment, or overall QA/collaudo performed.
+
+
+## Captured accounting snapshot idempotence — 2026-10-03
+
+Hardened `20261003052000_expose_captured_transfer_snapshot.sql`: the already-installed path now requires exactly one captured-snapshot JSON key and exactly one expected source expression, rejecting missing, duplicate, or malformed states. The updated migration was fetched back from GitHub and its blob SHA verified. Branch-only change; no production migration, merge, deployment, or overall QA/collaudo was performed.
