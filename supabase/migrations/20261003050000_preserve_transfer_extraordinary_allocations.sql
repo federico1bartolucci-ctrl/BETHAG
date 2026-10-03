@@ -31,17 +31,9 @@ declare
 begin
   v_definition := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position('extraordinary_deliberated_before_due_after' in v_definition)>0 then
-    if position('a.workspace_id=v_workspace' in v_definition)=0
-       or position('a.condominium_id=v_condominium' in v_definition)=0
-       or position('l.workspace_id=v_workspace' in v_definition)=0
-       or position('l.condominium_id=v_condominium' in v_definition)=0
-       or position('l.expense_type=''Straordinaria''' in v_definition)=0
-       or position('l.deliberation_date<=p_transfer_date' in v_definition)=0
-       or position('a.due_date>p_transfer_date' in v_definition)=0
-       or position('join public.condominium_ledger_entries l on l.id=a.ledger_entry_id' in v_definition)=0 then
-      raise exception 'Extraordinary allocation snapshot exists but its expected filters/source are incomplete';
-    end if;
-    raise notice 'Transfer snapshot already includes extraordinary allocations';
+    -- A prior definition may contain this JSON key with missing tenant filters.
+    -- Leave any repair to the dedicated forward migration 20261003074000.
+    raise notice 'Extraordinary allocation snapshot key already exists; forward scope repair handles incomplete filters';
     return;
   end if;
   if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
