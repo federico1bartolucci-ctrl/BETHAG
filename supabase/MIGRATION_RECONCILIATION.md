@@ -130,3 +130,14 @@ La migration #9 `20261003022110_block_unverified_transfer_identity.sql` rifiuta 
 ### Limiti e stato operativo
 
 Questa riconciliazione documenta la relazione fra i rami e i criteri di integrazione, non certifica l'equivalenza comportamentale né sostituisce test eseguibili. Il confronto ha confermato divergenza storica fra i rami #5/#6 e la base aggiornata #9; non è stata eseguita una riscrittura/rebase automatica perché gli strumenti GitHub disponibili in questa sessione non espongono un'operazione di cherry-pick o risoluzione semantica dei conflitti. Nessuna migrazione è stata applicata al progetto Supabase di produzione. Il collaudo QA completo resta posticipato fino alla risoluzione di tutte le problematiche.
+
+
+### Confronto puntuale dei diff applicativi
+
+Il diff delle tre PR conferma che la #9 non contiene l'interfaccia di subentro né le RPC client introdotte dalle #5/#6: le modifiche applicative della #9 riguardano soprattutto la sincronizzazione di attività/lavori e fornitori, oltre alle migrazioni di sicurezza e registrazione. La #6 aggiunge invece l'orchestrazione `executeMemberTransfer`, il caricamento dello storico dei trasferimenti, la conferma/chiusura tramite RPC e i controlli di permesso nell'interfaccia. La #5 implementa un percorso alternativo basato su identificativi legacy e aggiunge funzioni di risoluzione/chiusura nel backend.
+
+Nel backend, le PR #5 e #6 modificano entrambe la ricostruzione di `ownerMemberIds`, ma con strategie differenti: la #5 fa prevalere i membri strutturati quando sono presenti; la #6 filtra gli ID JSON legacy rispetto ai titolari attivi correnti e li combina con i membri collegati. La scelta non è puramente testuale: va verificata con casi di unità senza membri strutturati, co-proprietà, proprietari archiviati/inattivi, pertinenze con titolari esterni e dati legacy incompleti. Non sostituire una strategia con l'altra senza test mirati e confronto con lo schema live.
+
+La #9 contiene inoltre correzioni nella sincronizzazione: associa i lavori ai fornitori solo se entrambi i moduli sono abilitati, normalizza i nomi fornitore con una regex di spazi corretta e filtra attività/lavori con riferimenti a condomìni o fornitori non disponibili nel workspace. Queste modifiche vanno mantenute nel ramo integrato, perché non sono sostituti del flusso di subentro e possono prevenire riferimenti non risolvibili durante la sincronizzazione.
+
+**Esito di questa passata:** i diff applicativi sono stati esaminati per individuare responsabilità e sovrapposizioni; non è stata fatta una sostituzione integrale di `main.tsx` o `bethagBackend.ts`, perché cancellerebbe modifiche non correlate presenti nella #9 o introdurrebbe una delle due varianti di ownership senza una verifica eseguibile. Nessuna PR è stata unita e nessuna migrazione è stata eseguita sul database.
