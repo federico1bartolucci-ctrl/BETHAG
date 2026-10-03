@@ -384,3 +384,8 @@ Hardened `20261003072000_capture_transfer_unit_expenses.sql`: when the snapshot 
 ## Future installment snapshot guard hardening — 2026-10-03
 
 Updated `20261003061000_preserve_future_installments_transfer_snapshot.sql` so the already-applied guard requires exactly two occurrences of the future-due predicate and exactly two residual-positive predicates, in addition to unique snapshot keys and the outgoing-member filter. Source fetched back and verified. Branch-only; no database execution or production change; full QA/collaudo deferred.
+
+
+## Future installment preview guard hardening — 2026-10-03
+
+Updated `20261003060000_expand_member_transfer_preview_installments.sql` so the already-applied guard requires exactly two occurrences of the future-due predicate and exactly one residual-positive predicate, while retaining unique checks for the snapshot keys. Source was fetched back from GitHub and verified. Branch-only; no database execution or production change; full QA/collaudo deferred.
