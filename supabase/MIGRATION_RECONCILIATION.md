@@ -101,3 +101,32 @@ No pre-existing production migration history has been edited by this reconciliat
 - **Portal registration approval lookup is not workspace/condominium-scoped in the client.** In `src/main.tsx`, `approvePortalRegistration` resolves a local member using `condominium_members.legacy_id = localMemberId` followed by `.maybeSingle()`, without constraining the selected database row to the active workspace or the request's matched member. Production catalog inspection did not find a unique index on `condominium_members.legacy_id`. The server-side approval RPC independently verifies that the selected member belongs to the request workspace, preventing cross-workspace approval, but duplicate legacy IDs can still cause an ambiguous client lookup or wrong same-workspace candidate. Resolve via the request's trusted `matched_member_id` when present, otherwise query candidates scoped to active workspace condominiums and require an unambiguous match before invoking the RPC. This is an application-level issue; no database constraint or data mutation is justified without inspecting existing duplicate patterns.
 - **Member-transfer lifecycle is not wired into the current client files inspected.** The database has preview, confirmation and closure RPCs, but neither `src/main.tsx` nor `src/lib/bethagBackend.ts` contains calls to those transfer RPCs or transfer lifecycle UI strings. The SQL lifecycle therefore cannot yet be considered launch-ready from the user's workflow perspective. Add the authenticated UI flow and handle verified identity, accounting snapshot, open-position closure and refresh/errors before final collaudo.
 - **Security advisor warnings on public SECURITY DEFINER wrappers remain under review.** The three warned wrappers delegate to private SECURITY DEFINER functions with execution revoked from authenticated/anon on the private implementations. Their public wrappers perform authentication and, respectively, portal module/workspace/member/email checks, verified-identity blocking, or delegated scoped closure logic. Keep the security boundary intentional; do not blindly convert wrappers to SECURITY INVOKER or grant private function execution. Reassess warning disposition after full call-path and authorization tests.
+
+
+## Consolidamento PR #5 / #6 / #9 — 2026-10-03
+
+### Stato dei rami verificato
+
+| Pull request | Branch | Relazione con `main` | Stato |
+|---|---|---:|---|
+| #5 | `feat/member-transfer-rpc-client` | 26 commit avanti, 7 indietro; diverged | Draft |
+| #6 | `feature/subentro-rpc-client-20261002` | 41 commit avanti, 7 indietro; diverged | Draft |
+| #9 | `fix/portal-identity-flow-20261003` | 148 commit avanti, 0 indietro; ahead | Draft |
+
+I tre rami modificano entrambi i file applicativi `src/lib/bethagBackend.ts` e `src/main.tsx`; #5 e #6 divergono anche sulle modifiche a `supabase/tests/rls_policies.test.sql`. Non è dimostrata una sequenza di merge che preservi automaticamente la semantica di tutte le modifiche.
+
+### Criteri di consolidamento
+
+1. Usare il ramo #9 come base aggiornata per il flusso di identità e registrazione, senza riscriverne le verifiche di email confermata, associazione al workspace e appartenenza del membro.
+2. Integrare dalla #6 il flusso di subentro transazionale: lock dell'unità, verifica del proprietario uscente, snapshot contabile, disattivazione dell'accesso del precedente titolare, sincronizzazione dei riferimenti legacy e salvaguardia delle posizioni finanziarie.
+3. Portare dalla #5 solo le correzioni specifiche del resolver legacy o del controllo archivio che non siano già presenti, evitando duplicazioni delle funzioni e delle migrazioni di subentro.
+4. Unificare i test RLS e di trasferimento senza rimuovere le asserzioni già presenti su identità verificata, accesso al portale, co-proprietari e cutoff contabile.
+5. Non considerare i timestamp dei file una prova sufficiente dell'ordine di deploy: riconciliare ogni migration version con lo storico reale e con gli oggetti live prima di qualsiasi applicazione.
+
+### Protezioni identità da preservare
+
+La migration #9 `20261003022110_block_unverified_transfer_identity.sql` rifiuta un `p_incoming_user_id` non verificato nell'endpoint pubblico di trasferimento. La migration `20261003022133_gate_portal_registration_verified_identity.sql` richiede identità Auth confermata, email canonica corrispondente, membro attivo e workspace/condominio coerenti prima di delegare l'approvazione alla funzione privata. Questi controlli devono rimanere compatibili con il flusso di subentro della #6; non vanno sostituiti con un collegamento diretto a un'identità non verificata.
+
+### Limiti e stato operativo
+
+Questa riconciliazione documenta la relazione fra i rami e i criteri di integrazione, non certifica l'equivalenza comportamentale né sostituisce test eseguibili. Il confronto ha confermato divergenza storica fra i rami #5/#6 e la base aggiornata #9; non è stata eseguita una riscrittura/rebase automatica perché gli strumenti GitHub disponibili in questa sessione non espongono un'operazione di cherry-pick o risoluzione semantica dei conflitti. Nessuna migrazione è stata applicata al progetto Supabase di produzione. Il collaudo QA completo resta posticipato fino alla risoluzione di tutte le problematiche.
