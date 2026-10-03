@@ -15,12 +15,14 @@ begin
   ] loop
     v_def := pg_get_functiondef(v_sig::regprocedure);
     if position('''unit_unassigned_carryovers''' in v_def)>0 then
-      if position(v_new in v_def)>0 then
-        if position(v_old in v_def)>0 then
-          raise exception 'Mixed scoped and unscoped unit carryover queries remain in %',v_sig;
-        end if;
-        continue;
+      if (length(v_def)-length(replace(v_def,'''unit_unassigned_carryovers''','')))<>length('''unit_unassigned_carryovers''')
+         or (length(v_def)-length(replace(v_def,v_new,'')))<>length(v_new)
+         or position(v_old in v_def)>0
+         or position('and abs(c.balance)>0.005' in v_def)=0 then
+        raise exception 'Unit carryover snapshot is incomplete, duplicated, or mixed in %',v_sig;
       end if;
+      continue;
+    end if;
       v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
       if v_count<>1 then
         raise exception 'Expected one unscoped unit carryover query in %, found %',v_sig,v_count;
