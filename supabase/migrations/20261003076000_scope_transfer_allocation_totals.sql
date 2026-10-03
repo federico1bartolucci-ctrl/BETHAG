@@ -34,13 +34,17 @@ begin
         raise exception 'Unexpected outgoing allocation anchor count % in % (expected %)',v_count,v_sig,v_expected;
       end if;
       v_def := replace(v_def,v_old,v_new);
-    elsif position(v_old in v_def)>0 then
-      raise exception 'Mixed scoped and unscoped allocation reads remain in %',v_sig;
+    else
+      v_count := (length(v_def)-length(replace(v_def,v_new,'')))/length(v_new);
+      if position(v_old in v_def)>0 or v_count<>v_expected then
+        raise exception 'Scoped outgoing allocation predicates are duplicated, incomplete, or mixed in % (count=%)',v_sig,v_count;
+      end if;
     end if;
     if v_sig='public.get_member_transfer_accounting_snapshot(uuid)' then
       if position(v_incoming_new in v_def)>0 then
-        if position(v_incoming_old in v_def)>0 then
-          raise exception 'Mixed scoped and unscoped incoming allocation reads remain in snapshot reader';
+        v_count := (length(v_def)-length(replace(v_def,v_incoming_new,'')))/length(v_incoming_new);
+        if position(v_incoming_old in v_def)>0 or v_count<>1 then
+          raise exception 'Scoped incoming allocation predicate is duplicated, incomplete, or mixed (count=%)',v_count;
         end if;
       else
         v_count := (length(v_def)-length(replace(v_def,v_incoming_old,'')))/length(v_incoming_old);
