@@ -2892,7 +2892,8 @@ function App() {
       .eq("legacy_id", localMemberId)
       .maybeSingle();
     if (dbMemberError || !dbMember?.id) {
-      alert("ERRORE");
+      console.error("BETHAG registration member lookup failed", dbMemberError);
+      alert("Impossibile individuare il profilo condòmino nel database. Aggiorna i dati e riprova.");
       return;
     }
     const { error } = await supabase.rpc("admin_approve_portal_registration", {
@@ -2900,7 +2901,17 @@ function App() {
       p_member_id: dbMember.id,
     });
     if (error) {
-      alert("ERRORE");
+      console.error("BETHAG portal registration approval failed", error);
+      const message = String(error.message || "");
+      if (message.includes("ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH")) {
+        alert("L'indirizzo e-mail dell'account non risulta verificato o non corrisponde alla richiesta. Il condòmino deve confermare l'e-mail utilizzata per registrarsi.");
+      } else if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
+        alert("L'e-mail dell'anagrafica condominiale è diversa da quella verificata dell'account. Correggi prima l'e-mail nel profilo condòmino, salva e ripeti l'autorizzazione.");
+      } else if (message.includes("MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER")) {
+        alert("La richiesta presenta un'incongruenza e-mail: verifica e correggi il profilo originariamente individuato prima di autorizzare l'accesso.");
+      } else {
+        alert(message || "Autorizzazione non riuscita. Verifica i dati e riprova.");
+      }
       return;
     }
     setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
@@ -8259,7 +8270,7 @@ function PortalRegistrationRequestsPanel({
               <small style={{display:"block"}}>E-mail registrata: {request.email}</small>
               {mismatch && (
                 <div className="notice" style={{marginTop:8}}>
-                  ⚠️ <b>Incongruenza e-mail:</b> il profilo individuato nell'anagrafica contiene un indirizzo e-mail diverso. Verifica se vuoi procedere comunque oppure modificare l'associazione.
+                  ⚠️ <b>Incongruenza e-mail:</b> prima di autorizzare l'accesso, verifica l'identità della persona e correggi l'indirizzo e-mail nel profilo condòmino. La sola conferma dell'amministratore non sostituisce la verifica dell'account.
                 </div>
               )}
               {!mismatch && request.condominium_name && (
@@ -8289,7 +8300,7 @@ function PortalRegistrationRequestsPanel({
                   const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
                   const memberId = select?.value || "";
                   if (!memberId) return;
-                  if (mismatch && !confirm("L'e-mail dell'account è diversa da quella presente nel profilo condòmino. Vuoi procedere comunque con questa associazione?")) return;
+                  if (mismatch && !confirm("La richiesta presenta un'incongruenza e-mail. L'autorizzazione sarà consentita solo dopo aver verificato l'identità e corretto l'e-mail nell'anagrafica condominiale. Hai già completato queste verifiche?")) return;
                   void onApprove(request.id, memberId);
                 }}
               >
