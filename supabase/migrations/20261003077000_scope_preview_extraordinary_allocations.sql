@@ -10,6 +10,9 @@ begin
     if position(v_old in v_def)>0 then
       raise exception 'Preview contains both scoped and unscoped extraordinary allocation predicates';
     end if;
+    if (length(v_def)-length(replace(v_def,v_new,''))) / length(v_new) <> 2 then
+      raise exception 'Scoped extraordinary allocation predicate count is incomplete';
+    end if;
     return;
   end if;
   if (length(v_def)-length(replace(v_def,v_old,''))) / length(v_old) <> 2 then
