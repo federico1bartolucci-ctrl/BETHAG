@@ -9,7 +9,11 @@ begin
   v_def := pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
 
   if position('v_open_unit_allocations' in v_def)>0 then
-    if position('a.member_id is null and a.unit_id=v_unit' in v_def)>0 then return; end if;
+    if position('a.member_id is null and a.unit_id=v_unit' in v_def)>0
+       and position('or v_open_unit_allocations>0.005' in v_def)>0
+       and position('a.workspace_id=v_workspace and a.condominium_id=v_condominium' in v_def)>0 then
+      return;
+    end if;
     raise exception 'Partial unit-allocation close guard detected; refusing to patch';
   end if;
 
