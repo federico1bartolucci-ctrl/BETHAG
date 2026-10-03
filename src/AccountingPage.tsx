@@ -856,7 +856,7 @@ function AccountingPage({
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
     if (!guardOpenFiscalYear(ledgerForm.fiscal_year_id)) return;
-    if (!ledgerForm.description.trim() || Number(ledgerForm.amount) <= 0) {
+    if (!ledgerForm.description.trim() || !Number.isFinite(Number(ledgerForm.amount)) || Number(ledgerForm.amount) <= 0) {
       setError("Inserisci descrizione e importo maggiore di zero.");
       return;
     }
