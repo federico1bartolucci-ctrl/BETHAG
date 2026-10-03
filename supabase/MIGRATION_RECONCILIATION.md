@@ -431,3 +431,8 @@ Review of the migration patches identified an ordering defect: `20261003076000_s
 ## Allocation-scope migration occurrence-count correction — 2026-10-04
 
 Cross-review of 0740 and 0760 found that 0740 already scopes the confirmation function's extraordinary allocation predicate, leaving only one ordinary outgoing allocation predicate for 0760 to scope there. The previous expected count of two would stop the migration. Updated 0760 to expect one scoped outgoing anchor for the private confirmation function and retain two for preview; snapshot-reader behavior remains unchanged. The updated source was fetched back from GitHub and checked for the corrected branch-specific count. No SQL was executed and production remains unchanged.
+
+
+## Follow-up correction: 0740 anchor formatting and 0760 counts — 2026-10-04
+
+A deeper comparison against the live `private.confirm_condominium_member_transfer` definition showed that 0740's multiline anchor did not match the deployed function's single-line predicate. Rewrote 0740's old/new predicate strings to match the function text. With the resulting single-line fully scoped predicate, 0760 correctly sees two outgoing allocation predicates in confirmation (ordinary plus extraordinary), so restored its expected count to two. Both files were fetched back from the branch after the updates. This resolves the source-anchor/count mismatch found in static cross-review; it is not a live migration test, and production was not changed.
