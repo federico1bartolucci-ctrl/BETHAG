@@ -399,3 +399,8 @@ During cross-review, corrected the already-applied guard in `20261003060000_expa
 ## Unit-level carryover migration control-flow repair — 2026-10-03
 
 Corrected `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql`: the unscoped carryover query is now tenant-scoped and the snapshot insertion is performed in the same function-definition update, with a single execution after both transformations. Removed the stray control-flow closure that made the migration block structurally invalid. Source was fetched back and matched exactly. Static source review only; no SQL execution, database mutation, production change, or full QA/collaudo.
+
+
+## Unit carryover idempotency occurrence correction — 2026-10-03
+
+Further review of `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` found that the scoped carryover predicate is expected twice after transformation: once in the original carryover query and once in the inserted snapshot aggregation. Corrected the already-installed guard to require exactly two occurrences, rather than one. Updated migration fetched back and verified. Source-level verification only; no database execution or production changes; full QA/collaudo remains deferred.
