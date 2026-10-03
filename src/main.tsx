@@ -2958,9 +2958,9 @@ function App() {
 
       try {
         const normalizedEmail = (session.user.email || "").trim();
-        const invitedResident = session.user.user_metadata?.bethag_invited === true &&
+        const invitedAccount = session.user.user_metadata?.bethag_invited === true &&
           session.user.user_metadata?.bethag_password_set !== true;
-        if (invitedResident) {
+        if (invitedAccount) {
           setRequiresPasswordSetup(true);
           return;
         }
