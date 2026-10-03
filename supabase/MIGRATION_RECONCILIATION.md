@@ -426,3 +426,8 @@ Added `20261003079000_scope_transfer_close_financial_positions.sql` after the li
 ## Extraordinary allocation scope migration ordering correction — 2026-10-04
 
 Review of the migration patches identified an ordering defect: `20261003076000_scope_transfer_allocation_totals.sql` scopes outgoing allocation predicates before `20261003077000_scope_preview_extraordinary_allocations.sql` runs, so the latter's original unscoped anchor could not match. Updated 0770 to require the tenant-scoped allocation anchor created by 0760, then add the ledger workspace/condominium predicates. The migration retains two-occurrence checks and rejects partial/mixed states. File was fetched back from GitHub after the change. This is source-level reconciliation only; no SQL was executed against production.
+
+
+## Allocation-scope migration occurrence-count correction — 2026-10-04
+
+Cross-review of 0740 and 0760 found that 0740 already scopes the confirmation function's extraordinary allocation predicate, leaving only one ordinary outgoing allocation predicate for 0760 to scope there. The previous expected count of two would stop the migration. Updated 0760 to expect one scoped outgoing anchor for the private confirmation function and retain two for preview; snapshot-reader behavior remains unchanged. The updated source was fetched back from GitHub and checked for the corrected branch-specific count. No SQL was executed and production remains unchanged.
