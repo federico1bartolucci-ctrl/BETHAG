@@ -455,3 +455,9 @@ Hardened `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sq
 ## Allocation criteria unit-join tenant scoping — 2026-10-04
 
 Hardened `20260930110001_allocation_criteria_scope.sql` by constraining each join from millesimal values to condominium units by both workspace and condominium, in addition to unit ID. This keeps eligible-unit counts, quota totals, and generated allocation rows aligned to the requested tenant. The updated migration was fetched back from the feature branch and exact content equality verified. Static source review only; no SQL execution, production mutation, merge, deployment, or full QA/collaudo.
+
+## Transfer preview and accounting snapshot tenant scoping — 2026-10-04
+
+- Scoped installment and expense-allocation aggregates in `20261001110000_add_member_transfer_accounting_snapshot.sql` to the transfer's `workspace_id` and `condominium_id`, in addition to the member and date predicates.
+- Scoped installment and extraordinary-allocation queries in `20261001113000_add_member_transfer_preview.sql` to the resolved workspace and condominium, including both allocation and ledger-entry sides of extraordinary joins.
+- Both migration files were fetched back from the branch and matched the submitted contents. This is a static source correction only: no SQL was executed against Supabase, no production data was changed, and full QA remains deferred until all known issues are resolved.
