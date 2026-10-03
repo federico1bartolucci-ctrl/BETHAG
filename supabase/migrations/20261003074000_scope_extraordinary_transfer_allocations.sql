@@ -20,8 +20,9 @@ declare
 begin
   v_def := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position(v_new in v_def)>0 then
-    if position(v_old in v_def)>0 then
-      raise exception 'Extraordinary allocation query contains both scoped and unscoped variants';
+    if (length(v_def)-length(replace(v_def,v_new,'')))<>length(v_new)
+       or position(v_old in v_def)>0 then
+      raise exception 'Extraordinary allocation query is duplicated or contains scoped and unscoped variants';
     end if;
     return;
   end if;
