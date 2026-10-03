@@ -285,3 +285,8 @@ No migration was applied to Supabase production, no data or migration history wa
 Hardened `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` to require exactly one unscoped unit-carryover query before rewriting each existing preview/confirmation function, and to reject mixed scoped/unscoped variants. The snapshot insertion anchor is also required to be unique. Read-only inspection confirms the live preview and confirmation definitions each contain the expected unscoped carryover query and the snapshot key, so the repair branch is relevant to the observed schema. The updated file was committed and its GitHub blob verified. No production changes were made.
 
 The close-function inspection also confirms the unit-level fiscal carryover guard from the already-existing live definition, while the additional unit-unassigned installment closure guard from `20261003071000` is still absent. The latter remains a branch-only pending correction; migration execution and QA remain deferred until the full issue set is reconciled.
+
+
+## Unit-unassigned installment migration hardening — 2026-10-03
+
+Hardened `20261003062000_include_unit_unassigned_installments_in_transfer.sql` with expected occurrence counts for outgoing installment predicates in preview and confirmation, plus a unique JSON insertion anchor for the assignment-scope marker. Hardened `20261003071000_block_transfer_close_with_unassigned_installments.sql` to require unique declaration, unit-carryover query, and closure-condition anchors before modifying the close function. Both files were committed to the working branch and their updated content was fetched back from GitHub. These are textual guards only: no migration execution, production write, overall QA, or merge was performed.
