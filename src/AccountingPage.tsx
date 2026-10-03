@@ -90,7 +90,7 @@ type Allocation = {
 };
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; data: any };
-type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; data: any };
+type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; name?: string; email?: string | null; data: any };
 
 type MillesimalTable = { id:string; condominium_id:string; name:string; description:string; total_millesimi:number; active:boolean; notes:string; basis_type:"Millesimi"|"Quote personalizzate"|"Consumo"|"Misto"; scope_mode:"all"|"units"|"buildings"; scope_unit_ids:string[]; scope_building_codes:string[] };
 type MillesimalValue = { id:string; condominium_id:string; table_id:string; unit_id:string; value:number; excluded:boolean; notes:string };
@@ -613,7 +613,7 @@ function AccountingPage({
             .order("unit_code"),
           supabase
             .from("condominium_members")
-            .select("id, condominium_id, unit_id, active, data")
+            .select("id, condominium_id, unit_id, active, name, email, data")
             .eq("workspace_id", workspaceId)
             .order("created_at"),
           supabase
