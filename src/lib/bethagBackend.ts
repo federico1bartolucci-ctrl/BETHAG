@@ -2365,3 +2365,55 @@ export async function closeCondominiumMemberTransfer(transferId: string): Promis
     return data === true;
   });
 }
+
+/** Recupera il quadro contabile previsionale prima di confermare il subentro. */
+export async function previewCondominiumMemberTransfer(input: {
+  unitId: string;
+  outgoingMemberId: string;
+  transferDate: string;
+}): Promise<Record<string, unknown>> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  if (!isUuid(input.unitId) || !isUuid(input.outgoingMemberId)) {
+    throw new Error("Identificativo dell'unita o del titolare uscente non valido.");
+  }
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)) {
+    throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  }
+  const parsed = new Date(`${input.transferDate}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== input.transferDate) {
+    throw new Error("La data del subentro non e valida.");
+  }
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("preview_condominium_member_transfer", {
+      p_unit_id: input.unitId,
+      p_outgoing_member_id: input.outgoingMemberId,
+      p_transfer_date: input.transferDate,
+    });
+    if (error) throw error;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("Il server non ha restituito il quadro previsionale del subentro.");
+    }
+    return data as Record<string, unknown>;
+  });
+}
+
+/** Recupera lo snapshot contabile conservato per un subentro già registrato. */
+export async function getMemberTransferAccountingSnapshot(transferId: string): Promise<Record<string, unknown>> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transferId)) {
+    throw new Error("Identificativo del subentro non valido.");
+  }
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("get_member_transfer_accounting_snapshot", {
+      p_transfer_id: transferId,
+    });
+    if (error) throw error;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("Il server non ha restituito lo snapshot contabile del subentro.");
+    }
+    return data as Record<string, unknown>;
+  });
+}
+
