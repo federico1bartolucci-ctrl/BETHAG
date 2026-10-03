@@ -112,9 +112,10 @@ Deno.serve(async (req: Request) => {
         await adminClient.auth.admin.getUserById(targetUserId);
       if (existingUserError) throw existingUserError;
       const existingEmail = existingUserData.user?.email?.trim().toLowerCase() || "";
-      if (!existingEmail || existingEmail !== email) {
+      if (!existingEmail || existingEmail !== email || !existingUserData.user?.email_confirmed_at) {
         return json({
-          error: "Il codice interno del collaboratore è già associato a un account diverso. Genera un nuovo identificativo prima di procedere.",
+          error: "Il profilo collaboratore è già associato a un account con e-mail diversa o non verificata. Verifica l'identità e correggi l'associazione prima di procedere.",
+          code: "LINKED_COLLABORATOR_IDENTITY_UNVERIFIED",
         }, 409);
       }
     }
@@ -129,13 +130,26 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          let existingUser: (typeof invitedUser.user) | null = null;
+          let page = 1;
+          const perPage = 1000;
+          while (!existingUser) {
+            const { data: users, error: usersError } =
+              await adminClient.auth.admin.listUsers({ page, perPage });
+            if (usersError) throw usersError;
+            existingUser = users.users.find(
+              (candidate) => candidate.email?.trim().toLowerCase() === email
+            ) ?? null;
+            if (existingUser || users.users.length < perPage) break;
+            page += 1;
+          }
           if (!existingUser) throw inviteError;
+          if (!existingUser.email_confirmed_at) {
+            return json({
+              error: "Esiste già un account con questa e-mail, ma l'indirizzo non risulta verificato. L'utente deve completare la verifica prima che l'amministratore possa collegarlo al workspace.",
+              code: "EXISTING_COLLABORATOR_EMAIL_NOT_VERIFIED",
+            }, 409);
+          }
           targetUserId = existingUser.id;
         } else {
           throw inviteError;
