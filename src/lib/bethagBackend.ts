@@ -2362,7 +2362,7 @@ export async function previewCondominiumMemberTransfer(
 /** Registra il subentro senza spostare o cancellare le poste contabili pregresse. */
 export async function confirmCondominiumMemberTransfer(input: {
   unitDatabaseId: string; outgoingMemberDatabaseId: string; incomingName: string;
-  incomingEmail?: string | null; incomingUserId?: string | null; transferDate: string;
+  incomingEmail?: string | null; transferDate: string;
   transferType?: "Vendita" | "Acquisto" | "Donazione" | "Successione" | "Altro";
   notes?: string; data?: Record<string, unknown>;
 }): Promise<string> {
@@ -2370,7 +2370,6 @@ export async function confirmCondominiumMemberTransfer(input: {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("I dati del subentro non sono validi.");
   const name = typeof input.incomingName === "string" ? input.incomingName.trim() : "";
   const email = typeof input.incomingEmail === "string" ? input.incomingEmail.trim().toLowerCase() || null : null;
-  const userId = typeof input.incomingUserId === "string" ? input.incomingUserId.trim() || null : null;
   const notes = typeof input.notes === "string" ? input.notes.trim() : "";
   const type = input.transferType ?? "Vendita";
   if (!isMemberTransferUuid(input.unitDatabaseId) || !isMemberTransferUuid(input.outgoingMemberDatabaseId) ||
@@ -2379,13 +2378,13 @@ export async function confirmCondominiumMemberTransfer(input: {
     throw new Error("Inserisci identificativi, nominativo, tipo e data del subentro validi.");
   }
   if (name.length > 180 || (email !== null && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) ||
-      (userId !== null && !isMemberTransferUuid(userId)) || notes.length > 2000 ||
+      notes.length > 2000 ||
       (input.data !== undefined && (!input.data || typeof input.data !== "object" || Array.isArray(input.data)))) {
     throw new Error("Controlla i dati del subentrante e le note inserite.");
   }
   const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
     p_unit_id: input.unitDatabaseId, p_outgoing_member_id: input.outgoingMemberDatabaseId,
-    p_incoming_name: name, p_incoming_email: email, p_incoming_user_id: userId,
+    p_incoming_name: name, p_incoming_email: email, p_incoming_user_id: null,
     p_transfer_date: input.transferDate, p_transfer_type: type, p_notes: notes, p_data: input.data || {},
   });
   if (error) throw error;
