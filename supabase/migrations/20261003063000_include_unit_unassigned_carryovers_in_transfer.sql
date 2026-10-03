@@ -16,7 +16,7 @@ begin
     v_def := pg_get_functiondef(v_sig::regprocedure);
     if position('''unit_unassigned_carryovers''' in v_def)>0 then
       if (length(v_def)-length(replace(v_def,'''unit_unassigned_carryovers''','')))<>length('''unit_unassigned_carryovers''')
-         or (length(v_def)-length(replace(v_def,v_new,'')))<>length(v_new)
+         or (length(v_def)-length(replace(v_def,v_new,'')))/length(v_new)<>2
          or position(v_old in v_def)>0
          or position('and abs(c.balance)>0.005' in v_def)=0 then
         raise exception 'Unit carryover snapshot is incomplete, duplicated, or mixed in %',v_sig;
