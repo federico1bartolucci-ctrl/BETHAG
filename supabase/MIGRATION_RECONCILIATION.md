@@ -379,3 +379,8 @@ Cleaned `20261003078000_scope_snapshot_installment_totals.sql` by removing a dup
 ## Unit expense snapshot idempotency hardening — 2026-10-03
 
 Hardened `20261003072000_capture_transfer_unit_expenses.sql`: when the snapshot key is already present, the guard now requires exactly one occurrence of each source, unit, condominium, workspace, direction, and pre-transfer date predicate, while still rejecting duplicate snapshot keys. Updated migration was fetched back from GitHub and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
+
+
+## Future installment snapshot guard hardening — 2026-10-03
+
+Updated `20261003061000_preserve_future_installments_transfer_snapshot.sql` so the already-applied guard requires exactly two occurrences of the future-due predicate and exactly two residual-positive predicates, in addition to unique snapshot keys and the outgoing-member filter. Source fetched back and verified. Branch-only; no database execution or production change; full QA/collaudo deferred.
