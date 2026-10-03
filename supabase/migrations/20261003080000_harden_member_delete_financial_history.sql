@@ -22,8 +22,14 @@ begin
     select 1
     from public.condominium_fiscal_carryovers c
     where c.member_id = old.id
+  )
+  or exists (
+    select 1
+    from public.condominium_member_transfers t
+    where t.outgoing_member_id = old.id
+       or t.incoming_member_id = old.id
   ) then
-    raise exception 'MEMBER_FINANCIAL_HISTORY_LOCK: non è possibile eliminare un membro con storico contabile; disattivare la posizione o creare una nuova posizione anagrafica';
+    raise exception 'MEMBER_FINANCIAL_HISTORY_LOCK: non è possibile eliminare un membro con storico contabile o di subentro; disattivare la posizione o creare una nuova posizione anagrafica';
   end if;
 
   return old;
