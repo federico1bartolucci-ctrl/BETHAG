@@ -87,7 +87,6 @@ Snapshot: 177 remote migration-history records and 137 SQL files in the branch. 
 | `20261003050209` | `include_unit_unassigned_installments_in_transfer` | `20261003062000_include_unit_unassigned_installments_in_transfer.sql` |
 | `20261003050443` | `include_unit_unassigned_carryovers_in_transfer` | `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` |
 | `20261003050722` | `block_transfer_close_with_unresolved_unit_carryovers` | `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql` |
-
 | `20261003050722` | `capture_transfer_unit_expenses` | `20261003072000_capture_transfer_unit_expenses.sql` |
 
 ## Remote records without a filename-name match
