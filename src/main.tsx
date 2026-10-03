@@ -2895,12 +2895,36 @@ function App() {
       alert("ERRORE");
       return;
     }
+    const { data: registrationRequest, error: requestError } = await supabase
+      .from("portal_registration_requests")
+      .select("status,matched_member_id,email")
+      .eq("id", requestId)
+      .maybeSingle();
+    if (requestError || !registrationRequest) {
+      alert("Impossibile recuperare la richiesta di registrazione. Aggiorna la pagina e riprova.");
+      return;
+    }
+    if (registrationRequest.status === "email_mismatch" &&
+        registrationRequest.matched_member_id &&
+        registrationRequest.matched_member_id !== dbMember.id) {
+      alert("Questa richiesta è collegata a un preciso profilo anagrafico. Seleziona il profilo corrispondente al nominativo indicato.");
+      return;
+    }
     const { error } = await supabase.rpc("admin_approve_portal_registration", {
       p_request_id: requestId,
       p_member_id: dbMember.id,
     });
     if (error) {
-      alert("ERRORE");
+      const message = error.message || "";
+      if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
+        alert("L'e-mail del profilo anagrafico è diversa da quella verificata dell'account. Correggi prima l'e-mail nella scheda del condòmino, quindi ripeti l'autorizzazione.");
+      } else if (message.includes("MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER")) {
+        alert("La richiesta è vincolata al profilo anagrafico originariamente individuato. Verifica il profilo associato e riprova.");
+      } else if (message.includes("ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH")) {
+        alert("L'indirizzo e-mail dell'account non risulta verificato o non coincide con quello della richiesta.");
+      } else {
+        alert(message || "Impossibile autorizzare la registrazione.");
+      }
       return;
     }
     setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
@@ -8241,14 +8265,12 @@ function PortalRegistrationRequestsPanel({
           `${member.firstName} ${member.lastName}`.trim().toLowerCase() === request.full_name.trim().toLowerCase()
         );
         const allMembers = condominiumMembers.filter((member) => member.active);
-        const candidates = request.status === "email_mismatch" && nameCandidates.length
+        const candidates = request.status === "email_mismatch"
           ? nameCandidates
-          : request.status === "email_mismatch"
-            ? allMembers
-            : condominiumMembers.filter((member) =>
-                member.active &&
-                member.email.trim().toLowerCase() === request.email.trim().toLowerCase()
-              );
+          : condominiumMembers.filter((member) =>
+              member.active &&
+              member.email.trim().toLowerCase() === request.email.trim().toLowerCase()
+            );
         const defaultId = candidates[0]?.id ? String(candidates[0].id) : "";
         const mismatch = request.status === "email_mismatch";
 
@@ -8259,7 +8281,7 @@ function PortalRegistrationRequestsPanel({
               <small style={{display:"block"}}>E-mail registrata: {request.email}</small>
               {mismatch && (
                 <div className="notice" style={{marginTop:8}}>
-                  ⚠️ <b>Incongruenza e-mail:</b> il profilo individuato nell'anagrafica contiene un indirizzo e-mail diverso. Verifica se vuoi procedere comunque oppure modificare l'associazione.
+                  ⚠️ <b>Incongruenza e-mail:</b> per tutelare l'identità del condòmino, l'accesso non può essere autorizzato finché l'indirizzo e-mail dell'anagrafica non coincide con quello verificato dell'account. Correggi l'e-mail nel profilo anagrafico e poi ripeti l'autorizzazione.
                 </div>
               )}
               {!mismatch && request.condominium_name && (
@@ -8289,16 +8311,15 @@ function PortalRegistrationRequestsPanel({
                   const select = document.getElementById(`registration-member-${request.id}`) as HTMLSelectElement | null;
                   const memberId = select?.value || "";
                   if (!memberId) return;
-                  if (mismatch && !confirm("L'e-mail dell'account è diversa da quella presente nel profilo condòmino. Vuoi procedere comunque con questa associazione?")) return;
                   void onApprove(request.id, memberId);
                 }}
               >
-                {mismatch ? "Procedi comunque" : "Autorizza"}
+                {mismatch ? "Verifica e autorizza" : "Autorizza"}
               </button>
 
               {mismatch && (
                 <span className="muted-text">
-                  Per modificare l'associazione, seleziona un altro profilo dall'elenco.
+                  {candidates.length === 0 ? "Nessun profilo con questo nominativo: verifica l'anagrafica prima di autorizzare." : "È selezionabile solo il profilo con il nominativo corrispondente; l'e-mail deve essere corretta prima dell'autorizzazione."}
                 </span>
               )}
             </div>
