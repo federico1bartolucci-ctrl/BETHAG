@@ -101,7 +101,7 @@ begin
 
   -- Payment registration: lock before reading the installment and its
   -- allocations, so transfer closure cannot observe an intermediate state.
-  v_def := pg_get_functiondef('public.register_condominium_installment_payment(uuid,uuid,uuid,numeric,date,text,text,text)'::regprocedure);
+  v_def := pg_get_functiondef('public.register_condominium_installment_payment(uuid,uuid,uuid,date,numeric,text,text,text)'::regprocedure);
   if position('perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);' in v_def)=0 then
     v_old := 'begin';
     v_new := 'begin' || chr(10) || '  perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);';
@@ -125,7 +125,7 @@ begin
   execute v_def;
 
   -- Carryover regeneration: lock before checking/deleting existing rows.
-  v_def := pg_get_functiondef('private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)'::regprocedure);
+  v_def := pg_get_functiondef('public.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)'::regprocedure);
   if position('perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);' in v_def)=0 then
     v_old := 'begin';
     v_new := 'begin' || chr(10) || '  perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);';
