@@ -1,1 +1,0 @@
--- Remove a legacy duplicate trigger. The canonical relationship validation trigger remains active.\nDROP TRIGGER IF EXISTS trg_validate_unit_relationship ON public.condominium_units;\n
