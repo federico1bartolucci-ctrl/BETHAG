@@ -27,6 +27,12 @@ declare
 begin
   v_definition := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position('extraordinary_deliberated_before_due_after' in v_definition)>0 then
+    if position('l.expense_type=''Straordinaria''' in v_definition)=0
+       or position('l.deliberation_date<=p_transfer_date' in v_definition)=0
+       or position('a.due_date>p_transfer_date' in v_definition)=0
+       or position('join public.condominium_ledger_entries l on l.id=a.ledger_entry_id' in v_definition)=0 then
+      raise exception 'Extraordinary allocation snapshot exists but its expected filters/source are incomplete';
+    end if;
     raise notice 'Transfer snapshot already includes extraordinary allocations';
     return;
   end if;
