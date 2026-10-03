@@ -205,3 +205,13 @@ Snapshot: 177 remote migration-history records and 136 SQL files in the branch.
 ## Status
 
 Name-based candidates are inventoried. Content-level equivalence and deployment eligibility remain unverified.
+## Live database inspection — transfer accounting (2026-10-03)
+
+Read-only inspection of the connected Supabase project confirmed that the transfer workflow currently has:
+- private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb) and private.close_condominium_member_transfer(uuid) as SECURITY DEFINER functions with an empty search_path.
+- Public SECURITY DEFINER wrappers for both operations, executable by authenticated and service_role; the confirmation wrapper rejects a supplied incoming user ID with INCOMING_IDENTITY_REQUIRES_VERIFICATION before calling the private implementation.
+- public.preview_condominium_member_transfer(uuid,uuid,date) and public.get_member_transfer_accounting_snapshot(uuid) are present and executable by authenticated users; both apply a workspace-module access check.
+- The live confirmation function contains the outgoing-owner/current-owner guard, locks the unit row, and persists an immutable accounting_snapshot. The snapshot currently includes future installments, marks unit-unassigned installments, records unit-unassigned carryovers, and preserves extraordinary allocations deliberated before the transfer date but due later.
+- The live close function refuses closure while outgoing installments, allocations, member carryovers, or unit-unassigned carryovers remain unresolved.
+
+This confirms that the corresponding transfer protections are present in the live schema. It does not establish byte-for-byte equivalence between each historical SQL file and the applied SQL, nor does it authorize replay. The frontend calls the public wrappers, not the private functions directly. These checks were read-only; no live data or migration history was changed.
