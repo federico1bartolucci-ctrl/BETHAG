@@ -810,8 +810,17 @@ function AccountingPage({
       return;
     }
     if (!supabase || !dbCondominiumId) return;
+    if (!yearForm.name.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
+      setError("Inserisci un nome e date di esercizio valide.");
+      return;
+    }
     if (yearForm.start_date > yearForm.end_date) {
       setError("La data di inizio esercizio non può essere successiva alla data di fine.");
+      return;
+    }
+    const overlappingYear = scopedYears.find(y => y.condominium_id === dbCondominiumId && y.id !== editingYear?.id && yearForm.start_date <= y.end_date && yearForm.end_date >= y.start_date);
+    if (overlappingYear) {
+      setError("Il periodo si sovrappone a un altro esercizio contabile del condominio.");
       return;
     }
     const openingBalance = Number(yearForm.opening_balance);
