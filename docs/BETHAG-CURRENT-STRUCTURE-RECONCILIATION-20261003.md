@@ -81,3 +81,15 @@ Non viene aggiunta una migrazione con timestamp retrodatato: potrebbe essere app
 - Nel registro Production, fra le versioni di questa famiglia controllate, risultano `20261002045106` e `20261002110808`; non risultano registrate le versioni `20261001093000`, `20261001094000`, `20261001104500` e `20261001120000`.
 
 Quindi lo schema trasferimenti presente in Production è più completo di quanto suggerisca il registro delle migrazioni versionate. Questo è un segnale di divergenza fra stato effettivo e storia registrata, non una prova che le migrazioni mancanti non siano mai state eseguite: le modifiche possono essere state introdotte da interventi diretti o da un altro flusso. Non è sicuro marcare versioni come applicate o rieseguire quelle mancanti senza ricostruire le operazioni originarie e confrontare tutte le dipendenze. Il prossimo passo corretto è una matrice di convergenza per ambiente, separando schema osservato, versioni registrate e percorso di bootstrap.
+
+
+### Dettaglio catalogo e RPC subentri
+
+Un'ulteriore lettura del catalogo Production ha confermato:
+
+- Il vincolo `status_check` ammette esattamente `Bozza`, `Confermato`, `Chiuso` e `Annullato`; il vincolo `type_ck` limita `transfer_type` a `Vendita`, `Acquisto`, `Donazione`, `Successione` e `Altro`.
+- Sono presenti le foreign key per workspace, condominio, unità, membro uscente, membro entrante, creatore e utente che chiude il trasferimento. La policy RLS osservata è `condominium_member_transfers_manager_all`, assegnata ad `authenticated`, con `USING` e `WITH CHECK` basati su `private.can_manage_workspace_module(workspace_id, 'condomini')`.
+- La RPC `private.confirm_condominium_member_transfer` esiste come `SECURITY DEFINER`, imposta `search_path TO ''` e controlla `auth.uid()` e il permesso di gestione prima di procedere. È stato osservato anche un lock `FOR UPDATE` sull'unità. Questo è un riscontro parziale sulla funzione, non una certificazione completa di grants, dipendenze e comportamento di tutti i rami.
+- La query di raggruppamento degli stati non ha restituito righe: la tabella non presenta trasferimenti registrati al momento della verifica. Non sono quindi stati verificati casi reali di subentro già archiviati.
+
+Questi riscontri descrivono lo stato osservato e non risolvono la divergenza del registro. Prima di eseguire migrazioni sul database va inoltre verificata la compatibilità dei dati, anche se la tabella risulta attualmente priva di righe.
