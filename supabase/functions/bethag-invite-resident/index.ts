@@ -266,6 +266,8 @@ Deno.serve(async (req: Request) => {
         user_metadata: {
           full_name: name,
           bethag_role: "resident",
+          bethag_invited: true,
+          bethag_password_set: false,
           workspace_id: workspaceId,
         },
       });
