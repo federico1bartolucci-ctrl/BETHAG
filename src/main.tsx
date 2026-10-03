@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, closeCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, closeCondominiumMemberTransfer, previewCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2953,6 +2953,39 @@ function App() {
       return false;
     }
     try {
+      const preview = await previewCondominiumMemberTransfer({
+        unitId: input.unitId,
+        outgoingMemberId: input.outgoingMemberId,
+        transferDate: input.transferDate,
+      });
+      const money = (value: unknown) => new Intl.NumberFormat("it-IT", {
+        style: "currency", currency: "EUR",
+      }).format(Number(value ?? 0));
+      const flags = (preview.review_flags && typeof preview.review_flags === "object")
+        ? preview.review_flags as Record<string, unknown>
+        : {};
+      const reviewItems = [
+        flags.unpaid_before_transfer === true ? "rate scadute o non saldate" : "",
+        flags.unpaid_allocations_before_transfer === true ? "riparti di spesa non saldati" : "",
+        flags.outstanding_fiscal_carryovers === true ? "riporti fiscali ancora aperti" : "",
+        flags.extraordinary_deliberated_before_due_after === true ? "spese straordinarie deliberate prima del rogito ma con scadenza successiva" : "",
+      ].filter(Boolean);
+      const previewMessage = [
+        "QUADRO PREVISIONALE DEL SUBENTRO",
+        `Data: ${input.transferDate}`,
+        `Rate insolute alla data: ${money(preview.outstanding_before)}`,
+        `Rate già pagate alla data: ${money(preview.paid_before)}`,
+        `Riparti insoluti alla data: ${money(preview.allocations_outstanding_before)}`,
+        `Riporti fiscali aperti: ${money(preview.fiscal_carryovers_outstanding)}`,
+        "",
+        reviewItems.length
+          ? "Elementi da verificare:\n- " + reviewItems.join("\n- ")
+          : "Nessuna delle criticità contabili automatiche elencate risulta presente.",
+        "",
+        "La ripartizione delle responsabilità giuridiche richiede comunque verifica documentale.",
+        "Vuoi procedere con la registrazione del subentro?",
+      ].join("\n");
+      if (!window.confirm(previewMessage)) return false;
       await confirmCondominiumMemberTransfer(input);
       const refreshed = await loadBackendState(profile.workspaceId);
       setCondominiumMembers(refreshed.condominiumMembers || []);
