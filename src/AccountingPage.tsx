@@ -1557,7 +1557,9 @@ function AccountingPage({
       const scopeUnitIds = millesimalForm.scope_mode === "units" ? millesimalForm.scope_unit_ids : [];
       const scopeBuildingCodes = millesimalForm.scope_mode === "buildings" ? millesimalForm.scope_building_codes.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean) : [];
       if (millesimalForm.scope_mode === "units" && scopeUnitIds.length === 0) { setError("Seleziona almeno una unità."); return; }
+      if (millesimalForm.scope_mode === "units" && (new Set(scopeUnitIds).size !== scopeUnitIds.length || scopeUnitIds.some(id => !units.some(u => u.id === id && u.condominium_id === dbCondominiumId)))) { setError("La tabella può includere solo unità appartenenti al condominio selezionato, senza duplicati."); return; }
       if (millesimalForm.scope_mode === "buildings" && scopeBuildingCodes.length === 0) { setError("Indica almeno un fabbricato o civico."); return; }
+      if (millesimalForm.scope_mode === "buildings" && new Set(scopeBuildingCodes.map(code => code.toLowerCase())).size !== scopeBuildingCodes.length) { setError("I fabbricati o civici indicati non possono essere duplicati."); return; }
       const { error: saveError } = await supabase.from("condominium_millesimal_tables").insert({
         workspace_id: workspaceId, condominium_id: dbCondominiumId, name:millesimalForm.name.trim(),
         description:millesimalForm.description, total_millesimi:totalMillesimi,
@@ -1613,6 +1615,10 @@ function AccountingPage({
       setError("Tabella o unità non appartenenti al condominio selezionato.");
       return;
     }
+    const unitInTableScope = selectedTable.scope_mode === "all"
+      || (selectedTable.scope_mode === "units" && selectedTable.scope_unit_ids.includes(selectedUnit.id))
+      || (selectedTable.scope_mode === "buildings" && selectedTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((selectedUnit as any).building_code || "").trim().toLowerCase()));
+    if (!unitInTableScope) { setError("L'unità selezionata non rientra nell'ambito della tabella millesimale."); return; }
     setSaving(true); setError("");
     try {
       const payload = {
