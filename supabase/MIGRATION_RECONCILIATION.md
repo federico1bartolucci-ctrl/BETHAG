@@ -394,3 +394,8 @@ Updated `20261003060000_expand_member_transfer_preview_installments.sql` so the 
 ## Preview residual predicate count correction — 2026-10-03
 
 During cross-review, corrected the already-applied guard in `20261003060000_expand_member_transfer_preview_installments.sql`: the residual-positive predicate appears in both `outstanding_total` and `outstanding_due_after`, so the required exact count is two, not one. The updated source was fetched back and verified. Branch-only; no database execution or production change; full QA/collaudo remains deferred.
+
+
+## Unit-level carryover migration control-flow repair — 2026-10-03
+
+Corrected `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql`: the unscoped carryover query is now tenant-scoped and the snapshot insertion is performed in the same function-definition update, with a single execution after both transformations. Removed the stray control-flow closure that made the migration block structurally invalid. Source was fetched back and matched exactly. Static source review only; no SQL execution, database mutation, production change, or full QA/collaudo.
