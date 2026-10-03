@@ -364,3 +364,8 @@ Repaired `20261003050000_preserve_transfer_extraordinary_allocations.sql`: recon
 ## Unit expense scope idempotence — 2026-10-03
 
 Hardened `20261003073000_scope_transfer_unit_expenses.sql`: the already-scoped path now requires exactly one scoped predicate per target function and rejects any remaining unscoped variant. The file was fetched back from GitHub and the resulting blob SHA verified. This is a branch-only source change; no production DDL or data changes and no full QA/collaudo were performed.
+
+
+## Extraordinary preview idempotence count correction — 2026-10-03
+
+Corrected `20261003077000_scope_preview_extraordinary_allocations.sql`: the already-scoped path had compared the byte-length delta against one predicate length despite requiring two occurrences. It now compares against twice the predicate length, so both expected preview predicates must be present. The source was fetched back and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
