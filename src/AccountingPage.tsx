@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
   id: number;
@@ -101,7 +102,7 @@ type Installment = { id:string; condominium_id:string; fiscal_year_id:string|nul
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
 type CarryoverCompensation = { id:string; condominium_id:string; carryover_id:string; target_installment_id:string|null; amount:number; notes:string; created_at:string };
-type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "consumi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni";
+type Tab = "rendiconto" | "movimenti" | "ripartizioni" | "millesimi" | "consumi" | "rate" | "fondi" | "fiscale" | "contenzioso" | "impostazioni" | "subentri";
 type AccountingSettings = { id:string; condominium_id:string; accounting_start_date:string; accounting_end_date:string; ordinary_installment_count:number; ordinary_due_dates:string[]; extraordinary_mode:"integrata"|"separata"; extraordinary_allow_multi_year:boolean; };
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
@@ -1895,6 +1896,7 @@ function AccountingPage({
           ["fiscale", "Adempimenti fiscali"],
           ["contenzioso", "Contenzioso"],
           ["impostazioni", "Impostazioni contabilità"],
+          ["subentri", "Subentri e trasferimenti"],
         ] as [Tab, string][]).map(([value, label]) => (
           <button
             key={value}
@@ -2176,6 +2178,14 @@ function AccountingPage({
             </article>
           ))}
         </section>
+      ) : tab === "subentri" ? (
+        <MemberTransferPanel
+          workspaceId={workspaceId}
+          condominiumId={dbCondominiumId}
+          units={units}
+          members={members}
+          isAdministrator={isAdministrator}
+        />
       ) : tab === "impostazioni" ? (
         <section className="cards-grid"><article className="card"><div className="section-heading"><div><h2>Impostazioni contabilità</h2><p>Configura calendario, rate ordinarie e criteri per le spese straordinarie.</p></div></div>
           <form onSubmit={saveAccountingSettings}><h3>Esercizio contabile</h3><div className="form-grid"><label>Data inizio<input type="date" value={accountingSettingsForm.accounting_start_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_start_date:e.target.value})}/></label><label>Data fine<input type="date" value={accountingSettingsForm.accounting_end_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_end_date:e.target.value})}/></label></div>
