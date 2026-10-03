@@ -18,6 +18,7 @@ declare
     from public.condominium_ledger_entries l
     where l.unit_id=p_unit_id
       and l.condominium_id=v_condominium
+      and l.workspace_id=v_workspace
       and (l.entry_date<=p_transfer_date or (l.deliberation_date is not null and l.deliberation_date<=p_transfer_date))
     ),'[]'::jsonb),$new$;
 begin
@@ -26,6 +27,7 @@ begin
     if position('from public.condominium_ledger_entries l' in v_definition)=0
        or position('l.unit_id=p_unit_id' in v_definition)=0
        or position('l.condominium_id=v_condominium' in v_definition)=0
+       or position('l.workspace_id=v_workspace' in v_definition)=0
        or position('l.entry_date<=p_transfer_date' in v_definition)=0 then
       raise exception 'Unit expense snapshot exists but its expected source/scope/date filters are incomplete';
     end if;
