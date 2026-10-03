@@ -227,3 +227,13 @@ This confirms that the corresponding transfer protections are present in the liv
 Review of the live `private.close_condominium_member_transfer(uuid)` definition found that closure checked member-assigned installments, expense allocations, member carryovers, and unit-unassigned fiscal carryovers, but did not check unit-unassigned installments. The preview and confirmation-time snapshot include such installments, so an administrator could otherwise close/archive the outgoing member while an unresolved unit-level installment remained. The live `condominium_installments` schema includes `workspace_id`, `condominium_id`, `unit_id`, `member_id`, `amount`, and `paid_amount`, supporting a workspace- and condominium-scoped guard.
 
 Added `20261003071000_block_transfer_close_with_unassigned_installments.sql` to the working branch. It updates the existing close function definition idempotently, adds the outstanding unit-level installment sum, and includes it in the closure-blocking condition. A subsequent read-only `pg_get_functiondef` inspection of the live `private.close_condominium_member_transfer(uuid)` confirmed that the declaration fragment, unit-carryover query anchor, and closure condition expected by the migration match the currently deployed function. The live migration history still ends at `20261003050722`, so this `20261003071000` change is not recorded as applied. This validates the anchor against the current live definition only; it does not prove the migration is safe against every possible intervening schema state. The migration has not been applied to Supabase.
+
+
+## Read-only function reconciliation — 2026-10-03 (continued)
+
+A subsequent read-only inspection of the live function definitions confirmed:
+- `private.close_condominium_member_transfer(uuid)` includes the unit-unassigned fiscal carryover guard but does not yet include the unit-unassigned installment guard from branch migration `20261003071000`.
+- `public.preview_condominium_member_transfer(uuid,uuid,date)` and `public.get_member_transfer_accounting_snapshot(uuid)` already expose unit ledger expenses, but their current live source queries do not yet apply the workspace and `direction='Uscita'` predicates proposed in `20261003073000`.
+- `private.confirm_condominium_member_transfer(...)` does not yet include the `unit_expenses` snapshot key proposed in `20261003072000`.
+
+These are observed differences between the live function definitions and the pending branch changes, not evidence that the pending migrations have executed successfully. Inspection was read-only; production schema and migration history were not changed. Content-level and dependency review remains pending before deployment eligibility can be determined.
