@@ -374,7 +374,7 @@ async function syncBackendStateNow(
       if (condominiumSuppliersError) throw condominiumSuppliersError;
 
       const normalizeSupplierName = (value: unknown) =>
-        String(value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
+        String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
       const genericSuppliersByLegacyId = new Map(
         (state.suppliers ?? []).map((supplier: any) => [Number(supplier.id), supplier])
       );
