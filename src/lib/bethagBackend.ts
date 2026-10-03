@@ -360,7 +360,7 @@ async function syncBackendStateNow(
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
   let condominiumSupplierIdByLegacySupplierKey = new Map<string, string>();
-  if (canSyncModule("attivita")) {
+  if (canSyncModule("attivita") && canSyncModule("fornitori")) {
     const selectedSupplierIds = Array.from(new Set(
       (state.condominiumWorks ?? [])
         .map((item: any) => Number(item.supplierId))
@@ -467,7 +467,7 @@ async function syncBackendStateNow(
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
     }))] : null,
-    canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).map((item: any) => ({
+    canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).filter((item: any) => (!item.condominiumId || condominiumDbIdByLegacyId.has(item.condominiumId)) && (!item.supplierId || canSyncModule("fornitori"))).map((item: any) => ({
       id: item.id,
       workspace_id: workspaceId,
       condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
