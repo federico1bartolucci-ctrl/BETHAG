@@ -151,3 +151,16 @@ Questa dipendenza è quindi tripla: tabella, colonna `closed_by` e routine prees
 La verifica read-only del catalogo Production conferma che `public.condominium_member_transfers` contiene le 16 colonne attese dalla sequenza esaminata, incluse `closed_at` e `closed_by`. Sono presenti la FK `closed_by` verso `auth.users(id)`, il vincolo di stato finale con `Bozza`, `Confermato`, `Chiuso`, `Annullato` e gli indici attesi, incluso quello su `closed_by` e l'indice univoco parziale per unità/data sugli stati confermati o chiusi.
 
 Non risultano nel catalogo live né la constraint duplicata `condominium_member_transfers_status_ck` né una colonna mancante tra quelle elencate. Il difetto precedentemente individuato riguarda quindi la riproducibilità della catena storica da database vuoto, non la definizione attualmente osservata in Production. Questo riscontro non certifica da solo la correttezza di RLS, trigger, routine o dati preesistenti.
+
+
+### Ulteriori criticità nelle patch di preview e snapshot
+
+Dalla lettura integrale delle migrazioni successive emergono rischi di replay aggiuntivi, distinti dalla dipendenza tabella/indice:
+
+- `20261003062000_include_unit_unassigned_installments_in_transfer.sql` usa una sostituzione testuale globale del frammento `where i.member_id=p_outgoing_member_id` nelle definizioni di preview e conferma. Non limita la sostituzione al singolo predicato o alla singola query prevista e non verifica quante occorrenze siano state modificate. Un cambiamento anche innocuo di formattazione o la presenza di più occorrenze può quindi produrre una modifica incompleta o più ampia del previsto; l'ancora mancante causa invece il fallimento della migrazione.
+- `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` inserisce il dato tramite ancora testuale nella routine e tratta l'assenza dell'ancora come errore, salvo che la chiave sia già presente. È una patch dipendente dalla forma esatta della routine precedente e non una definizione dichiarativa autonoma.
+- `20261003060000` e `20261003061000` modificano le funzioni tramite `pg_get_functiondef` e `replace`; la seconda non controlla l'unicità dell'ancora prima della sostituzione. Il successo del replay dipende pertanto dalla definizione prodotta dalle migrazioni precedenti, non solo dalla presenza della routine.
+
+**Correzione di progetto registrata:** evitare ulteriori patch basate su sostituzioni di frammenti per le routine di trasferimento. La sequenza riconciliata dovrà installare definizioni complete e versionate delle funzioni di preview, conferma e chiusura, preservando esplicitamente le verifiche di autorizzazione, blocco per unità, controllo del proprietario uscente e snapshot contabile. Prima di preparare una migrazione incrementale per ambienti già aggiornati, va confrontata la definizione effettiva di ogni ambiente e gestita la divergenza in modo esplicito; non è sicuro applicare alla cieca una riscrittura generica.
+
+Questa è un'analisi statica dei file e non prova che tali sostituzioni abbiano danneggiato le routine in Production: le definizioni live osservate devono restare il riferimento per il percorso di riparazione. Nessuna DDL o modifica dei dati è stata eseguita.
