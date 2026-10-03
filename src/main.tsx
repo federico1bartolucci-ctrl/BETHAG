@@ -3081,6 +3081,20 @@ function App() {
 
         if (!user || cancelled) return;
 
+        const confirmedEmail = user.email?.trim().toLowerCase() || "";
+        if (!user.email_confirmed_at || confirmedEmail !== sessionEmail.trim().toLowerCase()) {
+          await supabase.auth.signOut();
+          if (!cancelled) {
+            setSessionRole(null);
+            setSessionEmail("");
+            setServerCollaboratorPermissions([]);
+            localStorage.removeItem(KEYS.session);
+            localStorage.removeItem(KEYS.sessionEmail);
+            setPage("homepage");
+          }
+          return;
+        }
+
         let authorized = false;
 
         if (sessionRole === "admin") {
