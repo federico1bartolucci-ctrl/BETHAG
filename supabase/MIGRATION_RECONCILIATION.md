@@ -374,3 +374,8 @@ Corrected `20261003077000_scope_preview_extraordinary_allocations.sql`: the alre
 ## Snapshot installment guard cleanup — 2026-10-03
 
 Cleaned `20261003078000_scope_snapshot_installment_totals.sql` by removing a duplicated pair of final outgoing/incoming scope validations. The remaining checks still enforce the expected three outgoing and one incoming scoped predicates and reject unscoped variants. Updated source was fetched back from GitHub and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
+
+
+## Unit expense snapshot idempotency hardening — 2026-10-03
+
+Hardened `20261003072000_capture_transfer_unit_expenses.sql`: when the snapshot key is already present, the guard now requires exactly one occurrence of each source, unit, condominium, workspace, direction, and pre-transfer date predicate, while still rejecting duplicate snapshot keys. Updated migration was fetched back from GitHub and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
