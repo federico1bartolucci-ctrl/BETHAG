@@ -77,7 +77,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   }
   async function confirmTransfer() {
     if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingName.trim()) { setError("Completa i dati obbligatori del trasferimento."); return; }
-    if (incomingEmail.trim() && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(incomingEmail.trim())) { setError("Inserisci un indirizzo email valido."); return; }
+    if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) { setError("Inserisci un indirizzo email valido."); return; }
     if (!window.confirm("Confermare il trasferimento? La posizione storica del cedente sarà conservata e il subentro verrà registrato.")) return;
     setBusy(true); setError(""); setMessage("");
     try {
