@@ -9594,7 +9594,7 @@ function CondominiumDetails(
         x.publishedToPortal
     ).length;
 
-  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active && (member as any).position_status !== "In chiusura" && (member as any).position_status !== "Archiviato");
+  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => { const record = member as any; const positionStatus = String(record.position_status ?? record.data?.position_status ?? "Attivo").trim(); const currentOwner = record.current_owner ?? record.data?.current_owner ?? true; return member.active && positionStatus !== "In chiusura" && positionStatus !== "Archiviato" && currentOwner !== false && String(currentOwner).toLowerCase() !== "false"; });
   const transferUnitKey = condominiumUnits.map((unit: CondominiumUnit) => unit.id).filter(Boolean).join("|");
   useEffect(() => {
     let cancelled = false;
