@@ -249,3 +249,8 @@ The date and direction predicates in the unit-expense snapshot proposal are alig
 ## Forward scope repair — 2026-10-03
 
 The extraordinary-allocation snapshot query also needed explicit tenant and condominium predicates on both the allocation and ledger-entry rows. The branch's `20261003050000_preserve_transfer_extraordinary_allocations.sql` now includes those predicates for fresh installations. Because production migration history may already have recorded that earlier version, a separate forward migration `20261003074000_scope_extraordinary_transfer_allocations.sql` was added to repair the live function definition idempotently when the unscoped query is still present. It verifies the exact expected query anchor and aborts if the anchor is missing, duplicated, or inconsistently both scoped and unscoped. The new migration is branch-only and has not been applied to production; its runtime execution still requires controlled validation.
+
+
+## Anchor precision correction — 2026-10-03
+
+The first compact single-line anchor drafted for `20261003074000` did not match the canonical multiline formatting returned by production `pg_get_functiondef`. The branch migration has been corrected to use the observed multiline predicate sequence. A subsequent read-only exact-string check confirmed the unscoped multiline anchor is present in the live confirmation function and the scoped replacement is absent. This confirms the forward migration's textual target against the current live definition; it does not validate execution, privileges preservation, or end-to-end transfer behavior. Production remains unchanged.
