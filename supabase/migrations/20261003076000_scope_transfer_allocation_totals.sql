@@ -5,6 +5,8 @@ declare
   v_def text;
   v_old text;
   v_new text;
+  v_count integer;
+  v_expected integer;
 begin
   foreach v_sig in array array[
     'public.preview_condominium_member_transfer(uuid,uuid,date)',
@@ -15,13 +17,19 @@ begin
     if v_sig like 'public.preview_%' or v_sig like 'private.confirm_%' then
       v_old := 'where a.member_id=p_outgoing_member_id';
       v_new := 'where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.member_id=p_outgoing_member_id';
+      v_expected := 2;
     else
       v_old := 'where a.member_id=t.outgoing_member_id';
       v_new := 'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.outgoing_member_id';
+      v_expected := 1;
     end if;
     if position(v_new in v_def)=0 then
-      if position(v_old in v_def)=0 then
+      v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
+      if v_count=0 then
         raise exception 'Allocation total anchor missing in %',v_sig;
+      end if;
+      if v_count<>v_expected then
+        raise exception 'Unexpected outgoing allocation anchor count % in % (expected %)',v_count,v_sig,v_expected;
       end if;
       v_def := replace(v_def,v_old,v_new);
     elsif position(v_old in v_def)>0 then
@@ -29,10 +37,12 @@ begin
     end if;
     if v_sig='public.get_member_transfer_accounting_snapshot(uuid)' then
       if position('where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id' in v_def)=0 then
-        if position('where a.member_id=t.incoming_member_id' in v_def)=0 then
-          raise exception 'Incoming allocation anchor missing in snapshot reader';
+        v_old := 'where a.member_id=t.incoming_member_id';
+        v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
+        if v_count<>1 then
+          raise exception 'Unexpected incoming allocation anchor count % in snapshot reader',v_count;
         end if;
-        v_def := replace(v_def,'where a.member_id=t.incoming_member_id','where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id');
+        v_def := replace(v_def,v_old,'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id');
       end if;
     end if;
     if position(v_old in v_def)>0 then
