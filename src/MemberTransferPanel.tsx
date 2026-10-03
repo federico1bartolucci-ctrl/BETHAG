@@ -29,7 +29,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [unitId, setUnitId] = useState("");
   const [outgoingId, setOutgoingId] = useState("");
-  const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
+  const [transferDate, setTransferDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
   const [transferType, setTransferType] = useState("Vendita");
   const [incomingName, setIncomingName] = useState("");
   const [incomingEmail, setIncomingEmail] = useState("");
