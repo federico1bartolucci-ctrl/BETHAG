@@ -69,3 +69,15 @@ Questo documento registra osservazioni statiche sul repository; non equivale a b
 La lettura delle migrazioni `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` e `20261001094000_index_transfer_closed_by.sql` conferma che entrambe fanno riferimento a `public.condominium_member_transfers` e alla colonna `closed_by`, mentre la migrazione `20261001104500_add_condominium_member_transfer.sql` è quella che crea la tabella nel flusso di file presente in `main`. Una replay pulita in ordine cronologico può quindi fallire prima di raggiungere la creazione della tabella.
 
 Non viene aggiunta una migrazione con timestamp retrodatato: potrebbe essere applicata fuori dall'ordine già registrato negli ambienti e non risolverebbe in modo sicuro la divergenza dei registri. La correzione richiede prima di determinare quali versioni siano effettivamente registrate in ciascun ambiente e poi mantenere due percorsi espliciti: bootstrap pulito ordinato e migrazioni forward-only per ambienti esistenti. Fino a tale confronto, la sequenza è segnalata come blocco di rilascio e non viene dichiarata corretta.
+
+
+## Riscontro read-only sul database Production
+
+È stata eseguita una consultazione esclusivamente in lettura del catalogo PostgreSQL e del registro `supabase_migrations.schema_migrations` del progetto Production (nessuna modifica allo schema o ai dati).
+
+- La tabella `public.condominium_member_transfers` è presente e il catalogo espone le colonne `closed_at` e `closed_by`, oltre ai campi base del trasferimento.
+- Sono presenti il vincolo canonico `condominium_member_transfers_status_check` e non compare il vincolo storico `condominium_member_transfers_status_ck`; il catalogo mostra inoltre la foreign key di `closed_by`.
+- Sono presenti l'indice `condominium_member_transfers_closed_by_idx`, gli indici principali per unità/condominio e la policy `condominium_member_transfers_manager_all`.
+- Nel registro Production, fra le versioni di questa famiglia controllate, risultano `20261002045106` e `20261002110808`; non risultano registrate le versioni `20261001093000`, `20261001094000`, `20261001104500` e `20261001120000`.
+
+Quindi lo schema trasferimenti presente in Production è più completo di quanto suggerisca il registro delle migrazioni versionate. Questo è un segnale di divergenza fra stato effettivo e storia registrata, non una prova che le migrazioni mancanti non siano mai state eseguite: le modifiche possono essere state introdotte da interventi diretti o da un altro flusso. Non è sicuro marcare versioni come applicate o rieseguire quelle mancanti senza ricostruire le operazioni originarie e confrontare tutte le dipendenze. Il prossimo passo corretto è una matrice di convergenza per ambiente, separando schema osservato, versioni registrate e percorso di bootstrap.
