@@ -12,8 +12,8 @@ begin
     end if;
     return;
   end if;
-  if length(v_def)-length(replace(v_def,v_old,'')) <> length(v_old) then
-    raise exception 'Expected unique extraordinary allocation preview anchor missing or duplicated';
+  if (length(v_def)-length(replace(v_def,v_old,''))) / length(v_old) <> 2 then
+    raise exception 'Expected two extraordinary allocation preview anchors; migration stopped';
   end if;
   v_def := replace(v_def,v_old,v_new);
   if position(v_new in v_def)=0 or position(v_old in v_def)>0 then
