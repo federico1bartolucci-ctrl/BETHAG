@@ -179,3 +179,18 @@ Lettura read-only dei log PostgreSQL dei due branch QA ha permesso di recuperare
 2. L'errore di relazione mancante va corretto nella sequenza di bootstrap/migrazioni del branch (creazione/garanzia dell'oggetto prima dei grant), non con un `REVOKE` cieco o una modifica al database Production.
 3. La policy richiede una migrazione compatibile che controlli/rimuova la policy preesistente o usi una procedura condizionale supportata da PostgreSQL, dopo aver confrontato espressione e ruoli della policy effettiva. Non sostituire semplicemente con `DROP POLICY` senza verificare il comportamento previsto.
 4. I log restituiscono più errori ma non stabiliscono da soli l'intera sequenza di migrazioni né quale sia il primo errore fatale per ciascun branch. Non sono stati eseguiti reset, rebase, replay o DDL; QA complessivo resta rinviato.
+
+
+## Riconduzione degli errori QA ai file correnti di main — 2026-10-03
+
+Il controllo dei file presenti nel branch `main` ha evidenziato una distinzione importante:
+
+- `20260928153242_add_condomino_registration_workflow.sql` crea `portal_registration_requests`, abilita RLS e rimuove esplicitamente con `DROP POLICY IF EXISTS` le policy `managers read portal registration requests` e `managers update portal registration requests` prima di ricrearle. Quindi il contenuto attuale di questo file gestisce già la policy duplicata osservata nel log QA. L'errore `42710` segnala che il SQL realmente eseguito nel branch non coincide con questa versione, oppure che un'altra migrazione successiva crea la stessa policy senza guardia; non è corretto dichiarare questo file la causa senza identificare il contenuto applicato.
+- `20261002113421_revoke_excess_public_table_privileges.sql` in `main` revoca `TRUNCATE, REFERENCES, TRIGGER` da quattro tabelle di trasferimento/trasformazione e imposta default privileges. Non contiene il `REVOKE` multi-tabella che include `public.portal_access` e compare nei log QA. Tale statement non è quindi attribuibile a questa migrazione nella versione corrente di `main`.
+- La migrazione `20260930400000_harden_portal_access_visibility.sql` opera su `public.portal_access` e sostituisce una policy con `DROP POLICY IF EXISTS`, ma presuppone correttamente che la tabella sia già stata creata.
+
+### Correzione del perimetro
+
+Gli errori registrati sono reali per i branch QA, ma non è stato trovato un file SQL corrente in `main` che contenga esattamente lo statement `REVOKE` fallito. La correzione va quindi orientata al disallineamento tra sorgente eseguita e branch/revision realmente deployata, oltre che all'ordine della migrazione che crea `portal_access`. Non aggiungere un'altra migrazione con `IF EXISTS` alla cieca: prima recuperare l'SQL effettivamente eseguito o la revisione/commit del branch e associare l'errore alla versione precisa.
+
+La policy attuale nella migrazione di registrazione è già idempotente rispetto alla policy omonima. Rimane da verificare se il branch QA abbia eseguito un file differente, una versione precedente o una seconda creazione successiva. Nessun file SQL è stato modificato in `main`, nessun DDL è stato applicato a Production e il collaudo end-to-end resta differito.
