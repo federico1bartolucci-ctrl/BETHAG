@@ -1273,6 +1273,7 @@ function AccountingPage({
       setError("I millesimi devono essere numerici e non negativi.");
       return;
     }
+    if (!hasCentPrecision(amount)) { setError("L'importo della ripartizione deve essere espresso in centesimi."); return; }
     // Il pagato di una ripartizione esistente deve provenire dai movimenti
     // di pagamento; non consentiamo modifiche manuali che creerebbero disallineamenti.
     if (editingAllocation && Number(editingAllocation.paid_amount || 0) > amount + 0.005) {
@@ -1776,8 +1777,11 @@ function AccountingPage({
     if (!supabase || !dbCondominiumId || !installmentForm.unit_id || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || !Number.isFinite(amount) || Math.round(amount * 100) <= 0) {
       setError("Inserisci unità, titolo e un importo della rata di almeno un centesimo."); return;
     }
-    const installmentYear = scopedYears.find(y => y.id === installmentForm.fiscal_year_id);
-    if (installmentYear && installmentForm.due_date && (installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
+    const installmentUnit = units.find(u => u.id === installmentForm.unit_id && u.condominium_id === dbCondominiumId);
+    const installmentYear = scopedYears.find(y => y.id === installmentForm.fiscal_year_id && y.condominium_id === dbCondominiumId);
+    if (!installmentUnit || !installmentYear) { setError("L'unità e l'esercizio della rata devono appartenere al condominio selezionato."); return; }
+    if (!hasCentPrecision(amount)) { setError("L'importo della rata deve essere espresso in centesimi."); return; }
+    if (installmentForm.due_date && (installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
       setError("La scadenza della rata non rientra nell'esercizio contabile selezionato."); return;
     }
     setSaving(true); setError("");
