@@ -349,3 +349,8 @@ Corrected `20261003071000_block_transfer_close_with_unassigned_installments.sql`
 ## Installment migration exact-count hardening — 2026-10-03
 
 Hardened `20261003075000_scope_transfer_installment_queries.sql` so its already-scoped path validates the exact expected seven preview and six confirmation predicates, rejecting duplicates, omissions, or mixed scoped/unscoped states. Hardened `20261003062000_include_unit_unassigned_installments_in_transfer.sql` with the same exact counts for expanded predicates and a uniqueness check for the `assignment_scope` JSON key. Both files were fetched back from GitHub and their blob SHAs verified. Branch-only; production was not changed, and full QA/collaudo remains deferred.
+
+
+## Allocation total scope exact-count hardening — 2026-10-03
+
+Hardened `20261003076000_scope_transfer_allocation_totals.sql`: the already-scoped path now validates exact expected counts for outgoing allocation predicates (two each in preview and confirmation, one in snapshot reader) and exactly one incoming snapshot predicate, rejecting missing, duplicated, or mixed scoped/unscoped conditions. The migration was fetched back from GitHub and its blob SHA verified. Branch-only; no production migration or full QA/collaudo was run.
