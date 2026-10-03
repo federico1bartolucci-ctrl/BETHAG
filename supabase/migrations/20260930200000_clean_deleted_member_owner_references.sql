@@ -28,6 +28,12 @@ BEGIN
     ),
     updated_at = now()
     WHERE u.condominium_id = OLD.condominium_id
+      AND EXISTS (
+        SELECT 1
+        FROM public.condominiums AS c
+        WHERE c.id = OLD.condominium_id
+          AND c.workspace_id = u.workspace_id
+      )
       AND jsonb_typeof(u.data->'ownerMemberIds') = 'array'
       AND EXISTS (
         SELECT 1
