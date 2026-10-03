@@ -416,3 +416,8 @@ Cross-review against the foundational `20261001110000_add_member_transfer_accoun
 ## Captured snapshot dollar-quote defect correction — 2026-10-03
 
 A fresh full-file read of `20261003052000_expose_captured_transfer_snapshot.sql` showed that its `v_old` dollar-quoted string was still malformed and duplicate trailing source remained after the migration block, despite the earlier anchor correction note. Rebuilt the complete file so `v_old` is exactly `$old$'transfer',jsonb_build_object($old$`, `v_new` contains only the intended captured-snapshot insertion, and the DO block closes once. The replacement was fetched back from the feature branch and exact content equality verified. This is a source correction only; no SQL execution, production change, merge, deployment, or comprehensive QA/collaudo was performed.
+
+
+## Transfer close financial tenant/unit scope — 2026-10-04
+
+Added `20261003079000_scope_transfer_close_financial_positions.sql` after the live-schema review found that the close function's outgoing-owner installment, expense-allocation, and fiscal-carryover checks filtered only by member ID. The migration now binds each check to the transfer's workspace, condominium, and unit, with exact-anchor counts and fail-closed mixed-state handling. The new migration was fetched back from GitHub and its blob SHA recorded. Source-level change only: no migration was executed, production was not modified, and full QA/collaudo remains deferred.
