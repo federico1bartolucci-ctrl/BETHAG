@@ -120,3 +120,10 @@ La definizione live di anteprima e quella di conferma includono invece rate pers
 La tabella `condominium_installments` conferma che `member_id` e `unit_id` sono entrambi nullable; quindi la distinzione è supportata dal modello dati. La correzione non viene applicata con una sostituzione testuale generica: la migrazione storica `20261003062000` dimostra che l'ancora del filtro compare in più sottoquery, comprese quelle di dettaglio e quelle aggregate, e una sostituzione indiscriminata rischierebbe di rimuovere le rate unitarie dagli elenchi o dal controllo di chiusura. Il prossimo cambiamento SQL deve intervenire per chiave JSON/aggregato in modo circoscritto, aggiungendo totali separati per le rate personali e quelle unit-level e mantenendo distinti i controlli di chiusura.
 
 Questa verifica è stata di sola lettura. La discrepanza di conteggio e contenuto del registro migrazioni resta aperta; non è stato scritto alcun record nel registro né eseguito alcun DDL su Production.
+
+
+### Ulteriore difetto rilevato nella chiusura del subentro
+
+La definizione live di `private.close_condominium_member_transfer` controlla le rate aperte collegate al cedente tramite `member_id`, le allocazioni del cedente e i carryover del cedente. Controlla inoltre i carryover senza assegnatario associati all'unità. Non effettua però un controllo equivalente sulle rate aperte con `member_id IS NULL` associate alla stessa unità, pur essendo queste incluse nell'anteprima e nello snapshot del subentro. Di conseguenza, una chiusura potrebbe risultare consentita mentre rimangono rate unit-level non assegnate.
+
+La correzione necessaria è aggiungere alla guardia di chiusura un controllo delle rate non saldate per la stessa workspace, condominio e unità, con `member_id IS NULL`, e impedire lo stato `Chiuso` finché il residuo supera la tolleranza contabile già usata (`0.005`). La migrazione sostitutiva proposta non è stata salvata nel branch: il tentativo di creazione del file è stato rifiutato dal controllo di sicurezza dello strumento GitHub. Non è stato eseguito alcun DDL su Production. Questo punto resta quindi un difetto identificato ma non corretto nel codice.
