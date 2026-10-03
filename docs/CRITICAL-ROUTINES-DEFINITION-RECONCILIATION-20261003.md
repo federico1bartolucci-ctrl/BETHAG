@@ -135,3 +135,12 @@ Il controllo dei file effettivi in `supabase/migrations` rileva un problema prec
 Di conseguenza, il replay cronologico dei file di `main` su un database vuoto non è autosufficiente: la migrazione `01093000` tenta di indicizzare una tabella non ancora creata e, anche anticipando la creazione della tabella, la colonna `closed_by` non esiste ancora. La routine iniziale inoltre assume che esista già `private.close_condominium_member_transfer(uuid)`.
 
 **Azione:** non alterare le migrazioni storiche già distribuite. La sequenza canonica per installazioni nuove deve essere ricostruita in ordine di dipendenze: prima tabelle e colonne necessarie (inclusi `closed_at/closed_by`), poi funzioni e indici, quindi grants/policy e successive evoluzioni. La correzione del solo check di stato non risolve questo blocco precedente. Il replay QA rimane da eseguire solo dopo aver completato la ricostruzione, senza scritture su Production.
+
+
+### Verifica puntuale della migrazione d'indice e delle routine dipendenti
+
+La lettura integrale dei file conferma inoltre che `20261001094000_index_transfer_closed_by.sql` ripete la creazione dell'indice su `closed_by` senza introdurre la colonna; `IF NOT EXISTS` protegge soltanto dalla duplicazione dell'indice, non dall'assenza della tabella o della colonna. La prima migrazione `20261001093000` ridefinisce anche `private.confirm_condominium_member_transfer` e altera `private.close_condominium_member_transfer`, presupponendo che entrambe le routine siano già presenti. La creazione della tabella e la definizione iniziale di conferma compaiono invece in `20261001104500`, successiva nell'ordinamento dei nomi.
+
+Questa dipendenza è quindi tripla: tabella, colonna `closed_by` e routine preesistenti. Non è correggibile rendendo idempotente il solo `CREATE INDEX`.
+
+**Intervento di riconciliazione registrato:** la futura sequenza canonica dovrà avere un bootstrap autosufficiente per la tabella trasferimenti (colonne, FK e check finali, incluso `Chiuso`), seguito dalle definizioni complete delle routine e dagli indici. Le migrazioni storiche già distribuite non vanno riscritte retroattivamente: per il percorso esistente occorre una nuova migrazione di riparazione compatibile con lo stato registrato; per installazioni nuove va preparato un percorso baseline coerente, senza eseguire in ordine file che dipendono da oggetti non ancora creati. Nessuna scrittura è stata effettuata sul database.
