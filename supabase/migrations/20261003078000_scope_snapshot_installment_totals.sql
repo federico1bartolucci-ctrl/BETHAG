@@ -19,14 +19,6 @@ if (length(v_def)-length(replace(v_def,'from public.condominium_installments i w
    or position('from condominium_installments i where i.member_id=t.incoming_member_id and i.due_date > t.transfer_date' in v_def)>0 then
   raise exception 'Incoming installment snapshot scope is incomplete or mixed';
 end if;
-if (length(v_def)-length(replace(v_def,'from public.condominium_installments i where i.workspace_id=t.workspace_id and i.condominium_id=t.condominium_id and i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date',''))) / length('from public.condominium_installments i where i.workspace_id=t.workspace_id and i.condominium_id=t.condominium_id and i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date') <> 3
-   or position('from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date' in v_def)>0 then
-  raise exception 'Outgoing installment snapshot scope is incomplete or mixed';
-end if;
-if (length(v_def)-length(replace(v_def,'from public.condominium_installments i where i.workspace_id=t.workspace_id and i.condominium_id=t.condominium_id and i.member_id=t.incoming_member_id and i.due_date > t.transfer_date',''))) / length('from public.condominium_installments i where i.workspace_id=t.workspace_id and i.condominium_id=t.condominium_id and i.member_id=t.incoming_member_id and i.due_date > t.transfer_date') <> 1
-   or position('from condominium_installments i where i.member_id=t.incoming_member_id and i.due_date > t.transfer_date' in v_def)>0 then
-  raise exception 'Incoming installment snapshot scope is incomplete or mixed';
-end if;
 execute v_def;
 end
 $migration$;
