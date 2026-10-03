@@ -37,7 +37,13 @@ BEGIN
       AND jsonb_typeof(u.data->'ownerMemberIds') = 'array'
       AND EXISTS (
         SELECT 1
-        FROM jsonb_array_elements(u.data->'ownerMemberIds') AS e(elem)
+        FROM jsonb_array_elements(
+          CASE
+            WHEN jsonb_typeof(u.data->'ownerMemberIds') = 'array'
+              THEN u.data->'ownerMemberIds'
+            ELSE '[]'::jsonb
+          END
+        ) AS e(elem)
         WHERE e.elem #>> '{}' = OLD.legacy_id::text
       );
   END IF;
