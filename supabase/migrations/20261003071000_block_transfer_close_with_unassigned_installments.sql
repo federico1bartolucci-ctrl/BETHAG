@@ -9,8 +9,9 @@ declare
 begin
   v_def := pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
   if position('v_open_unit_installments' in v_def)>0 then
-    if position('or v_open_unit_installments>0.005' in v_def)=0 then
-      raise exception 'Unit-level installment variable exists without a close guard';
+    if position('into v_open_unit_installments' in v_def)=0
+       or position('or v_open_unit_installments>0.005' in v_def)=0 then
+      raise exception 'Unit-level installment guard is only partially installed';
     end if;
     return;
   end if;
