@@ -8,10 +8,12 @@ begin
  select jsonb_build_object(
   'transfer',jsonb_build_object('id',t.id,'unit_id',t.unit_id,'outgoing_member_id',t.outgoing_member_id,'incoming_member_id',t.incoming_member_id,'transfer_date',t.transfer_date,'transfer_type',t.transfer_type,'status',t.status),
   'outgoing',jsonb_build_object(
-   'installments_due_before',coalesce((select sum(i.amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date<=t.transfer_date),0),
-   'installments_paid_before',coalesce((select sum(i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date<=t.transfer_date),0),
-   'installments_residual',coalesce((select sum(i.amount-i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date<=t.transfer_date),0),
-   'allocations_before',coalesce((select sum(a.amount) from condominium_expense_allocations a where a.member_id=t.outgoing_member_id and (a.due_date is null or a.due_date<=t.transfer_date)),0)
+   'installments_due_before',coalesce((select sum(i.amount) from condominium_installments i where i.member_id=t.outgoing_member_id and (i.due_date is null or i.due_date<=t.transfer_date)),0),
+   'installments_paid_before',coalesce((select sum(i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and (i.due_date is null or i.due_date<=t.transfer_date)),0),
+   'installments_residual',coalesce((select sum(i.amount-i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and (i.due_date is null or i.due_date<=t.transfer_date)),0),
+   'allocations_before',coalesce((select sum(a.amount) from condominium_expense_allocations a where a.member_id=t.outgoing_member_id and (a.due_date is null or a.due_date<=t.transfer_date)),0),
+   'allocations_paid_before',coalesce((select sum(a.paid_amount) from condominium_expense_allocations a where a.member_id=t.outgoing_member_id and (a.due_date is null or a.due_date<=t.transfer_date)),0),
+   'allocations_residual',coalesce((select sum(a.amount-a.paid_amount) from condominium_expense_allocations a where a.member_id=t.outgoing_member_id and (a.due_date is null or a.due_date<=t.transfer_date)),0)
   ),
   'post_transfer',jsonb_build_object(
    'installments_after',coalesce((select sum(i.amount) from condominium_installments i where i.member_id=t.incoming_member_id and i.due_date>t.transfer_date),0),
