@@ -93,3 +93,10 @@ Un'ulteriore lettura del catalogo Production ha confermato:
 - La query di raggruppamento degli stati non ha restituito righe: la tabella non presenta trasferimenti registrati al momento della verifica. Non sono quindi stati verificati casi reali di subentro già archiviati.
 
 Questi riscontri descrivono lo stato osservato e non risolvono la divergenza del registro. Prima di eseguire migrazioni sul database va inoltre verificata la compatibilità dei dati, anche se la tabella risulta attualmente priva di righe.
+
+
+### Verifica della sequenza e dei vincoli di stato trasferimento
+
+La comparazione dei file conferma una seconda incongruenza nella famiglia subentri: la migrazione iniziale `20261001104500_add_condominium_member_transfer.sql` crea il vincolo `condominium_member_transfers_status_ck` ammettendo `Bozza`, `Confermato` e `Annullato`, mentre `20261001120000_transfer_lifecycle_keep_outgoing_active.sql` sostituisce il vincolo `status_check` includendo anche `Chiuso`. La migrazione precedente `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` contiene già una funzione che usa la tabella trasferimenti prima della creazione della tabella nella sequenza nominale, quindi il replay cronologico da zero resta bloccato anche indipendentemente dal successivo riallineamento del vincolo.
+
+La migrazione forward-only `20261003121000_reconcile_member_transfer_status_constraint.sql` normalizza i due possibili nomi del vincolo e reintroduce l'insieme canonico di quattro stati; è presente nel branch ma non è stata eseguita su Production. Prima di applicarla in qualsiasi ambiente va verificato che non esistano valori `status` fuori dall'insieme ammesso, perché il nuovo CHECK li rifiuterebbe. Questa correzione del vincolo non risolve la dipendenza d'ordine nel bootstrap: il percorso da database vuoto deve essere ricostruito separatamente, senza riscrivere le migrazioni storiche registrate.
