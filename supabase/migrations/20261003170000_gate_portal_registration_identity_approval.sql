@@ -66,6 +66,12 @@ begin
     raise exception 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
   end if;
 
+  if v_request.status = 'email_mismatch'
+     and v_request.matched_member_id is not null
+     and v_request.matched_member_id <> v_member.id then
+    raise exception 'MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER';
+  end if;
+
   if v_verified_email <> lower(trim(coalesce(v_member.email, ''))) then
     raise exception 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
   end if;
