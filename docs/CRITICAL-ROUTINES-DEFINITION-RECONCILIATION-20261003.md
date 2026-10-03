@@ -109,3 +109,16 @@ Il controllo dei file in `main` conferma che non tutte le patch sono definizioni
 La definizione installata di `private.confirm_condominium_member_transfer` contiene effettivamente il lock dell'unità, la validazione del proprietario uscente, il controllo dei trasferimenti duplicati, lo snapshot contabile e la transizione del cedente a `In chiusura`. La definizione installata di `private.close_condominium_member_transfer` comprende il blocco sui riporti unitari non assegnati. Questi sono riscontri sullo stato runtime, non una prova che l'intera catena SQL di `main` ricrei lo stesso stato su database vuoto.
 
 **Decisione tecnica:** non produrre una migrazione sostitutiva della sola ultima patch: per farlo in modo affidabile serve consolidare l'intera definizione finale delle due routine, tutte le relative colonne/constraint/grants e le dipendenze di tabelle e funzioni. La correzione dovrà essere una migrazione versionata deterministica e accompagnata da verifica di replay isolato; il replay QA resta rinviato al termine della risoluzione delle anomalie, come richiesto. Non sono state eseguite scritture su Production o sui branch QA.
+
+
+### Difetto puntuale individuato nella sequenza del vincolo di stato — 2026-10-03
+
+Il confronto del testo SQL ha evidenziato un'incompatibilità riproducibile nella catena relativa a `condominium_member_transfers`:
+
+- La migrazione `20261001104500_add_condominium_member_transfer.sql` crea il check `condominium_member_transfers_status_ck`, che ammette solo `Bozza`, `Confermato` e `Annullato`.
+- La migrazione `20261001120000_transfer_lifecycle_keep_outgoing_active.sql` tenta di rimuovere `condominium_member_transfers_status_check` (nome diverso) e crea un check con quel secondo nome che include anche `Chiuso`.
+- Su un database vuoto in cui entrambe le migrazioni vengono applicate in sequenza, il primo check `status_ck` rimane attivo: il nuovo check non lo sostituisce. La chiusura con stato `Chiuso` può quindi essere respinta dal vincolo iniziale.
+
+Il catalogo Production interrogato in sola lettura mostra attualmente soltanto `condominium_member_transfers_status_check` con i quattro stati e `condominium_member_transfers_type_ck`; il difetto è dunque una criticità di riproducibilità della sequenza in `main`, non un vincolo duplicato osservato nello schema live.
+
+**Correzione da applicare nella catena versionata:** rendere coerente il nome del vincolo rimosso con quello effettivamente creato dalla migrazione iniziale (oppure assegnare fin dall'origine un nome canonico e usare quel nome in tutti i passaggi). Prima di applicare una correzione a Production occorre rispettare la versione già registrata e non modificare migrazioni storiche già distribuite; la rettifica va inserita come nuova migrazione idempotente, verificandone il comportamento sullo stato già installato e su un replay isolato. Nessuna DDL è stata eseguita.
