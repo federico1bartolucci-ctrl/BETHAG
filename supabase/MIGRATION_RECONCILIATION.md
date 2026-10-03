@@ -215,3 +215,8 @@ Read-only inspection of the connected Supabase project confirmed that the transf
 - The live close function refuses closure while outgoing installments, allocations, member carryovers, or unit-unassigned carryovers remain unresolved.
 
 This confirms that the corresponding transfer protections are present in the live schema. It does not establish byte-for-byte equivalence between each historical SQL file and the applied SQL, nor does it authorize replay. The frontend calls the public wrappers, not the private functions directly. These checks were read-only; no live data or migration history was changed.
+## Additional transfer closure defect identified (2026-10-03)
+
+Review of the live `private.close_condominium_member_transfer(uuid)` definition found that closure checked member-assigned installments, expense allocations, member carryovers, and unit-unassigned fiscal carryovers, but did not check unit-unassigned installments. The preview and confirmation-time snapshot include such installments, so an administrator could otherwise close/archive the outgoing member while an unresolved unit-level installment remained. The live `condominium_installments` schema includes `workspace_id`, `condominium_id`, `unit_id`, `member_id`, `amount`, and `paid_amount`, supporting a workspace- and condominium-scoped guard.
+
+Added `20261003071000_block_transfer_close_with_unassigned_installments.sql` to the working branch. It updates the existing close function definition idempotently, adds the outstanding unit-level installment sum, and includes it in the closure-blocking condition. The migration has not been applied to Supabase; validate its function-definition anchor against the target migration sequence before deployment.
