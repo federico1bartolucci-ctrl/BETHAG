@@ -7,6 +7,8 @@ declare
   v_new text;
   v_count integer;
   v_expected integer;
+  v_incoming_old text := 'where a.member_id=t.incoming_member_id';
+  v_incoming_new text := 'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id';
 begin
   foreach v_sig in array array[
     'public.preview_condominium_member_transfer(uuid,uuid,date)',
@@ -36,13 +38,16 @@ begin
       raise exception 'Mixed scoped and unscoped allocation reads remain in %',v_sig;
     end if;
     if v_sig='public.get_member_transfer_accounting_snapshot(uuid)' then
-      if position('where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id' in v_def)=0 then
-        v_old := 'where a.member_id=t.incoming_member_id';
-        v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
-        if v_count<>1 then
-          raise exception 'Unexpected incoming allocation anchor count % in snapshot reader',v_count;
+      if position(v_incoming_new in v_def)>0 then
+        if position(v_incoming_old in v_def)>0 then
+          raise exception 'Mixed scoped and unscoped incoming allocation reads remain in snapshot reader';
         end if;
-        v_def := replace(v_def,v_old,'where a.workspace_id=t.workspace_id and a.condominium_id=t.condominium_id and a.member_id=t.incoming_member_id');
+      else
+        v_count := (length(v_def)-length(replace(v_def,v_incoming_old,'')))/length(v_incoming_old);
+        if v_count<>1 then
+          raise exception 'Unexpected incoming allocation anchor count % in snapshot reader (expected one scoped or unscoped anchor)',v_count;
+        end if;
+        v_def := replace(v_def,v_incoming_old,v_incoming_new);
       end if;
     end if;
     if position(v_old in v_def)>0 then
