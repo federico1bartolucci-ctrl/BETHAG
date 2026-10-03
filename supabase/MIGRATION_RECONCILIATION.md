@@ -297,3 +297,10 @@ Hardened `20261003062000_include_unit_unassigned_installments_in_transfer.sql` w
 Read-only inspection of the live transfer function definitions confirmed one unit-expense anchor in preview and one in the accounting snapshot reader. The preview extraordinary-allocation predicate occurs twice in the live function, so migration `20261003077000_scope_preview_extraordinary_allocations.sql` was corrected to require exactly two anchors before replacing both. Migrations `20261003073000_scope_transfer_unit_expenses.sql` and `20261003078000_scope_snapshot_installment_totals.sql` now reject mixed states where scoped and unscoped predicates coexist, rather than treating any scoped occurrence as complete idempotency.
 
 These changes only update SQL files in the working branch. No production migration or full QA was run.
+
+
+## Migration dependency ordering correction — 2026-10-03
+
+Corrected 20261003062000_include_unit_unassigned_installments_in_transfer.sql so it performs only the semantic expansion from member-assigned installments to member-assigned plus unit-unassigned installments. Workspace and condominium filtering is deliberately deferred to 20261003075000_scope_transfer_installment_queries.sql. This preserves a valid dependency chain: 0620 introduces the expanded predicate, and 0750 scopes that exact predicate. Previously, 0620 embedded tenant filters itself, which made the subsequent 0750 anchor impossible to match in sequence.
+
+Also corrected the declaration anchor in 20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql to target the unique v_open_carryovers numeric; declaration independently of other variables in the function's DECLARE list. The revised 0620 and 0640 files were fetched back from GitHub and their blob hashes verified. These corrections are branch-only; no production migration was run.
