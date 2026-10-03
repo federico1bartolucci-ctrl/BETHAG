@@ -1697,7 +1697,7 @@ function AccountingPage({
 
   async function saveBudget(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(budgetForm.fiscal_year_id) || !budgetForm.description.trim() || Number(budgetForm.amount) <= 0) {
+    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(budgetForm.fiscal_year_id) || !budgetForm.description.trim() || !Number.isFinite(Number(budgetForm.amount)) || Number(budgetForm.amount) <= 0) {
       setError("Inserisci descrizione e importo del preventivo.");
       return;
     }
