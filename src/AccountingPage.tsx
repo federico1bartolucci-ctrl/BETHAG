@@ -864,7 +864,12 @@ function AccountingPage({
       setError("Inserisci descrizione e importo maggiore di zero.");
       return;
     }
-    const ledgerYear = scopedYears.find(y => y.id === ledgerForm.fiscal_year_id);
+    const ledgerYear = ledgerForm.fiscal_year_id ? scopedYears.find(y => y.id === ledgerForm.fiscal_year_id && y.condominium_id === dbCondominiumId) : null;
+    const isValidIsoDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+    if (ledgerForm.fiscal_year_id && !ledgerYear) { setError("L'esercizio del movimento deve appartenere al condominio selezionato."); return; }
+    if (!isValidIsoDate(ledgerForm.entry_date) || (ledgerForm.due_date && !isValidIsoDate(ledgerForm.due_date))) { setError("Inserisci date valide per il movimento e la scadenza."); return; }
+    if (!hasCentPrecision(Number(ledgerForm.amount))) { setError("L'importo del movimento deve essere espresso in centesimi."); return; }
+    if (ledgerForm.unit_id && !units.some(u => u.id === ledgerForm.unit_id && u.condominium_id === dbCondominiumId)) { setError("L'unità del movimento deve appartenere al condominio selezionato."); return; }
     if (ledgerYear && (ledgerForm.entry_date < ledgerYear.start_date || ledgerForm.entry_date > ledgerYear.end_date)) {
       setError("La data del movimento non rientra nell'esercizio contabile selezionato.");
       return;
