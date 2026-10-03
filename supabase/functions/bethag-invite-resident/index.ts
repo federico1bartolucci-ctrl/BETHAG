@@ -154,6 +154,12 @@ Deno.serve(async (req: Request) => {
             (candidate) => candidate.email?.trim().toLowerCase() === email
           );
           if (!existingUser) throw inviteError;
+          if (!existingUser.email_confirmed_at) {
+            return json({
+              error: "Esiste già un account con questa e-mail, ma l'indirizzo non risulta verificato. L'utente deve completare la verifica dell'account prima che l'amministratore possa collegarlo al profilo condominiale.",
+              code: "EXISTING_ACCOUNT_EMAIL_NOT_VERIFIED",
+            }, 409);
+          }
           targetUserId = existingUser.id;
         } else {
           throw inviteError;
