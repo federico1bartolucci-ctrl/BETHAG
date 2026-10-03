@@ -21,7 +21,7 @@ begin
   v_def := replace(v_def,v_old,v_new);
 
   v_old := 'if v_open_installments>0.005 or v_open_unit_installments>0.005 or v_open_allocations>0.005 or v_open_carryovers>0.005 or v_open_unit_carryovers>0.005 then';
-  v_new := E'select coalesce(sum(a.amount-a.paid_amount),0) into v_open_unit_allocations from public.condominium_expense_allocations a where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.unit_id=v_unit and a.member_id is null and a.amount-a.paid_amount>0.005;\\n ' || v_old;
+  v_new := 'select coalesce(sum(a.amount-a.paid_amount),0) into v_open_unit_allocations from public.condominium_expense_allocations a where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.unit_id=v_unit and a.member_id is null and a.amount-a.paid_amount>0.005;' || chr(10) || v_old;
   if length(v_def)-length(replace(v_def,v_old,'')) <> length(v_old) then
     raise exception 'Financial close condition anchor missing or ambiguous';
   end if;
