@@ -369,3 +369,8 @@ Hardened `20261003073000_scope_transfer_unit_expenses.sql`: the already-scoped p
 ## Extraordinary preview idempotence count correction — 2026-10-03
 
 Corrected `20261003077000_scope_preview_extraordinary_allocations.sql`: the already-scoped path had compared the byte-length delta against one predicate length despite requiring two occurrences. It now compares against twice the predicate length, so both expected preview predicates must be present. The source was fetched back and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
+
+
+## Snapshot installment guard cleanup — 2026-10-03
+
+Cleaned `20261003078000_scope_snapshot_installment_totals.sql` by removing a duplicated pair of final outgoing/incoming scope validations. The remaining checks still enforce the expected three outgoing and one incoming scoped predicates and reject unscoped variants. Updated source was fetched back from GitHub and its blob SHA verified. Branch-only; no database execution or production change, and full QA/collaudo remains deferred.
