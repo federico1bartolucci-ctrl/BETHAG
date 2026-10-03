@@ -166,12 +166,23 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          // listUsers is paginated; search until the exact address is found or
+          // the API returns a short page. A first-page-only lookup can turn a
+          // recoverable retry into a false "user not found" once the workspace
+          // has more than 1,000 Auth users.
+          let existingUser: (typeof invitedUser.user) | null = null;
+          let page = 1;
+          const perPage = 1000;
+          while (!existingUser) {
+            const { data: users, error: usersError } =
+              await adminClient.auth.admin.listUsers({ page, perPage });
+            if (usersError) throw usersError;
+            existingUser = users.users.find(
+              (candidate) => candidate.email?.trim().toLowerCase() === email
+            ) ?? null;
+            if (existingUser || users.users.length < perPage) break;
+            page += 1;
+          }
           if (!existingUser) throw inviteError;
           if (!existingUser.email_confirmed_at) {
             return json({
