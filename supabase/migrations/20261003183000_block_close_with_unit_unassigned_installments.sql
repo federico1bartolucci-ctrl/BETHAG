@@ -27,7 +27,7 @@ begin
   if position('v_condominium uuid' in v_def)=0
      or position('v_unit uuid' in v_def)=0
      or position('into v_open_unit_installments' in v_def)=0
-     or position('or v_open_unit_installments>0.005' in v_def)
+     or position('or v_open_unit_installments>0.005' in v_def)=0
      or position('i.member_id is null and i.amount-i.paid_amount>0.005' in v_def)=0 then
     raise exception 'Unit-level unpaid installment close guard or context missing';
   end if;
