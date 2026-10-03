@@ -8,10 +8,14 @@ declare
 begin
   v_def := pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
 
-  if position('v_open_unit_installments numeric' in v_def) > 0
-     and position('into v_open_unit_installments' in v_def) > 0
-     and position('or v_open_unit_installments>0.005' in v_def) > 0 then
-    return;
+  if position('v_open_unit_installments numeric' in v_def) > 0 then
+    if position(v_unit_query in v_def) > 0
+       and position('or v_open_unit_installments>0.005' in v_def) > 0
+       and position('i.workspace_id=t.workspace_id and i.condominium_id=t.condominium_id and i.unit_id=t.unit_id' in v_def) > 0
+       and position('i.member_id is null' in v_def) > 0 then
+      return;
+    end if;
+    raise exception 'Partial or incorrectly scoped unit-installment close guard detected';
   end if;
 
   if position('v_open_unit_carryovers numeric; v_out_data jsonb;' in v_def) = 0 then
