@@ -20,8 +20,9 @@ begin
       v_new := 'where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id and l.workspace_id=t.workspace_id and l.direction=''Uscita''';
     end if;
     if position(v_new in v_def)>0 then
-      if position(v_old in v_def)>0 then
-        raise exception 'Mixed scoped and unscoped unit expense predicates remain in %',v_sig;
+      if (length(v_def)-length(replace(v_def,v_new,'')))/length(v_new)<>1
+         or position(v_old in v_def)>0 then
+        raise exception 'Unit expense predicate is duplicated or mixed in %',v_sig;
       end if;
       continue;
     end if;
