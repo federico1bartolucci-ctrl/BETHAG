@@ -264,3 +264,8 @@ Added forward migration `20261003075000_scope_transfer_installment_queries.sql`.
 ## Transfer allocation tenant scoping — 2026-10-03
 
 Added forward migration `20261003076000_scope_transfer_allocation_totals.sql`. It scopes allocation reads in the transfer preview, confirmation snapshot, and accounting snapshot reader by workspace and condominium. The snapshot reader also scopes incoming-member allocation totals. The migration checks for missing anchors and mixed scoped/unscoped variants before replacing function definitions. Branch-only; not executed against production. A controlled database run is still required to validate exact function formatting, behavior, and preservation of function metadata.
+
+
+## Transfer preview extraordinary allocation scope — 2026-10-03
+
+Added `20261003077000_scope_preview_extraordinary_allocations.sql` to apply workspace/condominium predicates to extraordinary allocation rows and their linked ledger entries in the preview function. A read-only exact-anchor check against the current production function definition confirmed the migration's unscoped predicate is present. This verifies target text only; migration execution and behavior remain untested, and production was not modified.
