@@ -1,7 +1,16 @@
 # Verifica puntuale routine critiche — 2026-10-03
 
 ## Perimetro
-Lettura delle definizioni effettivamente installate nel database BETHAG Production tramite catalogo PostgreSQL. Nessuna funzione è stata eseguita e non sono state apportate modifiche al database. La ricerca delle routine nel codice SQL del branch `main` non ha restituito corrispondenze, quindi non è possibile attestare la parità con una migrazione versionata.
+Lettura delle definizioni effettivamente installate nel database BETHAG Production tramite catalogo PostgreSQL e controllo advisor Supabase del 2026-10-03. Nessuna funzione è stata eseguita e non sono state apportate modifiche al database. La ricerca delle routine nel codice SQL del branch `main` non ha restituito corrispondenze, quindi non è possibile attestare la parità con una migrazione versionata.
+
+## Avviso advisor sicurezza
+
+Il Security Advisor Supabase ha rilevato tre funzioni `SECURITY DEFINER` eseguibili dal ruolo `authenticated` attraverso l'API pubblica:
+- `public.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid)`
+- `public.close_condominium_member_transfer(p_transfer_id uuid)`
+- `public.confirm_condominium_member_transfer(...)`
+
+L'avviso conferma la raggiungibilità delle tre RPC nello schema `public`, non dimostra da solo un bypass di autorizzazione. Le routine contengono controlli applicativi descritti sotto; resta necessario verificare i percorsi negativi e che non esistano varianti invocabili con argomenti manipolati. Nessuna revoca automatica è stata applicata.
 
 ## Approvazione accesso portale
 
@@ -20,8 +29,17 @@ Sono presenti due livelli:
 
 **Punti di riconciliazione:** verificare i privilegi di accesso diretto alle routine private e la coerenza delle chiamate dal client; verificare inoltre che il blocco alla chiusura per qualsiasi saldo residuo sia coerente con la regola di continuità contabile concordata per il rogito. Lo snapshot preserva dati e residui, ma non effettua una riallocazione automatica dei debiti tra cedente e acquirente; la funzione segnala infatti che la verifica della responsabilità legale è richiesta.
 
+## Stato dei branch Supabase
+
+La lettura dei branch ha individuato:
+- `bethag-continuity-qa`: stato `MIGRATIONS_FAILED`; registro leggibile con 16 migrazioni, dalla `20260928021707` alla `20260928043415`.
+- `bethag-member-transfer-qa`: stato `MIGRATIONS_FAILED`; registro leggibile con 30 migrazioni, fino alla `20261002073340`.
+
+Il registro restituito documenta le versioni registrate, ma non espone il messaggio SQL preciso che ha causato il fallimento; non è quindi corretto attribuire una causa senza recuperare il dettaglio del log/errore. I branch non sono stati resettati, ribasati o modificati.
+
 ## Esito operativo
-1. Non emerge una base sufficiente per applicare una revoca generalizzata dei privilegi: potrebbe interrompere RPC legittime.
-2. Prima di una migrazione correttiva occorre acquisire la configurazione degli schemi esposti dall'API e gli ACL/USAGE effettivi, poi confrontare le chiamate client con i wrapper pubblici.
+1. L'advisor conferma che le tre RPC pubbliche sono eseguibili da `authenticated`; questo richiede una verifica mirata dei controlli e dei casi negativi, non una revoca indiscriminata.
+2. Prima di una migrazione correttiva occorre acquisire gli ACL/USAGE effettivi dello schema `private` e la configurazione degli schemi esposti dall'API, poi confrontare le chiamate client con i wrapper pubblici.
 3. Le definizioni di produzione non sono ancora riconciliate con una catena di migrazioni completa in `main`; non vanno convertite in una migrazione incrementale senza controllare dipendenze, firme e stato delle installazioni.
-4. Nessuna modifica Production; collaudo integrale rinviato al termine della riconciliazione, come richiesto.
+4. I branch QA risultano con migrazioni fallite; recuperare il dettaglio del primo errore è il prossimo passo per correggere la catena in modo deterministico.
+5. Nessuna modifica Production; collaudo integrale rinviato al termine della riconciliazione, come richiesto.
