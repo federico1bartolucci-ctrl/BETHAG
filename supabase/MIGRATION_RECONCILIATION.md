@@ -290,3 +290,10 @@ The close-function inspection also confirms the unit-level fiscal carryover guar
 ## Unit-unassigned installment migration hardening — 2026-10-03
 
 Hardened `20261003062000_include_unit_unassigned_installments_in_transfer.sql` with expected occurrence counts for outgoing installment predicates in preview and confirmation, plus a unique JSON insertion anchor for the assignment-scope marker. Hardened `20261003071000_block_transfer_close_with_unassigned_installments.sql` to require unique declaration, unit-carryover query, and closure-condition anchors before modifying the close function. Both files were committed to the working branch and their updated content was fetched back from GitHub. These are textual guards only: no migration execution, production write, overall QA, or merge was performed.
+
+
+## Scope repair anchor reconciliation — 2026-10-03
+
+Read-only inspection of the live transfer function definitions confirmed one unit-expense anchor in preview and one in the accounting snapshot reader. The preview extraordinary-allocation predicate occurs twice in the live function, so migration `20261003077000_scope_preview_extraordinary_allocations.sql` was corrected to require exactly two anchors before replacing both. Migrations `20261003073000_scope_transfer_unit_expenses.sql` and `20261003078000_scope_snapshot_installment_totals.sql` now reject mixed states where scoped and unscoped predicates coexist, rather than treating any scoped occurrence as complete idempotency.
+
+These changes only update SQL files in the working branch. No production migration or full QA was run.
