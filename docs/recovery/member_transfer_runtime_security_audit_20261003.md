@@ -42,3 +42,18 @@ La presenza del vincolo non risolve i rischi di identità del subentrante né la
 ## Verifica integrazione client (branch `bethag-migration-repair`, 2026-10-03)
 
 La verifica iniziale che non rilevava un collegamento client è superata da interventi successivi sul ramo `bethag-migration-repair`: `src/lib/bethagBackend.ts` contiene ora i client per anteprima e conferma; `src/main.tsx` espone il comando Subentro nel dettaglio condominio agli amministratori e collega anteprima, presa d'atto, conferma e refresh post-commit. Il form e il client RPC non accettano `incomingUserId` e inviano esplicitamente `p_incoming_user_id: null`, quindi il percorso UI non collega account al subentrante. Questo presidio client non corregge però il contratto RPC: la funzione server continua ad accettare un `p_incoming_user_id` arbitrario se chiamata direttamente da un gestore autorizzato. Prima del rilascio occorre introdurre un controllo server-side che impedisca il collegamento senza identità verificata/invito accettato. Non sono stati eseguiti build o test browser dopo l'integrazione.
+
+
+## Riscontro aggiuntivo: contratto RPC effettivo in produzione (2026-10-03)
+
+La lettura diretta di `pg_proc` ha restituito le definizioni complete delle tre RPC. Le firme pubbliche effettive sono:
+
+- `public.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)`
+- `public.preview_condominium_member_transfer(uuid,uuid,date)`
+- `public.close_condominium_member_transfer(uuid)`
+
+La conferma e la chiusura pubbliche risultano `SECURITY DEFINER`, non `SECURITY INVOKER`, e sono eseguibili da `authenticated`; le corrispondenti funzioni private sono anch'esse `SECURITY DEFINER`. L'anteprima pubblica è invece `SECURITY INVOKER`. Le funzioni hanno `search_path` fissato. Il wrapper di conferma inoltra il parametro `p_incoming_user_id` alla funzione privata; la definizione runtime privata inserisce tale UUID nel campo `condominium_members.user_id` senza un controllo che dimostri consenso o verifica dell'identità dell'account entrante. La rimozione del parametro dal client BETHAG riduce il rischio nel flusso UI, ma non è un controllo di sicurezza server-side.
+
+Le migrazioni storiche presenti nel ramo non sono una rappresentazione sufficiente della definizione runtime: le versioni lette differiscono dalla funzione effettiva per controlli su proprietario corrente, lock dell'unità, disattivazione dell'accesso portale e snapshot. Non copiare quindi una vecchia definizione `CREATE OR REPLACE FUNCTION` in una nuova migrazione senza prima riconciliare l'intero corpo runtime, dipendenze, grants e trigger. È necessario progettare una correzione incrementale che preservi tutti i controlli già presenti e rifiuti ogni `p_incoming_user_id` non verificato, oppure rimuova del tutto il collegamento account dalla RPC e lo demandi a un flusso di invito/accettazione separato.
+
+Questa è una verifica di catalogo in sola lettura. Non è stato eseguito alcun tentativo di chiamata RPC, non sono state cambiate ACL o definizioni e non è stata applicata alcuna migrazione. Prima di predisporre la patch SQL definitiva restano da verificare il flusso server di invito/accettazione, i controlli email verificata e conflitti account, nonché le grants di schema e l'intera catena dei trigger interessati.
