@@ -506,7 +506,7 @@ function AccountingPage({
     return Array.from(map.values()).map((row) => {
       const paid = installmentUnits.has(row.unitId) ? row.installmentPaid : row.allocatedPaid;
       const unitCarryovers = rendicontoYearId === "all" ? [] : rendicontoCarryovers.filter(c => c.unit_id === row.unitId);
-      const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Number(c.balance || 0) : -Math.abs(Number(c.balance || 0))), 0);
+      const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Math.abs(Number(c.balance || 0)) : -Math.abs(Number(c.balance || 0))), 0);
       const residual = installmentUnits.has(row.unitId)
         ? Math.max(0,row.installments-paid)
         : Math.max(0,row.allocated-paid);
