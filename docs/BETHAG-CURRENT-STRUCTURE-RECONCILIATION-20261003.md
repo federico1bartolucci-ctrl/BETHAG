@@ -243,3 +243,23 @@ La verifica puntuale delle sette funzioni nominate dal test conferma che tutte e
 La modifica non va applicata come sostituzione testuale delle definizioni né retroattivamente alla migrazione storica. Occorre una nuova migrazione forward-only con definizioni complete e versionate, preservando firme, tipo di ritorno, volatilità, proprietario e ACL effettive. Prima di prepararla per gli altri cinque helper, acquisire i rispettivi corpi completi da una sorgente autorizzata: il tentativo di lettura integrale dal catalogo live non è stato completato, quindi non è corretto ricostruire o riscrivere quei corpi per supposizione. Test mirati devono confrontare accesso legittimo admin/collaboratore/residente, permessi modulo mancanti, account disattivato e tentativi cross-workspace/cross-condominio, oltre a verificare che `authenticated` conservi EXECUTE e `anon` ne sia escluso.
 
 Esito operativo: l'ACL dei sette helper è coerente con il test RLS; la configurazione `search_path=public` è una superficie di hardening da correggere con definizioni complete e test, non una prova autonoma di vulnerabilità. Nessuna funzione o ACL live è stata modificata e nessuna migrazione eseguibile di hardening è stata aggiunta.
+
+
+### Matrice dei lock nelle scritture contabili e nel subentro (03/10/2026)
+
+La revisione statica delle definizioni versionate individua tre meccanismi di sincronizzazione distinti, che al momento non costituiscono un protocollo condiviso per unità:
+
+- `private.generate_installments_from_allocations_schedule` acquisisce `pg_advisory_xact_lock` calcolato da workspace, condominio e movimento contabile. Il lock serializza le generazioni riferite alla stessa spesa, ma non è dimostrato che venga acquisito dalle RPC di subentro o dalle altre mutazioni delle rate.
+- `public.register_condominium_installment_payment` acquisisce `FOR UPDATE` sulla singola rata e, successivamente, sulle ripartizioni della spesa/unità. Non acquisisce il lock advisory usato dalla generazione né un lock comune alla chiusura del subentro.
+- `private.confirm_condominium_member_transfer` acquisisce `FOR UPDATE` sull'unità nella migrazione `20261002110000_serialize_member_transfer_by_unit.sql`. La chiusura acquisisce il lock sulla riga del trasferimento. Non risulta quindi dimostrato un ordine di lock comune tra conferma/chiusura, generazione rate, pagamento e inserimento o modifica diretta di rate/ripartizioni.
+
+Conseguenza: i lock presenti proteggono righe o operazioni specifiche, ma non garantiscono da soli che il controllo dei residui in chiusura sia serializzato rispetto a tutte le scritture contabili concorrenti. Non è corretto aggiungere soltanto un lock advisory alla funzione di chiusura: finché ogni percorso di scrittura rilevante non acquisisce lo stesso lock (con chiave e ordine uniformi), quel lock non impedisce inserimenti concorrenti.
+
+Correzione architetturale richiesta prima di implementare una migrazione:
+1. Inventariare tutte le RPC, trigger e scritture dirette che creano/modificano/eliminano `condominium_installments`, `condominium_expense_allocations` e carryover.
+2. Definire un mutex transazionale canonico per workspace/condominio/unità e un ordine di acquisizione coerente, inclusi i percorsi che partono da una spesa o da una rata.
+3. Fare acquisire il mutex a ogni percorso di scrittura contabile interessato e alle RPC di conferma e chiusura del subentro prima di leggere o modificare le posizioni finanziarie.
+4. Mantenere i controlli di autorizzazione, i lock di riga e le guardie esistenti; valutare e gestire esplicitamente le operazioni che coinvolgono più unità, per evitare deadlock e blocchi eccessivi.
+5. Verificare la soluzione su database isolato con transazioni concorrenti reali prima di promuovere le migrazioni.
+
+Questa matrice è un riscontro statico delle definizioni versionate, non prova esaustiva di ogni callsite né test di concorrenza eseguito. Le migrazioni non sono state applicate a Production; non viene dichiarato risolto il problema di concorrenza.
