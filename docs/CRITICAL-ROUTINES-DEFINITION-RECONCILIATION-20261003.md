@@ -65,3 +65,24 @@ Nei log PostgreSQL di Production del 2026-10-03 alle 05:07 UTC compare un tentat
 3. Le definizioni di produzione non sono ancora riconciliate con una catena di migrazioni completa in `main`; non vanno convertite in una migrazione incrementale senza controllare dipendenze, firme e stato delle installazioni.
 4. I branch QA risultano con migrazioni fallite; recuperare il dettaglio del primo errore è il prossimo passo per correggere la catena in modo deterministico.
 5. Nessuna modifica Production; collaudo integrale rinviato al termine della riconciliazione, come richiesto.
+
+
+## Verifica diretta delle definizioni runtime — 2026-10-03
+
+Una nuova interrogazione read-only di `pg_proc` e `pg_get_functiondef` ha restituito le definizioni effettivamente installate per le tre RPC pubbliche e le implementazioni private:
+
+- Il wrapper pubblico `admin_approve_portal_registration(uuid, uuid)` è `SECURITY DEFINER`, usa `search_path TO ''` e verifica: sessione autenticata; richiesta pendente; autorizzazione sul workspace della richiesta; membro attivo nello stesso workspace e condominio non archiviato; email dell'account confermata e coincidente con la richiesta; corrispondenza dell'eventuale membro originariamente individuato; email del membro coincidente con quella verificata. Solo dopo delega alla funzione privata.
+- La funzione privata di approvazione aggiorna associazioni, accesso portale, workspace member e profilo, quindi approva la richiesta. Non ripete i controlli email del wrapper. La verifica dei privilegi ha già accertato che `authenticated` non possiede EXECUTE diretto su questa funzione privata.
+- Il wrapper pubblico `confirm_condominium_member_transfer(...)` rifiuta un'identità entrante non verificata e delega alla funzione privata con `p_incoming_user_id = null`. L'implementazione privata attuale include il lock dell'unità, i controlli di proprietario attivo, la prevenzione dei duplicati e lo snapshot contabile, e lascia il cedente attivo nello stato `In chiusura`.
+- Il wrapper pubblico `close_condominium_member_transfer(uuid)` delega alla funzione privata. L'implementazione privata attuale include anche il controllo dei riporti contabili unitari non assegnati, oltre a rate, allocazioni e riporti del membro, prima di chiudere il trasferimento.
+- Tutte e sei le definizioni restituite sono `SECURITY DEFINER` e impostano `search_path TO ''`; gli oggetti sono referenziati con nomi qualificati.
+
+### Divergenze verificate con i file di migrazione in main
+
+- `20260930320000_harden_portal_approval_rpc.sql` non corrisponde alla definizione pubblica runtime: il testo di migrazione consultato implementa direttamente l'approvazione senza i controlli email verificata/membro presenti nel wrapper corrente e non rappresenta da solo lo stato finale.
+- `20261001104500_add_condominium_member_transfer.sql` contiene una prima versione della conferma trasferimento, priva dello snapshot contabile e dei controlli più recenti visibili nel runtime.
+- `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql` aggiunge il blocco sui riporti unitari non assegnati tramite riscrittura testuale della definizione privata. Il runtime contiene tale controllo, ma la migrazione usa sostituzioni fragili basate su frammenti testuali: deve essere verificata nel replay isolato prima di considerarla affidabile.
+
+### Conclusione circoscritta
+
+La verifica attuale non mostra un bypass diretto delle funzioni private da parte del ruolo `authenticated`; il warning dell'advisor riguarda le RPC pubbliche e va valutato sui rispettivi controlli server-side. La funzione pubblica di approvazione contiene i controlli di identità/email richiesti. Restano da verificare il contratto completo dei consumer delle RPC di trasferimento, gli ACL effettivi per ogni ruolo e la riproducibilità delle definizioni runtime dalla catena di migrazioni. Nessuna DDL o modifica ai dati è stata eseguita in Production.
