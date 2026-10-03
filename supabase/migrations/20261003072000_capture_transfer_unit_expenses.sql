@@ -26,12 +26,12 @@ begin
   v_definition := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position('''unit_expenses''' in v_definition)>0 then
     if (length(v_definition)-length(replace(v_definition,'''unit_expenses''','')))<>length('''unit_expenses''')
-       or position('from public.condominium_ledger_entries l' in v_definition)=0
-       or position('l.unit_id=p_unit_id' in v_definition)=0
-       or position('l.condominium_id=v_condominium' in v_definition)=0
-       or position('l.workspace_id=v_workspace' in v_definition)=0
-       or position('l.direction=''Uscita''' in v_definition)=0
-       or position('(l.entry_date<=p_transfer_date or (l.deliberation_date is not null and l.deliberation_date<=p_transfer_date))' in v_definition)=0 then
+       or (length(v_definition)-length(replace(v_definition,'from public.condominium_ledger_entries l','')))/length('from public.condominium_ledger_entries l')<>1
+       or (length(v_definition)-length(replace(v_definition,'l.unit_id=p_unit_id','')))/length('l.unit_id=p_unit_id')<>1
+       or (length(v_definition)-length(replace(v_definition,'l.condominium_id=v_condominium','')))/length('l.condominium_id=v_condominium')<>1
+       or (length(v_definition)-length(replace(v_definition,'l.workspace_id=v_workspace','')))/length('l.workspace_id=v_workspace')<>1
+       or (length(v_definition)-length(replace(v_definition,'l.direction=''Uscita''','')))/length('l.direction=''Uscita''')<>1
+       or (length(v_definition)-length(replace(v_definition,'(l.entry_date<=p_transfer_date or (l.deliberation_date is not null and l.deliberation_date<=p_transfer_date))','')))/length('(l.entry_date<=p_transfer_date or (l.deliberation_date is not null and l.deliberation_date<=p_transfer_date))')<>1 then
       raise exception 'Unit expense snapshot is incomplete, duplicated, or missing source/scope/date filters';
     end if;
     raise notice 'Unit expense detail already captured in transfer snapshot';
