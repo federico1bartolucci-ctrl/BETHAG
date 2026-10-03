@@ -1,23 +1,22 @@
 -- Keep unit owner references consistent when a condominium member is deleted.
--- ownerMemberIds stores condominium_members.legacy_id values; the condominium
--- identifier is sufficient to scope the update because unit/member IDs are
--- globally unique UUIDs and legacy IDs are scoped by condominium.
+-- ownerMemberIds stores condominium_members.legacy_id values; scope by the
+-- condominium and its workspace, and tolerate malformed JSON values.
 CREATE OR REPLACE FUNCTION public.clean_deleted_member_owner_references()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = public, pg_catalog
+SET search_path = ''
 AS $function$
 BEGIN
   IF OLD.legacy_id IS NOT NULL THEN
     UPDATE public.condominium_units AS u
-    SET data = jsonb_set(
+    SET data = pg_catalog.jsonb_set(
       COALESCE(u.data, '{}'::jsonb),
       '{ownerMemberIds}',
       COALESCE((
-        SELECT jsonb_agg(e.elem ORDER BY e.ord)
-        FROM jsonb_array_elements(
+        SELECT pg_catalog.jsonb_agg(e.elem ORDER BY e.ord)
+        FROM pg_catalog.jsonb_array_elements(
           CASE
-            WHEN jsonb_typeof(u.data->'ownerMemberIds') = 'array'
+            WHEN pg_catalog.jsonb_typeof(u.data->'ownerMemberIds') = 'array'
               THEN u.data->'ownerMemberIds'
             ELSE '[]'::jsonb
           END
@@ -26,7 +25,7 @@ BEGIN
       ), '[]'::jsonb),
       true
     ),
-    updated_at = now()
+    updated_at = pg_catalog.now()
     WHERE u.condominium_id = OLD.condominium_id
       AND EXISTS (
         SELECT 1
@@ -34,16 +33,10 @@ BEGIN
         WHERE c.id = OLD.condominium_id
           AND c.workspace_id = u.workspace_id
       )
-      AND jsonb_typeof(u.data->'ownerMemberIds') = 'array'
+      AND pg_catalog.jsonb_typeof(u.data->'ownerMemberIds') = 'array'
       AND EXISTS (
         SELECT 1
-        FROM jsonb_array_elements(
-          CASE
-            WHEN jsonb_typeof(u.data->'ownerMemberIds') = 'array'
-              THEN u.data->'ownerMemberIds'
-            ELSE '[]'::jsonb
-          END
-        ) AS e(elem)
+        FROM pg_catalog.jsonb_array_elements(u.data->'ownerMemberIds') AS e(elem)
         WHERE e.elem #>> '{}' = OLD.legacy_id::text
       );
   END IF;
