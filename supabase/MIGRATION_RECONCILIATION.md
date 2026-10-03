@@ -314,3 +314,8 @@ Hardened `20261003076000_scope_transfer_allocation_totals.sql`: the incoming-mem
 ## Idempotence completeness checks — 2026-10-03
 
 Strengthened `20261003077000_scope_preview_extraordinary_allocations.sql` so its already-scoped path requires both expected predicate occurrences, not merely one. Strengthened `20261003078000_scope_snapshot_installment_totals.sql` to verify that all three outgoing and the single incoming snapshot installment predicates are scoped, with no unscoped remnants, before returning successfully. Both files were fetched back and their blob hashes verified. These are branch-only textual safeguards; production remains unchanged and full QA/collaudo remains deferred.
+
+
+## Close guard idempotence hardening — 2026-10-03
+
+Strengthened `20261003071000_block_transfer_close_with_unassigned_installments.sql`: the already-installed path now verifies exactly one declaration, the complete unit-installment query and condition, and rejects duplicates or coexistence with the unscoped unit-carryover anchor. The migration was fetched back from GitHub and its blob hash verified. This remains branch-only; no production migration or overall QA/collaudo was run.
