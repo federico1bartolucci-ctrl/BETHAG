@@ -4,7 +4,7 @@ do $migration$
 declare
   v_def text;
   v_old text := 'where i.member_id=p_outgoing_member_id';
-  v_new text := 'where i.workspace_id=v_workspace and i.condominium_id=v_condominium and (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id))';
+  v_new text := 'where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id))';
   v_count integer;
   v_json_old text := '''id'',i.id,''title'',i.title';
   v_json_new text := '''id'',i.id,''assignment_scope'',case when i.member_id is null then ''unit_unassigned'' else ''member'' end,''title'',i.title';
@@ -18,7 +18,7 @@ begin
     v_def := pg_get_functiondef(v_sig::regprocedure);
     if position(v_new in v_def)>0 then
       if position(v_old in v_def)>0 then
-        raise exception 'Mixed scoped and unscoped installment predicates remain in %',v_sig;
+        raise exception 'Mixed expanded and member-only installment predicates remain in %',v_sig;
       end if;
     else
       v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
