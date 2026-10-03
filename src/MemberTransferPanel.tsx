@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; data: any };
-type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; data: any };
+type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; name?: string; email?: string | null; data: any };
 type TransferRow = {
   id: string; unit_id: string; outgoing_member_id: string; incoming_member_id: string | null;
   transfer_date: string; transfer_type: string; status: string; notes: string; data: any;
@@ -10,6 +10,7 @@ type TransferRow = {
 
 function memberName(member?: MemberOption | null) {
   if (!member) return "Condòmino non disponibile";
+  if (typeof member.name === "string" && member.name.trim()) return member.name.trim();
   const d = member.data || {};
   const direct = [d.full_name, d.fullName, d.display_name, d.nome_completo, d.name].find(v => typeof v === "string" && v.trim());
   if (direct) return direct.trim();
@@ -41,8 +42,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
 
   const scopedUnits = useMemo(() => units.filter(u => !condominiumId || u.condominium_id === condominiumId), [units, condominiumId]);
   const scopedMembers = useMemo(() => members.filter(m => m.active && (!condominiumId || m.condominium_id === condominiumId)), [members, condominiumId]);
-  const unitMembers = useMemo(() => scopedMembers.filter(m => m.unit_id === unitId), [scopedMembers, unitId]);
+  const unitMembers = useMemo(() => scopedMembers.filter(m => m.unit_id === unitId && String(m.data?.role || "").trim() === "Proprietario" && m.data?.current_owner !== false && m.data?.position_status !== "In chiusura"), [scopedMembers, unitId]);
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
+  const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
   const unitLabel = (id: string) => scopedUnits.find(u => u.id === id)?.unit_code || "Unità";
   const memberLabel = (id: string) => memberName(scopedMembers.find(m => m.id === id));
 
@@ -129,8 +131,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <label>Email nuovo proprietario<input type="email" value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} maxLength={254} placeholder="nome@esempio.it" /></label>
       </div>
       <label>Note<textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} /></label>
-      <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>Anteprima situazione contabile</button><button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy || !preview || !incomingName.trim()}>Conferma trasferimento</button></div>
-      {preview && <div className="permission-box"><b>Anteprima al {transferDate}</b><span>Rate scadute residue: {euro(preview.outstanding_before)}</span><span>Rate pagate: {euro(preview.paid_before)}</span><span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview.extraordinary_deliberated_before_due_after || []).length}</span>{preview.review_flags?.legal_liability_review_required && <small>La ripartizione delle responsabilità giuridiche tra cedente e acquirente richiede verifica documentale e normativa.</small>}</div>}
+      <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>Anteprima situazione contabile</button><button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy || !previewIsCurrent || !incomingName.trim()}>Conferma trasferimento</button></div>
+      {previewIsCurrent && <div className="permission-box"><b>Anteprima al {transferDate}</b><span>Rate scadute residue: {euro(preview.outstanding_before)}</span><span>Rate pagate: {euro(preview.paid_before)}</span><span>Rate analitiche: {(preview.installments_before || []).length}</span><span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview.extraordinary_deliberated_before_due_after || []).length}</span>{(preview.installments_before || []).length > 0 && <ul>{preview.installments_before.map((i:any)=><li key={i.id}>{i.title} · scadenza {i.due_date} · residuo {euro(i.residual)}</li>)}</ul>}{preview.review_flags?.legal_liability_review_required && <small>La ripartizione delle responsabilità giuridiche tra cedente e acquirente richiede verifica documentale e normativa.</small>}</div>}
     </section>
     <section className="card">
       <div className="section-heading"><div><h2>Trasferimenti registrati</h2><p>Storico dei subentri del condominio selezionato.</p></div></div>
