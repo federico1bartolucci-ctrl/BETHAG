@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, closeCondominiumMemberTransfer, previewCondominiumMemberTransfer, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer, closeCondominiumMemberTransfer, previewCondominiumMemberTransfer, getMemberTransferAccountingSnapshot, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2952,6 +2952,7 @@ function App() {
       alert("Il subentro richiede una sessione BETHAG collegata al server.");
       return false;
     }
+    let transferConfirmed = false;
     try {
       const preview = await previewCondominiumMemberTransfer({
         unitId: input.unitId,
@@ -2986,15 +2987,32 @@ function App() {
         "Vuoi procedere con la registrazione del subentro?",
       ].join("\n");
       if (!window.confirm(previewMessage)) return false;
-      await confirmCondominiumMemberTransfer(input);
+      const transferId = await confirmCondominiumMemberTransfer(input);
+      transferConfirmed = true;
+      let accountingSnapshotAvailable = false;
+      try {
+        const snapshot = await getMemberTransferAccountingSnapshot(transferId);
+        accountingSnapshotAvailable = Boolean(snapshot.transfer);
+      } catch (snapshotError) {
+        console.warn("BETHAG transfer was registered, but its accounting snapshot could not be loaded", snapshotError);
+      }
       const refreshed = await loadBackendState(profile.workspaceId);
       setCondominiumMembers(refreshed.condominiumMembers || []);
       setCondominiumUnits(Array.isArray(refreshed.condominiumUnits) ? refreshed.condominiumUnits : []);
       setPortalMembers(refreshed.portalMembers || []);
+      if (accountingSnapshotAvailable) {
+        alert("Subentro registrato e dati aggiornati. Quadro contabile associato al trasferimento disponibile.");
+      } else {
+        alert("Subentro registrato e dati aggiornati. Il quadro contabile storico non e stato caricato: verifica il dettaglio del trasferimento.");
+      }
       return true;
     } catch (error) {
       console.error("BETHAG ownership transfer failed", error);
-      alert(error instanceof Error ? "Subentro non confermato dal server.\n\n" + error.message : "Subentro non confermato dal server.");
+      if (transferConfirmed) {
+        alert("Subentro registrato dal server, ma non e stato possibile completare l'aggiornamento della schermata. Aggiorna i dati prima di ripetere l'operazione.");
+      } else {
+        alert(error instanceof Error ? "Subentro non confermato dal server.\n\n" + error.message : "Subentro non confermato dal server.");
+      }
       return false;
     }
   };
