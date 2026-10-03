@@ -15,8 +15,19 @@ begin
   where n.nspname='private' and p.proname='confirm_condominium_member_transfer'
     and pg_get_function_identity_arguments(p.oid)='p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb';
   if v_definition is null then raise exception 'Transfer confirmation function not found'; end if;
-  if position('outstanding_due_after' in v_definition)>0 then return; end if;
-  if position(v_old in v_definition)=0 then raise exception 'Expected unique snapshot insertion point missing'; end if;
+  if position('outstanding_due_after' in v_definition)>0 then
+    if position('''installments_after''' in v_definition)=0
+       or position('i.member_id=p_outgoing_member_id' in v_definition)=0
+       or position('(i.due_date is null or i.due_date>p_transfer_date)' in v_definition)=0
+       or position('i.amount-i.paid_amount>0.005' in v_definition)=0 then
+      raise exception 'Future installment snapshot exists but expected source/filters are incomplete';
+    end if;
+    raise notice 'Future installments already captured with expected filters';
+    return;
+  end if;
+  if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
+    raise exception 'Expected unique snapshot insertion point missing or duplicated';
+  end if;
   execute replace(v_definition,v_old,v_new);
 end
 $migration$;
