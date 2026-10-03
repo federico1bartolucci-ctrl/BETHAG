@@ -122,3 +122,16 @@ Il confronto del testo SQL ha evidenziato un'incompatibilità riproducibile nell
 Il catalogo Production interrogato in sola lettura mostra attualmente soltanto `condominium_member_transfers_status_check` con i quattro stati e `condominium_member_transfers_type_ck`; il difetto è dunque una criticità di riproducibilità della sequenza in `main`, non un vincolo duplicato osservato nello schema live.
 
 **Correzione da applicare nella catena versionata:** rendere coerente il nome del vincolo rimosso con quello effettivamente creato dalla migrazione iniziale (oppure assegnare fin dall'origine un nome canonico e usare quel nome in tutti i passaggi). Prima di applicare una correzione a Production occorre rispettare la versione già registrata e non modificare migrazioni storiche già distribuite; la rettifica va inserita come nuova migrazione idempotente, verificandone il comportamento sullo stato già installato e su un replay isolato. Nessuna DDL è stata eseguita.
+
+
+### Ulteriore incompatibilità d'ordine nelle migrazioni del subentro — 2026-10-03
+
+Il controllo dei file effettivi in `supabase/migrations` rileva un problema precedente al vincolo di stato:
+
+- `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` esegue `CREATE INDEX ... ON public.condominium_member_transfers(closed_by)` e ridefinisce la RPC privata di conferma.
+- La tabella `public.condominium_member_transfers` viene creata dal file `20261001104500_add_condominium_member_transfer.sql`, ordinato successivamente per timestamp nel nome.
+- La colonna `closed_by` è introdotta da `20261001120000_transfer_lifecycle_keep_outgoing_active.sql`, anch'essa successiva.
+
+Di conseguenza, il replay cronologico dei file di `main` su un database vuoto non è autosufficiente: la migrazione `01093000` tenta di indicizzare una tabella non ancora creata e, anche anticipando la creazione della tabella, la colonna `closed_by` non esiste ancora. La routine iniziale inoltre assume che esista già `private.close_condominium_member_transfer(uuid)`.
+
+**Azione:** non alterare le migrazioni storiche già distribuite. La sequenza canonica per installazioni nuove deve essere ricostruita in ordine di dipendenze: prima tabelle e colonne necessarie (inclusi `closed_at/closed_by`), poi funzioni e indici, quindi grants/policy e successive evoluzioni. La correzione del solo check di stato non risolve questo blocco precedente. Il replay QA rimane da eseguire solo dopo aver completato la ricostruzione, senza scritture su Production.
