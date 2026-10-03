@@ -37,6 +37,10 @@ La lettura dei branch ha individuato:
 
 Il registro restituito documenta le versioni registrate, ma non espone il messaggio SQL preciso che ha causato il fallimento; non è quindi corretto attribuire una causa senza recuperare il dettaglio del log/errore. I branch non sono stati resettati, ribasati o modificati.
 
+## Evidenza dai log SQL
+
+Nei log PostgreSQL di Production del 2026-10-03 alle 05:07 UTC compare un tentativo di modifica dinamica di `private.close_condominium_member_transfer` terminato con errore di sintassi (`SQLSTATE 42601`) durante l'esecuzione del blocco PL/pgSQL. Il testo registrato contiene sequenze di escape anomale nel corpo generato. L'errore indica che quel tentativo non è una correzione applicabile così com'è; non è stato riutilizzato né ripetuto. I log contengono anche query di ispezione fallite per riferimenti a colonne di catalogo inesistenti (`proisagg`, `file_size`, `routine_schema`), perciò quei tentativi non costituiscono prova sugli ACL o sulla configurazione API.
+
 ## Esito operativo
 1. L'advisor conferma che le tre RPC pubbliche sono eseguibili da `authenticated`; questo richiede una verifica mirata dei controlli e dei casi negativi, non una revoca indiscriminata.
 2. Prima di una migrazione correttiva occorre acquisire gli ACL/USAGE effettivi dello schema `private` e la configurazione degli schemi esposti dall'API, poi confrontare le chiamate client con i wrapper pubblici.
