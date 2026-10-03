@@ -3015,7 +3015,7 @@ function App() {
           `Riparti successivi attribuiti al subentrante: ${money(postTransfer.allocations_after)}`,
           "",
           "Il riepilogo è informativo: la responsabilità giuridica va verificata sulla documentazione."
-        ].join("\\n");
+        ].join("\n");
         alert(snapshotMessage);
       } else {
         alert("Subentro registrato e dati aggiornati. Il quadro contabile storico non è stato caricato: verifica il dettaglio del trasferimento.");
