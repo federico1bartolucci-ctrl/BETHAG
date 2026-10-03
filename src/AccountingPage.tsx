@@ -439,21 +439,21 @@ function AccountingPage({
   }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoYear, scopedFunds]);
 
   const rendicontoByUnit = useMemo(() => {
-    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; paid:number; residual:number; carryover:number; balance:number }>();
+    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; allocatedPaid:number; installmentPaid:number; paid:number; residual:number; carryover:number; balance:number }>();
     for (const a of rendicontoAllocations) {
       const unit = units.find((u) => u.id === a.unit_id);
-      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
+      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, allocatedPaid:0, installmentPaid:0, paid:0, residual:0, carryover:0, balance:0 };
       row.allocated += Number(a.amount || 0);
-      row.paid += Number(a.paid_amount || 0);
+      row.allocatedPaid += Number(a.paid_amount || 0);
       map.set(a.unit_id, row);
     }
     const installmentUnits = new Set<string>();
     const addInstallmentToUnit = (unitId:string, amount:number, paid:number) => {
       installmentUnits.add(unitId);
       const unit = units.find((u) => u.id === unitId);
-      const row = map.get(unitId) ?? { unitId, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, paid:0, residual:0, carryover:0, balance:0 };
+      const row = map.get(unitId) ?? { unitId, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, allocatedPaid:0, installmentPaid:0, paid:0, residual:0, carryover:0, balance:0 };
       row.installments += amount;
-      row.paid += paid;
+      row.installmentPaid += paid;
       map.set(unitId, row);
     };
     for (const i of rendicontoInstallments) {
@@ -495,6 +495,8 @@ function AccountingPage({
         unitCode: unit?.unit_code || "Unità non trovata",
         allocated: 0,
         installments: 0,
+        allocatedPaid: 0,
+        installmentPaid: 0,
         paid: 0,
         residual: 0,
         carryover: 0,
@@ -502,7 +504,7 @@ function AccountingPage({
       });
     }
     return Array.from(map.values()).map((row) => {
-      const paid = row.paid;
+      const paid = installmentUnits.has(row.unitId) ? row.installmentPaid : row.allocatedPaid;
       const unitCarryovers = rendicontoYearId === "all" ? [] : rendicontoCarryovers.filter(c => c.unit_id === row.unitId);
       const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Number(c.balance || 0) : -Math.abs(Number(c.balance || 0))), 0);
       const residual = installmentUnits.has(row.unitId)
