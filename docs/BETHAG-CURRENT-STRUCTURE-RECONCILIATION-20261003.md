@@ -62,3 +62,10 @@ Questo documento registra osservazioni statiche sul repository; non equivale a b
 - Non eliminare dati o migrazioni già applicate; usare migrazioni forward-only e procedure di riconciliazione.
 - Nessun esito di test va dichiarato senza esecuzione effettiva.
 - La specifica funzionale in `docs/BETHAG-FUNCTIONAL-ARCHITECTURE-BASELINE-20261003.md` governa le scelte di implementazione.
+
+
+## Verifica aggiuntiva — dipendenze della migrazione subentri
+
+La lettura delle migrazioni `20261001093000_transfer_current_owner_and_portal_lifecycle.sql` e `20261001094000_index_transfer_closed_by.sql` conferma che entrambe fanno riferimento a `public.condominium_member_transfers` e alla colonna `closed_by`, mentre la migrazione `20261001104500_add_condominium_member_transfer.sql` è quella che crea la tabella nel flusso di file presente in `main`. Una replay pulita in ordine cronologico può quindi fallire prima di raggiungere la creazione della tabella.
+
+Non viene aggiunta una migrazione con timestamp retrodatato: potrebbe essere applicata fuori dall'ordine già registrato negli ambienti e non risolverebbe in modo sicuro la divergenza dei registri. La correzione richiede prima di determinare quali versioni siano effettivamente registrate in ciascun ambiente e poi mantenere due percorsi espliciti: bootstrap pulito ordinato e migrazioni forward-only per ambienti esistenti. Fino a tale confronto, la sequenza è segnalata come blocco di rilascio e non viene dichiarata corretta.
