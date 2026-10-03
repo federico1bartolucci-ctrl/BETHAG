@@ -86,6 +86,20 @@ declare
   v_old text;
   v_new text;
 begin
+  -- Consumption-based allocation regeneration also reads the ledger and existing
+  -- installments before deleting/rebuilding allocation rows. Lock at RPC entry;
+  -- row triggers alone would acquire the mutex too late to protect that snapshot.
+  v_def := pg_get_functiondef('public.generate_consumption_allocations(uuid,uuid,uuid,uuid,text)'::regprocedure);
+  if position('perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);' in v_def)=0 then
+    v_old := 'if not private.can_manage_workspace_module(p_workspace_id,''contabilita'') then raise exception ''Autorizzazione gestione contabilità richiesta''; end if;';
+    v_new := v_old || chr(10) || ' perform private.lock_condominium_accounting_scope(p_workspace_id,p_condominium_id);';
+    if length(v_def)-length(replace(v_def,v_old,'')) <> length(v_old) then
+      raise exception 'Consumption-allocation authorization anchor missing or ambiguous';
+    end if;
+    v_def := replace(v_def,v_old,v_new);
+  end if;
+  execute v_def;
+
   -- Installment generation: acquire the shared condominium mutex before the
   -- existing per-expense mutex, establishing one global lock order.
   v_def := pg_get_functiondef('private.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean)'::regprocedure);
