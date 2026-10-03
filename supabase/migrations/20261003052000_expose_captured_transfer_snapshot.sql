@@ -4,13 +4,7 @@ do $migration$
 declare
   v_definition text;
   v_old text := $old$'transfer', jsonb_build_object($old$;
-  v_new text := $new
-  if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
-    raise exception 'Expected unique transfer JSON insertion point; migration stopped';
-  end if;
-  execute replace(v_definition,v_old,v_new);
-end
-$migration$;captured_accounting_snapshot', coalesce(t.data->'accounting_snapshot','{}'::jsonb),
+  v_new text := $new$'captured_accounting_snapshot', coalesce(t.data->'accounting_snapshot','{}'::jsonb),
    'transfer', jsonb_build_object($new$;
   v_key text := '''captured_accounting_snapshot''';
   v_source text := 'coalesce(t.data->''accounting_snapshot'',''{}''::jsonb)';
