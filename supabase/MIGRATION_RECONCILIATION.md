@@ -412,3 +412,7 @@ Static review found that `20261003052000_expose_captured_transfer_snapshot.sql` 
 ## Captured snapshot insertion anchor correction — 2026-10-03
 
 Cross-review against the foundational `20261001110000_add_member_transfer_accounting_snapshot.sql` found that the canonical transfer JSON anchor is `'transfer',jsonb_build_object(`, without a space after the comma. Corrected `20261003052000_expose_captured_transfer_snapshot.sql` to match that exact source anchor, so the forward migration can locate the insertion point in the function created by the base migration. Updated file was fetched back from GitHub and exact content equality verified. Source-level correction only; no SQL execution or production changes. Full QA/collaudo remains deferred until the known migration issues are resolved.
+
+## Captured snapshot dollar-quote defect correction — 2026-10-03
+
+A fresh full-file read of `20261003052000_expose_captured_transfer_snapshot.sql` showed that its `v_old` dollar-quoted string was still malformed and duplicate trailing source remained after the migration block, despite the earlier anchor correction note. Rebuilt the complete file so `v_old` is exactly `$old$'transfer',jsonb_build_object($old$`, `v_new` contains only the intended captured-snapshot insertion, and the DO block closes once. The replacement was fetched back from the feature branch and exact content equality verified. This is a source correction only; no SQL execution, production change, merge, deployment, or comprehensive QA/collaudo was performed.
