@@ -84,7 +84,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       const { data, error: e } = await supabase.rpc("confirm_condominium_member_transfer", {
         p_unit_id: unitId, p_outgoing_member_id: outgoingId, p_incoming_name: incomingName.trim(),
         p_incoming_email: incomingEmail.trim().toLowerCase(), p_incoming_user_id: null,
-        p_transfer_date: transferDate, p_transfer_type: transferType, p_notes: notes.trim(), p_data: {}
+        p_transfer_date: transferDate, p_transfer_type: transferType, p_notes: notes.trim(), p_data: { outgoing_name: memberName(scopedMembers.find(m => m.id === outgoingId)), outgoing_email: scopedMembers.find(m => m.id === outgoingId)?.email || null, incoming_name: incomingName.trim(), incoming_email: incomingEmail.trim().toLowerCase() || null }
       });
       if (e) throw e;
       setMessage("Trasferimento registrato. La nuova identità dovrà completare la verifica prevista dal portale.");
@@ -126,7 +126,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <label>Unità immobiliare<select value={unitId} onChange={e=>{setUnitId(e.target.value);setOutgoingId("");setPreview(null);setSnapshot({});}}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label>
         <label>Proprietario uscente<select value={outgoingId} onChange={e=>{setOutgoingId(e.target.value);setPreview(null);}} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select></label>
         <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{setTransferDate(e.target.value);setPreview(null);}} required /></label>
-        <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
+        <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
         <label>Nuovo proprietario<input value={incomingName} onChange={e=>setIncomingName(e.target.value)} required maxLength={160} placeholder="Nome e cognome" /></label>
         <label>Email nuovo proprietario<input type="email" value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} maxLength={254} placeholder="nome@esempio.it" /></label>
       </div>
@@ -136,7 +136,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     </section>
     <section className="card">
       <div className="section-heading"><div><h2>Trasferimenti registrati</h2><p>Storico dei subentri del condominio selezionato.</p></div></div>
-      {rows.length===0 ? <p>Nessun trasferimento registrato.</p> : rows.map(r=><article className="row-card" key={r.id}><div><b>{unitLabel(r.unit_id)} · {r.transfer_type}</b><small>{r.transfer_date} · {memberLabel(r.outgoing_member_id)} → {r.incoming_member_id ? memberLabel(r.incoming_member_id) : "Nuovo proprietario in attesa di associazione"}</small><span>Stato: {r.status}</span>{r.notes && <small>{r.notes}</small>}</div><div className="row-actions"><button className="secondary-button small" onClick={()=>void loadSnapshot(r.id)} disabled={busy}>Prospetto</button>{r.status==="Confermato" && <button className="secondary-button small" onClick={()=>void closeTransfer(r.id)} disabled={busy}>Chiudi posizione</button>}</div></article>)}
+      {rows.length===0 ? <p>Nessun trasferimento registrato.</p> : rows.map(r=><article className="row-card" key={r.id}><div><b>{unitLabel(r.unit_id)} · {r.transfer_type}</b><small>{r.transfer_date} · {r.data?.outgoing_name || memberLabel(r.outgoing_member_id)} → {r.data?.incoming_name || (r.incoming_member_id ? memberLabel(r.incoming_member_id) : "Nuovo proprietario in attesa di associazione")}</small><span>Stato: {r.status}</span>{r.notes && <small>{r.notes}</small>}</div><div className="row-actions"><button className="secondary-button small" onClick={()=>void loadSnapshot(r.id)} disabled={busy}>Prospetto</button>{r.status==="Confermato" && <button className="secondary-button small" onClick={()=>void closeTransfer(r.id)} disabled={busy}>Chiudi posizione</button>}</div></article>)}
       {Object.keys(snapshot).length>0 && <div className="permission-box"><b>Prospetto contabile acquisito</b><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",fontSize:12,maxHeight:360,overflow:"auto"}}>{JSON.stringify(snapshot,null,2)}</pre></div>}
     </section>
     {error && <div className="alert error">{error}</div>}{message && <div className="alert success">{message}</div>}
