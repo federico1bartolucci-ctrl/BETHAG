@@ -123,6 +123,10 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   notes: "",
 };
 
+function hasCentPrecision(value: number) {
+  return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
@@ -811,8 +815,8 @@ function AccountingPage({
       return;
     }
     const openingBalance = Number(yearForm.opening_balance);
-    if (!Number.isFinite(openingBalance)) {
-      setError("Il saldo iniziale deve essere numerico.");
+    if (!hasCentPrecision(openingBalance)) {
+      setError("Il saldo iniziale deve essere espresso in centesimi.");
       return;
     }
     setSaving(true);
@@ -927,8 +931,8 @@ function AccountingPage({
     const targetAmount = Number(fundForm.target_amount);
     const allocatedAmount = Number(fundForm.allocated_amount);
     const usedAmount = Number(fundForm.used_amount);
-    if (![targetAmount, allocatedAmount, usedAmount].every(Number.isFinite) || targetAmount < 0 || allocatedAmount < 0 || usedAmount < 0) {
-      setError("Gli importi del fondo devono essere numerici e non negativi.");
+    if (![targetAmount, allocatedAmount, usedAmount].every(hasCentPrecision) || targetAmount < 0 || allocatedAmount < 0 || usedAmount < 0) {
+      setError("Gli importi del fondo devono essere espressi in centesimi e non negativi.");
       return;
     }
     if (usedAmount > allocatedAmount) {
@@ -973,8 +977,8 @@ function AccountingPage({
     e.preventDefault();
     if (!supabase || !dbCondominiumId || !taxForm.title.trim()) return;
     const taxAmount = Number(taxForm.amount);
-    if (taxForm.amount !== "" && (!Number.isFinite(taxAmount) || taxAmount < 0)) {
-      setError("L'importo dell'adempimento deve essere numerico e non negativo.");
+    if (taxForm.amount !== "" && (!hasCentPrecision(taxAmount) || taxAmount < 0)) {
+      setError("L'importo dell'adempimento deve essere espresso in centesimi e non negativo.");
       return;
     }
     setSaving(true);
