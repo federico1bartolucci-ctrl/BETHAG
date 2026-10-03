@@ -3,7 +3,7 @@
 do $$
 declare
  v_def text;
- v_decl text := 'v_open_carryovers numeric; v_out_data jsonb;';
+ v_decl text := 'v_open_carryovers numeric;';
  v_query text := 'select coalesce(sum(abs(c.balance)),0) into v_open_carryovers from public.condominium_fiscal_carryovers c where c.member_id=v_outgoing and abs(c.balance)>0.005;';
  v_condition text := 'if v_open_installments>0.005 or v_open_allocations>0.005 or v_open_carryovers>0.005 then';
  v_unit_decl text := 'v_open_unit_carryovers numeric;';
@@ -29,7 +29,7 @@ begin
  if (length(v_def)-length(replace(v_def,v_condition,'')))<>length(v_condition) then
    raise exception 'Expected unique close-function condition anchor missing or duplicated';
  end if;
- v_def:=replace(v_def,v_decl,'v_open_carryovers numeric; v_open_unit_carryovers numeric; v_out_data jsonb;');
+ v_def:=replace(v_def,v_decl,'v_open_carryovers numeric; v_open_unit_carryovers numeric;');
  v_def:=replace(v_def,v_query,v_query||chr(10)||' select coalesce(sum(abs(c.balance)),0) into v_open_unit_carryovers from public.condominium_fiscal_carryovers c join public.condominium_member_transfers t on t.id=p_transfer_id where c.workspace_id=t.workspace_id and c.condominium_id=t.condominium_id and c.unit_id=t.unit_id and c.member_id is null and abs(c.balance)>0.005;');
  v_def:=replace(v_def,v_condition,'if v_open_installments>0.005 or v_open_allocations>0.005 or v_open_carryovers>0.005 or v_open_unit_carryovers>0.005 then');
  if position(v_unit_decl in v_def)=0 or position(v_unit_query in v_def)=0 or position(v_unit_condition in v_def)=0 then
