@@ -5,17 +5,16 @@ declare
   v_def text;
   v_old text;
   v_new text;
+  v_unit_query text := 'select coalesce(sum(a.amount-a.paid_amount),0) into v_open_unit_allocations from public.condominium_expense_allocations a where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.unit_id=v_unit and a.member_id is null and a.amount-a.paid_amount>0.005;';
 begin
   v_def := pg_get_functiondef('private.close_condominium_member_transfer(uuid)'::regprocedure);
 
   if position('v_open_unit_allocations' in v_def)>0 then
-    if position('a.unit_id=v_unit and a.member_id is null' in v_def)>0
-       and position('or v_open_unit_allocations>0.005' in v_def)>0
-       and position('a.workspace_id=v_workspace and a.condominium_id=v_condominium' in v_def)>0
-       and position('a.amount-a.paid_amount>0.005' in v_def)>0 then
+    if position(v_unit_query in v_def)>0
+       and position('or v_open_unit_allocations>0.005' in v_def)>0 then
       return;
     end if;
-    raise exception 'Partial unit-allocation close guard detected; refusing to patch';
+    raise exception 'Partial or incorrectly scoped unit-allocation close guard detected';
   end if;
 
   v_old := 'v_open_unit_installments numeric;';
