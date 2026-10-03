@@ -16,7 +16,13 @@ begin
     and pg_get_function_identity_arguments(p.oid)='p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date';
   if v_definition is null then raise exception 'Preview transfer function not found'; end if;
   if position('installments_after' in v_definition)>0 then
-    raise notice 'Future installments already included';
+    if position('outstanding_total' in v_definition)=0
+       or position('outstanding_due_after' in v_definition)=0
+       or position('i.member_id=p_outgoing_member_id' in v_definition)=0
+       or position('(i.due_date is null or i.due_date>p_transfer_date)' in v_definition)=0 then
+      raise exception 'Future installment preview exists but expected balance/date filters are incomplete';
+    end if;
+    raise notice 'Future installments already included with expected filters';
     return;
   end if;
   if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
