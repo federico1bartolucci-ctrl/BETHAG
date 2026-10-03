@@ -724,7 +724,7 @@ function AccountingPage({
   async function compensateCarryover() {
     if (!supabase || !compensationCarryover || !dbCondominiumId) return;
     const amount = Number(compensationForm.amount || 0);
-    if (!(amount > 0) || !Number.isFinite(amount)) { setError("Inserisci un importo di compensazione finito e maggiore di zero."); return; }
+    if (!Number.isFinite(amount) || Math.round(amount * 100) <= 0) { setError("Inserisci un importo di compensazione finito e pari ad almeno un centesimo."); return; }
     const residual = Math.abs(Number(compensationCarryover.balance || 0));
     if (amount > residual + 0.005) { setError("L'importo supera il residuo della partita riportata."); return; }
     if (compensationCarryover.kind === "Credito" && compensationForm.target_installment_id) {
@@ -856,7 +856,7 @@ function AccountingPage({
     e.preventDefault();
     if (!supabase || !dbCondominiumId) return;
     if (!guardOpenFiscalYear(ledgerForm.fiscal_year_id)) return;
-    if (!ledgerForm.description.trim() || !Number.isFinite(Number(ledgerForm.amount)) || Number(ledgerForm.amount) <= 0) {
+    if (!ledgerForm.description.trim() || !Number.isFinite(Number(ledgerForm.amount)) || Math.round(Number(ledgerForm.amount) * 100) <= 0) {
       setError("Inserisci descrizione e importo maggiore di zero.");
       return;
     }
@@ -1261,8 +1261,8 @@ function AccountingPage({
       setError("La ripartizione deve riferirsi a una spesa registrata nel condominio.");
       return;
     }
-    if (!selectedUnit || !allocationForm.ledger_entry_id || !allocationForm.unit_id || !Number.isFinite(amount) || amount <= 0) {
-      setError("Seleziona una spesa, un'unità e un importo maggiore di zero.");
+    if (!selectedUnit || !allocationForm.ledger_entry_id || !allocationForm.unit_id || !Number.isFinite(amount) || Math.round(amount * 100) <= 0) {
+      setError("Seleziona una spesa, un'unità e un importo di almeno un centesimo.");
       return;
     }
     if (!Number.isFinite(millesimi) || millesimi < 0) {
@@ -1697,7 +1697,7 @@ function AccountingPage({
 
   async function saveBudget(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(budgetForm.fiscal_year_id) || !budgetForm.description.trim() || !Number.isFinite(Number(budgetForm.amount)) || Number(budgetForm.amount) <= 0) {
+    if (!supabase || !dbCondominiumId || !guardOpenFiscalYear(budgetForm.fiscal_year_id) || !budgetForm.description.trim() || !Number.isFinite(Number(budgetForm.amount)) || Math.round(Number(budgetForm.amount) * 100) <= 0) {
       setError("Inserisci descrizione e importo del preventivo.");
       return;
     }
@@ -1758,8 +1758,8 @@ function AccountingPage({
   async function saveInstallment(e: React.FormEvent) {
     e.preventDefault();
     const amount = Number(installmentForm.amount);
-    if (!supabase || !dbCondominiumId || !installmentForm.unit_id || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || !Number.isFinite(amount) || amount <= 0) {
-      setError("Inserisci unità, titolo e un importo della rata maggiore di zero."); return;
+    if (!supabase || !dbCondominiumId || !installmentForm.unit_id || !guardOpenFiscalYear(installmentForm.fiscal_year_id) || !installmentForm.title.trim() || !Number.isFinite(amount) || Math.round(amount * 100) <= 0) {
+      setError("Inserisci unità, titolo e un importo della rata di almeno un centesimo."); return;
     }
     const installmentYear = scopedYears.find(y => y.id === installmentForm.fiscal_year_id);
     if (installmentYear && installmentForm.due_date && (installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
