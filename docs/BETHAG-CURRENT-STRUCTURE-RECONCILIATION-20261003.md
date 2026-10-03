@@ -191,3 +191,32 @@ Conclusione: il warning advisor è una segnalazione di superficie esposta, non p
 La consultazione di `pg_proc.proacl` e `aclexplode` sul database Production mostra che le tre funzioni private delegate (`private.admin_approve_portal_registration`, `private.confirm_condominium_member_transfer`, `private.close_condominium_member_transfer`) hanno EXECUTE assegnato al solo proprietario `postgres`; non risultano grant EXECUTE a `PUBLIC`, `anon`, `authenticated` o `service_role`. I wrapper pubblici, invece, restano eseguibili da `authenticated` (e i due wrapper di subentro anche da `service_role`, secondo la lettura ACL precedente). Questo conferma che il percorso previsto è attraverso i wrapper pubblici e che il codice privato non è direttamente invocabile dai ruoli applicativi osservati.
 
 L'esito riduce il rischio di invocazione diretta degli helper privati, ma non sostituisce i test di autorizzazione dei wrapper e delle mutazioni. Il difetto delle rate unit-level non assegnate nella funzione di chiusura rimane aperto. Nessuna modifica a grant, funzioni o dati Production è stata eseguita.
+
+
+### Correzione definita per la chiusura contabile del subentro
+
+Lettura diretta della definizione live `private.close_condominium_member_transfer(uuid)` conferma che la funzione acquisisce `FOR UPDATE` sulla riga del trasferimento, ma non sulla unità; la query delle rate aperte considera esclusivamente `member_id=v_outgoing`. La tabella live `public.condominium_installments` contiene i campi `workspace_id`, `condominium_id`, `unit_id`, `member_id`, `amount` e `paid_amount`, quindi il controllo unit-level può essere circoscritto senza inferenze su JSON o join anagrafici.
+
+La correzione forward-only da preparare deve:
+
+1. Leggere e bloccare il trasferimento, poi validare stato e permessi come nella funzione live.
+2. Ricavare dal trasferimento `workspace_id`, `condominium_id` e `unit_id` e verificarne la coerenza con l'unità effettiva.
+3. Calcolare separatamente le rate aperte personali del cedente e quelle non assegnate dell'unità, senza sommare le due categorie in un'unica voce di preview:
+
+   ```sql
+   select coalesce(sum(i.amount - i.paid_amount), 0)
+     into v_open_unit_installments
+   from public.condominium_installments i
+   where i.workspace_id = v_workspace
+     and i.condominium_id = v_condominium
+     and i.unit_id = v_unit
+     and i.member_id is null
+     and i.amount - i.paid_amount > 0.005;
+   ```
+
+4. Includere `v_open_unit_installments > 0.005` nella guardia che solleva `TRANSFER_FINANCIAL_POSITIONS_OPEN`, preservando i controlli esistenti su rate personali, allocazioni e riporti.
+5. Rendere coerenti preview, snapshot e chiusura: indicare distintamente rate personali e rate unit-level non assegnate, evitando doppio conteggio e senza trasferire automaticamente debiti individuali al nuovo proprietario.
+6. Verificare la serializzazione rispetto a inserimenti/aggiornamenti concorrenti delle rate: il lock del trasferimento da solo non protegge la tabella rate. Definire un protocollo di lock condiviso con le operazioni che modificano rate della stessa unità, oppure un controllo transazionale equivalente; documentare il comportamento in caso di scrittura concorrente.
+7. Aggiungere test isolati per rate personali aperte/chiuse, rate unit-level aperte/chiuse, workspace o condominio non corrispondenti, unità nulla/inesistente, importi residui entro e oltre la tolleranza di 0,005 e tentativo concorrente di chiusura/modifica.
+
+Questo è il requisito SQL e funzionale ricavato dallo schema live, non una migrazione già implementata o applicata. La scrittura di una migrazione eseguibile resta non effettuata; nessuna modifica a Production è stata eseguita.
