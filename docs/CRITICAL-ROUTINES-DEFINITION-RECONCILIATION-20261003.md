@@ -21,6 +21,15 @@ Una query PostgreSQL di sola lettura eseguita il 2026-10-03 ha restituito `authe
 
 Quindi, pur avendo USAGE sullo schema, il ruolo autenticato non ha EXECUTE su queste tre implementazioni private. Questo riduce il rischio di invocazione diretta per queste specifiche firme. L'advisor segnala invece le tre RPC pubbliche come eseguibili via REST: restano da mantenere e verificare i controlli applicativi dei wrapper pubblici. Non è stata applicata alcuna modifica ai privilegi.
 
+## ACL delle RPC pubbliche
+
+La verifica PostgreSQL di sola lettura sulle firme pubbliche ha rilevato:
+- Tutte e tre le RPC negano EXECUTE ad `anon`.
+- Tutte e tre consentono EXECUTE ad `authenticated`, in linea con la raggiungibilità REST segnalata dall'advisor.
+- `service_role` non ha EXECUTE su `admin_approve_portal_registration`, mentre risulta abilitato su `close_condominium_member_transfer` e `confirm_condominium_member_transfer`.
+
+Questa differenza va confrontata con i chiamanti effettivi e con il modello operativo del backend prima di cambiare i grant; non è stata assunta come errore né corretta automaticamente.
+
 ## Approvazione accesso portale
 
 Sono presenti due livelli:
