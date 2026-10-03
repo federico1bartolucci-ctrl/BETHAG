@@ -93,6 +93,7 @@ Snapshot: 177 remote migration-history records and 138 SQL files in the branch. 
 | Branch version | Migration file | Status |
 |---|---|---|
 | `20261003072000` | `20261003072000_capture_transfer_unit_expenses.sql` | Branch-only change; not matched to remote version `20261003050722` and not applied to production |
+| `20261003073000` | `20261003073000_scope_transfer_unit_expenses.sql` | Branch-only change; scopes preview and snapshot ledger expense readers; pending content-level reconciliation and not applied to production |
 
 ## Remote records without a filename-name match
 
