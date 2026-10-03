@@ -446,3 +446,8 @@ The prior 0760 count adjustment alone was insufficient: because 0740 scopes the 
 ## Formatting-independent validation for 0740 — 2026-10-04
 
 Sequential review showed 0500 installs the extraordinary-allocation snapshot predicate as a multiline SQL fragment, while 0740's idempotence check required a single-line byte-for-byte match. Updated 0740 to recognize the existing snapshot key and validate its source, allocation/ledger tenant predicates, type, and date filters independently of whitespace. This avoids a false migration stop after 0500 while retaining fail-closed checks. Verified the changed source was saved to the branch; no database migration was run.
+
+
+## Unit carryover close guard exact-query validation — 2026-10-04
+
+Hardened `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql`: its idempotent path now validates the complete workspace-, condominium-, and unit-scoped unit-carryover query, rather than checking only for the `into` clause. The installation path reuses the same canonical query string. The migration source was fetched back from the branch and verified. This is static source validation only; no SQL execution, production mutation, merge, deployment, or full QA/collaudo was performed.
