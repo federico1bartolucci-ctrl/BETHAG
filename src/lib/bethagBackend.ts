@@ -1166,13 +1166,13 @@ function parseBethagAmount(value: unknown): number {
 function parseBethagDate(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (!raw) return new Date().toISOString().slice(0, 10);
-  const match = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})$/);
+  const match = raw.match(/^(\d{1,2})[\\/-](\d{1,2})[\\/-](\d{4})$/);
   if (match) {
     const day = match[1].padStart(2, "0");
     const month = match[2].padStart(2, "0");
     return `${match[3]}-${month}-${day}`;
   }
-  const iso = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+  const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/);
   return iso ? iso[1] : new Date(raw).toISOString().slice(0, 10);
 }
 
@@ -2378,7 +2378,7 @@ export async function previewCondominiumMemberTransfer(input: {
   if (!isUuid(input.unitId) || !isUuid(input.outgoingMemberId)) {
     throw new Error("Identificativo dell'unita o del titolare uscente non valido.");
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.transferDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.transferDate)) {
     throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
   }
   const parsed = new Date(`${input.transferDate}T00:00:00.000Z`);
