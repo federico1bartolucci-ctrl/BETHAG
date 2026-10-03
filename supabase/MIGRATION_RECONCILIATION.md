@@ -389,3 +389,8 @@ Updated `20261003061000_preserve_future_installments_transfer_snapshot.sql` so t
 ## Future installment preview guard hardening — 2026-10-03
 
 Updated `20261003060000_expand_member_transfer_preview_installments.sql` so the already-applied guard requires exactly two occurrences of the future-due predicate and exactly one residual-positive predicate, while retaining unique checks for the snapshot keys. Source was fetched back from GitHub and verified. Branch-only; no database execution or production change; full QA/collaudo deferred.
+
+
+## Preview residual predicate count correction — 2026-10-03
+
+During cross-review, corrected the already-applied guard in `20261003060000_expand_member_transfer_preview_installments.sql`: the residual-positive predicate appears in both `outstanding_total` and `outstanding_due_after`, so the required exact count is two, not one. The updated source was fetched back and verified. Branch-only; no database execution or production change; full QA/collaudo remains deferred.
