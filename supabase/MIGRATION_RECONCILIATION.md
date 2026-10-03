@@ -254,3 +254,8 @@ The extraordinary-allocation snapshot query also needed explicit tenant and cond
 ## Anchor precision correction — 2026-10-03
 
 The first compact single-line anchor drafted for `20261003074000` did not match the canonical multiline formatting returned by production `pg_get_functiondef`. The branch migration has been corrected to use the observed multiline predicate sequence. A subsequent read-only exact-string check confirmed the unscoped multiline anchor is present in the live confirmation function and the scoped replacement is absent. This confirms the forward migration's textual target against the current live definition; it does not validate execution, privileges preservation, or end-to-end transfer behavior. Production remains unchanged.
+
+
+## Transfer installment tenant scoping — 2026-10-03
+
+Added forward migration `20261003075000_scope_transfer_installment_queries.sql`. Read-only inspection of production function definitions showed that installment reads in `preview_condominium_member_transfer` and `confirm_condominium_member_transfer` matched outgoing-member or unit-unassigned records without an explicit workspace/condominium predicate. The new migration scopes those matching installment predicates to `v_workspace` and `v_condominium`, with guards against mixed scoped/unscoped variants. It is branch-only and has not been executed on production; controlled database validation remains pending.
