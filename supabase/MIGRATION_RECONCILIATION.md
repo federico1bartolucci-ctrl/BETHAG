@@ -6,7 +6,7 @@ Branch: `fix/owner-reference-migration-20261003`
 
 This is a working reconciliation ledger, not a deployment plan. A filename/name match is only a candidate association; it does **not** prove that the SQL contents are identical or that a migration is safe to replay. No production migration should be run from this ledger alone. Verify SQL content, dependencies, and actual schema state before proposing any history repair or deployment.
 
-Snapshot: 177 remote migration-history records and 137 SQL files in the branch. The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
+Snapshot: 177 remote migration-history records and 138 SQL files in the branch. The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
 
 ## Candidate associations by migration name
 
@@ -87,7 +87,12 @@ Snapshot: 177 remote migration-history records and 137 SQL files in the branch. 
 | `20261003050209` | `include_unit_unassigned_installments_in_transfer` | `20261003062000_include_unit_unassigned_installments_in_transfer.sql` |
 | `20261003050443` | `include_unit_unassigned_carryovers_in_transfer` | `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` |
 | `20261003050722` | `block_transfer_close_with_unresolved_unit_carryovers` | `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql` |
-| `20261003050722` | `capture_transfer_unit_expenses` | `20261003072000_capture_transfer_unit_expenses.sql` |
+
+## Branch migrations pending content-level reconciliation
+
+| Branch version | Migration file | Status |
+|---|---|---|
+| `20261003072000` | `20261003072000_capture_transfer_unit_expenses.sql` | Branch-only change; not matched to remote version `20261003050722` and not applied to production |
 
 ## Remote records without a filename-name match
 
