@@ -86,3 +86,15 @@ Una nuova interrogazione read-only di `pg_proc` e `pg_get_functiondef` ha restit
 ### Conclusione circoscritta
 
 La verifica attuale non mostra un bypass diretto delle funzioni private da parte del ruolo `authenticated`; il warning dell'advisor riguarda le RPC pubbliche e va valutato sui rispettivi controlli server-side. La funzione pubblica di approvazione contiene i controlli di identità/email richiesti. Restano da verificare il contratto completo dei consumer delle RPC di trasferimento, gli ACL effettivi per ogni ruolo e la riproducibilità delle definizioni runtime dalla catena di migrazioni. Nessuna DDL o modifica ai dati è stata eseguita in Production.
+
+
+### Controllo di vincoli e indici della tabella trasferimenti — 2026-10-03
+
+Una lettura di sola consultazione del catalogo PostgreSQL Production ha rilevato ulteriori divergenze tra la migrazione iniziale `20261001104500_add_condominium_member_transfer.sql` e la tabella effettiva:
+
+- Il vincolo di stato installato ammette `Bozza`, `Confermato`, `Chiuso` e `Annullato`; la migrazione iniziale dichiara invece soltanto `Bozza`, `Confermato` e `Annullato`. Lo stato `Chiuso` è utilizzato dalla routine di chiusura e deve quindi essere presente nella definizione canonica.
+- La tabella installata include i vincoli FK `closed_by` verso `auth.users(id)`, mentre tale colonna/relazione non compare nella definizione della migrazione iniziale. La migrazione iniziale non è quindi un bootstrap fedele dello schema corrente.
+- La routine runtime di conferma contiene il lock dell'unità, la verifica del ruolo proprietario e del flag `current_owner`, lo snapshot finanziario e la transizione del cedente a `In chiusura`; questi elementi non sono presenti nella funzione definita dalla migrazione iniziale.
+- La migrazione del blocco dei riporti unitari ricostruisce la funzione tramite `pg_get_functiondef` e `replace` su frammenti testuali. Il controllo è presente nella funzione runtime letta, ma l'esito positivo nel catalogo non dimostra che lo script sia riproducibile su un database con una definizione iniziale differente.
+
+**Azione di riconciliazione:** trattare la migrazione iniziale come storica, non come schema di riferimento per una nuova installazione; ricostruire una sequenza versionata coerente con colonne, FK, vincoli di stato, routine e grants. La migrazione di patch testuale resta da sostituire con una definizione deterministica dopo aver consolidato la sequenza completa e verificato le dipendenze in un ambiente isolato. Nessuna modifica a Production è stata eseguita.
