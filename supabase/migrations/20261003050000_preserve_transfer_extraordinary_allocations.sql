@@ -18,7 +18,11 @@ declare
       ) order by l.deliberation_date,a.due_date,a.id)
       from public.condominium_expense_allocations a
       join public.condominium_ledger_entries l on l.id=a.ledger_entry_id
-      where a.member_id=p_outgoing_member_id
+      where a.workspace_id=v_workspace
+        and a.condominium_id=v_condominium
+        and a.member_id=p_outgoing_member_id
+        and l.workspace_id=v_workspace
+        and l.condominium_id=v_condominium
         and l.expense_type='Straordinaria'
         and l.deliberation_date is not null
         and l.deliberation_date<=p_transfer_date
@@ -27,7 +31,11 @@ declare
 begin
   v_definition := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position('extraordinary_deliberated_before_due_after' in v_definition)>0 then
-    if position('l.expense_type=''Straordinaria''' in v_definition)=0
+    if position('a.workspace_id=v_workspace' in v_definition)=0
+       or position('a.condominium_id=v_condominium' in v_definition)=0
+       or position('l.workspace_id=v_workspace' in v_definition)=0
+       or position('l.condominium_id=v_condominium' in v_definition)=0
+       or position('l.expense_type=''Straordinaria''' in v_definition)=0
        or position('l.deliberation_date<=p_transfer_date' in v_definition)=0
        or position('a.due_date>p_transfer_date' in v_definition)=0
        or position('join public.condominium_ledger_entries l on l.id=a.ledger_entry_id' in v_definition)=0 then
