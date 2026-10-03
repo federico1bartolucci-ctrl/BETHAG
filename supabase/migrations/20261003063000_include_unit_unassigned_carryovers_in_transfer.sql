@@ -23,14 +23,11 @@ begin
       end if;
       continue;
     end if;
-      v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
-      if v_count<>1 then
-        raise exception 'Expected one unscoped unit carryover query in %, found %',v_sig,v_count;
-      end if;
-      v_def := replace(v_def,v_old,v_new);
-      execute v_def;
-      continue;
+    v_count := (length(v_def)-length(replace(v_def,v_old,'')))/length(v_old);
+    if v_count<>1 then
+      raise exception 'Expected one unscoped unit carryover query in %, found %',v_sig,v_count;
     end if;
+    v_def := replace(v_def,v_old,v_new);
     if position(v_anchor in v_def)=0 then
       raise exception 'Transfer snapshot insertion anchor missing for %',v_sig;
     end if;
