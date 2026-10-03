@@ -1638,6 +1638,11 @@ function AccountingPage({
     const num=(v:string)=>v.trim()===""?null:Number(v);
     const previous=num(consumptionForm.previous_reading), current=num(consumptionForm.current_reading), consumption=num(consumptionForm.consumption), kwh=num(consumptionForm.kwh), allocationValue=num(consumptionForm.allocation_value), chargeAmount=num(consumptionForm.charge_amount);
     if ([previous,current,consumption,kwh,allocationValue,chargeAmount].some(v=>v!==null&&(!Number.isFinite(v)||v<0))) { setError("I valori di consumo devono essere numerici e non negativi."); return; }
+    const selectedReadingYear = scopedYears.find(y => y.id === consumptionForm.fiscal_year_id && y.condominium_id === dbCondominiumId);
+    const selectedReadingUnit = units.find(u => u.id === consumptionForm.unit_id && u.condominium_id === dbCondominiumId);
+    if (!selectedReadingYear || !selectedReadingUnit) { setError("L'esercizio e l'unità devono appartenere al condominio selezionato."); return; }
+    if (consumptionForm.period_start && consumptionForm.period_end && consumptionForm.period_start > consumptionForm.period_end) { setError("La data iniziale del periodo di consumo non può superare quella finale."); return; }
+    if (chargeAmount !== null && !hasCentPrecision(chargeAmount)) { setError("L'importo addebitato deve essere espresso in centesimi."); return; }
     if (previous!==null&&current!==null&&current<previous) { setError("La lettura attuale non può essere inferiore alla precedente."); return; }
     setSaving(true); setError("");
     try {
