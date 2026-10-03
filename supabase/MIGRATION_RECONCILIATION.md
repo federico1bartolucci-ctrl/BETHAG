@@ -339,3 +339,8 @@ Hardened `20261003052000_expose_captured_transfer_snapshot.sql`: the already-ins
 ## Extraordinary allocation snapshot idempotence — 2026-10-03
 
 Hardened `20261003050000_preserve_transfer_extraordinary_allocations.sql`: the already-present snapshot path now verifies a unique JSON key and the expected allocation/ledger workspace and condominium filters plus extraordinary-expense type. The updated migration was fetched back from GitHub and its blob SHA verified. This is a branch-only safeguard; no production migration, merge, deployment, or overall QA/collaudo was performed.
+
+
+## Transfer close-guard idempotence correction — 2026-10-03
+
+Corrected `20261003071000_block_transfer_close_with_unassigned_installments.sql`: its already-installed path previously rejected the expected unit-carryover query anchor, even though that query correctly remains in the function after the installment guard is added. The path now requires the carryover anchor exactly once and validates the installment condition exactly once, alongside the existing declaration/query checks. The migration was fetched back from GitHub and its blob SHA verified. Branch-only; no production migration or overall QA/collaudo was run.
