@@ -408,3 +408,7 @@ Further review of `20261003063000_include_unit_unassigned_carryovers_in_transfer
 ## Captured snapshot migration source repair — 2026-10-03
 
 Static review found that `20261003052000_expose_captured_transfer_snapshot.sql` had a malformed `v_new` dollar-quoted string: part of the migration body had been inserted inside the replacement text, leaving the PL/pgSQL block structurally invalid. Reconstructed the replacement as the captured snapshot JSON key/source followed by the existing transfer JSON object anchor, and restored the intended executable block. The corrected file was committed to the feature branch and fetched back from GitHub with exact content equality. This is source-level verification only; no SQL was run against Supabase, production remains unchanged, and comprehensive QA/collaudo is still deferred.
+
+## Captured snapshot insertion anchor correction — 2026-10-03
+
+Cross-review against the foundational `20261001110000_add_member_transfer_accounting_snapshot.sql` found that the canonical transfer JSON anchor is `'transfer',jsonb_build_object(`, without a space after the comma. Corrected `20261003052000_expose_captured_transfer_snapshot.sql` to match that exact source anchor, so the forward migration can locate the insertion point in the function created by the base migration. Updated file was fetched back from GitHub and exact content equality verified. Source-level correction only; no SQL execution or production changes. Full QA/collaudo remains deferred until the known migration issues are resolved.
