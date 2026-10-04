@@ -516,3 +516,8 @@ Read-only inspection of the production foreign keys confirmed `condominium_ledge
 ## Production versus branch migration boundary — 2026-10-04
 
 A read-only Supabase migration-history check returned 177 applied migrations, with the latest recorded version `20261003050722` (`block_transfer_close_with_unresolved_unit_carryovers`). The branch contains subsequent transfer-accounting migrations through `20261003080000_harden_member_delete_financial_history.sql`, which are not recorded as applied in the production migration history. Read-only catalog inspection confirms the production member-delete trigger exists, while the branch's newer `20261003080000` function definition adds ledger-entry and transfer-party checks that are not yet reflected in the inspected production function. This is an environment boundary, not permission to apply pending DDL: production remains unchanged. The pending branch migrations require ordered validation in a disposable Supabase environment before any release decision.
+
+
+## Unified installment representative-member predicate — 2026-10-04
+
+Aligned the transfer-close guard with the actual installment generator in `20261001110001_harden_current_owner_installment_generation.sql`: unified installments store a non-null representative `member_id` and the note `Rata unificata per proprietario`. The close guard therefore must not require `i.member_id is null`. Removed that incompatible condition and retain matching by owner identity on the source allocation's unit, scoped to workspace, condominium, and ledger entry. This is statically reconciled against the generator source; SQL execution and controlled-data validation remain pending. Production remains read-only; no merge, deployment, or final QA/collaudo.
