@@ -628,3 +628,17 @@ The candidate DDL contains 27 distinct table definitions (the initial count of 2
 ### Reconciliation decision
 
 The checked migrations confirm that at least some candidate tables are created incrementally, while other accounting migrations alter tables whose original definitions are absent from this targeted sample. Therefore the candidate DDL cannot safely be inserted wholesale as a new baseline: it would duplicate some table creations and still requires exact dependency/order reconciliation for the rest. Next gate is a full-file pass over all tracked migrations, followed by column/constraint/index-level comparison and isolated replay validation. No SQL was applied to Production or to a live user dataset; final QA remains deferred until repair work is complete.
+
+## Incremental migration dependency findings — second pass (2026-10-04)
+
+A further content scan covered the 24 migrations from `20260928153422` through `20260930183000` (the portal/insurance/unit group and the early accounting hardening group). The scan is based on SQL text references and explicit `CREATE TABLE`/`ALTER TABLE` statements; references in function bodies are not treated as table introductions.
+
+Additional explicit table introductions observed:
+- `portal_registration_requests` in `20260928153242_add_condomino_registration_workflow.sql` (outside the 24-file slice due to the slice boundary; recorded here as an observed dependency).
+- `condominium_fiscal_carryover_compensations` in `20260930160000_fiscal_carryover_compensation.sql`.
+- `condominium_allocation_rules` and `condominium_consumption_readings` were previously observed in `20260930110000_accounting_consumption_and_installment_percentages.sql`.
+- `condominium_fiscal_carryovers` in `20260930230000_fiscal_year_carryovers.sql`, `condominium_accounting_settings` in `20260930235000_accounting_settings.sql`, and `condominium_payment_reversal_audit` in `20261001083000_payment_reversal_audit_and_reconciliation.sql` were observed in the prior targeted pass.
+
+The scanned hardening migrations repeatedly reference `condominium_expense_allocations`, `condominium_installments`, `condominium_fiscal_years`, `condominium_ledger_entries`, `condominium_millesimal_tables`, `condominium_millesimal_values`, and `condominium_payment_movements`, but the scanned files do not introduce those tables. This reinforces the baseline dependency gap: these files are patches against an already-present schema, not an empty-database bootstrap. Table references alone do not prove the initial definition or column-level compatibility.
+
+The text scan also identified `condominium_budgets` as a dependency in `20260929232000_harden_fiscal_year_closure.sql`, without a table DDL statement in the scanned slice. Absence of a create statement in a slice is not proof of absence from the full migration history. Full inventory and exact DDL reconciliation remain open; no baseline has been authored or executed from these partial findings.
