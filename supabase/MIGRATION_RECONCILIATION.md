@@ -642,3 +642,15 @@ Additional explicit table introductions observed:
 The scanned hardening migrations repeatedly reference `condominium_expense_allocations`, `condominium_installments`, `condominium_fiscal_years`, `condominium_ledger_entries`, `condominium_millesimal_tables`, `condominium_millesimal_values`, and `condominium_payment_movements`, but the scanned files do not introduce those tables. This reinforces the baseline dependency gap: these files are patches against an already-present schema, not an empty-database bootstrap. Table references alone do not prove the initial definition or column-level compatibility.
 
 The text scan also identified `condominium_budgets` as a dependency in `20260929232000_harden_fiscal_year_closure.sql`, without a table DDL statement in the scanned slice. Absence of a create statement in a slice is not proof of absence from the full migration history. Full inventory and exact DDL reconciliation remain open; no baseline has been authored or executed from these partial findings.
+
+## Accounting and unit-integrity dependency pass (2026-10-04)
+
+The migration text review was extended through the unit/accounting integrity group ending at `20260930215000`. No explicit `CREATE TABLE` for the remaining core accounting relations was found in this slice; multiple migrations instead reference existing tables in guards, RPCs, fiscal transitions, and hard-delete routines.
+
+Observed dependencies include:
+- `condominium_expense_allocations` and `condominium_installments`: integrity guards, unit-delete protection, fiscal-year transition, payment and allocation controls.
+- `condominium_fiscal_years`, `condominium_fiscal_carryovers`, `condominium_ledger_entries`, and `condominium_payment_movements`: fiscal transitions, access hardening, payment reconciliation and delete routines.
+- `condominium_funds`, `condominium_budgets`, `condominium_audit_log`, `condominium_legal_cases`, `condominium_register_items`, `condominium_suppliers`, `condominium_tax_obligations`, `condominium_works`, `condominium_work_events`, `condominium_work_documents`, and `condominium_work_progress`: referenced by the complete condominium hard-delete routine, but not created in the reviewed slice.
+- `condominium_allocation_rules` and `condominium_millesimal_tables`: used by allocation-scope validation; no create statement in this slice.
+
+These references are important dependency evidence but are not sufficient to infer columns, foreign-key actions, policies, or original creation versions. The working finding remains that the repository's tracked chain needs a verified foundation source for replay from empty state. Continue full inventory rather than infer or synthesize a production baseline from function references.
