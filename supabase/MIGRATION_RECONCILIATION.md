@@ -551,3 +551,8 @@ Review found that `20261003080000_harden_member_delete_financial_history.sql` de
 ## Preserve financial member identity on deletion — 2026-10-04
 
 Read-only inspection of the production foreign keys confirmed that `condominium_installments.member_id`, `condominium_expense_allocations.member_id`, `condominium_fiscal_carryovers.member_id`, and `condominium_ledger_entries.member_id` use `ON DELETE SET NULL`. That preserves financial rows but removes their member attribution, weakening later transfer reconciliation. Added branch-only migration `20261003080000_prevent_financial_member_deletion.sql`: a `BEFORE DELETE` trigger rejects hard deletion whenever any of those four accounting tables references the member, directing operators to archive the profile instead. Transfer history already has restrictive foreign keys to outgoing/incoming members. The new migration was committed to the feature branch and is not applied to production. SQL runtime validation in a controlled database and full QA/collaudo remain pending.
+
+
+## Duplicate migration version cleanup — 2026-10-04
+
+Removed `20261003080000_prevent_financial_member_deletion.sql`, which duplicated version `20261003080000` already used by `20261003080000_harden_member_delete_financial_history.sql`. The retained hardened migration includes the same financial-reference deletion protection plus ledger-entry and transfer-party checks, uses a trigger-only SECURITY DEFINER function with an empty search path, and attaches the BEFORE DELETE trigger. This prevents ambiguous ordering or migration-history collisions. The redundant file was deleted from the feature branch; no database migration, production write, merge, deployment, or full QA/collaudo was performed.
