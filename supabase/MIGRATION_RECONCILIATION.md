@@ -1335,3 +1335,12 @@ Esaminato `src/lib/bethagBackend.ts` (versione precedente al commit di correzion
 ### Verifica CI della modifica applicativa — 2026-10-04
 
 Il commit applicativo `84745d80b7818443c1ba8acc22b04e68f329f0a2` è associato al workflow GitHub Actions `BETHAG build`, run `37208045829`, concluso con esito `success`. Il PR #13 risulta ancora aperto verso `main`; il workflow di build non equivale al collaudo funzionale o al replay delle migration. La modifica client è quindi verificata dal build CI, ma non ancora certificata a runtime.
+
+
+### Allineamento validatore proprietari e flusso membro-unità — 2026-10-04
+
+Confronto diretto delle migrazioni `20260930214000_repair_unit_owner_references.sql` (blob `247f9d31c26203464a870fe37ff60a9d9caf91c1`) e `20260930215000_validate_unit_owner_member_refs.sql` (blob `428e91a190fde962cfe457572f48924a075a77f6`): la riparazione ricostruisce `ownerMemberIds` esclusivamente da membri con `m.unit_id = u.id`, stesso condominio, `legacy_id` non nullo e ruolo `Proprietario`; il validatore successivo controlla soltanto condominio, `legacy_id` e ruolo, non l'unità collegata. Quindi i due passaggi non applicano la stessa regola di integrità.
+
+**Esito della fase di confronto:** discrepanza confermata e registrata; non modificare la migrazione storica già applicata. La correzione forward dovrà rendere coerente la regola di proprietà con `unit_id`, ma prima deve preservare le posizioni legacy prive di `unit_id`, i comproprietari e i trasferimenti con storico. Inoltre il trigger attuale è sulla tabella `condominium_units`: un aggiornamento successivo del membro a `unit_id` o ruolo non provoca da solo la rivalidazione del JSON dell'unità. La presenza di trigger member-side per scope, sincronizzazione legacy, storico finanziario e portale è documentata nel catalogo recuperato, ma non sostituisce questa sincronizzazione dei riferimenti proprietario.
+
+Non è stata creata una migrazione eseguibile né effettuata alcuna modifica al database: i dati attuali e i flussi effettivamente distribuiti non sono disponibili per stabilire in sicurezza il trattamento delle associazioni legacy. La fase statica di confronto è conclusa; resta bloccata la remediation SQL fino a verifica del catalogo e dei dati in ambiente isolato. QA complessivo resta rinviato al termine della risoluzione.
