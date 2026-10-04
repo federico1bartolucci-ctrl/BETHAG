@@ -531,3 +531,8 @@ Tightened the unified-installment branch in `20261003079000_scope_transfer_close
 ## Scope transfer-confirmation accounting snapshot — 2026-10-04
 
 Added `20261003080000_scope_transfer_confirmation_snapshot.sql` to explicitly scope outgoing-owner installment and allocation totals captured during transfer confirmation by `workspace_id` and `condominium_id`. The migration checks each exact source fragment and accepts either the original unscoped form or the already-scoped form, raising an exception for missing, duplicated, or mixed anchors. This addresses consistency with the tenant-scoped preview and retrieval functions. File creation is on the feature branch only; fetch-back and static inspection are required. No production DDL, merge, deployment, or full QA/collaudo was performed.
+
+
+## Unified installment close-guard alignment — 2026-10-04
+
+Static cross-check of `20261003079000_scope_transfer_close_financial_positions.sql` against `20261001110001_harden_current_owner_installment_generation.sql` confirms that generated unified installments use `unit_id IS NULL`, carry the `Rata unificata per proprietario` note, and retain a representative `member_id`. The close guard now restricts its unified branch to that marker and resolves owner identity from members associated with the source allocation unit, while retaining tenant, condominium, ledger-entry, and transferred-unit predicates. This reduces false positives from unrelated NULL-unit installments and avoids relying solely on the representative member row. Static review only: the generated replacement function and migration have not been executed against a disposable Supabase database; do not treat this as runtime validation. Production remains read-only and no merge/deployment is authorized.
