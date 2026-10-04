@@ -774,7 +774,7 @@ Il confronto della catena `20260930230000_fiscal_year_carryovers.sql` e `2026100
 ### Public fiscal carryover RPC alignment
 - `20260930231000_correct_carryover_payment_basis.sql` replaced `public.generate_fiscal_year_carryovers(...)` with a legacy implementation grouped only by `unit_id` and using `max(member_id)`, which could collapse co-owner balances.
 - `20261001082000_fix_fiscal_carryover_regeneration.sql` introduced the hardened private implementation grouped by `unit_id, member_id`, with authentication, authorization, locking, fiscal-year validation, compensation safeguards, and opening-balance update, but did not itself replace the public RPC.
-- `20261004101000_route_public_carryovers_to_hardened_function.sql` now routes the public RPC to that private implementation, explicitly restricts public/anon execution, and grants execution to `authenticated`. This aligns the public entry point with the corrected per-member accounting logic. Migration is committed to the working branch only; it has not been applied to Supabase. Final database replay and QA remain deferred until all issues are resolved.
+- `20261004101000_route_public_carryovers_to_hardened_function.sql` now routes the public RPC to that private implementation, explicitly restricts public/anon execution, and grants the public wrapper to `authenticated` while keeping the private implementation ungranted to client roles (the `SECURITY DEFINER` wrapper invokes it internally). This aligns the public entry point with the corrected per-member accounting logic. Migration is committed to the working branch only; it has not been applied to Supabase. Final database replay and QA remain deferred until all issues are resolved.
 
 ## Corrective migration inventory refresh — 2026-10-04
 
