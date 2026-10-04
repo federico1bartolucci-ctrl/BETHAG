@@ -1013,3 +1013,12 @@ La funzione `private.can_access_condominium(uuid)` nello snapshot 001 invoca `pr
 - Prima di una baseline ricostruita, confrontare per ogni funzione firma, corpo, proprietario, SECURITY DEFINER, search_path, ACL/EXECUTE e chiamanti; la sola definizione testuale non basta a certificare sicurezza o compatibilità.
 
 Questa verifica è documentale e statica. Nessuna funzione è stata creata/modificata su Production, nessun replay, deploy o QA è stato eseguito.
+
+
+### Precisazione: funzione admin e bootstrap — 2026-10-04
+
+La lettura estesa degli snapshot Production completa la mappa precedente: `private.is_workspace_admin(uuid)` è definita in `docs/recovery/production_functions_definitions_003.sql` (blob `81f00cc54c4ff7d7b734020a2277c1d63d0fb331`), e verifica l'appartenenza attiva in `public.workspace_members` con ruolo `admin`. Quindi la definizione Production è recuperata; resta non individuata la corrispondente migration storica nei branch Git esaminati. Analogamente, `private.can_access_workspace_module(uuid,text)` è nello snapshot 001, ma non va confusa con `can_manage_workspace_module`.
+
+La migration `20260928060000_expose_first_admin_bootstrap.sql` (blob `fac77a0fe4b762d7ed06bc5ebea6915609833403`) espone `public.claim_first_workspace_admin(uuid)` e la concede ad `authenticated`, ma richiama `private.claim_first_workspace_admin(uuid)` senza definirla. Il corpo della funzione privata è presente nello snapshot 002 (blob `876b732024041793f92d41fad2ef6630704fd5cd`), non in questa migration. Di conseguenza, la migrazione di esposizione non è autosufficiente in un replay pulito: deve essere preceduta da una sorgente privata verificata, inclusi proprietario, ACL e dipendenze da `workspaces`, `workspace_members`, `profiles` e `auth.uid()`.
+
+**Stato:** definizioni rilevate negli snapshot di catalogo, provenienza storica delle funzioni private non certificata. La funzione wrapper non è stata eseguita o modificata; nessun DDL, replay, deploy o collaudo è stato effettuato.
