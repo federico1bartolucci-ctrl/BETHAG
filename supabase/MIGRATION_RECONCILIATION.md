@@ -541,3 +541,8 @@ Static cross-check of `20261003079000_scope_transfer_close_financial_positions.s
 ## Unique version for transfer confirmation snapshot — 2026-10-04
 
 The transfer confirmation snapshot scoping migration was assigned version `20261003080100` because `20261003080000` was already used by `harden_member_delete_financial_history`. The migration content was preserved under the unique versioned filename `20261003080100_scope_transfer_confirmation_snapshot.sql`; the duplicate-version filename was removed. This prevents two migrations from sharing the same version key. No production migration was run.
+
+
+## Member financial-history delete guard attachment — 2026-10-04
+
+Review found that `20261003080000_harden_member_delete_financial_history.sql` defined the SECURITY DEFINER guard function but did not attach it to `condominium_members`. Added an idempotent `BEFORE DELETE` trigger so the existence checks actually prevent deletion when installment, allocation, carryover, ledger, or transfer history exists. Trigger attachment is statically verified in the branch; migration execution and runtime behavior remain pending controlled non-production validation. Production remains read-only.
