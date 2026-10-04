@@ -4319,6 +4319,7 @@ function App() {
               for (const owner of draftUnit.owners ?? []) {
                 const legacyId = makeId();
                 const existingMember = condominiumMembers.find((member) => {
+                  if (Number(member.condominiumId) !== Number(savedItem.id)) return false;
                   const sameFiscalCode = owner.fiscalCode && member.fiscalCode &&
                     owner.fiscalCode.replace(/\\s/g, "").toUpperCase() === member.fiscalCode.replace(/\\s/g, "").toUpperCase();
                   const sameEmail = owner.email && member.email &&
@@ -4327,6 +4328,11 @@ function App() {
                 });
 
                 if (existingMember) {
+                  if (String(existingMember.unitId ?? "") !== String(target.id)) {
+                    throw new Error(
+                      `Il proprietario ${owner.firstName} ${owner.lastName} è già presente nel condominio ma associato a un'altra unità. Verifica l'anagrafica e assegna il proprietario alla nuova unità con la procedura di modifica autorizzata.`
+                    );
+                  }
                   ownerMemberIds.push(existingMember.id);
                   continue;
                 }
