@@ -1413,3 +1413,13 @@ The production history contains 177 records while the branch contains 154 migrat
 ### Live-schema exception — owner cleanup
 
 A read-only inspection of production on 2026-10-04 found the trigger `trg_clean_deleted_member_owner_references` and function `public.clean_deleted_member_owner_references()` installed on `public.condominium_members`. The function definition matches the branch migration `20261003070000_repair_deleted_member_owner_references.sql`, while the production migration ledger has no matching version/name entry. This is schema/history drift: do not replay this migration or fabricate a history row until the deployment origin and complete definition/dependencies are reconciled. The application deletion path now delegates cleanup to this database trigger, so this live-schema presence is a prerequisite that must be addressed explicitly before rollout to any environment lacking the trigger.
+
+### Unit-reference client alignment — 2026-10-04
+
+Updated `src/lib/bethagBackend.ts` in commits `8efc4e89`, `17b45362`, and `48f1bb2b`:
+
+- Bulk member synchronization now resolves a valid structured `unitId` against units loaded for that member's condominium before falling back to the legacy `apartment` code.
+- Member save validates `unitId` against the same condominium, falls back to the normalized legacy code for older records, and persists the canonical unit code and resolved ID in the member JSON/column. A stale or cross-condominium ID cannot be used to attach the member elsewhere.
+- Unit hydration now projects owner IDs from the authoritative member `unit_id` relation and condominium role, instead of unioning those IDs with potentially stale JSON-only references.
+
+The edits were fetched back from the branch and their key code paths verified statically. No runtime build result is available for the latest commit yet; no production data was written and no migration was applied.
