@@ -1794,3 +1794,12 @@ A fresh read-only catalog query enumerated effective EXECUTE grants for function
 The observed ACLs alone do not prove these private routines are callable through PostgREST: reachability depends on the project's API exposed-schema configuration, which is not returned by the available project metadata or PostgreSQL catalog inspection. Schema `private` has `USAGE` for `authenticated` in the prior catalog check, so direct SQL resolution should not be presumed impossible. Public wrappers remain the client entry points found in static client-code inspection, but static call-site absence is not proof against dynamic or external SQL use.
 
 **Next control required:** obtain and verify the actual Supabase API exposed-schema configuration, then map every exposed private routine to an intended caller and its migration-granted ACL. Until then, do not revoke schema USAGE or EXECUTE on private helpers: doing so could break policy evaluation, wrappers, or service workflows. This remains a configuration/authorization verification item, not a demonstrated anonymous exposure. Production was queried read-only; no DDL, ACL, data, merge, deploy, or comprehensive QA was performed.
+
+
+### Private schema reachability check — 2026-10-04
+
+A further read-only production privilege query confirmed schema-level access: `private` has USAGE for `authenticated` and `postgres`, but not for `anon` or `service_role`; neither `authenticated` nor `service_role` has CREATE. The `public` schema has USAGE for the API roles, with CREATE limited to `postgres`. This narrows direct SQL name resolution for anonymous clients, but does not establish whether PostgREST exposes `private` through its configured exposed-schema list.
+
+The connected Supabase project metadata does not return the API exposed-schema configuration, and the branch has no `supabase/config.toml` at the expected path. Therefore the private-schema API reachability question remains unverified. Do not infer that `authenticated` private helper grants are necessarily externally callable, nor that they are unreachable; confirm the deployed API configuration before changing schema USAGE or function ACLs. The historical migrations that introduced private-function lockdown are also absent from the operational branch, so no exact source-to-live replay equivalence can be claimed.
+
+No DDL, grants, data, or migration history were changed in production. No speculative ACL migration was added. This remains a targeted authorization/configuration check, not a runtime PostgREST authorization test or comprehensive QA.
