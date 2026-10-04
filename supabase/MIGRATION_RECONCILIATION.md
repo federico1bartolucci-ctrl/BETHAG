@@ -536,3 +536,8 @@ Added `20261003080000_scope_transfer_confirmation_snapshot.sql` to explicitly sc
 ## Unified installment close-guard alignment — 2026-10-04
 
 Static cross-check of `20261003079000_scope_transfer_close_financial_positions.sql` against `20261001110001_harden_current_owner_installment_generation.sql` confirms that generated unified installments use `unit_id IS NULL`, carry the `Rata unificata per proprietario` note, and retain a representative `member_id`. The close guard now restricts its unified branch to that marker and resolves owner identity from members associated with the source allocation unit, while retaining tenant, condominium, ledger-entry, and transferred-unit predicates. This reduces false positives from unrelated NULL-unit installments and avoids relying solely on the representative member row. Static review only: the generated replacement function and migration have not been executed against a disposable Supabase database; do not treat this as runtime validation. Production remains read-only and no merge/deployment is authorized.
+
+
+## Unique version for transfer confirmation snapshot — 2026-10-04
+
+The transfer confirmation snapshot scoping migration was assigned version `20261003080100` because `20261003080000` was already used by `harden_member_delete_financial_history`. The migration content was preserved under the unique versioned filename `20261003080100_scope_transfer_confirmation_snapshot.sql`; the duplicate-version filename was removed. This prevents two migrations from sharing the same version key. No production migration was run.
