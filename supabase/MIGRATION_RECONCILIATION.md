@@ -1707,3 +1707,20 @@ Il controllo read-only dei corpi funzione in produzione ha approfondito le RPC `
 Le due routine `prevent_closed_fiscal_year_payment_delete()` e `prevent_closed_fiscal_year_update()` risultano `RETURNS trigger`, `SECURITY INVOKER` e non associate a trigger attivi nel catalogo attuale, pur mantenendo EXECUTE ereditato da `PUBLIC`. I corpi usano `OLD`/`NEW` e non sono RPC PostgREST utilizzabili come normali funzioni. Restano oggetti orfani con ACL non minimale; la ricerca nel repository non ha restituito occorrenze, ma tale esito non è prova sufficiente dell'assenza di invocazioni dinamiche o SQL esterne.
 
 Il confronto puntuale delle tre migration di hardening conferma revoche `PUBLIC`/`anon` limitate alle firme nominate nei rispettivi file (RPC finanziarie, amministrative/archivio e restore). Non si estende la revoca alle due routine trigger residue: prima va identificata la loro provenienza storica e verificato se siano richiamate da altri processi. La decisione resta quindi di non introdurre una migration ACL speculativa. Produzione non modificata; replay isolato e collaudo complessivo ancora da eseguire dopo la chiusura dei blocker.
+
+
+### Incrocio chiamate RPC del client con ACL live — 2026-10-04
+
+Sono state censite le chiamate `.rpc()` nei componenti applicativi principali del branch (`src/lib/bethagBackend.ts`, `src/main.tsx`, `src/AccountingPage.tsx`, `src/MemberTransferPanel.tsx`). Le chiamate trovate sono:
+
+| Area client | RPC richiamate | ACL live osservata |
+|---|---|---|
+| Backend anagrafica | `save_condominium`, `claim_first_workspace_admin`, `delete_condominium` | EXECUTE ad `authenticated` e ruoli di servizio previsti; nessun `PUBLIC/anon` |
+| Registrazione/portale | `complete_portal_registration`, `admin_approve_portal_registration` | EXECUTE ad `authenticated` (oltre al proprietario); nessun `PUBLIC/anon` |
+| Codice di sicurezza personale | `set_personal_security_code`, `verify_personal_security_code` | EXECUTE ad `authenticated` e ruoli di servizio previsti; nessun `PUBLIC/anon` |
+| Contabilità | `compensate_fiscal_carryover`, `close_fiscal_year_and_generate_carryovers`, `generate_fiscal_year_carryovers`, `generate_condominium_expense_allocations`, `generate_installments_from_allocations_schedule`, `confirm_allocation_intake`, `generate_consumption_allocations`, `register_condominium_installment_payment` | EXECUTE ad `authenticated` e ruoli di servizio previsti; nessun `PUBLIC/anon` |
+| Trasferimento proprietà | `preview_condominium_member_transfer`, `confirm_condominium_member_transfer`, `get_member_transfer_accounting_snapshot`, `close_condominium_member_transfer` | EXECUTE ad `authenticated` e/o `service_role` secondo la funzione; nessun `PUBLIC/anon` |
+
+L'incrocio con il catalogo live non ha evidenziato chiamate RPC del client prive di corrispondente funzione, né una chiamata client alle due routine residue `prevent_closed_fiscal_year_payment_delete()` e `prevent_closed_fiscal_year_update()`. Queste ultime sono `RETURNS trigger`, non sono collegate a trigger attivi nel catalogo e conservano EXECUTE via `PUBLIC`; l'assenza di riferimenti statici nei file esaminati non esclude invocazioni dinamiche o processi esterni. Poiché i loro corpi dipendono da `OLD/NEW`, non sono normali endpoint RPC PostgREST: si mantengono come anomalia da ricondurre allo storico, senza revoca automatica.
+
+**Esito:** le RPC effettivamente richiamate dal client e presenti nel catalogo live risultano protette dall'EXECUTE pubblico/anonimo. Le tre migration di lockdown esaminate coprono un sottoinsieme mirato di RPC; il loro perimetro non va esteso per sola analogia. Resta da chiudere la riconciliazione storica delle funzioni residue e delle migration iniziali mancanti; il catalogo live non dimostra un replay pulito. Nessuna modifica al database di produzione, alle ACL o al flusso client è stata eseguita; QA complessivo, merge e deploy restano rinviati.
