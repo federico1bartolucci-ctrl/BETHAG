@@ -32,7 +32,7 @@ begin
     where m.condominium_id = new.condominium_id
       and m.unit_id = new.id
       and m.legacy_id::text = v_owner
-      and coalesce(m.data->>'role','') = 'Proprietario';
+      and coalesce(m.data->>'role',m.role,'') = 'Proprietario';
 
     if v_member_count <> 1 then
       raise exception 'OWNER_REF_INVALID: il proprietario % non è associato a questa unità o non è qualificato come Proprietario', v_owner;
