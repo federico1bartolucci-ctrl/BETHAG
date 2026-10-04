@@ -1225,3 +1225,12 @@ Ulteriore punto: il validatore scorre gli elementi senza imporre l'unicità degl
 Il trigger del validatore scatta su INSERT/UPDATE di `condominium_units` per `condominium_id,data`; non si attiva da solo quando cambia in seguito `condominium_members.unit_id`, ruolo o `legacy_id`. Il catalogo di produzione elenca separati trigger member-scope e sincronizzazione legacy, ma i loro corpi non sono stati verificati in questa passata. Prima di un intervento occorre confrontare quei corpi e il flusso applicativo, per scegliere una sincronizzazione/validazione transazionale completa e non creare falsi blocchi su subentri o modifiche anagrafiche.
 
 Esito: difetto logico circoscritto confermato a livello statico; non è stata creata né eseguita una migrazione correttiva, né modificato lo schema remoto. Nessuna QA runtime eseguita.
+
+
+### Esame della migrazione candidata di sincronizzazione owner refs — 2026-10-04
+
+Individuata e letta `supabase/migrations/20261004102000_sync_unit_owner_refs_on_member_change.sql` nel branch attivo (blob `[SHA da tree]`): la funzione `public.sync_unit_owner_refs_after_member_change()` aggiorna il JSON `ownerMemberIds` dopo INSERT e dopo UPDATE dei campi `unit_id, condominium_id, legacy_id, data`, ricalcolando sia l'unità precedente sia quella corrente in base ai membri con stessa unità/condominio e ruolo `Proprietario`. La logica confronta l'array attuale con quello atteso prima dell'UPDATE, riducendo scritture inutili; l'esecuzione è `SECURITY DEFINER`, con `search_path = ''` e riferimenti agli oggetti qualificati. Il trigger non include DELETE, coperto separatamente da `clean_deleted_member_owner_references()`.
+
+La migrazione è una candidata forward-only già presente nel branch, non prova che sia stata applicata o sia compatibile con lo schema remoto. Prima dell'adozione restano da verificare: integrità e tipo di `legacy_id`, comportamento dei trigger concorrenti e deferred, correttezza per cambi ruolo/unità/condominio e membri senza `legacy_id`, preservazione di eventuali chiavi aggiuntive in `data`, gestione delle unità prive di proprietari e dei comproprietari, nonché coerenza del trigger DELETE. Il validatore attuale continua inoltre a non imporre che ogni ID in `ownerMemberIds` sia associato proprio alla unità validata e non rifiuta ID duplicati: la sincronizzazione riduce la deriva nei cambi member, ma non sostituisce tale correzione del validatore né un controllo dati preesistenti.
+
+Non sono state eseguite migrazioni, query su Production o QA. Verifica statica del sorgente soltanto.
