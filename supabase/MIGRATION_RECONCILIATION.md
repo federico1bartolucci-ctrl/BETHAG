@@ -511,3 +511,8 @@ The embedded PL/pgSQL dynamic-SQL literal was also corrected so the generated pr
 ## Ledger-entry member attribution delete protection — 2026-10-04
 
 Read-only inspection of the production foreign keys confirmed `condominium_ledger_entries.member_id` also uses `ON DELETE SET NULL`. The member-delete guard in `20261003080000_harden_member_delete_financial_history.sql` previously checked installments, expense allocations, fiscal carryovers, and transfer parties, but omitted direct ledger-entry attribution. Added a scoped-by-member existence check for ledger entries to prevent deleting a member while that historical attribution exists. The change preserves the trigger-only SECURITY DEFINER function and does not reassign accounting records. Branch-only; production remains read-only, and SQL execution/runtime validation is outstanding.
+
+
+## Production versus branch migration boundary — 2026-10-04
+
+A read-only Supabase migration-history check returned 177 applied migrations, with the latest recorded version `20261003050722` (`block_transfer_close_with_unresolved_unit_carryovers`). The branch contains subsequent transfer-accounting migrations through `20261003080000_harden_member_delete_financial_history.sql`, which are not recorded as applied in the production migration history. Read-only catalog inspection confirms the production member-delete trigger exists, while the branch's newer `20261003080000` function definition adds ledger-entry and transfer-party checks that are not yet reflected in the inspected production function. This is an environment boundary, not permission to apply pending DDL: production remains unchanged. The pending branch migrations require ordered validation in a disposable Supabase environment before any release decision.
