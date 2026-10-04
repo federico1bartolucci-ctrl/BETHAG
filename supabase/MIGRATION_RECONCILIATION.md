@@ -1377,7 +1377,7 @@ Questa è una verifica statica dei sorgenti; non sono state modificate le funzio
 
 ## Reconciliation refresh — 2026-10-04
 
-This section supersedes the earlier pending-content table above, which listed only two files and is now incomplete. A fresh inventory found 154 SQL files in the branch and 177 migration-history records in production. Production's latest recorded version is `20261003050722`. The following branch files have later filename versions and are not recorded in production history:
+This section supersedes the earlier pending-content table above, which listed only two files and is now incomplete. A fresh inventory found 154 SQL files in the branch and 177 migration-history records in production. Production's latest recorded version is `20261003050722`. The following 25 branch files have later filename versions and are not recorded in production history:
 
 | Branch version | Repository file | Deployment status |
 |---|---|---|
@@ -1387,7 +1387,7 @@ This section supersedes the earlier pending-content table above, which listed on
 | `20261003062000` | `20261003062000_include_unit_unassigned_installments_in_transfer.sql` | Pending |
 | `20261003063000` | `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` | Pending |
 | `20261003064000` | `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql` | Pending |
-| `20261003070000` | `20261003070000_repair_deleted_member_owner_references.sql` | Pending |
+| `20261003070000` | `20261003070000_repair_deleted_member_owner_references.sql` | Trigger/function present in live schema; history record absent — reconcile before any replay |
 | `20261003071000` | `20261003071000_block_transfer_close_with_unassigned_installments.sql` | Pending |
 | `20261003072000` | `20261003072000_capture_transfer_unit_expenses.sql` | Pending |
 | `20261003073000` | `20261003073000_scope_transfer_unit_expenses.sql` | Pending |
@@ -1408,3 +1408,8 @@ This section supersedes the earlier pending-content table above, which listed on
 | `20261004103000` | `20261004103000_validate_unit_owner_refs_same_unit.sql` | Pending |
 
 The production history contains 177 records while the branch contains 154 migration files; these are not a one-to-one replay set. Historical version/name differences and missing filename matches must be reconciled by comparing SQL contents and live schema, not by rewriting history or blindly replaying old migrations. This inventory is not authorization to deploy. Production was queried read-only; no migration was applied in this refresh.
+
+
+### Live-schema exception — owner cleanup
+
+A read-only inspection of production on 2026-10-04 found the trigger `trg_clean_deleted_member_owner_references` and function `public.clean_deleted_member_owner_references()` installed on `public.condominium_members`. The function definition matches the branch migration `20261003070000_repair_deleted_member_owner_references.sql`, while the production migration ledger has no matching version/name entry. This is schema/history drift: do not replay this migration or fabricate a history row until the deployment origin and complete definition/dependencies are reconciled. The application deletion path now delegates cleanup to this database trigger, so this live-schema presence is a prerequisite that must be addressed explicitly before rollout to any environment lacking the trigger.
