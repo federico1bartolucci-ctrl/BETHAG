@@ -882,3 +882,22 @@ La verifica è statica sui file e sul branch indicati: non dimostra che l’ordi
 **Discrepanza da non propagare:** nello snapshot, `condominiums.archived_by` ha FK verso `profiles(id)`, mentre precedenti confronti storici segnalavano tale FK assente in develop. La migrazione `20261001180000_restore_condominium_units_base.sql` aggiunge `archived_by` come colonna, ma non crea il relativo vincolo FK. Prima di una migration forward occorre verificare il catalogo corrente dell'ambiente target con accesso read-only e decidere una correzione isolata. Inoltre lo snapshot `condominium_members` include FK `unit_id` verso `condominium_units`, quindi non è corretto usare l'estratto come SQL di bootstrap in un unico passaggio senza differire tale vincolo.
 
 Le definizioni sono state consultate come fonte di confronto e non sono state copiate come migration eseguibile: lo snapshot è uno stato catalogato e non contiene da solo semantica di bootstrap, ownership, grants e sequenza completa. Nessun oggetto Production è stato modificato; nessun SQL o QA è stato eseguito.
+
+
+## Verifica delle definizioni di funzioni Production recuperate — 2026-10-04
+
+Esaminati gli artefatti sorgente `docs/recovery/production_functions_definitions_001.sql`–`011.sql` nel branch `bethag-migration-repair`. Le definizioni confermano la presenza, nelle fonti Production recuperate, dei seguenti helper privati e delle firme rilevanti:
+
+| Funzione | Firma rilevata nella fonte | Evidenza/dipendenza esplicita |
+|---|---|---|
+| `private.claim_first_workspace_admin` | `(p_workspace_id uuid DEFAULT NULL::uuid) RETURNS uuid` | Presente in `production_functions_definitions_002.sql`; il wrapper pubblico recuperato in `006.sql` la richiama con `p_workspace_id`. La funzione usa contesto Auth e oggetti workspace; non costituisce da sola un bootstrap delle tabelle. |
+| `private.can_manage_workspace_module` | `(target_workspace uuid, required_permission text) RETURNS boolean` | Presente in `002.sql`; numerose funzioni di gestione la invocano prima di operazioni su dati di condominio e contabilità. |
+| `private.can_access_workspace_module` | `(target_workspace uuid, required_permission text) RETURNS boolean` | Presente in `001.sql`; utilizzata nelle funzioni di accesso del portale e nei controlli di visibilità. |
+| `private.can_access_condominium` | `(target_condominium uuid) RETURNS boolean` | Presente in `001.sql`; la definizione richiama controlli di amministrazione workspace, accesso al modulo condomini e accesso residente. |
+| `private.can_access_resident_condominium` | `(target_condominium uuid) RETURNS boolean` | Presente in `001.sql`; dipende dal modello di appartenenza residente/condominio. |
+
+Il wrapper `public.claim_first_workspace_admin(uuid)` è presente in `production_functions_definitions_006.sql` e delega alla funzione privata. La definizione Production di `private.claim_first_workspace_admin` dichiara un parametro con default NULL, mentre il wrapper e la migration d'esposizione vanno confrontati sulla firma effettiva e sui privilegi: il solo nome della funzione non prova equivalenza di overload, default, owner o grants. Analogamente, l'ordine di definizione degli helper deve precedere le funzioni e le policy che li invocano; la migrazione disponibile `20260928070000_save_condominium_rpc.sql` precede cronologicamente `20260928090000_collaborator_module_write_permissions.sql`, fonte dell'helper `can_manage_workspace_module`, e resta quindi un'incompatibilità del replay pulito da risolvere nella ricostruzione della baseline.
+
+Questi file sono estratti di definizioni Production, esplicitamente non eseguibili come migrazione: non attestano in modo sufficiente grants, ownership, dipendenze di tutte le tabelle, né la cronologia reale del database. I tentativi di recuperare dal branch operativo i singoli file migration indicati non hanno restituito contenuto verificabile; la ricerca testuale sul repository non ha restituito risultati. Per evitare una falsa correzione, non è stato creato un helper sostitutivo né alterato l'ordine dei file storici. Il prossimo passo resta associare ogni firma Production alla migrazione operativa corrispondente e documentare per ciascuna i prerequisiti e i privilegi da ripristinare, prima di produrre un eventuale bootstrap consolidato.
+
+Nessun SQL, replay, deploy, scrittura su Production o QA finale eseguiti.
