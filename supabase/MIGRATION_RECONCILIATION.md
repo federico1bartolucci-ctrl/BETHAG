@@ -1896,3 +1896,18 @@ The transfer implementation in `20261001093000_transfer_current_owner_and_portal
 ### Consolidated SECURITY DEFINER ACL filter — 2026-10-04
 
 A further read-only production catalog query filtered SECURITY DEFINER functions in both `public` and `private` for effective EXECUTE grants to `PUBLIC` or `anon`. The query returned no matching rows. This is consistent with the earlier function-specific findings: no anonymous/PUBLIC-executable SECURITY DEFINER routine was identified in the queried schemas at this point in time. This does not certify invoker routines, PostgREST schema exposure, grants outside these schemas, or runtime authorization behavior. Authenticated EXECUTE on private helpers remains a distinct boundary because authenticated has schema USAGE; preserve it until the configured exposed schemas and all dependent call paths are validated. No production changes or migration additions were made; comprehensive QA remains deferred.
+
+
+### Verifica mirata dei corpi RPC e deleghe private — 2026-10-04
+
+La lettura catalogo dei corpi live ha permesso di verificare i principali wrapper pubblici SECURITY DEFINER e le rispettive routine private:
+
+- `public.admin_approve_portal_registration(uuid,uuid)` controlla identità autenticata, autorizzazione al modulo Portale, corrispondenza tra workspace, condominio e richiesta, stato attivo/non archiviato, email confermata e coerenza dell'email del membro prima di delegare alla routine privata.
+- `private.complete_portal_registration(text,text,text)` richiede `auth.uid()` e email confermata. L'auto-associazione avviene solo per un unico membro attivo individuato e con email corrispondente; le incongruenze sono instradate a richiesta di revisione. Il wrapper pubblico resta SECURITY INVOKER e l'ACL osservata è limitata agli utenti autenticati, postgres e service_role.
+- `private.claim_first_workspace_admin(uuid)` richiede identità autenticata, serializza la richiesta con advisory lock e rifiuta il claim se il workspace contiene già membri. Il wrapper pubblico è SECURITY INVOKER e non rende anonimo il flusso.
+- `private.close_condominium_member_transfer(uuid)` verifica identità, permesso di gestione del workspace, stato del trasferimento e assenza di posizioni contabili aperte prima di archiviare il cedente e chiudere il trasferimento.
+- `private.confirm_condominium_member_transfer(...)` controlla identità, data e dati essenziali, permesso di gestione, condominio non archiviato, proprietario cedente attivo sulla specifica unità e assenza di trasferimenti/proprietari correnti duplicati. Il wrapper pubblico rifiuta un `p_incoming_user_id` fornito dal chiamante e delega con identità entrante nulla.
+
+Le routine esaminate utilizzano `SET search_path TO ''` e riferimenti qualificati, riducendo il rischio di risoluzione di oggetti non attendibili. L'ACL live delle RPC applicative osservate non mostra EXECUTE a `anon` o `PUBLIC`; i privilegi per authenticated/service_role sono coerenti con gli entry point individuati, ferma restando la necessità di collaudo runtime per dimostrare il comportamento effettivo.
+
+**Esito operativo:** nessuna revoca ulteriore o modifica SQL è giustificata dai soli corpi esaminati. Rimane aperta la verifica della configurazione degli schemi esposti da PostgREST e l'audit completo di tutti i percorsi esterni (Edge Functions, integrazioni e client diversi dai file già scansionati). Le dipendenze private con EXECUTE a authenticated non vanno revocate in blocco poiché sono utilizzate da wrapper e/o policy. Questa verifica non costituisce replay pulito né collaudo completo. Produzione e cronologia migration sono rimaste invariate.
