@@ -78,6 +78,13 @@ create trigger trg_clear_member_unit_legacy_on_unit_delete
 after delete on public.condominium_units
 for each row execute function public.clear_condominium_member_unit_legacy_fields();
 
-revoke all on function public.prevent_condominium_unit_delete_with_financial_data() from public, anon, authenticated;
-revoke all on function public.prevent_condominium_unit_delete_with_members() from public, anon, authenticated;
-revoke all on function public.clear_condominium_member_unit_legacy_fields() from public, anon, authenticated;
+-- Match the live invoker-function ACLs observed in production.
+revoke all on function public.prevent_condominium_unit_delete_with_financial_data() from public, anon, authenticated, service_role;
+grant execute on function public.prevent_condominium_unit_delete_with_financial_data() to public, authenticated, service_role;
+
+revoke all on function public.prevent_condominium_unit_delete_with_members() from public, anon, authenticated, service_role;
+grant execute on function public.prevent_condominium_unit_delete_with_members() to public, authenticated, service_role;
+
+-- The cleanup trigger is restricted to trusted database/service contexts.
+revoke all on function public.clear_condominium_member_unit_legacy_fields() from public, anon, authenticated, service_role;
+grant execute on function public.clear_condominium_member_unit_legacy_fields() to service_role;
