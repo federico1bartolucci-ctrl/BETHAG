@@ -4,10 +4,10 @@ do $migration$
 declare
   v_def text;
   v_old text[] := array[
-    $old$'installments_due_before',coalesce((select sum(i.amount) from public.condominium_installments i where i.member_id=p_outgoing_member_id and i.due_date<=p_transfer_date),0),$old$,
-    $old$'installments_paid_before',coalesce((select sum(i.paid_amount) from public.condominium_installments i where i.member_id=p_outgoing_member_id and i.due_date<=p_transfer_date),0),$old$,
-    $old$'installments_residual',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where i.member_id=p_outgoing_member_id and i.due_date<=p_transfer_date),0),$old$,
-    $old$'allocations_before',coalesce((select sum(a.amount) from public.condominium_expense_allocations a where a.member_id=p_outgoing_member_id and (a.due_date is null or a.due_date<=p_transfer_date)),0),$old$
+    $old$'installments_due_before',coalesce((select sum(i.amount) from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),0),$old$,
+    $old$'installments_paid_before',coalesce((select sum(i.paid_amount) from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),0),$old$,
+    $old$'installments_residual',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),0),$old$,
+    $old$'allocations_before',coalesce((select sum(a.amount) from public.condominium_expense_allocations a where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.member_id=p_outgoing_member_id and (a.due_date is null or a.due_date<=p_transfer_date)),0),$old$
   ];
   v_new text[] := array[
     $new$'installments_due_before',coalesce((select sum(i.amount) from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and i.member_id=p_outgoing_member_id and i.due_date<=p_transfer_date),0),$new$,
