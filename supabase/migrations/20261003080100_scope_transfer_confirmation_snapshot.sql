@@ -38,7 +38,10 @@ begin
   for v_idx in 1..array_length(v_old,1) loop
     v_old_count := (length(v_def)-length(replace(v_def,v_old[v_idx],''))) / length(v_old[v_idx]);
     v_new_count := (length(v_def)-length(replace(v_def,v_new[v_idx],''))) / length(v_new[v_idx]);
-    if v_old_count=1 and v_new_count=0 then
+    if v_old[v_idx]=v_new[v_idx] and v_old_count=1 then
+      -- Earlier ordered migrations already enforce this exact tenant predicate.
+      null;
+    elsif v_old_count=1 and v_new_count=0 then
       v_def := replace(v_def,v_old[v_idx],v_new[v_idx]);
     elsif v_old_count=0 and v_new_count=1 then
       null;
