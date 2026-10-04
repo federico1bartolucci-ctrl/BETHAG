@@ -1540,3 +1540,8 @@ These checks are catalog/source inspection only. No production data/schema was c
 ### ACL parity correction for restored unit-delete guards — 2026-10-04
 
 After comparing the live `proacl` values with the forward migration, corrected `20261004105000_restore_unit_delete_legacy_guards.sql` to preserve observed privilege parity: the two BEFORE DELETE guard functions retain EXECUTE for PUBLIC, authenticated, and service_role (matching production's effective/public ACL), while the AFTER DELETE legacy cleanup function is restricted to service_role and the database owner context. These are SECURITY INVOKER trigger functions; trigger invocation is not a reason to broaden direct execution. The updated migration file was fetched back and verified. This is an ACL/source-alignment correction only, not a production change.
+
+
+### Duplicate early condominium-delete RPC migration — 2026-10-04
+
+Source review confirms `20260928070000_save_condominium_rpc.sql` also defines `public.delete_condominium(uuid,bigint)`, while the immediately following `20260928081000_delete_condominium_rpc.sql` defines the same signature and materially equivalent authorization/deletion sequence again. Both are `CREATE OR REPLACE` with the same grants, so this is a redundant redefinition rather than two distinct runtime RPCs; the later migration is the effective definition after ordered replay. Keep both historical files immutable to avoid changing checksums/ledger expectations. A future squashed baseline should include one canonical definition only, after the delete semantics are checked against later financial-history and archive protections; the early RPC performs broad child deletion and must not be treated as the safe unit/condominium deletion contract without that review.
