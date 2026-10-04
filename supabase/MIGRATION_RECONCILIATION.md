@@ -1843,3 +1843,20 @@ Read-only catalog inspection of the connected production project compared callab
 - The branch migrations `20261001063800_lock_down_financial_rpc_anon_execute.sql`, `20261001081500_lock_down_legacy_admin_rpc_anon_execute.sql`, and `20261001081600_lock_down_restore_condominium_rpc_anon_execute.sql` revoke anon and PUBLIC on the listed legacy/financial wrappers. The live ACLs inspected are consistent with authenticated-only/service-role access for these callable routines. The default-privilege migration `20261002113618_secure_default_function_and_sequence_privileges.sql` applies only to future objects created by postgres and does not repair existing ACLs.
 
 Conclusion: no non-trigger public routine was observed executable by anon/PUBLIC in the current catalog query. Private schema USAGE for authenticated and the two orphaned trigger-returning public routines remain explicit follow-up items; no speculative ACL migration was added and production was not changed. Catalog inspection is not a substitute for a clean migration replay, PostgREST exposed-schema configuration review, or end-to-end authorization tests.
+
+
+## Client RPC crosswalk (2026-10-04)
+
+A source scan of `src/lib/bethagBackend.ts` and `src/main.tsx` on the active branch found these direct Supabase RPC calls:
+
+| Public RPC | Client location | Observed production EXECUTE grant | Reconciliation |
+|---|---|---|---|
+| `save_condominium` | `src/lib/bethagBackend.ts` | authenticated, postgres, service_role | Matches authenticated client use; public wrapper delegates to private implementation. |
+| `claim_first_workspace_admin` | `src/lib/bethagBackend.ts` | authenticated, postgres, service_role | Bootstrap call; preserve until first-admin eligibility and replay behavior are verified. |
+| `delete_condominium` | `src/lib/bethagBackend.ts` | authenticated, postgres, service_role | Matches authenticated client use; wrapper delegates to private implementation. |
+| `complete_portal_registration` | `src/main.tsx` | authenticated, postgres, service_role | Registration flow; public wrapper delegates to private implementation. |
+| `admin_approve_portal_registration` | `src/main.tsx` | authenticated, postgres | Administrative approval wrapper performs workspace, member and verified-email checks. |
+| `set_personal_security_code` | `src/main.tsx` | authenticated, postgres, service_role | Authenticated security-code setup/disable call. |
+| `verify_personal_security_code` | `src/main.tsx` | authenticated, postgres, service_role | Authenticated verification call. |
+
+The source scan found no direct client call to private-schema routines. It is not proof that no other client, Edge Function, scheduled task, or external integration calls a routine. No direct client call to the remaining public RPCs was found in these two source files; retain their grants until all application surfaces and deployment integrations are cross-checked. No ACL changes were made.
