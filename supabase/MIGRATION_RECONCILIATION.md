@@ -1555,3 +1555,14 @@ Review of the early migration sequence confirms that `20260928090000_collaborato
 ## Verifica dei controlli automatici disponibili — 2026-10-04
 
 Esaminati `package.json` e i workflow `.github/workflows/build.yml`, `main.yml` e `deploy.yml` nel branch operativo. Gli script npm dichiarano soltanto `dev`, `build` e `preview`; i workflow eseguono installazione dipendenze e `npm run build`, mentre il workflow di deploy costruisce `dist` e lo pubblica su GitHub Pages al push su `main`. Non risultano step configurati per replay SQL, lint/parse delle migrazioni, pgTAP o test runtime Supabase. Il file `supabase/tests/rls_policies.test.sql` contiene asserzioni catalogo/privilegi, ma non è richiamato dai workflow esaminati. Di conseguenza, il check GitHub `build: success` conferma la compilazione frontend soltanto e non certifica schema, ordine delle migrazioni, RLS effettiva o flussi contabili. Questa è una verifica statica della configurazione CI, non esecuzione QA; il collaudo resta differito al completamento delle correzioni. Nessuna modifica a workflow, database o produzione è stata eseguita.
+
+
+### Dipendenze anticipate nelle prime migrazioni — 2026-10-04
+
+La lettura diretta dei sorgenti SQL conferma un secondo vincolo di ordine oltre alla disponibilità di `portal_access`:
+
+- `20260928070000_save_condominium_rpc.sql` crea `public.save_condominium(...)` e invoca `private.can_manage_workspace_module(uuid,text)` nel controllo autorizzativo.
+- La definizione di `private.can_manage_workspace_module(uuid,text)` compare soltanto in `20260928090000_collaborator_module_write_permissions.sql`, quindi il replay strettamente cronologico da database vuoto può fallire già durante la creazione del RPC di salvataggio, prima ancora di arrivare alla migration che installa l'helper.
+- La migration `20260928090000_collaborator_module_write_permissions.sql` applica inoltre una policy a `public.portal_access`; `20260928093000_align_portal_request_access.sql` consulta la stessa tabella nelle funzioni residenti. Entrambi presuppongono che la relazione sia già stata creata, ma la migration `20260928153246_add_portal_access_unique_identity.sql` aggiunge esclusivamente un indice e non soddisfa tale prerequisito.
+
+Queste dipendenze sono difetti strutturali della sequenza storica per un clean replay, non si correggono riordinando solo il ledger già applicato e non autorizzano a inventare una baseline. Le migration storiche restano inalterate per non invalidare checksum o storia applicata. La risoluzione sicura richiede recuperare una definizione base autorevole e il relativo ordine (oppure approvare una nuova baseline separata, esplicitamente ricostruita e provata in un ambiente isolato). Fino ad allora la sequenza non va dichiarata replay-safe da zero. Evidenza da ispezione sorgenti, senza esecuzione SQL in produzione e senza avvio del collaudo finale.
