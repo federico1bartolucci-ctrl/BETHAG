@@ -1330,3 +1330,8 @@ Esaminato `src/lib/bethagBackend.ts` (versione precedente al commit di correzion
 È stata quindi rimossa da `saveCondominiumMember` la seconda scrittura client-side: il trigger database resta l'unico sincronizzatore della proiezione, mentre il client conserva l'upsert dell'anagrafica e il flusso di aggiornamento portale. Questo evita di riscrivere dal client un JSON unità appena aggiornato dal database e riduce il rischio di sovrascrivere campi concorrenti. Il client continua a passare il ruolo applicativo in `data`; la colonna SQL `role` è invece valorizzata a `resident` come categoria di accesso, perciò il filtro proprietario nel trigger continua a leggere `data->>'role'`, coerentemente con il mapping attuale.
 
 **Commit applicativo:** `84745d80b7818443c1ba8acc22b04e68f329f0a2`. Modifica statica al file; non sono stati eseguiti build, replay SQL, test runtime, deploy o modifiche Production. L'effettiva coerenza operativa dipende dall'applicazione della migration di sincronizzazione nel database di destinazione e resta da verificare nella fase finale di collaudo.
+
+
+### Verifica CI della modifica applicativa — 2026-10-04
+
+Il commit applicativo `84745d80b7818443c1ba8acc22b04e68f329f0a2` è associato al workflow GitHub Actions `BETHAG build`, run `37208045829`, concluso con esito `success`. Il PR #13 risulta ancora aperto verso `main`; il workflow di build non equivale al collaudo funzionale o al replay delle migration. La modifica client è quindi verificata dal build CI, ma non ancora certificata a runtime.
