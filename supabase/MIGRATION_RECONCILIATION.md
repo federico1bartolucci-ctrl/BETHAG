@@ -1923,3 +1923,12 @@ Read-only catalog inspection of production project `tctcgptrsmvgajqjgnev` compar
 - Trigger functions with PUBLIC/anon EXECUTE remain a separate least-privilege concern. Their privileges do not by themselves establish a callable RPC endpoint; do not revoke in bulk without checking direct SQL invocations and trigger attachment in the target schema. Two trigger-like signatures noted in earlier inventory have no currently attached non-internal trigger and should be investigated separately before ACL changes.
 
 No production DDL or data writes were performed. This inspection is catalog evidence only; it is not a PostgreSQL replay, runtime authorization test, or comprehensive QA result.
+
+
+### Private SECURITY DEFINER helper grants — 2026-10-04
+
+A fresh read-only production catalog query enumerated SECURITY DEFINER functions in schema `private` and their effective EXECUTE grantees. No such routine was granted EXECUTE to `PUBLIC` or `anon` in the returned inventory. Authenticated EXECUTE is present on authorization helpers (`can_access_condominium`, `can_access_resident_condominium`, `can_access_resident_condominium_module`, `can_access_workspace_module`, `can_manage_workspace_module`, `is_workspace_admin`, `is_workspace_manager`, `is_workspace_member`, `is_workspace_staff`) and on several delegated application routines (including bootstrap, archive/restore, financial operations, registration, and security-code operations). Other implementation-only routines remain postgres-only.
+
+The active branch does not contain `supabase/config.toml`, so the PostgREST exposed-schema list could not be verified from this repository path. Catalog grants plus schema USAGE therefore do not establish whether private functions are addressable over the Data API. Do not revoke authenticated EXECUTE wholesale: these helpers are dependencies of RLS policies and public wrappers. The safe next control is to verify the deployed exposed-schema configuration and trace each authenticated helper's policy/wrapper call sites, then apply only targeted forward-only ACL changes where direct client invocation is demonstrably unintended and supported call paths are preserved.
+
+No production writes, DDL, grant changes, or migration-history changes were performed. This remains catalog/source review, not runtime authorization testing, clean migration replay, or comprehensive QA.
