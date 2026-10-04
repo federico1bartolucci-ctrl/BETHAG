@@ -1860,3 +1860,16 @@ A source scan of `src/lib/bethagBackend.ts` and `src/main.tsx` on the active bra
 | `verify_personal_security_code` | `src/main.tsx` | authenticated, postgres, service_role | Authenticated verification call. |
 
 The source scan found no direct client call to private-schema routines. It is not proof that no other client, Edge Function, scheduled task, or external integration calls a routine. No direct client call to the remaining public RPCs was found in these two source files; retain their grants until all application surfaces and deployment integrations are cross-checked. No ACL changes were made.
+
+
+## Security-definer application RPC audit (2026-10-04)
+
+A fresh read-only production catalog query filtered public SECURITY DEFINER functions to routines granted EXECUTE to PUBLIC, anon, or authenticated, and separately identified whether each routine is referenced by a non-internal trigger. Exactly three callable public SECURITY DEFINER routines appeared in that filter:
+
+| Public routine | EXECUTE roles observed | Trigger-bound |
+|---|---|---|
+| `admin_approve_portal_registration(uuid, uuid)` | authenticated, postgres | no |
+| `close_condominium_member_transfer(uuid)` | authenticated, postgres, service_role | no |
+| `confirm_condominium_member_transfer(uuid, uuid, text, text, uuid, date, text, text, jsonb)` | authenticated, postgres, service_role | no |
+
+No anon or PUBLIC EXECUTE grant was returned for these three. They are intentionally authenticated-facing security-definer entry points rather than trigger routines, so their authorization safety depends on the function bodies enforcing caller identity, workspace/condominium scope, and allowed state transitions. The earlier client crosswalk covers direct calls in `src/lib/bethagBackend.ts` and `src/main.tsx`, but does not establish all external invocation paths. This catalog check did not inspect every function body or the project's PostgREST exposed-schema configuration; therefore it is not a complete authorization certification. Keep production unchanged and defer final permission validation to the later controlled replay and authorization test phase.
