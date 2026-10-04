@@ -1373,3 +1373,38 @@ Il caricamento backend calcola proprietari collegati da `condominium_members.uni
 **Correzione applicativa da integrare:** preferire l'ID unità strutturato quando è presente e verificato nello stesso condominio; usare `apartment` solo come fallback di migrazione/compatibilità; dopo il salvataggio ricaricare o ricalcolare la proiezione proprietari dalla relazione autorevole, senza conservare ID JSON non risolti. La logica deve rispettare l'eventuale appartenenza a più unità soltanto se il modello dati la supporta esplicitamente, e non deve spostare posizioni con storico fuori dal flusso di subentro. Le candidate SQL `20261004102000` e `20261004103000` già considerate sono coerenti col principio, ma non sostituiscono l'allineamento del client.
 
 Questa è una verifica statica dei sorgenti; non sono state modificate le funzioni applicative né eseguiti replay, scritture DB o QA runtime. La correzione client va applicata come modifica coordinata, seguita da build e collaudo finale solo dopo la risoluzione delle altre discrepanze.
+
+
+## Reconciliation refresh — 2026-10-04
+
+This section supersedes the earlier pending-content table above, which listed only two files and is now incomplete. A fresh inventory found 154 SQL files in the branch and 177 migration-history records in production. Production's latest recorded version is `20261003050722`. The following branch files have later filename versions and are not recorded in production history:
+
+| Branch version | Repository file | Deployment status |
+|---|---|---|
+| `20261003052000` | `20261003052000_expose_captured_transfer_snapshot.sql` | Pending |
+| `20261003060000` | `20261003060000_expand_member_transfer_preview_installments.sql` | Pending |
+| `20261003061000` | `20261003061000_preserve_future_installments_transfer_snapshot.sql` | Pending |
+| `20261003062000` | `20261003062000_include_unit_unassigned_installments_in_transfer.sql` | Pending |
+| `20261003063000` | `20261003063000_include_unit_unassigned_carryovers_in_transfer.sql` | Pending |
+| `20261003064000` | `20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql` | Pending |
+| `20261003070000` | `20261003070000_repair_deleted_member_owner_references.sql` | Pending |
+| `20261003071000` | `20261003071000_block_transfer_close_with_unassigned_installments.sql` | Pending |
+| `20261003072000` | `20261003072000_capture_transfer_unit_expenses.sql` | Pending |
+| `20261003073000` | `20261003073000_scope_transfer_unit_expenses.sql` | Pending |
+| `20261003074000` | `20261003074000_scope_extraordinary_transfer_allocations.sql` | Pending |
+| `20261003075000` | `20261003075000_scope_transfer_installment_queries.sql` | Pending |
+| `20261003076000` | `20261003076000_scope_transfer_allocation_totals.sql` | Pending |
+| `20261003077000` | `20261003077000_scope_preview_extraordinary_allocations.sql` | Pending |
+| `20261003078000` | `20261003078000_scope_snapshot_installment_totals.sql` | Pending |
+| `20261003079000` | `20261003079000_scope_transfer_close_financial_positions.sql` | Pending |
+| `20261003080000` | `20261003080000_harden_member_delete_financial_history.sql` | Pending |
+| `20261003080100` | `20261003080100_scope_transfer_confirmation_snapshot.sql` | Pending |
+| `20261004090000` | `20261004090000_fix_member_transfer_status_constraint.sql` | Pending |
+| `20261004091000` | `20261004091000_preserve_outgoing_current_owner_flag.sql` | Pending |
+| `20261004092000` | `20261004092000_reject_empty_installment_percentages.sql` | Pending |
+| `20261004100000` | `20261004100000_allow_installment_overpayment_movements.sql` | Pending |
+| `20261004101000` | `20261004101000_route_public_carryovers_to_hardened_function.sql` | Pending |
+| `20261004102000` | `20261004102000_sync_unit_owner_refs_on_member_change.sql` | Pending |
+| `20261004103000` | `20261004103000_validate_unit_owner_refs_same_unit.sql` | Pending |
+
+The production history contains 177 records while the branch contains 154 migration files; these are not a one-to-one replay set. Historical version/name differences and missing filename matches must be reconciled by comparing SQL contents and live schema, not by rewriting history or blindly replaying old migrations. This inventory is not authorization to deploy. Production was queried read-only; no migration was applied in this refresh.
