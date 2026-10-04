@@ -600,3 +600,31 @@ A read-only inspection of `backup/pre-rollback-20261001` found `docs/PROPOSED-FO
 It is still explicitly a **proposal, not an applied migration**. Its own scope excludes RLS policies, grants, triggers, function bodies, object ownership, comments, and sequence/identity details; six duplicate constraint definitions were deduplicated by definition, so canonical constraint naming requires review. It also represents a Production end-state snapshot and overlaps later incremental migrations. Therefore it must not be appended verbatim to the current migration chain or replayed on an existing database.
 
 Next reconciliation step: compare each of the 27 proposed table definitions with the corresponding incremental migration introductions/alterations, identify duplicated or later-evolved columns and constraints, then compose a separately versioned bootstrap candidate with an explicit object manifest. Preserve this DDL proposal as source evidence and test any composed baseline only on a disposable isolated database. Production remains unchanged; migration replay and final QA remain pending.
+
+## Foundation DDL cross-check — targeted migration sample (2026-10-04)
+
+The candidate DDL contains 27 distinct table definitions (the initial count of 28 included the SQL token `IF`, excluded after correcting the parser). A targeted content check was performed against nine accounting/fiscal migration files and eight transfer/payment migration files in this branch. This is a scoped sample, not a full 147-file migration-to-DDL reconciliation.
+
+| Candidate table | Explicit CREATE found in checked files | ALTER found in checked files | Interpretation |
+|---|---|---|---|
+| `condominium_accounting_settings` | `20260930235000_accounting_settings.sql` | same | Incremental create exists; compare its full definition to candidate DDL before bootstrap consolidation |
+| `condominium_allocation_rules` | `20260930241000_allocation_rules_and_consumption.sql` | same | Incremental create/alter exists |
+| `condominium_consumption_readings` | `20260930241000_allocation_rules_and_consumption.sql` | same | Incremental create/alter exists |
+| `condominium_fiscal_carryovers` | `20260930230000_fiscal_year_carryovers.sql` | same | Incremental create/alter exists |
+| `condominium_ledger_entries` | — | `20260930233000_link_funds_to_ledger.sql`, `20260930235500_classify_expense_type.sql` | Alterations depend on a prior table definition not found in this checked subset |
+| `condominium_payment_reversal_audit` | `20261001083000_payment_reversal_audit_and_reconciliation.sql` | same | Incremental create/alter exists |
+| `condominium_member_transfers` | `20261001104500_add_condominium_member_transfer.sql` | same | Incremental create/alter exists |
+| `condominium_expense_allocations` | — | — | No create/alter in this sample; not evidence that no definition exists elsewhere |
+| `condominium_installments` | — | — | No create/alter in this sample; dependent accounting migrations indicate a prior baseline is required |
+| `condominium_fiscal_years` | — | — | No create/alter in this sample |
+| `condominium_funds` | — | — | No create/alter in this sample |
+| `condominium_millesimal_tables` | — | — | No create/alter in this sample |
+| `condominium_millesimal_values` | — | — | No create/alter in this sample |
+| `condominium_fiscal_carryover_compensations` | — | — | No create/alter in this sample |
+| `condominium_allocation_intakes` | — | — | No create/alter in this sample |
+| `communication_recipients` | — | — | No create/alter in this sample |
+| `condominium_budgets`, `condominium_audit_log`, `condominium_legal_cases`, `condominium_register_items`, `condominium_suppliers`, `condominium_tax_obligations`, `condominium_work_documents`, `condominium_work_events`, `condominium_work_progress`, `condominium_works` | — | — | No create/alter found in the checked sample; broader scan remains required |
+
+### Reconciliation decision
+
+The checked migrations confirm that at least some candidate tables are created incrementally, while other accounting migrations alter tables whose original definitions are absent from this targeted sample. Therefore the candidate DDL cannot safely be inserted wholesale as a new baseline: it would duplicate some table creations and still requires exact dependency/order reconciliation for the rest. Next gate is a full-file pass over all tracked migrations, followed by column/constraint/index-level comparison and isolated replay validation. No SQL was applied to Production or to a live user dataset; final QA remains deferred until repair work is complete.
