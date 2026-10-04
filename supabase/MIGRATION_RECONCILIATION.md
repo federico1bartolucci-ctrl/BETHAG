@@ -918,3 +918,12 @@ Il parametro del wrapper pubblico `claim_first_workspace_admin` ha `DEFAULT NULL
 **Correzione immediata non applicata:** non è stato aggiunto un duplicato della funzione privata né riscritta la migration storica `20260928070000`. Senza la baseline originaria e la verifica delle dipendenze di `workspace_members`, introdurre ora una funzione ricostruita o anticipare la migration potrebbe rendere il replay apparentemente completo ma non riproducibile o sicuro. La prossima attività è rintracciare una fonte versionata attendibile della baseline privata e ricostruire la sequenza di prerequisiti di `workspace_members`; soltanto allora sarà possibile definire una migration forward mirata e validarla in ambiente isolato.
 
 Nessun SQL, replay, deploy, modifica Production o QA finale eseguiti.
+
+
+## Ricerca della baseline e delle origini di workspace_members — 2026-10-04
+
+Ulteriore ricerca mirata nel repository per i messaggi di commit `workspace_members`, `initial_bethag_backend` e `bootstrap schema` non ha restituito commit corrispondenti. Il recupero diretto di `supabase/migrations/20260928021707_initial_bethag_backend.sql` sul branch operativo ha restituito `NOT_FOUND`; questo conferma soltanto che il file non è accessibile a quel percorso e ref, non che la baseline non sia mai esistita o non sia recuperabile da altre fonti.
+
+I file operativi `20260928060000_expose_first_admin_bootstrap.sql` e `20260928090000_collaborator_module_write_permissions.sql` sono stati riaperti sul branch di recupero: il primo contiene il wrapper pubblico e non la funzione privata delegata; il secondo definisce l'helper che interroga `public.workspace_members` e presuppone quindi che la tabella e le colonne `workspace_id,user_id,active,role,permissions` siano già presenti. Non è emersa una migration fondativa verificabile da cui ricavare in sicurezza la definizione completa della tabella, i vincoli, le policy e i privilegi.
+
+**Esito operativo:** il prerequisito `workspace_members` resta non attribuito a una migration fondativa attendibile; non viene fabbricata una definizione SQL né modificata la sequenza storica. Per superare il blocco occorre recuperare il file originario o un'altra fonte versionata completa, quindi confrontarla con lo snapshot Production e le dipendenze effettive. Nessuna interrogazione o modifica al database, replay, deploy o QA finale eseguiti.
