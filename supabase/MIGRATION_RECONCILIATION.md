@@ -1040,3 +1040,16 @@ La verifica cross-branch corregge la portata della precedente osservazione: `202
 Il file di ripristino contiene la definizione base di `condominium_units`, aggiunge `condominium_members.unit_id` e la FK, configura indici e policy RLS. Tuttavia il suo timestamp/versione è successivo a `20260929165000_complete_condominium_units.sql`, che già aggiorna e inserisce righe in `public.condominium_units`. Pertanto il recupero del file nel branch di riparazione chiarisce la provenienza di una definizione candidata, ma non risolve l'ordine per un replay cronologico pulito. Inoltre la migration contiene due indici univoci normalizzati su `(condominium_id, unit_code)` con espressioni equivalenti (`lower(trim(...))` e `lower(btrim(...))`): non eliminarli senza verifica di equivalenza effettiva, dipendenze e dati duplicati nell'ambiente autorizzato.
 
 **Disposizione:** tenere separati il recupero del file nel branch di riparazione e l'assenza nel branch operativo; non spostare o rinominare la migration e non eseguirla speculativamente. Prima di una soluzione occorrono baseline completo, verifica degli oggetti già presenti e piano di replay isolato. Nessuna modifica a Production o QA eseguita.
+
+
+### Dipendenze cronologiche aggiuntive del dominio unità — 2026-10-04
+
+La lettura dei file nel branch operativo conferma che il problema di ordine non riguarda soltanto `20260929165000_complete_condominium_units.sql`. Anche:
+
+- `20260930214000_repair_unit_owner_references.sql` (blob `247f9d31c26203464a870fe37ff60a9d9caf91c1`) esegue un `UPDATE` su `public.condominium_units` e legge `condominium_members.unit_id`;
+- `20260930215000_validate_unit_owner_member_refs.sql` (blob `428e91a190fde962cfe457572f48924a075a77f6`) crea una funzione trigger e un constraint trigger su `public.condominium_units`, con riferimenti a `condominium_members`;
+- `20261001095000_add_unit_cadastral_transformations.sql` (blob `ec83741bbb80396238380a97eb0aaf890858e591`) crea gli oggetti di trasformazione che hanno FK verso `condominium_units` e ne modifica gli attributi di ciclo di vita.
+
+La migrazione candidata che crea la tabella e aggiunge `condominium_members.unit_id`, `20261001180000_restore_condominium_units_base.sql` (blob `fe10dc03984d9fe415464e1789a62e9cbda8d68c` nel branch `bethag-migration-repair`), è successiva a tutte le operazioni sopra e non è presente nel branch operativo. Questo rende esplicito un gruppo di dipendenze bloccanti nel replay cronologico, non un singolo riferimento anticipato. Il suo contenuto è una possibile base ricostruita, non prova che sia la sorgente storica applicata né che possa essere spostata senza ulteriori dipendenze.
+
+**Decisione di riconciliazione:** classificare le migrazioni che operano su unità prima del ripristino base come dipendenze d'ordine da risolvere in un baseline isolato; non rinumerare né spostare file storici sulla sola base del timestamp. Prima della correzione occorre un inventario completo delle operazioni e degli oggetti preesistenti, quindi replay in ambiente usa-e-getta autorizzato. Nessuna esecuzione SQL, modifica Production o QA finale è stata eseguita.
