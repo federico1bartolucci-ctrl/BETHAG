@@ -998,3 +998,18 @@ Confrontate le sorgenti nel branch operativo con lo snapshot catalogo Production
 
 ### Disposizione
 Questi delta sono classificati come **dipendenza/versione non riconciliata**, non come correzioni già validate. Occorre recuperare la migration della base unità o progettare una sostituzione separata, e rintracciare la provenienza della colonna/FK dell'intake. Non è stato eseguito SQL, non sono state alterate migration e non è stato avviato il collaudo finale.
+
+
+## Tracciamento delle funzioni di autorizzazione core — 2026-10-04
+
+Il confronto mirato degli snapshot di funzioni Production nel branch `bethag-migration-repair` conferma che `private.can_access_workspace_module(uuid,text)` è definita nel file `docs/recovery/production_functions_definitions_001.sql` (blob `769ac074036737f98e0393a65fb876e1e8911bdf`, blocco attorno alle righe 291–315), mentre `private.can_manage_workspace_module(uuid,text)` e `private.claim_first_workspace_admin(uuid)` sono nello snapshot `production_functions_definitions_002.sql` (blob `876b732024041793f92d41fad2ef6630704fd5cd`). Entrambi i file sono esplicitamente etichettati come snapshot di recupero, non migration eseguibili.
+
+La funzione `private.can_access_condominium(uuid)` nello snapshot 001 invoca `private.is_workspace_admin`, `private.can_access_workspace_module` e `private.can_access_resident_condominium`. La migration `20260928093000_align_portal_request_access.sql` sostituisce le definizioni di accesso al condominio e al residente, ma non crea `is_workspace_admin` né `can_access_workspace_module`. La migration `20260928090000_collaborator_module_write_permissions.sql` crea `can_manage_workspace_module`, funzione distinta dalla `can_access_workspace_module` chiamata nelle policy e nelle funzioni di accesso. Pertanto la sola presenza della migration 09:00 non soddisfa il prerequisito di autorizzazione in lettura.
+
+### Disposizione tecnica
+
+- Classificare `can_access_workspace_module` e `is_workspace_admin` come **funzioni con definizione Production recuperata ma sorgente migration storica non individuata negli alberi verificati**.
+- Non sostituire automaticamente `can_access_workspace_module` con `can_manage_workspace_module`: nomi e funzioni hanno scopi di autorizzazione diversi e la sostituzione potrebbe alterare l'accesso effettivo.
+- Prima di una baseline ricostruita, confrontare per ogni funzione firma, corpo, proprietario, SECURITY DEFINER, search_path, ACL/EXECUTE e chiamanti; la sola definizione testuale non basta a certificare sicurezza o compatibilità.
+
+Questa verifica è documentale e statica. Nessuna funzione è stata creata/modificata su Production, nessun replay, deploy o QA è stato eseguito.
