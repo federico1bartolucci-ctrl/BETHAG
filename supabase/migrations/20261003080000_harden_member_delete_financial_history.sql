@@ -42,3 +42,9 @@ end;
 $function$;
 
 revoke all on function public.prevent_member_delete_with_financial_history() from public, anon, authenticated;
+
+-- Attach the guard: defining a trigger function alone does not protect DELETE.
+drop trigger if exists trg_prevent_member_delete_with_financial_history on public.condominium_members;
+create trigger trg_prevent_member_delete_with_financial_history
+before delete on public.condominium_members
+for each row execute function public.prevent_member_delete_with_financial_history();
