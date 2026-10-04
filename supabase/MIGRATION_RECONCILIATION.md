@@ -1234,3 +1234,18 @@ Individuata e letta `supabase/migrations/20261004102000_sync_unit_owner_refs_on_
 La migrazione è una candidata forward-only già presente nel branch, non prova che sia stata applicata o sia compatibile con lo schema remoto. Prima dell'adozione restano da verificare: integrità e tipo di `legacy_id`, comportamento dei trigger concorrenti e deferred, correttezza per cambi ruolo/unità/condominio e membri senza `legacy_id`, preservazione di eventuali chiavi aggiuntive in `data`, gestione delle unità prive di proprietari e dei comproprietari, nonché coerenza del trigger DELETE. Il validatore attuale continua inoltre a non imporre che ogni ID in `ownerMemberIds` sia associato proprio alla unità validata e non rifiuta ID duplicati: la sincronizzazione riduce la deriva nei cambi member, ma non sostituisce tale correzione del validatore né un controllo dati preesistenti.
 
 Non sono state eseguite migrazioni, query su Production o QA. Verifica statica del sorgente soltanto.
+
+
+### Verifica puntuale della sincronizzazione owner refs — 2026-10-04
+
+Riletta integralmente la migrazione candidata `20261004102000_sync_unit_owner_refs_on_member_change.sql` (blob `c439c311ce39f70ee3a88549e6210ec179b162f0`). La sincronizzazione AFTER INSERT/UPDATE ricalcola `ownerMemberIds` dalla relazione membro-unità, per l'unità precedente e quella nuova; la funzione è `SECURITY DEFINER`, usa `search_path = ''` e qualifica gli oggetti. La separazione dalla pulizia AFTER DELETE è coerente in linea generale con il trigger di cancellazione già presente. Il trigger unitario differito esistente fornisce una validazione al termine della transazione, ma la sua regola attuale controlla ancora solo condominio e ruolo, non l'uguaglianza `m.unit_id = new.id`.
+
+**Rilievi da risolvere prima di considerarla pronta:**
+- La funzione sostituisce l'intero valore di `ownerMemberIds` con l'aggregato atteso, perdendo ordine manuale e possibili valori legacy non riconducibili a membri attivi; confermare che il campo sia rigorosamente derivato e non abbia semantica aggiuntiva.
+- L'aggregato non elimina duplicati di `legacy_id`; due righe proprietario con lo stesso identificativo generano riferimenti ripetuti. Occorre stabilire e imporre l'unicità della chiave legacy nel suo ambito, oppure aggregare valori distinti e gestire collisioni come errore dati.
+- I membri proprietari senza `legacy_id` vengono esclusi silenziosamente. Va verificato se il modello li ammetta e, se no, se l'inserimento/aggiornamento debba fallire esplicitamente.
+- La funzione dipende da `unit_id` e dalla codifica ruolo in `data->>'role'`; validare la compatibilità col tipo, con la normalizzazione e con i trigger `sync_condominium_member_unit_legacy_fields` e `validate_member_unit_scope` effettivi, incluso il loro ordine di esecuzione.
+- La migrazione ricrea il trigger su INSERT e UPDATE, ma non fa backfill delle unità già incoerenti. Un backfill va progettato separatamente, con report preliminare di anomalie, preservazione delle chiavi JSON e conteggio dei riferimenti senza corrispondenza.
+- La pulizia DELETE elimina l'ID cancellato ma non ricostruisce l'array dalla relazione residua; confrontare il suo comportamento con l'aggregazione su UPDATE e definire una sola regola canonica per inserimento, modifica e cancellazione.
+
+La candidata migliora la sincronizzazione futura, ma non corregge da sola il validatore e non dimostra la coerenza dei dati già esistenti. Non ho cambiato la migrazione né eseguito SQL, accessi di scrittura a Production o QA. Prossimo passo: tracciare il contratto del campo nel codice applicativo e le funzioni/trigger member correlati, poi preparare una correzione forward-only e un backfill verificabile per ambiente isolato.
