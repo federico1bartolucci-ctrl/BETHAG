@@ -25,6 +25,11 @@ begin
   )
   or exists (
     select 1
+    from public.condominium_ledger_entries l
+    where l.member_id = old.id
+  )
+  or exists (
+    select 1
     from public.condominium_member_transfers t
     where t.outgoing_member_id = old.id
        or t.incoming_member_id = old.id
