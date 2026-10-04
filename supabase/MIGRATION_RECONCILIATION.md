@@ -1423,3 +1423,7 @@ Updated `src/lib/bethagBackend.ts` in commits `8efc4e89`, `17b45362`, and `48f1b
 - Unit hydration now projects owner IDs from the authoritative member `unit_id` relation and condominium role, instead of unioning those IDs with potentially stale JSON-only references.
 
 The edits were fetched back from the branch and their key code paths verified statically. No runtime build result is available for the latest commit yet; no production data was written and no migration was applied.
+
+### Member deletion guard — live function is behind the branch candidate
+
+A read-only comparison of production `public.prevent_member_delete_with_financial_history()` with `20261003080000_harden_member_delete_financial_history.sql` found that the live trigger function checks installments, expense allocations, and fiscal carryovers, but does not check `condominium_ledger_entries` or `condominium_member_transfers`. The branch candidate adds both checks and uses `SECURITY DEFINER` with an empty `search_path`, retaining a trigger-only execution model. Production already has the `BEFORE DELETE` trigger, so applying the candidate should replace the function behind that trigger; do not drop or bypass the protection. Until this migration is safely reconciled and deployed through the approved migration process, member deletion protection in production is incomplete for those two history sources. The application must continue treating deletion as blocked/unsafe where accounting or transfer history may exist.
