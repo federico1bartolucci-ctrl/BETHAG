@@ -506,3 +506,8 @@ The production schema confirms that `condominium_installments.member_id` uses `O
 
 
 The embedded PL/pgSQL dynamic-SQL literal was also corrected so the generated predicate compares `notes` to the exact unified-installment marker. The revised migration and reconciliation note were fetched back; parenthesis balance and expected guard-fragment checks pass statically. SQL execution remains outstanding.
+
+
+## Ledger-entry member attribution delete protection — 2026-10-04
+
+Read-only inspection of the production foreign keys confirmed `condominium_ledger_entries.member_id` also uses `ON DELETE SET NULL`. The member-delete guard in `20261003080000_harden_member_delete_financial_history.sql` previously checked installments, expense allocations, fiscal carryovers, and transfer parties, but omitted direct ledger-entry attribution. Added a scoped-by-member existence check for ledger entries to prevent deleting a member while that historical attribution exists. The change preserves the trigger-only SECURITY DEFINER function and does not reassign accounting records. Branch-only; production remains read-only, and SQL execution/runtime validation is outstanding.
