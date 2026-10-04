@@ -159,7 +159,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
-    const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
+    // The member relation is authoritative; stale JSON-only owner references
+    // must not reappear after hydration.
     const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
     return {
       ...row.data,
@@ -179,7 +180,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      ownerMemberIds: linkedOwnerIds,
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
