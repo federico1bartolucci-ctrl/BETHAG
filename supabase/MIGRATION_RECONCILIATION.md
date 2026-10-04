@@ -526,3 +526,8 @@ Aligned the transfer-close guard with the actual installment generator in `20261
 ## Unified installment orphan and null-email guard — 2026-10-04
 
 Tightened the unified-installment branch in `20261003079000_scope_transfer_close_financial_positions.sql`: it now requires the generator's exact `Rata unificata per proprietario` marker, treats a legacy null representative member as a fail-closed condition when the source allocation touches the transferred unit, and avoids equating two missing emails as proof of shared identity. This prevents unrelated/null-email profiles from matching accidentally and prevents an orphaned unified balance from being silently ignored. Branch-only change; fetch-back and static fragment checks are required, SQL execution in a disposable Supabase environment remains outstanding. Production remains read-only; no merge, deployment, or final QA/collaudo.
+
+
+## Scope transfer-confirmation accounting snapshot — 2026-10-04
+
+Added `20261003080000_scope_transfer_confirmation_snapshot.sql` to explicitly scope outgoing-owner installment and allocation totals captured during transfer confirmation by `workspace_id` and `condominium_id`. The migration checks each exact source fragment and accepts either the original unscoped form or the already-scoped form, raising an exception for missing, duplicated, or mixed anchors. This addresses consistency with the tenant-scoped preview and retrieval functions. File creation is on the feature branch only; fetch-back and static inspection are required. No production DDL, merge, deployment, or full QA/collaudo was performed.
