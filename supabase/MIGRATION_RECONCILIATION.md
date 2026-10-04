@@ -1635,3 +1635,19 @@ Il confronto dei corpi SQL reperibili ha chiarito la sequenza delle regole di ac
 L'helper `can_manage_workspace_module` mostra inoltre una differenza di forma tra migration e snapshot: `auth.uid()` è invocato direttamente nella migration `20260928090000` e come `(select auth.uid())` nello snapshot. È una forma tipica di ottimizzazione initplan e non prova, da sola, una differenza nelle regole di autorizzazione; per dichiarare equivalenza servirebbero il confronto dell'intero corpo e gli attributi catalogo (owner, ACL, configurazione sicurezza/search_path).
 
 Nessuna modifica SQL è stata applicata; questa nota documenta la divergenza e impedisce di trattare le varianti come equivalenti senza verifica. Produzione resta in sola lettura e il collaudo QA complessivo resta rinviato alla chiusura dei blocker.
+
+
+### Verifica RLS, grant e ACL per accesso portale — 2026-10-04
+
+È stata interrogata in sola lettura la catalogazione PostgreSQL di produzione per `portal_access`, `condominium_units` e `condominium_members`, insieme alle quattro funzioni helper private usate dalle policy.
+
+| Oggetto | Stato RLS | ACL osservata | Valutazione |
+|---|---|---|---|
+| `portal_access` | abilitato, non FORCE | `authenticated`: SELECT/INSERT/UPDATE/DELETE; `service_role`: privilegi completi; nessun grant esplicito ad `anon` | Coerente con accesso mediato da policy, da confrontare con i grant storici della baseline mancante. |
+| `condominium_units` | abilitato, non FORCE | `authenticated`: SELECT/INSERT/UPDATE/DELETE; `service_role`: privilegi completi; nessun grant esplicito ad `anon` | Il ruolo autenticato dispone dei privilegi di tabella, ma la RLS limita le righe e le operazioni. |
+| `condominium_members` | abilitato, non FORCE | `authenticated`: SELECT/INSERT/UPDATE/DELETE; `service_role`: privilegi completi; nessun grant esplicito ad `anon` | Come sopra; le policy distinguono lettura residente e gestione amministrativa. |
+| Helper in schema `private` (`can_access_resident_condominium`, `can_access_resident_condominium_module`, `can_access_workspace_module`, `can_manage_workspace_module`) | `SECURITY DEFINER`, `search_path=public` | EXECUTE a `authenticated` e proprietario `postgres`; nessun EXECUTE a `PUBLIC` rilevato | ACL ristrette rispetto al default PostgreSQL; resta necessaria la verifica della corrispondenza esatta con le migration sorgente e dei controlli interni ai corpi funzione. |
+
+Le tre tabelle hanno RLS attiva e non forzata. Non risulta un grant esplicito ad `anon`; ciò non sostituisce il controllo delle impostazioni Data API, né rende superflua la RLS. Le policy attive osservate sono tutte destinate ad `authenticated` e applicano predicati di autorizzazione. Gli helper sono `SECURITY DEFINER`, quindi la loro correttezza dipende anche dal corpo, dal proprietario e dal `search_path`; il solo ACL non certifica la sicurezza funzionale.
+
+**Esito:** non emerge, da questi cataloghi, un'esposizione diretta ad `anon` sulle tre tabelle o l'EXECUTE pubblico dei quattro helper. Rimane non dimostrata la parità storica grant/ACL con le migrazioni iniziali non recuperate. La discrepanza `archived_at` / `data->>'archivedAt'` resta il blocker funzionale primario delle policy residenti; nessun grant, policy o funzione è stato modificato in produzione e non è stato avviato il collaudo complessivo.
