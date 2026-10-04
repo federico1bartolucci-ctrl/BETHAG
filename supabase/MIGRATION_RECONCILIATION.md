@@ -1676,3 +1676,25 @@ Il filtro del catalogo di produzione che esclude le funzioni effettivamente coll
 Le RPC applicative esaminate nei cataloghi risultano invece senza EXECUTE a `PUBLIC`/ `anon` e con EXECUTE a `authenticated` (oltre al ruolo di servizio dove previsto). Le migration presenti nel ramo revocano esplicitamente `PUBLIC` e `anon` da RPC finanziarie e amministrative selezionate; la sola somiglianza del nome non è stata usata per estendere le revoche ad altre funzioni.
 
 **Esito operativo:** non è emersa una RPC applicativa `SECURITY DEFINER` esposta ad `anon` nell'insieme interrogato. Le due funzioni `RETURNS trigger` non associate a trigger attivi restano una anomalia ACL da approfondire, ma non giustificano una revoca automatica senza confronto con l'intero storico e con gli eventuali usi SQL diretti. Nessuna modifica SQL/ACL è stata eseguita in produzione; nessuna migration correttiva è stata aggiunta sulla base di un'associazione non dimostrata. Il collaudo complessivo resta differito fino alla risoluzione degli altri blocker.
+
+
+### Verifica catalogo delle RPC SECURITY DEFINER — 2026-10-04
+
+È stato rieseguito il controllo in sola lettura sul catalogo PostgreSQL, esaminando `pg_proc`, ACL effettive (ACL esplicite o default), tipo restituito e collegamento ai trigger.
+
+**Funzioni `SECURITY DEFINER` non associate a trigger con EXECUTE per ruoli applicativi osservate:**
+
+| Funzione | Ruoli con EXECUTE osservati | Valutazione |
+|---|---|---|
+| `admin_approve_portal_registration(uuid, uuid)` | `authenticated` | RPC applicativa autenticata; non risulta EXECUTE a `PUBLIC` o `anon`. |
+| `close_condominium_member_transfer(uuid)` | `authenticated`, `service_role` | RPC applicativa autenticata/servizio; non risulta EXECUTE a `PUBLIC` o `anon`. |
+| `confirm_condominium_member_transfer(...)` | `authenticated`, `service_role` | RPC applicativa autenticata/servizio; non risulta EXECUTE a `PUBLIC` o `anon`. |
+| `sync_condominium_work_financial_summary(uuid)` | `service_role` | Funzione di servizio, non esposta ai ruoli client osservati. |
+
+Le altre funzioni `SECURITY DEFINER` che compaiono nel catalogo con EXECUTE a `service_role` restituiscono `trigger` e sono collegate a trigger attivi. Non è emersa, nell'insieme interrogato, alcuna RPC applicativa `SECURITY DEFINER` con EXECUTE a `PUBLIC` o `anon`.
+
+Il controllo ha inoltre confermato due routine `RETURNS trigger` non collegate a trigger attivi (`prevent_closed_fiscal_year_payment_delete()` e `prevent_closed_fiscal_year_update()`) con EXECUTE ereditato da `PUBLIC`; il catalogo non mostra un grant esplicito ad `anon`. Il tipo di ritorno e l'uso di `OLD/NEW` impediscono di trattarle come normali RPC PostgREST, ma rimangono residui ACL da ricondurre a una migrazione storica o a una rimozione controllata. Non è stata trovata evidenza sufficiente per revocare i privilegi o eliminare le routine senza prima verificare eventuali invocazioni SQL dirette e l'uso previsto.
+
+Le migration `20261001063800`, `20261001081500` e `20261001081600` revocano `PUBLIC`/`anon` da specifiche RPC finanziarie, amministrative e di ripristino. Il catalogo osservato è compatibile con l'assenza di esposizione anonima per le RPC applicative elencate, ma non prova da solo la corrispondenza integrale tra ogni definizione live e la migration che l'ha introdotta: restano necessari il confronto dei corpi completi e l'inventario di tutti i grant nelle migration non recuperate.
+
+**Esito:** nessuna esposizione `anon` individuata tra le RPC applicative `SECURITY DEFINER` esaminate. La verifica non certifica ancora l'intera superficie RPC (incluse funzioni `SECURITY INVOKER`, overload e oggetti fuori da `public`) né sostituisce il replay isolato. Nessuna modifica al database di produzione, nessuna revoca ACL, nessun merge/deploy e nessun collaudo complessivo sono stati eseguiti.
