@@ -834,3 +834,15 @@ L'ispezione dei branch alternativi ha individuato in `bethag-migration-repair` u
 Nel medesimo branch è presente `20260928043430_create_portal_access_baseline.sql`, che crea la tabella `portal_access`; la successiva `20260928050000_reconstruct_portal_access_registry.sql` è una continuazione ricostruita, non la migration iniziale originale. Il documento `core_units_accounting_dependency_review.md` evidenzia inoltre che `condominium_units` viene creata soltanto dalla migrazione tardiva `20261001180000_restore_condominium_units_base.sql`, mentre alcune migrazioni precedenti la referenziano: è un blocco concreto di ordine/dipendenza per il replay cronologico pulito, da risolvere confrontando l'intero insieme delle operazioni.
 
 È stato tentato il trasferimento dei file snapshot nel branch operativo tramite l'API GitHub, ma la creazione è stata rifiutata con errore HTTP 422 (sha non fornito); pertanto **nessuno snapshot è stato copiato o modificato** e il branch di riparazione resta la fonte originale di tali artefatti. Il registro corrente è stato aggiornato soltanto con queste evidenze. Non sono stati eseguiti SQL, replay, deploy o QA e Production resta intatta.
+
+
+## Confronto indici e baseline delle unità con snapshot Production — 2026-10-04
+
+Confrontati il blocco `public.condominium_units` nello snapshot catalogo Production del branch `bethag-migration-repair` e la migrazione `20261001180000_restore_condominium_units_base.sql`. Le colonne fondamentali, il vincolo di stato e i sette indici dichiarati risultano sostanzialmente coincidenti, inclusi i tre indici univoci:
+- `condominium_units_code_building_uq` su `(condominium_id, lower(btrim(building_code)), lower(btrim(unit_code)))`;
+- `condominium_units_condominium_unit_code_normalized_uidx` su `(condominium_id, lower(trim(unit_code)))`;
+- `condominium_units_unique_unit` su `(condominium_id, lower(btrim(unit_code)))`.
+
+I due ultimi indici hanno la stessa espressione logica e sono ridondanti tra loro; inoltre entrambi impongono unicità del codice a livello di condominio, anche se il primo indice esprime un'identità distinta per fabbricato. Poiché lo snapshot Production conferma che questi indici erano presenti nel catalogo rilevato, non è corretto rimuoverli unilateralmente nella migrazione di ripristino né presumere che la ridondanza sia soltanto un errore introdotto dal branch. Resta una decisione di modello/dati: verificare duplicati reali e valutare se il codice unità debba essere univoco nell'intero condominio o soltanto all'interno del fabbricato; solo dopo progettare una migrazione correttiva forward, con preflight e piano di rollback su ambiente isolato.
+
+La migrazione di ripristino include anche RLS e policy per manager/residenti, mentre lo snapshot tabellare non contiene le policy. L'equivalenza della tabella/indici è quindi parziale e non certifica grants, policies, trigger, ownership o l'ordine cronologico del replay. Nessun indice è stato modificato e nessuna query è stata eseguita su Production.
