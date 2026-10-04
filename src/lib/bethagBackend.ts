@@ -539,18 +539,18 @@ async function syncBackendStateNow(
   if (!canSyncCondomini) return;
 
   const unitRowsByKey = new Map<string, any>();
+  const unitRowsById = new Map<string, any>();
 
-  // Più condòmini possono appartenere alla stessa unità abitativa.
-  // Prima della sincronizzazione dobbiamo quindi eliminare i duplicati
-  // della coppia (condominio, codice unità). Senza questa deduplicazione
-  // PostgreSQL può rifiutare un singolo upsert che contiene due volte
-  // la stessa chiave di conflitto; in quel caso il secondo condòmino
-  // rimaneva solo nello stato locale e spariva al successivo refresh.
+  // Prefer the structured unitId when it resolves inside the same condominium.
+  // The legacy apartment code remains a fallback for older/local records.
   const desiredUnitMap = new Map<string, any>();
+  const memberCondominiums = new Set<string>();
   for (const item of state.condominiumMembers ?? []) {
     const condominiumId = condominiumDbIdByLegacyId.get(item.condominiumId);
+    if (!condominiumId) continue;
+    memberCondominiums.add(String(condominiumId));
     const unitCode = String(item.apartment ?? "").trim();
-    if (!condominiumId || !unitCode) continue;
+    if (!unitCode) continue;
 
     const key = String(condominiumId) + "::" + unitCode.toLowerCase();
     if (!desiredUnitMap.has(key)) {
@@ -564,9 +564,8 @@ async function syncBackendStateNow(
   }
 
   const desiredUnits = Array.from(desiredUnitMap.values());
-  if (desiredUnits.length) {
-    const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
-
+  const unitCondominiums = Array.from(memberCondominiums);
+  if (unitCondominiums.length) {
     const existingResult = await supabase
       .from("condominium_units")
       .select("id, condominium_id, unit_code")
@@ -579,9 +578,7 @@ async function syncBackendStateNow(
       )
     );
 
-    // Creiamo solo le unità mancanti. Non sovrascriviamo mai un'unità già
-    // presente: potrebbe contenere dati catastali, proprietari esterni,
-    // pertinenze e altri dati inseriti dall'amministratore.
+    // Create only missing legacy-coded units; never overwrite an existing unit.
     const missingUnits = desiredUnits.filter((row: any) =>
       !existingKeys.has(
         String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
@@ -598,6 +595,7 @@ async function syncBackendStateNow(
     if (persistedResult.error) throw persistedResult.error;
 
     (persistedResult.data ?? []).forEach((unit: any) => {
+      unitRowsById.set(String(unit.id), unit);
       unitRowsByKey.set(
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
         unit
@@ -610,10 +608,13 @@ async function syncBackendStateNow(
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
     unit_id: (() => {
       const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId);
-      const unit = condominiumDbId
-        ? unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`)
-        : null;
-      return unit?.id ?? null;
+      if (!condominiumDbId) return null;
+      const structuredUnit = item.unitId ? unitRowsById.get(String(item.unitId)) : null;
+      if (structuredUnit && String(structuredUnit.condominium_id) === String(condominiumDbId)) {
+        return structuredUnit.id;
+      }
+      const legacyUnit = unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`);
+      return legacyUnit?.id ?? null;
     })(),
     legacy_id: item.id,
     user_id: item.userId ?? null,
