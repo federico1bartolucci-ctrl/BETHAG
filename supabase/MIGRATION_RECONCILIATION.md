@@ -963,3 +963,26 @@ Lettura mirata di `docs/recovery/production_public_tables_snapshot.sql` nel bran
 Le definizioni snapshot attestano una forma osservata del catalogo, non la storia di creazione, la completezza di policy/grants, né la compatibilità dell'ordine di replay. In particolare, `workspace_members` contiene FK a `condominiums` e `profiles`, mentre altre tabelle referenziano workspace e condomini: la semplice copia del blocco `CREATE TABLE` in ordine di file non garantirebbe replay corretto, né ricostruirebbe funzioni, indici, trigger, policy e privilegi nella sequenza corretta. Lo snapshot resta quindi una fonte strutturale autorevole per confronto, ma non è stato promosso a migration eseguibile.
 
 **Prossimo criterio di ricostruzione:** costruire una baseline nuova e separata solo a partire dallo snapshot, mantenendo separati (a) definizioni tabelle/vincoli, (b) indici e trigger, (c) funzioni, (d) RLS/policy e grants; annotare per ciascun oggetto provenienza e dipendenze, quindi confrontare il risultato con gli altri snapshot disponibili. L'assenza del testo SQL storico rimane dichiarata, senza spacciare la ricostruzione per l'originale. Non sono stati eseguiti SQL o modifiche a Production, replay, deploy o QA.
+
+
+## Matrice dipendenze FK del core estratta dallo snapshot — 2026-10-04
+
+È stata eseguita un'estrazione statica delle FK dichiarate nei 47 blocchi `CREATE TABLE` di `docs/recovery/production_public_tables_snapshot.sql` (branch `bethag-migration-repair`, blob `c22a73b4c55187dee4a562afff99e5598ff6007b`). L'estrazione considera solo riferimenti tra le 47 tabelle pubbliche incluse nello snapshot; non comprende dipendenze da schemi esterni, funzioni, trigger, policy o viste.
+
+### Dipendenze core osservate
+
+| Tabella | Dipende da |
+|---|---|
+| `workspaces` | Nessuna tabella pubblica dello snapshot |
+| `profiles` | Nessuna tabella pubblica dello snapshot; FK esterna ad `auth.users` |
+| `condominiums` | `workspaces`, `profiles` |
+| `condominium_units` | `condominiums`, `workspaces` |
+| `condominium_members` | `condominiums`, `condominium_units`, `profiles` |
+| `workspace_members` | `workspaces`, `profiles`, `condominiums` |
+| `portal_access` | `workspaces`, `condominiums`, `condominium_members`, `profiles` |
+
+La relazione tra `condominium_members` e `condominium_units` conferma che le unità sono un prerequisito strutturale per la tabella membri nello snapshot; `workspace_members` dipende inoltre da `condominiums`, quindi non può essere collocata prima della creazione di quest'ultima se si mantengono tutte le FK inline. Le due tabelle `workspaces` e `profiles` non hanno dipendenze verso altre tabelle pubbliche nello snapshot e sono candidate a essere create per prime, previa gestione delle dipendenze esterne come schema `auth` ed estensioni.
+
+L'estrazione statica **non definisce ancora un ordine di replay completo**: non risolve le dipendenze di funzioni, viste, trigger, RLS e grants, né certifica che lo snapshot sia completo rispetto al catalogo corrente. Non è stato generato o eseguito SQL. La matrice serve come evidenza per una futura baseline isolata, non come autorizzazione al replay.
+
+**Avanzamento:** la dipendenza FK del nucleo è ora esplicitata nel registro; resta aperta la riconciliazione semantica di tutte le 47 tabelle con le migrazioni storiche e la verifica degli oggetti non tabellari. Nessuna modifica a Production e nessun collaudo QA eseguiti.
