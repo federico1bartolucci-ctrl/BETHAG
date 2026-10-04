@@ -577,3 +577,8 @@ Created the isolated Supabase branch `bethag-migration-reconciliation-qa` (proje
 ### Follow-up: make confirmation snapshot anchor compatible with preceding scope migration
 
 A second static pass found that the allocations-before entry in migration `20261003080100` used the same scoped expression for both the expected old and replacement anchors. That would make the anchor test fail when the prior allocation-scope migration had already scoped the query. The old anchor is now the actual unscoped expression; the replacement remains explicitly workspace/condominium scoped. This lets the migration accept either the exact pre-patch state or the exact already-scoped state, while still rejecting mixed/duplicate matches. Change committed in `75a48c0b08d6c3ddf55bf10b52a4d272362371c1`; not executed because the isolated branch is migration-failed and missing the accounting schema.
+
+
+### Final static correction of snapshot migration source — 2026-10-04
+
+A read-back caught that the previous text replacement had damaged the old-anchor array in `20261003080100_scope_transfer_confirmation_snapshot.sql`. The migration file has now been rebuilt in full with four complete old/new anchor pairs, valid dollar-quoted strings, and exact count checks. GitHub read-back confirms the old/new arrays close correctly, contain four anchors each, and the three installment aggregates retain the unit-unassigned OR branch while adding workspace/condominium scope. This is source-level verification only; execution remains blocked until a faithful accounting schema is available on the isolated branch. The branch is currently reported as `MIGRATIONS_FAILED`; production has not been changed.
