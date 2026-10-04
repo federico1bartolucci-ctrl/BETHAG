@@ -779,3 +779,14 @@ Il confronto della catena `20260930230000_fiscal_year_carryovers.sql` e `2026100
 ## Corrective migration inventory refresh — 2026-10-04
 
 The tracked `supabase/migrations` directory now contains 152 SQL files (the earlier snapshot recorded 147). The five subsequent branch-only corrective migrations are `20261004090000_fix_member_transfer_status_constraint.sql`, `20261004091000_preserve_outgoing_current_owner_flag.sql`, `20261004092000_reject_empty_installment_percentages.sql`, `20261004100000_allow_installment_overpayment_movements.sql`, and `20261004101000_route_public_carryovers_to_hardened_function.sql`. They are forward-only repository changes intended to repair identified migration-chain defects without rewriting historical files. Their presence in GitHub does not mean they have been applied to Supabase; no production database operation or final QA was performed in this pass.
+
+
+## Foundation DDL source comparison — 2026-10-04
+
+A targeted comparison of the historical, Production-derived candidate DDL against tracked introducing migrations confirms three source/schema differences that must remain explicit before any bootstrap migration is assembled:
+
+- `condominium_accounting_settings`: the tracked create migration requires `accounting_start_date` and `accounting_end_date` with no defaults; the historical candidate includes calendar-year defaults. Do not silently choose either behavior for a new baseline: the Production catalog snapshot describes deployed behavior, while the migration describes intended fresh-install behavior. Resolve this divergence deliberately and consistently in the eventual bootstrap and forward path.
+- `condominium_payment_reversal_audit`: the tracked create migration declares `original_payment_id uuid not null unique`; the historical candidate omits the uniqueness. The canonical foundation must preserve this one-reversal-per-original-payment invariant, and the candidate is not safe to apply as-is.
+- `condominium_member_transfers`: the introducing migration has named type/status checks and references to workspace, condominium, unit, outgoing/incoming members and creator; the historical candidate's table block includes `closed_at`/`closed_by` but omits those table-level constraints/FKs. The lifecycle and snapshot migrations must be included when deriving the final canonical shape rather than treating the candidate table block as complete.
+
+This is a source comparison only, not a live schema validation. No DDL was applied to Supabase; no QA/collaudo was started. Further reconciliation must inspect all subsequent ALTERs, policies, grants, triggers, functions, and identity dependencies before producing a foundation migration.
