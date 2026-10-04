@@ -1724,3 +1724,20 @@ Sono state censite le chiamate `.rpc()` nei componenti applicativi principali de
 L'incrocio con il catalogo live non ha evidenziato chiamate RPC del client prive di corrispondente funzione, né una chiamata client alle due routine residue `prevent_closed_fiscal_year_payment_delete()` e `prevent_closed_fiscal_year_update()`. Queste ultime sono `RETURNS trigger`, non sono collegate a trigger attivi nel catalogo e conservano EXECUTE via `PUBLIC`; l'assenza di riferimenti statici nei file esaminati non esclude invocazioni dinamiche o processi esterni. Poiché i loro corpi dipendono da `OLD/NEW`, non sono normali endpoint RPC PostgREST: si mantengono come anomalia da ricondurre allo storico, senza revoca automatica.
 
 **Esito:** le RPC effettivamente richiamate dal client e presenti nel catalogo live risultano protette dall'EXECUTE pubblico/anonimo. Le tre migration di lockdown esaminate coprono un sottoinsieme mirato di RPC; il loro perimetro non va esteso per sola analogia. Resta da chiudere la riconciliazione storica delle funzioni residue e delle migration iniziali mancanti; il catalogo live non dimostra un replay pulito. Nessuna modifica al database di produzione, alle ACL o al flusso client è stata eseguita; QA complessivo, merge e deploy restano rinviati.
+
+
+### Verifica runtime delle firme RPC e wrapper pubblici — 2026-10-04
+
+La lettura dei cataloghi pg_proc e delle definizioni live ha confermato una distinzione importante tra le prime migration versionate e lo schema attuale:
+
+| RPC pubblica | Sicurezza live | ACL live | Osservazione |
+|---|---|---|---|
+| save_condominium(uuid,bigint,text,text,text,text,text,jsonb) | SECURITY INVOKER | authenticated, service_role | Wrapper sottile che delega a private.save_condominium. La migration iniziale 20260928070000 definiva invece direttamente una funzione SECURITY DEFINER; non va usata come descrizione dello stato corrente. |
+| claim_first_workspace_admin(uuid) | SECURITY INVOKER | authenticated, service_role | Wrapper verso private.claim_first_workspace_admin; la migration iniziale esponeva un wrapper SECURITY DEFINER e concedeva EXECUTE ad authenticated. |
+| complete_portal_registration(text,text,text) | SECURITY INVOKER | authenticated, service_role | Wrapper verso la funzione privata; la migration 20260930390000 conteneva invece il corpo SECURITY DEFINER direttamente in public. |
+| delete_condominium(uuid,bigint,text) | SECURITY INVOKER | authenticated, service_role | Wrapper verso private.delete_condominium; la migration iniziale definiva una firma pubblica differente (uuid,bigint) con corpo SECURITY DEFINER. |
+| admin_approve_portal_registration(uuid,uuid) | SECURITY DEFINER con search_path vuoto | authenticated | Controlla sessione, workspace, condominio attivo, email Auth verificata e corrispondenza identità prima di delegare alla funzione privata. Nessun EXECUTE a PUBLIC/anon osservato. |
+
+Il catalogo live mostra inoltre due funzioni RETURNS trigger non collegate a trigger attivi (prevent_closed_fiscal_year_payment_delete() e prevent_closed_fiscal_year_update()) con EXECUTE ereditato da PUBLIC. I corpi dipendono da OLD/NEW e non sono normali RPC PostgREST; rimangono residui ACL non minimali da ricondurre allo storico. Nessuna invocazione client statica è stata individuata nelle aree già censite, ma ciò non esclude processi SQL esterni o chiamate dinamiche.
+
+**Esito:** le RPC client elencate nel controllo precedente non risultano esposte a anon o PUBLIC secondo le ACL live. I wrapper SECURITY INVOKER non vanno confusi con le vecchie implementazioni pubbliche SECURITY DEFINER; la sicurezza effettiva dipende anche dalle funzioni private delegate e dai loro controlli interni. La migrazione storica completa di questo passaggio non è ancora dimostrata, quindi non viene introdotta una revoca o riscrittura automatica. Produzione resta invariata; non eseguiti replay, QA complessivo, merge o deploy.
