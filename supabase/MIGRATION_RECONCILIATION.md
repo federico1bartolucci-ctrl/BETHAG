@@ -6,7 +6,7 @@ Branch: `fix/owner-reference-migration-20261003`
 
 This is a working reconciliation ledger, not a deployment plan. A filename/name match is only a candidate association; it does **not** prove that the SQL contents are identical or that a migration is safe to replay. No production migration should be run from this ledger alone. Verify SQL content, dependencies, and actual schema state before proposing any history repair or deployment.
 
-Snapshot: 177 remote migration-history records and 138 SQL files in the branch. The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
+Snapshot: 177 remote migration-history records and 147 SQL files in the branch (directory inventory refreshed 2026-10-04). The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
 
 ## Candidate associations by migration name
 
