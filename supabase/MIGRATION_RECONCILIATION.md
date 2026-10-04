@@ -861,3 +861,24 @@ Il confronto con le fonti nel branch `bethag-migration-repair` conferma che il s
 | `condominium_units` | Riferimenti in migrazioni precedenti alla sua migration base `20261001180000` | Ordine replay pulito ancora bloccato; non riordinare file storici senza replay isolato |
 
 La verifica è statica sui file e sul branch indicati: non dimostra che l’ordine corrisponda alla cronologia applicata sul database né che le dipendenze siano tutte censite. Il tentativo di trasferire lo snapshot catalogo nel branch operativo continua a essere bloccato dall’API di creazione file che restituisce HTTP 422 (“sha wasn't supplied”); non si dichiara quindi presente alcun nuovo artefatto snapshot nel branch operativo. La prossima correzione consentita è ricostruire il grafo completo migration-per-migration e recuperare definizioni fondative da fonti attendibili; non introdurre un bootstrap sostitutivo finché tabelle, funzioni, grants, trigger, policy e ownership non hanno provenienza verificabile. Nessun SQL, replay, deploy, modifica Production o QA finale eseguiti.
+
+
+## Estrazione relazioni core dallo snapshot Production — 2026-10-04
+
+È stata eseguita un'estrazione mirata delle definizioni `CREATE TABLE` presenti in `docs/recovery/production_public_tables_snapshot.sql` sul branch `bethag-migration-repair` (blob SHA `c22a73b4c55187dee4a562afff99e5598ff6007b`). Il catalogo snapshot contiene 47 tabelle pubbliche. Le relazioni core estratte confermano queste dipendenze FK:
+
+| Relazione | Dipendenze FK esplicite nello snapshot | Nota d'ordine |
+|---|---|---|
+| `workspaces` | nessuna FK pubblica | candidato nodo iniziale; contiene solo ID, nome, piano e date nello snapshot |
+| `profiles` | `auth.users(id)` | dipendenza dal sistema Auth, non da una tabella applicativa |
+| `condominiums` | `workspaces(id)`, `profiles(id)` via `archived_by` | richiede workspace e profili per il vincolo archivio |
+| `workspace_members` | `workspaces(id)`, `profiles(id)`, `condominiums(id)` via `condominium_id` | deve seguire le tre relazioni referenziate |
+| `condominium_units` | `condominiums(id)`, `workspaces(id)` | base unità dipendente dal core condominiale |
+| `condominium_members` | `condominiums(id)`, `profiles(id)`, `condominium_units(id)` via `unit_id` | il vincolo su `unit_id` richiede che le unità siano create prima, o aggiunto successivamente |
+| `portal_access` | `condominiums(id)`, `workspaces(id)`, `profiles(id)`, `condominium_members(id)` via `member_id` | dipende dall'intero nucleo precedente |
+
+**Conseguenza tecnica:** un bootstrap nuovo, se in futuro autorizzato e testato in ambiente isolato, deve separare la creazione delle tabelle dai vincoli FK che chiudono le dipendenze incrociate. In particolare `condominium_members.unit_id → condominium_units.id` e `portal_access.member_id → condominium_members.id` vanno aggiunti soltanto dopo che entrambe le tabelle referenziate esistono. L'ordine teorico ricavato dallo snapshot è quindi: `workspaces` e `profiles` → `condominiums` → `condominium_units` → `condominium_members` → `portal_access`, con `workspace_members` dopo `condominiums`; le FK che formano dipendenze circolari o anticipano tabelle vanno differite. Questo è un grafo preliminare di sole FK, non un ordine di replay completo: funzioni, trigger, policy, grants, indici, viste e operazioni dati possono imporre ulteriori prerequisiti.
+
+**Discrepanza da non propagare:** nello snapshot, `condominiums.archived_by` ha FK verso `profiles(id)`, mentre precedenti confronti storici segnalavano tale FK assente in develop. La migrazione `20261001180000_restore_condominium_units_base.sql` aggiunge `archived_by` come colonna, ma non crea il relativo vincolo FK. Prima di una migration forward occorre verificare il catalogo corrente dell'ambiente target con accesso read-only e decidere una correzione isolata. Inoltre lo snapshot `condominium_members` include FK `unit_id` verso `condominium_units`, quindi non è corretto usare l'estratto come SQL di bootstrap in un unico passaggio senza differire tale vincolo.
+
+Le definizioni sono state consultate come fonte di confronto e non sono state copiate come migration eseguibile: lo snapshot è uno stato catalogato e non contiene da solo semantica di bootstrap, ownership, grants e sequenza completa. Nessun oggetto Production è stato modificato; nessun SQL o QA è stato eseguito.
