@@ -1571,3 +1571,29 @@ Queste dipendenze sono difetti strutturali della sequenza storica per un clean r
 ### Confronto delle varianti di baseline portal tra branch — 2026-10-04
 
 La ricognizione dei tree Git conferma che `bethag-migration-repair` contiene sia `20260928043430_create_portal_access_baseline.sql` sia `20260928050000_reconstruct_portal_access_registry.sql`, mentre `bethag-migration-repair-clean` contiene il primo ma non il secondo; il branch operativo, `main` e `backup/pre-rollback-20261001` non contengono il file `20260928043430`. Il file `20260928043430` crea la relazione e alcuni indici/policy, ma richiede già `workspaces`, `condominiums`, `condominium_members` e `profiles`; non è quindi la migrazione di schema iniziale mancante. Il frammento `20260928050000` ricrea la stessa tabella con una forma di vincoli/indici simile e dichiara dipendenze da oggetti fondativi e helper preesistenti: aggiungerli entrambi alla sequenza corrente introdurrebbe una duplicazione della definizione e non risolverebbe il prerequisito del database vuoto. La loro presenza in un branch di riparazione è evidenza di ricostruzione, non prova di corrispondenza con la migration storica `20260928021707_initial_bethag_backend` o con il ledger di produzione. Perciò nessuno dei due file è stato copiato nella sequenza operativa né promosso a baseline canonico. Il recupero deve continuare sugli oggetti fondativi e sui privilegi effettivamente attestati dagli snapshot, con provenienza esplicita per ogni definizione; eventuale baseline nuova resta distinta dalle migration storiche e subordinata a replay isolato autorizzato. Sola verifica dei tree e dei sorgenti GitHub; nessuna modifica al database o avvio QA.
+
+
+### Grafo FK del catalogo pubblico: strato fondativo e dipendenze — 2026-10-04
+
+È stato estratto staticamente il grafo delle foreign key dal file `docs/recovery/production_public_tables_snapshot.sql` (47 tabelle pubbliche). È una fotografia catalogo, non una sequenza di DDL replay-safe; le dipendenze elencate attestano riferimenti FK, non l'ordine completo richiesto da funzioni, trigger, policy, viste, tipi ed estensioni.
+
+**Nucleo e dipendenze strutturali osservate**
+
+| Oggetto | Riferimenti FK osservati nello snapshot | Implicazione per baseline |
+|---|---|---|
+| `workspaces` | nessuno nello snapshot | Radice pubblica del tenant; definizione e policy originarie non recuperate da questa fotografia. |
+| `profiles` | `auth.users` | Richiede Auth/schema esterno prima delle strutture applicative che lo referenziano. |
+| `condominiums` | `profiles`, `workspaces` | Dipende da profili e workspace; va riconciliata prima delle tabelle condominiali figlie. |
+| `condominium_units` | `condominiums`, `workspaces` | Entità autonoma d'identità catastale; la sua creazione deve precedere membri, millesimi e oggetti contabili con FK a unità. |
+| `condominium_members` | `condominiums`, `condominium_units`, `profiles` | Nodo di collegamento tra identità personale, condominio e unità; attenzione a dipendenze circolari se si ricostruiscono tabelle in blocco. |
+| `portal_access` | `condominiums`, `condominium_members`, `profiles`, `workspaces` | Registro dipendente dal nucleo e da una forma coerente di membership. |
+| `portal_registration_requests` | `condominium_members`, `profiles`, `workspaces` | Workflow portale successivo alla disponibilità del nucleo d'identità. |
+
+**Dipendenze applicative ricorrenti**
+
+- Contabilità: `condominium_fiscal_years` dipende da condominio/workspace; `condominium_ledger_entries` collega condominio, esercizio, fondi, membri, unità, fornitori, documenti e assemblee; rate, ripartizioni, consumi e riporti dipendono da più nodi dello stesso gruppo.
+- Millesimi: `condominium_millesimal_tables` dipende da condominio/workspace; `condominium_millesimal_values` aggiunge la dipendenza da unità e tabelle millesimali.
+- Trasformazioni catastali: `condominium_unit_transformations` dipende da condominio/workspace e identità Auth; `condominium_unit_transformation_items` dipende da trasformazione e unità, quindi richiede l'unità base prima dei dettagli.
+- Comunicazioni e lavori: destinatari comunicazioni dipendono da comunicazioni, membri, profili, condominio e workspace; documenti/eventi/avanzamento lavori dipendono dalla scheda lavori e, in alcuni casi, da ledger, fondi, fornitori o registro.
+
+**Conseguenza operativa:** il catalogo permette ora di distinguere il nucleo relazionale dai moduli che vi si appoggiano, ma non permette di ricavare automaticamente la migration originale, i grant, le policy RLS, i trigger o le procedure di bootstrap. Il grafo FK evidenzia inoltre che una baseline deve trattare in modo esplicito le dipendenze reciproche e gli oggetti esterni Supabase (Auth/Storage), anziché ordinare soltanto i `CREATE TABLE`. Non è stata generata né applicata una migration di baseline; il prossimo passaggio resta il confronto per oggetto tra questo grafo, le definizioni di funzione/trigger e le migration sorgente, mantenendo il database di produzione in sola lettura.
