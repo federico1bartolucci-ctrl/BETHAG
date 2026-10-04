@@ -6,7 +6,7 @@ Branch: `fix/owner-reference-migration-20261003`
 
 This is a working reconciliation ledger, not a deployment plan. A filename/name match is only a candidate association; it does **not** prove that the SQL contents are identical or that a migration is safe to replay. No production migration should be run from this ledger alone. Verify SQL content, dependencies, and actual schema state before proposing any history repair or deployment.
 
-Snapshot: 177 remote migration-history records and 147 SQL files in the branch (directory inventory refreshed 2026-10-04). The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
+Snapshot: 177 remote migration-history records and 152 SQL files in the branch (directory inventory refreshed 2026-10-04). The 14-digit filename version prefixes are unique (no duplicates detected in this snapshot).
 
 ## Candidate associations by migration name
 
@@ -811,3 +811,12 @@ Accordingly, the tracked sequence's first migration is an application-layer boot
 A further source-level pass checked the tracked migrations that introduce or extend the insurance, condominium-intake, unit, and accounting modules. The following tracked files contain explicit table creation statements: `20260929110000_add_condominium_insurance_policies.sql` (`condominium_insurance_policies`), `20260930125903_condominium_creation_intakes.sql` (`condominium_creation_intakes`), `20260930110000_accounting_consumption_and_installment_percentages.sql` (`condominium_allocation_rules`, `condominium_consumption_readings`), `20260930230000_fiscal_year_carryovers.sql` (`condominium_fiscal_carryovers`), `20260930235000_accounting_settings.sql` (`condominium_accounting_settings`), `20260930241000_allocation_rules_and_consumption.sql` (redefinitions/creation guards for allocation rules and consumption readings), and `20261001083000_payment_reversal_audit_and_reconciliation.sql` (`condominium_payment_reversal_audit`). The installment-schedule, funds-to-ledger, installment-percentage, and unit-completion migrations also extend existing relations and therefore are not substitutes for the missing core schema.
 
 This confirms that the Production-derived proposal's 27 tables are a selected accounting/work subset, not a full core bootstrap: core entities such as workspaces, profiles, condominiums, members, portal access, and unit relations still require authoritative definitions, while several tracked migrations assume them before they run. The checked module migrations are source evidence only; this trace does not establish complete dependency order or equivalence with deployed catalog state. No migration was executed, no Production object was changed, and final QA remains deferred.
+
+
+## Cross-check against retained schema-reconstruction artifacts — 2026-10-04
+
+The historical branch contains supporting audit artifacts that sharpen the bootstrap gap: `PROPOSED-PRODUCTION-RLS-POLICIES-NOT-APPLIED.md` records 62 policies for the 27 accounting/work tables, while `FUNCTIONS-TRIGGERS-RLS-DEPENDENCY-AUDIT.md` inventories 85 relevant functions and 88 non-internal triggers but includes SQL bodies for only 14 selected functions. The manifest `PROPOSED-CONSOLIDATED-BOOTSTRAP-MANIFEST.md` explicitly treats the Production DDL as a final-state snapshot that must not be concatenated with incremental migrations.
+
+The retained `COMMON-TABLES-PRODUCTION-DEVELOP-DIFF.md` also documents concrete environment gaps: missing `documents.file_size_bytes`, absent constraints on `communications.email_status`, `condominium_requests.title/status` and insurance monetary values, missing `condominium_creation_intakes.created_condominium_id` plus its FK, and the missing `condominiums.archived_by` FK in develop. These are historical metadata findings, not proof that the same gaps persist in the current database state; each needs a fresh read-only schema check before a targeted repair is authored.
+
+**Action boundary:** the evidence is sufficient to reject a naive concatenation or a 27-table-only bootstrap, but insufficient to publish a faithful full bootstrap: core table definitions and complete function bodies/grants/triggers are not all available in the retained artifacts. No speculative baseline or schema patch is added. Production remains read-only; final QA stays deferred until reconciliation is complete.
