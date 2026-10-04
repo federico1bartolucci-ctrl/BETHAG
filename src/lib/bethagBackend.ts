@@ -871,33 +871,44 @@ export async function saveCondominiumMember(
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
     const apartment = String(item.apartment ?? "").trim();
+    const requestedUnitId = String(item.unitId ?? "").trim();
     let unitId: string | null = null;
+    let canonicalApartment = apartment;
 
-    if (apartment) {
-      // L'unità è il contenitore dei millesimi e degli altri dati patrimoniali.
-      // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
-      // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
-      // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const { data: existingUnits, error: existingUnitError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominium.id);
+    // Prefer an explicit unitId only after verifying that it belongs to this
+    // condominium. The textual apartment code is retained for legacy records.
+    const { data: existingUnits, error: existingUnitError } = await supabase
+      .from("condominium_units")
+      .select("id, unit_code, data")
+      .eq("condominium_id", condominium.id);
+    if (existingUnitError) throw existingUnitError;
 
-      if (existingUnitError) throw existingUnitError;
+    const units = existingUnits ?? [];
+    const structuredUnit = requestedUnitId
+      ? units.find((unit: any) => String(unit.id) === requestedUnitId)
+      : null;
 
+    if (structuredUnit?.id) {
+      unitId = structuredUnit.id;
+      canonicalApartment = String(structuredUnit.unit_code ?? apartment).trim();
+    } else if (apartment) {
       const normalizedApartment = apartment.toLowerCase();
-      const existingUnit = (existingUnits ?? []).find(
+      const legacyUnit = units.find(
         (unit: any) =>
           String(unit.unit_code ?? "").trim().toLowerCase() === normalizedApartment
       );
 
-      if (existingUnit?.id) {
-        unitId = existingUnit.id;
+      if (legacyUnit?.id) {
+        unitId = legacyUnit.id;
+        canonicalApartment = String(legacyUnit.unit_code ?? apartment).trim();
       } else {
         throw new Error(
           "L'unità indicata non esiste nel condominio. Crea prima l'unità nella gestione delle unità immobiliari."
         );
       }
+    } else if (requestedUnitId) {
+      // A foreign or stale unitId must never attach a member across condominiums.
+      throw new Error("L'unità selezionata non appartiene al condominio indicato.");
     }
 
     const { data: previousMemberRow, error: previousMemberError } = await supabase
@@ -909,7 +920,8 @@ export async function saveCondominiumMember(
 
     if (previousMemberError) throw previousMemberError;
 
-    const { millesimi: _legacyMillesimi, ...memberData } = item ?? {};
+    const { millesimi: _legacyMillesimi, ...rawMemberData } = item ?? {};
+    const memberData = { ...rawMemberData, apartment: canonicalApartment, unitId: unitId ?? "" };
     const row = {
       condominium_id: condominium.id,
       unit_id: unitId,
