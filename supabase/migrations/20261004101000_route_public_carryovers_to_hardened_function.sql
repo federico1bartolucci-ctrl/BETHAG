@@ -32,4 +32,3 @@ $function$;
 
 revoke all on function public.generate_fiscal_year_carryovers(uuid, uuid, uuid, uuid) from public, anon;
 grant execute on function public.generate_fiscal_year_carryovers(uuid, uuid, uuid, uuid) to authenticated;
-grant execute on function private.generate_fiscal_year_carryovers(uuid, uuid, uuid, uuid) to authenticated;
