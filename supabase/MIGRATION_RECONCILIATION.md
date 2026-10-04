@@ -546,3 +546,8 @@ The transfer confirmation snapshot scoping migration was assigned version `20261
 ## Member financial-history delete guard attachment — 2026-10-04
 
 Review found that `20261003080000_harden_member_delete_financial_history.sql` defined the SECURITY DEFINER guard function but did not attach it to `condominium_members`. Added an idempotent `BEFORE DELETE` trigger so the existence checks actually prevent deletion when installment, allocation, carryover, ledger, or transfer history exists. Trigger attachment is statically verified in the branch; migration execution and runtime behavior remain pending controlled non-production validation. Production remains read-only.
+
+
+## Preserve financial member identity on deletion — 2026-10-04
+
+Read-only inspection of the production foreign keys confirmed that `condominium_installments.member_id`, `condominium_expense_allocations.member_id`, `condominium_fiscal_carryovers.member_id`, and `condominium_ledger_entries.member_id` use `ON DELETE SET NULL`. That preserves financial rows but removes their member attribution, weakening later transfer reconciliation. Added branch-only migration `20261003080000_prevent_financial_member_deletion.sql`: a `BEFORE DELETE` trigger rejects hard deletion whenever any of those four accounting tables references the member, directing operators to archive the profile instead. Transfer history already has restrictive foreign keys to outgoing/incoming members. The new migration was committed to the feature branch and is not applied to production. SQL runtime validation in a controlled database and full QA/collaudo remain pending.
