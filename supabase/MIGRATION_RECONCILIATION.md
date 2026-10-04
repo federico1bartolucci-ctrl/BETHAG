@@ -1616,3 +1616,22 @@ Sono state lette le quattro parti `docs/recovery/production_functions_definition
 **Risultato dell'incrocio:** lo snapshot conferma riferimenti concreti a oggetti del nucleo e dei moduli, ma non attribuisce le definizioni alle versioni di migrazione che le hanno introdotte. Le funzioni sono quindi evidenza dello stato osservato, non sorgente storica equivalente. I corpi dipendono inoltre da ACL, proprietario, `SECURITY DEFINER/INVOKER`, `search_path` e trigger chiamanti: questi aspetti vanno verificati separatamente e non ricostruiti per supposizione.
 
 **Azione successiva:** continuare il confronto per helper condivisi e per funzioni che mutano dati contabili o identità, associando ogni definizione a una migration soltanto quando la corrispondenza è verificabile. Non è stato eseguito SQL, né modificato il database; nessun replay, QA finale, merge o deploy è stato avviato.
+
+
+### Riconciliazione puntuale helper RLS residenti e stato archivio — 2026-10-04
+
+Il confronto dei corpi SQL reperibili ha chiarito la sequenza delle regole di accesso residenti nel branch operativo:
+
+| Migrazione | Evidenza statica | Esito confronto |
+|---|---|---|
+| `20260928183000_harden_resident_portal_access.sql` | L'associazione tra accesso portale e membro attivo è basata sull'email; la funzione modulo limita il ruolo a `resident`. | Variante precedente, più restrittiva sul collegamento esplicito `user_id` e differente per il ruolo ammesso. |
+| `20260929201500_fix_resident_portal_rls.sql` | Introduce il collegamento esplicito tramite `pa.user_id/cm.user_id` con fallback email; non interroga la tabella condomini per verificare lo stato archivio. | Corregge la corrispondenza identità, ma non è da sola la definizione finale osservata in produzione. |
+| `20260930440000_optimize_portal_authorization_helpers.sql` | Ottimizza la valutazione del contesto Auth e aggiorna l'helper modulo residente usando il collegamento esplicito e i ruoli `resident/council`. | Il corpo è sostanzialmente allineato alla regola di collegamento identità presente nello snapshot; resta da verificare l'eventuale sostituzione successiva. |
+| `20260930550000_harden_archived_condominium_visibility.sql` | Blocca la visibilità residente leggendo `condominiums.data->>'archivedAt'`; modifica helper e policy portal/unità. | **Divergenza critica di rappresentazione archivio** rispetto allo snapshot catalogo, che usa `condominiums.archived_at` negli helper residenti osservati. |
+| Snapshot `production_functions_definitions_001.sql` | Gli helper `can_access_resident_condominium` e `can_access_resident_condominium_module` verificano `c.archived_at is null`, mantenendo il collegamento esplicito e fallback email. | Definizione osservata attualmente in produzione secondo l'estrazione catalogo; non dimostra quale migration storica l'abbia introdotta. |
+
+**Decisione tecnica:** non riscrivere automaticamente la migration `20260930550000` né aggiungere un override correttivo sulla base del solo snapshot. Prima occorre verificare la fonte canonica dello stato archivio, il contenuto effettivo di `condominiums.data` rispetto a `archived_at`, le policy collegate e gli eventuali trigger/backfill. La divergenza è registrata come blocker di semantica RLS: l'uso del campo errato può lasciare accessibili o nascondere in modo incoerente i condomini archiviati, a seconda della rappresentazione effettiva dei record.
+
+L'helper `can_manage_workspace_module` mostra inoltre una differenza di forma tra migration e snapshot: `auth.uid()` è invocato direttamente nella migration `20260928090000` e come `(select auth.uid())` nello snapshot. È una forma tipica di ottimizzazione initplan e non prova, da sola, una differenza nelle regole di autorizzazione; per dichiarare equivalenza servirebbero il confronto dell'intero corpo e gli attributi catalogo (owner, ACL, configurazione sicurezza/search_path).
+
+Nessuna modifica SQL è stata applicata; questa nota documenta la divergenza e impedisce di trattare le varianti come equivalenti senza verifica. Produzione resta in sola lettura e il collaudo QA complessivo resta rinviato alla chiusura dei blocker.
