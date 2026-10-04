@@ -702,3 +702,9 @@ Compared the candidate foundation DDL against the explicit `CREATE TABLE` statem
 - The accounting-settings candidate has defaults for accounting start/end dates, whereas the introducing migration declares both dates `NOT NULL` without defaults.
 
 This is a comparison of original CREATE statements, not yet the effective schema after all subsequent ALTER TABLE, CREATE INDEX, and constraint migrations. Therefore omitted constraints must be checked against later migrations before classifying them as absent from the final schema. The candidate DDL should not be treated as equivalent or replay-ready; this pass establishes concrete reconciliation deltas and the next exact checks. No database changes were made.
+
+## Member-transfer table definition cross-check — 2026-10-04
+
+Compared `public.condominium_member_transfers` in `20261001104500_add_condominium_member_transfer.sql` with the recovered candidate DDL. The introducing migration defines 15 columns and includes workspace, condominium, unit, outgoing/incoming member, and creator foreign keys, plus transfer-type and status checks. The candidate block includes the same core columns and additionally `closed_at` and `closed_by`, but omits those foreign keys and checks. The candidate therefore appears to combine a later lifecycle shape with a weaker constraint set; the later lifecycle migration and all subsequent ALTER statements must be traced before deciding the canonical final definition.
+
+The transfer-related functions in adjacent migrations query installments, expense allocations, and ledger entries scoped to workspace/condominium/unit. This reinforces that those accounting relations are hard dependencies of the transfer workflow, but does not supply their canonical table definitions. No DDL was applied and no QA was run.
