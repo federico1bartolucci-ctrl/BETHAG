@@ -521,3 +521,8 @@ A read-only Supabase migration-history check returned 177 applied migrations, wi
 ## Unified installment representative-member predicate — 2026-10-04
 
 Aligned the transfer-close guard with the actual installment generator in `20261001110001_harden_current_owner_installment_generation.sql`: unified installments store a non-null representative `member_id` and the note `Rata unificata per proprietario`. The close guard therefore must not require `i.member_id is null`. Removed that incompatible condition and retain matching by owner identity on the source allocation's unit, scoped to workspace, condominium, and ledger entry. This is statically reconciled against the generator source; SQL execution and controlled-data validation remain pending. Production remains read-only; no merge, deployment, or final QA/collaudo.
+
+
+## Unified installment orphan and null-email guard — 2026-10-04
+
+Tightened the unified-installment branch in `20261003079000_scope_transfer_close_financial_positions.sql`: it now requires the generator's exact `Rata unificata per proprietario` marker, treats a legacy null representative member as a fail-closed condition when the source allocation touches the transferred unit, and avoids equating two missing emails as proof of shared identity. This prevents unrelated/null-email profiles from matching accidentally and prevents an orphaned unified balance from being silently ignored. Branch-only change; fetch-back and static fragment checks are required, SQL execution in a disposable Supabase environment remains outstanding. Production remains read-only; no merge, deployment, or final QA/collaudo.
