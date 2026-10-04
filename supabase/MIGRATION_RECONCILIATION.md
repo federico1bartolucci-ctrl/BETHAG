@@ -1193,3 +1193,17 @@ La futura validazione forward dovrà verificare sia l'unicità del riferimento n
 Il confronto diretto con `20260930214000_repair_unit_owner_references.sql` (blob `247f9d31c26203464a870fe37ff60a9d9caf91c1`) evidenzia che l'UPDATE modifica soltanto le unità per cui esiste almeno un membro qualificato come `Proprietario` con `unit_id` coincidente e `legacy_id` non nullo. Per le unità senza tale membro, l'UPDATE non viene eseguito: un eventuale `ownerMemberIds` preesistente e obsoleto può quindi rimanere nel JSON. È distinto dal difetto già annotato nella validazione (assenza del confronto `unit_id` e mancato controllo duplicati).
 
 La correzione forward dovrà quindi definire esplicitamente anche il caso senza proprietari associati: se la relazione membro-unità è la fonte autorevole, il JSON deve essere ricostruito come array vuoto per le unità senza riferimenti validi, salvo diversa regola di dominio documentata. Prima dell'aggiornamento massivo servono conteggi di confronto tra JSON e relazione autorevole, gestione dei legacy_id null/duplicati e verifica della semantica di comproprietà; non alterare lo storico né cancellare membri. Nessuna migration storica o database è stata modificata.
+
+
+### Ciclo di vita del riferimento proprietario: aggiornamento della lacuna — 2026-10-04
+
+Confrontati direttamente i tre sorgenti attivi:
+- `20260930211000_guard_unit_scope_changes.sql` (blob `b65975dd8cfa4067693f04e40cbeb9d7c6c9d6a7`) protegge lo spostamento dell'unità con storico contabile, ma non mantiene `ownerMemberIds` quando cambia il membro.
+- `20260930214000_repair_unit_owner_references.sql` (blob `247f9d31c26203464a870fe37ff60a9d9caf91c1`) ricostruisce il JSON usando i membri collegati a quella specifica unità, ma è un aggiornamento una tantum della migrazione.
+- `20260930215000_validate_unit_owner_member_refs.sql` (blob `428e91a190fde962cfe457572f48924a075a77f6`) valida il JSON solo su INSERT/UPDATE di `condominium_units`, e abbina il membro per condominio, legacy ID e ruolo, non per `unit_id`.
+
+Il problema è quindi bidirezionale: un cambiamento successivo su `condominium_members.unit_id`, `legacy_id` o `data.role` può lasciare `ownerMemberIds` obsoleto, mentre una modifica dell'unità può superare il controllo con un proprietario del medesimo condominio ma di un'altra unità. Il trigger di sincronizzazione legacy dei campi unità non dimostra, da solo, che venga mantenuto anche il JSON proprietari.
+
+Direzione di correzione da applicare solo dopo il controllo di compatibilità dati: rendere coerente il validatore con l'identità della stessa unità (`m.unit_id = new.id`), quindi definire una sincronizzazione transazionale del JSON quando cambiano associazione, legacy ID o ruolo del membro; gestire esplicitamente più comproprietari, unità senza proprietario, valori legacy e operazioni di subentro. Il trigger di cancellazione già esistente va mantenuto e verificato insieme alla sincronizzazione. La correzione non va applicata come semplice sostituzione SQL senza preflight su riferimenti esistenti, perché potrebbe bloccare scritture legittime o eliminare associazioni storiche.
+
+Nessuna migrazione è stata eseguita sul database e nessun test runtime è stato dichiarato. La definizione della remediation resta subordinata al controllo del catalogo effettivo e a un replay isolato della baseline completa.
