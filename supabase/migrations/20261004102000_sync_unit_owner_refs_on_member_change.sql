@@ -25,7 +25,7 @@ begin
               where m.unit_id = u.id
                 and m.condominium_id = u.condominium_id
                 and m.legacy_id is not null
-                and coalesce(m.data->>'role', '') = 'Proprietario'
+                and coalesce(m.data->>'role', m.role, '') = 'Proprietario'
             ), '[]'::pg_catalog.jsonb),
             true
           ),
@@ -39,7 +39,7 @@ begin
               where m.unit_id = u.id
                 and m.condominium_id = u.condominium_id
                 and m.legacy_id is not null
-                and coalesce(m.data->>'role', '') = 'Proprietario'
+                and coalesce(m.data->>'role', m.role, '') = 'Proprietario'
             ), '[]'::pg_catalog.jsonb);
     end if;
   end if;
@@ -55,7 +55,7 @@ begin
             where m.unit_id = u.id
               and m.condominium_id = u.condominium_id
               and m.legacy_id is not null
-              and coalesce(m.data->>'role', '') = 'Proprietario'
+              and coalesce(m.data->>'role', m.role, '') = 'Proprietario'
           ), '[]'::pg_catalog.jsonb),
           true
         ),
@@ -69,7 +69,7 @@ begin
             where m.unit_id = u.id
               and m.condominium_id = u.condominium_id
               and m.legacy_id is not null
-              and coalesce(m.data->>'role', '') = 'Proprietario'
+              and coalesce(m.data->>'role', m.role, '') = 'Proprietario'
           ), '[]'::pg_catalog.jsonb);
   end if;
 
@@ -80,7 +80,7 @@ $function$;
 drop trigger if exists trg_sync_unit_owner_refs_after_member_change
   on public.condominium_members;
 create trigger trg_sync_unit_owner_refs_after_member_change
-after insert or update of unit_id, condominium_id, legacy_id, data
+after insert or update of unit_id, condominium_id, legacy_id, role, data
 on public.condominium_members
 for each row
 execute function public.sync_unit_owner_refs_after_member_change();
