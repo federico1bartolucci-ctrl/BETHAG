@@ -1071,3 +1071,17 @@ Il catalogo di trigger salvato in `docs/recovery/production_triggers_snapshot.js
 Questo restringe la lacuna segnalata nella sezione precedente: non si deve concludere che il sistema sia privo di controlli su unità, trasferimenti o portale. Il punto residuo specifico è la coerenza tra il JSON ridondante `ownerMemberIds` e la relazione membro-unità nei casi di modifica del ruolo o dell'associazione, oltre al fatto che la funzione `validate_unit_owner_member_refs()` controlla il condominio ma non confronta direttamente `m.unit_id` con l'unità validata. Le protezioni esistenti non vanno rimosse o replicate alla cieca; la futura remediation dovrà integrarsi con la sincronizzazione legacy, i vincoli di storico contabile e il flusso di subentro, e sarà da verificare in replay isolato.
 
 Nessuna modifica al database o QA runtime è stata effettuata. La ricognizione resta statica e non certifica il comportamento del sistema installato.
+
+
+### Effetti di cambio unità e ruolo sui riferimenti proprietario — 2026-10-04
+
+Ulteriore confronto delle migrazioni operative:
+
+- `20260930211000_guard_unit_scope_changes.sql` (blob `b65975dd8cfa4067693f04e40cbeb9d7c6c9d6a7`) blocca cambi di workspace/condominio e modifiche a fabbricato/civico quando trova storico in allocazioni o rate; non gestisce `ownerMemberIds`.
+- `20260930510000_harden_unit_workspace_scope.sql` (blob `100b7568a6392b2dbeb56d8273b41d781afb100f`) convalida l'allineamento workspace-condominio delle unità; non valida il riferimento proprietario.
+- `20261002110808_validate_transfer_outgoing_owner.sql` (blob `d8faca1980fc76bdfa8b616cd829229c28d43af8`) richiede che il membro uscente sia proprietario attivo e corrente sull'unità nel flusso di subentro.
+- `20261004091000_preserve_outgoing_current_owner_flag.sql` (blob `9ecf9e1556356650019eac40001eb2884984cda2`) mantiene `current_owner=false` sulla posizione uscente alla conferma del trasferimento.
+
+Questi controlli coprono aspetti distinti e non eliminano il rischio di riferimenti JSON obsoleti: il trigger `validate_unit_owner_member_refs` si attiva sulle modifiche a `condominium_units.condominium_id,data`, non sulle modifiche a ruolo o `unit_id` del membro. La pulizia dopo DELETE è prevista da `20261003070000_repair_deleted_member_owner_references.sql`, ma non è equivalente alla gestione di un cambio di ruolo o di unità. Inoltre, la migrazione di guardia allo scope protegge lo storico solo per i campi e le tabelle che interroga; non va interpretata come una validazione completa dei legami proprietario-unità.
+
+**Azione di riconciliazione:** la futura migrazione forward dovrà decidere e applicare un'unica fonte autorevole per l'assegnazione proprietario-unità, aggiornare o invalidare i riferimenti JSON in modo transazionale nei cambi di `unit_id`/ruolo e conservare i vincoli del subentro e dello storico contabile. L'ordine resta subordinato al ripristino verificato della tabella base e alla conferma della definizione effettiva delle funzioni/triggers nel database isolato. Solo revisione statica; nessuna scrittura Production, replay o QA finale.
