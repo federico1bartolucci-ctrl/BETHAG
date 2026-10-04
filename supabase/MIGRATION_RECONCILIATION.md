@@ -1535,3 +1535,8 @@ A further read-only production catalog check confirmed all five live `BEFORE DEL
 The archive visibility migration itself explicitly documents `condominiums.data.archivedAt` as its then-current application contract and uses that JSON predicate across resident/portal visibility. The live production mutation trigger and current policy inventory use the typed `condominiums.archived_at` column. Branch-wide GitHub search did not provide an authoritative current application source to establish a safe canonical conversion, so no replacement archive policy migration was authored. Next reconciliation must establish application read/write shape and backfill semantics before changing either predicate; otherwise a migration could unintentionally re-expose archived condominiums or hide active ones.
 
 These checks are catalog/source inspection only. No production data/schema was changed, no branch QA reset was performed, and no full replay or end-to-end QA was run.
+
+
+### ACL parity correction for restored unit-delete guards — 2026-10-04
+
+After comparing the live `proacl` values with the forward migration, corrected `20261004105000_restore_unit_delete_legacy_guards.sql` to preserve observed privilege parity: the two BEFORE DELETE guard functions retain EXECUTE for PUBLIC, authenticated, and service_role (matching production's effective/public ACL), while the AFTER DELETE legacy cleanup function is restricted to service_role and the database owner context. These are SECURITY INVOKER trigger functions; trigger invocation is not a reason to broaden direct execution. The updated migration file was fetched back and verified. This is an ACL/source-alignment correction only, not a production change.
