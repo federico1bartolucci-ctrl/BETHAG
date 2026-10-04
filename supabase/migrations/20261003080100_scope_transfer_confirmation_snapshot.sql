@@ -12,7 +12,8 @@ declare
     $o$'outstanding_total',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.amount-i.paid_amount>0.005),0),$o$,
     $o$'outstanding_due_after',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and (i.due_date is null or i.due_date>p_transfer_date) and i.amount-i.paid_amount>0.005),0),$o$,
     $o$'unit_unassigned_carryovers',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'balance',c.balance,'kind',c.kind,'status',c.status,'source_fiscal_year_id',c.source_fiscal_year_id,'target_fiscal_year_id',c.target_fiscal_year_id) order by c.created_at,c.id) from public.condominium_fiscal_carryovers c where c.unit_id=p_unit_id and c.member_id is null and abs(c.balance)>0.005),'[]'::jsonb),$o$,
-    $o$where a.member_id=p_outgoing_member_id
+    $o$where a.workspace_id=v_workspace and a.condominium_id=v_condominium
+        and a.member_id=p_outgoing_member_id
         and l.expense_type='Straordinaria'
         and l.deliberation_date is not null
         and l.deliberation_date<=p_transfer_date
