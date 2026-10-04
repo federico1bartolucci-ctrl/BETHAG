@@ -654,3 +654,22 @@ Observed dependencies include:
 - `condominium_allocation_rules` and `condominium_millesimal_tables`: used by allocation-scope validation; no create statement in this slice.
 
 These references are important dependency evidence but are not sufficient to infer columns, foreign-key actions, policies, or original creation versions. The working finding remains that the repository's tracked chain needs a verified foundation source for replay from empty state. Continue full inventory rather than infer or synthesize a production baseline from function references.
+
+## Mid-chain accounting/RLS migration scan — 2026-10-04
+
+Reviewed migration files in the filename range `20260930230000`–`20260930400000`, in addition to the earlier targeted review. This scan finds the following explicit table introductions among the 27 candidate DDL tables:
+
+| Table | Introducing migration |
+|---|---|
+| `condominium_fiscal_carryovers` | `20260930230000_fiscal_year_carryovers.sql` |
+| `condominium_accounting_settings` | `20260930235000_accounting_settings.sql` |
+| `condominium_allocation_rules` | `20260930241000_allocation_rules_and_consumption.sql` |
+| `condominium_consumption_readings` | `20260930241000_allocation_rules_and_consumption.sql` |
+| `condominium_allocation_intakes` | `20260930250000_manual_ai_allocation_intake.sql` |
+| `condominium_fiscal_carryover_compensations` | `20260930160000_fiscal_carryover_compensation.sql` |
+| `condominium_payment_reversal_audit` | `20261001083000_payment_reversal_audit_and_reconciliation.sql` |
+| `condominium_member_transfers` | `20261001104500_add_condominium_member_transfer.sql` |
+
+Other candidate relations appear throughout the reviewed migrations as dependencies for installment schedules, ledger/fund links, allocation logic, fiscal-year controls, RLS, foreign-key indexes, and portal/document visibility. No explicit create statements for the core relations `condominium_expense_allocations`, `condominium_installments`, `condominium_fiscal_years`, `condominium_funds`, `condominium_ledger_entries`, `condominium_millesimal_tables`, `condominium_millesimal_values`, or `condominium_payment_movements` were found in the portions checked; their original DDL source remains unresolved.
+
+The review also notes dependencies on candidate DDL tables in later RLS and FK-index migrations, but those references do not provide enough information to reconstruct exact schema. This is a text-based partial scan of the chain, not yet a complete 147-file, column-by-column reconciliation. Do not infer that unlisted tables are absent from every migration or create a baseline from this table alone. The next step remains full-chain parsing and exact structural comparison (columns, types, defaults, constraints, indexes, policies, triggers, and functions), then replay testing on a disposable isolated database. Production remains untouched.
