@@ -1446,3 +1446,8 @@ The previous edit of `20261003080100_scope_transfer_confirmation_snapshot.sql` w
 
 
 A subsequent dependency review found that migration `20261003076000_scope_transfer_allocation_totals.sql` scopes the extraordinary-allocation predicate before `20261003080100` runs. The latter's expected source anchor has therefore been adjusted to match that intermediate state and add the ledger tenant predicates. The updated migration was fetched back and verified byte-for-byte. Exact production fragment preflight and isolated replay remain outstanding; production was not modified.
+
+
+### Dependency-order anchor correction (2026-10-04)
+
+The transfer confirmation snapshot migration's source anchors now reflect the intermediate tenant-scoped state introduced by `20261003074000_scope_extraordinary_transfer_allocations.sql` and `20261003075000_scope_transfer_installment_queries.sql`. The extraordinary-allocation anchor was normalized to the exact single-line SQL emitted by the earlier migration, including workspace and condominium predicates on both allocation and ledger rows. The revised migration was fetched back and verified byte-for-byte. This is static source verification only; exact live source comparison and isolated ordered replay are still required before deployment.
