@@ -4,23 +4,23 @@ create or replace function public.validate_unit_owner_member_refs()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+set search_path = ''
 as $function$
 declare
   v_owner text;
   v_member_count integer;
   v_ref_count integer;
 begin
-  if jsonb_typeof(coalesce(new.data->'ownerMemberIds','[]'::jsonb)) <> 'array' then
+  if pg_catalog.jsonb_typeof(coalesce(new.data->'ownerMemberIds','[]'::pg_catalog.jsonb)) <> 'array' then
     raise exception 'OWNER_REFS_INVALID: ownerMemberIds deve essere un array';
   end if;
 
   for v_owner in
     select value
-    from jsonb_array_elements_text(coalesce(new.data->'ownerMemberIds','[]'::jsonb))
+    from pg_catalog.jsonb_array_elements_text(coalesce(new.data->'ownerMemberIds','[]'::pg_catalog.jsonb))
   loop
     select count(*) into v_ref_count
-    from jsonb_array_elements_text(coalesce(new.data->'ownerMemberIds','[]'::jsonb)) as refs(value)
+    from pg_catalog.jsonb_array_elements_text(coalesce(new.data->'ownerMemberIds','[]'::pg_catalog.jsonb)) as refs(value)
     where refs.value = v_owner;
 
     if v_ref_count <> 1 then
@@ -45,7 +45,7 @@ $function$;
 
 drop trigger if exists trg_validate_unit_owner_member_refs on public.condominium_units;
 create constraint trigger trg_validate_unit_owner_member_refs
-after insert or update of condominium_id, data on public.condominium_units
+after insert or update on public.condominium_units
 deferrable initially deferred
 for each row execute function public.validate_unit_owner_member_refs();
 
