@@ -10190,9 +10190,7 @@ function CondominiumDetails(
                             <button
                               className="primary-button small"
                               type="button"
-                              onClickCapture={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
+                              onClick={() => {
                                 const transferUnit = condominiumUnits.find((u: CondominiumUnit) =>
                                   (member.unitId && String(u.id) === String(member.unitId)) ||
                                   String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
