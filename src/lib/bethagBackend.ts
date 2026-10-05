@@ -127,6 +127,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      currentOwner: row.data?.current_owner !== false,
+      positionStatus: row.data?.position_status ?? "Attivo",
     };
   });
 
@@ -138,7 +140,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     // qualifica condominiale, altrimenti un refresh può perdere i proprietari
     // associati all'unità.
     const condominiumRole = String(member.data?.role ?? member.role ?? "").trim();
-    if (condominiumRole !== "Proprietario" || !member.unitId) return;
+    if (condominiumRole !== "Proprietario" || member.currentOwner === false || member.positionStatus === "In chiusura" || !member.unitId) return;
     const current = ownerIdsByUnit.get(String(member.unitId)) ?? [];
     if (!current.includes(member.id)) current.push(member.id);
     ownerIdsByUnit.set(String(member.unitId), current);
