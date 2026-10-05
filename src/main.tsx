@@ -2154,7 +2154,13 @@ function App() {
       } catch {
         // Fall back to persisted application state.
       }
-      return load<Page>(KEYS.page, "homepage");
+      const persistedPage = load<string>(KEYS.page, "homepage");
+      const validPages = new Set<Page>([
+        "homepage", "condomini", "archivio", "contabilita", "registro", "documenti",
+        "scadenze", "assemblee", "fornitori", "attivita", "lavori", "comunicazioni",
+        "ai", "portale", "abbonamento", "amministratore", "impostazioni", "collaboratori", "aiuto",
+      ]);
+      return validPages.has(persistedPage as Page) ? persistedPage as Page : "homepage";
     });
 
   useEffect(() => bethagInstallGlobalFieldRules(), []);
@@ -2908,17 +2914,26 @@ function App() {
 
   // Logout must keep the authenticated and public render trees hook-safe.
   const logout = async () => {
-    if (supabaseConfigured && supabase) {
-      await supabase.auth.signOut();
+    try {
+      if (supabaseConfigured && supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (error) {
+      // Logout locale must still complete if the remote sign-out is interrupted.
+      console.warn("BETHAG remote logout failed; completing local logout.", error);
+    } finally {
+      setSessionRole(null);
+      setSessionEmail("");
+      setServerCollaboratorPermissions([]);
+      setRequiresPasswordSetup(false);
+      localStorage.removeItem(KEYS.session);
+      localStorage.removeItem(KEYS.sessionEmail);
+      localStorage.removeItem(KEYS.page);
+      localStorage.removeItem(KEYS.selectedCondominium);
+      setPage("homepage");
+      setSelectedCondominium(null);
+      setMobileMenuOpen(false);
     }
-    setSessionRole(null);
-    setSessionEmail("");
-    setServerCollaboratorPermissions([]);
-    localStorage.removeItem(KEYS.session);
-    localStorage.removeItem(KEYS.sessionEmail);
-    localStorage.removeItem(KEYS.page);
-    setPage("homepage");
-    setMobileMenuOpen(false);
   };
 
   useEffect(() => {
