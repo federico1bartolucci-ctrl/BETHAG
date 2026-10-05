@@ -45,3 +45,5 @@ grant execute on function public.confirm_condominium_member_transfer(uuid,uuid,t
 revoke execute on function public.close_condominium_member_transfer(uuid) from anon, public;
 grant execute on function public.close_condominium_member_transfer(uuid) to authenticated;
 
+
+-- Reconciled public transfer wrappers remain SECURITY INVOKER; privileged implementation stays private.
