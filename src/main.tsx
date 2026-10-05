@@ -2326,9 +2326,16 @@ function App() {
   const [
     selectedCondominium,
     setSelectedCondominium,
-  ] = useState<Condominium | null>(null);
-
-  const selectedCondominiumPersistenceReady = useRef(false);
+  ] = useState<Condominium | null>(() => {
+    try {
+      const urlId = new URLSearchParams(window.location.search).get("condominiumId");
+      const savedId = urlId || load<number | null>(KEYS.selectedCondominium, null);
+      if (savedId == null || savedId === "") return null;
+      return condominiums.find((item) => String(item.id) === String(savedId)) ?? null;
+    } catch {
+      return null;
+    }
+  });
 
   // Persist the condominium detail selection immediately. The detail view is
   // an in-page state, not a separate route, so it must survive a hard refresh.
@@ -6192,39 +6199,6 @@ function App() {
         if (cancelled) return;
 
         setCondominiums(backend.condominiums);
-
-        // Restore the open condominium from the persisted selection at the
-        // exact point where backend data is known to be complete. Relying
-        // only on a later effect can miss the one-time ref transition during
-        // a hard refresh, leaving the user on the condominium list.
-        if (page === "condomini" && !selectedCondominiumPersistenceReady.current) {
-          let savedId: number | null = null;
-          try {
-            const urlId = new URLSearchParams(window.location.search).get("condominiumId");
-            if (urlId) savedId = Number(urlId);
-          } catch {
-            // Fall back to localStorage below.
-          }
-          if (savedId == null || !Number.isFinite(savedId)) {
-            savedId = load<number | null>(KEYS.selectedCondominium, null);
-          }
-          selectedCondominiumPersistenceReady.current = true;
-          if (savedId != null) {
-            const restored = backend.condominiums.find((item) => String(item.id) === String(savedId));
-            if (restored) {
-              setSelectedCondominium(restored);
-            } else {
-              localStorage.removeItem(KEYS.selectedCondominium);
-              try {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("condominiumId");
-                window.history.replaceState(window.history.state, document.title, url.toString());
-              } catch {
-                // URL cleanup is cosmetic.
-              }
-            }
-          }
-        }
 
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
