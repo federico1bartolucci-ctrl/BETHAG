@@ -40,10 +40,11 @@ create table if not exists public.condominium_tax_obligations (
 create index if not exists condominium_tax_obligations_condominium_idx on public.condominium_tax_obligations(condominium_id);
 create index if not exists condominium_tax_obligations_workspace_idx on public.condominium_tax_obligations(workspace_id);
 alter table public.condominium_tax_obligations enable row level security;
-create policy if not exists "Managers can delete condominium_tax_obligations" on public.condominium_tax_obligations for delete to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
-create policy if not exists "Managers can insert condominium_tax_obligations" on public.condominium_tax_obligations for insert to authenticated with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
-create policy if not exists "Managers can read condominium_tax_obligations" on public.condominium_tax_obligations for select to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
-drop policy if exists "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations;\ncreate policy "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations for update to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita')) with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can delete condominium_tax_obligations" on public.condominium_tax_obligations for delete to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can insert condominium_tax_obligations" on public.condominium_tax_obligations for insert to authenticated with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can read condominium_tax_obligations" on public.condominium_tax_obligations for select to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations;
+create policy "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations for update to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita')) with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
 
 create table if not exists public.condominium_suppliers (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null,
@@ -56,7 +57,8 @@ create table if not exists public.condominium_suppliers (
 create index if not exists condominium_suppliers_condominium_fk_idx on public.condominium_suppliers(condominium_id);
 create index if not exists condominium_suppliers_workspace_condo_idx on public.condominium_suppliers(workspace_id,condominium_id,category);
 alter table public.condominium_suppliers enable row level security;
-drop policy if exists condominium_suppliers_manager_all on public.condominium_suppliers;\ncreate policy condominium_suppliers_manager_all on public.condominium_suppliers for all to authenticated using(private.can_manage_workspace_module(workspace_id,'fornitori')) with check(private.can_manage_workspace_module(workspace_id,'fornitori'));
+drop policy if exists condominium_suppliers_manager_all on public.condominium_suppliers;
+create policy condominium_suppliers_manager_all on public.condominium_suppliers for all to authenticated using(private.can_manage_workspace_module(workspace_id,'fornitori')) with check(private.can_manage_workspace_module(workspace_id,'fornitori'));
 
 create table if not exists public.condominium_register_items (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null,
@@ -72,7 +74,8 @@ create index if not exists condominium_register_items_condominium_fk_idx on publ
 create index if not exists condominium_register_items_supplier_idx on public.condominium_register_items(supplier_id);
 create index if not exists condominium_register_items_workspace_condo_idx on public.condominium_register_items(workspace_id,condominium_id,item_type,expiry_date);
 alter table public.condominium_register_items enable row level security;
-drop policy if exists condominium_register_items_manager_all on public.condominium_register_items;\ncreate policy condominium_register_items_manager_all on public.condominium_register_items for all to authenticated using(private.is_workspace_admin(workspace_id)) with check(private.is_workspace_admin(workspace_id));
+drop policy if exists condominium_register_items_manager_all on public.condominium_register_items;
+create policy condominium_register_items_manager_all on public.condominium_register_items for all to authenticated using(private.is_workspace_admin(workspace_id)) with check(private.is_workspace_admin(workspace_id));
 
 create table if not exists public.condominium_unit_transformations (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null,
@@ -100,7 +103,7 @@ create index if not exists idx_unit_transformations_created_by on public.condomi
 create index if not exists idx_unit_transformations_status on public.condominium_unit_transformations(status);
 create index if not exists idx_unit_transformations_workspace on public.condominium_unit_transformations(workspace_id);
 alter table public.condominium_unit_transformations enable row level security;
-create policy if not exists "unit transformations manager access" on public.condominium_unit_transformations for all to authenticated using(private.can_manage_workspace_module(workspace_id,'condomini')) with check(private.can_manage_workspace_module(workspace_id,'condomini'));
+drop policy if exists "unit transformations manager access" on public.condominium_unit_transformations for all to authenticated using(private.can_manage_workspace_module(workspace_id,'condomini')) with check(private.can_manage_workspace_module(workspace_id,'condomini'));
 
 create table if not exists public.condominium_unit_transformation_items (
  id uuid primary key default gen_random_uuid(), transformation_id uuid not null, unit_id uuid not null,
@@ -115,7 +118,7 @@ create table if not exists public.condominium_unit_transformation_items (
 create index if not exists idx_unit_transform_items_transformation on public.condominium_unit_transformation_items(transformation_id);
 create index if not exists idx_unit_transform_items_unit on public.condominium_unit_transformation_items(unit_id);
 alter table public.condominium_unit_transformation_items enable row level security;
-create policy if not exists "unit transformation items manager access" on public.condominium_unit_transformation_items for all to authenticated using(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini'))) with check(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini')));
+drop policy if exists "unit transformation items manager access" on public.condominium_unit_transformation_items for all to authenticated using(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini'))) with check(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini')));
 
 create table if not exists public.condominium_works (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null, title text not null,
@@ -142,7 +145,8 @@ create index if not exists condominium_works_register_item_fk_idx on public.cond
 create index if not exists condominium_works_supplier_fk_idx on public.condominium_works(supplier_id);
 create index if not exists condominium_works_workspace_condo_idx on public.condominium_works(workspace_id,condominium_id,status);
 alter table public.condominium_works enable row level security;
-drop policy if exists condominium_works_manager_all on public.condominium_works;\ncreate policy condominium_works_manager_all on public.condominium_works for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
+drop policy if exists condominium_works_manager_all on public.condominium_works;
+create policy condominium_works_manager_all on public.condominium_works for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
 
 create table if not exists public.condominium_work_events (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null, work_id uuid not null,
@@ -156,7 +160,8 @@ create index if not exists condominium_work_events_condominium_fk_idx on public.
 create index if not exists condominium_work_events_work_idx on public.condominium_work_events(work_id,event_date);
 create index if not exists condominium_work_events_workspace_fk_idx on public.condominium_work_events(workspace_id);
 alter table public.condominium_work_events enable row level security;
-drop policy if exists condominium_work_events_manager_all on public.condominium_work_events;\ncreate policy condominium_work_events_manager_all on public.condominium_work_events for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
+drop policy if exists condominium_work_events_manager_all on public.condominium_work_events;
+create policy condominium_work_events_manager_all on public.condominium_work_events for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
 
 create table if not exists public.condominium_work_progress (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null, work_id uuid not null,
@@ -181,7 +186,8 @@ create index if not exists condominium_work_progress_payment_entry_idx on public
 create index if not exists condominium_work_progress_work_idx on public.condominium_work_progress(work_id,progress_date);
 create index if not exists condominium_work_progress_workspace_fk_idx on public.condominium_work_progress(workspace_id);
 alter table public.condominium_work_progress enable row level security;
-drop policy if exists condominium_work_progress_manager_all on public.condominium_work_progress;\ncreate policy condominium_work_progress_manager_all on public.condominium_work_progress for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
+drop policy if exists condominium_work_progress_manager_all on public.condominium_work_progress;
+create policy condominium_work_progress_manager_all on public.condominium_work_progress for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
 
 create table if not exists public.condominium_work_documents (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null, work_id uuid not null,
@@ -196,7 +202,8 @@ create index if not exists condominium_work_documents_work_idx on public.condomi
 create index if not exists condominium_work_documents_workspace_document_idx on public.condominium_work_documents(workspace_id,document_id);
 create index if not exists condominium_work_documents_workspace_fk_idx on public.condominium_work_documents(workspace_id);
 alter table public.condominium_work_documents enable row level security;
-drop policy if exists condominium_work_documents_manager_all on public.condominium_work_documents;\ncreate policy condominium_work_documents_manager_all on public.condominium_work_documents for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
+drop policy if exists condominium_work_documents_manager_all on public.condominium_work_documents;
+create policy condominium_work_documents_manager_all on public.condominium_work_documents for all to authenticated using(private.can_manage_workspace_module(workspace_id,'attivita')) with check(private.can_manage_workspace_module(workspace_id,'attivita'));
 
 create table if not exists public.condominium_fund_availability (
  id uuid, workspace_id uuid, condominium_id uuid, name text, purpose text, target_amount numeric, allocated_amount numeric, used_amount numeric,
