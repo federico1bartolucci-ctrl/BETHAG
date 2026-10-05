@@ -2819,7 +2819,7 @@ function App() {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
 
     const redirectToUrl = new URL(
-      (import.meta.env.BASE_URL || "/BETHAG/") + "reset-password.html",
+      (import.meta.env.BASE_URL || "/BETHAG/") + "reset-password/",
       window.location.origin
     );
     // Keep the recovery marker in the query string. Supabase Auth consumes
