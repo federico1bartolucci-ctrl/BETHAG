@@ -2329,6 +2329,24 @@ export async function confirmCondominiumMemberTransfer(
       throw new Error("Il proprietario selezionato non è associato all'unità indicata.");
     }
 
+    const normalizedIncomingEmail = incomingEmail.trim().toLowerCase();
+    if (normalizedIncomingEmail) {
+      const { data: duplicateMembers, error: duplicateError } = await supabase
+        .from("condominium_members")
+        .select("legacy_id,name,email,active")
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", outgoing.condominium_id)
+        .eq("active", true)
+        .ilike("email", normalizedIncomingEmail)
+        .neq("legacy_id", outgoingMemberLegacyId)
+        .limit(10);
+
+      if (duplicateError) throw duplicateError;
+      if ((duplicateMembers ?? []).length > 0) {
+        throw new Error("L'e-mail del nuovo proprietario è già associata a un altro condòmino attivo nello stesso condominio.");
+      }
+    }
+
     const { data: transferId, error: transferError } = await supabase.rpc(
       "confirm_condominium_member_transfer",
       {
