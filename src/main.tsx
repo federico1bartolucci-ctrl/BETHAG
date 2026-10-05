@@ -2822,6 +2822,9 @@ function App() {
     redirectToUrl.searchParams.set("reset-password", "1");
     const redirectTo = redirectToUrl.toString();
 
+    // Keep the intent locally until the new password is actually saved.
+    localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
+
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) {
       localStorage.removeItem("bethag-password-recovery-pending");
@@ -3003,7 +3006,7 @@ function App() {
     const recoveryPendingTimestamp = recoveryPendingRaw ? Number(recoveryPendingRaw) : 0;
     const recoveryPending = Number.isFinite(recoveryPendingTimestamp) &&
       recoveryPendingTimestamp > 0 &&
-      Date.now() - recoveryPendingTimestamp < 30 * 60 * 1000;
+      Date.now() - recoveryPendingTimestamp < 60 * 60 * 1000;
     const recoveryHash = window.location.hash.slice(1);
     const recoveryHashParams = new URLSearchParams(recoveryHash);
     const recoverySearchParams = new URLSearchParams(window.location.search);
@@ -3016,9 +3019,14 @@ function App() {
       recoverySearchParams.has("code") ||
       (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
-    if (recoveryCallbackPresent) {
+    // Persist the recovery intent so the flow survives Supabase's callback
+    // processing, browser redirects and hash/query cleanup.
+    const recoveryIntentActive = recoveryPending || recoveryCallbackPresent;
+
+    if (recoveryIntentActive) {
       recoveryFlowActive = true;
       setPasswordRecoveryMode(true);
+      localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     }
 
     const applySupabaseSession = async (
@@ -3036,6 +3044,11 @@ function App() {
       }
 
       if (!session?.user) {
+        if (recoveryFlowActive || localStorage.getItem("bethag-password-recovery-pending")) {
+          recoveryFlowActive = true;
+          setPasswordRecoveryMode(true);
+          return;
+        }
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
@@ -3134,6 +3147,7 @@ function App() {
       const hasRecoveryMarker =
         searchParams.has("reset-password") ||
         searchParams.get("type") === "recovery" ||
+        searchParams.has("code") ||
         hashParams.has("reset-password") ||
         hashParams.get("type") === "recovery";
 
