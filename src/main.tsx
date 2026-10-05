@@ -2277,7 +2277,6 @@ function App() {
       return (
         searchParams.has("reset-password") ||
         searchParams.get("type") === "recovery" ||
-        searchParams.has("code") ||
         hashParams.has("reset-password") ||
         hashParams.get("type") === "recovery" ||
         (referrer.includes("/auth/v1/verify") && referrer.includes("type=recovery"))
@@ -3071,9 +3070,10 @@ function App() {
       recoverySearchParams.has("code") ||
       (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
-    // The callback URL is the authoritative recovery signal for the
-    // main application. The pending local marker is used only by the
-    // dedicated reset page and must not hijack ordinary app refreshes.
+    // Only explicit recovery markers identify the password-reset flow.
+    // A generic PKCE "code" must never be treated as recovery: it can remain
+    // in the SPA URL after navigation and would otherwise hijack a normal
+    // hard refresh of pages such as condominium details.
     const recoveryIntentActive = recoveryCallbackPresent;
 
     if (recoveryIntentActive) {
@@ -3207,14 +3207,13 @@ function App() {
       const hasRecoveryMarker =
         searchParams.has("reset-password") ||
         searchParams.get("type") === "recovery" ||
-        searchParams.has("code") ||
         hashParams.has("reset-password") ||
         hashParams.get("type") === "recovery";
 
       try {
         // Recovery URLs are owned exclusively by the dedicated recovery client.
-        // Do not exchange/set the same callback on the normal client: doing so
-        // can consume the one-time token and immediately fall back to login.
+        // Only explicit recovery markers reach this branch; a normal page URL
+        // containing an unrelated/stale PKCE code must stay in the application.
         if (hasRecoveryMarker || recoveryFlowActive) {
           recoveryFlowActive = true;
           setPasswordRecoveryMode(true);
