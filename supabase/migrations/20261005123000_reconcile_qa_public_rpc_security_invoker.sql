@@ -1,0 +1,10 @@
+drop function if exists public.claim_first_workspace_admin(uuid);
+drop function if exists public.delete_condominium(uuid,bigint,text);
+drop function if exists public.save_condominium(uuid,bigint,text,text,text,text,text,jsonb);
+drop function if exists public.set_personal_security_code(text,boolean);
+drop function if exists public.verify_personal_security_code(text);
+create function public.claim_first_workspace_admin(p_workspace_id uuid default null) returns uuid language sql security invoker set search_path='' as $function$ select private.claim_first_workspace_admin(p_workspace_id); $function$;
+create function public.delete_condominium(p_workspace_id uuid,p_legacy_id bigint,p_security_code text) returns void language plpgsql security invoker set search_path='' as $function$ begin perform private.delete_condominium($1,$2,$3); end $function$;
+create function public.save_condominium(p_workspace_id uuid,p_legacy_id bigint,p_name text,p_address text,p_city text,p_postal_code text,p_province text,p_data jsonb) returns uuid language plpgsql security invoker set search_path='' as $function$ begin return private.save_condominium($1,$2,$3,$4,$5,$6,$7,$8); end $function$;
+create function public.set_personal_security_code(p_code text,p_enabled boolean) returns void language plpgsql security invoker set search_path='' as $function$ begin perform private.set_personal_security_code($1,$2); end $function$;
+create function public.verify_personal_security_code(p_code text) returns boolean language plpgsql security invoker set search_path='' as $function$ begin return private.verify_personal_security_code($1); end $function$;
