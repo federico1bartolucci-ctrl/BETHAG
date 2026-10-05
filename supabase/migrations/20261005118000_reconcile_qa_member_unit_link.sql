@@ -1,0 +1,1 @@
+alter table public.condominium_members add column if not exists unit_id uuid;
