@@ -3,7 +3,7 @@ import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
-import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { supabase, supabaseConfigured, supabasePublicAuth, supabaseRecoveryAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2828,7 +2828,9 @@ function App() {
     // Keep the intent locally until the new password is actually saved.
     localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    const recoveryClient = supabaseRecoveryAuth || supabase;
+    if (!recoveryClient) throw new Error("Servizio di recupero password non disponibile.");
+    const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) {
       localStorage.removeItem("bethag-password-recovery-pending");
       throw new Error(error.message || "Impossibile inviare il link di recupero password.");
@@ -2838,7 +2840,9 @@ function App() {
   const completePasswordRecovery = async (password: string) => {
     if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
 
-    const { error } = await supabase.auth.updateUser({ password });
+    const recoveryClient = supabaseRecoveryAuth || supabase;
+    if (!recoveryClient) throw new Error("Sessione di recupero BETHAG non disponibile.");
+    const { error } = await recoveryClient.auth.updateUser({ password });
     if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
 
     localStorage.removeItem("bethag-password-recovery-pending");
@@ -3155,18 +3159,10 @@ function App() {
         hashParams.get("type") === "recovery";
 
       try {
-        if (authCode) {
-          const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-          if (error) throw error;
-        } else if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (error) throw error;
-        }
-
-        if (hasRecoveryMarker) {
+        // Recovery URLs are owned exclusively by the dedicated recovery client.
+        // Do not exchange/set the same callback on the normal client: doing so
+        // can consume the one-time token and immediately fall back to login.
+        if (hasRecoveryMarker || recoveryFlowActive || recoveryPending) {
           recoveryFlowActive = true;
           setPasswordRecoveryMode(true);
           try {
@@ -3217,13 +3213,21 @@ function App() {
       }, 0);
     });
 
-    // Register the listener before processing the callback so manual
-    // exchange/setSession cannot race the React auth state.
+    const recoverySubscription = supabaseRecoveryAuth?.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryFlowActive = true;
+        setPasswordRecoveryMode(true);
+        localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
+      }
+    });
+
+    // The recovery client owns the callback; the normal client owns normal login.
     void initializeAuth();
 
     return () => {
       cancelled = true;
       authSubscription.unsubscribe();
+      recoverySubscription?.data.subscription.unsubscribe();
     };
   }, []);
 
