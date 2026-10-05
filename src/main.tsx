@@ -2265,7 +2265,8 @@ function App() {
     } catch {
       return false;
     }
-  });  const recoveryFlowActiveRef = useRef(false);
+  });
+  const recoveryFlowActiveRef = useRef(false);
 
 
   const [profile, setProfile] =
@@ -3168,8 +3169,8 @@ function App() {
         const { data } = await supabase.auth.getSession();
         if (!cancelled) {
           const recoverySession = sessionIsRecovery(data.session);
-          if (recoverySession || recoveryFlowActive) {
-            recoveryFlowActive = true;
+          if (recoverySession || recoveryFlowActiveRef.current) {
+            recoveryFlowActiveRef.current = true;
             setPasswordRecoveryMode(true);
             if (recoverySession) {
               try {
@@ -3207,7 +3208,7 @@ function App() {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || sessionIsRecovery(session)) {
-        recoveryFlowActive = true;
+        recoveryFlowActiveRef.current = true;
         setPasswordRecoveryMode(true);
         try {
           localStorage.setItem(
@@ -3222,7 +3223,7 @@ function App() {
         return;
       }
 
-      if (recoveryFlowActive) {
+      if (recoveryFlowActiveRef.current) {
         setPasswordRecoveryMode(true);
         return;
       }
