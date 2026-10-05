@@ -3009,6 +3009,7 @@ function App() {
     setPage("homepage");
   };
 
+  // Logout must keep the authenticated and public render trees hook-safe.
   const logout = async () => {
     if (supabaseConfigured && supabase) {
       await supabase.auth.signOut();
