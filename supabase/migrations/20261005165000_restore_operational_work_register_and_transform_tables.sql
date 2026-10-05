@@ -40,9 +40,12 @@ create table if not exists public.condominium_tax_obligations (
 create index if not exists condominium_tax_obligations_condominium_idx on public.condominium_tax_obligations(condominium_id);
 create index if not exists condominium_tax_obligations_workspace_idx on public.condominium_tax_obligations(workspace_id);
 alter table public.condominium_tax_obligations enable row level security;
-drop policy if exists "Managers can delete condominium_tax_obligations" on public.condominium_tax_obligations for delete to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
-drop policy if exists "Managers can insert condominium_tax_obligations" on public.condominium_tax_obligations for insert to authenticated with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
-drop policy if exists "Managers can read condominium_tax_obligations" on public.condominium_tax_obligations for select to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can delete condominium_tax_obligations" on public.condominium_tax_obligations;
+create policy "Managers can delete condominium_tax_obligations" on public.condominium_tax_obligations for delete to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can insert condominium_tax_obligations" on public.condominium_tax_obligations;
+create policy "Managers can insert condominium_tax_obligations" on public.condominium_tax_obligations for insert to authenticated with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
+drop policy if exists "Managers can read condominium_tax_obligations" on public.condominium_tax_obligations;
+create policy "Managers can read condominium_tax_obligations" on public.condominium_tax_obligations for select to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
 drop policy if exists "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations;
 create policy "Managers can update condominium_tax_obligations" on public.condominium_tax_obligations for update to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita')) with check(private.can_manage_workspace_module(workspace_id,'contabilita'));
 
@@ -103,7 +106,8 @@ create index if not exists idx_unit_transformations_created_by on public.condomi
 create index if not exists idx_unit_transformations_status on public.condominium_unit_transformations(status);
 create index if not exists idx_unit_transformations_workspace on public.condominium_unit_transformations(workspace_id);
 alter table public.condominium_unit_transformations enable row level security;
-drop policy if exists "unit transformations manager access" on public.condominium_unit_transformations for all to authenticated using(private.can_manage_workspace_module(workspace_id,'condomini')) with check(private.can_manage_workspace_module(workspace_id,'condomini'));
+drop policy if exists "unit transformations manager access" on public.condominium_unit_transformations;
+create policy "unit transformations manager access" on public.condominium_unit_transformations for all to authenticated using(private.can_manage_workspace_module(workspace_id,'condomini')) with check(private.can_manage_workspace_module(workspace_id,'condomini'));
 
 create table if not exists public.condominium_unit_transformation_items (
  id uuid primary key default gen_random_uuid(), transformation_id uuid not null, unit_id uuid not null,
@@ -118,7 +122,8 @@ create table if not exists public.condominium_unit_transformation_items (
 create index if not exists idx_unit_transform_items_transformation on public.condominium_unit_transformation_items(transformation_id);
 create index if not exists idx_unit_transform_items_unit on public.condominium_unit_transformation_items(unit_id);
 alter table public.condominium_unit_transformation_items enable row level security;
-drop policy if exists "unit transformation items manager access" on public.condominium_unit_transformation_items for all to authenticated using(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini'))) with check(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini')));
+drop policy if exists "unit transformation items manager access" on public.condominium_unit_transformation_items;
+create policy "unit transformation items manager access" on public.condominium_unit_transformation_items for all to authenticated using(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini'))) with check(exists(select 1 from public.condominium_unit_transformations t where t.id=condominium_unit_transformation_items.transformation_id and private.can_manage_workspace_module(t.workspace_id,'condomini')));
 
 create table if not exists public.condominium_works (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null, title text not null,
