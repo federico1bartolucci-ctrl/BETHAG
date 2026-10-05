@@ -3213,6 +3213,7 @@ function App() {
 
     // Register the listener before processing the callback so manual
     // exchange/setSession cannot race the React auth state.
+    void initializeAuth();
 
     return () => {
       cancelled = true;
