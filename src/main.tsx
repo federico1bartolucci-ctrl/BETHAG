@@ -2256,14 +2256,11 @@ function App() {
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const referrer = document.referrer || "";
       return (
         searchParams.has("reset-password") ||
         searchParams.get("type") === "recovery" ||
-        searchParams.has("code") ||
         hashParams.has("reset-password") ||
-        hashParams.get("type") === "recovery" ||
-        (referrer.includes("/auth/v1/verify") && referrer.includes("type=recovery"))
+        hashParams.get("type") === "recovery"
       );
     } catch {
       return false;
@@ -2835,6 +2832,7 @@ function App() {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
 
+    localStorage.removeItem("bethag-password-recovery-active-v2");
     localStorage.removeItem("bethag-password-recovery-pending");
     setPasswordRecoveryMode(false);
     setSessionRole(null);
@@ -2997,42 +2995,82 @@ function App() {
     if (!supabaseConfigured || !supabase) return;
 
     let cancelled = false;
-    let recoveryFlowActive = false;
-
-    const recoveryPendingRaw = localStorage.getItem("bethag-password-recovery-pending");
-    const recoveryPendingTimestamp = recoveryPendingRaw ? Number(recoveryPendingRaw) : 0;
-    const recoveryPending = Number.isFinite(recoveryPendingTimestamp) &&
-      recoveryPendingTimestamp > 0 &&
-      Date.now() - recoveryPendingTimestamp < 30 * 60 * 1000;
-    const recoveryHash = window.location.hash.slice(1);
-    const recoveryHashParams = new URLSearchParams(recoveryHash);
     const recoverySearchParams = new URLSearchParams(window.location.search);
-    const recoveryReferrer = document.referrer || "";
-    const recoveryCallbackPresent =
-      recoveryHashParams.get("type") === "recovery" ||
-      recoveryHashParams.has("reset-password") ||
+    const recoveryHashParams = new URLSearchParams(window.location.hash.slice(1));
+    let recoveryFlowActive =
       recoverySearchParams.has("reset-password") ||
       recoverySearchParams.get("type") === "recovery" ||
-      recoverySearchParams.has("code") ||
-      (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
+      recoveryHashParams.has("reset-password") ||
+      recoveryHashParams.get("type") === "recovery";
 
-    if (recoveryCallbackPresent) {
-      recoveryFlowActive = true;
-      setPasswordRecoveryMode(true);
-    }
+    const recoveryStorageKey = "bethag-password-recovery-active-v2";
+    const readRecoveryMarker = () => {
+      try {
+        const raw = localStorage.getItem(recoveryStorageKey);
+        if (!raw) return null;
+        const marker = JSON.parse(raw);
+        if (!marker || typeof marker.createdAt !== "number") return null;
+        if (Date.now() - marker.createdAt > 30 * 60 * 1000) {
+          localStorage.removeItem(recoveryStorageKey);
+          return null;
+        }
+        return marker as { userId?: string; email?: string; createdAt: number };
+      } catch {
+        localStorage.removeItem(recoveryStorageKey);
+        return null;
+      }
+    };
 
-    const applySupabaseSession = async (
-      session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null
-    ) => {
+    const clearRecoveryMarker = () => {
+      localStorage.removeItem(recoveryStorageKey);
+    };
+
+    const sessionIsRecovery = (session: any) => {
+      try {
+        const token = String(session?.access_token || "");
+        const payload = token.split(".")[1];
+        if (!payload) return false;
+        const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const decoded = decodeURIComponent(
+          atob(normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "="))
+            .split("")
+            .map((char) => "%" + ("00" + char.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
+        const claims = JSON.parse(decoded);
+        return Array.isArray(claims?.amr) && claims.amr.some((item: any) => item?.method === "recovery");
+      } catch {
+        return false;
+      }
+    };
+
+    const applySupabaseSession = async (session: any) => {
       if (cancelled) return;
 
-      // A password-recovery session must never be routed through the normal
-      // workspace authorization flow. Supabase can consume the URL callback
-      // before React registers onAuthStateChange, so the sessionStorage marker
-      // is the authoritative client-side recovery signal.
+      const recoverySession = sessionIsRecovery(session);
+      if (recoverySession) {
+        recoveryFlowActive = true;
+        setPasswordRecoveryMode(true);
+        try {
+          localStorage.setItem(
+            recoveryStorageKey,
+            JSON.stringify({
+              userId: session?.user?.id || "",
+              email: session?.user?.email || "",
+              createdAt: Date.now(),
+            })
+          );
+        } catch {}
+        return;
+      }
+
       if (recoveryFlowActive) {
         setPasswordRecoveryMode(true);
         return;
+      }
+
+      if (readRecoveryMarker()) {
+        clearRecoveryMarker();
       }
 
       if (!session?.user) {
@@ -3081,10 +3119,7 @@ function App() {
           }
         }
 
-        const access = await resolveSupabaseAccess(
-          session.user.id,
-          normalizedEmail
-        );
+        const access = await resolveSupabaseAccess(session.user.id, normalizedEmail);
 
         if (!access || cancelled) {
           setSessionRole(null);
@@ -3111,68 +3146,54 @@ function App() {
         }));
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled && !recoveryCallbackPresent) {
+        if (!cancelled && !recoveryFlowActive) {
           setSessionRole(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
         }
-        if (recoveryCallbackPresent) {
+        if (recoveryFlowActive) {
           setPasswordRecoveryMode(true);
         }
       }
     };
 
     const initializeAuth = async () => {
-      // Auth URL handling is intentionally explicit. With detectSessionInUrl
-      // disabled, React can inspect the callback before Supabase consumes it.
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const authCode = searchParams.get("code");
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
-      const hasRecoveryMarker =
-        searchParams.has("reset-password") ||
-        searchParams.get("type") === "recovery" ||
-        hashParams.has("reset-password") ||
-        hashParams.get("type") === "recovery";
-
       try {
-        if (authCode) {
-          const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-          if (error) throw error;
-        } else if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (error) throw error;
-        }
-
-        if (hasRecoveryMarker) {
-          recoveryFlowActive = true;
-          setPasswordRecoveryMode(true);
-          try {
-            const cleanUrl = new URL(window.location.href);
-            cleanUrl.search = "";
-            cleanUrl.hash = "";
-            window.history.replaceState({}, document.title, cleanUrl.pathname);
-          } catch {
-            // URL cleanup is cosmetic.
-          }
-          return;
-        }
+        const { error } = await supabase.auth.initialize();
+        if (error) throw error;
 
         const { data } = await supabase.auth.getSession();
-        if (recoveryFlowActive) {
-          setPasswordRecoveryMode(true);
-          return;
+        if (!cancelled) {
+          const recoverySession = sessionIsRecovery(data.session);
+          if (recoverySession || recoveryFlowActive) {
+            recoveryFlowActive = true;
+            setPasswordRecoveryMode(true);
+            if (recoverySession) {
+              try {
+                localStorage.setItem(
+                  recoveryStorageKey,
+                  JSON.stringify({
+                    userId: data.session?.user?.id || "",
+                    email: data.session?.user?.email || "",
+                    createdAt: Date.now(),
+                  })
+                );
+              } catch {}
+            }
+            try {
+              const cleanUrl = new URL(window.location.href);
+              cleanUrl.search = "";
+              cleanUrl.hash = "";
+              window.history.replaceState({}, document.title, cleanUrl.pathname);
+            } catch {}
+            return;
+          }
+          await applySupabaseSession(data.session);
         }
-        await applySupabaseSession(data.session);
       } catch (error) {
-        console.error("BETHAG auth callback handling failed", error);
-        if (hasRecoveryMarker) {
-          recoveryFlowActive = true;
+        console.error("BETHAG auth initialization failed", error);
+        if (recoveryFlowActive) {
           setPasswordRecoveryMode(true);
           return;
         }
@@ -3183,14 +3204,23 @@ function App() {
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" || sessionIsRecovery(session)) {
         recoveryFlowActive = true;
         setPasswordRecoveryMode(true);
+        try {
+          localStorage.setItem(
+            recoveryStorageKey,
+            JSON.stringify({
+              userId: session?.user?.id || "",
+              email: session?.user?.email || "",
+              createdAt: Date.now(),
+            })
+          );
+        } catch {}
         return;
       }
 
       if (recoveryFlowActive) {
-        recoveryFlowActive = true;
         setPasswordRecoveryMode(true);
         return;
       }
@@ -3200,8 +3230,9 @@ function App() {
       }, 0);
     });
 
-    // Register the listener before processing the callback so manual
-    // exchange/setSession cannot race the React auth state.
+    // Supabase Auth is deliberately initialized only after the listener exists.
+    // This prevents the recovery callback from being consumed before React can
+    // observe PASSWORD_RECOVERY/SIGNED_IN.
     void initializeAuth();
 
     return () => {
