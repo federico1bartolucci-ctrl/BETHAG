@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(36);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -276,6 +276,159 @@ select is(
      and indexname = 'condominium_work_documents_workspace_document_idx'),
   1,
   'La ricerca dei documenti collegati al lavoro deve avere l'indice di workspace'
+);
+
+
+-- Member-transfer RPC must allow a share transfer while preserving security and serialization.
+select ok(
+  position('ACTIVE_INCOMING_OWNER_ALREADY_PRESENT' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) = 0,
+  'Il trasferimento di una quota non deve essere bloccato dalla presenza di altri comproprietari'
+);
+
+select ok(
+  position('for update' in lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  ))) > 0,
+  'La conferma del trasferimento deve serializzare le operazioni sulla stessa unità'
+);
+
+select ok(
+  position('ownerMemberIds' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'La conferma del trasferimento deve riallineare i riferimenti legacy dei proprietari'
+);
+
+select ok(
+  (length(lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  ))) - length(replace(lower(pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )), '(i.due_date is null or i.due_date<=p_transfer_date)', ''))) > 0,
+  'Il riepilogo contabile del subentro deve includere rate senza data certa'
+);
+
+select ok(
+  position('allocations_residual' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'Il riepilogo contabile deve registrare il residuo delle ripartizioni'
+);
+
+
+select ok(
+  position('TRANSFER_FINANCIAL_POSITIONS_OPEN' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_installments' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_expense_allocations' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('condominium_fiscal_carryovers' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'La chiusura deve bloccare il subentro finché rate, ripartizioni e riporti fiscali hanno residui'
+);
+
+select ok(
+  position('v_transfer_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0
+  and position('i.due_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0
+  and position('a.due_date' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0,
+  'La chiusura deve applicare la data di subentro al controllo di rate e ripartizioni'
+);
+
+select ok(
+  position('(i.due_date is null or i.due_date<=v_transfer_date)' in lower(pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  ))) > 0,
+  'Le rate senza data certa devono restare bloccanti fino a riconciliazione'
+);
+
+select ok(
+  position('undated_allocations_and_fiscal_carryovers_reconciled' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'Le posizioni prive di data certa devono essere riconciliate prima della chiusura'
+);
+
+select ok(
+  position('status=''Chiuso''' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('closed_at' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0
+  and position('closed_by' in pg_get_functiondef(
+    'private.close_condominium_member_transfer(uuid)'::regprocedure
+  )) > 0,
+  'La chiusura deve registrare stato e audit temporale e utente'
+);
+
+select ok(
+  position('(i.due_date is null or i.due_date<=p_transfer_date)' in lower(pg_get_functiondef(
+    'public.preview_condominium_member_transfer(uuid,uuid,date)'::regprocedure
+  ))) > 0,
+  'L’anteprima del subentro deve includere le rate senza data certa'
+);
+
+select ok(
+  position('(i.due_date is null or i.due_date<=t.transfer_date)' in lower(pg_get_functiondef(
+    'public.get_member_transfer_accounting_snapshot(uuid)'::regprocedure
+  ))) > 0
+  and position('allocations_residual' in pg_get_functiondef(
+    'public.get_member_transfer_accounting_snapshot(uuid)'::regprocedure
+  )) > 0,
+  'Il dettaglio contabile deve includere rate non datate e residui delle ripartizioni'
+);
+
+select ok(
+  position('jsonb_array_elements' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0
+  and position('v_outgoing_legacy_id::text' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0
+  and position('jsonb_build_array(v_incoming_legacy_id)' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'Il riallineamento deve sostituire il solo titolare uscente e conservare gli altri riferimenti'
+);
+
+select ok(
+  position('ACTIVE_INCOMING_OWNER_ALREADY_PRESENT' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) = 0,
+  'Il subentro del singolo comproprietario non deve essere bloccato dalla presenza degli altri titolari'
+);
+
+select ok(
+  position('position_status' in pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  )) > 0
+  and position('current_owner' in pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  )) > 0
+  and position('active=false' in lower(pg_get_functiondef(
+    'private.sync_portal_after_member_change()'::regprocedure
+  ))) > 0,
+  'Il trigger Portal deve disattivare l’accesso dei titolari trasferiti o archiviati'
+);
+
+select ok(
+  position('OUTGOING_MEMBER_LEGACY_ID_MISSING' in pg_get_functiondef(
+    'private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure
+  )) > 0,
+  'Il subentro deve interrompersi se manca l’identificativo legacy del titolare uscente'
 );
 
 select * from finish();

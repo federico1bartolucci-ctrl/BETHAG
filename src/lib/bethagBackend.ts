@@ -121,12 +121,14 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     const { millesimi: _legacyMillesimi, ...memberData } = row.data ?? {};
     return {
       ...memberData,
+      dbId: row.id,
       id: row.legacy_id,
       condominiumId:
         condominiumLegacyByDbId.get(row.condominium_id) ??
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      active: row.active ?? true,
     };
   });
 
@@ -138,7 +140,16 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     // qualifica condominiale, altrimenti un refresh può perdere i proprietari
     // associati all'unità.
     const condominiumRole = String(member.data?.role ?? member.role ?? "").trim();
-    if (condominiumRole !== "Proprietario" || !member.unitId) return;
+    const currentOwner = member.current_owner ?? member.data?.current_owner ?? true;
+    const positionStatus = String(member.position_status ?? member.data?.position_status ?? "Attivo").trim();
+    const isCurrentOwner = currentOwner !== false && String(currentOwner).toLowerCase() !== "false";
+    if (
+      condominiumRole !== "Proprietario" ||
+      !member.unitId ||
+      member.active === false ||
+      !isCurrentOwner ||
+      positionStatus === "In chiusura"
+    ) return;
     const current = ownerIdsByUnit.get(String(member.unitId)) ?? [];
     if (!current.includes(member.id)) current.push(member.id);
     ownerIdsByUnit.set(String(member.unitId), current);
@@ -161,6 +172,10 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
     const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
     const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
+    const currentOwnerIds = new Set(linkedOwnerIds.map((id) => String(id)));
+    // I riferimenti legacy non devono reintrodurre ex proprietari o anagrafiche
+    // inattive dopo un refresh: conserviamo solo titolari correnti verificati.
+    const verifiedStoredOwnerIds = storedOwnerIds.filter((id: unknown) => currentOwnerIds.has(String(id)));
     return {
       ...row.data,
       id: row.id,
@@ -179,7 +194,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      ownerMemberIds: Array.from(new Set([...verifiedStoredOwnerIds, ...linkedOwnerIds])),
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
@@ -2281,5 +2296,80 @@ export async function updateCondominiumRequestStatus(
       .eq("legacy_id", request.id);
 
     if (error) throw error;
+  });
+}
+
+/**
+ * Registra il subentro del titolare di un'unita tramite la RPC transazionale
+ * Supabase. La procedura server valida autorizzazioni e coerenza dei dati.
+ * Non crea autonomamente l'accesso al Portale per il nuovo titolare.
+ */
+export async function confirmCondominiumMemberTransfer(input: {
+  unitId: string;
+  outgoingMemberId: string;
+  incomingName: string;
+  incomingEmail?: string | null;
+  incomingUserId?: string | null;
+  transferDate: string;
+  transferType?: string;
+  notes?: string;
+  data?: Record<string, unknown>;
+}): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  if (!isUuid(input.unitId) || !isUuid(input.outgoingMemberId)) {
+    throw new Error("Identificativo dell'unita o del titolare uscente non valido.");
+  }
+  if (input.incomingUserId && !isUuid(input.incomingUserId)) {
+    throw new Error("Identificativo dell'account del nuovo titolare non valido.");
+  }
+  const parsedTransferDate = /^\d{4}-\d{2}-\d{2}$/.test(input.transferDate)
+    ? new Date(`${input.transferDate}T00:00:00.000Z`)
+    : null;
+  if (!parsedTransferDate || Number.isNaN(parsedTransferDate.getTime()) ||
+      parsedTransferDate.toISOString().slice(0, 10) !== input.transferDate) {
+    throw new Error("La data del subentro non e una data valida nel formato AAAA-MM-GG.");
+  }
+  if (!input.incomingName.trim()) {
+    throw new Error("Il nominativo del nuovo titolare e obbligatorio.");
+  }
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: input.unitId,
+      p_outgoing_member_id: input.outgoingMemberId,
+      p_incoming_name: input.incomingName.trim(),
+      p_incoming_email: input.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: input.incomingUserId || null,
+      p_transfer_date: input.transferDate,
+      p_transfer_type: input.transferType || "Vendita",
+      p_notes: input.notes || "",
+      p_data: input.data || {},
+    });
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
+  });
+}
+
+/**
+ * Chiude il rapporto contabile del titolare uscente dopo aver verificato
+ * che non restino partite aperte. La verifica finale e svolta dal database.
+ */
+export async function closeCondominiumMemberTransfer(transferId: string): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transferId)) {
+    throw new Error("Identificativo del subentro non valido.");
+  }
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
+      p_transfer_id: transferId,
+    });
+    if (error) throw error;
+    return data === true;
   });
 }
