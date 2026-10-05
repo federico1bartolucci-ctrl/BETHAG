@@ -10186,14 +10186,17 @@ function CondominiumDetails(
                           >
                             Modifica dati
                           </button>
-                          {member.role === "Proprietario" && member.active && member.unitId && (
+                          {member.role === "Proprietario" && member.active && (
                             <button
                               className="primary-button small"
                               type="button"
                               onClick={() => {
-                                const transferUnit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(member.unitId));
+                                const transferUnit = condominiumUnits.find((u: CondominiumUnit) =>
+                                  (member.unitId && String(u.id) === String(member.unitId)) ||
+                                  String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
+                                );
                                 if (!transferUnit) {
-                                  alert("L'unità immobiliare del proprietario non è disponibile.");
+                                  alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                                   return;
                                 }
                                 setSelectedUnit(null);
@@ -10274,14 +10277,17 @@ function CondominiumDetails(
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
                   Modifica dati
                 </button>
-                {member.role === "Proprietario" && member.active && member.unitId && (
+                {member.role === "Proprietario" && member.active && (
                   <button
                     className="primary-button small"
                     type="button"
                     onClick={() => {
-                      const unit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(member.unitId));
+                      const unit = condominiumUnits.find((u: CondominiumUnit) =>
+                        (member.unitId && String(u.id) === String(member.unitId)) ||
+                        String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
+                      );
                       if (!unit) {
-                        alert("L'unità immobiliare del proprietario non è disponibile.");
+                        alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                         return;
                       }
                       setSelectedMemberTransferOutgoing(member);
@@ -10342,14 +10348,17 @@ function CondominiumDetails(
             >
               Modifica dati
             </button>
-            {selectedMemberDetail.role === "Proprietario" && selectedMemberDetail.active && selectedMemberDetail.unitId && (
+            {selectedMemberDetail.role === "Proprietario" && selectedMemberDetail.active && (
               <button
                 className="primary-button"
                 type="button"
                 onClick={() => {
-                  const unit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(selectedMemberDetail.unitId));
+                  const unit = condominiumUnits.find((u: CondominiumUnit) =>
+                    (selectedMemberDetail.unitId && String(u.id) === String(selectedMemberDetail.unitId)) ||
+                    String(u.unitCode ?? "").trim().toLowerCase() === String(selectedMemberDetail.apartment ?? "").trim().toLowerCase()
+                  );
                   if (!unit) {
-                    alert("L'unità immobiliare del proprietario non è disponibile.");
+                    alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                     return;
                   }
                   const member = selectedMemberDetail;
