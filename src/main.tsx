@@ -2799,12 +2799,12 @@ function App() {
   const resetPassword = async (email: string) => {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
 
-    sessionStorage.setItem("bethag-password-recovery-pending", "1");
+    localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     const redirectTo = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin).toString();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) {
-      sessionStorage.removeItem("bethag-password-recovery-pending");
+      localStorage.removeItem("bethag-password-recovery-pending");
       throw new Error(error.message || "Impossibile inviare il link di recupero password.");
     }
   };
@@ -2815,7 +2815,7 @@ function App() {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
 
-    sessionStorage.removeItem("bethag-password-recovery-pending");
+    localStorage.removeItem("bethag-password-recovery-pending");
     setPasswordRecoveryMode(false);
     setSessionRole(null);
     setSessionEmail("");
@@ -2979,7 +2979,11 @@ function App() {
     let cancelled = false;
     let recoveryFlowActive = false;
 
-    const recoveryPending = sessionStorage.getItem("bethag-password-recovery-pending") === "1";
+    const recoveryPendingRaw = localStorage.getItem("bethag-password-recovery-pending");
+    const recoveryPendingTimestamp = recoveryPendingRaw ? Number(recoveryPendingRaw) : 0;
+    const recoveryPending = Number.isFinite(recoveryPendingTimestamp) &&
+      recoveryPendingTimestamp > 0 &&
+      Date.now() - recoveryPendingTimestamp < 30 * 60 * 1000;
     const recoveryCallbackPresent =
       recoveryPending ||
       window.location.hash.includes("type=recovery") ||
@@ -3094,29 +3098,9 @@ function App() {
     };
 
     const initializeAuth = async () => {
-      // detectSessionInUrl normally exchanges the PKCE callback for us.
-      // If a code is still present when this effect runs, complete the
-      // exchange explicitly before reading the resulting session.
-      const authCode = new URL(window.location.href).searchParams.get("code");
-      if (authCode) {
-        const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-        if (error) {
-          console.error("BETHAG password recovery code exchange failed", error);
-          setPasswordRecoveryMode(true);
-          return;
-        }
-        recoveryFlowActive = true;
-        setPasswordRecoveryMode(true);
-        try {
-          const cleanUrl = new URL(window.location.href);
-          cleanUrl.searchParams.delete("code");
-          cleanUrl.searchParams.delete("type");
-          window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
-        } catch {
-          // URL cleanup is cosmetic; the recovery session remains valid.
-        }
-      }
-
+      // supabase-js is configured with detectSessionInUrl=true, so the PKCE
+      // authorization code is exchanged automatically by the client. We only
+      // use the recovery marker/event to keep the UI in recovery mode.
       const { data } = await supabase.auth.getSession();
       if (recoveryFlowActive) {
         setPasswordRecoveryMode(true);
@@ -3132,12 +3116,18 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         recoveryFlowActive = true;
-        sessionStorage.setItem("bethag-password-recovery-pending", "1");
+        localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
         setPasswordRecoveryMode(true);
         return;
       }
 
-      if (recoveryFlowActive || sessionStorage.getItem("bethag-password-recovery-pending") === "1") {
+      const pendingRecoveryRaw = localStorage.getItem("bethag-password-recovery-pending");
+      const pendingRecoveryTimestamp = pendingRecoveryRaw ? Number(pendingRecoveryRaw) : 0;
+      const pendingRecovery = Number.isFinite(pendingRecoveryTimestamp) &&
+        pendingRecoveryTimestamp > 0 &&
+        Date.now() - pendingRecoveryTimestamp < 30 * 60 * 1000;
+
+      if (recoveryFlowActive || pendingRecovery) {
         recoveryFlowActive = true;
         setPasswordRecoveryMode(true);
         return;
