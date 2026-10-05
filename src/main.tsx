@@ -308,6 +308,8 @@ type CondominiumMemberTransferForm = {
   outgoingMemberId: number;
   incomingFirstName: string;
   incomingLastName: string;
+  incomingFiscalCode: string;
+  incomingPhone: string;
   incomingEmail: string;
   transferDate: string;
   transferType: MemberTransferType;
@@ -1069,6 +1071,8 @@ const emptyMemberTransferForm: CondominiumMemberTransferForm = {
   outgoingMemberId: 0,
   incomingFirstName: "",
   incomingLastName: "",
+  incomingFiscalCode: "",
+  incomingPhone: "",
   incomingEmail: "",
   transferDate: localISODate(),
   transferType: "Vendita",
@@ -5407,6 +5411,14 @@ function App() {
       alert("Inserisci nome e cognome del nuovo proprietario.");
       return;
     }
+    if (form.incomingFiscalCode.trim() && form.incomingFiscalCode.trim().length !== 16) {
+      alert("Il codice fiscale del nuovo proprietario deve contenere 16 caratteri.");
+      return;
+    }
+    if (!validateEmail(form.incomingEmail)) {
+      alert("Controlla l'indirizzo e-mail del nuovo proprietario.");
+      return;
+    }
     if (!form.transferDate) {
       alert("Inserisci la data del rogito/subentro.");
       return;
@@ -5429,8 +5441,8 @@ function App() {
         {
           firstName: form.incomingFirstName.trim(),
           lastName: form.incomingLastName.trim(),
-          fiscalCode: "",
-          phone: "",
+          fiscalCode: form.incomingFiscalCode.trim().toUpperCase(),
+          phone: form.incomingPhone.trim(),
           apartment: unit.unitCode,
           role: "Proprietario",
         }
@@ -16082,7 +16094,9 @@ function CondominiumMemberTransferForm({ value, setValue, outgoingMember, unit, 
     <div className="form-grid">
       <Field label="Nome nuovo proprietario *" value={value.incomingFirstName} onChange={(v: string) => set("incomingFirstName", v)} />
       <Field label="Cognome nuovo proprietario *" value={value.incomingLastName} onChange={(v: string) => set("incomingLastName", v)} />
-      <Field label="E-mail" value={value.incomingEmail} onChange={(v: string) => set("incomingEmail", v)} />
+      <Field label="Codice fiscale" value={value.incomingFiscalCode} onChange={(v: string) => set("incomingFiscalCode", normalizeByLabel(v, "Codice fiscale"))} />
+      <Field label="Telefono" value={value.incomingPhone} onChange={(v: string) => set("incomingPhone", v)} />
+      <Field label="E-mail" type="email" value={value.incomingEmail} onChange={(v: string) => set("incomingEmail", v)} />
       <Field label="Data rogito / subentro *" type="date" value={value.transferDate} onChange={(v: string) => set("transferDate", v)} />
       <SelectField label="Tipo subentro" value={value.transferType} onChange={(v: string) => set("transferType", v)} options={[
         ["Vendita","Vendita"],["Acquisto","Acquisto"],["Donazione","Donazione"],["Successione","Successione"],["Altro","Altro"],
