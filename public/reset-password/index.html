@@ -57,7 +57,7 @@ form.addEventListener("submit",async e=>{
  const {error}=await supabase.auth.updateUser({password});
  if(error){showError(error.message);save.disabled=false;save.textContent="Salva nuova password";return}
  await supabase.auth.signOut({scope:"local"});form.hidden=true;showOk("Password aggiornata correttamente. Ora puoi accedere a BETHAG.");
- setTimeout(()=>{location.href="../../";},900);
+ setTimeout(()=>{location.href="../";},900);
 });
 </script>
 </body>
