@@ -2954,7 +2954,8 @@ function App() {
 
     const recoveryCallbackPresent =
       window.location.hash.includes("type=recovery") ||
-      new URLSearchParams(window.location.search).get("type") === "recovery";
+      window.location.search.includes("type=recovery") ||
+      window.location.search.includes("code=");
 
     if (recoveryCallbackPresent) {
       setPasswordRecoveryMode(true);
