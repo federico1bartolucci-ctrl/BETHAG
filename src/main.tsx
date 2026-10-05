@@ -62,6 +62,7 @@ type Page =
   | "portale"
   | "abbonamento"
   | "amministratore"
+  | "impostazioni"
   | "collaboratori"
   | "aiuto";
 
@@ -2135,6 +2136,64 @@ function bethagInstallErrorDialog() {
     document.body.appendChild(overlay);
   };
   return () => { window.alert = nativeAlert; };
+}
+
+
+function SettingsPage({
+  sessionEmail,
+  workspaceId,
+  plan,
+  onNavigate,
+  onLogout,
+}: {
+  sessionEmail: string;
+  workspaceId: string;
+  plan: PlanId;
+  onNavigate: (page: Page) => void;
+  onLogout: () => void;
+}) {
+  return (
+    <>
+      <PageHeader eyebrow="Configurazione" title="Impostazioni" />
+      <div className="dashboard-grid">
+        <section className="card">
+          <SectionTitle title="Account e sicurezza" />
+          <div className="detail-grid">
+            <Detail label="E-mail account" value={sessionEmail || "Non disponibile"} />
+            <Detail label="Workspace" value={workspaceId || "Non disponibile"} />
+            <Detail label="Piano attivo" value={PLAN_NAMES[plan]} />
+          </div>
+          <div className="button-row" style={{ marginTop: 18 }}>
+            <button className="secondary-button" type="button" onClick={() => onNavigate("amministratore")}>
+              Apri Profilo
+            </button>
+            <button className="secondary-button" type="button" onClick={onLogout}>
+              Esci
+            </button>
+          </div>
+        </section>
+
+        <section className="card">
+          <SectionTitle title="Preferenze piattaforma" />
+          <div className="permission-box">
+            <b>Sessione e accesso</b>
+            <span>Le impostazioni di autenticazione e sicurezza dell'account vengono gestite tramite l'accesso BETHAG.</span>
+          </div>
+          <div className="permission-box">
+            <b>Workspace</b>
+            <span>Le configurazioni operative sono associate al workspace dell'amministratore.</span>
+          </div>
+          <div className="permission-box">
+            <b>Abbonamento</b>
+            <span>Il piano e le funzionalità disponibili sono gestiti nella sezione Piano e upgrade.</span>
+          </div>
+          <button className="secondary-button" type="button" onClick={() => onNavigate("abbonamento")}>
+            Vai a Piano e upgrade
+          </button>
+        </section>
+      </div>
+    </>
+  );
 }
 
 function App() {
@@ -7247,6 +7306,16 @@ function App() {
               </NavButton>
             )}
 
+            {canAccessPage("impostazioni") && (
+              <NavButton
+                active={page === "impostazioni"}
+                onClick={() => navigate("impostazioni")}
+              >
+                <span className="nav-icon"><AppIcon name="settings" size={18} /></span>
+                <span>Impostazioni</span>
+              </NavButton>
+            )}
+
             {canAccessPage("aiuto") && (
               <NavButton
                 active={page === "aiuto"}
@@ -7296,10 +7365,10 @@ function App() {
               className="icon-button"
               onClick={() =>
                 navigate(
-                  isAdministrator ? "amministratore" : "aiuto"
+                  isAdministrator ? "impostazioni" : "aiuto"
                 )
               }
-              aria-label={isAdministrator ? "Apri profilo amministratore" : "Apri Aiuto"}
+              aria-label={isAdministrator ? "Apri impostazioni" : "Apri Aiuto"}
             >
               <AppIcon name={isAdministrator ? "settings" : "help"} size={19} />
             </button>
@@ -7851,6 +7920,16 @@ function App() {
             />
           )}
 
+          {page === "impostazioni" && (
+            <SettingsPage
+              sessionEmail={sessionEmail}
+              workspaceId={profile.workspaceId}
+              plan={subscription.plan}
+              onNavigate={navigate}
+              onLogout={logout}
+            />
+          )}
+
           {page === "amministratore" && (
             <ProfilePage
               profile={
@@ -7936,18 +8015,18 @@ function App() {
 
         <button
           className={
-            page === (isAdministrator ? "amministratore" : "aiuto")
+            page === (isAdministrator ? "impostazioni" : "aiuto")
               ? "mobile-bottom-active"
               : ""
           }
           onClick={() =>
             navigate(
-              isAdministrator ? "amministratore" : "aiuto"
+              isAdministrator ? "impostazioni" : "aiuto"
             )
           }
         >
-          <span><AppIcon name={isAdministrator ? "user" : "help"} size={19} /></span>
-          <small>{isAdministrator ? "Profilo" : "Aiuto"}</small>
+          <span><AppIcon name={isAdministrator ? "settings" : "help"} size={19} /></span>
+          <small>{isAdministrator ? "Impostazioni" : "Aiuto"}</small>
         </button>
 
       </div>
@@ -8023,6 +8102,7 @@ function App() {
                   ["abbonamento", "Piano e upgrade", "star"],
                   ["collaboratori", "Collaboratori", "users"],
                   ["amministratore", "Amministratore", "user"],
+                  ["impostazioni", "Impostazioni", "settings"],
                   ["aiuto", "Aiuto", "help"],
                 ] as [
                   Page,
