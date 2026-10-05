@@ -2800,7 +2800,11 @@ function App() {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
 
     localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
-    const redirectTo = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin).toString();
+    const redirectToUrl = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin);
+    // Keep an explicit recovery marker in the callback URL. This survives
+    // opening the link from Mail/Safari even when browser storage is isolated.
+    redirectToUrl.hash = "reset-password=1";
+    const redirectTo = redirectToUrl.toString();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) {
@@ -2984,9 +2988,12 @@ function App() {
     const recoveryPending = Number.isFinite(recoveryPendingTimestamp) &&
       recoveryPendingTimestamp > 0 &&
       Date.now() - recoveryPendingTimestamp < 30 * 60 * 1000;
+    const recoveryHash = window.location.hash.slice(1);
+    const recoveryHashParams = new URLSearchParams(recoveryHash);
     const recoveryCallbackPresent =
       recoveryPending ||
-      window.location.hash.includes("type=recovery") ||
+      recoveryHashParams.get("type") === "recovery" ||
+      recoveryHashParams.has("reset-password") ||
       window.location.search.includes("type=recovery") ||
       window.location.search.includes("code=");
 
