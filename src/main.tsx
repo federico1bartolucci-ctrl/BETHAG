@@ -1939,7 +1939,7 @@ function bethagIsNumericField(meta: string, input: HTMLInputElement): boolean {
   if (input.type === "number") return true;
   // "Numero polizza", "numero pratica", ecc. possono essere alfanumerici:
   // rendiamo numerici solo i campi che rappresentano effettivamente valori numerici.
-  return /(cap|codice postale|telefono|cellulare|numero civico|civico|quantità|quantita|importo|premio|franchigia|millesimi|percentuale|quota|progressivo|anno|giorni|ore|metri|superficie|prezzo|totale)/i.test(meta);
+  return /(cap|codice postale|telefono|cellulare|quantità|quantita|importo|premio|franchigia|millesimi|percentuale|quota|progressivo|anno|giorni|ore|metri|superficie|prezzo|totale)/i.test(meta);
 }
 
 function bethagInstallGlobalFieldRules() {
