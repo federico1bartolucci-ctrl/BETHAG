@@ -1,5 +1,5 @@
 -- Reconcile portal member linkage and current condominium archive storage.
-create or replace function public.complete_portal_registration(
+create or replace function private.complete_portal_registration(
   p_full_name text, p_fiscal_code text default null, p_condominium_name text default null
 ) returns jsonb language plpgsql security definer set search_path to '' as $function$
 declare v_user_id uuid:=auth.uid(); v_email text; v_member public.condominium_members%rowtype;
@@ -77,3 +77,23 @@ begin
  returning id into v_transfer_id;
  return v_transfer_id;
 end;$function$;
+
+
+-- Keep the exposed RPC invoker-only; privileged work remains in private.
+create or replace function public.complete_portal_registration(
+  p_full_name text,
+  p_fiscal_code text default null,
+  p_condominium_name text default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path to 'public'
+as $function$
+begin
+  return private.complete_portal_registration($1,$2,$3);
+end;
+$function$;
+
+revoke execute on function public.complete_portal_registration(text,text,text) from anon, public;
+grant execute on function public.complete_portal_registration(text,text,text) to authenticated;
