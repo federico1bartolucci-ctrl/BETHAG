@@ -10152,9 +10152,57 @@ function CondominiumDetails(
               <Detail label="Persone associate" value={String(detailPeople.length)} />
             </div>
             <div className="notes">
-              <div className="detail-label">Persone associate</div>
+              <div className="detail-label">Proprietari e inquilini associati</div>
               {detailPeople.length ? (
-                <p>{detailPeople.map((m: CondominiumMember) => `${m.firstName} ${m.lastName} · ${m.role}${m.email ? ` · ${m.email}` : ""}`).join(" | ")}</p>
+                <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                  {detailPeople.map((member: CondominiumMember) => (
+                    <div key={member.id} className="request-card" style={{ margin: 0 }}>
+                      <div className="request-main">
+                        <b>{member.firstName} {member.lastName}</b>
+                        <span>{member.role}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</span>
+                        <small>{member.phone || "Telefono non inserito"} · {member.fiscalCode || "Codice fiscale non inserito"}</small>
+                      </div>
+                      {isAdministrator && (
+                        <div className="request-actions">
+                          <button
+                            className="secondary-button small"
+                            type="button"
+                            onClick={() => {
+                              setSelectedUnit(null);
+                              onEditMember(member);
+                            }}
+                          >
+                            Modifica dati
+                          </button>
+                          {member.role === "Proprietario" && member.active && member.unitId && (
+                            <button
+                              className="primary-button small"
+                              type="button"
+                              onClick={() => {
+                                const transferUnit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(member.unitId));
+                                if (!transferUnit) {
+                                  alert("L'unità immobiliare del proprietario non è disponibile.");
+                                  return;
+                                }
+                                setSelectedUnit(null);
+                                setSelectedMemberTransferOutgoing(member);
+                                setMemberTransferForm({
+                                  ...emptyMemberTransferForm,
+                                  condominiumId: member.condominiumId,
+                                  unitId: String(transferUnit.id),
+                                  outgoingMemberId: member.id,
+                                });
+                                openModal("member-transfer");
+                              }}
+                            >
+                              Subentro
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p>Nessuna persona associata.</p>
               )}
@@ -10178,7 +10226,7 @@ function CondominiumDetails(
 
       <section className="condominium-section-card">
         <div className="section-title">
-          <div><div className="eyebrow">Anagrafica</div><h2>Condòmini</h2><p className="section-subtitle">Gestisci anagrafica, recapiti, interno e qualifica.</p></div>
+          <div><div className="eyebrow">Anagrafica</div><h2>Proprietari e inquilini</h2><p className="section-subtitle">Gestisci dati anagrafici, recapiti, associazione all'unità e subentri di proprietà.</p></div>
           <div className="button-row compact condominium-members-actions">
             <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>📢 Nuova comunicazione</button>
             <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
