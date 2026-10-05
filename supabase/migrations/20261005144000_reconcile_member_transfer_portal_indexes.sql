@@ -1,0 +1,14 @@
+begin;
+create index if not exists condominium_member_transfers_closed_by_idx on public.condominium_member_transfers(closed_by);
+create index if not exists condominium_member_transfers_condo_date_idx on public.condominium_member_transfers(condominium_id,transfer_date desc);
+create index if not exists condominium_member_transfers_created_by_idx on public.condominium_member_transfers(created_by);
+create index if not exists condominium_member_transfers_incoming_member_id_idx on public.condominium_member_transfers(incoming_member_id);
+create index if not exists condominium_member_transfers_outgoing_member_id_idx on public.condominium_member_transfers(outgoing_member_id);
+create index if not exists condominium_member_transfers_unit_date_idx on public.condominium_member_transfers(unit_id,transfer_date desc);
+create index if not exists condominium_member_transfers_workspace_id_idx on public.condominium_member_transfers(workspace_id);
+create unique index if not exists condominium_member_transfers_unit_date_confirmed_uidx on public.condominium_member_transfers(unit_id,transfer_date) where status in ('Confermato','Chiuso');
+create index if not exists portal_registration_requests_matched_member_id_idx on public.portal_registration_requests(matched_member_id);
+create index if not exists portal_registration_requests_requested_user_id_idx on public.portal_registration_requests(requested_user_id);
+create index if not exists portal_registration_requests_reviewed_by_idx on public.portal_registration_requests(reviewed_by);
+create index if not exists portal_registration_requests_email_idx on public.portal_registration_requests(lower(trim(email)));
+commit;
