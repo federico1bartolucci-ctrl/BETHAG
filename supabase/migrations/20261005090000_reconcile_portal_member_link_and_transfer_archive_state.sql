@@ -68,7 +68,7 @@ begin
  select coalesce(m.data,'{}'::jsonb) into v_out_data from public.condominium_members m where m.id=p_outgoing_member_id for update;
  update public.condominium_members set active=true,updated_at=now(),data=v_out_data||jsonb_build_object('position_status','In chiusura','current_owner',false,'subentro_date',p_transfer_date,'subentro_type',p_transfer_type) where id=p_outgoing_member_id;
  update public.portal_access set active=false,updated_at=now() where member_id=p_outgoing_member_id;
- update public.workspace_members set active=false,updated_at=now() where member_id=p_outgoing_member_id and role='resident';
+ update public.workspace_members set active=false,updated_at=now() where workspace_id=v_workspace and condominium_id=v_condominium and legacy_id=(select m.legacy_id from public.condominium_members m where m.id=p_outgoing_member_id) and role='resident';
  insert into public.condominium_members(condominium_id,user_id,name,email,role,active,permissions,data,unit_id,created_at,updated_at)
  values(v_condominium,p_incoming_user_id,trim(p_incoming_name),nullif(lower(trim(coalesce(p_incoming_email,''))),''),'resident',true,'{}'::jsonb,coalesce(p_data,'{}'::jsonb)||jsonb_build_object('role','Proprietario','position_status','Attivo','current_owner',true,'subentro_date',p_transfer_date,'subentro_type',p_transfer_type),p_unit_id,now(),now())
  returning id into v_incoming_id;
