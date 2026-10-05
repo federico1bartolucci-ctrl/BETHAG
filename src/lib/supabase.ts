@@ -18,7 +18,11 @@ export const supabase = supabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: true,
+        flowType: "implicit",
+        // React registers the auth listener before initialization so recovery
+        // callbacks cannot be consumed before the PASSWORD_RECOVERY event.
+        skipAutoInitialize: true,
       },
     })
   : null;
