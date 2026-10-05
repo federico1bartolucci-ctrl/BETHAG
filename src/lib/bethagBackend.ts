@@ -127,18 +127,26 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      // Lo stato effettivo è una colonna strutturata e deve prevalere
+      // sull'eventuale copia legacy contenuta nel JSON.
+      active: row.active ?? row.data?.active ?? true,
     };
   });
 
   const ownerIdsByUnit = new Map<string, number[]>();
+  const unitsWithStructuredMembers = new Set<string>();
   mappedCondominiumMembers.forEach((member: any) => {
+    if (member.unitId) unitsWithStructuredMembers.add(String(member.unitId));
     // La colonna tecnica role identifica il ruolo di accesso al portale
     // (es. resident), mentre la qualifica condominiale è conservata nel
     // JSON anagrafico. I proprietari devono quindi essere ricavati dalla
     // qualifica condominiale, altrimenti un refresh può perdere i proprietari
     // associati all'unità.
     const condominiumRole = String(member.data?.role ?? member.role ?? "").trim();
-    if (condominiumRole !== "Proprietario" || !member.unitId) return;
+    // Dopo un subentro la persona uscente resta nello storico, ma non deve
+    // essere riproposta tra i titolari correnti dell'unità.
+    const isCurrentOwner = member.current_owner !== false && member.position_status !== "In chiusura";
+    if (condominiumRole !== "Proprietario" || !member.unitId || member.active === false || !isCurrentOwner) return;
     const current = ownerIdsByUnit.get(String(member.unitId)) ?? [];
     if (!current.includes(member.id)) current.push(member.id);
     ownerIdsByUnit.set(String(member.unitId), current);
@@ -179,7 +187,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      // Quando esistono anagrafiche strutturate, queste prevalgono sul
+      // vecchio array JSON: evita che il precedente proprietario resti titolare.
+      ownerMemberIds: unitsWithStructuredMembers.has(String(row.id)) ? linkedOwnerIds : storedOwnerIds,
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
@@ -2281,5 +2291,164 @@ export async function updateCondominiumRequestStatus(
       .eq("legacy_id", request.id);
 
     if (error) throw error;
+  });
+}
+
+/**
+ * Registra il subentro di un nuovo titolare tramite la RPC autorizzata.
+ * Gli identificativi richiesti sono UUID del database, non ID legacy della UI.
+ * La RPC applica i controlli di ruolo e di coerenza lato server.
+ */
+export async function confirmCondominiumMemberTransfer(
+  workspaceId: string,
+  payload: {
+    unitId: string;
+    outgoingMemberId: string;
+    incomingName: string;
+    incomingEmail?: string | null;
+    incomingUserId?: string | null;
+    transferDate: string;
+    transferType?: string;
+    notes?: string;
+    data?: Record<string, any>;
+  }
+): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  if (!payload.unitId || !payload.outgoingMemberId) {
+    throw new Error("Unità e condòmino uscente sono obbligatori.");
+  }
+  if (!payload.incomingName.trim()) {
+    throw new Error("Il nominativo del nuovo titolare è obbligatorio.");
+  }
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(payload.transferDate) ||
+    !Number.isFinite(Date.parse(`${payload.transferDate}T00:00:00Z`)) ||
+    new Date(`${payload.transferDate}T00:00:00Z`).toISOString().slice(0, 10) !== payload.transferDate
+  ) {
+    throw new Error("Inserisci una data di subentro valida nel formato AAAA-MM-GG.");
+  }
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase!.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: payload.unitId,
+      p_outgoing_member_id: payload.outgoingMemberId,
+      p_incoming_name: payload.incomingName.trim(),
+      p_incoming_email: payload.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: payload.incomingUserId || null,
+      p_transfer_date: payload.transferDate,
+      p_transfer_type: payload.transferType?.trim() || "Vendita",
+      p_notes: payload.notes?.trim() || "",
+      p_data: payload.data ?? {},
+    });
+
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
+  });
+}
+
+/**
+ * Chiude un subentro già confermato. Il server rifiuta la chiusura finché
+ * permangono partite economiche aperte secondo le regole configurate.
+ */
+export async function closeCondominiumMemberTransfer(
+  workspaceId: string,
+  transferId: string
+): Promise<boolean> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  if (!transferId) throw new Error("Identificativo del subentro mancante.");
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase!.rpc("close_condominium_member_transfer", {
+      p_transfer_id: transferId,
+    });
+    if (error) throw error;
+    return data === true;
+  });
+}
+
+
+/**
+ * Variante per l'interfaccia legacy: risolve gli ID numerici del gestionale
+ * in UUID del database e verifica che la persona sia associata all'unità.
+ */
+export async function confirmCondominiumMemberTransferByLegacyIds(
+  workspaceId: string,
+  payload: {
+    condominiumLegacyId: number;
+    outgoingMemberLegacyId: number;
+    apartment: string;
+    incomingName: string;
+    incomingEmail?: string | null;
+    incomingUserId?: string | null;
+    transferDate: string;
+    transferType?: string;
+    notes?: string;
+    data?: Record<string, any>;
+  }
+): Promise<string> {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
+  const apartment = payload.apartment.trim();
+  if (!apartment) throw new Error("L'unità immobiliare è obbligatoria.");
+
+  if (!payload.incomingName.trim()) throw new Error("Il nome del nuovo proprietario è obbligatorio.");
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(payload.transferDate);
+  if (!dateMatch) throw new Error("La data del subentro deve essere nel formato AAAA-MM-GG.");
+  const transferDate = new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])));
+  if (transferDate.getUTCFullYear() !== Number(dateMatch[1]) || transferDate.getUTCMonth() !== Number(dateMatch[2]) - 1 || transferDate.getUTCDate() !== Number(dateMatch[3])) throw new Error("La data del subentro non è valida.");
+
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: condominiumError } = await supabase!
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", payload.condominiumLegacyId)
+      .maybeSingle();
+    if (condominiumError) throw condominiumError;
+    if (!condominium?.id) throw new Error("Condominio non trovato nel workspace.");
+
+    const { data: outgoing, error: outgoingError } = await supabase!
+      .from("condominium_members")
+      .select("id, condominium_id, unit_id, legacy_id")
+      .eq("condominium_id", condominium.id)
+      .eq("legacy_id", payload.outgoingMemberLegacyId)
+      .maybeSingle();
+    if (outgoingError) throw outgoingError;
+    if (!outgoing?.id) throw new Error("Condòmino uscente non trovato.");
+
+    const { data: units, error: unitsError } = await supabase!
+      .from("condominium_units")
+      .select("id, unit_code")
+      .eq("condominium_id", condominium.id);
+    if (unitsError) throw unitsError;
+    const unit = (units ?? []).find(
+      (candidate: any) => String(candidate.unit_code ?? "").trim().toLowerCase() === apartment.toLowerCase()
+    );
+    if (!unit?.id) throw new Error("Unità non trovata nel condominio.");
+    if (outgoing.unit_id !== unit.id) {
+      throw new Error("Il condòmino selezionato non risulta associato all'unità indicata. Verifica l'anagrafica prima del subentro.");
+    }
+
+    const { data, error } = await supabase!.rpc("confirm_condominium_member_transfer", {
+      p_unit_id: unit.id,
+      p_outgoing_member_id: outgoing.id,
+      p_incoming_name: payload.incomingName.trim(),
+      p_incoming_email: payload.incomingEmail?.trim().toLowerCase() || null,
+      p_incoming_user_id: payload.incomingUserId || null,
+      p_transfer_date: payload.transferDate,
+      p_transfer_type: payload.transferType?.trim() || "Vendita",
+      p_notes: payload.notes?.trim() || "",
+      p_data: payload.data ?? {},
+    });
+    if (error) throw error;
+    if (typeof data !== "string" || !data) {
+      throw new Error("Il server non ha restituito l'identificativo del subentro.");
+    }
+    return data;
   });
 }
