@@ -3126,18 +3126,63 @@ function App() {
     };
 
     const initializeAuth = async () => {
-      // supabase-js is configured with detectSessionInUrl=true, so the PKCE
-      // authorization code is exchanged automatically by the client. We only
-      // use the recovery marker/event to keep the UI in recovery mode.
-      const { data } = await supabase.auth.getSession();
-      if (recoveryFlowActive) {
-        setPasswordRecoveryMode(true);
-        return;
-      }
-      await applySupabaseSession(data.session);
-    };
+      // Auth URL handling is intentionally explicit. With detectSessionInUrl
+      // disabled, React can inspect the callback before Supabase consumes it.
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const authCode = searchParams.get("code");
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const hasRecoveryMarker =
+        searchParams.has("reset-password") ||
+        searchParams.get("type") === "recovery" ||
+        hashParams.has("reset-password") ||
+        hashParams.get("type") === "recovery" ||
+        recoveryPending;
 
-    void initializeAuth();
+      try {
+        if (authCode) {
+          const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+          if (error) throw error;
+        } else if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) throw error;
+        }
+
+        if (hasRecoveryMarker) {
+          recoveryFlowActive = true;
+          localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
+          setPasswordRecoveryMode(true);
+          try {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.search = "";
+            cleanUrl.hash = "";
+            window.history.replaceState({}, document.title, cleanUrl.pathname);
+          } catch {
+            // URL cleanup is cosmetic.
+          }
+          return;
+        }
+
+        const { data } = await supabase.auth.getSession();
+        if (recoveryFlowActive) {
+          setPasswordRecoveryMode(true);
+          return;
+        }
+        await applySupabaseSession(data.session);
+      } catch (error) {
+        console.error("BETHAG auth callback handling failed", error);
+        if (hasRecoveryMarker) {
+          recoveryFlowActive = true;
+          setPasswordRecoveryMode(true);
+          return;
+        }
+        await applySupabaseSession(null);
+      }
+    };
 
     const {
       data: { subscription: authSubscription },
@@ -3165,6 +3210,9 @@ function App() {
         void applySupabaseSession(session);
       }, 0);
     });
+
+    // Register the listener before processing the callback so manual
+    // exchange/setSession cannot race the React auth state.
 
     return () => {
       cancelled = true;
