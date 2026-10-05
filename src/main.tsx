@@ -2801,9 +2801,10 @@ function App() {
 
     localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     const redirectToUrl = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin);
-    // Keep an explicit recovery marker in the callback URL. This survives
-    // opening the link from Mail/Safari even when browser storage is isolated.
-    redirectToUrl.hash = "reset-password=1";
+    // Keep the recovery marker in the query string. Supabase Auth consumes
+    // the URL hash during implicit/PKCE callback processing, so a hash marker
+    // can disappear before React registers the recovery state.
+    redirectToUrl.searchParams.set("reset-password", "1");
     const redirectTo = redirectToUrl.toString();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
@@ -2994,6 +2995,7 @@ function App() {
       recoveryPending ||
       recoveryHashParams.get("type") === "recovery" ||
       recoveryHashParams.has("reset-password") ||
+      new URLSearchParams(window.location.search).has("reset-password") ||
       window.location.search.includes("type=recovery") ||
       window.location.search.includes("code=");
 
