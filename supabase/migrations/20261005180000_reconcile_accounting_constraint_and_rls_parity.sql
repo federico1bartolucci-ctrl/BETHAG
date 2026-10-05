@@ -28,6 +28,7 @@ alter table public.condominium_fiscal_years
   add constraint condominium_fiscal_years_no_overlap exclude using gist (workspace_id with =, condominium_id with =, daterange(start_date,end_date,'[]') with &&),
   add constraint condominium_fiscal_years_opening_balance_finite check (opening_balance=opening_balance),
   add constraint condominium_fiscal_years_valid_dates check (start_date<=end_date),
+  add constraint condominium_fiscal_years_valid_range check (start_date<=end_date),
   add constraint condominium_fiscal_years_workspace_id_fkey foreign key (workspace_id) references public.workspaces(id) on delete cascade;
 
 alter table public.condominium_funds
@@ -42,13 +43,7 @@ alter table public.condominium_installments
   add constraint condominium_installments_fiscal_year_id_fkey foreign key (fiscal_year_id) references public.condominium_fiscal_years(id) on delete set null,
   add constraint condominium_installments_ledger_entry_id_fkey foreign key (ledger_entry_id) references public.condominium_ledger_entries(id) on delete restrict,
   add constraint condominium_installments_member_id_fkey foreign key (member_id) references public.condominium_members(id) on delete set null,
-  add constraint condominium_installments_status_amount_consistent check (
-    (status='Da pagare' and paid_amount=0) or
-    (status='Parzialmente pagato' and paid_amount>0 and paid_amount<amount) or
-    (status='Pagato' and abs(paid_amount-amount)<=0.005) or
-    (status='Scaduto' and paid_amount>=0 and paid_amount<amount) or
-    (status='Accorpata' and paid_amount>=0 and paid_amount<=amount)
-  ),
+  add constraint condominium_installments_status_amount_consistent check ((status='Da pagare' and paid_amount=0) or (status='Parzialmente pagato' and paid_amount>0 and paid_amount<amount) or (status='Pagato' and abs(paid_amount-amount)<=0.005) or (status='Scaduto' and paid_amount>=0 and paid_amount<amount) or (status='Accorpata' and paid_amount>=0 and paid_amount<=amount)),
   add constraint condominium_installments_unit_id_fkey foreign key (unit_id) references public.condominium_units(id) on delete set null,
   add constraint condominium_installments_workspace_id_fkey foreign key (workspace_id) references public.workspaces(id) on delete cascade;
 
@@ -72,9 +67,22 @@ alter table public.condominium_payment_movements
   add constraint condominium_payment_movements_installment_id_fkey foreign key (installment_id) references public.condominium_installments(id) on delete cascade,
   add constraint condominium_payment_movements_workspace_id_fkey foreign key (workspace_id) references public.workspaces(id) on delete cascade;
 
+alter table public.condominium_expense_allocations
+  add constraint condominium_expense_allocations_allocation_table_id_fkey foreign key (allocation_table_id) references public.condominium_millesimal_tables(id) on delete set null,
+  add constraint condominium_expense_allocations_amounts_valid check (amount>=0 and paid_amount>=0 and paid_amount<=amount),
+  add constraint condominium_expense_allocations_condominium_id_fkey foreign key (condominium_id) references public.condominiums(id) on delete cascade,
+  add constraint condominium_expense_allocations_ledger_entry_id_fkey foreign key (ledger_entry_id) references public.condominium_ledger_entries(id) on delete cascade,
+  add constraint condominium_expense_allocations_member_id_fkey foreign key (member_id) references public.condominium_members(id) on delete set null,
+  add constraint condominium_expense_allocations_status_amount_consistent check ((status='Da pagare' and paid_amount=0) or (status='Parzialmente pagato' and paid_amount>0 and paid_amount<amount) or (status='Pagato' and abs(paid_amount-amount)<=0.005) or (status='Scaduto' and paid_amount>=0 and paid_amount<amount)),
+  add constraint condominium_expense_allocations_unit_id_fkey foreign key (unit_id) references public.condominium_units(id) on delete set null,
+  add constraint condominium_expense_allocations_workspace_id_fkey foreign key (workspace_id) references public.workspaces(id) on delete cascade;
+
 alter table public.condominium_requests
   add constraint condominium_requests_status_check check (status=any(array['Nuova','In lavorazione','In attesa','Risolta','Chiusa','Annullata']::text[])),
   add constraint condominium_requests_title_not_blank_chk check (length(btrim(title))>0);
+
+alter table public.condominium_work_progress drop constraint if exists condominium_work_progress_financial_consistency_chk;
+alter table public.condominium_work_progress add constraint condominium_work_progress_financial_consistency_chk check ((progress_no>0 and amount>=0 and paid_amount>=0 and paid_amount<=(amount+0.005) and (percentage>=0 and percentage<=100)));
 
 alter table public.condominium_fund_availability disable row level security;
 drop policy if exists "condominium_fund_availability_manager_all" on public.condominium_fund_availability;
