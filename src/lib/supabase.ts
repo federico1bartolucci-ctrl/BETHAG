@@ -35,7 +35,7 @@ export const supabaseRecoveryAuth = supabaseConfigured
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
-        flowType: "implicit",
+        flowType: "pkce",
       },
     })
   : null;
