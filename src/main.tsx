@@ -8015,18 +8015,18 @@ function App() {
 
         <button
           className={
-            page === (isAdministrator ? "impostazioni" : "aiuto")
+            page === (isAdministrator ? "amministratore" : "aiuto")
               ? "mobile-bottom-active"
               : ""
           }
           onClick={() =>
             navigate(
-              isAdministrator ? "impostazioni" : "aiuto"
+              isAdministrator ? "amministratore" : "aiuto"
             )
           }
         >
-          <span><AppIcon name={isAdministrator ? "settings" : "help"} size={19} /></span>
-          <small>{isAdministrator ? "Impostazioni" : "Aiuto"}</small>
+          <span><AppIcon name={isAdministrator ? "user" : "help"} size={19} /></span>
+          <small>{isAdministrator ? "Profilo" : "Aiuto"}</small>
         </button>
 
       </div>
