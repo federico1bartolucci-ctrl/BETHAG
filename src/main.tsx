@@ -6713,6 +6713,24 @@ function App() {
     setModalType(type);
     setShowModal(true);
   };
+
+  const openMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
+    setSelectedUnit(null);
+    setSelectedMemberDetail(null);
+    setSelectedMemberTransferOutgoing(member);
+    setMemberTransferForm({
+      ...emptyMemberTransferForm,
+      condominiumId: member.condominiumId,
+      unitId: String(unit.id),
+      outgoingMemberId: member.id,
+    });
+    setShowModal(false);
+    setModalType("");
+    window.setTimeout(() => {
+      setModalType("member-transfer");
+      setShowModal(true);
+    }, 0);
+  };
   const openCondominiumAiCreation = () => {
     if (!requirePlan("professional", "La creazione automatica del condominio con AI", "ai")) return;
     setCondominiumAiDraft(null);
@@ -10199,15 +10217,7 @@ function CondominiumDetails(
                                   alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                                   return;
                                 }
-                                setSelectedUnit(null);
-                                setSelectedMemberTransferOutgoing(member);
-                                setMemberTransferForm({
-                                  ...emptyMemberTransferForm,
-                                  condominiumId: member.condominiumId,
-                                  unitId: String(transferUnit.id),
-                                  outgoingMemberId: member.id,
-                                });
-                                openModal("member-transfer");
+                                openMemberTransfer(member, transferUnit);
                               }}
                             >
                               Subentro
@@ -10290,14 +10300,7 @@ function CondominiumDetails(
                         alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                         return;
                       }
-                      setSelectedMemberTransferOutgoing(member);
-                      setMemberTransferForm({
-                        ...emptyMemberTransferForm,
-                        condominiumId: member.condominiumId,
-                        unitId: String(unit.id),
-                        outgoingMemberId: member.id,
-                      });
-                      openModal("member-transfer");
+                      openMemberTransfer(member, unit);
                     }}
                   >
                     Subentro
@@ -10362,15 +10365,7 @@ function CondominiumDetails(
                     return;
                   }
                   const member = selectedMemberDetail;
-                  setSelectedMemberDetail(null);
-                  setSelectedMemberTransferOutgoing(member);
-                  setMemberTransferForm({
-                    ...emptyMemberTransferForm,
-                    condominiumId: member.condominiumId,
-                    unitId: String(unit.id),
-                    outgoingMemberId: member.id,
-                  });
-                  openModal("member-transfer");
+                  openMemberTransfer(member, unit);
                 }}
               >
                 Subentro nuovo proprietario
