@@ -2268,9 +2268,9 @@ function App() {
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
     try {
-      const pendingRecovery = localStorage.getItem("bethag-password-recovery-pending");
-      const pendingTimestamp = pendingRecovery ? Number(pendingRecovery) : 0;
-      if (Number.isFinite(pendingTimestamp) && pendingTimestamp > 0 && Date.now() - pendingTimestamp < 60 * 60 * 1000) return true;
+      // Only an actual recovery callback can enter the reset-password UI.
+      // The local pending marker is not sufficient: if it survives a previous
+      // recovery attempt, a normal refresh of BETHAG must remain in the app.
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       const referrer = document.referrer || "";
@@ -3059,11 +3059,6 @@ function App() {
     let cancelled = false;
     let recoveryFlowActive = false;
 
-    const recoveryPendingRaw = localStorage.getItem("bethag-password-recovery-pending");
-    const recoveryPendingTimestamp = recoveryPendingRaw ? Number(recoveryPendingRaw) : 0;
-    const recoveryPending = Number.isFinite(recoveryPendingTimestamp) &&
-      recoveryPendingTimestamp > 0 &&
-      Date.now() - recoveryPendingTimestamp < 60 * 60 * 1000;
     const recoveryHash = window.location.hash.slice(1);
     const recoveryHashParams = new URLSearchParams(recoveryHash);
     const recoverySearchParams = new URLSearchParams(window.location.search);
@@ -3076,14 +3071,14 @@ function App() {
       recoverySearchParams.has("code") ||
       (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
-    // Persist the recovery intent so the flow survives Supabase's callback
-    // processing, browser redirects and hash/query cleanup.
-    const recoveryIntentActive = recoveryPending || recoveryCallbackPresent;
+    // The callback URL is the authoritative recovery signal for the
+    // main application. The pending local marker is used only by the
+    // dedicated reset page and must not hijack ordinary app refreshes.
+    const recoveryIntentActive = recoveryCallbackPresent;
 
     if (recoveryIntentActive) {
       recoveryFlowActive = true;
       setPasswordRecoveryMode(true);
-      localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     }
 
     let authInitializationComplete = false;
@@ -3220,7 +3215,7 @@ function App() {
         // Recovery URLs are owned exclusively by the dedicated recovery client.
         // Do not exchange/set the same callback on the normal client: doing so
         // can consume the one-time token and immediately fall back to login.
-        if (hasRecoveryMarker || recoveryFlowActive || recoveryPending) {
+        if (hasRecoveryMarker || recoveryFlowActive) {
           recoveryFlowActive = true;
           setPasswordRecoveryMode(true);
 
