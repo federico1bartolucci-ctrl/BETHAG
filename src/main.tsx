@@ -3,7 +3,7 @@ import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
-import { supabase, supabaseConfigured, supabasePublicAuth, supabaseRecoveryAuth } from "./lib/supabase";
+import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -1565,58 +1565,6 @@ function LoginPage({
   );
 }
 
-function PasswordResetPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (password.length < 8) {
-      setError("La password deve contenere almeno 8 caratteri.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Le password non coincidono.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await onComplete(password);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Impossibile aggiornare la password.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-card-header"><BrandLogo /></div>
-        <h1>Reimposta la password</h1>
-        <p className="login-intro">Inserisci la nuova password per il tuo account BETHAG.</p>
-        <form onSubmit={submit}>
-          <label>Nuova password</label>
-          <div className="password-field-wrap">
-            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Almeno 8 caratteri" />
-            <button type="button" className="password-toggle" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Nascondi password" : "Mostra password"} title={showPassword ? "Nascondi password" : "Mostra password"}>{showPassword ? "🙈" : "👁️"}</button>
-          </div>
-          <label>Conferma nuova password</label>
-          <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" placeholder="Ripeti la password" />
-          {error && <div className="login-error" role="alert"><strong>{error}</strong></div>}
-          <button className="primary-button login-submit" disabled={busy} type="submit">
-            {busy ? "Aggiornamento in corso…" : "Salva nuova password"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function PasswordSetupPage({ onComplete }: { onComplete: (password: string) => Promise<void> }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -2325,26 +2273,6 @@ function App() {
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
-  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
-    try {
-      // Only an actual recovery callback can enter the reset-password UI.
-      // The local pending marker is not sufficient: if it survives a previous
-      // recovery attempt, a normal refresh of BETHAG must remain in the app.
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const referrer = document.referrer || "";
-      return (
-        (searchParams.has("reset-password") && window.location.pathname.includes("/reset-password")) ||
-        searchParams.get("type") === "recovery" ||
-        hashParams.has("reset-password") ||
-        hashParams.get("type") === "recovery" ||
-        (referrer.includes("/auth/v1/verify") && referrer.includes("type=recovery"))
-      );
-    } catch {
-      return false;
-    }
-  });
-
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
       const stored = load(
@@ -2921,59 +2849,21 @@ function App() {
   };
 
   const resetPassword = async (email: string) => {
-    if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
+    if (!supabaseConfigured || !supabase) {
+      throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
+    }
 
-    const redirectToUrl = new URL(
-      (import.meta.env.BASE_URL || "/BETHAG/") + "reset-password/",
+    // Password recovery is isolated from the SPA. The normal application
+    // never consumes recovery callbacks, markers or recovery sessions.
+    const redirectTo = new URL(
+      (import.meta.env.BASE_URL || "/BETHAG/") + "reset-password.html",
       window.location.origin
-    );
-    // Keep the recovery marker in the query string. Supabase Auth consumes
-    // the URL hash during implicit/PKCE callback processing, so a hash marker
-    // can disappear before React registers the recovery state.
-    redirectToUrl.searchParams.set("reset-password", "1");
-    const redirectTo = redirectToUrl.toString();
+    ).toString();
 
-    // Keep the intent locally until the new password is actually saved.
-    localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
-
-    const recoveryClient = supabaseRecoveryAuth || supabase;
-    if (!recoveryClient) throw new Error("Servizio di recupero password non disponibile.");
-    const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) {
-      localStorage.removeItem("bethag-password-recovery-pending");
       throw new Error(error.message || "Impossibile inviare il link di recupero password.");
     }
-  };
-
-  const completePasswordRecovery = async (password: string) => {
-    if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
-
-    const recoveryClient = supabaseRecoveryAuth || supabase;
-    if (!recoveryClient) throw new Error("Sessione di recupero BETHAG non disponibile.");
-    const { error } = await recoveryClient.auth.updateUser({ password });
-    if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
-
-    localStorage.removeItem("bethag-password-recovery-pending");
-    setPasswordRecoveryMode(false);
-    setSessionRole(null);
-    setSessionEmail("");
-    setServerCollaboratorPermissions([]);
-    localStorage.removeItem(KEYS.session);
-    localStorage.removeItem(KEYS.sessionEmail);
-
-    await supabase.auth.signOut({ scope: "local" });
-
-    try {
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.search = "";
-      cleanUrl.hash = "";
-      window.history.replaceState({}, document.title, cleanUrl.pathname);
-    } catch {
-      // URL cleanup is cosmetic.
-    }
-
-    setPage("homepage");
-    alert("Password aggiornata correttamente. Ora puoi accedere a BETHAG con la nuova password.");
   };
 
   const completePasswordSetup = async (password: string) => {
@@ -3116,30 +3006,6 @@ function App() {
     if (!supabaseConfigured || !supabase) return;
 
     let cancelled = false;
-    let recoveryFlowActive = false;
-
-    const recoveryHash = window.location.hash.slice(1);
-    const recoveryHashParams = new URLSearchParams(recoveryHash);
-    const recoverySearchParams = new URLSearchParams(window.location.search);
-    const recoveryReferrer = document.referrer || "";
-    const recoveryCallbackPresent =
-      recoveryHashParams.get("type") === "recovery" ||
-      recoveryHashParams.has("reset-password") ||
-      (recoverySearchParams.has("reset-password") && window.location.pathname.includes("/reset-password")) ||
-      recoverySearchParams.get("type") === "recovery" ||
-      (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
-
-    // Only explicit recovery markers identify the password-reset flow.
-    // A generic PKCE "code" must never be treated as recovery: it can remain
-    // in the SPA URL after navigation and would otherwise hijack a normal
-    // hard refresh of pages such as condominium details.
-    const recoveryIntentActive = recoveryCallbackPresent;
-
-    if (recoveryIntentActive) {
-      recoveryFlowActive = true;
-      setPasswordRecoveryMode(true);
-    }
-
     let authInitializationComplete = false;
 
     const applySupabaseSession = async (
@@ -3148,37 +3014,24 @@ function App() {
     ) => {
       if (cancelled) return;
 
-      // A password-recovery session must never be routed through the normal
-      // workspace authorization flow. Supabase can consume the URL callback
-      // before React registers onAuthStateChange, so the sessionStorage marker
-      // is the authoritative client-side recovery signal.
-      if (recoveryFlowActive) {
-        setPasswordRecoveryMode(true);
-        return;
-      }
-
       if (!session?.user) {
         // Ignore an early INITIAL_SESSION null event until the explicit
         // getSession() hydration has completed. On refresh Safari/Supabase can
         // briefly emit the event before the persisted session is available.
         if (source === "event" && !authInitializationComplete) return;
 
-        if (recoveryFlowActive || localStorage.getItem("bethag-password-recovery-pending")) {
-          recoveryFlowActive = true;
-          setPasswordRecoveryMode(true);
-          return;
-        }
+
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
         setRequiresPasswordSetup(false);
-        setPasswordRecoveryMode(false);
         localStorage.removeItem(KEYS.session);
         localStorage.removeItem(KEYS.sessionEmail);
         localStorage.removeItem(KEYS.page);
         setPage("homepage");
         return;
       }
+
 
       try {
         const normalizedEmail = (session.user.email || "").trim();
@@ -3223,7 +3076,6 @@ function App() {
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
           setRequiresPasswordSetup(false);
-          setPasswordRecoveryMode(false);
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
           localStorage.removeItem(KEYS.page);
@@ -3243,81 +3095,29 @@ function App() {
         }));
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled && !recoveryCallbackPresent) {
+        if (!cancelled) {
           setSessionRole(null);
           setSessionEmail("");
+          setServerCollaboratorPermissions([]);
+          setRequiresPasswordSetup(false);
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
-        }
-        if (recoveryCallbackPresent) {
-          setPasswordRecoveryMode(true);
+          localStorage.removeItem(KEYS.page);
+          setPage("homepage");
         }
       }
     };
 
+
+
     const initializeAuth = async () => {
-      // Auth URL handling is intentionally explicit. With detectSessionInUrl
-      // disabled, React can inspect the callback before Supabase consumes it.
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const authCode = searchParams.get("code");
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
-      const hasRecoveryMarker =
-        searchParams.has("reset-password") ||
-        searchParams.get("type") === "recovery" ||
-        hashParams.has("reset-password") ||
-        hashParams.get("type") === "recovery";
-
       try {
-        // Recovery URLs are owned exclusively by the dedicated recovery client.
-        // Only explicit recovery markers reach this branch; a normal page URL
-        // containing an unrelated/stale PKCE code must stay in the application.
-        if (hasRecoveryMarker || recoveryFlowActive) {
-          recoveryFlowActive = true;
-          setPasswordRecoveryMode(true);
-
-          const recoveryClient = supabaseRecoveryAuth || supabase;
-          if (recoveryClient) {
-            const recoveryAccessToken = hashParams.get("access_token");
-            const recoveryRefreshToken = hashParams.get("refresh_token");
-            if (recoveryAccessToken && recoveryRefreshToken) {
-              const { error: recoverySessionError } = await recoveryClient.auth.setSession({
-                access_token: recoveryAccessToken,
-                refresh_token: recoveryRefreshToken,
-              });
-              if (recoverySessionError) throw recoverySessionError;
-            }
-          }
-
-          try {
-            const cleanUrl = new URL(window.location.href);
-            cleanUrl.search = "";
-            cleanUrl.hash = "";
-            window.history.replaceState({}, document.title, cleanUrl.pathname);
-          } catch {
-            // URL cleanup is cosmetic.
-          }
-          authInitializationComplete = true;
-          if (!cancelled) setAuthHydrated(true);
-          return;
-        }
-
         const { data } = await supabase.auth.getSession();
-        if (recoveryFlowActive) {
-          setPasswordRecoveryMode(true);
-          return;
-        }
         await applySupabaseSession(data.session, "initialization");
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       } catch (error) {
-        console.error("BETHAG auth callback handling failed", error);
-        if (hasRecoveryMarker) {
-          recoveryFlowActive = true;
-          setPasswordRecoveryMode(true);
-          return;
-        }
+        console.error("BETHAG auth session initialization failed", error);
         await applySupabaseSession(null, "initialization");
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
@@ -3326,25 +3126,12 @@ function App() {
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        recoveryFlowActive = true;
-        setPasswordRecoveryMode(true);
-        return;
-      }
-
-      if (recoveryFlowActive) {
-        recoveryFlowActive = true;
-        setPasswordRecoveryMode(true);
-        return;
-      }
-
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       window.setTimeout(() => {
         void applySupabaseSession(session, "event");
       }, 0);
     });
 
-    // The recovery client owns recovery tokens; the normal client owns normal login.
     void initializeAuth();
 
     return () => {
@@ -6965,15 +6752,6 @@ function App() {
 
 
 
-
-  if (passwordRecoveryMode) {
-    return (
-      <>
-        <style>{styles}</style>
-        <PasswordResetPage onComplete={completePasswordRecovery} />
-      </>
-    );
-  }
 
   if (!authHydrated) {
     return (
