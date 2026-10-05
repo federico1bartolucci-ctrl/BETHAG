@@ -4043,10 +4043,10 @@ function App() {
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("condominiumId");
-      url.searchParams.delete("page");
+      url.searchParams.set("page", target);
       window.history.replaceState(window.history.state, document.title, url.toString());
     } catch {
-      // URL cleanup is cosmetic.
+      // URL persistence is best-effort; localStorage remains the fallback.
     }
     setSelectedDeadline(null);
     setSelectedDocument(null);
