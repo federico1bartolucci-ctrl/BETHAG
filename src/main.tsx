@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -297,6 +297,21 @@ type CondominiumMember = {
   notes: string;
   active: boolean;
   unitId?: string;
+  data?: Record<string, unknown>;
+};
+
+type MemberTransferType = "Vendita" | "Acquisto" | "Donazione" | "Successione" | "Altro";
+
+type CondominiumMemberTransferForm = {
+  condominiumId: number;
+  unitId: string;
+  outgoingMemberId: number;
+  incomingFirstName: string;
+  incomingLastName: string;
+  incomingEmail: string;
+  transferDate: string;
+  transferType: MemberTransferType;
+  notes: string;
 };
 
 type RequestStatus = "Nuova" | "In lavorazione" | "Risolta" | "Chiusa";
@@ -1046,6 +1061,18 @@ const emptyWorkProgress: WorkProgress = { workId: "", progressNo: 1, progressDat
 
 const emptyCondominiumMember: CondominiumMember = {
   id: 0, condominiumId: 1, firstName: "", lastName: "", fiscalCode: "", phone: "", email: "", apartment: "", role: "Proprietario", notes: "", active: true, unitId: "",
+};
+
+const emptyMemberTransferForm: CondominiumMemberTransferForm = {
+  condominiumId: 1,
+  unitId: "",
+  outgoingMemberId: 0,
+  incomingFirstName: "",
+  incomingLastName: "",
+  incomingEmail: "",
+  transferDate: localISODate(),
+  transferType: "Vendita",
+  notes: "",
 };
 
 const emptyCondominiumRequest: CondominiumRequest = {
@@ -2490,6 +2517,8 @@ function App() {
   ] = useState<Communication>(emptyCommunication);
   const [selectedCondominiumMember, setSelectedCondominiumMember] = useState<CondominiumMember | null>(null);
   const [condominiumMemberForm, setCondominiumMemberForm] = useState<CondominiumMember>(emptyCondominiumMember);
+  const [memberTransferForm, setMemberTransferForm] = useState<CondominiumMemberTransferForm>(emptyMemberTransferForm);
+  const [selectedMemberTransferOutgoing, setSelectedMemberTransferOutgoing] = useState<CondominiumMember | null>(null);
   const [selectedCondominiumRequest, setSelectedCondominiumRequest] = useState<CondominiumRequest | null>(null);
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
@@ -5363,6 +5392,102 @@ function App() {
     }
   };
 
+  const confirmMemberTransfer = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!requireModulePermission("condomini", "Il subentro del proprietario")) return;
+
+    const form = memberTransferForm;
+    const outgoing = selectedMemberTransferOutgoing;
+    const unit = condominiumUnits.find((item) => String(item.id) === String(form.unitId));
+    if (!outgoing || !unit) {
+      alert("Proprietario o unità immobiliare non disponibili.");
+      return;
+    }
+    if (!form.incomingFirstName.trim() || !form.incomingLastName.trim()) {
+      alert("Inserisci nome e cognome del nuovo proprietario.");
+      return;
+    }
+    if (!form.transferDate) {
+      alert("Inserisci la data del rogito/subentro.");
+      return;
+    }
+    if (!supabaseConfigured || !supabase || !profile.workspaceId) {
+      alert("Il servizio server BETHAG non è disponibile.");
+      return;
+    }
+
+    try {
+      const result = await confirmCondominiumMemberTransferBackend(
+        profile.workspaceId,
+        String(unit.id),
+        outgoing.id,
+        `${form.incomingFirstName.trim()} ${form.incomingLastName.trim()}`,
+        form.incomingEmail.trim(),
+        form.transferDate,
+        form.transferType,
+        form.notes,
+        {
+          firstName: form.incomingFirstName.trim(),
+          lastName: form.incomingLastName.trim(),
+          fiscalCode: "",
+          phone: "",
+          apartment: unit.unitCode,
+          role: "Proprietario",
+        }
+      );
+
+      const incoming = result.incoming;
+      const incomingData = incoming.data && typeof incoming.data === "object" ? incoming.data : {};
+      const incomingMember: CondominiumMember = {
+        id: Number(incoming.legacy_id),
+        userId: incoming.user_id ?? undefined,
+        condominiumId: form.condominiumId,
+        firstName: String(incomingData.firstName ?? incoming.name ?? form.incomingFirstName.trim()),
+        lastName: String(incomingData.lastName ?? form.incomingLastName.trim()),
+        fiscalCode: String(incomingData.fiscalCode ?? ""),
+        phone: String(incomingData.phone ?? ""),
+        email: String(incoming.email ?? form.incomingEmail.trim().toLowerCase()),
+        apartment: unit.unitCode,
+        role: "Proprietario",
+        notes: form.notes.trim(),
+        active: true,
+        unitId: String(unit.id),
+        data: incomingData,
+      };
+
+      setCondominiumMembers((current) => [
+        ...current.map((member) =>
+          member.id === outgoing.id
+            ? { ...member, active: false, notes: `${member.notes ? member.notes + " · " : ""}Subentro del ${form.transferDate}` }
+            : member
+        ),
+        incomingMember,
+      ]);
+
+      setCondominiumUnits((current) =>
+        current.map((currentUnit) =>
+          String(currentUnit.id) === String(unit.id)
+            ? {
+                ...currentUnit,
+                ownerMemberIds: [
+                  ...(Array.isArray(currentUnit.ownerMemberIds) ? currentUnit.ownerMemberIds.filter((id) => String(id) !== String(outgoing.id)) : []),
+                  incomingMember.id,
+                ],
+              }
+            : currentUnit
+        )
+      );
+
+      setMemberTransferForm(emptyMemberTransferForm);
+      setSelectedMemberTransferOutgoing(null);
+      closeModal();
+      alert("Subentro completato. Il nuovo proprietario è ora associato all'unità e lo storico del precedente proprietario è stato conservato.");
+    } catch (error) {
+      console.error("BETHAG member transfer failed", error);
+      alert(error instanceof Error ? `Impossibile completare il subentro: ${error.message}` : "Impossibile completare il subentro.");
+    }
+  };
+
   const saveCondominiumRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -8138,6 +8263,17 @@ function App() {
             />
           )}
 
+          {modalType === "member-transfer" && (
+            <CondominiumMemberTransferForm
+              value={memberTransferForm}
+              setValue={setMemberTransferForm}
+              outgoingMember={selectedMemberTransferOutgoing}
+              unit={condominiumUnits.find((u) => String(u.id) === String(memberTransferForm.unitId))}
+              onSubmit={confirmMemberTransfer}
+              onCancel={closeModal}
+            />
+          )}
+
           {modalType === "condominium-member" && (
             <CondominiumMemberForm value={condominiumMemberForm} setValue={setCondominiumMemberForm} condominiums={condominiums.filter((c) => !c.archivedAt)} members={condominiumMembers} units={condominiumUnits} onSubmit={saveCondominiumMember} onCancel={closeModal} editing={!!selectedCondominiumMember} />
           )}
@@ -10071,8 +10207,31 @@ function CondominiumDetails(
                   ✉️ Scrivi
                 </button>
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
-                  Modifica
+                  Modifica dati
                 </button>
+                {member.role === "Proprietario" && member.active && member.unitId && (
+                  <button
+                    className="primary-button small"
+                    type="button"
+                    onClick={() => {
+                      const unit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(member.unitId));
+                      if (!unit) {
+                        alert("L'unità immobiliare del proprietario non è disponibile.");
+                        return;
+                      }
+                      setSelectedMemberTransferOutgoing(member);
+                      setMemberTransferForm({
+                        ...emptyMemberTransferForm,
+                        condominiumId: member.condominiumId,
+                        unitId: String(unit.id),
+                        outgoingMemberId: member.id,
+                      });
+                      openModal("member-transfer");
+                    }}
+                  >
+                    Subentro
+                  </button>
+                )}
                 <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)} aria-label="Elimina condòmino">
                   ×
                 </button>
@@ -10116,8 +10275,34 @@ function CondominiumDetails(
                 onEditMember(member);
               }}
             >
-              Modifica condòmino
+              Modifica dati
             </button>
+            {selectedMemberDetail.role === "Proprietario" && selectedMemberDetail.active && selectedMemberDetail.unitId && (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  const unit = condominiumUnits.find((u: CondominiumUnit) => String(u.id) === String(selectedMemberDetail.unitId));
+                  if (!unit) {
+                    alert("L'unità immobiliare del proprietario non è disponibile.");
+                    return;
+                  }
+                  const member = selectedMemberDetail;
+                  setSelectedMemberDetail(null);
+                  setSelectedMemberTransferOutgoing(member);
+                  setMemberTransferForm({
+                    ...emptyMemberTransferForm,
+                    condominiumId: member.condominiumId,
+                    unitId: String(unit.id),
+                    outgoingMemberId: member.id,
+                  });
+                  openModal("member-transfer");
+                }}
+              >
+                Subentro nuovo proprietario
+              </button>
+            )}
+
           </div>
         </Modal>
       )}
@@ -15833,6 +16018,31 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
     <Actions onCancel={onCancel} />
   </form>;
 }
+function CondominiumMemberTransferForm({ value, setValue, outgoingMember, unit, onSubmit, onCancel }: any) {
+  const set = (key: keyof CondominiumMemberTransferForm, val: any) => setValue({ ...value, [key]: val });
+  return <form onSubmit={onSubmit}>
+    <ModalTitle title="Subentro nuovo proprietario" />
+    <div className="form-help" style={{ marginBottom: 14 }}>
+      <strong>Unità:</strong> {unit?.unitCode || "—"} · <strong>Proprietario uscente:</strong> {outgoingMember?.firstName} {outgoingMember?.lastName}
+      <br />Il proprietario uscente viene mantenuto nella storia con la posizione chiusa alla data del subentro. Il nuovo proprietario diventa titolare corrente dell'unità.
+    </div>
+    <div className="form-grid">
+      <Field label="Nome nuovo proprietario *" value={value.incomingFirstName} onChange={(v: string) => set("incomingFirstName", v)} />
+      <Field label="Cognome nuovo proprietario *" value={value.incomingLastName} onChange={(v: string) => set("incomingLastName", v)} />
+      <Field label="E-mail" value={value.incomingEmail} onChange={(v: string) => set("incomingEmail", v)} />
+      <Field label="Data rogito / subentro *" type="date" value={value.transferDate} onChange={(v: string) => set("transferDate", v)} />
+      <SelectField label="Tipo subentro" value={value.transferType} onChange={(v: string) => set("transferType", v)} options={[
+        ["Vendita","Vendita"],["Acquisto","Acquisto"],["Donazione","Donazione"],["Successione","Successione"],["Altro","Altro"],
+      ]} />
+      <Field full label="Note" value={value.notes} onChange={(v: string) => set("notes", v)} textarea placeholder="Estremi rogito, note sulla decorrenza, accordi particolari..." />
+    </div>
+    <div className="form-help" style={{ marginTop: 12 }}>
+      Alla conferma BETHAG conserva lo storico del proprietario uscente e acquisisce lo snapshot contabile alla data indicata, comprese le posizioni future e le straordinarie già deliberate.
+    </div>
+    <Actions onCancel={onCancel} />
+  </form>;
+}
+
 function CondominiumRequestForm({ value, setValue, condominiums, members, suppliers, activities, onSubmit, onCancel, editing }: any) {
   const set = (key: keyof CondominiumRequest, val: any) => setValue({ ...value, [key]: val });
   return <form onSubmit={onSubmit}><ModalTitle title={editing ? "Modifica segnalazione / richiesta" : "Nuova segnalazione / richiesta"} /><div className="form-grid">
