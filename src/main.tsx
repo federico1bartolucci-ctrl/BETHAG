@@ -14517,17 +14517,14 @@ function Modal({
   return (
     <div
       className="modal-backdrop"
-      onMouseDown={onClose}
+      onClick={onClose}
     >
-
       <div
         className="modal"
-        onMouseDown={(e) =>
-          e.stopPropagation()
-        }
+        onClick={(e) => e.stopPropagation()}
       >
-
         <button
+          type="button"
           className="modal-close"
           onClick={onClose}
         >
