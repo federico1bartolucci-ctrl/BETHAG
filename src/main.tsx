@@ -3189,13 +3189,7 @@ function App() {
         return;
       }
 
-      const pendingRecoveryRaw = localStorage.getItem("bethag-password-recovery-pending");
-      const pendingRecoveryTimestamp = pendingRecoveryRaw ? Number(pendingRecoveryRaw) : 0;
-      const pendingRecovery = Number.isFinite(pendingRecoveryTimestamp) &&
-        pendingRecoveryTimestamp > 0 &&
-        Date.now() - pendingRecoveryTimestamp < 30 * 60 * 1000;
-
-      if (recoveryFlowActive || pendingRecovery) {
+      if (recoveryFlowActive) {
         recoveryFlowActive = true;
         setPasswordRecoveryMode(true);
         return;
