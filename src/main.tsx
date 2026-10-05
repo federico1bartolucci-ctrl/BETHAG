@@ -2142,9 +2142,10 @@ function App() {
     useState<Page>(() => {
       try {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("page") === "condomini" && params.get("condominiumId")) return "condomini";
+        const urlPage = params.get("page");
+        if (urlPage === "condomini" || params.get("condominiumId")) return "condomini";
       } catch {
-        // URL state is only a persistence hint; localStorage remains the fallback.
+        // Fall back to persisted application state.
       }
       return load<Page>(KEYS.page, "homepage");
     });
@@ -2382,42 +2383,43 @@ function App() {
   const [condominiumAiProcessing, setCondominiumAiProcessing] = useState(false);
   const [condominiumAiConfirmedUnits, setCondominiumAiConfirmedUnits] = useState<CondominiumCreationUnitDraft[]>([]);
 
-  // La selezione viene mantenuta al refresh, ma solo dopo che Supabase
-  // ha completato l'hydration: in questo modo non viene mai renderizzata
-  // una scheda costruita su dati locali incompleti o obsoleti.
+  // Il dettaglio del condominio è identificato dalla URL. Al refresh
+  // riproviamo automaticamente finché i dati backend sono disponibili.
   useEffect(() => {
-    if (!backendHydrated.current || page !== "condomini" || selectedCondominiumPersistenceReady.current) return;
+    if (page !== "condomini") return;
 
-    let savedId: number | null = null;
+    let urlId: string | null = null;
     try {
-      const urlId = new URLSearchParams(window.location.search).get("condominiumId");
-      if (urlId) savedId = Number(urlId);
+      urlId = new URLSearchParams(window.location.search).get("condominiumId");
     } catch {
-      // Fall back to localStorage below.
+      urlId = null;
     }
-    if (savedId == null || !Number.isFinite(savedId)) {
-      savedId = load<number | null>(KEYS.selectedCondominium, null);
-    }
-    selectedCondominiumPersistenceReady.current = true;
 
-    if (savedId == null) {
+    const savedId = urlId || load<number | null>(KEYS.selectedCondominium, null);
+    if (savedId == null || savedId === "") return;
+
+    const restored = condominiums.find(
+      (item) => String(item.id) === String(savedId)
+    );
+
+    if (restored) {
+      if (selectedCondominium?.id !== restored.id) {
+        setSelectedCondominium(restored);
+      }
+      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(restored.id));
       return;
     }
 
-    const restored = condominiums.find((item) => String(item.id) === String(savedId));
-    if (restored) {
-      setSelectedCondominium(restored);
-    } else {
-      localStorage.removeItem(KEYS.selectedCondominium);
-    }
-  }, [page, condominiums, sessionRole]);
+    // Se il backend non ha ancora terminato l'hydration, non cancelliamo
+    // l'identificativo: il prossimo aggiornamento di condominiums ritenterà.
+  }, [page, condominiums, sessionRole, selectedCondominium?.id]);
 
   useEffect(() => {
-    if (selectedCondominium) {
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(selectedCondominium.id));
-    } else if (selectedCondominiumPersistenceReady.current) {
-      localStorage.removeItem(KEYS.selectedCondominium);
-    }
+    if (!selectedCondominium) return;
+    localStorage.setItem(
+      KEYS.selectedCondominium,
+      JSON.stringify(selectedCondominium.id)
+    );
   }, [selectedCondominium]);
 
 
