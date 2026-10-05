@@ -2252,7 +2252,23 @@ function App() {
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
   const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
-  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const referrer = document.referrer || "";
+      return (
+        searchParams.has("reset-password") ||
+        searchParams.get("type") === "recovery" ||
+        searchParams.has("code") ||
+        hashParams.has("reset-password") ||
+        hashParams.get("type") === "recovery" ||
+        (referrer.includes("/auth/v1/verify") && referrer.includes("type=recovery"))
+      );
+    } catch {
+      return false;
+    }
+  });
 
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -2991,13 +3007,16 @@ function App() {
       Date.now() - recoveryPendingTimestamp < 30 * 60 * 1000;
     const recoveryHash = window.location.hash.slice(1);
     const recoveryHashParams = new URLSearchParams(recoveryHash);
+    const recoverySearchParams = new URLSearchParams(window.location.search);
+    const recoveryReferrer = document.referrer || "";
     const recoveryCallbackPresent =
       recoveryPending ||
       recoveryHashParams.get("type") === "recovery" ||
       recoveryHashParams.has("reset-password") ||
-      new URLSearchParams(window.location.search).has("reset-password") ||
-      window.location.search.includes("type=recovery") ||
-      window.location.search.includes("code=");
+      recoverySearchParams.has("reset-password") ||
+      recoverySearchParams.get("type") === "recovery" ||
+      recoverySearchParams.has("code") ||
+      (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
     if (recoveryCallbackPresent) {
       recoveryFlowActive = true;
