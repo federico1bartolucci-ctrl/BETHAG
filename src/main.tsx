@@ -2732,12 +2732,12 @@ function App() {
           ...current,
           workspaceId: access.workspaceId,
           email: normalizedEmail || current.email,
-          name: session.user.user_metadata?.full_name || current.name,
-          company: session.user.user_metadata?.company || current.company,
-          phone: session.user.user_metadata?.phone || current.phone,
-          address: session.user.user_metadata?.address || current.address,
-          fiscalCode: session.user.user_metadata?.fiscal_code || current.fiscalCode,
-          vat: session.user.user_metadata?.vat || current.vat,
+          name: data.user.user_metadata?.full_name || current.name,
+          company: data.user.user_metadata?.company || current.company,
+          phone: data.user.user_metadata?.phone || current.phone,
+          address: data.user.user_metadata?.address || current.address,
+          fiscalCode: data.user.user_metadata?.fiscal_code || current.fiscalCode,
+          vat: data.user.user_metadata?.vat || current.vat,
         }));
 
         localStorage.setItem(KEYS.session, JSON.stringify(access.role));
@@ -2952,11 +2952,23 @@ function App() {
 
     let cancelled = false;
 
+    const recoveryCallbackPresent =
+      window.location.hash.includes("type=recovery") ||
+      new URLSearchParams(window.location.search).get("type") === "recovery";
+
+    if (recoveryCallbackPresent) {
+      setPasswordRecoveryMode(true);
+    }
+
     const applySupabaseSession = async (
       session: { user: { id: string; email?: string | null } } | null
     ) => {
       if (cancelled) return;
       if (!session?.user) {
+        if (recoveryCallbackPresent) {
+          setPasswordRecoveryMode(true);
+          return;
+        }
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
@@ -3006,6 +3018,10 @@ function App() {
         );
 
         if (!access || cancelled) {
+          if (recoveryCallbackPresent) {
+            setPasswordRecoveryMode(true);
+            return;
+          }
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3031,11 +3047,14 @@ function App() {
         // Il ritorno alla Homepage avviene esplicitamente nel flusso di login.
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled) {
+        if (!cancelled && !recoveryCallbackPresent) {
           setSessionRole(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
+        }
+        if (recoveryCallbackPresent) {
+          setPasswordRecoveryMode(true);
         }
       }
     };
