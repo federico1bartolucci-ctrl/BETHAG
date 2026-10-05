@@ -3390,15 +3390,6 @@ function App() {
     profile.workspaceId,
   ]);
 
-  if (passwordRecoveryMode) {
-    return (
-      <>
-        <style>{styles}</style>
-        <PasswordResetPage onComplete={completePasswordRecovery} />
-      </>
-    );
-  }
-
   const restoreWorkspaceBackup = async (file: File) => {
     if (!isAdministrator) {
       alert("Il ripristino del backup è riservato all'Amministratore.");
@@ -6974,6 +6965,15 @@ function App() {
 
 
 
+
+  if (passwordRecoveryMode) {
+    return (
+      <>
+        <style>{styles}</style>
+        <PasswordResetPage onComplete={completePasswordRecovery} />
+      </>
+    );
+  }
 
   if (!authHydrated) {
     return (
