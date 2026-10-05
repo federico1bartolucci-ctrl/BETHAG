@@ -2265,7 +2265,8 @@ function App() {
     } catch {
       return false;
     }
-  });
+  });  const recoveryFlowActiveRef = useRef(false);
+
 
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -2834,6 +2835,7 @@ function App() {
 
     localStorage.removeItem("bethag-password-recovery-active-v2");
     localStorage.removeItem("bethag-password-recovery-pending");
+    recoveryFlowActiveRef.current = false;
     setPasswordRecoveryMode(false);
     setSessionRole(null);
     setSessionEmail("");
@@ -2997,7 +2999,7 @@ function App() {
     let cancelled = false;
     const recoverySearchParams = new URLSearchParams(window.location.search);
     const recoveryHashParams = new URLSearchParams(window.location.hash.slice(1));
-    let recoveryFlowActive =
+    recoveryFlowActiveRef.current =
       recoverySearchParams.has("reset-password") ||
       recoverySearchParams.get("type") === "recovery" ||
       recoveryHashParams.has("reset-password") ||
@@ -3049,7 +3051,7 @@ function App() {
 
       const recoverySession = sessionIsRecovery(session);
       if (recoverySession) {
-        recoveryFlowActive = true;
+        recoveryFlowActiveRef.current = true;
         setPasswordRecoveryMode(true);
         try {
           localStorage.setItem(
@@ -3064,7 +3066,7 @@ function App() {
         return;
       }
 
-      if (recoveryFlowActive) {
+      if (recoveryFlowActiveRef.current) {
         setPasswordRecoveryMode(true);
         return;
       }
@@ -3146,13 +3148,13 @@ function App() {
         }));
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled && !recoveryFlowActive) {
+        if (!cancelled && !recoveryFlowActiveRef.current) {
           setSessionRole(null);
           setSessionEmail("");
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
         }
-        if (recoveryFlowActive) {
+        if (recoveryFlowActiveRef.current) {
           setPasswordRecoveryMode(true);
         }
       }
@@ -3193,7 +3195,7 @@ function App() {
         }
       } catch (error) {
         console.error("BETHAG auth initialization failed", error);
-        if (recoveryFlowActive) {
+        if (recoveryFlowActiveRef.current) {
           setPasswordRecoveryMode(true);
           return;
         }
