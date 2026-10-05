@@ -10190,7 +10190,7 @@ function CondominiumDetails(
                             <button
                               className="primary-button small"
                               type="button"
-                              onClick={(event) => {
+                              onClickCapture={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
                                 const transferUnit = condominiumUnits.find((u: CondominiumUnit) =>
@@ -10283,7 +10283,7 @@ function CondominiumDetails(
                   <button
                     className="primary-button small"
                     type="button"
-                    onClick={(event) => {
+                    onClickCapture={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       const unit = condominiumUnits.find((u: CondominiumUnit) =>
@@ -10356,7 +10356,7 @@ function CondominiumDetails(
               <button
                 className="primary-button"
                 type="button"
-                onClick={(event) => {
+                onClickCapture={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
                   const unit = condominiumUnits.find((u: CondominiumUnit) =>
