@@ -41,7 +41,7 @@ create policy "residents read own portal access"
       select 1
       from public.condominiums c
       where c.id = portal_access.condominium_id
-        and coalesce(c.data->>'archivedAt','') = ''
+        and c.archived_at is null
     )
     and (
       user_id = (select auth.uid())
