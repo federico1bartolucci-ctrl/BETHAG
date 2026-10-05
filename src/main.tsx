@@ -2139,7 +2139,15 @@ function bethagInstallErrorDialog() {
 
 function App() {
   const [page, setPage] =
-    useState<Page>(() => load<Page>(KEYS.page, "homepage"));
+    useState<Page>(() => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("page") === "condomini" && params.get("condominiumId")) return "condomini";
+      } catch {
+        // URL state is only a persistence hint; localStorage remains the fallback.
+      }
+      return load<Page>(KEYS.page, "homepage");
+    });
 
   useEffect(() => bethagInstallGlobalFieldRules(), []);
   useEffect(() => bethagInstallErrorDialog(), []);
@@ -2341,8 +2349,24 @@ function App() {
     setSelectedCondominium(item);
     if (item) {
       localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(item.id));
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", "condomini");
+        url.searchParams.set("condominiumId", String(item.id));
+        window.history.replaceState(window.history.state, document.title, url.toString());
+      } catch {
+        // URL persistence is best-effort; localStorage remains authoritative fallback.
+      }
     } else {
       localStorage.removeItem(KEYS.selectedCondominium);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("condominiumId");
+        if (url.searchParams.get("page") === "condomini") url.searchParams.delete("page");
+        window.history.replaceState(window.history.state, document.title, url.toString());
+      } catch {
+        // URL cleanup is cosmetic.
+      }
     }
   };
 
@@ -2364,14 +2388,23 @@ function App() {
   useEffect(() => {
     if (!backendHydrated.current || page !== "condomini" || selectedCondominiumPersistenceReady.current) return;
 
-    const savedId = load<number | null>(KEYS.selectedCondominium, null);
+    let savedId: number | null = null;
+    try {
+      const urlId = new URLSearchParams(window.location.search).get("condominiumId");
+      if (urlId) savedId = Number(urlId);
+    } catch {
+      // Fall back to localStorage below.
+    }
+    if (savedId == null || !Number.isFinite(savedId)) {
+      savedId = load<number | null>(KEYS.selectedCondominium, null);
+    }
     selectedCondominiumPersistenceReady.current = true;
 
     if (savedId == null) {
       return;
     }
 
-    const restored = condominiums.find((item) => item.id === savedId);
+    const restored = condominiums.find((item) => String(item.id) === String(savedId));
     if (restored) {
       setSelectedCondominium(restored);
     } else {
@@ -3634,14 +3667,30 @@ function App() {
         // only on a later effect can miss the one-time ref transition during
         // a hard refresh, leaving the user on the condominium list.
         if (page === "condomini" && !selectedCondominiumPersistenceReady.current) {
-          const savedId = load<number | null>(KEYS.selectedCondominium, null);
+          let savedId: number | null = null;
+          try {
+            const urlId = new URLSearchParams(window.location.search).get("condominiumId");
+            if (urlId) savedId = Number(urlId);
+          } catch {
+            // Fall back to localStorage below.
+          }
+          if (savedId == null || !Number.isFinite(savedId)) {
+            savedId = load<number | null>(KEYS.selectedCondominium, null);
+          }
           selectedCondominiumPersistenceReady.current = true;
           if (savedId != null) {
-            const restored = backend.condominiums.find((item) => item.id === savedId);
+            const restored = backend.condominiums.find((item) => String(item.id) === String(savedId));
             if (restored) {
               setSelectedCondominium(restored);
             } else {
               localStorage.removeItem(KEYS.selectedCondominium);
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("condominiumId");
+                window.history.replaceState(window.history.state, document.title, url.toString());
+              } catch {
+                // URL cleanup is cosmetic.
+              }
             }
           }
         }
@@ -3989,6 +4038,14 @@ function App() {
     setMobileMenuOpen(false);
     setSelectedCondominium(null);
     localStorage.removeItem(KEYS.selectedCondominium);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("condominiumId");
+      url.searchParams.delete("page");
+      window.history.replaceState(window.history.state, document.title, url.toString());
+    } catch {
+      // URL cleanup is cosmetic.
+    }
     setSelectedDeadline(null);
     setSelectedDocument(null);
     setSelectedAssembly(null);
