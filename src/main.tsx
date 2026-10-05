@@ -2578,30 +2578,27 @@ function App() {
   ) => {
     if (!supabase) return null;
 
-    const membershipResult = await supabase
-      .from("workspace_members")
-      .select("workspace_id, role, active, permissions")
-      .eq("user_id", userId)
-      .eq("active", true)
-      .order("workspace_id")
-      .limit(1)
-      .maybeSingle();
+    const membershipResult = await supabase.rpc("get_my_workspace_access");
 
     if (membershipResult.error) throw membershipResult.error;
 
-    if (membershipResult.data) {
+    const membership = Array.isArray(membershipResult.data)
+      ? membershipResult.data[0]
+      : membershipResult.data;
+
+    if (membership) {
       const mappedRole =
-        membershipResult.data.role === "admin"
+        membership.role === "admin"
           ? "admin"
-          : membershipResult.data.role === "collaborator"
+          : membership.role === "collaborator"
             ? "collaborator"
             : "resident";
 
       return {
         role: mappedRole as "admin" | "collaborator" | "resident",
-        workspaceId: membershipResult.data.workspace_id as string,
-        permissions: Array.isArray(membershipResult.data.permissions)
-          ? membershipResult.data.permissions as CollaboratorPermission[]
+        workspaceId: membership.workspace_id as string,
+        permissions: Array.isArray(membership.permissions)
+          ? membership.permissions as CollaboratorPermission[]
           : [],
       };
     }
