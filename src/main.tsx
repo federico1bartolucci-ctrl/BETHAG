@@ -3628,6 +3628,24 @@ function App() {
         if (cancelled) return;
 
         setCondominiums(backend.condominiums);
+
+        // Restore the open condominium from the persisted selection at the
+        // exact point where backend data is known to be complete. Relying
+        // only on a later effect can miss the one-time ref transition during
+        // a hard refresh, leaving the user on the condominium list.
+        if (page === "condomini" && !selectedCondominiumPersistenceReady.current) {
+          const savedId = load<number | null>(KEYS.selectedCondominium, null);
+          selectedCondominiumPersistenceReady.current = true;
+          if (savedId != null) {
+            const restored = backend.condominiums.find((item) => item.id === savedId);
+            if (restored) {
+              setSelectedCondominium(restored);
+            } else {
+              localStorage.removeItem(KEYS.selectedCondominium);
+            }
+          }
+        }
+
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
         setDocuments(backend.documents);
