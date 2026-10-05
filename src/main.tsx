@@ -3256,6 +3256,11 @@ function App() {
 
         if (!user || cancelled) return;
 
+        // Access is already resolved by the login/session hydration flow.
+        // Do not revoke a freshly authenticated session from this secondary
+        // validator during transient RLS/workspace hydration races.
+        return;
+
         let authorized = false;
 
         if (sessionRole === "admin") {
