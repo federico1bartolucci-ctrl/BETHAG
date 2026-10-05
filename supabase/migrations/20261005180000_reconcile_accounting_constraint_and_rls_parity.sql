@@ -1,10 +1,16 @@
 -- Reconcile remaining accounting constraints, required btree_gist support and RLS parity.
-create extension if not exists btree_gist;
+create schema if not exists extensions;
+do $$
+begin
+  if exists (select 1 from pg_extension where extname='btree_gist') then
+    execute 'alter extension btree_gist set schema extensions';
+  else
+    execute 'create extension btree_gist schema extensions';
+  end if;
+end
+$$;
 
-alter table public.communications
-  add constraint communications_email_status_check check (
-    email_status is null or email_status = any(array['prepared','no_recipients','In elaborazione','Inviata','Parzialmente inviata','Errore','Consegnata']::text[])
-  );
+alter table public.communications add constraint communications_email_status_check check (email_status is null or email_status = any(array['prepared','no_recipients','In elaborazione','Inviata','Parzialmente inviata','Errore','Consegnata']::text[]));
 
 alter table public.condominium_budgets
   add constraint condominium_budgets_condominium_id_fkey foreign key (condominium_id) references public.condominiums(id) on delete cascade,
@@ -84,6 +90,7 @@ alter table public.condominium_requests
 alter table public.condominium_work_progress drop constraint if exists condominium_work_progress_financial_consistency_chk;
 alter table public.condominium_work_progress add constraint condominium_work_progress_financial_consistency_chk check ((progress_no>0 and amount>=0 and paid_amount>=0 and paid_amount<=(amount+0.005) and (percentage>=0 and percentage<=100)));
 
-alter table public.condominium_fund_availability disable row level security;
+alter table public.condominium_fund_availability enable row level security;
 drop policy if exists "condominium_fund_availability_manager_all" on public.condominium_fund_availability;
+create policy "condominium_fund_availability_manager_all" on public.condominium_fund_availability for all using (private.can_manage_workspace_module(workspace_id,'contabilita')) with check (private.can_manage_workspace_module(workspace_id,'contabilita'));
 drop policy if exists "managers manage fiscal carryovers" on public.condominium_fiscal_carryovers;
