@@ -2254,6 +2254,9 @@ function App() {
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
     try {
+      const pendingRecovery = localStorage.getItem("bethag-password-recovery-pending");
+      const pendingTimestamp = pendingRecovery ? Number(pendingRecovery) : 0;
+      if (Number.isFinite(pendingTimestamp) && pendingTimestamp > 0 && Date.now() - pendingTimestamp < 60 * 60 * 1000) return true;
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       const referrer = document.referrer || "";
