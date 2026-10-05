@@ -15,7 +15,7 @@ begin
  select u.workspace_id,u.condominium_id into v_workspace,v_condominium
  from public.condominium_units u where u.id=p_unit_id for update;
  if v_workspace is null or not private.can_manage_workspace_module(v_workspace,'condomini') then raise exception 'FORBIDDEN'; end if;
- if exists(select 1 from public.condominiums c where c.id=v_condominium and coalesce(c.data->>'archivedAt','')<>'') then raise exception 'ARCHIVED_CONDOMINIUM'; end if;
+ if exists(select 1 from public.condominiums c where c.id=v_condominium and c.archived_at is not null) then raise exception 'ARCHIVED_CONDOMINIUM'; end if;
 
  if not exists(
    select 1 from public.condominium_members m
