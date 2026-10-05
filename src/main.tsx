@@ -2798,17 +2798,43 @@ function App() {
 
   const resetPassword = async (email: string) => {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
+
+    sessionStorage.setItem("bethag-password-recovery-pending", "1");
     const redirectTo = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin).toString();
+
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-    if (error) throw new Error(error.message || "Impossibile inviare il link di recupero password.");
+    if (error) {
+      sessionStorage.removeItem("bethag-password-recovery-pending");
+      throw new Error(error.message || "Impossibile inviare il link di recupero password.");
+    }
   };
 
   const completePasswordRecovery = async (password: string) => {
     if (!supabase) throw new Error("Sessione BETHAG non disponibile.");
+
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw new Error(error.message || "Impossibile aggiornare la password.");
+
+    sessionStorage.removeItem("bethag-password-recovery-pending");
     setPasswordRecoveryMode(false);
-    await supabase.auth.signOut();
+    setSessionRole(null);
+    setSessionEmail("");
+    setServerCollaboratorPermissions([]);
+    localStorage.removeItem(KEYS.session);
+    localStorage.removeItem(KEYS.sessionEmail);
+
+    await supabase.auth.signOut({ scope: "local" });
+
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.search = "";
+      cleanUrl.hash = "";
+      window.history.replaceState({}, document.title, cleanUrl.pathname);
+    } catch {
+      // URL cleanup is cosmetic.
+    }
+
+    setPage("homepage");
     alert("Password aggiornata correttamente. Ora puoi accedere a BETHAG con la nuova password.");
   };
 
@@ -2951,25 +2977,35 @@ function App() {
     if (!supabaseConfigured || !supabase) return;
 
     let cancelled = false;
+    let recoveryFlowActive = false;
 
+    const recoveryPending = sessionStorage.getItem("bethag-password-recovery-pending") === "1";
     const recoveryCallbackPresent =
+      recoveryPending ||
       window.location.hash.includes("type=recovery") ||
       window.location.search.includes("type=recovery") ||
       window.location.search.includes("code=");
 
     if (recoveryCallbackPresent) {
+      recoveryFlowActive = true;
       setPasswordRecoveryMode(true);
     }
 
     const applySupabaseSession = async (
-      session: { user: { id: string; email?: string | null } } | null
+      session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null
     ) => {
       if (cancelled) return;
+
+      // A password-recovery session must never be routed through the normal
+      // workspace authorization flow. Supabase can consume the URL callback
+      // before React registers onAuthStateChange, so the sessionStorage marker
+      // is the authoritative client-side recovery signal.
+      if (recoveryFlowActive) {
+        setPasswordRecoveryMode(true);
+        return;
+      }
+
       if (!session?.user) {
-        if (recoveryCallbackPresent) {
-          setPasswordRecoveryMode(true);
-          return;
-        }
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
@@ -2990,6 +3026,7 @@ function App() {
           setRequiresPasswordSetup(true);
           return;
         }
+
         const pendingRegistrationRaw = sessionStorage.getItem("bethag-pending-resident-registration");
         if (pendingRegistrationRaw && supabase) {
           try {
@@ -3013,16 +3050,13 @@ function App() {
             return;
           }
         }
+
         const access = await resolveSupabaseAccess(
           session.user.id,
           normalizedEmail
         );
 
         if (!access || cancelled) {
-          if (recoveryCallbackPresent) {
-            setPasswordRecoveryMode(true);
-            return;
-          }
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3030,6 +3064,7 @@ function App() {
           setPasswordRecoveryMode(false);
           localStorage.removeItem(KEYS.session);
           localStorage.removeItem(KEYS.sessionEmail);
+          localStorage.removeItem(KEYS.page);
           setPage("homepage");
           return;
         }
@@ -3044,8 +3079,6 @@ function App() {
           workspaceId: access.workspaceId,
           email: normalizedEmail || current.email,
         }));
-        // Con una sessione già autenticata manteniamo la sezione salvata.
-        // Il ritorno alla Homepage avviene esplicitamente nel flusso di login.
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
         if (!cancelled && !recoveryCallbackPresent) {
@@ -3060,17 +3093,56 @@ function App() {
       }
     };
 
-    void supabase.auth.getSession().then(({ data }) => {
-      void applySupabaseSession(data.session);
-    });
+    const initializeAuth = async () => {
+      // detectSessionInUrl normally exchanges the PKCE callback for us.
+      // If a code is still present when this effect runs, complete the
+      // exchange explicitly before reading the resulting session.
+      const authCode = new URL(window.location.href).searchParams.get("code");
+      if (authCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+        if (error) {
+          console.error("BETHAG password recovery code exchange failed", error);
+          setPasswordRecoveryMode(true);
+          return;
+        }
+        recoveryFlowActive = true;
+        setPasswordRecoveryMode(true);
+        try {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete("code");
+          cleanUrl.searchParams.delete("type");
+          window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+        } catch {
+          // URL cleanup is cosmetic; the recovery session remains valid.
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (recoveryFlowActive) {
+        setPasswordRecoveryMode(true);
+        return;
+      }
+      await applySupabaseSession(data.session);
+    };
+
+    void initializeAuth();
 
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
+        recoveryFlowActive = true;
+        sessionStorage.setItem("bethag-password-recovery-pending", "1");
         setPasswordRecoveryMode(true);
         return;
       }
+
+      if (recoveryFlowActive || sessionStorage.getItem("bethag-password-recovery-pending") === "1") {
+        recoveryFlowActive = true;
+        setPasswordRecoveryMode(true);
+        return;
+      }
+
       window.setTimeout(() => {
         void applySupabaseSession(session);
       }, 0);
