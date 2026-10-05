@@ -3127,7 +3127,6 @@ function App() {
       recoveryHashParams.has("reset-password") ||
       recoverySearchParams.has("reset-password") ||
       recoverySearchParams.get("type") === "recovery" ||
-      recoverySearchParams.has("code") ||
       (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
     // Only explicit recovery markers identify the password-reset flow.
