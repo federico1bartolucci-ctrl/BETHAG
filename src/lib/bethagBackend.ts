@@ -1031,8 +1031,19 @@ export async function saveCondominium(
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
+    // Il workspace salvato nello stato React può essere obsoleto dopo un
+    // refresh/login. Risolviamo sempre quello effettivamente associato alla
+    // sessione autenticata prima di inviare la modifica al server.
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError) throw new Error(userError.message || "Impossibile verificare la sessione autenticata.");
+    const userId = userResult.user?.id;
+    if (!userId) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
+
+    const activeWorkspaceId = await getActiveWorkspaceId(userId, workspaceId);
+    if (!activeWorkspaceId) throw new Error("Workspace amministratore non trovato.");
+
     const { data, error } = await supabase.rpc("save_condominium", {
-      p_workspace_id: workspaceId,
+      p_workspace_id: activeWorkspaceId,
       p_legacy_id: item.id,
       p_name: item.name,
       p_address: item.address,
@@ -1042,7 +1053,9 @@ export async function saveCondominium(
       p_data: item,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(error.message || error.details || error.hint || "Il salvataggio del condominio è stato rifiutato dal server.");
+    }
 
     const condominiumDbId = data as string;
     const requestedUnits = Math.max(0, Number(item.units) || 0);
