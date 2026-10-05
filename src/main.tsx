@@ -2818,7 +2818,10 @@ function App() {
   const resetPassword = async (email: string) => {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
 
-    const redirectToUrl = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin);
+    const redirectToUrl = new URL(
+      (import.meta.env.BASE_URL || "/BETHAG/") + "reset-password.html",
+      window.location.origin
+    );
     // Keep the recovery marker in the query string. Supabase Auth consumes
     // the URL hash during implicit/PKCE callback processing, so a hash marker
     // can disappear before React registers the recovery state.
