@@ -80,7 +80,7 @@ begin
   );
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text DEFAULT NULL::text)
  RETURNS void
@@ -136,7 +136,7 @@ begin
     );
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid)
  RETURNS uuid
@@ -217,7 +217,7 @@ begin
   return v_year.id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid)
  RETURNS integer
@@ -275,7 +275,7 @@ begin
   return v_count;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid DEFAULT NULL::uuid, p_notes text DEFAULT ''::text)
  RETURNS numeric
@@ -432,7 +432,7 @@ begin
  return v_new_balance;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid)
  RETURNS uuid
@@ -480,7 +480,7 @@ begin
  return p_condominium_id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text DEFAULT NULL::text)
  RETURNS void
@@ -600,7 +600,7 @@ begin
   where id=v_condominium_id and workspace_id=p_workspace_id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid)
  RETURNS integer
@@ -689,7 +689,7 @@ begin
   return v_count;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid DEFAULT NULL::uuid)
  RETURNS integer
@@ -697,7 +697,7 @@ CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations(p_work
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_catalog'
 AS $function$ declare v_count_before integer; v_count_after integer; begin if p_due_date is null then raise exception 'Titolo e scadenza sono obbligatori'; end if; select count(*) into v_count_before from public.condominium_installments where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id; perform public.generate_installments_from_allocations_schedule(p_workspace_id,p_condominium_id,p_ledger_entry_id,p_title,array[p_due_date],p_fiscal_year_id,array[100]::numeric[],false); select count(*) into v_count_after from public.condominium_installments where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id; return v_count_after-v_count_before; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid DEFAULT NULL::uuid, p_percentages numeric[] DEFAULT NULL::numeric[], p_unify_by_member boolean DEFAULT false)
  RETURNS integer
@@ -754,7 +754,7 @@ end loop;
 return created_count;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.guard_confirmed_intake_immutability()
  RETURNS trigger
@@ -771,7 +771,7 @@ begin
  return coalesce(new,old);
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.list_archived_condominiums(p_workspace_id uuid)
  RETURNS SETOF condominiums
@@ -796,7 +796,7 @@ begin
   order by c.archived_at desc, c.name asc;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.prepare_communication_recipients(p_communication_id uuid)
  RETURNS jsonb
@@ -901,7 +901,7 @@ begin
   );
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.prevent_new_installment_for_closing_member()
  RETURNS trigger
@@ -923,7 +923,7 @@ begin
   return new;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text DEFAULT 'Bonifico'::text, p_reference text DEFAULT ''::text, p_notes text DEFAULT ''::text)
  RETURNS numeric
@@ -1181,7 +1181,7 @@ begin
   return v_result_paid;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.reset_stale_communication_recipients(p_communication_id uuid DEFAULT NULL::uuid, p_age interval DEFAULT '00:15:00'::interval)
  RETURNS jsonb
@@ -1202,7 +1202,7 @@ begin
  return jsonb_build_object('reset',v_count);
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid)
  RETURNS void
@@ -1253,7 +1253,7 @@ begin
     );
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.reverse_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text)
  RETURNS boolean
@@ -1326,7 +1326,7 @@ begin
   return true;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.save_condominium(p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb)
  RETURNS uuid
@@ -1380,7 +1380,7 @@ begin
   return v_id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.set_personal_security_code(p_code text, p_enabled boolean)
  RETURNS void
@@ -1397,7 +1397,7 @@ begin
   values (auth.uid(), case when p_enabled then crypt(trim(p_code), gen_salt('bf')) else null end, p_enabled, now())
   on conflict (user_id) do update set personal_code_hash=excluded.personal_code_hash, personal_code_enabled=excluded.personal_code_enabled, updated_at=now();
 end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.touch_condominium_request_updated_at()
  RETURNS trigger
@@ -1409,7 +1409,7 @@ begin
   return new;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION private.verify_personal_security_code(p_code text)
  RETURNS boolean
