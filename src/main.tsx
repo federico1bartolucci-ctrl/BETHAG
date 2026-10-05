@@ -2335,6 +2335,17 @@ function App() {
 
   const selectedCondominiumPersistenceReady = useRef(false);
 
+  // Persist the condominium detail selection immediately. The detail view is
+  // an in-page state, not a separate route, so it must survive a hard refresh.
+  const selectCondominium = (item: Condominium | null) => {
+    setSelectedCondominium(item);
+    if (item) {
+      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(item.id));
+    } else {
+      localStorage.removeItem(KEYS.selectedCondominium);
+    }
+  };
+
   const [
     editingCondominium,
     setEditingCondominium,
@@ -4724,8 +4735,7 @@ function App() {
         await saveCondominiumBackend(profile.workspaceId, archived);
       }
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
-      setSelectedCondominium(null);
-      localStorage.removeItem(KEYS.selectedCondominium);
+      selectCondominium(null);
     } catch (error) {
       console.error("BETHAG condominium archive failed", error);
       alert(error instanceof Error ? "Il condominio non è stato archiviato.\\n\\n" + error.message : "Il condominio non è stato archiviato.");
@@ -4815,8 +4825,7 @@ function App() {
     setPortalMembers((current) => current.filter((x) => x.condominiumId !== item.id));
     setCondominiumMembers((current) => current.filter((member) => member.condominiumId !== item.id));
     setCondominiumRequests((current) => current.filter((request) => request.condominiumId !== item.id));
-    setSelectedCondominium(null);
-    localStorage.removeItem(KEYS.selectedCondominium);
+    selectCondominium(null);
   };
 
 
@@ -7377,7 +7386,7 @@ function App() {
                 selectedCondominium
               }
               setSelected={
-                setSelectedCondominium
+                selectCondominium
               }
               onNew={() => {
                 setEditingCondominium(
