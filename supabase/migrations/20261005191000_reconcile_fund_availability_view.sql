@@ -1,7 +1,7 @@
 -- Reconcile condominium_fund_availability with production: it is a
 -- security-invoker view over condominium_funds, not a standalone table.
-drop table if exists public.condominium_fund_availability;
 drop view if exists public.condominium_fund_availability;
+drop table if exists public.condominium_fund_availability;
 
 create view public.condominium_fund_availability
 with (security_invoker = true)
