@@ -1103,7 +1103,7 @@ export async function saveCondominium(
         const { error: insertError } = await supabase
           .from("condominium_units")
           .insert({
-            workspace_id: workspaceId,
+            workspace_id: activeWorkspaceId,
             condominium_id: condominiumDbId,
             unit_code: code,
             data: {
