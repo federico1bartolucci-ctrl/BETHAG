@@ -55,7 +55,7 @@ begin
  if nullif(trim(coalesce(p_incoming_name,'')),'') is null then raise exception 'INCOMING_NAME_REQUIRED'; end if;
  select u.workspace_id,u.condominium_id into v_workspace,v_condominium from public.condominium_units u where u.id=p_unit_id;
  if v_workspace is null or not private.can_manage_workspace_module(v_workspace,'condomini') then raise exception 'FORBIDDEN'; end if;
- if exists(select 1 from public.condominiums c where c.id=v_condominium and coalesce(c.data->>'archivedAt','')<>'') then raise exception 'ARCHIVED_CONDOMINIUM'; end if;
+ if exists(select 1 from public.condominiums c where c.id=v_condominium and c.archived_at is not null) then raise exception 'ARCHIVED_CONDOMINIUM'; end if;
  if not exists(select 1 from public.condominium_members m where m.id=p_outgoing_member_id and m.condominium_id=v_condominium and m.unit_id=p_unit_id and m.active) then raise exception 'OUTGOING_MEMBER_NOT_ACTIVE_ON_UNIT'; end if;
  if exists(select 1 from public.condominium_member_transfers t where t.unit_id=p_unit_id and t.transfer_date=p_transfer_date and t.status in ('Confermato','Chiuso')) then raise exception 'TRANSFER_ALREADY_EXISTS'; end if;
  select count(*) into v_existing_count from public.condominium_members m where m.condominium_id=v_condominium and m.unit_id=p_unit_id and m.active and m.id<>p_outgoing_member_id and coalesce(m.data->>'current_owner','true')='true' and coalesce(m.data->>'position_status','Attivo')<>'In chiusura' and trim(coalesce(m.data->>'role',''))='Proprietario';
