@@ -3822,13 +3822,10 @@ function App() {
           }
         }
 
-        const refreshedBackend = await loadBackendState(workspaceId);
-        setCondominiumUnits(
-          Array.isArray(refreshedBackend.condominiumUnits)
-            ? refreshedBackend.condominiumUnits
-            : []
-        );
-
+        // Il salvataggio è già stato completato dal RPC e le unità generate
+        // vengono aggiornate localmente nei passaggi precedenti. Non ricarichiamo
+        // qui l'intero backend: un errore di lettura di una tabella secondaria
+        // non deve trasformare un salvataggio riuscito in un falso errore.
         if (!profile.workspaceId) {
           setProfile((current) => ({
             ...current,
