@@ -18,7 +18,7 @@ export const supabase = supabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
       },
     })
   : null;
@@ -26,6 +26,20 @@ export const supabase = supabaseConfigured
 // Dedicated client for public registration. It does not share the main
 // session/storage lock, so a first-time signup cannot be blocked by the
 // application's session hydration.
+// Isolated browser client dedicated to password-recovery callbacks.
+// The normal application client never consumes the recovery URL, avoiding a
+// race between URL handling and BETHAG's normal login/authorization routing.
+export const supabaseRecoveryAuth = supabaseConfigured
+  ? createClient(supabaseUrl!, supabasePublishableKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: "implicit",
+      },
+    })
+  : null;
+
 export const supabasePublicAuth = supabaseConfigured
   ? createClient(supabaseUrl!, supabasePublishableKey!, {
       auth: {
