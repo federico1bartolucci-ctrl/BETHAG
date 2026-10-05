@@ -9714,7 +9714,12 @@ function CondominiumDetails(
         x.publishedToPortal
     ).length;
 
-  const activeMembers = condominiumMembers.filter((member: CondominiumMember) => member.active);
+  const activeMembers = condominiumMembers.filter(
+    (member: CondominiumMember) =>
+      member.active &&
+      (member as any).currentOwner !== false &&
+      (member as any).positionStatus !== "In chiusura"
+  );
   const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
   const unitCollator = new Intl.Collator("it-IT", { numeric: true, sensitivity: "base" });
