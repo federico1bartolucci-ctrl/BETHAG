@@ -2296,3 +2296,76 @@ export async function updateCondominiumRequestStatus(
     if (error) throw error;
   });
 }
+
+export async function confirmCondominiumMemberTransfer(
+  workspaceId: string,
+  unitId: string,
+  outgoingMemberLegacyId: number,
+  incomingName: string,
+  incomingEmail: string,
+  transferDate: string,
+  transferType: string = "Vendita",
+  notes: string = "",
+  data: Record<string, unknown> = {}
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    if (!unitId) throw new Error("Unità immobiliare non disponibile.");
+    if (!workspaceId) throw new Error("Workspace non disponibile.");
+
+    const { data: outgoing, error: outgoingError } = await supabase
+      .from("condominium_members")
+      .select("id,condominium_id,unit_id,legacy_id,data")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", outgoingMemberLegacyId)
+      .maybeSingle();
+
+    if (outgoingError) throw outgoingError;
+    if (!outgoing?.id) throw new Error("Proprietario uscente non trovato nel server.");
+    if (String(outgoing.unit_id) !== String(unitId)) {
+      throw new Error("Il proprietario selezionato non è associato all'unità indicata.");
+    }
+
+    const { data: transferId, error: transferError } = await supabase.rpc(
+      "confirm_condominium_member_transfer",
+      {
+        p_unit_id: unitId,
+        p_outgoing_member_id: outgoing.id,
+        p_incoming_name: incomingName.trim(),
+        p_incoming_email: incomingEmail.trim().toLowerCase() || null,
+        p_incoming_user_id: null,
+        p_transfer_date: transferDate,
+        p_transfer_type: transferType,
+        p_notes: notes.trim(),
+        p_data: data,
+      }
+    );
+
+    if (transferError) throw transferError;
+
+    const { data: incomingRows, error: incomingError } = await supabase
+      .from("condominium_members")
+      .select("legacy_id,name,email,user_id,active,unit_id,data")
+      .eq("workspace_id", workspaceId)
+      .eq("unit_id", unitId)
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (incomingError) throw incomingError;
+
+    const incoming = (incomingRows ?? []).find((row: any) => {
+      const role = String(row.data?.role ?? "").trim();
+      const currentOwner = row.data?.current_owner;
+      const status = String(row.data?.position_status ?? "Attivo").trim();
+      return role === "Proprietario" && currentOwner !== false && status !== "In chiusura";
+    }) ?? null;
+
+    if (!incoming?.legacy_id) {
+      throw new Error("Subentro registrato, ma il nuovo proprietario non è stato restituito dal server.");
+    }
+
+    return { transferId: transferId as string, incoming };
+  });
+}
