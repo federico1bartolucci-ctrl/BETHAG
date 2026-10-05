@@ -9499,6 +9499,7 @@ function CondominiumsPage(
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
           openCondominiumEmailComposer={openCondominiumEmailComposer}
+          openMemberTransfer={openMemberTransfer}
           onNewDeadline={() => onNewDeadline(selected.id)}
           onNewDocument={() => onNewDocument(selected.id)}
           onNewAssembly={() => onNewAssembly(selected.id)}
@@ -9694,6 +9695,7 @@ function CondominiumDetails(
     onNewCommunication,
     onPrepareEmail,
     openCondominiumEmailComposer,
+    openMemberTransfer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
