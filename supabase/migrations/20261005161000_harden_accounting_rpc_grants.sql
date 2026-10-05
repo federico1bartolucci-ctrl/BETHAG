@@ -10,4 +10,4 @@ grant execute on function public.confirm_allocation_intake(uuid,uuid) to authent
 grant execute on function public.generate_condominium_expense_allocations(uuid,uuid,uuid,uuid,date) to authenticated;
 grant execute on function public.generate_consumption_allocations(uuid,uuid,uuid,uuid,text) to authenticated;
 grant execute on function public.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid) to authenticated;
-grant execute on function public.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[]) to authenticated;
+grant execute on function public.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean) to authenticated;
