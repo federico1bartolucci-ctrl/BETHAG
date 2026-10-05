@@ -3165,6 +3165,20 @@ function App() {
         if (hasRecoveryMarker || recoveryFlowActive || recoveryPending) {
           recoveryFlowActive = true;
           setPasswordRecoveryMode(true);
+
+          const recoveryClient = supabaseRecoveryAuth || supabase;
+          if (recoveryClient) {
+            const recoveryAccessToken = hashParams.get("access_token");
+            const recoveryRefreshToken = hashParams.get("refresh_token");
+            if (recoveryAccessToken && recoveryRefreshToken) {
+              const { error: recoverySessionError } = await recoveryClient.auth.setSession({
+                access_token: recoveryAccessToken,
+                refresh_token: recoveryRefreshToken,
+              });
+              if (recoverySessionError) throw recoverySessionError;
+            }
+          }
+
           try {
             const cleanUrl = new URL(window.location.href);
             cleanUrl.search = "";
@@ -3213,21 +3227,12 @@ function App() {
       }, 0);
     });
 
-    const recoverySubscription = supabaseRecoveryAuth?.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        recoveryFlowActive = true;
-        setPasswordRecoveryMode(true);
-        localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
-      }
-    });
-
-    // The recovery client owns the callback; the normal client owns normal login.
+    // The recovery client owns recovery tokens; the normal client owns normal login.
     void initializeAuth();
 
     return () => {
       cancelled = true;
       authSubscription.unsubscribe();
-      recoverySubscription?.data.subscription.unsubscribe();
     };
   }, []);
 
