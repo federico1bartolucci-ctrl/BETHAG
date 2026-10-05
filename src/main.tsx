@@ -3219,7 +3219,9 @@ function App() {
           setPasswordRecoveryMode(true);
           return;
         }
-        await applySupabaseSession(null);
+        await applySupabaseSession(null, "initialization");
+        authInitializationComplete = true;
+        if (!cancelled) setAuthHydrated(true);
       }
     };
 
