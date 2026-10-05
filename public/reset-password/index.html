@@ -32,7 +32,7 @@ button:disabled{opacity:.6}.error{margin-top:15px;padding:11px;border-radius:9px
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.1";
 const SUPABASE_URL="https://tctcgptrsmvgajqjgnev.supabase.co";
 const SUPABASE_KEY="sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ";
-const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce"}});
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:"pkce"}});
 const form=document.getElementById("form"),message=document.getElementById("message"),save=document.getElementById("save"),intro=document.getElementById("intro");
 function showError(t){message.className="error";message.textContent=t}
 function showOk(t){message.className="ok";message.textContent=t}
