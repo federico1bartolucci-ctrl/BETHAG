@@ -44,3 +44,9 @@ revoke execute on function public.confirm_condominium_member_transfer(uuid,uuid,
 grant execute on function public.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb) to authenticated;
 revoke execute on function public.close_condominium_member_transfer(uuid) from anon, public;
 grant execute on function public.close_condominium_member_transfer(uuid) to authenticated;
+
+
+-- The public approval RPC is a controlled authenticated entry point; keep its
+-- privileged implementation behind the private helper and deny anonymous use.
+revoke execute on function public.admin_approve_portal_registration(uuid,uuid) from anon, public;
+grant execute on function public.admin_approve_portal_registration(uuid,uuid) to authenticated;
