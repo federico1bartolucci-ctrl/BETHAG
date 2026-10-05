@@ -2334,7 +2334,7 @@ function App() {
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
       const referrer = document.referrer || "";
       return (
-        searchParams.has("reset-password") ||
+        (searchParams.has("reset-password") && window.location.pathname.includes("/reset-password")) ||
         searchParams.get("type") === "recovery" ||
         hashParams.has("reset-password") ||
         hashParams.get("type") === "recovery" ||
@@ -3125,7 +3125,7 @@ function App() {
     const recoveryCallbackPresent =
       recoveryHashParams.get("type") === "recovery" ||
       recoveryHashParams.has("reset-password") ||
-      recoverySearchParams.has("reset-password") ||
+      (recoverySearchParams.has("reset-password") && window.location.pathname.includes("/reset-password")) ||
       recoverySearchParams.get("type") === "recovery" ||
       (recoveryReferrer.includes("/auth/v1/verify") && recoveryReferrer.includes("type=recovery"));
 
