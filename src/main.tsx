@@ -2153,8 +2153,13 @@ function App() {
 
   const [sessionRole, setSessionRole] =
     useState<"admin" | "collaborator" | "resident" | null>(() =>
-      supabaseConfigured ? null : load(KEYS.session, null)
+      load(KEYS.session, null)
     );
+
+  // The authenticated session must be hydrated before rendering the public
+  // login screen. This prevents a refresh from showing the login page while
+  // Supabase is still restoring the persisted session.
+  const [authHydrated, setAuthHydrated] = useState(() => !supabaseConfigured);
 
   const [sessionEmail, setSessionEmail] =
     useState<string>(() =>
@@ -3035,8 +3040,11 @@ function App() {
       localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     }
 
+    let authInitializationComplete = false;
+
     const applySupabaseSession = async (
-      session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null
+      session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null,
+      source: "initialization" | "event" = "event"
     ) => {
       if (cancelled) return;
 
@@ -3050,6 +3058,11 @@ function App() {
       }
 
       if (!session?.user) {
+        // Ignore an early INITIAL_SESSION null event until the explicit
+        // getSession() hydration has completed. On refresh Safari/Supabase can
+        // briefly emit the event before the persisted session is available.
+        if (source === "event" && !authInitializationComplete) return;
+
         if (recoveryFlowActive || localStorage.getItem("bethag-password-recovery-pending")) {
           recoveryFlowActive = true;
           setPasswordRecoveryMode(true);
@@ -3186,6 +3199,8 @@ function App() {
           } catch {
             // URL cleanup is cosmetic.
           }
+          authInitializationComplete = true;
+          if (!cancelled) setAuthHydrated(true);
           return;
         }
 
@@ -3194,7 +3209,9 @@ function App() {
           setPasswordRecoveryMode(true);
           return;
         }
-        await applySupabaseSession(data.session);
+        await applySupabaseSession(data.session, "initialization");
+        authInitializationComplete = true;
+        if (!cancelled) setAuthHydrated(true);
       } catch (error) {
         console.error("BETHAG auth callback handling failed", error);
         if (hasRecoveryMarker) {
@@ -3222,7 +3239,7 @@ function App() {
       }
 
       window.setTimeout(() => {
-        void applySupabaseSession(session);
+        void applySupabaseSession(session, "event");
       }, 0);
     });
 
@@ -6892,6 +6909,17 @@ function App() {
     (document) => document.aiStatus === "Da verificare"
   ).length;
 
+
+  if (!authHydrated) {
+    return (
+      <>
+        <style>{styles}</style>
+        <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f5f7fb", color: "#172033", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", fontWeight: 700 }}>
+          Caricamento sessione BETHAG…
+        </div>
+      </>
+    );
+  }
 
   if (!sessionRole) {
     return (
