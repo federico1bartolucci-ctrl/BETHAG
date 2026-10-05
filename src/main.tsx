@@ -10190,7 +10190,9 @@ function CondominiumDetails(
                             <button
                               className="primary-button small"
                               type="button"
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
                                 const transferUnit = condominiumUnits.find((u: CondominiumUnit) =>
                                   (member.unitId && String(u.id) === String(member.unitId)) ||
                                   String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
@@ -10281,7 +10283,9 @@ function CondominiumDetails(
                   <button
                     className="primary-button small"
                     type="button"
-                    onClick={() => {
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
                       const unit = condominiumUnits.find((u: CondominiumUnit) =>
                         (member.unitId && String(u.id) === String(member.unitId)) ||
                         String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
@@ -10352,7 +10356,9 @@ function CondominiumDetails(
               <button
                 className="primary-button"
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                   const unit = condominiumUnits.find((u: CondominiumUnit) =>
                     (selectedMemberDetail.unitId && String(u.id) === String(selectedMemberDetail.unitId)) ||
                     String(u.unitCode ?? "").trim().toLowerCase() === String(selectedMemberDetail.apartment ?? "").trim().toLowerCase()
