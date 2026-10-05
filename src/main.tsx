@@ -3169,7 +3169,8 @@ function App() {
         const { data } = await supabase.auth.getSession();
         if (!cancelled) {
           const recoverySession = sessionIsRecovery(data.session);
-          if (recoverySession || recoveryFlowActiveRef.current) {
+          const storedRecovery = readRecoveryMarker();
+          if (recoverySession || recoveryFlowActiveRef.current || Boolean(storedRecovery)) {
             recoveryFlowActiveRef.current = true;
             setPasswordRecoveryMode(true);
             if (recoverySession) {
@@ -3207,6 +3208,11 @@ function App() {
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session && !sessionIsRecovery(session)) {
+        clearRecoveryMarker();
+        recoveryFlowActiveRef.current = false;
+      }
+
       if (event === "PASSWORD_RECOVERY" || sessionIsRecovery(session)) {
         recoveryFlowActiveRef.current = true;
         setPasswordRecoveryMode(true);
@@ -3249,7 +3255,7 @@ function App() {
      ======================================================= */
 
   useEffect(() => {
-    if (!sessionRole || !supabaseConfigured || !supabase) return;
+    if (passwordRecoveryMode || !sessionRole || !supabaseConfigured || !supabase) return;
 
     let cancelled = false;
 
@@ -3558,12 +3564,13 @@ function App() {
   }, [
     sessionRole,
     profile.workspaceId,
+    passwordRecoveryMode,
   ]);
 
   const backendHydrated = useRef(false);
 
   useEffect(() => {
-    if (!supabaseConfigured || !supabase || !sessionRole) return;
+    if (passwordRecoveryMode || !supabaseConfigured || !supabase || !sessionRole) return;
 
     let cancelled = false;
     backendHydrated.current = false;
@@ -3637,7 +3644,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionRole]);
+  }, [sessionRole, passwordRecoveryMode]);
 
   useEffect(() => {
     if (
@@ -3645,6 +3652,7 @@ function App() {
       !supabase ||
       !profile.workspaceId ||
       !backendHydrated.current ||
+      passwordRecoveryMode ||
       (sessionRole !== "admin" && sessionRole !== "collaborator")
     ) return;
 
@@ -3680,6 +3688,7 @@ function App() {
   }, [
     sessionRole,
     profile.workspaceId,
+    passwordRecoveryMode,
     serverCollaboratorPermissions,
     condominiums,
     condominiumMembers,
