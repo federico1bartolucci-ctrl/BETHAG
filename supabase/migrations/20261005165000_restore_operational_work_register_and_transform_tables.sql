@@ -29,6 +29,10 @@ create table if not exists public.condominium_payment_reversal_audit (
  constraint condominium_payment_reversal_audit_amount_check check(amount > 0),
  constraint condominium_payment_reversal_audit_original_payment_id_key unique(original_payment_id)
 );
+alter table public.condominium_payment_reversal_audit enable row level security;
+drop policy if exists "Managers can read payment reversal audit" on public.condominium_payment_reversal_audit;
+create policy "Managers can read payment reversal audit" on public.condominium_payment_reversal_audit for select to authenticated using(private.can_manage_workspace_module(workspace_id,'contabilita'));
+
 create table if not exists public.condominium_tax_obligations (
  id uuid primary key default gen_random_uuid(), workspace_id uuid not null, condominium_id uuid not null,
  title text not null, category text not null default 'Fiscale', due_date date not null, amount numeric,
