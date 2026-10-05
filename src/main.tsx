@@ -2815,7 +2815,6 @@ function App() {
   const resetPassword = async (email: string) => {
     if (!supabaseConfigured || !supabase) throw new Error("Il servizio di recupero password BETHAG non è disponibile.");
 
-    localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
     const redirectToUrl = new URL(import.meta.env.BASE_URL || "/BETHAG/", window.location.origin);
     // Keep the recovery marker in the query string. Supabase Auth consumes
     // the URL hash during implicit/PKCE callback processing, so a hash marker
@@ -3010,7 +3009,6 @@ function App() {
     const recoverySearchParams = new URLSearchParams(window.location.search);
     const recoveryReferrer = document.referrer || "";
     const recoveryCallbackPresent =
-      recoveryPending ||
       recoveryHashParams.get("type") === "recovery" ||
       recoveryHashParams.has("reset-password") ||
       recoverySearchParams.has("reset-password") ||
@@ -3137,8 +3135,7 @@ function App() {
         searchParams.has("reset-password") ||
         searchParams.get("type") === "recovery" ||
         hashParams.has("reset-password") ||
-        hashParams.get("type") === "recovery" ||
-        recoveryPending;
+        hashParams.get("type") === "recovery";
 
       try {
         if (authCode) {
@@ -3154,7 +3151,6 @@ function App() {
 
         if (hasRecoveryMarker) {
           recoveryFlowActive = true;
-          localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
           setPasswordRecoveryMode(true);
           try {
             const cleanUrl = new URL(window.location.href);
@@ -3189,7 +3185,6 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         recoveryFlowActive = true;
-        localStorage.setItem("bethag-password-recovery-pending", String(Date.now()));
         setPasswordRecoveryMode(true);
         return;
       }
