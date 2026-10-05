@@ -3596,607 +3596,6 @@ function App() {
   };
 
 
-  const backendHydrated = useRef(false);
-
-  useEffect(() => {
-    if (!supabaseConfigured || !supabase || !sessionRole) return;
-
-    let cancelled = false;
-    backendHydrated.current = false;
-
-    const hydrateFromBackend = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.user || cancelled) return;
-
-        let workspaceId = profile.workspaceId;
-
-        if (sessionRole !== "resident") {
-          workspaceId = await getActiveWorkspaceId(
-            session.user.id,
-            profile.workspaceId
-          );
-        } else if (!workspaceId) {
-          const { data: portalAccess, error: portalAccessError } = await supabase
-            .from("portal_access")
-            .select("workspace_id")
-            .eq("active", true)
-            .ilike("email", session.user.email || "")
-            .limit(1)
-            .maybeSingle();
-
-          if (portalAccessError) throw portalAccessError;
-          workspaceId = portalAccess?.workspace_id ?? null;
-        }
-
-        if (!workspaceId || cancelled) return;
-
-        const backend = await loadBackendState(workspaceId);
-        if (cancelled) return;
-
-        setCondominiums(backend.condominiums);
-
-        // Restore the open condominium from the persisted selection at the
-        // exact point where backend data is known to be complete. Relying
-        // only on a later effect can miss the one-time ref transition during
-        // a hard refresh, leaving the user on the condominium list.
-        if (page === "condomini" && !selectedCondominiumPersistenceReady.current) {
-          let savedId: number | null = null;
-          try {
-            const urlId = new URLSearchParams(window.location.search).get("condominiumId");
-            if (urlId) savedId = Number(urlId);
-          } catch {
-            // Fall back to localStorage below.
-          }
-          if (savedId == null || !Number.isFinite(savedId)) {
-            savedId = load<number | null>(KEYS.selectedCondominium, null);
-          }
-          selectedCondominiumPersistenceReady.current = true;
-          if (savedId != null) {
-            const restored = backend.condominiums.find((item) => String(item.id) === String(savedId));
-            if (restored) {
-              setSelectedCondominium(restored);
-            } else {
-              localStorage.removeItem(KEYS.selectedCondominium);
-              try {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("condominiumId");
-                window.history.replaceState(window.history.state, document.title, url.toString());
-              } catch {
-                // URL cleanup is cosmetic.
-              }
-            }
-          }
-        }
-
-        setCondominiumMembers(backend.condominiumMembers);
-        setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
-        setDocuments(backend.documents);
-        setDeadlines(backend.deadlines);
-        setAssemblies(backend.assemblies);
-        setSuppliers(backend.suppliers);
-        setActivities(backend.activities);
-        setCondominiumWorks(Array.isArray(backend.condominiumWorks) ? backend.condominiumWorks : []);
-        setCommunications(backend.communications);
-        setCondominiumRequests(backend.condominiumRequests);
-        setPortalMembers(
-          Array.isArray(backend.portalMembers)
-            ? backend.portalMembers
-            : []
-        );
-        setCollaborators(
-          Array.isArray(backend.collaborators) ? backend.collaborators : []
-        );
-        backendHydrated.current = true;
-
-        setProfile((current) => ({
-          ...current,
-          workspaceId,
-          email: session.user.email || current.email,
-        }));
-      } catch (error) {
-        console.error("BETHAG backend hydration failed", error);
-      }
-    };
-
-    void hydrateFromBackend();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionRole]);
-
-  useEffect(() => {
-    if (
-      !supabaseConfigured ||
-      !supabase ||
-      !profile.workspaceId ||
-      !backendHydrated.current ||
-      (sessionRole !== "admin" && sessionRole !== "collaborator")
-    ) return;
-
-    const timer = window.setTimeout(() => {
-      const allowedModules =
-        sessionRole === "collaborator"
-          ? serverCollaboratorPermissions
-          : null;
-
-      void syncBackendState(
-        profile.workspaceId,
-        {
-          condominiums,
-          condominiumMembers,
-          documents,
-          deadlines,
-          assemblies,
-          suppliers,
-          activities,
-          condominiumWorks,
-          communications,
-          condominiumRequests,
-          portalMembers,
-          collaborators,
-        },
-        allowedModules
-      ).catch((error) => {
-        console.error("BETHAG backend sync failed", error);
-      });
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    sessionRole,
-    profile.workspaceId,
-    serverCollaboratorPermissions,
-    condominiums,
-    condominiumMembers,
-    documents,
-    deadlines,
-    assemblies,
-    suppliers,
-    activities,
-    condominiumWorks,
-    communications,
-    condominiumRequests,
-    portalMembers,
-    collaborators,
-  ]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.condominiums,
-      JSON.stringify(condominiums)
-    );
-  }, [condominiums]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.deadlines,
-      JSON.stringify(deadlines)
-    );
-  }, [deadlines]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.documents,
-      JSON.stringify(documents)
-    );
-  }, [documents]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.assemblies,
-      JSON.stringify(assemblies)
-    );
-  }, [assemblies]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.suppliers,
-      JSON.stringify(suppliers)
-    );
-  }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.activities,
-      JSON.stringify(activities)
-    );
-  }, [activities]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
-  }, [condominiumWorks]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.communications,
-      JSON.stringify(communications)
-    );
-  }, [communications]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
-  }, [condominiumMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
-  }, [condominiumRequests]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.profile,
-      JSON.stringify(profile)
-    );
-  }, [profile]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.portalMembers,
-      JSON.stringify(portalMembers)
-    );
-  }, [portalMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.subscription,
-      JSON.stringify(subscription)
-    );
-  }, [subscription]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.collaborators,
-      JSON.stringify(collaborators)
-    );
-  }, [collaborators]);
-
-
-  /* =======================================================
-     HELPERS
-     ======================================================= */
-
-  const condominiumName = (
-    id: number | null
-  ) =>
-    condominiums.find(
-      (c) => c.id === id
-    )?.name || "Tutti i condomini";
-
-  const isAdministrator = sessionRole === "admin";
-  const isCollaborator = sessionRole === "collaborator";
-
-  const currentCollaborator = useMemo(
-    () =>
-      collaborators.find(
-        (item) =>
-          item.email.trim().toLowerCase() ===
-            sessionEmail.trim().toLowerCase() &&
-          item.workspaceId === profile.workspaceId &&
-          item.status === "Attivo"
-      ) || null,
-    [collaborators, sessionEmail, profile.workspaceId]
-  );
-
-  const collaboratorPermissions =
-    isCollaborator && supabaseConfigured
-      ? serverCollaboratorPermissions
-      : currentCollaborator?.permissions || [];
-
-  const pageAddon: Partial<Record<Page, AddonId>> = {
-    condomini: "condomini",
-    contabilita: "condomini",
-    documenti: "documenti",
-    scadenze: "scadenze",
-    assemblee: "assemblee",
-    fornitori: "fornitori",
-    attivita: "attivita",
-    lavori: "attivita",
-    comunicazioni: "comunicazioni",
-    ai: "ai",
-    portale: "portale",
-  };
-
-  const pagePermission: Partial<
-    Record<Page, CollaboratorPermission>
-  > = {
-    condomini: "condomini",
-    documenti: "documenti",
-    scadenze: "scadenze",
-    assemblee: "assemblee",
-    fornitori: "fornitori",
-    attivita: "attivita",
-    lavori: "attivita",
-    comunicazioni: "comunicazioni",
-    ai: "ai",
-    portale: "portale",
-  };
-
-  const canAccessPage = (target: Page) => {
-    if (isAdministrator) {
-      const addon = pageAddon[target];
-      return !addon || hasEntitlement(
-        subscription,
-        ADDON_REQUIRED_PLAN[addon],
-        addon
-      );
-    }
-
-    if (isCollaborator) {
-      if (
-        target === "abbonamento" ||
-        target === "amministratore" ||
-        target === "collaboratori" ||
-        target === "contabilita"
-      ) {
-        return false;
-      }
-
-      const requiredPermission = pagePermission[target];
-      const hasRolePermission =
-        !requiredPermission ||
-        collaboratorPermissions.includes(requiredPermission);
-
-      const addon = pageAddon[target];
-      const hasPlanAccess =
-        !addon ||
-        hasEntitlement(
-          subscription,
-          ADDON_REQUIRED_PLAN[addon],
-          addon
-        );
-
-      return hasRolePermission && hasPlanAccess;
-    }
-
-    return false;
-  };
-
-  const requireModulePermission = (
-    permission: CollaboratorPermission,
-    action: string
-  ) => {
-    if (isAdministrator) return true;
-
-    if (
-      isCollaborator &&
-      collaboratorPermissions.includes(permission)
-    ) {
-      return true;
-    }
-
-    alert(
-      action +
-        " non è autorizzata per il tuo profilo o per le funzioni assegnate."
-    );
-    return false;
-  };
-
-  const requireAdministrator = (action: string) => {
-    if (isAdministrator) return true;
-
-    alert(action + " è riservata all'Amministratore.");
-    return false;
-  };
-
-  const navigate = (target: Page) => {
-    if (!canAccessPage(target)) {
-      const addon = pageAddon[target];
-      if (
-        isAdministrator &&
-        addon
-      ) {
-        const answer = confirm(
-          ADDON_NAMES[addon] +
-            " non è compreso nel tuo piano attuale. " +
-            "Puoi sbloccarlo singolarmente senza passare al piano superiore.\n\nVuoi aprire Piano e upgrade?"
-        );
-        if (answer) {
-          setPage("abbonamento");
-          setSearch("");
-          setMobileMenuOpen(false);
-        }
-      } else if (isCollaborator && addon) {
-        alert(
-          ADDON_NAMES[addon] +
-            " non è disponibile nel piano attuale oppure non è tra le tue autorizzazioni."
-        );
-      } else {
-        alert("Questa sezione è riservata all'Amministratore.");
-      }
-      return;
-    }
-
-    setPage(target);
-    setSearch("");
-    setMobileMenuOpen(false);
-    setSelectedCondominium(null);
-    localStorage.removeItem(KEYS.selectedCondominium);
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("condominiumId");
-      url.searchParams.set("page", target);
-      window.history.replaceState(window.history.state, document.title, url.toString());
-    } catch {
-      // URL persistence is best-effort; localStorage remains the fallback.
-    }
-    setSelectedDeadline(null);
-    setSelectedDocument(null);
-    setSelectedAssembly(null);
-    setSelectedSupplier(null);
-    setSelectedActivity(null);
-    setSelectedCondominiumWork(null);
-    setSelectedCommunication(null);
-  };
-
-  const openModal = (type: string) => {
-    setModalType(type);
-    setShowModal(true);
-  };
-  const openCondominiumAiCreation = () => {
-    if (!requirePlan("professional", "La creazione automatica del condominio con AI", "ai")) return;
-    setCondominiumAiDraft(null);
-    setCondominiumAiFiles([]);
-    setCondominiumAiProcessing(false);
-    setCondominiumAiLargeFiles([]);
-    setCondominiumAiConfirmedUnits([]);
-    openModal("condominium-ai");
-  };
-
-  const processCondominiumDocuments = async (
-    selectedFiles: File[],
-    storageMode: "both" | "analysis" | "storage"
-  ) => {
-    if (!selectedFiles.length) return;
-    setCondominiumAiFiles(selectedFiles.map((file) => file.name));
-    setCondominiumAiProcessing(true);
-    setCondominiumAiIntakeId(null);
-    try {
-      const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
-
-      let storedDocuments: any[] = [];
-      if (storageMode !== "analysis") {
-        storedDocuments = await storeCondominiumDocuments(workspaceId, selectedFiles);
-      }
-      if (storageMode === "storage") {
-        alert("Documenti memorizzati correttamente. L'analisi AI non è stata eseguita.");
-        return;
-      }
-
-      const analysisFiles = storedDocuments.map((item: any, index: number) => ({
-        filename: item.name || selectedFiles[index]?.name || "documento",
-        storagePath: item.path,
-        mimeType: item.type || selectedFiles[index]?.type || "application/octet-stream",
-      }));
-      const draft = await analyzeCondominiumStoredDocumentsWithAI(workspaceId, analysisFiles);
-
-      if (storageMode === "analysis" && storedDocuments.length) {
-        await Promise.all(
-          storedDocuments.map((item: any) =>
-            deleteWorkspaceStoredFile(item.path).catch(() => undefined)
-          )
-        );
-      }
-      setCondominiumAiDraft(draft);
-      const intakeId = await createCondominiumCreationIntake(workspaceId, {
-        source: "AI",
-        sourceDocuments: selectedFiles.map((file) => ({
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          size: file.size,
-          lastModified: file.lastModified,
-          stored: storageMode !== "analysis",
-          storagePath: storedDocuments.find((item) => item.name === file.name)?.path ?? null,
-        })),
-        extractedData: {
-          name: draft.name ?? "",
-          address: draft.address ?? "",
-          cap: draft.cap ?? "",
-          city: draft.city ?? "",
-          province: draft.province ?? "",
-          fiscalCode: draft.fiscalCode ?? "",
-          units: draft.units ?? draft.unitRecords?.length ?? 0,
-          unitRecords: draft.unitRecords ?? [],
-        },
-        structure: draft.structure ?? {},
-        validationErrors: [],
-        warnings: draft.warnings ?? [],
-        notes: storageMode === "analysis"
-          ? "Proposta estratta automaticamente senza memorizzazione permanente del file originale."
-          : "Proposta estratta automaticamente e documento originale memorizzato.",
-      });
-      setCondominiumAiIntakeId(intakeId);
-    } catch (error: any) {
-      console.error("BETHAG condominium AI analysis error", error);
-      alert(error?.message || "Impossibile elaborare i documenti.");
-      setCondominiumAiDraft(null);
-    } finally {
-      setCondominiumAiProcessing(false);
-      setCondominiumAiLargeFiles([]);
-    }
-  };
-
-  const analyzeCondominiumDocuments = async (files: FileList | null) => {
-    if (!files?.length) return;
-    if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
-    const selectedFiles = Array.from(files);
-    const largeFiles = selectedFiles.filter((file) => file.size >= 25 * 1024 * 1024);
-    if (largeFiles.length) {
-      setCondominiumAiFiles(selectedFiles.map((file) => file.name));
-      setCondominiumAiLargeFiles(selectedFiles);
-      return;
-    }
-    await processCondominiumDocuments(selectedFiles, "both");
-  };
-
-  const handleLargeCondominiumFiles = async (
-    mode: "both" | "analysis" | "storage"
-  ) => {
-    if (!condominiumAiLargeFiles.length) return;
-    await processCondominiumDocuments(condominiumAiLargeFiles, mode);
-  };
-  const closeModal = () => {
-    setShowModal(false);
-    setModalType("");
-    setSelectedFileName("");
-  };
-
-  const filteredCondominiums =
-    useMemo(() => {
-      const q = search.trim().toLowerCase();
-      const activeCondominiums = condominiums.filter((item) => !item.archivedAt);
-      if (!q) return activeCondominiums;
-      return activeCondominiums.filter((c) =>
-        [
-          c.name,
-          c.address,
-          c.city,
-          c.province,
-          c.fiscalCode,
-          c.contact,
-          c.email,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)
-      );
-    }, [condominiums, search]);
-
-
-  /* =======================================================
-     GESTIONE PIANO
-     ======================================================= */
-
-  const requirePlan = (
-    required: PlanId,
-    feature: string,
-    addon?: AddonId
-  ) => {
-    if (hasEntitlement(subscription, required, addon)) {
-      return true;
-    }
-
-    const addonText = addon
-      ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
-      : "";
-
-    const answer = confirm(
-      feature + " richiede " + PLAN_NAMES[required] + "." + addonText +
-      "\n\nVuoi vedere piani e sblocchi singoli?"
-    );
-
-    if (answer) {
-      navigate("abbonamento");
-    }
-
-    return false;
-  };
-
-
   /* =======================================================
      CONDOMINI
      ======================================================= */
@@ -6971,6 +6370,609 @@ function App() {
   const documentsToVerify = activeDocuments.filter(
     (document) => document.aiStatus === "Da verificare"
   ).length;
+
+
+  const backendHydrated = useRef(false);
+
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase || !sessionRole) return;
+
+    let cancelled = false;
+    backendHydrated.current = false;
+
+    const hydrateFromBackend = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user || cancelled) return;
+
+        let workspaceId = profile.workspaceId;
+
+        if (sessionRole !== "resident") {
+          workspaceId = await getActiveWorkspaceId(
+            session.user.id,
+            profile.workspaceId
+          );
+        } else if (!workspaceId) {
+          const { data: portalAccess, error: portalAccessError } = await supabase
+            .from("portal_access")
+            .select("workspace_id")
+            .eq("active", true)
+            .ilike("email", session.user.email || "")
+            .limit(1)
+            .maybeSingle();
+
+          if (portalAccessError) throw portalAccessError;
+          workspaceId = portalAccess?.workspace_id ?? null;
+        }
+
+        if (!workspaceId || cancelled) return;
+
+        const backend = await loadBackendState(workspaceId);
+        if (cancelled) return;
+
+        setCondominiums(backend.condominiums);
+
+        // Restore the open condominium from the persisted selection at the
+        // exact point where backend data is known to be complete. Relying
+        // only on a later effect can miss the one-time ref transition during
+        // a hard refresh, leaving the user on the condominium list.
+        if (page === "condomini" && !selectedCondominiumPersistenceReady.current) {
+          let savedId: number | null = null;
+          try {
+            const urlId = new URLSearchParams(window.location.search).get("condominiumId");
+            if (urlId) savedId = Number(urlId);
+          } catch {
+            // Fall back to localStorage below.
+          }
+          if (savedId == null || !Number.isFinite(savedId)) {
+            savedId = load<number | null>(KEYS.selectedCondominium, null);
+          }
+          selectedCondominiumPersistenceReady.current = true;
+          if (savedId != null) {
+            const restored = backend.condominiums.find((item) => String(item.id) === String(savedId));
+            if (restored) {
+              setSelectedCondominium(restored);
+            } else {
+              localStorage.removeItem(KEYS.selectedCondominium);
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("condominiumId");
+                window.history.replaceState(window.history.state, document.title, url.toString());
+              } catch {
+                // URL cleanup is cosmetic.
+              }
+            }
+          }
+        }
+
+        setCondominiumMembers(backend.condominiumMembers);
+        setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        setDocuments(backend.documents);
+        setDeadlines(backend.deadlines);
+        setAssemblies(backend.assemblies);
+        setSuppliers(backend.suppliers);
+        setActivities(backend.activities);
+        setCondominiumWorks(Array.isArray(backend.condominiumWorks) ? backend.condominiumWorks : []);
+        setCommunications(backend.communications);
+        setCondominiumRequests(backend.condominiumRequests);
+        setPortalMembers(
+          Array.isArray(backend.portalMembers)
+            ? backend.portalMembers
+            : []
+        );
+        setCollaborators(
+          Array.isArray(backend.collaborators) ? backend.collaborators : []
+        );
+        backendHydrated.current = true;
+
+        setProfile((current) => ({
+          ...current,
+          workspaceId,
+          email: session.user.email || current.email,
+        }));
+      } catch (error) {
+        console.error("BETHAG backend hydration failed", error);
+      }
+    };
+
+    void hydrateFromBackend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionRole]);
+
+  useEffect(() => {
+    if (
+      !supabaseConfigured ||
+      !supabase ||
+      !profile.workspaceId ||
+      !backendHydrated.current ||
+      (sessionRole !== "admin" && sessionRole !== "collaborator")
+    ) return;
+
+    const timer = window.setTimeout(() => {
+      const allowedModules =
+        sessionRole === "collaborator"
+          ? serverCollaboratorPermissions
+          : null;
+
+      void syncBackendState(
+        profile.workspaceId,
+        {
+          condominiums,
+          condominiumMembers,
+          documents,
+          deadlines,
+          assemblies,
+          suppliers,
+          activities,
+          condominiumWorks,
+          communications,
+          condominiumRequests,
+          portalMembers,
+          collaborators,
+        },
+        allowedModules
+      ).catch((error) => {
+        console.error("BETHAG backend sync failed", error);
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    sessionRole,
+    profile.workspaceId,
+    serverCollaboratorPermissions,
+    condominiums,
+    condominiumMembers,
+    documents,
+    deadlines,
+    assemblies,
+    suppliers,
+    activities,
+    condominiumWorks,
+    communications,
+    condominiumRequests,
+    portalMembers,
+    collaborators,
+  ]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.condominiums,
+      JSON.stringify(condominiums)
+    );
+  }, [condominiums]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.deadlines,
+      JSON.stringify(deadlines)
+    );
+  }, [deadlines]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.documents,
+      JSON.stringify(documents)
+    );
+  }, [documents]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.assemblies,
+      JSON.stringify(assemblies)
+    );
+  }, [assemblies]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.suppliers,
+      JSON.stringify(suppliers)
+    );
+  }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.activities,
+      JSON.stringify(activities)
+    );
+  }, [activities]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
+  }, [condominiumWorks]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.communications,
+      JSON.stringify(communications)
+    );
+  }, [communications]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
+  }, [condominiumMembers]);
+
+  useEffect(() => {
+    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
+  }, [condominiumRequests]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.profile,
+      JSON.stringify(profile)
+    );
+  }, [profile]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.portalMembers,
+      JSON.stringify(portalMembers)
+    );
+  }, [portalMembers]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.subscription,
+      JSON.stringify(subscription)
+    );
+  }, [subscription]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      KEYS.collaborators,
+      JSON.stringify(collaborators)
+    );
+  }, [collaborators]);
+
+
+  /* =======================================================
+     HELPERS
+     ======================================================= */
+
+  const condominiumName = (
+    id: number | null
+  ) =>
+    condominiums.find(
+      (c) => c.id === id
+    )?.name || "Tutti i condomini";
+
+  const isAdministrator = sessionRole === "admin";
+  const isCollaborator = sessionRole === "collaborator";
+
+  const currentCollaborator = useMemo(
+    () =>
+      collaborators.find(
+        (item) =>
+          item.email.trim().toLowerCase() ===
+            sessionEmail.trim().toLowerCase() &&
+          item.workspaceId === profile.workspaceId &&
+          item.status === "Attivo"
+      ) || null,
+    [collaborators, sessionEmail, profile.workspaceId]
+  );
+
+  const collaboratorPermissions =
+    isCollaborator && supabaseConfigured
+      ? serverCollaboratorPermissions
+      : currentCollaborator?.permissions || [];
+
+  const pageAddon: Partial<Record<Page, AddonId>> = {
+    condomini: "condomini",
+    contabilita: "condomini",
+    documenti: "documenti",
+    scadenze: "scadenze",
+    assemblee: "assemblee",
+    fornitori: "fornitori",
+    attivita: "attivita",
+    lavori: "attivita",
+    comunicazioni: "comunicazioni",
+    ai: "ai",
+    portale: "portale",
+  };
+
+  const pagePermission: Partial<
+    Record<Page, CollaboratorPermission>
+  > = {
+    condomini: "condomini",
+    documenti: "documenti",
+    scadenze: "scadenze",
+    assemblee: "assemblee",
+    fornitori: "fornitori",
+    attivita: "attivita",
+    lavori: "attivita",
+    comunicazioni: "comunicazioni",
+    ai: "ai",
+    portale: "portale",
+  };
+
+  const canAccessPage = (target: Page) => {
+    if (isAdministrator) {
+      const addon = pageAddon[target];
+      return !addon || hasEntitlement(
+        subscription,
+        ADDON_REQUIRED_PLAN[addon],
+        addon
+      );
+    }
+
+    if (isCollaborator) {
+      if (
+        target === "abbonamento" ||
+        target === "amministratore" ||
+        target === "collaboratori" ||
+        target === "contabilita"
+      ) {
+        return false;
+      }
+
+      const requiredPermission = pagePermission[target];
+      const hasRolePermission =
+        !requiredPermission ||
+        collaboratorPermissions.includes(requiredPermission);
+
+      const addon = pageAddon[target];
+      const hasPlanAccess =
+        !addon ||
+        hasEntitlement(
+          subscription,
+          ADDON_REQUIRED_PLAN[addon],
+          addon
+        );
+
+      return hasRolePermission && hasPlanAccess;
+    }
+
+    return false;
+  };
+
+  const requireModulePermission = (
+    permission: CollaboratorPermission,
+    action: string
+  ) => {
+    if (isAdministrator) return true;
+
+    if (
+      isCollaborator &&
+      collaboratorPermissions.includes(permission)
+    ) {
+      return true;
+    }
+
+    alert(
+      action +
+        " non è autorizzata per il tuo profilo o per le funzioni assegnate."
+    );
+    return false;
+  };
+
+  const requireAdministrator = (action: string) => {
+    if (isAdministrator) return true;
+
+    alert(action + " è riservata all'Amministratore.");
+    return false;
+  };
+
+  const navigate = (target: Page) => {
+    if (!canAccessPage(target)) {
+      const addon = pageAddon[target];
+      if (
+        isAdministrator &&
+        addon
+      ) {
+        const answer = confirm(
+          ADDON_NAMES[addon] +
+            " non è compreso nel tuo piano attuale. " +
+            "Puoi sbloccarlo singolarmente senza passare al piano superiore.\n\nVuoi aprire Piano e upgrade?"
+        );
+        if (answer) {
+          setPage("abbonamento");
+          setSearch("");
+          setMobileMenuOpen(false);
+        }
+      } else if (isCollaborator && addon) {
+        alert(
+          ADDON_NAMES[addon] +
+            " non è disponibile nel piano attuale oppure non è tra le tue autorizzazioni."
+        );
+      } else {
+        alert("Questa sezione è riservata all'Amministratore.");
+      }
+      return;
+    }
+
+    setPage(target);
+    setSearch("");
+    setMobileMenuOpen(false);
+    setSelectedCondominium(null);
+    localStorage.removeItem(KEYS.selectedCondominium);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("condominiumId");
+      url.searchParams.set("page", target);
+      window.history.replaceState(window.history.state, document.title, url.toString());
+    } catch {
+      // URL persistence is best-effort; localStorage remains the fallback.
+    }
+    setSelectedDeadline(null);
+    setSelectedDocument(null);
+    setSelectedAssembly(null);
+    setSelectedSupplier(null);
+    setSelectedActivity(null);
+    setSelectedCondominiumWork(null);
+    setSelectedCommunication(null);
+  };
+
+  const openModal = (type: string) => {
+    setModalType(type);
+    setShowModal(true);
+  };
+  const openCondominiumAiCreation = () => {
+    if (!requirePlan("professional", "La creazione automatica del condominio con AI", "ai")) return;
+    setCondominiumAiDraft(null);
+    setCondominiumAiFiles([]);
+    setCondominiumAiProcessing(false);
+    setCondominiumAiLargeFiles([]);
+    setCondominiumAiConfirmedUnits([]);
+    openModal("condominium-ai");
+  };
+
+  const processCondominiumDocuments = async (
+    selectedFiles: File[],
+    storageMode: "both" | "analysis" | "storage"
+  ) => {
+    if (!selectedFiles.length) return;
+    setCondominiumAiFiles(selectedFiles.map((file) => file.name));
+    setCondominiumAiProcessing(true);
+    setCondominiumAiIntakeId(null);
+    try {
+      const workspaceId = await getActiveWorkspaceId();
+      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+
+      let storedDocuments: any[] = [];
+      if (storageMode !== "analysis") {
+        storedDocuments = await storeCondominiumDocuments(workspaceId, selectedFiles);
+      }
+      if (storageMode === "storage") {
+        alert("Documenti memorizzati correttamente. L'analisi AI non è stata eseguita.");
+        return;
+      }
+
+      const analysisFiles = storedDocuments.map((item: any, index: number) => ({
+        filename: item.name || selectedFiles[index]?.name || "documento",
+        storagePath: item.path,
+        mimeType: item.type || selectedFiles[index]?.type || "application/octet-stream",
+      }));
+      const draft = await analyzeCondominiumStoredDocumentsWithAI(workspaceId, analysisFiles);
+
+      if (storageMode === "analysis" && storedDocuments.length) {
+        await Promise.all(
+          storedDocuments.map((item: any) =>
+            deleteWorkspaceStoredFile(item.path).catch(() => undefined)
+          )
+        );
+      }
+      setCondominiumAiDraft(draft);
+      const intakeId = await createCondominiumCreationIntake(workspaceId, {
+        source: "AI",
+        sourceDocuments: selectedFiles.map((file) => ({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          lastModified: file.lastModified,
+          stored: storageMode !== "analysis",
+          storagePath: storedDocuments.find((item) => item.name === file.name)?.path ?? null,
+        })),
+        extractedData: {
+          name: draft.name ?? "",
+          address: draft.address ?? "",
+          cap: draft.cap ?? "",
+          city: draft.city ?? "",
+          province: draft.province ?? "",
+          fiscalCode: draft.fiscalCode ?? "",
+          units: draft.units ?? draft.unitRecords?.length ?? 0,
+          unitRecords: draft.unitRecords ?? [],
+        },
+        structure: draft.structure ?? {},
+        validationErrors: [],
+        warnings: draft.warnings ?? [],
+        notes: storageMode === "analysis"
+          ? "Proposta estratta automaticamente senza memorizzazione permanente del file originale."
+          : "Proposta estratta automaticamente e documento originale memorizzato.",
+      });
+      setCondominiumAiIntakeId(intakeId);
+    } catch (error: any) {
+      console.error("BETHAG condominium AI analysis error", error);
+      alert(error?.message || "Impossibile elaborare i documenti.");
+      setCondominiumAiDraft(null);
+    } finally {
+      setCondominiumAiProcessing(false);
+      setCondominiumAiLargeFiles([]);
+    }
+  };
+
+  const analyzeCondominiumDocuments = async (files: FileList | null) => {
+    if (!files?.length) return;
+    if (!requirePlan("professional", "La lettura AI dei documenti per creare un condominio", "ai")) return;
+    const selectedFiles = Array.from(files);
+    const largeFiles = selectedFiles.filter((file) => file.size >= 25 * 1024 * 1024);
+    if (largeFiles.length) {
+      setCondominiumAiFiles(selectedFiles.map((file) => file.name));
+      setCondominiumAiLargeFiles(selectedFiles);
+      return;
+    }
+    await processCondominiumDocuments(selectedFiles, "both");
+  };
+
+  const handleLargeCondominiumFiles = async (
+    mode: "both" | "analysis" | "storage"
+  ) => {
+    if (!condominiumAiLargeFiles.length) return;
+    await processCondominiumDocuments(condominiumAiLargeFiles, mode);
+  };
+  const closeModal = () => {
+    setShowModal(false);
+    setModalType("");
+    setSelectedFileName("");
+  };
+
+  const filteredCondominiums =
+    useMemo(() => {
+      const q = search.trim().toLowerCase();
+      const activeCondominiums = condominiums.filter((item) => !item.archivedAt);
+      if (!q) return activeCondominiums;
+      return activeCondominiums.filter((c) =>
+        [
+          c.name,
+          c.address,
+          c.city,
+          c.province,
+          c.fiscalCode,
+          c.contact,
+          c.email,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }, [condominiums, search]);
+
+
+  /* =======================================================
+     GESTIONE PIANO
+     ======================================================= */
+
+  const requirePlan = (
+    required: PlanId,
+    feature: string,
+    addon?: AddonId
+  ) => {
+    if (hasEntitlement(subscription, required, addon)) {
+      return true;
+    }
+
+    const addonText = addon
+      ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
+      : "";
+
+    const answer = confirm(
+      feature + " richiede " + PLAN_NAMES[required] + "." + addonText +
+      "\n\nVuoi vedere piani e sblocchi singoli?"
+    );
+
+    if (answer) {
+      navigate("abbonamento");
+    }
+
+    return false;
+  };
+
+
 
 
   if (!authHydrated) {
