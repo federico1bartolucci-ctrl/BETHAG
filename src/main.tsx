@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2523,6 +2523,7 @@ function App() {
   const [condominiumMemberForm, setCondominiumMemberForm] = useState<CondominiumMember>(emptyCondominiumMember);
   const [memberTransferForm, setMemberTransferForm] = useState<CondominiumMemberTransferForm>(emptyMemberTransferForm);
   const [selectedMemberTransferOutgoing, setSelectedMemberTransferOutgoing] = useState<CondominiumMember | null>(null);
+  const [memberTransferAccounting, setMemberTransferAccounting] = useState<any | null>(null);
   const [selectedCondominiumRequest, setSelectedCondominiumRequest] = useState<CondominiumRequest | null>(null);
   const [condominiumRequestForm, setCondominiumRequestForm] = useState<CondominiumRequest>(emptyCondominiumRequest);
 
@@ -5511,6 +5512,53 @@ function App() {
     }
   };
 
+  const openMemberTransferAccounting = async (member: CondominiumMember) => {
+    if (!profile.workspaceId) return;
+    setMemberTransferAccounting({ member, loading: true, result: null, error: null });
+    openModal("member-transfer-accounting");
+    try {
+      const result = await getMemberTransferAccountingSnapshotBackend(profile.workspaceId, Number(member.id));
+      setMemberTransferAccounting({ member, loading: false, result, error: null });
+    } catch (error) {
+      setMemberTransferAccounting({
+        member,
+        loading: false,
+        result: null,
+        error: error instanceof Error ? error.message : "Impossibile recuperare la situazione contabile.",
+      });
+    }
+  };
+
+  const closeMemberTransferAccounting = async () => {
+    const current = memberTransferAccounting;
+    if (!current?.result?.transferId) return;
+    if (!window.confirm("Confermi la chiusura definitiva della posizione contabile del precedente proprietario? L'operazione è consentita solo se tutte le posizioni finanziarie risultano chiuse.")) return;
+    try {
+      await closeCondominiumMemberTransferBackend(current.result.transferId);
+      const legacyId = Number(current.member?.id);
+      setCondominiumMembers((members) =>
+        members.map((member) =>
+          Number(member.id) === legacyId
+            ? {
+                ...member,
+                active: false,
+                data: {
+                  ...(member.data ?? {}),
+                  position_status: "Archiviato",
+                  current_owner: false,
+                },
+              }
+            : member
+        )
+      );
+      setMemberTransferAccounting(null);
+      closeModal();
+      alert("Posizione contabile chiusa. Il precedente proprietario è stato archiviato nello storico.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "La posizione contabile non può essere chiusa.");
+    }
+  };
+
   const saveCondominiumRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -7479,6 +7527,7 @@ function App() {
               onPrepareEmail={prepareCondominiumEmail}
               openCondominiumEmailComposer={openCondominiumEmailComposer}
               startMemberTransfer={startMemberTransfer}
+          onOpenMemberTransferAccounting={openMemberTransferAccounting}
               onNewDeadline={newDeadline}
               onNewDocument={newDocument}
               onNewAssembly={newAssembly}
@@ -8295,6 +8344,14 @@ function App() {
               onSubmit={saveCondominiumUnit}
               onCancel={closeModal}
               editing={!!selectedCondominiumUnit}
+            />
+          )}
+
+          {modalType === "member-transfer-accounting" && (
+            <MemberTransferAccountingPanel
+              value={memberTransferAccounting}
+              onClose={closeModal}
+              onCloseTransfer={closeMemberTransferAccounting}
             />
           )}
 
@@ -9336,6 +9393,7 @@ function CondominiumsPage(
     onPrepareEmail,
     openCondominiumEmailComposer,
     startMemberTransfer,
+    onOpenMemberTransferAccounting,
     onNewCondominiumAi,
     onNewDeadline,
     onNewDocument,
@@ -16144,6 +16202,65 @@ function CondominiumMemberTransferForm({ value, setValue, outgoingMember, unit, 
     </div>
     <Actions onCancel={onCancel} />
   </form>;
+}
+
+function MemberTransferAccountingPanel({ value, onClose, onCloseTransfer }: any) {
+  const snapshot = value?.result?.snapshot;
+  const captured = snapshot?.captured_accounting_snapshot ?? {};
+  const outgoing = snapshot?.outgoing ?? {};
+  const postTransfer = snapshot?.post_transfer ?? {};
+  const transfer = snapshot?.transfer ?? {};
+  const money = (v: any) => currency(Number(v ?? 0));
+
+  return (
+    <div>
+      <ModalTitle title="Situazione contabile del subentro" />
+      {value?.loading && <p>Recupero della situazione contabile...</p>}
+      {value?.error && (
+        <div className="form-help" style={{ marginBottom: 14 }}>
+          {value.error}
+        </div>
+      )}
+      {snapshot && (
+        <>
+          <div className="form-help" style={{ marginBottom: 14 }}>
+            <strong>Trasferimento:</strong> {transfer.transfer_type || "Subentro"} · <strong>Data:</strong> {formatDate(transfer.transfer_date)} · <strong>Stato:</strong> {transfer.status}
+          </div>
+          <div className="detail-grid">
+            <Detail label="Rate dovute prima del rogito" value={money(captured.installments_due_before)} />
+            <Detail label="Rate pagate prima del rogito" value={money(captured.installments_paid_before)} />
+            <Detail label="Residuo alla data del rogito" value={money(captured.installments_residual)} />
+            <Detail label="Posizione complessiva residua" value={money(captured.outstanding_total)} />
+            <Detail label="Residuo con scadenza successiva" value={money(captured.outstanding_due_after)} />
+            <Detail label="Straordinarie deliberate" value={Array.isArray(captured.extraordinary_deliberated_before_due_after) ? String(captured.extraordinary_deliberated_before_due_after.length) : "0"} />
+            <Detail label="Rate nuovo proprietario dopo il rogito" value={money(postTransfer.installments_after)} />
+            <Detail label="Allocazioni nuovo proprietario dopo il rogito" value={money(postTransfer.allocations_after)} />
+          </div>
+          <div className="notes">
+            <div className="detail-label">Esito</div>
+            <p>
+              {Number(captured.outstanding_total ?? 0) > 0.005 || Number(outgoing.installments_residual ?? 0) > 0.005
+                ? "La posizione del precedente proprietario deve restare in chiusura: prima della chiusura definitiva occorre regolare le partite contabili aperte."
+                : "Non risultano residui sulle rate considerate alla data del subentro."}
+            </p>
+          </div>
+          <div className="form-actions">
+            <button className="secondary-button" type="button" onClick={onClose}>Chiudi</button>
+            {transfer.status === "Confermato" && (
+              <button className="primary-button" type="button" onClick={onCloseTransfer}>
+                Chiudi posizione contabile
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {!snapshot && !value?.loading && (
+        <div className="form-actions">
+          <button className="secondary-button" type="button" onClick={onClose}>Chiudi</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CondominiumRequestForm({ value, setValue, condominiums, members, suppliers, activities, onSubmit, onCancel, editing }: any) {
