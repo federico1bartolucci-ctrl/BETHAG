@@ -9695,7 +9695,6 @@ function CondominiumDetails(
     onNewCommunication,
     onPrepareEmail,
     openCondominiumEmailComposer,
-    openMemberTransfer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
@@ -9718,6 +9717,15 @@ function CondominiumDetails(
     onStatusActivity,
     isAdministrator = false,
   } = props;
+
+  const handleMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
+    const transferHandler = props.openMemberTransfer;
+    if (typeof transferHandler !== "function") {
+      alert("Funzione di subentro non disponibile. Ricarica BETHAG e riprova.");
+      return;
+    }
+    transferHandler(member, unit);
+  };
 
   const openDeadlines =
     deadlines.filter(
@@ -10219,7 +10227,7 @@ function CondominiumDetails(
                                   alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                                   return;
                                 }
-                                openMemberTransfer(member, transferUnit);
+                                handleMemberTransfer(member, transferUnit);
                               }}
                             >
                               Subentro
@@ -10302,7 +10310,7 @@ function CondominiumDetails(
                         alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
                         return;
                       }
-                      openMemberTransfer(member, unit);
+                      handleMemberTransfer(member, unit);
                     }}
                   >
                     Subentro
@@ -10367,7 +10375,7 @@ function CondominiumDetails(
                     return;
                   }
                   const member = selectedMemberDetail;
-                  openMemberTransfer(member, unit);
+                  handleMemberTransfer(member, unit);
                 }}
               >
                 Subentro nuovo proprietario
