@@ -10319,7 +10319,7 @@ function CondominiumDetails(
                 <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
                   Modifica dati
                 </button>
-                {member.role === "Proprietario" && member.active && (
+                {isCurrentOwner(member) && (
                   <button
                     className="primary-button small"
                     type="button"
@@ -10385,7 +10385,7 @@ function CondominiumDetails(
             >
               Modifica dati
             </button>
-            {selectedMemberDetail.role === "Proprietario" && selectedMemberDetail.active && (
+            {isCurrentOwner(selectedMemberDetail) && (
               <button
                 className="primary-button"
                 type="button"
