@@ -590,7 +590,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
-      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
+      const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
             .from("condominium_fiscal_years")
