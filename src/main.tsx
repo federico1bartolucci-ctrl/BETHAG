@@ -6714,7 +6714,7 @@ function App() {
     setShowModal(true);
   };
 
-  const openMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
+  const startMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
     setSelectedUnit(null);
     setSelectedMemberDetail(null);
     setSelectedMemberTransferOutgoing(member);
@@ -9499,7 +9499,7 @@ function CondominiumsPage(
           onNewCommunication={onNewCommunication}
           onPrepareEmail={onPrepareEmail}
           openCondominiumEmailComposer={openCondominiumEmailComposer}
-          openMemberTransfer={openMemberTransfer}
+          startMemberTransfer={startMemberTransfer}
           onNewDeadline={() => onNewDeadline(selected.id)}
           onNewDocument={() => onNewDocument(selected.id)}
           onNewAssembly={() => onNewAssembly(selected.id)}
@@ -9719,7 +9719,7 @@ function CondominiumDetails(
   } = props;
 
   const handleMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
-    const transferHandler = props.openMemberTransfer;
+    const transferHandler = props.startMemberTransfer;
     if (typeof transferHandler !== "function") {
       alert("Funzione di subentro non disponibile. Ricarica BETHAG e riprova.");
       return;
