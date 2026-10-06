@@ -10432,6 +10432,11 @@ function CondominiumDetails(
             <button className="secondary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, [selectedMemberDetail.id], "Selezionati")}>
               ✉️ Scrivi
             </button>
+            {String((selectedMemberDetail as any).positionStatus ?? (selectedMemberDetail as any).data?.position_status ?? "").trim() === "In chiusura" && (
+              <button className="secondary-button" type="button" onClick={() => onOpenMemberTransferAccounting(selectedMemberDetail)}>
+                Contabilità subentro
+              </button>
+            )}
             <button
               className="primary-button"
               type="button"
