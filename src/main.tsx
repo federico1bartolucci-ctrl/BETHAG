@@ -5513,7 +5513,6 @@ function App() {
   };
 
   const openMemberTransferAccounting = async (member: CondominiumMember) => {
-    if (!profile.workspaceId) return;
     setMemberTransferAccounting({ member, loading: true, result: null, error: null });
     openModal("member-transfer-accounting");
     try {
