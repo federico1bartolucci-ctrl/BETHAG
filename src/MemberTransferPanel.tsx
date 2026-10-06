@@ -163,9 +163,21 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     finally { setBusy(false); }
   }
   async function closeTransfer(id: string) {
-    if (!supabase || !window.confirm("Chiudere il trasferimento? L'operazione è consentita solo quando tutte le posizioni contabili del cedente risultano chiuse.")) return;
+    if (!supabase) return;
+    const transfer = rows.find(r => r.id === id);
+    if (!transfer) return;
+    const ok = window.confirm("Confermi la chiusura della posizione del cedente? La chiusura è consentita solo quando tutte le posizioni contabili risultano pari a zero.");
+    if (!ok) return;
     setBusy(true); setError(""); setMessage("");
     try {
+      const { data: check, error: checkError } = await supabase.rpc("check_condominium_member_transfer_closure", { p_transfer_id: id });
+      if (checkError) throw checkError;
+      const financial = check || {};
+      const openTotal = Number(financial.open_total || 0);
+      if (openTotal > 0.005) {
+        setError(`Chiusura non consentita: risultano ancora ${openTotal.toFixed(2)} € di posizioni contabili aperte (rate ${Number(financial.open_installments || 0).toFixed(2)} €, spese ${Number(financial.open_allocations || 0).toFixed(2)} €, riporti cedente ${Number(financial.open_member_carryovers || 0).toFixed(2)} €, riporti unità ${Number(financial.open_unit_carryovers || 0).toFixed(2)} €).`);
+        return;
+      }
       const { error: e } = await supabase.rpc("close_condominium_member_transfer", { p_transfer_id: id });
       if (e) throw e;
       setMessage("Trasferimento chiuso e posizione del cedente archiviata.");
