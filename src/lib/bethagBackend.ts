@@ -127,6 +127,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         row.data?.condominiumId ??
         null,
       unitId: row.unit_id ?? row.data?.unitId ?? "",
+      // Le colonne strutturate sono la fonte di verità per lo stato attivo.
+      // Il campo data.active è legacy e non deve nascondere lo storico.
+      active: row.active ?? true,
       currentOwner: row.data?.current_owner !== false,
       positionStatus: row.data?.position_status ?? "Attivo",
     };
