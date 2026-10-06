@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 
-type UnitOption = { id: string; condominium_id: string; unit_code: string; data: any };
+type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
 type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; name?: string; email?: string | null; data: any };
 type TransferRow = {
   id: string; unit_id: string; outgoing_member_id: string; incoming_member_id: string | null;
@@ -23,8 +23,15 @@ function euro(value: unknown) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
 
-export default function MemberTransferPanel({ workspaceId, condominiumId, units, members, isAdministrator }: {
-  workspaceId: string; condominiumId: string | null; units: UnitOption[]; members: MemberOption[]; isAdministrator: boolean;
+export default function MemberTransferPanel({ workspaceId, condominiumId, units, members, isAdministrator, condominiums = [], selectedCondominiumId = "all", onCondominiumChange }: {
+  workspaceId: string;
+  condominiumId: string | null;
+  units: UnitOption[];
+  members: MemberOption[];
+  isAdministrator: boolean;
+  condominiums?: Array<{ id: number; name: string; address?: string; cap?: string; city?: string; province?: string }>;
+  selectedCondominiumId?: number | "all";
+  onCondominiumChange?: (id: number | "all") => void;
 }) {
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [unitId, setUnitId] = useState("");
@@ -44,8 +51,23 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const scopedMembers = useMemo(() => members.filter(m => m.active && (!condominiumId || m.condominium_id === condominiumId)), [members, condominiumId]);
   const unitMembers = useMemo(() => scopedMembers.filter(m => m.unit_id === unitId && String(m.data?.role || "").trim() === "Proprietario" && m.data?.current_owner !== false && m.data?.position_status !== "In chiusura"), [scopedMembers, unitId]);
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
+  const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
   const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
-  const unitLabel = (id: string) => scopedUnits.find(u => u.id === id)?.unit_code || "Unità";
+  const unitLabel = (id: string) => {
+    const unit = scopedUnits.find(u => u.id === id);
+    if (!unit) return "Unità";
+    const d = unit.data || {};
+    const civic = d.civicCode ?? d.civic_code ?? "";
+    const building = unit.building_code ?? d.buildingCode ?? d.building_code ?? "";
+    const staircase = d.staircaseCode ?? d.staircase_code ?? "";
+    const type = d.unitType ?? d.unit_type ?? "";
+    const hierarchy = [
+      civic ? `Civico ${civic}` : "",
+      building ? `Palazzina ${building}` : "",
+      staircase ? `Scala ${staircase}` : "",
+    ].filter(Boolean).join(" · ");
+    return [`Unità ${unit.unit_code}`, hierarchy, type].filter(Boolean).join(" · ");
+  };
   const memberLabel = (id: string) => memberName(scopedMembers.find(m => m.id === id));
 
   const loadRows = useCallback(async () => {
@@ -122,8 +144,10 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   return <div className="cards-grid">
     <section className="card">
       <div className="section-heading"><div><h2>Nuovo subentro</h2><p>Consulta la situazione contabile alla data del rogito prima di registrare il trasferimento.</p></div></div>
+      {selectedCondominiumId !== "all" && selectedCondominium && <div className="permission-box"><b>Contesto del subentro</b><span>Condominio: {selectedCondominium.name}</span><span>Indirizzo: {[selectedCondominium.address, selectedCondominium.cap && selectedCondominium.city ? `${selectedCondominium.cap} ${selectedCondominium.city}` : selectedCondominium.city, selectedCondominium.province ? `(${selectedCondominium.province})` : ""].filter(Boolean).join(", ")}</span><small>Le unità sono mostrate con civico, palazzina e scala quando questi dati sono presenti nell'anagrafica.</small></div>}
       <div className="form-grid">
-        <label>Unità immobiliare<select value={unitId} onChange={e=>{setUnitId(e.target.value);setOutgoingId("");setPreview(null);setSnapshot({});}}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{u.unit_code}</option>)}</select></label>
+        <label>Condominio<select value={String(selectedCondominiumId)} onChange={e=>{const value=e.target.value === "all" ? "all" : Number(e.target.value); onCondominiumChange?.(value); setUnitId(""); setOutgoingId(""); setPreview(null); setSnapshot({});}} disabled={!onCondominiumChange}><option value="all">Tutti i condomini</option>{condominiums.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label>Unità immobiliare<select value={unitId} onChange={e=>{setUnitId(e.target.value);setOutgoingId("");setPreview(null);setSnapshot({});}} disabled={!condominiumId}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{unitLabel(u.id)}</option>)}</select></label>
         <label>Proprietario uscente<select value={outgoingId} onChange={e=>{setOutgoingId(e.target.value);setPreview(null);}} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select></label>
         <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{setTransferDate(e.target.value);setPreview(null);}} required /></label>
         <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
