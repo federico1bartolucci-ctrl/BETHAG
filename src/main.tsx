@@ -10447,10 +10447,9 @@ function CondominiumDetails(
                   event.stopPropagation();
                   const member = selectedMemberDetail;
                   if (!member) return;
-                  // La finestra contabile è indipendente dal dettaglio:
-                  // chiudiamo solo la scheda anagrafica e apriamo direttamente
-                  // la situazione contabile nello stesso evento click.
-                  setSelectedMemberDetail(null);
+                  // Apriamo la contabilità sopra il dettaglio corrente.
+                  // Non chiudiamo qui il modale anagrafico: la chiusura anticipata
+                  // faceva tornare la vista a Proprietari/Inquilini prima dell'apertura.
                   onOpenMemberTransferAccounting(member);
                 }}
               >
