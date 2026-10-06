@@ -622,7 +622,11 @@ async function syncBackendStateNow(
     name: [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name || "Condòmino",
     email: item.email ?? null,
     role: item.role === "Inquilino" ? "resident" : "resident",
-    active: item.active ?? true,
+    // Una posizione "In chiusura" resta attiva nell'anagrafica fino alla
+    // chiusura contabile; viene disattivata solo dal flusso di chiusura.
+    active: String(item.data?.position_status ?? item.positionStatus ?? "").trim() === "In chiusura"
+      ? true
+      : (item.active ?? true),
     permissions: item.permissions ?? {},
     data: item,
   })).filter((row: any) => row.condominium_id);
