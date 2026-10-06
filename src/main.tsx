@@ -10433,7 +10433,19 @@ function CondominiumDetails(
               ✉️ Scrivi
             </button>
             {String((selectedMemberDetail as any).positionStatus ?? (selectedMemberDetail as any).data?.position_status ?? "").trim() === "In chiusura" && (
-              <button className="secondary-button" type="button" onClick={() => onOpenMemberTransferAccounting(selectedMemberDetail)}>
+              <button
+                className="secondary-button"
+                type="button"
+                onPointerUpCapture={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onOpenMemberTransferAccounting(selectedMemberDetail);
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+              >
                 Contabilità subentro
               </button>
             )}
