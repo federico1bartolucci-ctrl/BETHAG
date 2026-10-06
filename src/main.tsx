@@ -10136,18 +10136,25 @@ function CondominiumDetails(
                     member.unitId === unit.id ||
                     member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase()
                 );
-                const owners = linkedMembers.filter((member: CondominiumMember) => member.role === "Proprietario");
-                const tenants = linkedMembers.filter((member: CondominiumMember) => member.role === "Inquilino");
+                const currentOwners = linkedMembers.filter((member: CondominiumMember) => isCurrentOwner(member));
+                const currentTenants = linkedMembers.filter((member: CondominiumMember) => member.role === "Inquilino" && member.active);
+                const historicalOwners = linkedMembers.filter((member: CondominiumMember) => member.role === "Proprietario" && !isCurrentOwner(member));
                 const ownerMembers = visibleMembers.filter(
                   (member: CondominiumMember) =>
-                    Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id)
+                    Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id) && isCurrentOwner(member)
                 );
                 const externalOwners = Array.isArray(unit.externalOwners) ? unit.externalOwners : [];
                 const incorporated = unit.incorporatedInUnitId
                   ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId)
                   : null;
+                const personLabel = (member: CondominiumMember) => {
+                  const first = String(member.firstName || (member as any).data?.first_name || "").trim();
+                  const last = String(member.lastName || (member as any).data?.last_name || "").trim();
+                  const direct = String((member as any).name || (member as any).fullName || (member as any).data?.full_name || "").trim();
+                  return direct || [first, last].filter(Boolean).join(" ") || "Persona senza nome";
+                };
                 const ownerLabels = [
-                  ...ownerMembers.map((m: CondominiumMember) => m.firstName + " " + m.lastName),
+                  ...ownerMembers.map(personLabel),
                   ...externalOwners
                     .map((o: ExternalUnitOwner) => [o.firstName, o.lastName].filter(Boolean).join(" "))
                     .filter(Boolean),
@@ -10184,31 +10191,26 @@ function CondominiumDetails(
                         {incorporated ? " · collegata a " + incorporated.unitCode : ""}
                       </small>
 
-                      <p>
-                        <strong>
-                          {linkedMembers.length}{" "}
-                          {linkedMembers.length === 1 ? "persona associata" : "persone associate"}
-                        </strong>
-                        {" · "}
-                        {owners.length} proprietari · {tenants.length} inquilini
-                      </p>
-
-                      {ownerLabels.length > 0 && (
-                        <p>
-                          <strong>Proprietari:</strong> {ownerLabels.join(" | ")}
-                        </p>
-                      )}
-
-                      {linkedMembers.length > 0 && (
-                        <p>
-                          {linkedMembers
-                            .map(
-                              (member: CondominiumMember) =>
-                                `${member.firstName} ${member.lastName} · ${member.role}${member.email ? ` · ${member.email}` : ""}`
-                            )
-                            .join(" | ")}
-                        </p>
-                      )}
+                      <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                        <div style={{ padding: "10px 12px", borderRadius: 12, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
+                          <strong>👤 Proprietari attuali ({currentOwners.length + externalOwners.length})</strong>
+                          <div style={{ marginTop: 5 }}>{ownerLabels.length ? ownerLabels.join(" · ") : "Nessun proprietario attuale associato"}</div>
+                        </div>
+                        <div style={{ padding: "10px 12px", borderRadius: 12, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                          <strong>🏠 Inquilini attuali ({currentTenants.length})</strong>
+                          <div style={{ marginTop: 5 }}>{currentTenants.length ? currentTenants.map(personLabel).join(" · ") : "Nessun inquilino attuale"}</div>
+                        </div>
+                        {historicalOwners.length > 0 && (
+                          <details style={{ padding: "10px 12px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                            <summary style={{ cursor: "pointer", fontWeight: 700 }}>Storico proprietari ({historicalOwners.length})</summary>
+                            <div style={{ marginTop: 8, color: "#64748b" }}>
+                              {historicalOwners.map((member: CondominiumMember) => (
+                                <div key={member.id}>{personLabel(member)} · {member.email || "E-mail non inserita"} · posizione archiviata</div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
 
                       {linkedMembers.length === 0 && ownerLabels.length === 0 && (
                         <p style={{ color: "#b45309" }}>
