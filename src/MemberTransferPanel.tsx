@@ -253,7 +253,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
             memberRole(m) === "Proprietario" &&
             memberIsCurrentOwner(m)
           );
-          const nextOutgoingId = owners.length === 1 ? owners[0].id : "";
+          const nextOutgoingId = owners[0]?.id || "";
           setUnitId(nextUnitId);
           setOutgoingId(nextOutgoingId);
           setPreview(null);
@@ -276,7 +276,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>        <label>Modalità trasferimento<select value={transferScope} onChange={e=>{
           const next = e.target.value as "whole_property" | "ownership_share";
           setTransferScope(next); setPreview(null); setSnapshot({}); setError("");
-          if (next === "whole_property" && currentUnitOwners.length === 1) setOutgoingId(currentUnitOwners[0].id);
+          if (next === "whole_property" && currentUnitOwners.length) setOutgoingId(currentUnitOwners[0].id);
           if (next === "ownership_share" && currentUnitOwners.length > 1 && !currentUnitOwners.some(m => m.id === outgoingId)) setOutgoingId(currentUnitOwners[0]?.id || "");
         }}>
           <option value="whole_property">Trasferimento dell'intera proprietà</option>
@@ -291,7 +291,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
         </button>
-        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim() || currentUnitOwners.length > 1}>
+        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
           Verifica e conferma dati
         </button>
       </div>
