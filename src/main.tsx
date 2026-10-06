@@ -5516,8 +5516,7 @@ function App() {
     // La contabilità del subentro è una finestra indipendente dal modale
     // "Dettaglio condòmino". Non deve dipendere da showModal/modalType,
     // altrimenti la chiusura del dettaglio può smontare anche la contabilità.
-    setSelectedMemberDetail(null);
-    setMemberTransferAccounting({ member, loading: true, result: null, error: null });
+    // Il dettaglio anagrafico viene chiuso dal componente CondominiumDetails prima di arrivare qui.\n    // Questo handler appartiene al componente principale e non deve riferirsi al suo stato locale.\n    setMemberTransferAccounting({ member, loading: true, result: null, error: null });
     try {
       const result = await getMemberTransferAccountingSnapshotBackend(profile.workspaceId, Number(member.id));
       setMemberTransferAccounting({ member, loading: false, result, error: null });
