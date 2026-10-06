@@ -9692,6 +9692,7 @@ function CondominiumDetails(
     onNewCommunication,
     onPrepareEmail,
     openCondominiumEmailComposer,
+    startMemberTransfer,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
@@ -9716,15 +9717,11 @@ function CondominiumDetails(
   } = props;
 
   const handleMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
-    setSelectedUnit(null);
-    setSelectedMemberTransferOutgoing(member);
-    setMemberTransferForm({
-      ...emptyMemberTransferForm,
-      condominiumId: member.condominiumId,
-      unitId: String(unit.id),
-      outgoingMemberId: member.id,
-    });
-    openModal("member-transfer");
+    if (typeof startMemberTransfer !== "function") {
+      alert("Funzione di subentro non disponibile. Ricarica BETHAG e riprova.");
+      return;
+    }
+    startMemberTransfer(member, unit);
   };
 
   const openDeadlines =
