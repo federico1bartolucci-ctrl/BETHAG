@@ -52,8 +52,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [transferType, setTransferType] = useState("Vendita");
   const [transferScope, setTransferScope] = useState<"whole_property" | "ownership_share">("whole_property");
   const [ownershipShare, setOwnershipShare] = useState("");
-  const [incomingName, setIncomingName] = useState("");
-  const [incomingEmail, setIncomingEmail] = useState("");
+  const [incomingOwners, setIncomingOwners] = useState<Array<{ name: string; email: string; share: string }>>([{ name: "", email: "", share: "" }]);
   const [notes, setNotes] = useState("");
   const [preview, setPreview] = useState<any>(null);
   const [snapshot, setSnapshot] = useState<Record<string, any>>({});
@@ -61,6 +60,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const incomingOwnersValid = useMemo(() => incomingOwners.filter(o => o.name.trim()), [incomingOwners]);
+  const incomingOwnersTotalShare = useMemo(() => incomingOwnersValid.reduce((sum, o) => sum + (Number(o.share) || 0), 0), [incomingOwnersValid]);
+  const incomingDisplayName = useMemo(() => incomingOwnersValid.map(o => o.name.trim()).join(" · "), [incomingOwnersValid]);
 
   const scopedUnits = useMemo(() => units.filter(u => !condominiumId || u.condominium_id === condominiumId), [units, condominiumId]);
   const scopedMembers = useMemo(() => members.filter(m => m.active && (!condominiumId || m.condominium_id === condominiumId)), [members, condominiumId]);
@@ -143,8 +145,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     await makePreviewFor(unitId, outgoingId, transferDate);
   }
   function openConfirmation() {
-    if (!unitId || !outgoingId || !transferDate || !incomingName.trim()) {
-      setError("Completa i dati obbligatori del trasferimento.");
+    if (!unitId || !outgoingId || !transferDate || !incomingOwnersValid.length) {
+      setError("Inserisci almeno un nuovo proprietario.");
       return;
     }
     if (transferScope === "ownership_share") {
@@ -156,8 +158,18 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       setError("Nessun proprietario attivo trovato per l'unità selezionata.");
       return;
     }
-    if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) {
-      setError("Inserisci un indirizzo email valido.");
+    for (const owner of incomingOwnersValid) {
+      if (owner.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) {
+        setError("Inserisci un indirizzo email valido per ciascun nuovo proprietario.");
+        return;
+      }
+    }
+    if (transferScope === "whole_property" && Math.abs(incomingOwnersTotalShare - 100) > 0.0001) {
+      setError("Per il trasferimento dell'intera proprietà, le quote dei nuovi comproprietari devono sommare esattamente il 100%.");
+      return;
+    }
+    if (transferScope === "ownership_share" && (incomingOwnersValid.some(o => !Number.isFinite(Number(o.share)) || Number(o.share) <= 0) || incomingOwnersTotalShare <= 0 || incomingOwnersTotalShare > Number(ownershipShare) + 0.0001)) {
+      setError("Le quote dei nuovi comproprietari devono essere positive e la loro somma non può superare la quota trasferita.");
       return;
     }
     if (!previewIsCurrent) {
@@ -169,7 +181,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   }
 
   async function confirmTransfer() {
-    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingName.trim()) { setError("Completa i dati obbligatori del trasferimento."); return; }
+    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingOwnersValid.length) { setError("Inserisci almeno un nuovo proprietario."); return; }
     if (transferScope === "ownership_share") {
       const share = Number(ownershipShare);
       if (!Number.isFinite(share) || share <= 0 || share > 100) { setError("Indica una quota valida da trasferire, compresa tra 0,01% e 100%."); return; }
@@ -177,27 +189,30 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       if (share > selectedOutgoingShare + 0.0001) { setError("La quota da trasferire supera la quota attualmente posseduta dal cedente."); return; }
     } else if (!currentUnitOwners.length) { setError("Nessun proprietario attivo trovato per l'unità selezionata."); return; }
     if (!previewIsCurrent) { setError("L'anteprima contabile non è aggiornata."); return; }
-    if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) { setError("Inserisci un indirizzo email valido."); return; }
+    for (const owner of incomingOwnersValid) { if (owner.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) { setError("Inserisci un indirizzo email valido per ciascun nuovo proprietario."); return; } }
+    if (transferScope === "whole_property" && Math.abs(incomingOwnersTotalShare - 100) > 0.0001) { setError("Per il trasferimento dell'intera proprietà, le quote dei nuovi comproprietari devono sommare esattamente il 100%."); return; }
+    if (transferScope === "ownership_share" && (incomingOwnersValid.some(o => !Number.isFinite(Number(o.share)) || Number(o.share) <= 0) || incomingOwnersTotalShare <= 0 || incomingOwnersTotalShare > Number(ownershipShare) + 0.0001)) { setError("Le quote dei nuovi comproprietari devono essere positive e la loro somma non può superare la quota trasferita."); return; }
     setBusy(true); setError(""); setMessage("");
     try {
       const { data, error: e } = await supabase.rpc("confirm_condominium_member_transfer", {
-        p_unit_id: unitId, p_outgoing_member_id: outgoingId, p_incoming_name: incomingName.trim(),
-        p_incoming_email: incomingEmail.trim().toLowerCase(), p_incoming_user_id: null,
+        p_unit_id: unitId, p_outgoing_member_id: outgoingId, p_incoming_name: incomingOwnersValid[0].name.trim(),
+        p_incoming_email: incomingOwnersValid[0].email.trim().toLowerCase(), p_incoming_user_id: null,
         p_transfer_date: transferDate, p_transfer_type: transferType, p_notes: notes.trim(), p_data: {
           outgoing_name: memberName(scopedMembers.find(m => m.id === outgoingId)),
           outgoing_email: scopedMembers.find(m => m.id === outgoingId)?.email || null,
-          incoming_name: incomingName.trim(),
-          incoming_email: incomingEmail.trim().toLowerCase() || null,
+          incoming_name: incomingDisplayName,
+          incoming_email: incomingOwnersValid[0].email.trim().toLowerCase() || null,
+          incoming_members: incomingOwnersValid.map(o => ({ name: o.name.trim(), email: o.email.trim().toLowerCase() || null, ownership_share: Number(o.share) })),
           transfer_scope: transferScope,
           outgoing_member_ids: transferScope === "whole_property" ? wholePropertyOutgoingIds : [outgoingId],
-          incoming_share: transferScope === "whole_property" ? 100 : Number(ownershipShare),
+          incoming_share: transferScope === "whole_property" ? 100 : incomingOwnersTotalShare,
           outgoing_share: transferScope === "ownership_share" ? Number(selectedOutgoingShare) : null
         }
       });
       if (e) throw e;
       setMessage("Trasferimento registrato. La nuova identità dovrà completare la verifica prevista dal portale.");
       setShowConfirmation(false);
-      setIncomingName(""); setIncomingEmail(""); setNotes(""); setPreview(null);
+      setIncomingOwners([{ name: "", email: "", share: "" }]); setNotes(""); setPreview(null);
       await loadRows();
       if (data) await loadSnapshot(String(data));
     } catch (e: any) { setError(e?.message || "Impossibile confermare il trasferimento."); }
@@ -283,15 +298,25 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           <option value="ownership_share">Trasferimento di una quota</option>
         </select></label>
         {transferScope === "ownership_share" && <label>Quota da trasferire (%)<input type="number" min="0.01" max="100" step="0.01" value={ownershipShare} onChange={e=>{setOwnershipShare(e.target.value);setPreview(null);}} placeholder={selectedOutgoingShare ? String(selectedOutgoingShare) : "es. 50"} /><small>{selectedOutgoingShare ? "Quota attuale del cedente: " + selectedOutgoingShare + "%" : "La quota del cedente deve essere presente nell'anagrafica."}</small></label>}
-        <label>Nuovo proprietario<input value={incomingName} onChange={e=>setIncomingName(e.target.value)} required maxLength={160} placeholder="Nome e cognome" /></label>
-        <label>Email nuovo proprietario<input type="email" value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} maxLength={254} placeholder="nome@esempio.it" /></label>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <b>Nuovi proprietari / comproprietari</b>
+          <small style={{ display: "block", marginBottom: 8 }}>Puoi inserire uno o più subentranti. Per l'intera proprietà, le quote devono sommare il 100%.</small>
+          {incomingOwners.map((owner, index) => <div key={index} className="form-grid" style={{ marginBottom: 8 }}>
+            <label>Nome e cognome<input value={owner.name} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,name:e.target.value}:o))} required maxLength={160} placeholder="Nome e cognome" /></label>
+            <label>Email<input type="email" value={owner.email} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,email:e.target.value}:o))} maxLength={254} placeholder="nome@esempio.it" /></label>
+            <label>Quota %<input type="number" min="0.01" max="100" step="0.01" value={owner.share} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,share:e.target.value}:o))} placeholder="es. 50" /></label>
+            {incomingOwners.length > 1 && <button type="button" className="secondary-button" onClick={()=>setIncomingOwners(prev=>prev.filter((_,i)=>i!==index))}>Rimuovi</button>}
+          </div>)}
+          <button type="button" className="secondary-button" onClick={()=>setIncomingOwners(prev=>[...prev,{name:"",email:"",share:""}])}>+ Aggiungi comproprietario</button>
+          <span style={{ display:"block", marginTop:8 }}>Totale quote inserite: <b>{incomingOwnersTotalShare.toFixed(2)}%</b></span>
+        </div>
       </div>
       <label>Note<textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} /></label>
       <div className="form-actions">
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
         </button>
-        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
+        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingOwnersValid.length}>
           Verifica e conferma dati
         </button>
       </div>
@@ -304,8 +329,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
             <div><div className="detail-label">Unità</div><div className="detail-value">{unitLabel(unitId)}</div></div>
             <div><div className="detail-label">Modalità</div><div className="detail-value">{transferScope === "whole_property" ? "Intera proprietà" : "Quota " + ownershipShare + "%"}</div></div>
             <div><div className="detail-label">Proprietario/i uscente/i</div><div className="detail-value">{transferScope === "whole_property" ? currentUnitOwners.map(m => memberName(m)).join(" · ") : memberLabel(outgoingId)}</div></div>
-            <div><div className="detail-label">Nuovo proprietario</div><div className="detail-value">{incomingName.trim()}</div></div>
-            <div><div className="detail-label">E-mail nuovo proprietario</div><div className="detail-value">{incomingEmail.trim().toLowerCase() || "Non indicata"}</div></div>
+            <div><div className="detail-label">Nuovo/i proprietario/i</div><div className="detail-value">{incomingOwnersValid.map(o => o.name.trim() + " · " + Number(o.share || 0).toFixed(2) + "%").join(" | ")}</div></div>
+            <div><div className="detail-label">E-mail</div><div className="detail-value">{incomingOwnersValid.map(o => o.email.trim().toLowerCase() || "Non indicata").join(" · ")}</div></div>
             <div><div className="detail-label">Data rogito / trasferimento</div><div className="detail-value">{transferDate}</div></div>
             <div><div className="detail-label">Tipo trasferimento</div><div className="detail-value">{transferType}</div></div>
           </div>
