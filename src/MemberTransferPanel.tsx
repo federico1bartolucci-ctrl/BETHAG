@@ -46,6 +46,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const scopedUnits = useMemo(() => units.filter(u => !condominiumId || u.condominium_id === condominiumId), [units, condominiumId]);
   const scopedMembers = useMemo(() => members.filter(m => m.active && (!condominiumId || m.condominium_id === condominiumId)), [members, condominiumId]);
@@ -114,10 +115,27 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     }
     await makePreviewFor(unitId, outgoingId, transferDate);
   }
+  function openConfirmation() {
+    if (!unitId || !outgoingId || !transferDate || !incomingName.trim()) {
+      setError("Completa i dati obbligatori del trasferimento.");
+      return;
+    }
+    if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) {
+      setError("Inserisci un indirizzo email valido.");
+      return;
+    }
+    if (!previewIsCurrent) {
+      setError("Aggiorna prima l'anteprima contabile.");
+      return;
+    }
+    setError("");
+    setShowConfirmation(true);
+  }
+
   async function confirmTransfer() {
     if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingName.trim()) { setError("Completa i dati obbligatori del trasferimento."); return; }
+    if (!previewIsCurrent) { setError("L'anteprima contabile non è aggiornata."); return; }
     if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) { setError("Inserisci un indirizzo email valido."); return; }
-    if (!window.confirm("Confermare il trasferimento? La posizione storica del cedente sarà conservata e il subentro verrà registrato.")) return;
     setBusy(true); setError(""); setMessage("");
     try {
       const { data, error: e } = await supabase.rpc("confirm_condominium_member_transfer", {
@@ -127,6 +145,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       });
       if (e) throw e;
       setMessage("Trasferimento registrato. La nuova identità dovrà completare la verifica prevista dal portale.");
+      setShowConfirmation(false);
       setIncomingName(""); setIncomingEmail(""); setNotes(""); setPreview(null);
       await loadRows();
       if (data) await loadSnapshot(String(data));
@@ -201,10 +220,37 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
         </button>
-        <button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
-          Conferma trasferimento
+        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
+          Verifica e conferma dati
         </button>
       </div>
+      {showConfirmation && (
+        <div className="permission-box" style={{ marginTop: 16, border: "2px solid #526dfe", background: "#f8faff" }}>
+          <h3 style={{ marginTop: 0 }}>Conferma i dati del subentro</h3>
+          <p style={{ marginTop: 0 }}>Controlla attentamente i dati prima della registrazione definitiva.</p>
+          <div className="detail-grid">
+            <div><div className="detail-label">Condominio</div><div className="detail-value">{selectedCondominium?.name || "—"}</div></div>
+            <div><div className="detail-label">Unità</div><div className="detail-value">{unitLabel(unitId)}</div></div>
+            <div><div className="detail-label">Proprietario uscente</div><div className="detail-value">{memberLabel(outgoingId)}</div></div>
+            <div><div className="detail-label">Nuovo proprietario</div><div className="detail-value">{incomingName.trim()}</div></div>
+            <div><div className="detail-label">E-mail nuovo proprietario</div><div className="detail-value">{incomingEmail.trim().toLowerCase() || "Non indicata"}</div></div>
+            <div><div className="detail-label">Data rogito / trasferimento</div><div className="detail-value">{transferDate}</div></div>
+            <div><div className="detail-label">Tipo trasferimento</div><div className="detail-value">{transferType}</div></div>
+          </div>
+          <div className="permission-box" style={{ marginTop: 14 }}>
+            <b>Situazione contabile al rogito</b>
+            <span>Residuo complessivo cedente: {euro(preview?.outstanding_total)}</span>
+            <span>Residuo con scadenza successiva: {euro(preview?.outstanding_due_after)}</span>
+            <span>Rate entro il rogito: {(preview?.installments_before || []).length}</span>
+            <span>Rate successive già intestate al cedente: {(preview?.installments_after || []).length}</span>
+            <span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview?.extraordinary_deliberated_before_due_after || []).length}</span>
+          </div>
+          <div className="form-actions">
+            <button type="button" className="secondary-button" onClick={()=>setShowConfirmation(false)} disabled={busy}>Modifica dati</button>
+            <button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy}>Conferma definitivamente il trasferimento</button>
+          </div>
+        </div>
+      )}
       {outgoingId && <div className="permission-box"><b>Cedente selezionato</b><span>{memberLabel(outgoingId)} · anteprima contabile {previewIsCurrent ? "disponibile" : "da aggiornare"}</span></div>}
       {previewIsCurrent && <div className="permission-box"><b>Anteprima al {transferDate}</b><span>Rate scadute residue: {euro(preview.outstanding_before)}</span><span>Rate pagate: {euro(preview.paid_before)}</span><span>Rate analitiche entro la data del rogito: {(preview.installments_before || []).length}</span><span>Rate future già intestate al cedente: {(preview.installments_after || []).length}</span><span>Residuo complessivo del cedente: {euro(preview.outstanding_total)}</span><span>Residuo con scadenza successiva: {euro(preview.outstanding_due_after)}</span><span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview.extraordinary_deliberated_before_due_after || []).length}</span><span>Riporti fiscali dell’unità non attribuiti a un condomino: {(preview.unit_unassigned_carryovers || []).length} · esposizione {euro((preview.unit_unassigned_carryovers || []).reduce((sum:number,c:any)=>sum+Math.abs(Number(c.balance||0)),0))}</span>{(preview.unit_unassigned_carryovers || []).length>0 && <ul>{preview.unit_unassigned_carryovers.map((c:any)=><li key={c.id}>Riporto {c.kind || "fiscale"} · {c.status || "—"} · saldo {euro(c.balance)}</li>)}</ul>}{(preview.installments_before || []).length > 0 && <><b>Rate con scadenza entro il rogito</b><ul>{preview.installments_before.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.installments_after || []).length > 0 && <><b>Rate con scadenza successiva (da verificare prima della ripartizione)</b><ul>{preview.installments_after.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date || "non indicata"} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.extraordinary_deliberated_before_due_after || []).length > 0 && <><b>Spese straordinarie deliberate prima del rogito</b><ul>{preview.extraordinary_deliberated_before_due_after.map((a:any)=><li key={a.id}>{a.description || "Spesa straordinaria"} · deliberata {a.deliberation_date} · scadenza {a.due_date || "non indicata"} · residuo {euro(Number(a.amount||0)-Number(a.paid_amount||0))}</li>)}</ul></>}{preview.review_flags?.legal_liability_review_required && <small>La ripartizione delle responsabilità giuridiche tra cedente e acquirente richiede verifica documentale e normativa.</small>}</div>}
     </section>
