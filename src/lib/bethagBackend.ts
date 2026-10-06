@@ -161,7 +161,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const mappedCondominiumUnits = (condominiumUnits.data ?? []).map((row: any) => {
-    const storedOwnerIds = Array.isArray(row.data?.ownerMemberIds) ? row.data.ownerMemberIds : [];
+    // The member relation is authoritative; stale JSON-only owner references
+    // must not reappear after hydration.
     const linkedOwnerIds = ownerIdsByUnit.get(String(row.id)) ?? [];
     return {
       ...row.data,
@@ -181,7 +182,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       incorporatedInUnitId: row.data?.incorporatedInUnitId ?? null,
       relationshipToResidentialUnit: row.data?.relationshipToResidentialUnit ?? (row.data?.incorporatedInUnitId ? "Pertinenza" : "Nessuna"),
       ownerMode: row.data?.ownerMode ?? "condominium_member",
-      ownerMemberIds: Array.from(new Set([...storedOwnerIds, ...linkedOwnerIds])),
+      ownerMemberIds: linkedOwnerIds,
       externalOwners: Array.isArray(row.data?.externalOwners) ? row.data.externalOwners : [],
       notes: row.data?.notes ?? "",
       active: (row.lifecycle_status ?? row.data?.lifecycleStatus ?? "Attiva") === "Attiva" && (row.data?.active ?? true),
@@ -541,18 +542,18 @@ async function syncBackendStateNow(
   if (!canSyncCondomini) return;
 
   const unitRowsByKey = new Map<string, any>();
+  const unitRowsById = new Map<string, any>();
 
-  // Più condòmini possono appartenere alla stessa unità abitativa.
-  // Prima della sincronizzazione dobbiamo quindi eliminare i duplicati
-  // della coppia (condominio, codice unità). Senza questa deduplicazione
-  // PostgreSQL può rifiutare un singolo upsert che contiene due volte
-  // la stessa chiave di conflitto; in quel caso il secondo condòmino
-  // rimaneva solo nello stato locale e spariva al successivo refresh.
+  // Prefer the structured unitId when it resolves inside the same condominium.
+  // The legacy apartment code remains a fallback for older/local records.
   const desiredUnitMap = new Map<string, any>();
+  const memberCondominiums = new Set<string>();
   for (const item of state.condominiumMembers ?? []) {
     const condominiumId = condominiumDbIdByLegacyId.get(item.condominiumId);
+    if (!condominiumId) continue;
+    memberCondominiums.add(String(condominiumId));
     const unitCode = String(item.apartment ?? "").trim();
-    if (!condominiumId || !unitCode) continue;
+    if (!unitCode) continue;
 
     const key = String(condominiumId) + "::" + unitCode.toLowerCase();
     if (!desiredUnitMap.has(key)) {
@@ -566,9 +567,8 @@ async function syncBackendStateNow(
   }
 
   const desiredUnits = Array.from(desiredUnitMap.values());
-  if (desiredUnits.length) {
-    const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
-
+  const unitCondominiums = Array.from(memberCondominiums);
+  if (unitCondominiums.length) {
     const existingResult = await supabase
       .from("condominium_units")
       .select("id, condominium_id, unit_code")
@@ -581,9 +581,7 @@ async function syncBackendStateNow(
       )
     );
 
-    // Creiamo solo le unità mancanti. Non sovrascriviamo mai un'unità già
-    // presente: potrebbe contenere dati catastali, proprietari esterni,
-    // pertinenze e altri dati inseriti dall'amministratore.
+    // Create only missing legacy-coded units; never overwrite an existing unit.
     const missingUnits = desiredUnits.filter((row: any) =>
       !existingKeys.has(
         String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
@@ -600,6 +598,7 @@ async function syncBackendStateNow(
     if (persistedResult.error) throw persistedResult.error;
 
     (persistedResult.data ?? []).forEach((unit: any) => {
+      unitRowsById.set(String(unit.id), unit);
       unitRowsByKey.set(
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
         unit
@@ -612,10 +611,13 @@ async function syncBackendStateNow(
     condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
     unit_id: (() => {
       const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId);
-      const unit = condominiumDbId
-        ? unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`)
-        : null;
-      return unit?.id ?? null;
+      if (!condominiumDbId) return null;
+      const structuredUnit = item.unitId ? unitRowsById.get(String(item.unitId)) : null;
+      if (structuredUnit && String(structuredUnit.condominium_id) === String(condominiumDbId)) {
+        return structuredUnit.id;
+      }
+      const legacyUnit = unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`);
+      return legacyUnit?.id ?? null;
     })(),
     legacy_id: item.id,
     user_id: item.userId ?? null,
@@ -871,33 +873,44 @@ export async function saveCondominiumMember(
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
     const apartment = String(item.apartment ?? "").trim();
+    const requestedUnitId = String(item.unitId ?? "").trim();
     let unitId: string | null = null;
+    let canonicalApartment = apartment;
 
-    if (apartment) {
-      // L'unità è il contenitore dei millesimi e degli altri dati patrimoniali.
-      // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
-      // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
-      // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const { data: existingUnits, error: existingUnitError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominium.id);
+    // Prefer an explicit unitId only after verifying that it belongs to this
+    // condominium. The textual apartment code is retained for legacy records.
+    const { data: existingUnits, error: existingUnitError } = await supabase
+      .from("condominium_units")
+      .select("id, unit_code, data")
+      .eq("condominium_id", condominium.id);
+    if (existingUnitError) throw existingUnitError;
 
-      if (existingUnitError) throw existingUnitError;
+    const units = existingUnits ?? [];
+    const structuredUnit = requestedUnitId
+      ? units.find((unit: any) => String(unit.id) === requestedUnitId)
+      : null;
 
+    if (structuredUnit?.id) {
+      unitId = structuredUnit.id;
+      canonicalApartment = String(structuredUnit.unit_code ?? apartment).trim();
+    } else if (apartment) {
       const normalizedApartment = apartment.toLowerCase();
-      const existingUnit = (existingUnits ?? []).find(
+      const legacyUnit = units.find(
         (unit: any) =>
           String(unit.unit_code ?? "").trim().toLowerCase() === normalizedApartment
       );
 
-      if (existingUnit?.id) {
-        unitId = existingUnit.id;
+      if (legacyUnit?.id) {
+        unitId = legacyUnit.id;
+        canonicalApartment = String(legacyUnit.unit_code ?? apartment).trim();
       } else {
         throw new Error(
           "L'unità indicata non esiste nel condominio. Crea prima l'unità nella gestione delle unità immobiliari."
         );
       }
+    } else if (requestedUnitId) {
+      // A foreign or stale unitId must never attach a member across condominiums.
+      throw new Error("L'unità selezionata non appartiene al condominio indicato.");
     }
 
     const { data: previousMemberRow, error: previousMemberError } = await supabase
@@ -909,7 +922,8 @@ export async function saveCondominiumMember(
 
     if (previousMemberError) throw previousMemberError;
 
-    const { millesimi: _legacyMillesimi, ...memberData } = item ?? {};
+    const { millesimi: _legacyMillesimi, ...rawMemberData } = item ?? {};
+    const memberData = { ...rawMemberData, apartment: canonicalApartment, unitId: unitId ?? "" };
     const row = {
       condominium_id: condominium.id,
       unit_id: unitId,
@@ -931,51 +945,9 @@ export async function saveCondominiumMember(
 
     if (error) throw error;
 
-    // L'elenco proprietari appartiene alle unità e non alle persone.
-    // Quando un condòmino viene trasferito, oppure cambia qualifica,
-    // riallineiamo ownerMemberIds sulle unità coinvolte senza mai riscrivere
-    // i millesimi: questi ultimi restano esclusivamente nei dati dell'unità.
-    const previousUnitId = previousMemberRow?.unit_id ?? null;
-    const affectedUnitIds = Array.from(
-      new Set([previousUnitId, unitId].filter(Boolean).map(String))
-    );
-
-    if (affectedUnitIds.length) {
-      const { data: affectedUnits, error: affectedUnitsError } = await supabase
-        .from("condominium_units")
-        .select("id, data")
-        .eq("condominium_id", condominium.id)
-        .in("id", affectedUnitIds);
-
-      if (affectedUnitsError) throw affectedUnitsError;
-
-      for (const unit of affectedUnits ?? []) {
-        const currentOwners = Array.isArray(unit.data?.ownerMemberIds)
-          ? unit.data.ownerMemberIds.map((id: any) => Number(id)).filter(Number.isFinite)
-          : [];
-        const withoutMember = currentOwners.filter((id: number) => id !== Number(item.id));
-        const shouldOwnThisUnit = String(unit.id) === String(unitId) && item.role === "Proprietario";
-        const nextOwners = shouldOwnThisUnit
-          ? Array.from(new Set([...withoutMember, Number(item.id)]))
-          : withoutMember;
-
-        if (JSON.stringify(currentOwners) !== JSON.stringify(nextOwners)) {
-          const { error: ownerSyncError } = await supabase
-            .from("condominium_units")
-            .update({
-              data: {
-                ...(unit.data ?? {}),
-                ownerMemberIds: nextOwners,
-              },
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", unit.id)
-            .eq("condominium_id", condominium.id);
-
-          if (ownerSyncError) throw ownerSyncError;
-        }
-      }
-    }
+    // L'aggiornamento di ownerMemberIds è gestito dal trigger database, nella stessa
+    // transazione dell'upsert del membro. Il client non riscrive una seconda volta
+    // la proiezione, evitando aggiornamenti concorrenti o sovrascritture dei dati unità.
 
     // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
     // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
@@ -1774,41 +1746,8 @@ export async function deleteCondominiumMember(
 
     if (error) throw error;
 
-    // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
-    // di tutte le unità del medesimo condominio. I millesimi restano
-    // esclusivamente nell'oggetto unità e non vengono mai modificati.
-    const { data: condominiumUnits, error: unitsError } = await supabase
-      .from("condominium_units")
-      .select("id, data")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id);
-
-    if (unitsError) throw unitsError;
-
-    for (const unit of condominiumUnits ?? []) {
-      const currentData =
-        unit.data && typeof unit.data === "object" ? unit.data : {};
-      const currentOwners = Array.isArray((currentData as any).ownerMemberIds)
-        ? (currentData as any).ownerMemberIds
-        : [];
-      const nextOwners = currentOwners.filter(
-        (ownerId: unknown) => String(ownerId) !== String(legacyId)
-      );
-
-      if (nextOwners.length !== currentOwners.length) {
-        const nextData = {
-          ...currentData,
-          ownerMemberIds: nextOwners,
-        };
-        const { error: unitUpdateError } = await supabase
-          .from("condominium_units")
-          .update({ data: nextData })
-          .eq("workspace_id", workspaceId)
-          .eq("condominium_id", condominium.id)
-          .eq("id", unit.id);
-        if (unitUpdateError) throw unitUpdateError;
-      }
-    }
+    // ownerMemberIds viene ripulito dal trigger AFTER DELETE nel database,
+    // nella stessa transazione della cancellazione del membro.
   });
 }
 
