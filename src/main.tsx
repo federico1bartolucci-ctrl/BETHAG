@@ -6715,8 +6715,6 @@ function App() {
   };
 
   const startMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
-    setSelectedUnit(null);
-    setSelectedMemberDetail(null);
     setSelectedMemberTransferOutgoing(member);
     setMemberTransferForm({
       ...emptyMemberTransferForm,
@@ -9721,6 +9719,8 @@ function CondominiumDetails(
       alert("Funzione di subentro non disponibile. Ricarica BETHAG e riprova.");
       return;
     }
+    setSelectedUnit(null);
+    setSelectedMemberDetail(null);
     startMemberTransfer(member, unit);
   };
 
