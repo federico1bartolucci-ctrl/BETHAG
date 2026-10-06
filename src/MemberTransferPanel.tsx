@@ -382,7 +382,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
         </button>
-        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !incomingOwnersValid.length}>
+        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy}>
           Verifica e conferma dati
         </button>
       </div>
