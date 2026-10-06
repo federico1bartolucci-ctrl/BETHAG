@@ -131,13 +131,72 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     }
     setBusy(true); setError(""); setMessage(""); setSnapshot({});
     try {
-      const { data, error: e } = await supabase.rpc("preview_condominium_member_transfer", {
-        p_unit_id: nextUnitId,
-        p_outgoing_member_id: nextOutgoingId,
-        p_transfer_date: nextTransferDate
-      });
-      if (e) throw e;
-      setPreview(data);
+      const previewOwnerIds = transferScope === "whole_property"
+        ? currentUnitOwners.map(m => m.id)
+        : [nextOutgoingId];
+      const uniqueOwnerIds = Array.from(new Set(previewOwnerIds.filter(Boolean)));
+      if (!uniqueOwnerIds.length) {
+        setPreview(null);
+        return;
+      }
+
+      const results = await Promise.all(uniqueOwnerIds.map(async ownerId => {
+        const { data, error: e } = await supabase.rpc("preview_condominium_member_transfer", {
+          p_unit_id: nextUnitId,
+          p_outgoing_member_id: ownerId,
+          p_transfer_date: nextTransferDate
+        });
+        if (e) throw e;
+        return data || {};
+      }));
+
+      const byId = new Map<string, any>();
+      const mergeArray = (key: string) => {
+        for (const result of results) {
+          for (const item of Array.isArray(result?.[key]) ? result[key] : []) {
+            const id = String(item?.id ?? item?.allocation_id ?? item?.ledger_entry_id ?? "");
+            const fallback = JSON.stringify(item);
+            byId.set(key + "::" + (id || fallback), item);
+          }
+        }
+        return Array.from(byId.entries())
+          .filter(([entry]) => entry.startsWith(key + "::"))
+          .map(([, item]) => item);
+      };
+
+      const installmentsBefore = mergeArray("installments_before");
+      const installmentsAfter = mergeArray("installments_after");
+      const extraordinary = mergeArray("extraordinary_deliberated_before_due_after");
+
+      const outstandingBefore = installmentsBefore.reduce((sum, item) => sum + Math.max(0, Number(item?.residual) || 0), 0);
+      const paidBefore = installmentsBefore.reduce((sum, item) => sum + (Number(item?.paid_amount) || 0), 0);
+      const outstandingTotal = [...installmentsBefore, ...installmentsAfter]
+        .reduce((sum, item) => sum + Math.max(0, Number(item?.residual) || 0), 0);
+      const outstandingDueAfter = installmentsAfter
+        .reduce((sum, item) => sum + Math.max(0, Number(item?.residual) || 0), 0);
+
+      const base = results[0];
+      const merged = {
+        ...base,
+        transfer_date: nextTransferDate,
+        unit_id: nextUnitId,
+        outgoing_member_id: nextOutgoingId,
+        outstanding_before: outstandingBefore,
+        paid_before: paidBefore,
+        installments_before: installmentsBefore,
+        installments_after: installmentsAfter,
+        outstanding_total: outstandingTotal,
+        outstanding_due_after: outstandingDueAfter,
+        extraordinary_deliberated_before_due_after: extraordinary,
+        review_flags: {
+          ...(base?.review_flags || {}),
+          unpaid_before_transfer: results.some(r => !!r?.review_flags?.unpaid_before_transfer),
+          extraordinary_deliberated_before_due_after: results.some(r => !!r?.review_flags?.extraordinary_deliberated_before_due_after),
+          unit_unassigned_carryovers: results.some(r => !!r?.review_flags?.unit_unassigned_carryovers),
+          legal_liability_review_required: true
+        }
+      };
+      setPreview(merged);
     } catch (e: any) {
       setPreview(null);
       setError(e?.message || "Impossibile calcolare la situazione contabile.");
