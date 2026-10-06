@@ -341,13 +341,13 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           setSnapshot({});
           if (nextOutgoingId) void makePreviewFor(nextUnitId, nextOutgoingId, transferDate);
         }} disabled={!condominiumId}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{unitLabel(u.id)}</option>)}</select></label>
-        <label>Proprietario uscente<select value={outgoingId} onChange={e=>{
+        <label>Proprietario/i uscente/i{transferScope === "whole_property" ? <div className="permission-box" style={{ marginTop: 6, marginBottom: 0 }}><b>{currentUnitOwners.length ? currentUnitOwners.map(m => memberName(m)).join(" · ") : "Nessun proprietario attivo"}</b><small>Con il trasferimento dell'intera proprietà vengono trasferiti tutti i proprietari attivi dell'unità.</small></div> : <select value={outgoingId} onChange={e=>{
           const nextOutgoingId = e.target.value;
           setOutgoingId(nextOutgoingId);
           setPreview(null);
           setSnapshot({});
           if (nextOutgoingId && unitId && transferDate) void makePreviewFor(unitId, nextOutgoingId, transferDate);
-        }} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select></label>
+        }} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select>}</label>
         <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{
           const nextDate = e.target.value;
           setTransferDate(nextDate);
