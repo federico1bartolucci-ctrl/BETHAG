@@ -245,9 +245,15 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
             <span>Rate successive già intestate al cedente: {(preview?.installments_after || []).length}</span>
             <span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview?.extraordinary_deliberated_before_due_after || []).length}</span>
           </div>
+          {error && <div className="permission-box" style={{ marginTop: 14, border: "2px solid #d33", background: "#fff7f7" }}>
+            <b>Trasferimento non registrato</b>
+            <span>{error === "TRANSFER_ALREADY_EXISTS" ? "Esiste già un trasferimento confermato per questa unità nella stessa data. Modifica la data del rogito/trasferimento oppure apri lo storico dei trasferimenti." : error}</span>
+          </div>}
           <div className="form-actions">
             <button type="button" className="secondary-button" onClick={()=>setShowConfirmation(false)} disabled={busy}>Modifica dati</button>
-            <button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy}>Conferma definitivamente il trasferimento</button>
+            <button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy}>
+              {busy ? "Registrazione in corso…" : "Conferma definitivamente il trasferimento"}
+            </button>
           </div>
         </div>
       )}
