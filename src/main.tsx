@@ -10438,6 +10438,7 @@ function CondominiumDetails(
                 onPointerUpCapture={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
+                  setSelectedMemberDetail(null);
                   onOpenMemberTransferAccounting(selectedMemberDetail);
                 }}
                 onClick={(event) => {
