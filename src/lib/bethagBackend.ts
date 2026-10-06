@@ -62,6 +62,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     legalCases,
     portalAccess,
     workspaceMembers,
+    condominiumMemberTransfers,
   ] = await Promise.all([
     condominiumIds.length
       ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
@@ -85,6 +86,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
+    condominiumIds.length
+      ? supabase.from("condominium_member_transfers").select("id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at").in("condominium_id", condominiumIds).order("created_at")
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   const firstError = [
@@ -106,6 +110,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     legalCases,
     portalAccess,
     workspaceMembers,
+    condominiumMemberTransfers,
   ].find((result) => result.error)?.error;
 
   if (firstError) throw firstError;
@@ -114,14 +119,67 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     (condominiums.data ?? []).map((row: any) => [row.id, row.legacy_id])
   );
 
+  const transferIncomingIdentityByMemberId = new Map<string, { name: string; email: string; ownershipShare: number | null }>();
+  for (const transfer of condominiumMemberTransfers.data ?? []) {
+    const transferData = transfer.data && typeof transfer.data === "object" ? transfer.data : {};
+    const ids = Array.isArray(transferData.incoming_member_ids) ? transferData.incoming_member_ids : [];
+    const incomingMembers = Array.isArray(transferData.incoming_members) ? transferData.incoming_members : [];
+    ids.forEach((memberId: any, index: number) => {
+      const incoming = incomingMembers[index];
+      if (!incoming || !String(memberId || "").trim()) return;
+      transferIncomingIdentityByMemberId.set(String(memberId), {
+        name: String(incoming.name ?? "").trim(),
+        email: String(incoming.email ?? "").trim().toLowerCase(),
+        ownershipShare: Number.isFinite(Number(incoming.ownership_share)) ? Number(incoming.ownership_share) : null,
+      });
+    });
+    // Compatibilità con i subentri precedenti che avevano un solo incoming_member_id.
+    if (transfer.incoming_member_id && !transferIncomingIdentityByMemberId.has(String(transfer.incoming_member_id))) {
+      const legacyName = String(transferData.incoming_name ?? "").trim();
+      if (legacyName) {
+        transferIncomingIdentityByMemberId.set(String(transfer.incoming_member_id), {
+          name: legacyName,
+          email: String(transferData.incoming_email ?? "").trim().toLowerCase(),
+          ownershipShare: Number.isFinite(Number(transferData.incoming_share)) ? Number(transferData.incoming_share) : null,
+        });
+      }
+    }
+  }
+
   const mappedCondominiumMembers = (condominiumMembers.data ?? []).map((row: any) => {
     // I millesimi appartengono esclusivamente all'unità immobiliare.
     // Eliminiamo anche eventuali valori legacy rimasti nel JSON del condòmino,
     // così un vecchio record non può farli riapparire nella scheda persona.
     const { millesimi: _legacyMillesimi, ...memberData } = row.data ?? {};
+    const identity = transferIncomingIdentityByMemberId.get(String(row.id));
+    const storedName = String(row.name ?? "").trim();
+    const fallbackName = String(memberData.name ?? memberData.fullName ?? memberData.full_name ?? "").trim();
+    const resolvedName =
+      (storedName && !["condòmino", "condomino"].includes(storedName.toLowerCase()) ? storedName : "") ||
+      (identity?.name ?? "") ||
+      fallbackName ||
+      (String(memberData.incoming_name ?? "").trim() || "");
+    const resolvedEmail = String(row.email ?? memberData.email ?? identity?.email ?? "").trim().toLowerCase();
+    const existingFirstName = String(memberData.firstName ?? memberData.first_name ?? "").trim();
+    const existingLastName = String(memberData.lastName ?? memberData.last_name ?? "").trim();
+    const nameParts = resolvedName.split(/\s+/).filter(Boolean);
+    const resolvedFirstName = existingFirstName || (nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : (nameParts[0] ?? ""));
+    const resolvedLastName = existingLastName || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
     return {
       ...memberData,
       id: row.legacy_id,
+      name: resolvedName || storedName || "Condòmino",
+      firstName: resolvedFirstName,
+      lastName: resolvedLastName,
+      email: resolvedEmail,
+      ownershipShare: identity?.ownershipShare ?? memberData.ownership_share ?? memberData.ownershipShare,
+      data: {
+        ...memberData,
+        name: resolvedName || storedName || "Condòmino",
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
+        email: resolvedEmail,
+      },
       condominiumId:
         condominiumLegacyByDbId.get(row.condominium_id) ??
         row.data?.condominiumId ??
