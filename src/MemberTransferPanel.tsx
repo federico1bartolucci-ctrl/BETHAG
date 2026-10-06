@@ -8,6 +8,18 @@ type TransferRow = {
   transfer_date: string; transfer_type: string; status: string; notes: string; data: any;
 };
 
+function memberRole(member?: MemberOption | null) {
+  if (!member) return "";
+  const d = member.data || {};
+  return String(d.role ?? d.condominiumRole ?? (member as any).role ?? "").trim();
+}
+function memberIsCurrentOwner(member?: MemberOption | null) {
+  if (!member) return false;
+  const d = member.data || {};
+  const currentOwner = d.current_owner ?? d.currentOwner ?? (member as any).current_owner ?? (member as any).currentOwner;
+  const status = String(d.position_status ?? d.positionStatus ?? (member as any).position_status ?? (member as any).positionStatus ?? "Attivo").trim();
+  return currentOwner !== false && currentOwner !== "false" && status !== "In chiusura" && status !== "Archiviato";
+}
 function memberName(member?: MemberOption | null) {
   if (!member) return "Condòmino non disponibile";
   if (typeof member.name === "string" && member.name.trim()) return member.name.trim();
@@ -50,7 +62,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
 
   const scopedUnits = useMemo(() => units.filter(u => !condominiumId || u.condominium_id === condominiumId), [units, condominiumId]);
   const scopedMembers = useMemo(() => members.filter(m => m.active && (!condominiumId || m.condominium_id === condominiumId)), [members, condominiumId]);
-  const unitMembers = useMemo(() => scopedMembers.filter(m => m.unit_id === unitId && String(m.data?.role || "").trim() === "Proprietario" && m.data?.current_owner !== false && m.data?.position_status !== "In chiusura"), [scopedMembers, unitId]);
+  const unitMembers = useMemo(() => scopedMembers.filter(m => m.unit_id === unitId && memberRole(m) === "Proprietario" && memberIsCurrentOwner(m)), [scopedMembers, unitId]);
+  const currentUnitOwners = useMemo(() => unitMembers, [unitMembers]);
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
   const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
   const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
@@ -208,9 +221,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           const nextUnitId = e.target.value;
           const owners = scopedMembers.filter(m =>
             m.unit_id === nextUnitId &&
-            String(m.data?.role || "").trim() === "Proprietario" &&
-            m.data?.current_owner !== false &&
-            m.data?.position_status !== "In chiusura"
+            memberRole(m) === "Proprietario" &&
+            memberIsCurrentOwner(m)
           );
           const nextOutgoingId = owners.length === 1 ? owners[0].id : "";
           setUnitId(nextUnitId);
@@ -268,7 +280,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           </div>
           {error && <div className="permission-box" style={{ marginTop: 14, border: "2px solid #d33", background: "#fff7f7" }}>
             <b>Trasferimento non registrato</b>
-            <span>{error === "TRANSFER_ALREADY_EXISTS" ? "Esiste già un trasferimento confermato per questa unità nella stessa data. Modifica la data del rogito/trasferimento oppure apri lo storico dei trasferimenti." : error}</span>
+            <span>{error === "TRANSFER_ALREADY_EXISTS" ? "Esiste già un trasferimento confermato per questa unità nella stessa data. Modifica la data del rogito/trasferimento oppure apri lo storico dei trasferimenti." : error === "ACTIVE_INCOMING_OWNER_ALREADY_PRESENT" ? "Il trasferimento non può essere registrato perché l'unità ha già un altro proprietario attivo. Verifica se si tratta di comproprietà: il subentro attuale sostituisce il proprietario dell'intera unità e non trasferisce una sola quota." : error}</span>
           </div>}
           <div className="form-actions">
             <button type="button" className="secondary-button" onClick={()=>setShowConfirmation(false)} disabled={busy}>Modifica dati</button>
@@ -279,6 +291,11 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         </div>
       )}
       {outgoingId && <div className="permission-box"><b>Cedente selezionato</b><span>{memberLabel(outgoingId)} · anteprima contabile {previewIsCurrent ? "disponibile" : "da aggiornare"}</span></div>}
+      {currentUnitOwners.length > 1 && <div className="permission-box" style={{ marginTop: 12, border: "2px solid #f59e0b", background: "#fffbeb" }}>
+        <b>Unità con più proprietari attivi</b>
+        <span>Il subentro BETHAG sostituisce il proprietario dell'intera unità. Prima della registrazione occorre quindi verificare la titolarità dell'unità: risultano attivi {currentUnitOwners.length} proprietari.</span>
+        <small>{currentUnitOwners.map(m => memberName(m)).join(" · ")}</small>
+      </div>}
       {previewIsCurrent && <div className="permission-box"><b>Anteprima al {transferDate}</b><span>Rate scadute residue: {euro(preview.outstanding_before)}</span><span>Rate pagate: {euro(preview.paid_before)}</span><span>Rate analitiche entro la data del rogito: {(preview.installments_before || []).length}</span><span>Rate future già intestate al cedente: {(preview.installments_after || []).length}</span><span>Residuo complessivo del cedente: {euro(preview.outstanding_total)}</span><span>Residuo con scadenza successiva: {euro(preview.outstanding_due_after)}</span><span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview.extraordinary_deliberated_before_due_after || []).length}</span><span>Riporti fiscali dell’unità non attribuiti a un condomino: {(preview.unit_unassigned_carryovers || []).length} · esposizione {euro((preview.unit_unassigned_carryovers || []).reduce((sum:number,c:any)=>sum+Math.abs(Number(c.balance||0)),0))}</span>{(preview.unit_unassigned_carryovers || []).length>0 && <ul>{preview.unit_unassigned_carryovers.map((c:any)=><li key={c.id}>Riporto {c.kind || "fiscale"} · {c.status || "—"} · saldo {euro(c.balance)}</li>)}</ul>}{(preview.installments_before || []).length > 0 && <><b>Rate con scadenza entro il rogito</b><ul>{preview.installments_before.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.installments_after || []).length > 0 && <><b>Rate con scadenza successiva (da verificare prima della ripartizione)</b><ul>{preview.installments_after.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date || "non indicata"} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.extraordinary_deliberated_before_due_after || []).length > 0 && <><b>Spese straordinarie deliberate prima del rogito</b><ul>{preview.extraordinary_deliberated_before_due_after.map((a:any)=><li key={a.id}>{a.description || "Spesa straordinaria"} · deliberata {a.deliberation_date} · scadenza {a.due_date || "non indicata"} · residuo {euro(Number(a.amount||0)-Number(a.paid_amount||0))}</li>)}</ul></>}{preview.review_flags?.legal_liability_review_required && <small>La ripartizione delle responsabilità giuridiche tra cedente e acquirente richiede verifica documentale e normativa.</small>}</div>}
     </section>
     <section className="card">
