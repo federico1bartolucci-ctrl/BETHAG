@@ -142,6 +142,10 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       setError("Completa i dati obbligatori del trasferimento.");
       return;
     }
+    if (currentUnitOwners.length > 1) {
+      setError("L'unità ha più proprietari attivi. Il subentro attuale sostituisce il titolare dell'intera unità: verifica prima la comproprietà.");
+      return;
+    }
     if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) {
       setError("Inserisci un indirizzo email valido.");
       return;
@@ -156,6 +160,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
 
   async function confirmTransfer() {
     if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingName.trim()) { setError("Completa i dati obbligatori del trasferimento."); return; }
+    if (currentUnitOwners.length > 1) { setError("L'unità ha più proprietari attivi. Il subentro attuale sostituisce il titolare dell'intera unità: verifica prima la comproprietà."); return; }
     if (!previewIsCurrent) { setError("L'anteprima contabile non è aggiornata."); return; }
     if (incomingEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(incomingEmail.trim())) { setError("Inserisci un indirizzo email valido."); return; }
     setBusy(true); setError(""); setMessage("");
@@ -253,7 +258,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
         </button>
-        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
+        <button type="button" className="primary-button" onClick={openConfirmation} disabled={busy || !previewIsCurrent || !incomingName.trim() || currentUnitOwners.length > 1}>
           Verifica e conferma dati
         </button>
       </div>
