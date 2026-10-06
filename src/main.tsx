@@ -10442,23 +10442,16 @@ function CondominiumDetails(
               <button
                 className="secondary-button"
                 type="button"
-                onPointerUpCapture={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  const member = selectedMemberDetail;
-                  // Il dettaglio condòmino è una modale separata dalla modale
-                  // contabile. Chiuderla e aprire la seconda nello stesso
-                  // evento può lasciare il rendering senza modale su mobile.
-                  // Apriamo quindi la contabilità al frame successivo, quando
-                  // il dettaglio è già stato smontato.
-                  setSelectedMemberDetail(null);
-                  window.requestAnimationFrame(() => {
-                    if (member) onOpenMemberTransferAccounting(member);
-                  });
-                }}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
+                  const member = selectedMemberDetail;
+                  if (!member) return;
+                  // La finestra contabile è indipendente dal dettaglio:
+                  // chiudiamo solo la scheda anagrafica e apriamo direttamente
+                  // la situazione contabile nello stesso evento click.
+                  setSelectedMemberDetail(null);
+                  onOpenMemberTransferAccounting(member);
                 }}
               >
                 Contabilità subentro
