@@ -5470,7 +5470,18 @@ function App() {
       setCondominiumMembers((current) => [
         ...current.map((member) =>
           member.id === outgoing.id
-            ? { ...member, active: false, notes: `${member.notes ? member.notes + " · " : ""}Subentro del ${form.transferDate}` }
+            ? {
+                ...member,
+                active: true,
+                notes: `${member.notes ? member.notes + " · " : ""}Subentro del ${form.transferDate}`,
+                data: {
+                  ...(member.data ?? {}),
+                  position_status: "In chiusura",
+                  current_owner: false,
+                  subentro_date: form.transferDate,
+                  subentro_type: form.transferType,
+                },
+              }
             : member
         ),
         incomingMember,
@@ -9755,8 +9766,20 @@ function CondominiumDetails(
     (member: CondominiumMember) =>
       member.active &&
       (member as any).currentOwner !== false &&
-      (member as any).positionStatus !== "In chiusura"
+      (member as any).positionStatus !== "In chiusura" &&
+      (member as any).data?.current_owner !== false &&
+      String((member as any).data?.position_status ?? "").trim() !== "In chiusura"
   );
+  const visibleMembers = condominiumMembers.filter(
+    (member: CondominiumMember) => member.active
+  );
+  const isCurrentOwner = (member: CondominiumMember) =>
+    member.role === "Proprietario" &&
+    member.active &&
+    (member as any).currentOwner !== false &&
+    (member as any).positionStatus !== "In chiusura" &&
+    (member as any).data?.current_owner !== false &&
+    String((member as any).data?.position_status ?? "").trim() !== "In chiusura";
   const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
   const unitCollator = new Intl.Collator("it-IT", { numeric: true, sensitivity: "base" });
@@ -10042,14 +10065,14 @@ function CondominiumDetails(
                 const showHierarchyHeader = hierarchyKey !== previousHierarchyKey;
                 const hierarchyTitle = [unit.civicCode, unit.buildingCode, unit.staircaseCode].filter(Boolean).join(" · ");
                 const isAutonomous = !unit.civicCode && !unit.buildingCode && !unit.staircaseCode;
-                const linkedMembers = activeMembers.filter(
+                const linkedMembers = visibleMembers.filter(
                   (member: CondominiumMember) =>
                     member.unitId === unit.id ||
                     member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase()
                 );
                 const owners = linkedMembers.filter((member: CondominiumMember) => member.role === "Proprietario");
                 const tenants = linkedMembers.filter((member: CondominiumMember) => member.role === "Inquilino");
-                const ownerMembers = activeMembers.filter(
+                const ownerMembers = visibleMembers.filter(
                   (member: CondominiumMember) =>
                     Array.isArray(unit.ownerMemberIds) && unit.ownerMemberIds.includes(member.id)
                 );
@@ -10174,7 +10197,7 @@ function CondominiumDetails(
       {selectedUnit && (() => {
         const detailUnit = condominiumUnits.find((u: CondominiumUnit) => u.id === selectedUnit);
         if (!detailUnit) return null;
-        const detailPeople = activeMembers.filter((m: CondominiumMember) =>
+        const detailPeople = visibleMembers.filter((m: CondominiumMember) =>
           m.unitId === detailUnit.id || m.apartment.trim().toLowerCase() === detailUnit.unitCode.trim().toLowerCase()
         );
         return (
@@ -10211,7 +10234,7 @@ function CondominiumDetails(
                           >
                             Modifica dati
                           </button>
-                          {member.role === "Proprietario" && member.active && (
+                          {isCurrentOwner(member) && (
                             <button
                               className="primary-button small"
                               type="button"
@@ -10276,7 +10299,7 @@ function CondominiumDetails(
           </div>
         </div>
         <div className="condominium-member-list">
-          {activeMembers.length === 0 ? <Empty text="Nessun condòmino presente nell'anagrafica." /> : activeMembers.map((member: CondominiumMember) => (
+          {visibleMembers.length === 0 ? <Empty text="Nessun condòmino presente nell'anagrafica." /> : visibleMembers.map((member: CondominiumMember) => (
             <div className="condominium-member-card" key={member.id}>
               <button
                 type="button"
