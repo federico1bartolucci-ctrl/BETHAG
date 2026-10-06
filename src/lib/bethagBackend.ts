@@ -964,7 +964,8 @@ export async function saveCondominiumMember(
         const isCurrentOwner = item.role === "Proprietario" &&
           (item.currentOwner !== false) &&
           (item.data?.current_owner !== false) &&
-          String(item.positionStatus ?? item.data?.position_status ?? "").trim() !== "In chiusura";\n        const shouldOwnThisUnit = String(unit.id) === String(unitId) && isCurrentOwner;
+          String(item.positionStatus ?? item.data?.position_status ?? "").trim() !== "In chiusura";
+        const shouldOwnThisUnit = String(unit.id) === String(unitId) && isCurrentOwner;
         const nextOwners = shouldOwnThisUnit
           ? Array.from(new Set([...withoutMember, Number(item.id)]))
           : withoutMember;
