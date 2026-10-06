@@ -52,7 +52,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [transferType, setTransferType] = useState("Vendita");
   const [transferScope, setTransferScope] = useState<"whole_property" | "ownership_share">("whole_property");
   const [ownershipShare, setOwnershipShare] = useState("");
-  const [incomingOwners, setIncomingOwners] = useState<Array<{ name: string; email: string; share: string }>>([{ name: "", email: "", share: "" }]);
+  const [incomingOwners, setIncomingOwners] = useState<Array<{ name: string; email: string; share: string }>>([{ name: "", email: "", share: "100" }]);
   const [notes, setNotes] = useState("");
   const [preview, setPreview] = useState<any>(null);
   const [snapshot, setSnapshot] = useState<Record<string, any>>({});
@@ -212,7 +212,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       if (e) throw e;
       setMessage("Trasferimento registrato. La nuova identità dovrà completare la verifica prevista dal portale.");
       setShowConfirmation(false);
-      setIncomingOwners([{ name: "", email: "", share: "" }]); setNotes(""); setPreview(null);
+      setIncomingOwners([{ name: "", email: "", share: "100" }]); setNotes(""); setPreview(null);
       await loadRows();
       if (data) await loadSnapshot(String(data));
     } catch (e: any) { setError(e?.message || "Impossibile confermare il trasferimento."); }
@@ -307,7 +307,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
             <label>Quota %<input type="number" min="0.01" max="100" step="0.01" value={owner.share} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,share:e.target.value}:o))} placeholder="es. 50" /></label>
             {incomingOwners.length > 1 && <button type="button" className="secondary-button" onClick={()=>setIncomingOwners(prev=>prev.filter((_,i)=>i!==index))}>Rimuovi</button>}
           </div>)}
-          <button type="button" className="secondary-button" onClick={()=>setIncomingOwners(prev=>[...prev,{name:"",email:"",share:""}])}>+ Aggiungi comproprietario</button>
+          <button type="button" className="secondary-button" onClick={()=>setIncomingOwners(prev=>prev.length === 1 && prev[0].share === "100" ? [{...prev[0],share:"50"},{name:"",email:"",share:"50"}] : [...prev,{name:"",email:"",share:""}])}>+ Aggiungi comproprietario</button>
           <span style={{ display:"block", marginTop:8 }}>Totale quote inserite: <b>{incomingOwnersTotalShare.toFixed(2)}%</b></span>
         </div>
       </div>
