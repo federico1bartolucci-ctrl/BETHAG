@@ -8066,6 +8066,7 @@ function App() {
                 [
                   ["homepage", "Homepage", "dashboard"],
                   ["condomini", "Condomini", "building"],
+                  ["contabilita", "Contabilità", "wallet"],
                   ["documenti", "Documenti", "folder"],
                   ["scadenze", "Scadenze", "calendar"],
                   ["assemblee", "Assemblee", "users"],
