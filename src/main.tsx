@@ -10438,8 +10438,16 @@ function CondominiumDetails(
                 onPointerUpCapture={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
+                  const member = selectedMemberDetail;
+                  // Il dettaglio condòmino è una modale separata dalla modale
+                  // contabile. Chiuderla e aprire la seconda nello stesso
+                  // evento può lasciare il rendering senza modale su mobile.
+                  // Apriamo quindi la contabilità al frame successivo, quando
+                  // il dettaglio è già stato smontato.
                   setSelectedMemberDetail(null);
-                  onOpenMemberTransferAccounting(selectedMemberDetail);
+                  window.requestAnimationFrame(() => {
+                    if (member) onOpenMemberTransferAccounting(member);
+                  });
                 }}
                 onClick={(event) => {
                   event.preventDefault();
