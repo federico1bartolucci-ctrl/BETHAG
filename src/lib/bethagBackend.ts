@@ -2334,7 +2334,6 @@ export async function confirmCondominiumMemberTransfer(
       const { data: duplicateMembers, error: duplicateError } = await supabase
         .from("condominium_members")
         .select("legacy_id,name,email,active")
-        .eq("workspace_id", workspaceId)
         .eq("condominium_id", outgoing.condominium_id)
         .eq("active", true)
         .ilike("email", normalizedIncomingEmail)
