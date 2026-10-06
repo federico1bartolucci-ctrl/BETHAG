@@ -6724,12 +6724,7 @@ function App() {
       unitId: String(unit.id),
       outgoingMemberId: member.id,
     });
-    setShowModal(false);
-    setModalType("");
-    window.setTimeout(() => {
-      setModalType("member-transfer");
-      setShowModal(true);
-    }, 0);
+    openModal("member-transfer");
   };
   const openCondominiumAiCreation = () => {
     if (!requirePlan("professional", "La creazione automatica del condominio con AI", "ai")) return;
