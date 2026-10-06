@@ -5513,8 +5513,11 @@ function App() {
   };
 
   const openMemberTransferAccounting = async (member: CondominiumMember) => {
+    // La contabilità del subentro è una finestra indipendente dal modale
+    // "Dettaglio condòmino". Non deve dipendere da showModal/modalType,
+    // altrimenti la chiusura del dettaglio può smontare anche la contabilità.
+    setSelectedMemberDetail(null);
     setMemberTransferAccounting({ member, loading: true, result: null, error: null });
-    openModal("member-transfer-accounting");
     try {
       const result = await getMemberTransferAccountingSnapshotBackend(profile.workspaceId, Number(member.id));
       setMemberTransferAccounting({ member, loading: false, result, error: null });
@@ -8346,14 +8349,6 @@ function App() {
             />
           )}
 
-          {modalType === "member-transfer-accounting" && (
-            <MemberTransferAccountingPanel
-              value={memberTransferAccounting}
-              onClose={closeModal}
-              onCloseTransfer={closeMemberTransferAccounting}
-            />
-          )}
-
           {modalType === "member-transfer" && (
             <CondominiumMemberTransferForm
               value={memberTransferForm}
@@ -8397,6 +8392,18 @@ function App() {
             />
           )}
 
+        </Modal>
+      )}
+
+      {memberTransferAccounting && (
+        <Modal
+          onClose={() => setMemberTransferAccounting(null)}
+        >
+          <MemberTransferAccountingPanel
+            value={memberTransferAccounting}
+            onClose={() => setMemberTransferAccounting(null)}
+            onCloseTransfer={closeMemberTransferAccounting}
+          />
         </Modal>
       )}
 
