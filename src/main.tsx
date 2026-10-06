@@ -9569,6 +9569,7 @@ function CondominiumsPage(
           onPrepareEmail={onPrepareEmail}
           openCondominiumEmailComposer={openCondominiumEmailComposer}
           startMemberTransfer={startMemberTransfer}
+          onOpenMemberTransferAccounting={onOpenMemberTransferAccounting}
           onNewDeadline={() => onNewDeadline(selected.id)}
           onNewDocument={() => onNewDocument(selected.id)}
           onNewAssembly={() => onNewAssembly(selected.id)}
