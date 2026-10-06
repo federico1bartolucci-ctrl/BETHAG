@@ -54,20 +54,29 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
   const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
   const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
+  const condominiumLabel = (id?: string | number | null) => {
+    if (id == null) return "Condominio non disponibile";
+    const match = condominiums.find(c => String(c.id) === String(id));
+    if (match) return match.name;
+    if (String(id) === String(condominiumId) && selectedCondominium?.name) return selectedCondominium.name;
+    return "Condominio";
+  };
   const unitLabel = (id: string) => {
     const unit = scopedUnits.find(u => u.id === id);
     if (!unit) return "Unità";
     const d = unit.data || {};
-    const civic = d.civicCode ?? d.civic_code ?? "";
-    const building = unit.building_code ?? d.buildingCode ?? d.building_code ?? "";
-    const staircase = d.staircaseCode ?? d.staircase_code ?? "";
-    const type = d.unitType ?? d.unit_type ?? "";
+    const civic = d.civicCode ?? d.civic_code ?? d.civic ?? "";
+    const building = unit.building_code ?? d.buildingCode ?? d.building_code ?? d.building ?? "";
+    const staircase = d.staircaseCode ?? d.staircase_code ?? d.staircase ?? "";
+    const internal = d.internalCode ?? d.internal_code ?? d.internal ?? d.interno ?? "";
+    const type = d.unitType ?? d.unit_type ?? d.type ?? "";
     const hierarchy = [
       civic ? `Civico ${civic}` : "",
       building ? `Palazzina ${building}` : "",
       staircase ? `Scala ${staircase}` : "",
+      internal ? `Interno ${internal}` : "",
     ].filter(Boolean).join(" · ");
-    return [`Unità ${unit.unit_code}`, hierarchy, type].filter(Boolean).join(" · ");
+    return [condominiumLabel(unit.condominium_id), `Unità ${unit.unit_code}`, hierarchy, type].filter(Boolean).join(" · ");
   };
   const memberLabel = (id: string) => memberName(scopedMembers.find(m => m.id === id));
 
