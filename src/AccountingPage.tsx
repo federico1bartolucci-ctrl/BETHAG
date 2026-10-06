@@ -629,7 +629,7 @@ function AccountingPage({
             .order("created_at", { ascending: false }),
           supabase
             .from("condominium_units")
-            .select("id, condominium_id, unit_code, data")
+            .select("id, condominium_id, unit_code, building_code, data")
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
           supabase
@@ -2241,6 +2241,9 @@ function AccountingPage({
           units={units}
           members={members}
           isAdministrator={isAdministrator}
+          condominiums={condominiums}
+          selectedCondominiumId={selectedCondominiumId}
+          onCondominiumChange={setSelectedCondominiumId}
         />
       ) : tab === "impostazioni" ? (
         <section className="cards-grid"><article className="card"><div className="section-heading"><div><h2>Impostazioni contabilità</h2><p>Configura calendario, rate ordinarie e criteri per le spese straordinarie.</p></div></div>
