@@ -22,8 +22,15 @@ function memberIsCurrentOwner(member?: MemberOption | null) {
 }
 function memberName(member?: MemberOption | null) {
   if (!member) return "Condòmino non disponibile";
-  if (typeof member.name === "string" && member.name.trim()) return member.name.trim();
   const d = member.data || {};
+  const storedName = typeof member.name === "string" ? member.name.trim() : "";
+  // I record creati dai subentri possono avere il placeholder "Condòmino":
+  // in quel caso il nome reale del nuovo proprietario è conservato nei dati del subentro.
+  const incoming = [d.incoming_name, d.incomingName].find(v => typeof v === "string" && v.trim());
+  if (incoming && (!storedName || storedName.toLowerCase() === "condòmino" || storedName.toLowerCase() === "condomino")) {
+    return String(incoming).trim();
+  }
+  if (storedName) return storedName;
   const direct = [d.full_name, d.fullName, d.display_name, d.nome_completo, d.name].find(v => typeof v === "string" && v.trim());
   if (direct) return direct.trim();
   const first = d.first_name || d.firstName || d.nome || "";
