@@ -10359,7 +10359,7 @@ function CondominiumDetails(
             <Detail label="Codice fiscale" value={selectedMemberDetail.fiscalCode || "Non inserito"} />
             <Detail label="Telefono" value={selectedMemberDetail.phone || "Non inserito"} />
             <Detail label="E-mail" value={selectedMemberDetail.email || "Non inserita"} />
-            <Detail label="Stato" value={selectedMemberDetail.active ? "Attivo" : "Disattivato"} />
+            <Detail label="Stato" value={String((selectedMemberDetail as any).positionStatus ?? (selectedMemberDetail as any).data?.position_status ?? "").trim() === "In chiusura" ? "In chiusura" : (selectedMemberDetail.active ? "Attivo" : "Disattivato")} />
           </div>
           <div className="notes">
             <div className="detail-label">Accesso Portale</div>
