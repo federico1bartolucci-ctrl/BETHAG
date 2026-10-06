@@ -1,4 +1,5 @@
 name: Deploy BETHAG to GitHub Pages
+# Automatic deployment workflow
 
 on:
   push:
