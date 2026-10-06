@@ -1155,12 +1155,12 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-function currency(value: string) {
-  if (!value) return "—";
+function currency(value: string | number | null | undefined) {
+  if (value === null || value === undefined || String(value).trim() === "") return "—";
 
   const number = Number(value);
 
-  if (!Number.isFinite(number)) return value;
+  if (!Number.isFinite(number)) return String(value);
 
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
