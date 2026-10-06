@@ -9716,12 +9716,15 @@ function CondominiumDetails(
   } = props;
 
   const handleMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
-    const transferHandler = props.startMemberTransfer;
-    if (typeof transferHandler !== "function") {
-      alert("Funzione di subentro non disponibile. Ricarica BETHAG e riprova.");
-      return;
-    }
-    transferHandler(member, unit);
+    setSelectedUnit(null);
+    setSelectedMemberTransferOutgoing(member);
+    setMemberTransferForm({
+      ...emptyMemberTransferForm,
+      condominiumId: member.condominiumId,
+      unitId: String(unit.id),
+      outgoingMemberId: member.id,
+    });
+    openModal("member-transfer");
   };
 
   const openDeadlines =
