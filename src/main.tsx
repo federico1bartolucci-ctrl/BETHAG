@@ -5122,16 +5122,12 @@ function App() {
     }
 
     const normalizedEmail = condominiumMemberForm.email.trim().toLowerCase();
-    const duplicate = Boolean(normalizedEmail) && condominiumMembers.some((member) =>
+    const duplicateEmailMember = Boolean(normalizedEmail) && condominiumMembers.find((member) =>
       member.condominiumId === condominiumMemberForm.condominiumId &&
       member.id !== selectedCondominiumMember?.id &&
-      member.email.trim().toLowerCase() === normalizedEmail
+      member.email.trim().toLowerCase() === normalizedEmail &&
+      member.active
     );
-
-    if (duplicate) {
-      alert("Esiste già un condòmino con questo indirizzo e-mail nello stesso condominio.");
-      return;
-    }
 
     const { millesimi: _legacyMillesimi, ...memberFormData } = condominiumMemberForm as CondominiumMember & { millesimi?: string };
     const data = {
@@ -5218,6 +5214,13 @@ function App() {
           if (!newMember.email.trim()) {
             // Nessun invito possibile senza e-mail, ma il condòmino è già
             // stato salvato correttamente nel database.
+          } else if (duplicateEmailMember) {
+            // La stessa e-mail può appartenere a più comproprietari della
+            // stessa unità. L'anagrafica viene salvata normalmente, ma non
+            // tentiamo un secondo invito al Portale sulla stessa identità
+            // e-mail, perché portal_access/Auth non possono rappresentare
+            // due account distinti con lo stesso indirizzo.
+            alert("Secondo comproprietario inserito. L'e-mail è già associata a un altro condòmino attivo: nessun nuovo invito al Portale è stato inviato.");
           } else {
           const { data: inviteResult, error: inviteError } = await supabase.functions.invoke("bethag-invite-resident", {
             body: {
