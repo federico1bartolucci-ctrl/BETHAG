@@ -9766,6 +9766,7 @@ function CondominiumDetails(
     onPrepareEmail,
     openCondominiumEmailComposer,
     startMemberTransfer,
+    onOpenMemberTransferAccounting,
     onNewDeadline,
     onNewDocument,
     onNewAssembly,
