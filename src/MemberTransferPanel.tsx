@@ -87,15 +87,32 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     return () => { active = false; };
   }, [workspaceId, condominiumId]);
 
-  async function makePreview() {
-    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate) { setError("Seleziona condominio, unità, cedente e data del trasferimento."); return; }
+  async function makePreviewFor(nextUnitId: string, nextOutgoingId: string, nextTransferDate: string) {
+    if (!supabase || !condominiumId || !nextUnitId || !nextOutgoingId || !nextTransferDate) {
+      setPreview(null);
+      return;
+    }
     setBusy(true); setError(""); setMessage(""); setSnapshot({});
     try {
-      const { data, error: e } = await supabase.rpc("preview_condominium_member_transfer", { p_unit_id: unitId, p_outgoing_member_id: outgoingId, p_transfer_date: transferDate });
+      const { data, error: e } = await supabase.rpc("preview_condominium_member_transfer", {
+        p_unit_id: nextUnitId,
+        p_outgoing_member_id: nextOutgoingId,
+        p_transfer_date: nextTransferDate
+      });
       if (e) throw e;
       setPreview(data);
-    } catch (e: any) { setError(e?.message || "Impossibile calcolare la situazione contabile."); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      setPreview(null);
+      setError(e?.message || "Impossibile calcolare la situazione contabile.");
+    } finally { setBusy(false); }
+  }
+
+  async function makePreview() {
+    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate) {
+      setError("Seleziona condominio, unità, cedente e data del trasferimento.");
+      return;
+    }
+    await makePreviewFor(unitId, outgoingId, transferDate);
   }
   async function confirmTransfer() {
     if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingName.trim()) { setError("Completa i dati obbligatori del trasferimento."); return; }
@@ -147,15 +164,48 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       {selectedCondominiumId !== "all" && selectedCondominium && <div className="permission-box"><b>Contesto del subentro</b><span>Condominio: {selectedCondominium.name}</span><span>Indirizzo: {[selectedCondominium.address, selectedCondominium.cap && selectedCondominium.city ? `${selectedCondominium.cap} ${selectedCondominium.city}` : selectedCondominium.city, selectedCondominium.province ? `(${selectedCondominium.province})` : ""].filter(Boolean).join(", ")}</span><small>Le unità sono mostrate con civico, palazzina e scala quando questi dati sono presenti nell'anagrafica.</small></div>}
       <div className="form-grid">
         <label>Condominio<select value={String(selectedCondominiumId)} onChange={e=>{const value=e.target.value === "all" ? "all" : Number(e.target.value); onCondominiumChange?.(value); setUnitId(""); setOutgoingId(""); setPreview(null); setSnapshot({});}} disabled={!onCondominiumChange}><option value="all">Tutti i condomini</option>{condominiums.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label>Unità immobiliare<select value={unitId} onChange={e=>{setUnitId(e.target.value);setOutgoingId("");setPreview(null);setSnapshot({});}} disabled={!condominiumId}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{unitLabel(u.id)}</option>)}</select></label>
-        <label>Proprietario uscente<select value={outgoingId} onChange={e=>{setOutgoingId(e.target.value);setPreview(null);}} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select></label>
-        <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{setTransferDate(e.target.value);setPreview(null);}} required /></label>
+        <label>Unità immobiliare<select value={unitId} onChange={e=>{
+          const nextUnitId = e.target.value;
+          const owners = scopedMembers.filter(m =>
+            m.unit_id === nextUnitId &&
+            String(m.data?.role || "").trim() === "Proprietario" &&
+            m.data?.current_owner !== false &&
+            m.data?.position_status !== "In chiusura"
+          );
+          const nextOutgoingId = owners.length === 1 ? owners[0].id : "";
+          setUnitId(nextUnitId);
+          setOutgoingId(nextOutgoingId);
+          setPreview(null);
+          setSnapshot({});
+          if (nextOutgoingId) void makePreviewFor(nextUnitId, nextOutgoingId, transferDate);
+        }} disabled={!condominiumId}><option value="">Seleziona unità</option>{scopedUnits.map(u=><option key={u.id} value={u.id}>{unitLabel(u.id)}</option>)}</select></label>
+        <label>Proprietario uscente<select value={outgoingId} onChange={e=>{
+          const nextOutgoingId = e.target.value;
+          setOutgoingId(nextOutgoingId);
+          setPreview(null);
+          setSnapshot({});
+          if (nextOutgoingId && unitId && transferDate) void makePreviewFor(unitId, nextOutgoingId, transferDate);
+        }} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select></label>
+        <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{
+          const nextDate = e.target.value;
+          setTransferDate(nextDate);
+          setPreview(null);
+          if (nextDate && unitId && outgoingId) void makePreviewFor(unitId, outgoingId, nextDate);
+        }} required /></label>
         <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>
         <label>Nuovo proprietario<input value={incomingName} onChange={e=>setIncomingName(e.target.value)} required maxLength={160} placeholder="Nome e cognome" /></label>
         <label>Email nuovo proprietario<input type="email" value={incomingEmail} onChange={e=>setIncomingEmail(e.target.value)} maxLength={254} placeholder="nome@esempio.it" /></label>
       </div>
       <label>Note<textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} /></label>
-      <div className="form-actions"><button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>Anteprima situazione contabile</button><button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy || !previewIsCurrent || !incomingName.trim()}>Conferma trasferimento</button></div>
+      <div className="form-actions">
+        <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
+          {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
+        </button>
+        <button type="button" className="primary-button" onClick={()=>void confirmTransfer()} disabled={busy || !previewIsCurrent || !incomingName.trim()}>
+          Conferma trasferimento
+        </button>
+      </div>
+      {outgoingId && <div className="permission-box"><b>Cedente selezionato</b><span>{memberLabel(outgoingId)} · anteprima contabile {previewIsCurrent ? "disponibile" : "da aggiornare"}</span></div>}
       {previewIsCurrent && <div className="permission-box"><b>Anteprima al {transferDate}</b><span>Rate scadute residue: {euro(preview.outstanding_before)}</span><span>Rate pagate: {euro(preview.paid_before)}</span><span>Rate analitiche entro la data del rogito: {(preview.installments_before || []).length}</span><span>Rate future già intestate al cedente: {(preview.installments_after || []).length}</span><span>Residuo complessivo del cedente: {euro(preview.outstanding_total)}</span><span>Residuo con scadenza successiva: {euro(preview.outstanding_due_after)}</span><span>Spese straordinarie deliberate prima del rogito con scadenza successiva: {(preview.extraordinary_deliberated_before_due_after || []).length}</span><span>Riporti fiscali dell’unità non attribuiti a un condomino: {(preview.unit_unassigned_carryovers || []).length} · esposizione {euro((preview.unit_unassigned_carryovers || []).reduce((sum:number,c:any)=>sum+Math.abs(Number(c.balance||0)),0))}</span>{(preview.unit_unassigned_carryovers || []).length>0 && <ul>{preview.unit_unassigned_carryovers.map((c:any)=><li key={c.id}>Riporto {c.kind || "fiscale"} · {c.status || "—"} · saldo {euro(c.balance)}</li>)}</ul>}{(preview.installments_before || []).length > 0 && <><b>Rate con scadenza entro il rogito</b><ul>{preview.installments_before.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.installments_after || []).length > 0 && <><b>Rate con scadenza successiva (da verificare prima della ripartizione)</b><ul>{preview.installments_after.map((i:any)=><li key={i.id}>{i.assignment_scope === "unit_unassigned" ? "[Rata associata all’unità, non attribuita] " : ""}{i.title} · scadenza {i.due_date || "non indicata"} · residuo {euro(i.residual)}</li>)}</ul></>}{(preview.extraordinary_deliberated_before_due_after || []).length > 0 && <><b>Spese straordinarie deliberate prima del rogito</b><ul>{preview.extraordinary_deliberated_before_due_after.map((a:any)=><li key={a.id}>{a.description || "Spesa straordinaria"} · deliberata {a.deliberation_date} · scadenza {a.due_date || "non indicata"} · residuo {euro(Number(a.amount||0)-Number(a.paid_amount||0))}</li>)}</ul></>}{preview.review_flags?.legal_liability_review_required && <small>La ripartizione delle responsabilità giuridiche tra cedente e acquirente richiede verifica documentale e normativa.</small>}</div>}
     </section>
     <section className="card">
