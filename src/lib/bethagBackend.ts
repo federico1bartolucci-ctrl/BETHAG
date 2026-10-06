@@ -1033,6 +1033,71 @@ export async function saveCondominiumMember(
   });
 }
 
+
+export async function previewCondominiumMemberTransfer(
+  workspaceId: string,
+  unitId: string,
+  outgoingMemberLegacyId: number,
+  transferDate: string
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  const { data: member, error: memberError } = await supabase
+    .from("condominium_members")
+    .select("id")
+    .eq("legacy_id", outgoingMemberLegacyId)
+    .maybeSingle();
+  if (memberError) throw memberError;
+  if (!member?.id) throw new Error("Proprietario uscente non trovato sul server.");
+  const { data, error } = await supabase.rpc("preview_condominium_member_transfer", {
+    p_unit_id: unitId,
+    p_outgoing_member_id: member.id,
+    p_transfer_date: transferDate,
+  });
+  if (error) throw new Error(error.message || "Impossibile calcolare l'anteprima contabile del subentro.");
+  return data;
+}
+
+export async function getMemberTransferAccountingSnapshot(
+  workspaceId: string,
+  outgoingMemberLegacyId: number
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  const { data: member, error: memberError } = await supabase
+    .from("condominium_members")
+    .select("id")
+    .eq("legacy_id", outgoingMemberLegacyId)
+    .maybeSingle();
+  if (memberError) throw memberError;
+  if (!member?.id) throw new Error("Proprietario uscente non trovato sul server.");
+
+  const { data: transfer, error: transferError } = await supabase
+    .from("condominium_member_transfers")
+    .select("id, status, transfer_date")
+    .eq("outgoing_member_id", member.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (transferError) throw transferError;
+  if (!transfer?.id) throw new Error("Nessun subentro contabile associato a questo proprietario.");
+
+  const { data, error } = await supabase.rpc("get_member_transfer_accounting_snapshot", {
+    p_transfer_id: transfer.id,
+  });
+  if (error) throw new Error(error.message || "Impossibile recuperare la situazione contabile del subentro.");
+  return { transferId: transfer.id, status: transfer.status, transferDate: transfer.transfer_date, snapshot: data };
+}
+
+export async function closeCondominiumMemberTransfer(
+  transferId: string
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  const { data, error } = await supabase.rpc("close_condominium_member_transfer", {
+    p_transfer_id: transferId,
+  });
+  if (error) throw new Error(error.message || "Impossibile chiudere la posizione contabile del subentro.");
+  return data;
+}
+
 export async function saveCondominium(
   workspaceId: string,
   item: any
