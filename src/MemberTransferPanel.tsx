@@ -331,8 +331,23 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       )}
       {outgoingId && <div className="permission-box"><b>Cedente selezionato</b><span>{transferScope === "whole_property" ? currentUnitOwners.map(m => memberName(m)).join(" · ") : memberLabel(outgoingId)} · anteprima contabile {previewIsCurrent ? "disponibile" : "da aggiornare"}</span></div>}
       {currentUnitOwners.length > 1 && <div className="permission-box" style={{ marginTop: 12, border: "2px solid #f59e0b", background: "#fffbeb" }}>
-        <b>Comproprietà rilevata</b>
-        <span>Risultano {currentUnitOwners.length} proprietari attivi. Puoi trasferire l'intera proprietà oppure una quota di uno solo dei comproprietari.</span>
+        <b>Comproprietà rilevata: scegli il tipo di trasferimento</b>
+        <span>Risultano {currentUnitOwners.length} proprietari attivi. Prima di continuare devi indicare se il rogito riguarda l'intera proprietà oppure soltanto la quota di uno dei comproprietari.</span>
+        <div className="form-actions" style={{ marginTop: 12 }}>
+          <button type="button" className={transferScope === "whole_property" ? "primary-button" : "secondary-button"} onClick={() => {
+            setTransferScope("whole_property"); setPreview(null); setSnapshot({}); setError("");
+            setOutgoingId(currentUnitOwners[0]?.id || "");
+            if (currentUnitOwners[0]?.id && unitId && transferDate) void makePreviewFor(unitId, currentUnitOwners[0].id, transferDate);
+          }}>
+            Trasferire intera proprietà
+          </button>
+          <button type="button" className={transferScope === "ownership_share" ? "primary-button" : "secondary-button"} onClick={() => {
+            setTransferScope("ownership_share"); setPreview(null); setSnapshot({}); setError("");
+            setOutgoingId(outgoingId && currentUnitOwners.some(m => m.id === outgoingId) ? outgoingId : (currentUnitOwners[0]?.id || ""));
+          }}>
+            Trasferire una quota
+          </button>
+        </div>
         <small>{currentUnitOwners.map(m => {
           const share = Number(m.data?.ownership_share ?? m.data?.ownershipShare);
           return memberName(m) + (Number.isFinite(share) && share > 0 ? " · quota " + share + "%" : "");
