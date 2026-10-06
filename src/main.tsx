@@ -9839,13 +9839,16 @@ function CondominiumDetails(
   const visibleMembers = condominiumMembers.filter(
     (member: CondominiumMember) => member.active
   );
-  const isCurrentOwner = (member: CondominiumMember) =>
-    member.role === "Proprietario" &&
-    member.active &&
-    (member as any).currentOwner !== false &&
-    (member as any).positionStatus !== "In chiusura" &&
-    (member as any).data?.current_owner !== false &&
-    String((member as any).data?.position_status ?? "").trim() !== "In chiusura";
+  const isCurrentOwner = (member: CondominiumMember) => {
+    if (member.role !== "Proprietario" || !member.active) return false;
+    const data: any = (member as any).data || {};
+    const nested: any = data.data || {};
+    const currentMarker = (member as any).currentOwner ?? data.current_owner ?? nested.current_owner ?? data.currentOwner ?? nested.currentOwner;
+    const status = String((member as any).positionStatus ?? data.position_status ?? nested.position_status ?? "").trim();
+    if (status === "In chiusura" || status === "Archiviato") return false;
+    if (currentMarker !== undefined && currentMarker !== null) return currentMarker === true;
+    return true;
+  };
   const openRequests = condominiumRequests.filter((request: CondominiumRequest) => request.status !== "Risolta" && request.status !== "Chiusa").length;
 
   const unitCollator = new Intl.Collator("it-IT", { numeric: true, sensitivity: "base" });
@@ -10148,13 +10151,15 @@ function CondominiumDetails(
                   ? condominiumUnits.find((parent: CondominiumUnit) => parent.id === unit.incorporatedInUnitId)
                   : null;
                 const personLabel = (member: CondominiumMember) => {
-                  const first = String(member.firstName || (member as any).data?.first_name || "").trim();
-                  const last = String(member.lastName || (member as any).data?.last_name || "").trim();
-                  const direct = String((member as any).name || (member as any).fullName || (member as any).data?.full_name || "").trim();
+                  const data: any = (member as any).data || {};
+                  const nested: any = data.data || {};
+                  const first = String(member.firstName || data.firstName || data.first_name || nested.firstName || nested.first_name || "").trim();
+                  const last = String(member.lastName || data.lastName || data.last_name || nested.lastName || nested.last_name || "").trim();
+                  const direct = String((member as any).name || data.name || data.fullName || data.full_name || nested.name || nested.fullName || nested.full_name || "").trim();
                   return direct || [first, last].filter(Boolean).join(" ") || "Persona senza nome";
                 };
                 const ownerLabels = [
-                  ...ownerMembers.map(personLabel),
+                  ...currentOwners.map(personLabel),
                   ...externalOwners
                     .map((o: ExternalUnitOwner) => [o.firstName, o.lastName].filter(Boolean).join(" "))
                     .filter(Boolean),
@@ -10191,21 +10196,51 @@ function CondominiumDetails(
                         {incorporated ? " · collegata a " + incorporated.unitCode : ""}
                       </small>
 
-                      <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-                        <div style={{ padding: "10px 12px", borderRadius: 12, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
-                          <strong>👤 Proprietari attuali ({currentOwners.length + externalOwners.length})</strong>
-                          <div style={{ marginTop: 5 }}>{ownerLabels.length ? ownerLabels.join(" · ") : "Nessun proprietario attuale associato"}</div>
+                      <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                            <strong>👤 PROPRIETÀ ATTUALE</strong>
+                            <span className="badge">{currentOwners.length + externalOwners.length}</span>
+                          </div>
+                          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                            {currentOwners.map((member: CondominiumMember) => (
+                              <div key={member.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", padding: "7px 0", borderTop: "1px solid #dbe4ff" }}>
+                                <span><strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700 }}>PROPRIETARIO</span>
+                              </div>
+                            ))}
+                            {externalOwners.map((owner: ExternalUnitOwner, idx: number) => (
+                              <div key={"external-" + idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", padding: "7px 0", borderTop: "1px solid #dbe4ff" }}>
+                                <span><strong>{[owner.firstName, owner.lastName].filter(Boolean).join(" ") || "Proprietario esterno"}</strong></span>
+                                <span style={{ fontSize: 12, fontWeight: 700 }}>ESTERNO</span>
+                              </div>
+                            ))}
+                            {!currentOwners.length && !externalOwners.length && <span>Nessun proprietario attuale associato</span>}
+                          </div>
                         </div>
-                        <div style={{ padding: "10px 12px", borderRadius: 12, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-                          <strong>🏠 Inquilini attuali ({currentTenants.length})</strong>
-                          <div style={{ marginTop: 5 }}>{currentTenants.length ? currentTenants.map(personLabel).join(" · ") : "Nessun inquilino attuale"}</div>
+                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                            <strong>🏠 OCCUPAZIONE ATTUALE</strong>
+                            <span className="badge">{currentTenants.length}</span>
+                          </div>
+                          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                            {currentTenants.map((member: CondominiumMember) => (
+                              <div key={member.id} style={{ padding: "7px 0", borderTop: "1px solid #d6f5df" }}>
+                                <strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""}
+                                <span style={{ display: "block", fontSize: 12, fontWeight: 700, marginTop: 2 }}>INQUILINO</span>
+                              </div>
+                            ))}
+                            {!currentTenants.length && <span>Nessun inquilino attuale</span>}
+                          </div>
                         </div>
                         {historicalOwners.length > 0 && (
-                          <details style={{ padding: "10px 12px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                            <summary style={{ cursor: "pointer", fontWeight: 700 }}>Storico proprietari ({historicalOwners.length})</summary>
-                            <div style={{ marginTop: 8, color: "#64748b" }}>
+                          <details style={{ padding: "12px 14px", borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                            <summary style={{ cursor: "pointer", fontWeight: 700 }}>📁 STORICO PROPRIETÀ · {historicalOwners.length}</summary>
+                            <div style={{ display: "grid", gap: 6, marginTop: 8, color: "#64748b" }}>
                               {historicalOwners.map((member: CondominiumMember) => (
-                                <div key={member.id}>{personLabel(member)} · {member.email || "E-mail non inserita"} · posizione archiviata</div>
+                                <div key={member.id} style={{ padding: "7px 0", borderTop: "1px solid #e2e8f0" }}>
+                                  <strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""} · posizione archiviata
+                                </div>
                               ))}
                             </div>
                           </details>
