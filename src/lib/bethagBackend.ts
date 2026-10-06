@@ -2319,8 +2319,8 @@ export async function confirmCondominiumMemberTransfer(
     const { data: outgoing, error: outgoingError } = await supabase
       .from("condominium_members")
       .select("id,condominium_id,unit_id,legacy_id,data")
-      .eq("workspace_id", workspaceId)
       .eq("legacy_id", outgoingMemberLegacyId)
+      .eq("unit_id", unitId)
       .maybeSingle();
 
     if (outgoingError) throw outgoingError;
@@ -2367,7 +2367,6 @@ export async function confirmCondominiumMemberTransfer(
     const { data: incomingRows, error: incomingError } = await supabase
       .from("condominium_members")
       .select("legacy_id,name,email,user_id,active,unit_id,data")
-      .eq("workspace_id", workspaceId)
       .eq("unit_id", unitId)
       .eq("active", true)
       .order("created_at", { ascending: false })
