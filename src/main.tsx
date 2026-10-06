@@ -10447,10 +10447,17 @@ function CondominiumDetails(
                   event.stopPropagation();
                   const member = selectedMemberDetail;
                   if (!member) return;
-                  // Apriamo la contabilità sopra il dettaglio corrente.
-                  // Non chiudiamo qui il modale anagrafico: la chiusura anticipata
-                  // faceva tornare la vista a Proprietari/Inquilini prima dell'apertura.
-                  onOpenMemberTransferAccounting(member);
+                  if (typeof onOpenMemberTransferAccounting !== "function") {
+                    alert("La contabilità subentro non è disponibile. Ricarica BETHAG e riprova.");
+                    return;
+                  }
+                  // Chiudiamo prima il dettaglio anagrafico e apriamo la contabilità
+                  // nel ciclo React successivo, evitando che i due modali si contendano
+                  // contemporaneamente il focus e l'evento di chiusura.
+                  setSelectedMemberDetail(null);
+                  window.setTimeout(() => {
+                    onOpenMemberTransferAccounting(member);
+                  }, 0);
                 }}
               >
                 Contabilità subentro
