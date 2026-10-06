@@ -7474,6 +7474,7 @@ function App() {
               onNewCommunication={newCommunication}
               onPrepareEmail={prepareCondominiumEmail}
               openCondominiumEmailComposer={openCondominiumEmailComposer}
+              startMemberTransfer={startMemberTransfer}
               onNewDeadline={newDeadline}
               onNewDocument={newDocument}
               onNewAssembly={newAssembly}
@@ -9330,6 +9331,7 @@ function CondominiumsPage(
     onNewCommunication,
     onPrepareEmail,
     openCondominiumEmailComposer,
+    startMemberTransfer,
     onNewCondominiumAi,
     onNewDeadline,
     onNewDocument,
