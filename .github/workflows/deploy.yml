@@ -1,5 +1,6 @@
 name: Deploy BETHAG to GitHub Pages
 # Automatic deployment workflow
+# Trigger latest automatic navigation refresh
 # Trigger latest transfer validation fix
 
 on:
