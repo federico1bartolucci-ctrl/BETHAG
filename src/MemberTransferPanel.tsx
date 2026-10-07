@@ -359,7 +359,14 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           const next = e.target.value as "whole_property" | "ownership_share";
           setTransferScope(next); setPreview(null); setSnapshot({}); setError("");
           if (next === "whole_property" && currentUnitOwners.length) setOutgoingId(currentUnitOwners[0].id);
-          if (next === "ownership_share" && currentUnitOwners.length > 1 && !currentUnitOwners.some(m => m.id === outgoingId)) setOutgoingId(currentUnitOwners[0]?.id || "");
+          if (next === "ownership_share" && currentUnitOwners.length) {
+            const nextOutgoingId = currentUnitOwners.some(m => m.id === outgoingId) ? outgoingId : currentUnitOwners[0]?.id || "";
+            setOutgoingId(nextOutgoingId);
+            const currentShare = Number((currentUnitOwners.find(m => m.id === nextOutgoingId)?.data?.ownership_share ?? currentUnitOwners.find(m => m.id === nextOutgoingId)?.data?.ownershipShare));
+            const defaultShare = Number.isFinite(currentShare) && currentShare > 0 ? currentShare : 50;
+            setOwnershipShare(String(defaultShare));
+            setIncomingOwners(prev => prev.length === 1 ? [{ ...prev[0], share: String(defaultShare) }] : prev);
+          }
         }}>
           <option value="whole_property">Trasferimento dell'intera proprietà</option>
           <option value="ownership_share">Trasferimento di una quota</option>
@@ -379,6 +386,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         </div>
       </div>
       <label>Note<textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} /></label>
+      {error && <div className="alert error" style={{ marginTop: 12 }} role="alert"><b>Verifica dati</b><span>{error}</span></div>}
       <div className="form-actions">
         <button type="button" className="secondary-button" onClick={()=>void makePreview()} disabled={busy || !unitId || !outgoingId || !transferDate}>
           {busy ? "Calcolo in corso…" : "Aggiorna anteprima contabile"}
