@@ -5273,15 +5273,18 @@ function App() {
                 condominiumId: newMember.condominiumId,
                 role: "resident",
                 apartment: newMember.apartment,
-                permissions: [
-                  "documenti",
-                  "verbali",
-                  "regolamento",
-                  "pagamenti_ordinari",
-                  "pagamenti_straordinari",
-                  "assemblee",
-                  "comunicazioni",
-                ],
+                permissions:
+                  newMember.role === "Inquilino"
+                    ? ["pagamenti_ordinari", "comunicazioni", "regolamento"]
+                    : [
+                        "documenti",
+                        "verbali",
+                        "regolamento",
+                        "pagamenti_ordinari",
+                        "pagamenti_straordinari",
+                        "assemblee",
+                        "comunicazioni",
+                      ],
                 active: true,
               };
 
