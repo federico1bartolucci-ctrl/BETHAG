@@ -9848,7 +9848,10 @@ function CondominiumDetails(
     const nested: any = data.data || {};
     const currentMarker = (member as any).currentOwner ?? data.current_owner ?? nested.current_owner ?? data.currentOwner ?? nested.currentOwner;
     const status = String((member as any).positionStatus ?? data.position_status ?? nested.position_status ?? "").trim();
+    const ownershipShareRaw = data.ownership_share ?? nested.ownership_share;
+    const ownershipShare = ownershipShareRaw === undefined || ownershipShareRaw === null || ownershipShareRaw === "" ? null : Number(ownershipShareRaw);
     if (status === "In chiusura" || status === "Archiviato") return false;
+    if (ownershipShare !== null && Number.isFinite(ownershipShare) && ownershipShare <= 0) return false;
     if (currentMarker !== undefined && currentMarker !== null) return currentMarker === true;
     return true;
   };
