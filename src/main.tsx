@@ -6449,6 +6449,47 @@ function App() {
     };
   }, [sessionRole]);
 
+  // Keep the SPA data synchronized after standalone modules perform mutations
+  // and whenever the user changes page, so unit/condominium views never rely
+  // on a manual browser refresh to show the latest backend state.
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase || !sessionRole || !profile.workspaceId || !backendHydrated.current) return;
+
+    let cancelled = false;
+    const refreshBackendState = async () => {
+      try {
+        const backend = await loadBackendState(profile.workspaceId);
+        if (cancelled) return;
+        setCondominiums(backend.condominiums);
+        setCondominiumMembers(backend.condominiumMembers);
+        setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        setDocuments(backend.documents);
+        setDeadlines(backend.deadlines);
+        setAssemblies(backend.assemblies);
+        setSuppliers(backend.suppliers);
+        setActivities(backend.activities);
+        setCondominiumWorks(Array.isArray(backend.condominiumWorks) ? backend.condominiumWorks : []);
+        setCommunications(backend.communications);
+        setCondominiumRequests(backend.condominiumRequests);
+        setPortalMembers(Array.isArray(backend.portalMembers) ? backend.portalMembers : []);
+        setCollaborators(Array.isArray(backend.collaborators) ? backend.collaborators : []);
+      } catch (error) {
+        console.error("BETHAG navigation refresh failed", error);
+      }
+    };
+
+    const handleBackendRefresh = () => { void refreshBackendState(); };
+    window.addEventListener("bethag-backend-refresh", handleBackendRefresh);
+
+    // Navigation itself is a refresh boundary: always read the authoritative state.
+    void refreshBackendState();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("bethag-backend-refresh", handleBackendRefresh);
+    };
+  }, [page, profile.workspaceId, sessionRole]);
+
   useEffect(() => {
     if (
       !supabaseConfigured ||
