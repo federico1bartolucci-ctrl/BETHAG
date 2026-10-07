@@ -1,4 +1,5 @@
-// Pages deployment trigger: transfer confirmation flow verified in source.\nimport React, { useCallback, useEffect, useMemo, useState } from "react";
+// Pages deployment trigger: transfer confirmation flow verified in source.
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
