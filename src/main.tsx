@@ -10260,10 +10260,17 @@ function CondominiumDetails(
                           </div>
                           <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
                             {currentOwners.map((member: CondominiumMember) => (
-                              <div key={member.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", padding: "7px 0", borderTop: "1px solid #dbe4ff" }}>
+                              <button
+                                key={member.id}
+                                type="button"
+                                className="member-main member-main-button"
+                                style={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", padding: "7px 0", borderTop: "1px solid #dbe4ff", background: "transparent", borderLeft: 0, borderRight: 0, borderBottom: 0, textAlign: "left" }}
+                                onClick={() => setSelectedMemberDetail(member)}
+                                aria-label={`Apri scheda di ${personLabel(member)}`}
+                              >
                                 <span><strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""}</span>
-                                <span style={{ fontSize: 12, fontWeight: 700 }}>PROPRIETARIO</span>
-                              </div>
+                                <span style={{ fontSize: 12, fontWeight: 700 }}>PROPRIETARIO ›</span>
+                              </button>
                             ))}
                             {externalOwners.map((owner: ExternalUnitOwner, idx: number) => (
                               <div key={"external-" + idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", padding: "7px 0", borderTop: "1px solid #dbe4ff" }}>
@@ -10281,10 +10288,17 @@ function CondominiumDetails(
                           </div>
                           <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
                             {currentTenants.map((member: CondominiumMember) => (
-                              <div key={member.id} style={{ padding: "7px 0", borderTop: "1px solid #d6f5df" }}>
+                              <button
+                                key={member.id}
+                                type="button"
+                                className="member-main member-main-button"
+                                style={{ width: "100%", display: "block", padding: "7px 0", borderTop: "1px solid #d6f5df", background: "transparent", borderLeft: 0, borderRight: 0, borderBottom: 0, textAlign: "left" }}
+                                onClick={() => setSelectedMemberDetail(member)}
+                                aria-label={`Apri scheda di ${personLabel(member)}`}
+                              >
                                 <strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""}
-                                <span style={{ display: "block", fontSize: 12, fontWeight: 700, marginTop: 2 }}>INQUILINO</span>
-                              </div>
+                                <span style={{ display: "block", fontSize: 12, fontWeight: 700, marginTop: 2 }}>INQUILINO ›</span>
+                              </button>
                             ))}
                             {!currentTenants.length && <span>Nessun inquilino attuale</span>}
                           </div>
@@ -10294,9 +10308,16 @@ function CondominiumDetails(
                             <summary style={{ cursor: "pointer", fontWeight: 700 }}>📁 STORICO PROPRIETÀ · {historicalOwners.length}</summary>
                             <div style={{ display: "grid", gap: 6, marginTop: 8, color: "#64748b" }}>
                               {historicalOwners.map((member: CondominiumMember) => (
-                                <div key={member.id} style={{ padding: "7px 0", borderTop: "1px solid #e2e8f0" }}>
-                                  <strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""} · posizione archiviata
-                                </div>
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  className="member-main member-main-button"
+                                  style={{ width: "100%", display: "block", padding: "7px 0", borderTop: "1px solid #e2e8f0", background: "transparent", borderLeft: 0, borderRight: 0, borderBottom: 0, textAlign: "left", color: "#64748b" }}
+                                  onClick={() => setSelectedMemberDetail(member)}
+                                  aria-label={`Apri scheda di ${personLabel(member)}`}
+                                >
+                                  <strong>{personLabel(member)}</strong>{member.email ? " · " + member.email : ""} · posizione archiviata ›
+                                </button>
                               ))}
                             </div>
                           </details>
@@ -10439,74 +10460,6 @@ function CondominiumDetails(
           </Modal>
         );
       })()}
-
-      <section className="condominium-section-card">
-        <div className="section-title">
-          <div><div className="eyebrow">Anagrafica</div><h2>Proprietari e inquilini</h2><p className="section-subtitle">Gestisci dati anagrafici, recapiti, associazione all'unità e subentri di proprietà.</p></div>
-          <div className="button-row compact condominium-members-actions">
-            <button className="secondary-button" onClick={() => onNewCommunication(item.id)}>📢 Nuova comunicazione</button>
-            <button className="primary-button" type="button" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>
-              ✉️ Scrivi a tutti
-            </button>
-            <button
-              className="secondary-button condominium-add-member-button"
-              type="button"
-              onClick={() => onNewMember(item.id)}
-            >
-              + Aggiungi condòmino
-            </button>
-          </div>
-        </div>
-        <div className="condominium-member-list">
-          {visibleMembers.length === 0 ? <Empty text="Nessun condòmino presente nell'anagrafica." /> : visibleMembers.map((member: CondominiumMember) => (
-            <div className="condominium-member-card" key={member.id}>
-              <button
-                type="button"
-                className="member-main member-main-button"
-                onClick={() => setSelectedMemberDetail(member)}
-                aria-label={`Visualizza il dettaglio di ${member.firstName} ${member.lastName}`}
-              >
-                <b>{member.firstName} {member.lastName}</b>
-                <span>{member.apartment} · {member.role}</span>
-                <small>{member.phone || "Telefono non inserito"}{member.email ? ` · ${member.email}` : " · E-mail non inserita"}</small>
-              </button>
-              <div className="related-actions">
-                <button className="secondary-button small" type="button" onClick={() => setSelectedMemberDetail(member)}>Dettagli</button>
-                <button className="secondary-button small" type="button" onClick={() => openCondominiumEmailComposer(item.id, [member.id], "Selezionati")}>
-                  ✉️ Scrivi
-                </button>
-                <button className="secondary-button small" type="button" onClick={() => onEditMember(member)}>
-                  Modifica dati
-                </button>
-                {isCurrentOwner(member) && (
-                  <button
-                    className="primary-button small"
-                    type="button"
-                    onPointerUpCapture={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const unit = condominiumUnits.find((u: CondominiumUnit) =>
-                        (member.unitId && String(u.id) === String(member.unitId)) ||
-                        String(u.unitCode ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase()
-                      );
-                      if (!unit) {
-                        alert("L'unità immobiliare del proprietario non è disponibile. Verifica l'associazione dell'unità.");
-                        return;
-                      }
-                      handleMemberTransfer(member, unit);
-                    }}
-                  >
-                    Subentro
-                  </button>
-                )}
-                <button className="mini-danger" type="button" onClick={() => onDeleteMember(member.id)} aria-label="Elimina condòmino">
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {selectedMemberDetail && (
         <Modal onClose={() => setSelectedMemberDetail(null)}>
