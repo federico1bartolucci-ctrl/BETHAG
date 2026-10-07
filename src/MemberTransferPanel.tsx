@@ -19,7 +19,13 @@ function memberIsCurrentOwner(member?: MemberOption | null) {
   const d = member.data || {};
   const currentOwner = d.current_owner ?? d.currentOwner ?? (member as any).current_owner ?? (member as any).currentOwner;
   const status = String(d.position_status ?? d.positionStatus ?? (member as any).position_status ?? (member as any).positionStatus ?? "Attivo").trim();
-  return currentOwner !== false && currentOwner !== "false" && status !== "In chiusura" && status !== "Archiviato";
+  const shareRaw = d.ownership_share ?? d.ownershipShare;
+  const share = shareRaw === undefined || shareRaw === null || shareRaw === "" ? null : Number(shareRaw);
+  return currentOwner !== false &&
+    currentOwner !== "false" &&
+    status !== "In chiusura" &&
+    status !== "Archiviato" &&
+    !(share !== null && Number.isFinite(share) && share <= 0);
 }
 function memberName(member?: MemberOption | null) {
   if (!member) return "Condòmino non disponibile";
@@ -132,8 +138,16 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     }
     setBusy(true); setError(""); setMessage(""); setSnapshot({});
     try {
+      // Derive owners from the requested unit, not from the previous
+      // React render. This avoids a stale-owner preview immediately after
+      // changing the unit selector.
+      const nextUnitOwners = scopedMembers.filter(m =>
+        m.unit_id === nextUnitId &&
+        memberRole(m) === "Proprietario" &&
+        memberIsCurrentOwner(m)
+      );
       const previewOwnerIds = transferScope === "whole_property"
-        ? currentUnitOwners.map(m => m.id)
+        ? nextUnitOwners.map(m => m.id)
         : [nextOutgoingId];
       const uniqueOwnerIds = Array.from(new Set(previewOwnerIds.filter(Boolean)));
       if (!uniqueOwnerIds.length) {
