@@ -5505,6 +5505,12 @@ function App() {
         )
       );
 
+      // Keep the condominium/unit view synchronized with the authoritative
+      // Supabase state after the legacy transfer flow as well. The detail
+      // component is rendered from the main shell state, so navigation/closing
+      // the modal must not require a manual browser refresh.
+      window.dispatchEvent(new Event("bethag-backend-refresh"));
+
       setMemberTransferForm(emptyMemberTransferForm);
       setSelectedMemberTransferOutgoing(null);
       closeModal();
