@@ -278,6 +278,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       });
       if (e) throw e;
       setMessage("Trasferimento registrato. La nuova identità dovrà completare la verifica prevista dal portale.");
+      // Notify the main shell so condominium/unit views immediately reload the
+      // authoritative backend state without requiring a manual browser refresh.
+      window.dispatchEvent(new Event("bethag-backend-refresh"));
       setShowConfirmation(false);
       setIncomingOwners([{ name: "", email: "", share: "100" }]); setNotes(""); setPreview(null);
       await loadRows();
