@@ -475,3 +475,29 @@ Una query di sola lettura su QA ha verificato i privilegi effettivi delle funzio
 È stata inoltre osservata una ACL permissiva su `private.check_condominium_member_transfer_closure(uuid)` (`EXECUTE` a `PUBLIC`) nell'ambiente QA. Il namespace `private` non concede `USAGE` ad `anon`, mentre lo concede ad `authenticated`; il risultato della query non prova da solo che la funzione sia raggiungibile via PostgREST, perché ciò dipende anche dagli schemi esposti dalla configurazione API. È quindi registrata come verifica di sicurezza da chiudere: confermare gli schemi API esposti e, se il chiamante previsto è soltanto il wrapper pubblico, valutare una migrazione dedicata che revochi l'esecuzione diretta dal ruolo `PUBLIC` senza rompere i chiamanti interni. Nessuna ACL è stata modificata durante questo controllo.
 
 La verifica è stata eseguita con sole query `SELECT` sia su QA (`mxhciszzpqzvsaqcnwhg`) sia su Production (`tctcgptrsmvgajqjgnev`); nessuna ACL o altro oggetto è stato modificato. I risultati confermano che anche Production presenta la stessa ACL ereditata su `private.check_condominium_member_transfer_closure(uuid)` e che lo schema `private` non concede `USAGE` ad `anon`. La parità QA/Production è confermata per questi privilegi; resta la revisione del modello di esposizione API prima di decidere se una futura modifica debba essere applicata in entrambi gli ambienti. Non viene dichiarato il collaudo end-to-end completato.
+
+
+## Addendum 8 — confronto esatto dei ledger Production/QA (11 ottobre 2026)
+
+Confronto in sola lettura delle versioni registrate, confrontando la chiave `version` e non il nome descrittivo:
+
+- Production: **243** record.
+- QA: **159** record.
+- Versioni presenti in entrambi i ledger: **84**.
+- Versioni Production assenti dal ledger QA: **159**.
+- Versioni presenti solo nel ledger QA: **75**.
+- Versioni comuni con nome descrittivo differente: **0**.
+
+Il dato conferma che i due ledger non sono una cronologia incrementale direttamente confrontabile: QA contiene numerose registrazioni di replay con versioni nuove e nomi che incorporano vecchi timestamp, oltre alle due riconciliazioni dell'11 ottobre. Non è sicuro colmare il divario marcando migrazioni come applicate o rilanciando in blocco i file reperiti.
+
+### Percorso di riproducibilità raccomandato (non eseguito)
+
+1. Conservare i ledger attuali come evidenza, senza modificarli.
+2. Recuperare le sorgenti originali mancanti oppure generare uno snapshot canonico verificabile dello schema corrente da cataloghi PostgreSQL, includendo schema/estensioni, tipi, sequenze, tabelle, default, vincoli, indici, viste, funzioni con definizioni e ACL, trigger, policy RLS, privilegi, storage e configurazioni API rilevanti.
+3. Fissare uno specifico commit dell'app e un cutoff documentato dello snapshot; lo snapshot deve essere dichiarato **baseline**, non falsamente presentato come ricostruzione della sequenza storica originale.
+4. In un ambiente isolato autorizzato, provare il ripristino da zero della baseline e applicare soltanto migrazioni successive al cutoff, con dati sintetici e test di parità dei cataloghi.
+5. Verificare flussi applicativi e isolamento multi-workspace, quindi produrre un piano di cutover separato. Nessun passaggio in Production prima della revisione e dell'autorizzazione esplicita.
+
+### Blocco immediato
+
+Il progetto QA indicato nei controlli precedenti non è sufficiente a certificare un replay storico pulito: la cronologia contiene replay e baseline QA specifiche. Inoltre la sorgente originale `initial_bethag_backend` non è stata recuperata. Di conseguenza non si deve usare `supabase db push`, `migration repair`, reset o replay integrale come scorciatoia. Questo addendum documenta il percorso proposto; non afferma che sia già stata costruita o provata una baseline canonica.
