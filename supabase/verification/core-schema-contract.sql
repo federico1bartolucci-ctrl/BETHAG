@@ -101,8 +101,9 @@ expected_rls(table_name) as (
 rls_issues as (
   select 'rls_not_enabled'::text issue,e.table_name object_name,
          'RLS must be enabled and FORCE RLS must be off' detail
-  from expected_rls e left join pg_class c on c.relname=e.table_name
-  left join pg_namespace n on n.oid=c.relnamespace and n.nspname='public'
+  from expected_rls e left join pg_class c
+    on c.relname=e.table_name
+   and c.relnamespace=(select oid from pg_namespace where nspname='public')
   where c.oid is null or not c.relrowsecurity or c.relforcerowsecurity
 )
 select issue,object_name,detail from column_issues
