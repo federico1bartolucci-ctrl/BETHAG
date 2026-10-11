@@ -438,3 +438,12 @@ Queste cinque sorgenti sono recuperate. Il conteggio nominale dei record Product
 Per `add_condominium_works` è stato individuato un commit funzionale del 30 settembre 2026 che aggiunge il modulo lavori all'applicazione, ma il diff disponibile riguarda il codice applicativo e non fornisce il file SQL originario. Analogamente, commit applicativi sul bootstrap dell'amministratore e sui documenti non costituiscono sorgenti delle rispettive migrazioni.
 
 **Conclusione:** questi riscontri non dimostrano che le migrazioni non siano mai esistite; dimostrano soltanto che i percorsi SQL esatti non sono recuperabili dalla cronologia consultata. Non ricostruire il contenuto originario a intuito e non usare gli attuali oggetti del database come sostituto automatico di una migrazione storica. Prima di definire un replay pulito serve una baseline esplicita, derivata da uno schema documentato e validata in un ambiente isolato.
+
+
+## Addendum 4 — distinzione tra sorgenti storiche e ricostruzioni temporanee (11 ottobre 2026)
+
+La cronologia della PR #14 contiene commit che aggiungevano migrazioni di ricostruzione per allineare il precedente ambiente QA, seguiti da commit che le rimuovevano esplicitamente. Esempio verificato: `20261005113000_reconcile_qa_unit_and_archive_baseline.sql`, aggiunta nel commit `699d763259fe78b3d7c11ce027d2e1ee9780cf34` e rimossa nel commit `ab63e894518412745e05a02cf781d2e4a6a6309f`, con lo stesso blob SHA `a14ed83559b0cc64aaef90db4359241b77ba73e7`.
+
+Questi file documentano tentativi di ricostruzione dello stato QA, non sono automaticamente le migrazioni originali eseguite in Production e non possono colmare i record storici mancanti. La PR #14 è stata integrata, ma le migrazioni temporanee rimosse non fanno parte del suo diff finale. Non reintrodurle nel flusso canonico senza una revisione separata di dipendenze, ordine, idempotenza e comportamento su un ambiente isolato.
+
+La migrazione `20260928043410_create_portal_access_baseline.sql` è invece presente nel repository, ma il suo scopo documentato è il baseline della tabella di accesso al portale: non è sostitutiva di `initial_bethag_backend` né dimostra la ricostruzione del blocco iniziale di schema.
