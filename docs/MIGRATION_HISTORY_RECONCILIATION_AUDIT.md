@@ -12,12 +12,12 @@ Non eseguire `supabase db push`, `migration repair`, reset, merge o deploy sulla
 
 - Production: 243 record di migrazione.
 - QA `bethag-migration-reconciliation-qa`: 159 record dopo le due migrazioni di riconciliazione.
-- File SQL distinti reperiti nell'unione dei branch: 258.
-- Record Production con una corrispondenza nominale univoca: 132.
-- Record Production senza corrispondenza nominale: 104.
-- Record Production con più file candidati dallo stesso nome normalizzato: 7.
-- File senza corrispondenza nominale nella cronologia Production: 116.
-- Corrispondenze univoche in cui timestamp/versione differisce: 113.
+- File SQL distinti reperiti nell'unione dei branch (scan esteso): 341.
+- Record Production con una corrispondenza nominale univoca nel primo inventario: 132.
+- Record Production senza sorgente nominale recuperata dopo l'Addendum 2: 99.
+- Record Production con più file candidati dallo stesso nome normalizzato nel primo inventario: 7.
+- File senza corrispondenza nominale nella cronologia Production: 116 (conteggio del primo inventario; da ricalcolare sul corpus esteso).
+- Corrispondenze univoche in cui timestamp/versione differisce nel primo inventario: 113.
 
 ## Branch consultati
 
@@ -28,6 +28,18 @@ Non eseguire `supabase db push`, `migration repair`, reset, merge o deploy sulla
 - `fix/migration-reconciliation-20261005`
 - `fix/migration-timestamp-collisions`
 - `fix/owner-reference-migration-20261003`
+- `backup/pre-rollback-20261001`
+- `backup/recovery-flow-20261005`
+- `architecture-functional-alignment-20261003`
+- `feat/member-transfer-rpc-client`
+- `feature/preserve-member-database-uuid`
+- `fix/member-transfer-coowners-20261002`
+- `fix/member-transfer-workspace-members-lookup`
+- `feature/subentro-rpc-client-20261002`
+- `fix/portal-identity-flow-20261003`
+- `fix/portal-transfer-reactivation`
+- `integration/subentro-portal-identity-20261003`
+- `sync/send-email-supabase-v7`
 
 ## Record Production senza file con nome corrispondente
 
