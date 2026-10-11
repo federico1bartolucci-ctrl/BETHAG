@@ -501,3 +501,10 @@ Il dato conferma che i due ledger non sono una cronologia incrementale direttame
 ### Blocco immediato
 
 Il progetto QA indicato nei controlli precedenti non è sufficiente a certificare un replay storico pulito: la cronologia contiene replay e baseline QA specifiche. Inoltre la sorgente originale `initial_bethag_backend` non è stata recuperata. Di conseguenza non si deve usare `supabase db push`, `migration repair`, reset o replay integrale come scorciatoia. Questo addendum documenta il percorso proposto; non afferma che sia già stata costruita o provata una baseline canonica.
+
+
+## Addendum 9 — controllo automatico della nomenclatura migrazioni
+
+Aggiunto in branch `fix/migration-timestamp-collisions` lo script `scripts/check-migrations.mjs`, richiamato dallo script npm `check:migrations` e dalla pipeline GitHub Actions prima della build. Il controllo verifica che ogni file SQL in `supabase/migrations` rispetti il formato `YYYYMMDDHHMMSS_descrizione.sql` e che il timestamp sia univoco; fallisce in presenza di nomi non validi, collisioni o directory senza migrazioni.
+
+La pipeline del commit `81b678aabdb049f7b6eba13613d440aae4b3105b` ha completato con esito **SUCCESS** sia il nuovo controllo sia la build. La successiva rimozione di un import inutilizzato nello script è una modifica non funzionale e avvia una nuova esecuzione CI. Questo guardrail previene nuove collisioni di timestamp, ma **non** certifica l'equivalenza del contenuto SQL, non ricostruisce le migrazioni originali mancanti e non risolve la divergenza dei ledger Production/QA.
