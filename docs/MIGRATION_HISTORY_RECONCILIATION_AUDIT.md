@@ -575,3 +575,16 @@ Data verifica: 11 ottobre 2026.
 La verifica è limitata ai ref e al percorso indicati: non dimostra che il contenuto non esista in altri repository, artefatti, backup esterni o con un nome/percorso differente. Non ricostruire la migrazione a intuito e non sostituirla con uno snapshot non verificato.
 
 **Conseguenza operativa:** la baseline iniziale resta un blocco di rilascio. Per procedere in sicurezza serve recuperare il file originale da una fonte verificabile oppure approvare esplicitamente una strategia di baseline/snapshot con checksum, cutoff e bootstrap isolato documentati. Il progetto Supabase QA non è stato modificato da questa verifica; Production non è stata modificata.
+
+
+## Addendum 16 — stato corrente CI e inventari Supabase
+
+Verifica del 11 ottobre 2026.
+
+- La GitHub Actions run `38132951700` (run #1746), associata al commit `8a6493912c047c56aead78228b00c208718045d6`, risulta conclusa con esito `success`. Sono passati installazione dipendenze, test unitari, controllo dei nomi/timestamp delle migrazioni e build.
+- Query read-only del ledger Production: 243 record, prima versione `20260928021707`, ultima versione `20261007072310`.
+- Query read-only del ledger QA `bethag-migration-reconciliation-qa`: 159 record, prima versione `20260928021707`, ultima versione `20261011021037`.
+- Il branch QA continua a riportare lo stato `MIGRATIONS_FAILED` nell'inventario dei branch Supabase. Un conteggio read-only conferma 47 tabelle base nello schema `public` sia in Production sia in QA; la sola parità nel numero di tabelle non dimostra parità completa né replay riproducibile.
+- Production non è stata modificata. Nessuna riparazione del ledger, replay, reset, merge o deploy è stato eseguito.
+
+**Esito:** la CI del repository è verde, ma il collaudo di riproducibilità del database resta bloccato. Il prossimo gate è diagnosticare lo stato `MIGRATIONS_FAILED` e dimostrare un bootstrap isolato ripetibile senza ricostruire a intuito la migrazione iniziale mancante.
