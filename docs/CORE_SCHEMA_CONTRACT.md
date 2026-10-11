@@ -93,3 +93,10 @@ L'ordine è solo uno schema di dipendenze logiche: prima di trasformarlo in SQL 
 - La parità di queste quattro tabelle è confermata per colonne, default, nullability, vincoli e policy; non è una prova di bootstrap da zero.
 - La migrazione originale `20260928021707_initial_bethag_backend.sql` rimane non recuperata.
 - Nessuna scrittura è stata eseguita su Production o QA durante questa rilevazione.
+
+
+## Verifica riutilizzabile
+
+È stato aggiunto `supabase/verification/core-schema-contract.sql`, una query di sola lettura che confronta le quattro tabelle con il contratto atteso e restituisce soltanto discrepanze di colonne, vincoli e stato RLS. Va eseguita separatamente in ciascun ambiente; il risultato atteso è zero righe. La query non è una migrazione e non deve essere spostata in `supabase/migrations`.
+
+I confronti diretti già eseguiti sui cataloghi Production e QA hanno confermato le colonne, i vincoli e le policy descritti sopra. L'esecuzione del file SQL completo tramite il connettore non è stata completata in questa sessione; il file resta da eseguire nel SQL Editor read-only prima di considerarlo validato end-to-end.
