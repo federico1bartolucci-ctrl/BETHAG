@@ -515,3 +515,12 @@ La pipeline del commit `81b678aabdb049f7b6eba13613d440aae4b3105b` ha completato 
 La definizione Production letta dal catalogo conferma che il wrapper pubblico `public.close_condominium_member_transfer(uuid)` delega alla funzione privata qualificata esplicitamente (`private.close_condominium_member_transfer`). L'implementazione privata impone `auth.uid()`, blocca la riga del trasferimento, verifica `private.can_manage_workspace_module(v_workspace,'condomini')`, richiede stato `Confermato`, impedisce la chiusura delle cessioni di quota e rifiuta la chiusura se rimangono rate, allocazioni o riporti contabili aperti; solo dopo archivia i cedenti e chiude il trasferimento. Il wrapper pubblico concede EXECUTE ad `authenticated`, ma non ad `anon` né a `PUBLIC`.
 
 Questa evidenza sostiene la scelta intenzionale di un wrapper `SECURITY DEFINER` con controllo di autorizzazione nella funzione privata; non è sufficiente da sola a chiudere ogni verifica di sicurezza, ma **non giustifica una modifica automatica a SECURITY INVOKER o la revoca del grant autenticato**, che rischierebbe di interrompere il flusso di subentro. Il warning resta da valutare nel controllo finale, con test negativi su utente non autenticato, utente di altro workspace, trasferimento inesistente, quota di proprietà e posizione contabile aperta.
+
+
+## Addendum 10 — manifest esteso degli ambienti e piano baseline
+
+È stato aggiunto `docs/BASELINE_REPRODUCIBILITY_PLAN.md` con il confronto di catalogo esteso e una procedura controllata per costruire e verificare una baseline corrente senza spacciare uno snapshot per la cronologia storica originale.
+
+Il controllo ha individuato differenze oltre alle tabelle pubbliche: Production ha 6 estensioni, 10 schemi non di sistema, 106 tipi custom, 2 sequenze, 460 routine e 24 regole di default privileges; QA ha rispettivamente 7, 12, 114, 4, 471 e 27. QA include `pg_net` e gli schemi `net` e `supabase_functions`. Queste differenze includono componenti gestiti dalla piattaforma e richiedono classificazione prima di qualsiasi intervento: non vanno replicate o rimosse automaticamente.
+
+Il piano separa il manifest applicativo dagli oggetti gestiti da Supabase, richiede checksum/cutoff, bootstrap in un ambiente isolato autorizzato, test con dati sintetici e review di tutte le differenze non spiegate. La baseline non è stata generata né applicata: il documento è una procedura di lavoro, non una migrazione eseguibile. Production non è stata modificata.
