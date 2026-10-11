@@ -564,3 +564,14 @@ Verifica read-only eseguita sul branch `main` e sul branch `fix/migration-timest
 L'inventario del branch PR contiene 205 file SQL e non presenta timestamp duplicati. La CI del branch ha superato test unitari, controllo dei nomi/timestamp e build. Queste verifiche dimostrano la correzione delle collisioni di nomenclatura e la conservazione dei contenuti dei nove file; **non** dimostrano la correttezza dell'ordine di replay o la ricostruibilità dell'intera cronologia.
 
 Restano invariati i blocchi descritti nel piano di riproducibilità: il file storico `20260928021707_initial_bethag_backend.sql` non è stato recuperato; il ledger Production/QA resta divergente; non è stata dimostrata una ricostruzione da zero in ambiente isolato. Nessuna migrazione è stata applicata a Production e nessun merge/deploy è stato eseguito.
+
+
+## Addendum 15 — verifica mirata della migrazione iniziale mancante
+
+Data verifica: 11 ottobre 2026.
+
+È stata ripetuta la ricerca del percorso esatto `supabase/migrations/20260928021707_initial_bethag_backend.sql` nei seguenti ref Git: `main`, `migration-reconciliation-audit-20261003`, `bethag-migration-repair`, `bethag-migration-repair-clean`, `fix/migration-reconciliation-20261005`, `fix/owner-reference-migration-20261003`, `backup/pre-rollback-20261001`, `backup/recovery-flow-20261005`. Il file non è stato trovato in nessuno di questi ref al percorso verificato. La ricerca testuale GitHub per il nome esatto/versione non ha restituito risultati.
+
+La verifica è limitata ai ref e al percorso indicati: non dimostra che il contenuto non esista in altri repository, artefatti, backup esterni o con un nome/percorso differente. Non ricostruire la migrazione a intuito e non sostituirla con uno snapshot non verificato.
+
+**Conseguenza operativa:** la baseline iniziale resta un blocco di rilascio. Per procedere in sicurezza serve recuperare il file originale da una fonte verificabile oppure approvare esplicitamente una strategia di baseline/snapshot con checksum, cutoff e bootstrap isolato documentati. Il progetto Supabase QA non è stato modificato da questa verifica; Production non è stata modificata.
