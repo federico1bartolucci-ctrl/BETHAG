@@ -398,3 +398,17 @@ Queste righe sono solo una pista d'indagine; non sono autorizzazione a segnare m
 La cronologia non è ancora riproducibile in modo dimostrato. Per ogni voce non corrispondente serve recuperare il contenuto originale o dimostrare l'equivalenza tramite il diff SQL e lo stato degli oggetti risultanti. In particolare, non si deve trattare la parità attuale di tabelle/funzioni come prova che il replay storico sia sicuro.
 
 La Production è stata consultata in sola lettura. Questo audit non modifica dati, schema o cronologia di Production.
+
+
+## Addendum 2 — recupero di sorgenti SQL con versione e nome esatti (11 ottobre 2026)
+
+La ricerca estesa ha recuperato quattro file che corrispondono esattamente a versione e nome di record Production precedentemente elencati come privi di sorgente. Sono stati letti dal branch indicato e ne è stato registrato il blob SHA Git. Questo prova la reperibilità del file in quel branch, ma non certifica da solo che il contenuto sia byte-per-byte identico al file eseguito storicamente in Production; prima di un replay occorre comunque verificarne dipendenze e comportamento sul database isolato.
+
+| Versione | Migrazione | Branch sorgente | Blob SHA | File |
+|---|---|---|---|---|
+| `20261002050900` | `fix_member_transfer_archived_column_check` | `feat/member-transfer-rpc-client` | `4272f9af58c27c93e3e3f2b3ea08404256c12956` | [SQL](https://github.com/federico1bartolucci-ctrl/BETHAG/blob/feat/member-transfer-rpc-client/supabase/migrations/20261002050900_fix_member_transfer_archived_column_check.sql) |
+| `20261003021711` | `fix_deleted_member_owner_references_workspace_scope` | `fix/portal-identity-flow-20261003` | `f670135456bfb5e588439c5c16e514a8bbd13d93` | [SQL](https://github.com/federico1bartolucci-ctrl/BETHAG/blob/fix/portal-identity-flow-20261003/supabase/migrations/20261003021711_fix_deleted_member_owner_references_workspace_scope.sql) |
+| `20261003022110` | `block_unverified_transfer_identity` | `fix/portal-identity-flow-20261003` | `e8061e7c3028ede9fccb550b3e5b91cbc315923c` | [SQL](https://github.com/federico1bartolucci-ctrl/BETHAG/blob/fix/portal-identity-flow-20261003/supabase/migrations/20261003022110_block_unverified_transfer_identity.sql) |
+| `20261003022133` | `gate_portal_registration_verified_identity` | `fix/portal-identity-flow-20261003` | `81b9cff06f4a6b3b05789fd086c16fa35c7debdc` | [SQL](https://github.com/federico1bartolucci-ctrl/BETHAG/blob/fix/portal-identity-flow-20261003/supabase/migrations/20261003022133_gate_portal_registration_verified_identity.sql) |
+
+Queste quattro sorgenti sono recuperate. Il conteggio nominale dei record Production senza sorgente scende da 104 a 100; i restanti record non vanno ricostruiti per supposizione. Nessun replay, repair della cronologia o modifica a Production è stato eseguito.
