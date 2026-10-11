@@ -588,3 +588,24 @@ Verifica del 11 ottobre 2026.
 - Production non è stata modificata. Nessuna riparazione del ledger, replay, reset, merge o deploy è stato eseguito.
 
 **Esito:** la CI del repository è verde, ma il collaudo di riproducibilità del database resta bloccato. Il prossimo gate è diagnosticare lo stato `MIGRATIONS_FAILED` e dimostrare un bootstrap isolato ripetibile senza ricostruire a intuito la migrazione iniziale mancante.
+
+
+## Addendum 17 — confronto deterministico dei ledger Production/QA
+
+Verifica read-only del 11 ottobre 2026. I risultati completi di `list_migrations` sono stati confrontati per `version` e per `name`; la corrispondenza del nome non viene considerata prova di equivalenza SQL.
+
+| Misura | Production | QA |
+|---|---:|---:|
+| Record nel ledger | 243 | 159 |
+| Versioni uniche | 243 | 159 |
+| Nomi distinti | 237 | 142 |
+
+- 16 versioni condivise.
+- 227 versioni solo Production; 143 versioni solo QA.
+- 35 nomi distinti condivisi. Esempio di nome registrato con versioni diverse: `20260930250000_manual_ai_allocation_intake` è alla versione `20260930103120` in Production e `20261005074808` in QA.
+- Nessuna versione condivisa ha un nome diverso tra gli ambienti.
+- QA termina alla versione `20261011021037`; Production termina alla versione `20261007072310`.
+
+I conteggi sono stati calcolati direttamente dai due elenchi completi restituiti dal provider nella stessa verifica. Correggono l'incertezza dei precedenti confronti sul numero di versioni condivise. Non dimostrano l'equivalenza dei file SQL e non costituiscono autorizzazione a riallineare automaticamente i ledger.
+
+**Esito:** QA non rappresenta una copia storica del ledger Production e non dimostra un replay pulito. Il rilascio resta bloccato finché non viene definita una fonte canonica delle migrazioni, verificato il contenuto delle sorgenti disponibili e dimostrato un bootstrap isolato riproducibile. Production non è stata modificata.
