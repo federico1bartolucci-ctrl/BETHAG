@@ -538,3 +538,8 @@ Per queste quattro tabelle i controlli comparativi hanno restituito gli stessi m
 La validazione della nomenclatura è stata separata in `scripts/migration-name-validation.mjs` e coperta da cinque test Node nativi in `scripts/migration-name-validation.test.mjs`: nomi validi, prefisso versione mancante, suffisso non valido, timestamp duplicato con descrizioni diverse e inventario vuoto. È stato aggiunto `npm test` e la pipeline ora esegue i test prima del controllo dell'inventario e della build.
 
 Il run GitHub Actions **1739** sul commit `50c7896006b7be53d3163ce11289a1fe61801828` è terminato **SUCCESS** con i passaggi `Unit tests`, `Check migration filenames and timestamp uniqueness` e `Build` tutti riusciti. Il test copre solo la regola di naming; non è una suite end-to-end né dimostra l'equivalenza o la sicurezza delle migrazioni.
+
+
+## Addendum 13 — query read-only per il controllo del nucleo schema
+
+Aggiunto `supabase/verification/core-schema-contract.sql`, che confronta colonne, default, nullability, vincoli e abilitazione RLS delle quattro tabelle core e restituisce soltanto le discrepanze. È collocato fuori da `supabase/migrations` e non contiene scritture. Il documento `docs/CORE_SCHEMA_CONTRACT.md` spiega come usarlo e ne chiarisce il limite: l'esecuzione del file completo tramite connettore non è ancora stata validata, benché i controlli diretti precedenti abbiano trovato parità tra Production e QA per queste tabelle.
