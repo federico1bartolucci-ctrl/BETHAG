@@ -543,3 +543,24 @@ Il run GitHub Actions **1739** sul commit `50c7896006b7be53d3163ce11289a1fe61801
 ## Addendum 13 — query read-only per il controllo del nucleo schema
 
 Aggiunto `supabase/verification/core-schema-contract.sql`, che confronta colonne, default, nullability, vincoli e abilitazione RLS delle quattro tabelle core e restituisce soltanto le discrepanze. È collocato fuori da `supabase/migrations` e non contiene scritture. Il documento `docs/CORE_SCHEMA_CONTRACT.md` spiega come usarlo e ne chiarisce il limite: l'esecuzione del file completo tramite connettore non è ancora stata validata, benché i controlli diretti precedenti abbiano trovato parità tra Production e QA per queste tabelle.
+
+
+## Addendum 14 — verifica dei nove rinomini per collisione timestamp
+
+Verifica read-only eseguita sul branch `main` e sul branch `fix/migration-timestamp-collisions`. Per tutti e nove i file rinominati per rendere univoci i timestamp, il contenuto SQL è identico byte per byte tra il percorso precedente e quello nuovo: il blob SHA GitHub coincide in ogni coppia.
+
+| Percorso precedente | Percorso nel branch PR |
+|---|---|
+| `20260930110000_allocation_criteria_scope.sql` | `20260930110100_allocation_criteria_scope.sql` |
+| `20260930200000_harden_payment_movements_access.sql` | `20260930200100_harden_payment_movements_access.sql` |
+| `20260930210000_validate_allocation_rule_scope.sql` | `20260930210100_validate_allocation_rule_scope.sql` |
+| `20261001110000_harden_current_owner_installment_generation.sql` | `20261001110100_harden_current_owner_installment_generation.sql` |
+| `20261005170000_reconcile_operational_trigger_chain.sql` | `20261005170100_reconcile_operational_trigger_chain.sql` |
+| `20261005190000_remove_obsolete_function_overload.sql` | `20261005190100_remove_obsolete_function_overload.sql` |
+| `20261005191000_reconcile_public_function_security_parity.sql` | `20261005191100_reconcile_public_function_security_parity.sql` |
+| `20261005192000_remove_obsolete_schedule_overload_final.sql` | `20261005192100_remove_obsolete_schedule_overload_final.sql` |
+| `20261005193000_reconcile_public_indexes.sql` | `20261005193100_reconcile_public_indexes.sql` |
+
+L'inventario del branch PR contiene 205 file SQL e non presenta timestamp duplicati. La CI del branch ha superato test unitari, controllo dei nomi/timestamp e build. Queste verifiche dimostrano la correzione delle collisioni di nomenclatura e la conservazione dei contenuti dei nove file; **non** dimostrano la correttezza dell'ordine di replay o la ricostruibilità dell'intera cronologia.
+
+Restano invariati i blocchi descritti nel piano di riproducibilità: il file storico `20260928021707_initial_bethag_backend.sql` non è stato recuperato; il ledger Production/QA resta divergente; non è stata dimostrata una ricostruzione da zero in ambiente isolato. Nessuna migrazione è stata applicata a Production e nessun merge/deploy è stato eseguito.
