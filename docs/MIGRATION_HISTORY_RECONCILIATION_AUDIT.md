@@ -524,3 +524,10 @@ Questa evidenza sostiene la scelta intenzionale di un wrapper `SECURITY DEFINER`
 Il controllo ha individuato differenze oltre alle tabelle pubbliche: Production ha 6 estensioni, 10 schemi non di sistema, 106 tipi custom, 2 sequenze, 460 routine e 24 regole di default privileges; QA ha rispettivamente 7, 12, 114, 4, 471 e 27. QA include `pg_net` e gli schemi `net` e `supabase_functions`. Queste differenze includono componenti gestiti dalla piattaforma e richiedono classificazione prima di qualsiasi intervento: non vanno replicate o rimosse automaticamente.
 
 Il piano separa il manifest applicativo dagli oggetti gestiti da Supabase, richiede checksum/cutoff, bootstrap in un ambiente isolato autorizzato, test con dati sintetici e review di tutte le differenze non spiegate. La baseline non è stata generata né applicata: il documento è una procedura di lavoro, non una migrazione eseguibile. Production non è stata modificata.
+
+
+## Addendum 11 — contratto del nucleo workspace/profile/condominio
+
+Aggiunto `docs/CORE_SCHEMA_CONTRACT.md`, ricavato da query di sola lettura sui cataloghi Production e QA. Registra colonne, default, nullability, vincoli e policy RLS delle quattro tabelle fondamentali `workspaces`, `profiles`, `workspace_members` e `condominiums`.
+
+Per queste quattro tabelle i controlli comparativi hanno restituito gli stessi metadati strutturali nei due ambienti. Il documento esplicita le dipendenze e le policy RLS da preservare; non contiene una migrazione applicabile e non pretende di ricostruire il file storico `initial_bethag_backend`. Prima di un bootstrap restano da risolvere l'ordine delle dipendenze circolari e l'inclusione delle funzioni helper/ACL.
