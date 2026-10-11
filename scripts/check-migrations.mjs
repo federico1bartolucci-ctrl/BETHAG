@@ -1,6 +1,4 @@
 import { readdir } from "node:fs/promises";
-import { join } from "node:path";
-
 const directory = "supabase/migrations";
 const files = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 const errors = [];
