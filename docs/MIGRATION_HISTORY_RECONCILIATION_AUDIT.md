@@ -531,3 +531,10 @@ Il piano separa il manifest applicativo dagli oggetti gestiti da Supabase, richi
 Aggiunto `docs/CORE_SCHEMA_CONTRACT.md`, ricavato da query di sola lettura sui cataloghi Production e QA. Registra colonne, default, nullability, vincoli e policy RLS delle quattro tabelle fondamentali `workspaces`, `profiles`, `workspace_members` e `condominiums`.
 
 Per queste quattro tabelle i controlli comparativi hanno restituito gli stessi metadati strutturali nei due ambienti. Il documento esplicita le dipendenze e le policy RLS da preservare; non contiene una migrazione applicabile e non pretende di ricostruire il file storico `initial_bethag_backend`. Prima di un bootstrap restano da risolvere l'ordine delle dipendenze circolari e l'inclusione delle funzioni helper/ACL.
+
+
+## Addendum 12 — test unitari del controllo migrazioni
+
+La validazione della nomenclatura è stata separata in `scripts/migration-name-validation.mjs` e coperta da cinque test Node nativi in `scripts/migration-name-validation.test.mjs`: nomi validi, prefisso versione mancante, suffisso non valido, timestamp duplicato con descrizioni diverse e inventario vuoto. È stato aggiunto `npm test` e la pipeline ora esegue i test prima del controllo dell'inventario e della build.
+
+Il run GitHub Actions **1739** sul commit `50c7896006b7be53d3163ce11289a1fe61801828` è terminato **SUCCESS** con i passaggi `Unit tests`, `Check migration filenames and timestamp uniqueness` e `Build` tutti riusciti. Il test copre solo la regola di naming; non è una suite end-to-end né dimostra l'equivalenza o la sicurezza delle migrazioni.
