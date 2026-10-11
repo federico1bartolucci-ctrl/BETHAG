@@ -20,5 +20,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Check migration filenames and timestamp uniqueness
+        run: npm run check:migrations
+
       - name: Build
         run: npm run build
