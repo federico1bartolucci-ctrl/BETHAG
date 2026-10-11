@@ -425,3 +425,16 @@ La ricerca estesa ha recuperato quattro file che corrispondono esattamente a ver
 | `20261003030800` | `20261003040000_restrict_audit_log_to_workspace_admins` (il nome registrato contiene un timestamp ulteriore) | `fix/portal-identity-flow-20261003` | `7e755f3107d3e2e0dfdeb4c5f794991eb3b464a3` | [SQL](https://github.com/federico1bartolucci-ctrl/BETHAG/blob/fix/portal-identity-flow-20261003/supabase/migrations/20261003030800_restrict_audit_log_to_workspace_admins.sql) |
 
 Queste cinque sorgenti sono recuperate. Il conteggio nominale dei record Production senza sorgente scende da 104 a 99; i restanti record non vanno ricostruiti per supposizione. Nessun replay, repair della cronologia o modifica a Production è stato eseguito.
+
+
+## Addendum 3 — controllo della cronologia Git per sorgenti mancanti (11 ottobre 2026)
+
+È stata interrogata anche la cronologia dei commit del repository per i percorsi SQL esatti delle seguenti voci Production. L'API GitHub non restituisce commit per questi percorsi nel branch predefinito; la ricerca per nome nei file dei branch già inventariati non ha individuato le sorgenti esatte:
+
+- `supabase/migrations/20260928021707_initial_bethag_backend.sql`
+- `supabase/migrations/20260928021935_sync_auth_profiles.sql`
+- `supabase/migrations/20260929071513_add_condominium_works.sql`
+
+Per `add_condominium_works` è stato individuato un commit funzionale del 30 settembre 2026 che aggiunge il modulo lavori all'applicazione, ma il diff disponibile riguarda il codice applicativo e non fornisce il file SQL originario. Analogamente, commit applicativi sul bootstrap dell'amministratore e sui documenti non costituiscono sorgenti delle rispettive migrazioni.
+
+**Conclusione:** questi riscontri non dimostrano che le migrazioni non siano mai esistite; dimostrano soltanto che i percorsi SQL esatti non sono recuperabili dalla cronologia consultata. Non ricostruire il contenuto originario a intuito e non usare gli attuali oggetti del database come sostituto automatico di una migrazione storica. Prima di definire un replay pulito serve una baseline esplicita, derivata da uno schema documentato e validata in un ambiente isolato.
