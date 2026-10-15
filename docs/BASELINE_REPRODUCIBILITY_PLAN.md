@@ -62,7 +62,7 @@ Durante la stesura del piano non sono state eseguite scritture SQL, modifiche al
 
 La ricreazione della vista ha inizialmente ereditato privilegi accessori per `anon`; la correzione è stata applicata in QA e verificata, con ACL ora identica a Production. Nota storica superata: il tentativo iniziale di registrare la correzione ACL non era riuscito e il file provvisorio aveva un timestamp non valido per il ledger QA. La correzione definitiva è stata poi applicata e registrata tramite `20261015162104_restore_fund_availability_view_acl.sql`; il ledger QA riporta la versione `20261015162104` e l'ACL è stata verificata.
 
-Questo intervento risolve la divergenza di precisione numerica, non il blocco principale della baseline: le 99 sorgenti SQL Production non recuperate e la prova di bootstrap pulito restano aperte. Nessuna scrittura è stata eseguita su Production.
+Questo intervento risolve la divergenza di precisione numerica, non il blocco principale della baseline: restano 99 record del ledger Production senza sorgente nominale recuperata e non è ancora dimostrato un bootstrap pulito. Nessuna scrittura è stata eseguita su Production.
 
 
 ## Addendum di verifica — 15 ottobre 2026, aggiornamento successivo
