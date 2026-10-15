@@ -54,3 +54,12 @@ Le 47 tabelle pubbliche e gli oggetti applicativi precedentemente confrontati so
 ## Vincoli di sicurezza
 
 Durante la stesura del piano non sono state eseguite scritture SQL, modifiche alle ACL, `db push`, `migration repair`, reset, replay, merge o deploy. Production resta intatta. Nessuna nuova risorsa Supabase è stata creata.
+
+
+## Addendum operativo — 15 ottobre 2026
+
+È stata aggiunta e applicata in QA la migrazione `20261015155159_reconcile_numeric_column_precision.sql`. Il preflight sui dati non ha rilevato valori che richiedessero arrotondamento o eccedessero la precisione prevista. Dopo l'operazione, le 13 colonne numeriche confrontate (10 colonne fisiche e tre colonne derivate della vista `condominium_fund_availability`) hanno gli stessi tipi di Production. La vista conserva `security_invoker=true` e il trigger di sincronizzazione del fondo è presente con la stessa definizione.
+
+La ricreazione della vista ha inizialmente ereditato privilegi accessori per `anon`; la correzione è stata applicata in QA e verificata, con ACL ora identica a Production. La migrazione idempotente `20261015160000_restore_fund_availability_view_acl.sql` è presente nel branch, ma la registrazione della migrazione via Supabase MCP non è riuscita; il ledger QA non va considerato sincronizzato su questo secondo passaggio finché non sarà applicato con il flusso di migrazione standard.
+
+Questo intervento risolve la divergenza di precisione numerica, non il blocco principale della baseline: le 99 sorgenti SQL Production non recuperate e la prova di bootstrap pulito restano aperte. Nessuna scrittura è stata eseguita su Production.
