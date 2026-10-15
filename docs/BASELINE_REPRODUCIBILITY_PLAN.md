@@ -48,7 +48,7 @@ Le 47 tabelle pubbliche e gli oggetti applicativi precedentemente confrontati so
 - Il ledger Production contiene 243 record, quello QA 159; le versioni comuni sono 84, quelle presenti solo in Production 159 e quelle solo in QA 75.
 - La sorgente originale `20260928021707_initial_bethag_backend.sql` non è stata recuperata.
 - Il progetto QA attuale non è un ambiente pulito per dimostrare la riproduzione dell'intera storia.
-- Il repository non dispone ancora di una suite di test end-to-end e CI esegue il controllo della nomenclatura migrazioni più la build.
+- Il repository non dispone ancora di una suite di test end-to-end. La CI esegue test unitari, controllo dei nomi/timestamp delle migrazioni e build; questi controlli non dimostrano un bootstrap pulito.
 - Le differenze di estensioni/schemi gestiti richiedono una decisione documentata, non una correzione automatica.
 
 ## Vincoli di sicurezza
@@ -60,6 +60,17 @@ Durante la stesura del piano non sono state eseguite scritture SQL, modifiche al
 
 È stata aggiunta e applicata in QA la migrazione `20261015155159_reconcile_numeric_column_precision.sql`. Il preflight sui dati non ha rilevato valori che richiedessero arrotondamento o eccedessero la precisione prevista. Dopo l'operazione, le 13 colonne numeriche confrontate (10 colonne fisiche e tre colonne derivate della vista `condominium_fund_availability`) hanno gli stessi tipi di Production. La vista conserva `security_invoker=true` e il trigger di sincronizzazione del fondo è presente con la stessa definizione.
 
-La ricreazione della vista ha inizialmente ereditato privilegi accessori per `anon`; la correzione è stata applicata in QA e verificata, con ACL ora identica a Production. La migrazione idempotente `20261015160000_restore_fund_availability_view_acl.sql` è presente nel branch, ma la registrazione della migrazione via Supabase MCP non è riuscita; il ledger QA non va considerato sincronizzato su questo secondo passaggio finché non sarà applicato con il flusso di migrazione standard.
+La ricreazione della vista ha inizialmente ereditato privilegi accessori per `anon`; la correzione è stata applicata in QA e verificata, con ACL ora identica a Production. Nota storica superata: il tentativo iniziale di registrare la correzione ACL non era riuscito e il file provvisorio aveva un timestamp non valido per il ledger QA. La correzione definitiva è stata poi applicata e registrata tramite `20261015162104_restore_fund_availability_view_acl.sql`; il ledger QA riporta la versione `20261015162104` e l'ACL è stata verificata.
 
 Questo intervento risolve la divergenza di precisione numerica, non il blocco principale della baseline: le 99 sorgenti SQL Production non recuperate e la prova di bootstrap pulito restano aperte. Nessuna scrittura è stata eseguita su Production.
+
+
+## Addendum di verifica — 15 ottobre 2026, aggiornamento successivo
+
+- La migrazione `20261015162156_use_invoker_for_transfer_wrapper.sql` è stata applicata al QA e risulta nel ledger con versione `20261015162156`.
+- Verifica catalogo PostgreSQL: il wrapper pubblico `public.close_condominium_member_transfer(uuid)` è `SECURITY INVOKER` con `search_path` vuoto; l'implementazione privata resta `SECURITY DEFINER`, con `search_path` vuoto e controlli di identità/autorizzazione.
+- Smoke test transazionale con ruolo `authenticated` e identità sintetica: la chiamata a un trasferimento inesistente è stata respinta con `FORBIDDEN`; transazione annullata. Questo è un controllo mirato, non sostituisce i test con account reali e ruoli distinti.
+- Supabase Security Advisor sul QA: zero findings al controllo successivo alla migrazione.
+- GitHub Actions run #1766 ha completato con successo test unitari, controllo di unicità dei timestamp delle migrazioni e build sul commit head della PR #15 `167753ada61cdd7662c84603894bbfff7043f444`.
+- La PR #15 resta aperta e draft. Il bootstrap pulito non è ancora provato: l'assenza della sorgente storica `20260928021707_initial_bethag_backend.sql`, gli altri record di Production senza sorgente recuperata e le differenze di provisioning tra ambienti rimangono bloccanti.
+- Production non è stata modificata; non sono stati eseguiti merge, deploy, reset o replay integrale.
