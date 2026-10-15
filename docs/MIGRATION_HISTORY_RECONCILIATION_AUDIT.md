@@ -609,3 +609,20 @@ Verifica read-only del 11 ottobre 2026. I risultati completi di `list_migrations
 I conteggi sono stati calcolati direttamente dai due elenchi completi restituiti dal provider nella stessa verifica. Correggono l'incertezza dei precedenti confronti sul numero di versioni condivise. Non dimostrano l'equivalenza dei file SQL e non costituiscono autorizzazione a riallineare automaticamente i ledger.
 
 **Esito:** QA non rappresenta una copia storica del ledger Production e non dimostra un replay pulito. Il rilascio resta bloccato finché non viene definita una fonte canonica delle migrazioni, verificato il contenuto delle sorgenti disponibili e dimostrato un bootstrap isolato riproducibile. Production non è stata modificata.
+
+
+## Addendum operativo — 15 ottobre 2026
+
+### Riconciliazione dei tipi numerici in QA
+
+- Production non è stata modificata.
+- In QA è stata applicata la migrazione registrata come versione `20261015155159`, nome `reconcile_numeric_column_precision`.
+- Il preflight ha verificato le dieci colonne fisiche coinvolte senza rilevare valori che richiedessero arrotondamento o eccedessero l'intervallo target.
+- La migrazione ha allineato dieci colonne fisiche (importi `numeric(14,2)`, millesimi `numeric(12,4)`) e ricreato la vista `public.condominium_fund_availability` e il trigger `trg_sync_condominium_fund_usage` necessari per l'alterazione dei tipi.
+- Il confronto live successivo ha verificato che le 13 definizioni numeriche esposte dal catalogo, incluse le tre colonne della vista, ora coincidono con Production. La vista mantiene `security_invoker=true`; trigger e ACL sono stati ricontrollati.
+- La ricreazione della vista aveva introdotto privilegi accessori per `anon`. Sono stati revocati in QA e l'ACL finale ora coincide con Production. È stata aggiunta la migrazione versionata `20261015160000_restore_fund_availability_view_acl.sql` per rendere idempotente la correzione.
+- **Limite di tracciamento:** il secondo tentativo di `apply_migration` per registrare la sola correzione ACL è fallito con errore di risoluzione progetto. La revoca è stata applicata direttamente in QA via SQL e verificata, ma la migrazione `20261015160000` resta da applicare/registrare tramite il normale flusso autorizzato. Non alterare manualmente il ledger per simulare un'applicazione.
+
+### Stato ancora aperto
+
+La correzione numerica è verificata sullo schema QA, ma non risolve la ricostruibilità completa della cronologia: la sorgente originale `20260928021707_initial_bethag_backend.sql` e altre sorgenti storiche restano non recuperate. Il QA esistente non è una prova di bootstrap pulito. Non è autorizzato alcun merge, deploy, reset o replay su Production.
