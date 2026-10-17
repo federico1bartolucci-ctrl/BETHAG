@@ -1229,8 +1229,6 @@ ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_pkey"
 
 ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "trg_validate_unit_owner_member_refs" TRIGGER DEFERRABLE INITIALLY DEFERRED;
-
 ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_pkey" PRIMARY KEY (id);
