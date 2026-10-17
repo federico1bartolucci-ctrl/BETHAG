@@ -4,10 +4,10 @@
   "branches_scanned": 19,
   "source_entries": 368,
   "counts": {
-    "exact": 69,
+    "exact": 70,
     "version_mismatch": 64,
     "missing_source": 99,
-    "ambiguous_name": 11
+    "ambiguous_name": 10
   },
   "results": [
     {
@@ -158,25 +158,8 @@
         "sha": "fac77a0fe4b762d7ed06bc5ebea6915609833403"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -379,25 +362,8 @@
         "sha": "5eb0a9045a44d9213c860365d43cff31e5dc5f7a"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -578,25 +544,8 @@
         "sha": "1f9b955f85d338299ceb46aeb2928f87a04c67d8"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -633,25 +582,8 @@
         "sha": "f0d0865f87899394ef01a583d08faf66fbf2d918"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -664,25 +596,8 @@
         "sha": "45bfec28303a1a8c32092b22f176d27f9e7f7ef8"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -695,25 +610,8 @@
         "sha": "838e8d81155dde2b34df5f684ce3a0b8d1a802de"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -855,25 +753,8 @@
         "sha": "e6be3444600d8327886c295c9760a5e8e8d8a6ea"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -886,25 +767,8 @@
         "sha": "2287a44427e5602fe6f81879f1cebffad527062a"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -917,25 +781,8 @@
         "sha": "d1c42ad3283584c437567c4d11d604145f78b0af"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -948,25 +795,8 @@
         "sha": "f6a138de174c53b049ebae53b5b7107ebea22998"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -979,25 +809,8 @@
         "sha": "ef67ae580a2e5c389fcd3bd86b953534981790c0"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1010,25 +823,8 @@
         "sha": "a2e14b7208bfcd17e48ddbb766026dfd4ca3ff90"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1165,25 +961,8 @@
         "sha": "a1be69fdc58c7e97dd43ec491d8a9f9b90f93f9a"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1220,55 +999,15 @@
     {
       "version": "20260930080331",
       "name": "clean_deleted_member_owner_references",
-      "status": "ambiguous_name",
-      "distinct_blobs": 4,
-      "candidates": [
-        {
-          "path": "supabase/migrations/20260930200000_clean_deleted_member_owner_references.sql",
-          "version": "20260930200000",
-          "sha": "f72cb4d1b23510f9e00578ed9c4bf4f60055fa33",
-          "branches": [
-            "architecture-functional-alignment-20261003",
-            "backup/pre-rollback-20261001",
-            "backup/recovery-flow-20261005",
-            "bethag-migration-repair-clean",
-            "feat/member-transfer-rpc-client",
-            "feature/preserve-member-database-uuid",
-            "feature/subentro-rpc-client-20261002",
-            "fix/member-transfer-coowners-20261002",
-            "fix/member-transfer-workspace-members-lookup",
-            "fix/migration-reconciliation-20261005",
-            "fix/portal-transfer-reactivation",
-            "migration-reconciliation-audit-20261003",
-            "sync/send-email-supabase-v7"
-          ]
-        },
-        {
-          "path": "supabase/migrations/20260930200000_clean_deleted_member_owner_references.sql",
-          "version": "20260930200000",
-          "sha": "11e04cb64900f3d896db0221f6cfb7ac4abac088",
-          "branches": [
-            "bethag-migration-repair"
-          ]
-        },
-        {
-          "path": "supabase/migrations/20260930200000_clean_deleted_member_owner_references.sql",
-          "version": "20260930200000",
-          "sha": "84b65f5c82630715c0371144352752172820f09b",
-          "branches": [
-            "fix/migration-timestamp-collisions",
-            "main"
-          ]
-        },
-        {
-          "path": "supabase/migrations/20260930080331_clean_deleted_member_owner_references.sql",
-          "version": "20260930080331",
-          "sha": "be9307d0d264d9354f7bf2404fa07177f4d29b9b",
-          "branches": [
-            "fix/portal-identity-flow-20261003",
-            "integration/subentro-portal-identity-20261003"
-          ]
-        }
+      "status": "exact",
+      "source": {
+        "path": "supabase/migrations/20260930080331_clean_deleted_member_owner_references.sql",
+        "version": "20260930080331",
+        "sha": "be9307d0d264d9354f7bf2404fa07177f4d29b9b"
+      },
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1281,25 +1020,8 @@
         "sha": "cb2364d34e78be9816e556b4279b91004fd1df12"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1318,25 +1040,8 @@
         "sha": "53306ffade9665e0c9ad9e06d083a97faccd112c"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1349,25 +1054,8 @@
         "sha": "64a6dafa22e7f651509e6474d5fe4192c40a7319"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1380,25 +1068,8 @@
         "sha": "857da6cdb6782e0bb8605f16a46800ae8c76efcb"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1411,25 +1082,8 @@
         "sha": "64739dd8bb82a4a7aec140992d4dfdd1ce24ddbd"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1442,25 +1096,8 @@
         "sha": "61138503fa211c44dc7e6918eb811c8a9fb82528"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1504,25 +1141,8 @@
         "sha": "b2438a529a68f75671fe1a02cbebf6433f238413"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1535,25 +1155,8 @@
         "sha": "93640049977a6fd61f43e1f3bbf3cd0a0b851708"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1566,25 +1169,8 @@
         "sha": "5900328665908cfe4bdc376b2bcb627706a2e7f3"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1597,25 +1183,8 @@
         "sha": "a9ff415a0c23952e9013650580c799e525f9498b"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1628,25 +1197,8 @@
         "sha": "5fd9bb751675860c33894f69d5b46f328334cc28"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1659,25 +1211,8 @@
         "sha": "b65975dd8cfa4067693f04e40cbeb9d7c6c9d6a7"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1690,25 +1225,8 @@
         "sha": "483672eed8eb2fd17a2985548750b6abd8b4db48"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1721,25 +1239,8 @@
         "sha": "71c027bc5ab0406d25b58ed5c6328b458e0d2040"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1752,25 +1253,8 @@
         "sha": "247f9d31c26203464a870fe37ff60a9d9caf91c1"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1783,25 +1267,8 @@
         "sha": "428e91a190fde962cfe457572f48924a075a77f6"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1851,25 +1318,8 @@
         "sha": "8953e8ecc8bdbf5da79f00d1055be32af2b94c65"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1882,25 +1332,8 @@
         "sha": "aa5d30b67a77783ce026561c8bff8759ac54b672"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1913,25 +1346,8 @@
         "sha": "a751ca8c327d71faabc76977da47db2da5fab1f6"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1944,25 +1360,8 @@
         "sha": "036be70af8c0cb0839e9e28d86194094761ec892"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -1975,25 +1374,8 @@
         "sha": "5395fe3e2202d7b98f8f44253d77882880c56563"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2006,25 +1388,8 @@
         "sha": "e93338b497d485eaa5979a6ae45f9ed8febe2a42"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2037,25 +1402,8 @@
         "sha": "100b7568a6392b2dbeb56d8273b41d781afb100f"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2074,25 +1422,8 @@
         "sha": "6eb8f041841df4db3ed63efb7ee61ff57589f965"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2105,25 +1436,8 @@
         "sha": "4bec1128ae543d38af87759b38640fa817befc55"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2227,25 +1541,8 @@
         "sha": "ed4a29aae1d3f7a0c34a636381b3dffd9abfda24"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2282,25 +1579,8 @@
         "sha": "dff9880f7bfac8361899424c90aef15d3b8452f9"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2313,25 +1593,8 @@
         "sha": "0500a3f0448aa49eaece58171a6e06c87e3ee0ba"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2344,25 +1607,8 @@
         "sha": "ec83741bbb80396238380a97eb0aaf890858e591"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2375,25 +1621,8 @@
         "sha": "7febbce607da3660b1ac5672a6af3df7e8721c30"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2412,25 +1641,8 @@
         "sha": "76120553d13d372937f3ccc345f60e37fe01dc6b"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2449,25 +1661,8 @@
         "sha": "61a3c49d59c6a5051c7263f11d7bba5707eb28ba"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2592,25 +1787,8 @@
         "sha": "8504f8908291e8739bea581d2dce4ca4f4b38db7"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/pre-rollback-20261001",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "fix/portal-transfer-reactivation",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003",
-        "sync/send-email-supabase-v7"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
@@ -2651,21 +1829,8 @@
         "sha": "22635cad70738651615cd1f37533dce96e2f486a"
       },
       "branches": [
-        "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client",
-        "feature/preserve-member-database-uuid",
-        "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-coowners-20261002",
-        "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions",
-        "fix/owner-reference-migration-20261003",
         "fix/portal-identity-flow-20261003",
-        "integration/subentro-portal-identity-20261003",
-        "main",
-        "migration-reconciliation-audit-20261003"
+        "integration/subentro-portal-identity-20261003"
       ]
     },
     {
