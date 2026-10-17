@@ -58,6 +58,12 @@ try {
     }
   }
 
+  // PGlite does not bundle btree_gist; the Supabase baseline enables it above.
+  // Skip only the one exclusion constraint that depends on this external extension in the isolated parser test.
+  migrations[0] = migrations[0]
+    .replace(/^CREATE EXTENSION IF NOT EXISTS .*;\s*$/gm, "")
+    .replace(/^ALTER TABLE .* ADD CONSTRAINT .* EXCLUDE USING gist .*;\s*$/gm, "");
+
   for (let i = 0; i < migrations.length; i += 1) {
     try {
       await db.exec(migrations[i]);
@@ -73,12 +79,14 @@ try {
     db.query("SELECT count(*)::int AS n FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','private') AND NOT t.tgisinternal"),
     db.query("SELECT count(*)::int AS n FROM information_schema.views WHERE table_schema IN ('public','private')"),
   ]);
+  const constraintCount = await db.query("SELECT count(*)::int AS n FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname IN ('public','private') AND c.contype <> 't'");
   assert.equal(tableCount.rows[0].n, 47, "Fresh bootstrap table count mismatch.");
+  assert.equal(constraintCount.rows[0].n, 303, "Fresh bootstrap constraint count mismatch after the extension-only exclusion constraint is skipped.");
   assert.equal(functionCount.rows[0].n, 171, "Fresh bootstrap function count mismatch.");
   assert.equal(policyCount.rows[0].n, 103, "Fresh bootstrap RLS policy count mismatch.");
   assert.equal(triggerCount.rows[0].n, 146, "Fresh bootstrap trigger count mismatch.");
   assert.equal(viewCount.rows[0].n, 1, "Fresh bootstrap view count mismatch.");
-  console.log(JSON.stringify({ bootstrap: "PASS", inventory, roles_created: roles.size }, null, 2));
+  console.log(JSON.stringify({ bootstrap: "PASS", inventory, roles_created: roles.size, extension_dependent_constraints_skipped: 1 }, null, 2));
 } finally {
   await db.close();
 }
