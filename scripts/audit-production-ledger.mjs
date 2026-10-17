@@ -1,12 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 const LEDGER_PATH = "supabase/rebuild/production-ledger-20261017.json";
 const MIGRATIONS_DIR = "supabase/migrations";
 
 export function normalizeMigrationName(value) {
-  let name = value.replace(/\\.sql$/, "");
-  while (/^\\d{14}_/.test(name)) name = name.slice(15);
+  let name = value.replace(/\.sql$/, "");
+  while (/^\d{14}_/.test(name)) name = name.slice(15);
   return name;
 }
 
@@ -32,16 +32,20 @@ async function main() {
   const ledger = JSON.parse(await readFile(LEDGER_PATH, "utf8"));
   const files = await readdir(MIGRATIONS_DIR);
   const results = auditLedger(ledger, files);
-  const counts = Object.fromEntries(
-    ["exact", "version_mismatch", "missing_source", "ambiguous_name"].map((status) => [
-      status,
-      results.filter((item) => item.status === status).length,
-    ]),
-  );
-  console.log(JSON.stringify({ captured_at_utc: ledger.captured_at_utc, production_records: results.length, counts, unresolved: results.filter((x) => x.status === "missing_source" || x.status === "ambiguous_name") }, null, 2));
+  const statuses = ["exact", "version_mismatch", "missing_source", "ambiguous_name"];
+  const counts = Object.fromEntries(statuses.map((status) => [
+    status,
+    results.filter((item) => item.status === status).length,
+  ]));
+  console.log(JSON.stringify({
+    captured_at_utc: ledger.captured_at_utc,
+    production_records: results.length,
+    counts,
+    unresolved: results.filter((x) => x.status === "missing_source" || x.status === "ambiguous_name"),
+  }, null, 2));
   if (counts.missing_source > 0 || counts.ambiguous_name > 0) process.exitCode = 1;
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\\\/g, "/"))) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   await main();
 }
