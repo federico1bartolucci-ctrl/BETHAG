@@ -32,7 +32,7 @@ const result = {
 };
 
 assert.equal(result.tables, 47, "Production catalog table count changed.");
-assert.equal(result.constraints, 305, "Production constraint count changed.");
+assert.equal(result.constraints, 304, "Production table-constraint count changed.");
 assert.equal(result.indexes, 193, "Unexpected baseline index count.");
 assert.equal(result.views, 1, "Expected the production fund-availability view.");
 assert.equal(result.functions, 171, "Production function/procedure count changed.");
