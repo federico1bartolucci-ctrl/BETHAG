@@ -24,3 +24,12 @@ test("distinguishes exact source, version mismatch, missing source, and conflict
     "exact", "version_mismatch", "missing_source", "ambiguous_name",
   ]);
 });
+
+test("an exact ledger version takes precedence over conflicting copies at other versions", () => {
+  const ledger = { migrations: [{ version: "20261001000000", name: "first_migration" }] };
+  const sources = [
+    { path: "supabase/migrations/20261001000000_first_migration.sql", version: "20261001000000", name: "first_migration", sha: "a", branches: ["main"] },
+    { path: "supabase/migrations/20261002000000_first_migration.sql", version: "20261002000000", name: "first_migration", sha: "b", branches: ["recovery"] },
+  ];
+  assert.equal(auditLedger(ledger, sources)[0].status, "exact");
+});
