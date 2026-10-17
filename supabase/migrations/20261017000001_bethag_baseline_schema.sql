@@ -763,35 +763,17 @@ CREATE TABLE "public"."workspaces" (
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
 
-ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_pkey" PRIMARY KEY (id);
 
-ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_communication_id_fkey" FOREIGN KEY (communication_id) REFERENCES communications(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_condominium_fk" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_delivery_consistency_chk" CHECK (((status <> ALL (ARRAY['sent'::text, 'delivered'::text])) OR provider_message_id IS NOT NULL) AND (status <> 'delivered'::text OR delivered_at IS NOT NULL) AND (status <> 'queued'::text OR queued_at IS NOT NULL));
 
 ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_email_chk" CHECK (POSITION(('@'::text) IN (email)) > 1);
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_member_fk" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_pkey" PRIMARY KEY (id);
 
@@ -801,29 +783,15 @@ ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_re
 
 ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_status_chk" CHECK (status = ANY (ARRAY['pending'::text, 'queued'::text, 'sent'::text, 'delivered'::text, 'failed'::text, 'skipped'::text]));
 
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_user_fk" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_workspace_fk" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_email_status_check" CHECK (email_status IS NULL OR (email_status = ANY (ARRAY['prepared'::text, 'no_recipients'::text, 'In elaborazione'::text, 'Inviata'::text, 'Parzialmente inviata'::text, 'Errore'::text, 'Consegnata'::text])));
 
 ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
 
 ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_setting_ordinary_installment_count_check" CHECK (ordinary_installment_count >= 1 AND ordinary_installment_count <= 12);
 
 ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_check" CHECK (accounting_start_date <= accounting_end_date);
-
-ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_extraordinary_mode_check" CHECK (extraordinary_mode = ANY (ARRAY['integrata'::text, 'separata'::text]));
 
@@ -833,77 +801,31 @@ ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condomini
 
 ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_workspace_id_condominium_id_key" UNIQUE (workspace_id, condominium_id);
 
-ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "allocation_intake_amount_ck" CHECK (expense_amount IS NULL OR expense_amount >= 0::numeric);
 
 ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "allocation_intake_source_ck" CHECK (source = ANY (ARRAY['Manuale'::text, 'AI'::text, 'Importazione'::text]));
 
 ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "allocation_intake_status_ck" CHECK (status = ANY (ARRAY['Bozza'::text, 'Da verificare'::text, 'Confermato'::text, 'Annullato'::text]));
 
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_confirmed_by_fkey" FOREIGN KEY (confirmed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_document_id_fkey" FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_ledger_entry_id_fkey" FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL;
-
 ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "allocation_rules_priority_ck" CHECK (priority >= 0);
 
 ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "allocation_rules_scope_ck" CHECK (NULLIF(TRIM(BOTH FROM COALESCE(expense_type, ''::text)), ''::text) IS NOT NULL OR NULLIF(TRIM(BOTH FROM COALESCE(category, ''::text)), ''::text) IS NOT NULL);
 
-ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE RESTRICT;
-
-ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
 ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_audit_log" ADD CONSTRAINT "condominium_audit_log_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_audit_log" ADD CONSTRAINT "condominium_audit_log_pkey" PRIMARY KEY (id);
 
-ALTER TABLE "public"."condominium_audit_log" ADD CONSTRAINT "condominium_audit_log_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_fiscal_year_id_fkey" FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL;
-
 ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_pkey" PRIMARY KEY (id);
 
-ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_fiscal_year_id_fkey" FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL;
-
 ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "consumption_nonnegative_ck" CHECK (COALESCE(previous_reading, 0::numeric) >= 0::numeric AND COALESCE(current_reading, 0::numeric) >= 0::numeric AND COALESCE(consumption, 0::numeric) >= 0::numeric AND COALESCE(kwh, 0::numeric) >= 0::numeric AND COALESCE(allocation_value, 0::numeric) >= 0::numeric AND COALESCE(charge_amount, 0::numeric) >= 0::numeric);
 
 ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "consumption_period_ck" CHECK (period_start IS NULL OR period_end IS NULL OR period_start <= period_end);
 
 ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "consumption_reading_ck" CHECK (current_reading IS NULL OR previous_reading IS NULL OR current_reading >= previous_reading);
-
-ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_confirmed_by_fkey" FOREIGN KEY (confirmed_by) REFERENCES auth.users(id);
-
-ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
-
-ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_created_condominium_id_fkey" FOREIGN KEY (created_condominium_id) REFERENCES condominiums(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_extracted_object" CHECK (jsonb_typeof(extracted_data) = 'object'::text);
 
@@ -921,19 +843,9 @@ ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_
 
 ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_warnings_array" CHECK (jsonb_typeof(warnings) = 'array'::text);
 
-ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL;
-
 ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_amount_nonnegative_chk" CHECK (amount >= 0::numeric);
 
 ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_amounts_valid" CHECK (amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= amount);
-
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_ledger_entry_id_fkey" FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_paid_amount_valid_chk" CHECK (paid_amount >= 0::numeric AND paid_amount <= amount);
 
@@ -941,19 +853,7 @@ ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condomini
 
 ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_status_amount_consistent" CHECK (status = 'Da pagare'::text AND paid_amount = 0::numeric OR status = 'Parzialmente pagato'::text AND paid_amount > 0::numeric AND paid_amount < amount OR status = 'Pagato'::text AND abs(paid_amount - amount) <= 0.005 OR status = 'Scaduto'::text AND paid_amount >= 0::numeric AND paid_amount < amount);
 
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compens_target_installment_id_fkey" FOREIGN KEY (target_installment_id) REFERENCES condominium_installments(id) ON DELETE RESTRICT;
-
 ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_amount_positive" CHECK (amount > 0::numeric);
-
-ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_carryover_id_fkey" FOREIGN KEY (carryover_id) REFERENCES condominium_fiscal_carryovers(id) ON DELETE RESTRICT;
-
-ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE RESTRICT;
-
-ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
 
 ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_pkey" PRIMARY KEY (id);
 
@@ -967,6 +867,302 @@ ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carr
 
 ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carryovers_balance_nonzero" CHECK (abs(balance) >= 0.01);
 
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_check" CHECK (end_date >= start_date);
+
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_no_overlap" EXCLUDE USING gist (workspace_id WITH =, condominium_id WITH =, daterange(start_date, end_date, '[]'::text) WITH &&);
+
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_opening_balance_finite" CHECK (opening_balance = opening_balance);
+
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_valid_dates" CHECK (start_date <= end_date);
+
+ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_valid_range" CHECK (start_date <= end_date);
+
+ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_nonnegative_amounts" CHECK (target_amount >= 0::numeric AND allocated_amount >= 0::numeric AND used_amount >= 0::numeric);
+
+ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_used_lte_allocated" CHECK (used_amount <= allocated_amount);
+
+ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_amount_positive_chk" CHECK (amount > 0::numeric);
+
+ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_amounts_valid" CHECK (amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= amount);
+
+ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_paid_amount_valid_chk" CHECK (paid_amount >= 0::numeric AND paid_amount <= amount);
+
+ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_status_amount_consistent" CHECK (status = 'Da pagare'::text AND paid_amount = 0::numeric OR status = 'Parzialmente pagato'::text AND paid_amount > 0::numeric AND paid_amount < amount OR status = 'Pagato'::text AND abs(paid_amount - amount) <= 0.005 OR status = 'Scaduto'::text AND paid_amount >= 0::numeric AND paid_amount < amount OR status = 'Accorpata'::text AND paid_amount >= 0::numeric AND paid_amount <= amount);
+
+ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_dates_valid" CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date);
+
+ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_deductible_nonnegative" CHECK (deductible IS NULL OR deductible >= 0::numeric);
+
+ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_premium_nonnegative" CHECK (premium IS NULL OR premium >= 0::numeric);
+
+ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_amount_check" CHECK (amount >= 0::numeric);
+
+ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_direction_check" CHECK (direction = ANY (ARRAY['Entrata'::text, 'Uscita'::text]));
+
+ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_expense_type_check" CHECK (expense_type = ANY (ARRAY['Ordinaria'::text, 'Straordinaria'::text]));
+
+ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_payment_status_check" CHECK (payment_status = ANY (ARRAY['Registrato'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text, 'Scaduto'::text]));
+
+ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_dates_valid" CHECK (closed_date IS NULL OR opened_date IS NULL OR closed_date >= opened_date);
+
+ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_status_check" CHECK (status = ANY (ARRAY['Bozza'::text, 'Confermato'::text, 'Chiuso'::text, 'Annullato'::text]));
+
+ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_type_ck" CHECK (transfer_type = ANY (ARRAY['Vendita'::text, 'Acquisto'::text, 'Donazione'::text, 'Successione'::text, 'Altro'::text]));
+
+ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_condominium_legacy_unique" UNIQUE (condominium_id, legacy_id);
+
+ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_basis_type_check" CHECK (basis_type = ANY (ARRAY['Millesimi'::text, 'Quote personalizzate'::text, 'Consumo'::text, 'Misto'::text]));
+
+ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_scope_mode_check" CHECK (scope_mode = ANY (ARRAY['all'::text, 'units'::text, 'buildings'::text]));
+
+ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_total_positive" CHECK (total_millesimi > 0::numeric);
+
+ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_table_id_unit_id_key" UNIQUE (table_id, unit_id);
+
+ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_value_nonnegative" CHECK (value >= 0::numeric);
+
+ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_amount_valid" CHECK (amount > 0::numeric);
+
+ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_amount_check" CHECK (amount > 0::numeric);
+
+ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_original_payment_id_key" UNIQUE (original_payment_id);
+
+ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_register_items" ADD CONSTRAINT "condominium_register_items_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_status_check" CHECK (status = ANY (ARRAY['Nuova'::text, 'In lavorazione'::text, 'In attesa'::text, 'Risolta'::text, 'Chiusa'::text, 'Annullata'::text]));
+
+ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_title_not_blank_chk" CHECK (length(btrim(title)) > 0);
+
+ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."condominium_suppliers" ADD CONSTRAINT "condominium_suppliers_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_nonnegative_amount" CHECK (amount IS NULL OR amount >= 0::numeric);
+
+ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformati_transformation_id_direction_s_key" UNIQUE (transformation_id, direction, sequence_no);
+
+ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformati_transformation_id_unit_id_dir_key" UNIQUE (transformation_id, unit_id, direction);
+
+ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_direction_check" CHECK (direction = ANY (ARRAY['Fonte'::text, 'Destinazione'::text]));
+
+ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_sequence_no_check" CHECK (sequence_no > 0);
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformat_accounting_resolution_status_check" CHECK (accounting_resolution_status = ANY (ARRAY['Da verificare'::text, 'Non necessaria'::text, 'Risolta'::text]));
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_confirmed_integrity_chk" CHECK (status <> 'Confermata'::text OR confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL AND source_unit_count > 0 AND destination_unit_count > 0 AND (transformation_type = 'Fusione'::text AND source_unit_count >= 2 AND destination_unit_count = 1 OR transformation_type = 'Frazionamento'::text AND source_unit_count = 1 AND destination_unit_count >= 2));
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_confirmed_reviews_chk" CHECK (status <> 'Confermata'::text OR (accounting_resolution_status = ANY (ARRAY['Non necessaria'::text, 'Risolta'::text])) AND (millesimal_review_status = ANY (ARRAY['Confermata invariata'::text, 'Nuove tabelle'::text])));
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_millesimal_review_status_check" CHECK (millesimal_review_status = ANY (ARRAY['Da verificare'::text, 'Confermata invariata'::text, 'Nuove tabelle'::text, 'Da aggiornare'::text]));
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_status_check" CHECK (status = ANY (ARRAY['Bozza'::text, 'Confermata'::text, 'Annullata'::text]));
+
+ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_transformation_type_check" CHECK (transformation_type = ANY (ARRAY['Fusione'::text, 'Frazionamento'::text]));
+
+ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_lifecycle_status_check" CHECK (lifecycle_status = ANY (ARRAY['Attiva'::text, 'Storica'::text, 'Soppressa'::text]));
+
+ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_work_events" ADD CONSTRAINT "condominium_work_events_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_amounts_chk" CHECK (amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= amount);
+
+ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_financial_consistency_chk" CHECK (progress_no > 0 AND amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= (amount + 0.005) AND percentage >= 0::numeric AND percentage <= 100::numeric);
+
+ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_percentage_chk" CHECK (percentage >= 0::numeric AND percentage <= 100::numeric);
+
+ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_work_id_progress_no_key" UNIQUE (work_id, progress_no);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_amounts_chk" CHECK (estimated_amount >= 0::numeric AND approved_amount >= 0::numeric AND actual_amount >= 0::numeric);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_financial_consistency_chk" CHECK (estimated_amount >= 0::numeric AND approved_amount >= 0::numeric AND actual_amount >= 0::numeric AND paid_amount >= 0::numeric AND remaining_amount >= 0::numeric AND paid_amount <= (actual_amount + 0.005) AND abs(remaining_amount - GREATEST(actual_amount - paid_amount, 0::numeric)) <= 0.005);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_paid_amount_check" CHECK (paid_amount >= 0::numeric);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_payment_status_check" CHECK (payment_status = ANY (ARRAY['Nessun importo'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text]));
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_progress_chk" CHECK (progress_percent >= 0::numeric AND progress_percent <= 100::numeric);
+
+ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_remaining_amount_check" CHECK (remaining_amount >= 0::numeric);
+
+ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_file_size_nonnegative_chk" CHECK (file_size_bytes IS NULL OR file_size_bytes >= 0);
+
+ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_role_check" CHECK (role = ANY (ARRAY['resident'::text, 'council'::text]));
+
+ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'email_mismatch'::text, 'approved'::text, 'rejected'::text]));
+
+ALTER TABLE "public"."profiles" ADD CONSTRAINT "profiles_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."profiles" ADD CONSTRAINT "profiles_role_check" CHECK (role = ANY (ARRAY['admin'::text, 'collaborator'::text, 'resident'::text, 'council'::text]));
+
+ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
+
+ALTER TABLE "public"."user_security_settings" ADD CONSTRAINT "user_security_settings_pkey" PRIMARY KEY (user_id);
+
+ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_pkey" PRIMARY KEY (workspace_id, user_id);
+
+ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_role_check" CHECK (role = ANY (ARRAY['admin'::text, 'collaborator'::text, 'resident'::text, 'council'::text]));
+
+ALTER TABLE "public"."workspaces" ADD CONSTRAINT "workspaces_pkey" PRIMARY KEY (id);
+
+ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."activities" ADD CONSTRAINT "activities_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."assemblies" ADD CONSTRAINT "assemblies_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_communication_id_fkey" FOREIGN KEY (communication_id) REFERENCES communications(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_condominium_fk" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_member_fk" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_user_fk" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_workspace_fk" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communication_recipients" ADD CONSTRAINT "communication_recipients_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."communications" ADD CONSTRAINT "communications_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_accounting_settings" ADD CONSTRAINT "condominium_accounting_settings_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_confirmed_by_fkey" FOREIGN KEY (confirmed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_document_id_fkey" FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_ledger_entry_id_fkey" FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_allocation_intakes" ADD CONSTRAINT "condominium_allocation_intakes_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE RESTRICT;
+
+ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_allocation_rules" ADD CONSTRAINT "condominium_allocation_rules_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_audit_log" ADD CONSTRAINT "condominium_audit_log_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_audit_log" ADD CONSTRAINT "condominium_audit_log_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_fiscal_year_id_fkey" FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_budgets" ADD CONSTRAINT "condominium_budgets_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_fiscal_year_id_fkey" FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_consumption_readings" ADD CONSTRAINT "condominium_consumption_readings_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_confirmed_by_fkey" FOREIGN KEY (confirmed_by) REFERENCES auth.users(id);
+
+ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
+
+ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_created_condominium_id_fkey" FOREIGN KEY (created_condominium_id) REFERENCES condominiums(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_creation_intakes" ADD CONSTRAINT "condominium_creation_intakes_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_allocation_table_id_fkey" FOREIGN KEY (allocation_table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_ledger_entry_id_fkey" FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL;
+
+ALTER TABLE "public"."condominium_expense_allocations" ADD CONSTRAINT "condominium_expense_allocations_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compens_target_installment_id_fkey" FOREIGN KEY (target_installment_id) REFERENCES condominium_installments(id) ON DELETE RESTRICT;
+
+ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_carryover_id_fkey" FOREIGN KEY (carryover_id) REFERENCES condominium_fiscal_carryovers(id) ON DELETE RESTRICT;
+
+ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE RESTRICT;
+
+ALTER TABLE "public"."condominium_fiscal_carryover_compensations" ADD CONSTRAINT "condominium_fiscal_carryover_compensations_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
+
 ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carryovers_condominium_fk" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carryovers_member_fk" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
@@ -979,35 +1175,13 @@ ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carr
 
 ALTER TABLE "public"."condominium_fiscal_carryovers" ADD CONSTRAINT "fiscal_carryovers_workspace_fk" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_check" CHECK (end_date >= start_date);
-
 ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_no_overlap" EXCLUDE USING gist (workspace_id WITH =, condominium_id WITH =, daterange(start_date, end_date, '[]'::text) WITH &&);
-
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_opening_balance_finite" CHECK (opening_balance = opening_balance);
-
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_valid_dates" CHECK (start_date <= end_date);
-
-ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_valid_range" CHECK (start_date <= end_date);
 
 ALTER TABLE "public"."condominium_fiscal_years" ADD CONSTRAINT "condominium_fiscal_years_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_nonnegative_amounts" CHECK (target_amount >= 0::numeric AND allocated_amount >= 0::numeric AND used_amount >= 0::numeric);
-
-ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_used_lte_allocated" CHECK (used_amount <= allocated_amount);
-
 ALTER TABLE "public"."condominium_funds" ADD CONSTRAINT "condominium_funds_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_amount_positive_chk" CHECK (amount > 0::numeric);
-
-ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_amounts_valid" CHECK (amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= amount);
 
 ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
@@ -1017,49 +1191,25 @@ ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_inst
 
 ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_paid_amount_valid_chk" CHECK (paid_amount >= 0::numeric AND paid_amount <= amount);
-
-ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_status_amount_consistent" CHECK (status = 'Da pagare'::text AND paid_amount = 0::numeric OR status = 'Parzialmente pagato'::text AND paid_amount > 0::numeric AND paid_amount < amount OR status = 'Pagato'::text AND abs(paid_amount - amount) <= 0.005 OR status = 'Scaduto'::text AND paid_amount >= 0::numeric AND paid_amount < amount OR status = 'Accorpata'::text AND paid_amount >= 0::numeric AND paid_amount <= amount);
-
 ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_installments" ADD CONSTRAINT "condominium_installments_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_dates_valid" CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date);
-
-ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_deductible_nonnegative" CHECK (deductible IS NULL OR deductible >= 0::numeric);
-
-ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_premium_nonnegative" CHECK (premium IS NULL OR premium >= 0::numeric);
-
 ALTER TABLE "public"."condominium_insurance_policies" ADD CONSTRAINT "condominium_insurance_policies_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_amount_check" CHECK (amount >= 0::numeric);
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_assembly_fk" FOREIGN KEY (assembly_id) REFERENCES assemblies(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_direction_check" CHECK (direction = ANY (ARRAY['Entrata'::text, 'Uscita'::text]));
-
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_document_id_fkey" FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_expense_type_check" CHECK (expense_type = ANY (ARRAY['Ordinaria'::text, 'Straordinaria'::text]));
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_fiscal_year_id_fkey" FOREIGN KEY (fiscal_year_id) REFERENCES condominium_fiscal_years(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_fund_id_fkey" FOREIGN KEY (fund_id) REFERENCES condominium_funds(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_payment_status_check" CHECK (payment_status = ANY (ARRAY['Registrato'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text, 'Scaduto'::text]));
-
-ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_supplier_id_fkey" FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL;
 
@@ -1068,10 +1218,6 @@ ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_le
 ALTER TABLE "public"."condominium_ledger_entries" ADD CONSTRAINT "condominium_ledger_entries_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_dates_valid" CHECK (closed_date IS NULL OR opened_date IS NULL OR closed_date >= opened_date);
-
-ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."condominium_legal_cases" ADD CONSTRAINT "condominium_legal_cases_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
@@ -1085,71 +1231,35 @@ ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_
 
 ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_outgoing_member_id_fkey" FOREIGN KEY (outgoing_member_id) REFERENCES condominium_members(id) ON DELETE RESTRICT;
 
-ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_status_check" CHECK (status = ANY (ARRAY['Bozza'::text, 'Confermato'::text, 'Chiuso'::text, 'Annullato'::text]));
-
-ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_type_ck" CHECK (transfer_type = ANY (ARRAY['Vendita'::text, 'Acquisto'::text, 'Donazione'::text, 'Successione'::text, 'Altro'::text]));
-
 ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE RESTRICT;
 
 ALTER TABLE "public"."condominium_member_transfers" ADD CONSTRAINT "condominium_member_transfers_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_condominium_legacy_unique" UNIQUE (condominium_id, legacy_id);
-
-ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_members" ADD CONSTRAINT "condominium_members_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_basis_type_check" CHECK (basis_type = ANY (ARRAY['Millesimi'::text, 'Quote personalizzate'::text, 'Consumo'::text, 'Misto'::text]));
-
 ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_scope_mode_check" CHECK (scope_mode = ANY (ARRAY['all'::text, 'units'::text, 'buildings'::text]));
-
-ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_total_positive" CHECK (total_millesimi > 0::numeric);
 
 ALTER TABLE "public"."condominium_millesimal_tables" ADD CONSTRAINT "condominium_millesimal_tables_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_table_id_fkey" FOREIGN KEY (table_id) REFERENCES condominium_millesimal_tables(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_table_id_unit_id_key" UNIQUE (table_id, unit_id);
 
 ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_value_nonnegative" CHECK (value >= 0::numeric);
-
 ALTER TABLE "public"."condominium_millesimal_values" ADD CONSTRAINT "condominium_millesimal_values_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_amount_valid" CHECK (amount > 0::numeric);
 
 ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_installment_id_fkey" FOREIGN KEY (installment_id) REFERENCES condominium_installments(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_payment_movements" ADD CONSTRAINT "condominium_payment_movements_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_amount_check" CHECK (amount > 0::numeric);
-
-ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_original_payment_id_key" UNIQUE (original_payment_id);
-
-ALTER TABLE "public"."condominium_payment_reversal_audit" ADD CONSTRAINT "condominium_payment_reversal_audit_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_register_items" ADD CONSTRAINT "condominium_register_items_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_register_items" ADD CONSTRAINT "condominium_register_items_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."condominium_register_items" ADD CONSTRAINT "condominium_register_items_supplier_id_fkey" FOREIGN KEY (supplier_id) REFERENCES condominium_suppliers(id) ON DELETE SET NULL;
 
@@ -1159,79 +1269,35 @@ ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests
 
 ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_requester_user_id_fkey" FOREIGN KEY (requester_user_id) REFERENCES profiles(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_status_check" CHECK (status = ANY (ARRAY['Nuova'::text, 'In lavorazione'::text, 'In attesa'::text, 'Risolta'::text, 'Chiusa'::text, 'Annullata'::text]));
-
-ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_title_not_blank_chk" CHECK (length(btrim(title)) > 0);
 
 ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_requests" ADD CONSTRAINT "condominium_requests_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
-
 ALTER TABLE "public"."condominium_suppliers" ADD CONSTRAINT "condominium_suppliers_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_suppliers" ADD CONSTRAINT "condominium_suppliers_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."condominium_suppliers" ADD CONSTRAINT "condominium_suppliers_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_nonnegative_amount" CHECK (amount IS NULL OR amount >= 0::numeric);
-
-ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_tax_obligations" ADD CONSTRAINT "condominium_tax_obligations_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformati_transformation_id_direction_s_key" UNIQUE (transformation_id, direction, sequence_no);
-
-ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformati_transformation_id_unit_id_dir_key" UNIQUE (transformation_id, unit_id, direction);
-
-ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_direction_check" CHECK (direction = ANY (ARRAY['Fonte'::text, 'Destinazione'::text]));
-
-ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_sequence_no_check" CHECK (sequence_no > 0);
 
 ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_transformation_id_fkey" FOREIGN KEY (transformation_id) REFERENCES condominium_unit_transformations(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_unit_transformation_items" ADD CONSTRAINT "condominium_unit_transformation_items_unit_id_fkey" FOREIGN KEY (unit_id) REFERENCES condominium_units(id) ON DELETE RESTRICT;
 
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformat_accounting_resolution_status_check" CHECK (accounting_resolution_status = ANY (ARRAY['Da verificare'::text, 'Non necessaria'::text, 'Risolta'::text]));
-
 ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE RESTRICT;
 
 ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_confirmed_by_fkey" FOREIGN KEY (confirmed_by) REFERENCES auth.users(id);
 
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_confirmed_integrity_chk" CHECK (status <> 'Confermata'::text OR confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL AND source_unit_count > 0 AND destination_unit_count > 0 AND (transformation_type = 'Fusione'::text AND source_unit_count >= 2 AND destination_unit_count = 1 OR transformation_type = 'Frazionamento'::text AND source_unit_count = 1 AND destination_unit_count >= 2));
-
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_confirmed_reviews_chk" CHECK (status <> 'Confermata'::text OR (accounting_resolution_status = ANY (ARRAY['Non necessaria'::text, 'Risolta'::text])) AND (millesimal_review_status = ANY (ARRAY['Confermata invariata'::text, 'Nuove tabelle'::text])));
-
 ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_created_by_fkey" FOREIGN KEY (created_by) REFERENCES auth.users(id);
-
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_millesimal_review_status_check" CHECK (millesimal_review_status = ANY (ARRAY['Da verificare'::text, 'Confermata invariata'::text, 'Nuove tabelle'::text, 'Da aggiornare'::text]));
-
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_status_check" CHECK (status = ANY (ARRAY['Bozza'::text, 'Confermata'::text, 'Annullata'::text]));
-
-ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_transformation_type_check" CHECK (transformation_type = ANY (ARRAY['Fusione'::text, 'Frazionamento'::text]));
 
 ALTER TABLE "public"."condominium_unit_transformations" ADD CONSTRAINT "condominium_unit_transformations_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT;
 
 ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_lifecycle_status_check" CHECK (lifecycle_status = ANY (ARRAY['Attiva'::text, 'Storica'::text, 'Soppressa'::text]));
-
-ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_units" ADD CONSTRAINT "condominium_units_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_work_documents_work_id_fkey" FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE;
 
@@ -1239,51 +1305,25 @@ ALTER TABLE "public"."condominium_work_documents" ADD CONSTRAINT "condominium_wo
 
 ALTER TABLE "public"."condominium_work_events" ADD CONSTRAINT "condominium_work_events_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_work_events" ADD CONSTRAINT "condominium_work_events_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_work_events" ADD CONSTRAINT "condominium_work_events_work_id_fkey" FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."condominium_work_events" ADD CONSTRAINT "condominium_work_events_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_amounts_chk" CHECK (amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= amount);
-
 ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_financial_consistency_chk" CHECK (progress_no > 0 AND amount >= 0::numeric AND paid_amount >= 0::numeric AND paid_amount <= (amount + 0.005) AND percentage >= 0::numeric AND percentage <= 100::numeric);
 
 ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_ledger_entry_id_fkey" FOREIGN KEY (ledger_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_payment_entry_id_fkey" FOREIGN KEY (payment_entry_id) REFERENCES condominium_ledger_entries(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_percentage_chk" CHECK (percentage >= 0::numeric AND percentage <= 100::numeric);
-
-ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_work_id_fkey" FOREIGN KEY (work_id) REFERENCES condominium_works(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_work_id_progress_no_key" UNIQUE (work_id, progress_no);
 
 ALTER TABLE "public"."condominium_work_progress" ADD CONSTRAINT "condominium_work_progress_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_amounts_chk" CHECK (estimated_amount >= 0::numeric AND approved_amount >= 0::numeric AND actual_amount >= 0::numeric);
-
 ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_financial_consistency_chk" CHECK (estimated_amount >= 0::numeric AND approved_amount >= 0::numeric AND actual_amount >= 0::numeric AND paid_amount >= 0::numeric AND remaining_amount >= 0::numeric AND paid_amount <= (actual_amount + 0.005) AND abs(remaining_amount - GREATEST(actual_amount - paid_amount, 0::numeric)) <= 0.005);
 
 ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_fund_id_fkey" FOREIGN KEY (fund_id) REFERENCES condominium_funds(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_paid_amount_check" CHECK (paid_amount >= 0::numeric);
-
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_payment_status_check" CHECK (payment_status = ANY (ARRAY['Nessun importo'::text, 'Da pagare'::text, 'Parzialmente pagato'::text, 'Pagato'::text]));
-
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_progress_chk" CHECK (progress_percent >= 0::numeric AND progress_percent <= 100::numeric);
-
 ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_register_item_id_fkey" FOREIGN KEY (register_item_id) REFERENCES condominium_register_items(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_remaining_amount_check" CHECK (remaining_amount >= 0::numeric);
 
 ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_supplier_id_fkey" FOREIGN KEY (supplier_id) REFERENCES condominium_suppliers(id) ON DELETE SET NULL;
 
@@ -1291,85 +1331,45 @@ ALTER TABLE "public"."condominium_works" ADD CONSTRAINT "condominium_works_works
 
 ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_archived_by_fkey" FOREIGN KEY (archived_by) REFERENCES profiles(id);
 
-ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."condominiums" ADD CONSTRAINT "condominiums_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
 
 ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."deadlines" ADD CONSTRAINT "deadlines_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
 
 ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_file_size_nonnegative_chk" CHECK (file_size_bytes IS NULL OR file_size_bytes >= 0);
-
-ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."documents" ADD CONSTRAINT "documents_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
 
 ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_member_id_fkey" FOREIGN KEY (member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_role_check" CHECK (role = ANY (ARRAY['resident'::text, 'council'::text]));
-
 ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."portal_access" ADD CONSTRAINT "portal_access_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
-
 ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_matched_member_id_fkey" FOREIGN KEY (matched_member_id) REFERENCES condominium_members(id) ON DELETE SET NULL;
-
-ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_requested_user_id_fkey" FOREIGN KEY (requested_user_id) REFERENCES profiles(id) ON DELETE SET NULL;
 
 ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_reviewed_by_fkey" FOREIGN KEY (reviewed_by) REFERENCES profiles(id) ON DELETE SET NULL;
 
-ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'email_mismatch'::text, 'approved'::text, 'rejected'::text]));
-
 ALTER TABLE "public"."portal_registration_requests" ADD CONSTRAINT "portal_registration_requests_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."profiles" ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."profiles" ADD CONSTRAINT "profiles_pkey" PRIMARY KEY (id);
-
-ALTER TABLE "public"."profiles" ADD CONSTRAINT "profiles_role_check" CHECK (role = ANY (ARRAY['admin'::text, 'collaborator'::text, 'resident'::text, 'council'::text]));
-
 ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY (id);
-
 ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."suppliers" ADD CONSTRAINT "suppliers_workspace_legacy_unique" UNIQUE (workspace_id, legacy_id);
-
-ALTER TABLE "public"."user_security_settings" ADD CONSTRAINT "user_security_settings_pkey" PRIMARY KEY (user_id);
 
 ALTER TABLE "public"."user_security_settings" ADD CONSTRAINT "user_security_settings_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_condominium_id_fkey" FOREIGN KEY (condominium_id) REFERENCES condominiums(id) ON DELETE CASCADE;
 
-ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_pkey" PRIMARY KEY (workspace_id, user_id);
-
-ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_role_check" CHECK (role = ANY (ARRAY['admin'::text, 'collaborator'::text, 'resident'::text, 'council'::text]));
-
 ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
 
 ALTER TABLE "public"."workspace_members" ADD CONSTRAINT "workspace_members_workspace_id_fkey" FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-
-ALTER TABLE "public"."workspaces" ADD CONSTRAINT "workspaces_pkey" PRIMARY KEY (id);
 
 ALTER TABLE "public"."activities" ENABLE ROW LEVEL SECURITY;
 
