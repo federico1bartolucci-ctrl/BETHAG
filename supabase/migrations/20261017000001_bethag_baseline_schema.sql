@@ -9,6 +9,10 @@
 SET search_path = public, private, auth, extensions;
 
 CREATE SCHEMA IF NOT EXISTS private;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 CREATE TABLE "public"."activities" (
   "id" uuid DEFAULT gen_random_uuid() NOT NULL,
