@@ -1,0 +1,148 @@
+{
+  "captured_at_utc": "2026-10-17",
+  "project_ref": "tctcgptrsmvgajqjgnev",
+  "offset": 60,
+  "count": 10,
+  "functions": [
+    {
+      "oid": "24037",
+      "schema_name": "public",
+      "name": "delete_condominium",
+      "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+      "definition": "CREATE OR REPLACE FUNCTION public.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin perform private.delete_condominium($1,$2,$3); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 61
+    },
+    {
+      "oid": "23073",
+      "schema_name": "public",
+      "name": "ensure_table_millesimal_values",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.ensure_table_millesimal_values()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if NEW.active then\n    insert into public.condominium_millesimal_values\n      (workspace_id, condominium_id, table_id, unit_id, value, excluded, notes)\n    select NEW.workspace_id, NEW.condominium_id, NEW.id, u.id, 0, false, ''\n    from public.condominium_units u\n    where u.condominium_id = NEW.condominium_id and u.workspace_id = NEW.workspace_id\n    on conflict (workspace_id, table_id, unit_id) do nothing;\n  end if;\n  return NEW;\nend; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 62
+    },
+    {
+      "oid": "23071",
+      "schema_name": "public",
+      "name": "ensure_unit_millesimal_values",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.ensure_unit_millesimal_values()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  insert into public.condominium_millesimal_values\n    (workspace_id, condominium_id, table_id, unit_id, value, excluded, notes)\n  select NEW.workspace_id, NEW.condominium_id, t.id, NEW.id, 0, false, ''\n  from public.condominium_millesimal_tables t\n  where t.condominium_id = NEW.condominium_id and t.workspace_id = NEW.workspace_id and t.active\n  on conflict (workspace_id, table_id, unit_id) do nothing;\n  return NEW;\nend; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 63
+    },
+    {
+      "oid": "21873",
+      "schema_name": "public",
+      "name": "generate_condominium_expense_allocations",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date",
+      "definition": "CREATE OR REPLACE FUNCTION public.generate_condominium_expense_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date DEFAULT NULL::date)\n RETURNS TABLE(unit_id uuid, millesimi numeric, amount numeric)\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_entry public.condominium_ledger_entries%rowtype;\n  v_table public.condominium_millesimal_tables%rowtype;\n  v_expense numeric;\n  v_due_date date;\n  v_total numeric;\n  v_unit_count integer;\n  v_value_count integer;\n  v_installments integer;\n  v_other_allocations integer;\nbegin\n  if not private.can_manage_workspace_module(p_workspace_id,'contabilita') then\n    raise exception 'Autorizzazione gestione contabilità richiesta';\n  end if;\n\n  select * into v_entry\n  from public.condominium_ledger_entries\n  where id=p_ledger_entry_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id\n  for update;\n\n  if not found or v_entry.direction<>'Uscita' or coalesce(v_entry.amount,0)<=0 then\n    raise exception 'Spesa non valida o non appartenente al condominio';\n  end if;\n\n  select * into v_table\n  from public.condominium_millesimal_tables\n  where id=p_table_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and active=true;\n\n  if not found then raise exception 'Tabella millesimale non valida o non attiva'; end if;\n\n  v_installments := (\n    select count(*) from public.condominium_installments\n    where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id\n  );\n  if v_installments>0 then\n    raise exception 'La spesa ha già rate collegate: modifica o elimina prima le rate per poter rigenerare la ripartizione';\n  end if;\n\n  v_other_allocations := (\n    select count(*) from public.condominium_expense_allocations\n    where workspace_id=p_workspace_id and condominium_id=p_condominium_id\n      and ledger_entry_id=p_ledger_entry_id\n      and allocation_table_id is distinct from p_table_id\n  );\n  if v_other_allocations>0 then\n    raise exception 'La spesa è già ripartita con un''altra tabella: elimina prima il riparto esistente per evitare una doppia imputazione';\n  end if;\n\n  v_expense:=round(v_entry.amount::numeric,2);\n  v_due_date:=coalesce(p_due_date,v_entry.due_date);\n\n  v_unit_count := (\n    select count(*) from public.condominium_units u\n    where u.workspace_id=p_workspace_id and u.condominium_id=p_condominium_id\n      and case\n        when v_table.scope_mode='all' then true\n        when v_table.scope_mode='units' then u.id=any(v_table.scope_unit_ids)\n        when v_table.scope_mode='buildings' then exists(\n          select 1 from unnest(v_table.scope_building_codes) x\n          where lower(trim(x))=lower(trim(coalesce(u.building_code,u.data->>'building_code',u.data->>'civic_code',u.data->>'fabbricato','')))\n        )\n        else false end\n  );\n  if v_unit_count=0 then raise exception 'Il criterio di riparto non contiene unità eleggibili'; end if;\n\n  v_value_count := (\n    select count(*) from public.condominium_millesimal_values v\n    join public.condominium_units u on u.id=v.unit_id\n    where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id and v.table_id=p_table_id\n      and case\n        when v_table.scope_mode='all' then true\n        when v_table.scope_mode='units' then u.id=any(v_table.scope_unit_ids)\n        when v_table.scope_mode='buildings' then exists(\n          select 1 from unnest(v_table.scope_building_codes) x\n          where lower(trim(x))=lower(trim(coalesce(u.building_code,u.data->>'building_code',u.data->>'civic_code',u.data->>'fabbricato','')))\n        )\n        else false end\n  );\n  if v_value_count<>v_unit_count then\n    raise exception 'Tabella millesimale incompleta: inserire una quota per ogni unità prevista dal criterio';\n  end if;\n\n  v_total := (\n    select coalesce(sum(v.value),0)\n    from public.condominium_millesimal_values v\n    join public.condominium_units u on u.id=v.unit_id\n    where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id and v.table_id=p_table_id\n      and v.excluded=false and v.value>0\n      and case\n        when v_table.scope_mode='all' then true\n        when v_table.scope_mode='units' then u.id=any(v_table.scope_unit_ids)\n        when v_table.scope_mode='buildings' then exists(\n          select 1 from unnest(v_table.scope_building_codes) x\n          where lower(trim(x))=lower(trim(coalesce(u.building_code,u.data->>'building_code',u.data->>'civic_code',u.data->>'fabbricato','')))\n        )\n        else false end\n  );\n  if v_total<=0 then raise exception 'Nessuna quota millesimale eleggibile'; end if;\n  if abs(v_total-coalesce(v_table.total_millesimi,0))>0.001 then\n    raise exception 'La somma delle quote millesimali del criterio non coincide con il totale della tabella';\n  end if;\n\n  delete from public.condominium_expense_allocations\n  where workspace_id=p_workspace_id and condominium_id=p_condominium_id\n    and ledger_entry_id=p_ledger_entry_id and allocation_table_id=p_table_id;\n\n  return query\n  with eligible as (\n    select v.unit_id eligible_unit_id,v.value::numeric eligible_millesimi,\n           v_expense*v.value::numeric/v_total exact_amount\n    from public.condominium_millesimal_values v\n    join public.condominium_units u on u.id=v.unit_id\n    where v.workspace_id=p_workspace_id and v.condominium_id=p_condominium_id\n      and v.table_id=p_table_id and v.excluded=false and v.value>0\n      and case\n        when v_table.scope_mode='all' then true\n        when v_table.scope_mode='units' then u.id=any(v_table.scope_unit_ids)\n        when v_table.scope_mode='buildings' then exists(\n          select 1 from unnest(v_table.scope_building_codes) x\n          where lower(trim(x))=lower(trim(coalesce(u.building_code,u.data->>'building_code',u.data->>'civic_code',u.data->>'fabbricato','')))\n        )\n        else false end\n  ), rounded as (\n    select e.*,floor(e.exact_amount*100)/100 base_amount,\n           e.exact_amount-floor(e.exact_amount*100)/100 remainder from eligible e\n  ), delta as (\n    select round(v_expense*100)-round(coalesce(sum(r.base_amount),0)*100) cents from rounded r\n  ), ranked as (\n    select r.*,row_number() over(order by r.remainder desc,r.eligible_unit_id) rn from rounded r\n  ), final_amounts as (\n    select r.eligible_unit_id final_unit_id,r.eligible_millesimi final_millesimi,\n           r.base_amount+case when r.rn <= greatest((select cents from delta),0) then 0.01 else 0 end final_amount\n    from ranked r\n  )\n  insert into public.condominium_expense_allocations(\n    workspace_id,condominium_id,ledger_entry_id,allocation_table_id,unit_id,member_id,\n    allocation_basis,millesimi,amount,paid_amount,due_date,status,notes\n  )\n  select p_workspace_id,p_condominium_id,p_ledger_entry_id,p_table_id,\n         f.final_unit_id,null,v_table.basis_type,f.final_millesimi,f.final_amount,\n         0,v_due_date,'Da pagare','Generata automaticamente secondo il criterio configurato'\n  from final_amounts f\n  returning condominium_expense_allocations.unit_id,\n            condominium_expense_allocations.millesimi,\n            condominium_expense_allocations.amount;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 64
+    },
+    {
+      "oid": "23330",
+      "schema_name": "public",
+      "name": "generate_consumption_allocations",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text",
+      "definition": "CREATE OR REPLACE FUNCTION public.generate_consumption_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text)\n RETURNS integer\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_expense public.condominium_ledger_entries%rowtype;\n  v_total_weight numeric;\n  v_total_cents bigint;\n  v_used_cents bigint := 0;\n  v_alloc_cents bigint;\n  v_idx integer := 0;\n  v_count integer;\n  v_rows integer;\n  v_row record;\nbegin\n  if not private.can_manage_workspace_module(p_workspace_id,'contabilita') then\n    raise exception 'Autorizzazione gestione contabilità richiesta';\n  end if;\n\n  if trim(coalesce(p_service_type,''))='' then\n    raise exception 'Servizio di consumo obbligatorio';\n  end if;\n\n  select * into v_expense\n  from public.condominium_ledger_entries\n  where id=p_ledger_entry_id\n    and workspace_id=p_workspace_id\n    and condominium_id=p_condominium_id\n  for update;\n\n  if not found then\n    raise exception 'Spesa non trovata';\n  end if;\n\n  if v_expense.direction<>'Uscita' or v_expense.amount<=0 then\n    raise exception 'Il movimento selezionato non è una spesa valida';\n  end if;\n\n  if exists(\n    select 1 from public.condominium_fiscal_years\n    where id=p_fiscal_year_id\n      and workspace_id=p_workspace_id\n      and condominium_id=p_condominium_id\n      and status='Chiuso'\n  ) then\n    raise exception 'L''esercizio contabile è chiuso';\n  end if;\n\n  if not exists(\n    select 1 from public.condominium_fiscal_years\n    where id=p_fiscal_year_id\n      and workspace_id=p_workspace_id\n      and condominium_id=p_condominium_id\n  ) then\n    raise exception 'Esercizio contabile non valido';\n  end if;\n\n  if exists(\n    select 1 from public.condominium_installments\n    where workspace_id=p_workspace_id\n      and condominium_id=p_condominium_id\n      and ledger_entry_id=p_ledger_entry_id\n  ) then\n    raise exception 'La spesa ha già rate collegate';\n  end if;\n\n  select count(*), coalesce(sum(w.weight),0)\n  into v_count,v_total_weight\n  from (\n    select r.unit_id,\n      sum(\n        coalesce(\n          nullif(r.charge_amount,0),\n          nullif(r.allocation_value,0),\n          nullif(r.consumption,0),\n          nullif(r.kwh,0),\n          0\n        )\n      ) as weight\n    from public.condominium_consumption_readings r\n    join public.condominium_units u\n      on u.id=r.unit_id\n     and u.workspace_id=p_workspace_id\n     and u.condominium_id=p_condominium_id\n    where r.workspace_id=p_workspace_id\n      and r.condominium_id=p_condominium_id\n      and r.fiscal_year_id=p_fiscal_year_id\n      and lower(trim(r.service_type))=lower(trim(p_service_type))\n    group by r.unit_id\n    having sum(\n      coalesce(\n        nullif(r.charge_amount,0),\n        nullif(r.allocation_value,0),\n        nullif(r.consumption,0),\n        nullif(r.kwh,0),\n        0\n      )\n    ) > 0\n  ) w;\n\n  if v_count=0 then\n    raise exception 'Nessun dato di consumo disponibile per il servizio selezionato';\n  end if;\n\n  if v_total_weight<=0 then\n    raise exception 'I dati di consumo non contengono un valore utile al riparto';\n  end if;\n\n  v_total_cents:=round(v_expense.amount*100);\n\n  select count(*) into v_rows\n  from (\n    select r.unit_id\n    from public.condominium_consumption_readings r\n    join public.condominium_units u\n      on u.id=r.unit_id\n     and u.workspace_id=p_workspace_id\n     and u.condominium_id=p_condominium_id\n    where r.workspace_id=p_workspace_id\n      and r.condominium_id=p_condominium_id\n      and r.fiscal_year_id=p_fiscal_year_id\n      and lower(trim(r.service_type))=lower(trim(p_service_type))\n    group by r.unit_id\n    having sum(\n      coalesce(\n        nullif(r.charge_amount,0),\n        nullif(r.allocation_value,0),\n        nullif(r.consumption,0),\n        nullif(r.kwh,0),\n        0\n      )\n    ) > 0\n  ) q;\n\n  delete from public.condominium_expense_allocations\n  where workspace_id=p_workspace_id\n    and condominium_id=p_condominium_id\n    and ledger_entry_id=p_ledger_entry_id;\n\n  for v_row in\n    select r.unit_id,u.unit_code,\n      sum(\n        coalesce(\n          nullif(r.charge_amount,0),\n          nullif(r.allocation_value,0),\n          nullif(r.consumption,0),\n          nullif(r.kwh,0),\n          0\n        )\n      ) as weight\n    from public.condominium_consumption_readings r\n    join public.condominium_units u\n      on u.id=r.unit_id\n     and u.workspace_id=p_workspace_id\n     and u.condominium_id=p_condominium_id\n    where r.workspace_id=p_workspace_id\n      and r.condominium_id=p_condominium_id\n      and r.fiscal_year_id=p_fiscal_year_id\n      and lower(trim(r.service_type))=lower(trim(p_service_type))\n    group by r.unit_id,u.unit_code\n    having sum(\n      coalesce(\n        nullif(r.charge_amount,0),\n        nullif(r.allocation_value,0),\n        nullif(r.consumption,0),\n        nullif(r.kwh,0),\n        0\n      )\n    ) > 0\n    order by u.unit_code\n  loop\n    v_idx:=v_idx+1;\n\n    if v_idx=v_rows then\n      v_alloc_cents:=v_total_cents-v_used_cents;\n    else\n      v_alloc_cents:=floor(v_total_cents*v_row.weight/v_total_weight);\n    end if;\n\n    if v_alloc_cents<0 then\n      raise exception 'Importo di riparto non valido';\n    end if;\n\n    v_used_cents:=v_used_cents+v_alloc_cents;\n\n    insert into public.condominium_expense_allocations(\n      workspace_id,condominium_id,ledger_entry_id,unit_id,\n      allocation_basis,millesimi,amount,paid_amount,due_date,status,notes\n    )\n    values(\n      p_workspace_id,p_condominium_id,p_ledger_entry_id,v_row.unit_id,\n      'Consumo - '||trim(p_service_type),v_row.weight,\n      v_alloc_cents/100.0,0,v_expense.due_date,'Da pagare',\n      'Riparto generato dai dati di consumo inseriti/importati in BETHAG; letture aggregate per unità.'\n    );\n  end loop;\n\n  return v_rows;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 65
+    },
+    {
+      "oid": "24038",
+      "schema_name": "public",
+      "name": "generate_fiscal_year_carryovers",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid)\n RETURNS integer\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.generate_fiscal_year_carryovers($1,$2,$3,$4); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 66
+    },
+    {
+      "oid": "24039",
+      "schema_name": "public",
+      "name": "generate_installments_from_allocations",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid)\n RETURNS integer\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.generate_installments_from_allocations($1,$2,$3,$4,$5,$6); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 67
+    },
+    {
+      "oid": "24040",
+      "schema_name": "public",
+      "name": "generate_installments_from_allocations_schedule",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+      "definition": "CREATE OR REPLACE FUNCTION public.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[] DEFAULT NULL::numeric[], p_unify_by_member boolean DEFAULT false)\n RETURNS integer\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.generate_installments_from_allocations_schedule($1,$2,$3,$4,$5,$6,$7,$8); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 68
+    },
+    {
+      "oid": "24286",
+      "schema_name": "public",
+      "name": "get_member_transfer_accounting_snapshot",
+      "identity_arguments": "p_transfer_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_member_transfer_accounting_snapshot(p_transfer_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n t public.condominium_member_transfers%rowtype;\n result jsonb;\nbegin\n select * into t from public.condominium_member_transfers where id=p_transfer_id;\n if t.id is null then raise exception 'TRANSFER_NOT_FOUND'; end if;\n if not private.can_access_workspace_module(t.workspace_id,'condomini') then raise exception 'FORBIDDEN'; end if;\n\n select jsonb_build_object(\n   'captured_accounting_snapshot', coalesce(t.data->'accounting_snapshot','{}'::jsonb),\n   'transfer', jsonb_build_object(\n      'id',t.id,'unit_id',t.unit_id,'outgoing_member_id',t.outgoing_member_id,\n      'incoming_member_id',t.incoming_member_id,'transfer_date',t.transfer_date,\n      'transfer_type',t.transfer_type,'status',t.status\n   ),\n   'outgoing', jsonb_build_object(\n      'installments_due_before', coalesce((select sum(i.amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date),0),\n      'installments_paid_before', coalesce((select sum(i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date),0),\n      'installments_residual', coalesce((select sum(i.amount-i.paid_amount) from condominium_installments i where i.member_id=t.outgoing_member_id and i.due_date <= t.transfer_date),0),\n      'allocations_before', coalesce((select sum(a.amount) from condominium_expense_allocations a where a.member_id=t.outgoing_member_id and (a.due_date is null or a.due_date <= t.transfer_date)),0)\n   ),\n   'post_transfer', jsonb_build_object(\n      'installments_after', coalesce((select sum(i.amount) from condominium_installments i where i.member_id=t.incoming_member_id and i.due_date > t.transfer_date),0),\n      'allocations_after', coalesce((select sum(a.amount) from condominium_expense_allocations a where a.member_id=t.incoming_member_id and (a.due_date is null or a.due_date > t.transfer_date)),0)\n   ),\n   'unit_expenses', coalesce((\n      select jsonb_agg(jsonb_build_object(\n        'id',l.id,'description',l.description,'expense_type',l.expense_type,\n        'entry_date',l.entry_date,'deliberation_date',l.deliberation_date,\n        'amount',l.amount,'assembly_id',l.assembly_id,\n        'deliberation_before_transfer',\n          case when l.deliberation_date is not null and l.deliberation_date <= t.transfer_date then true else false end\n      ) order by coalesce(l.deliberation_date,l.entry_date),l.id)\n      from condominium_ledger_entries l\n      where l.unit_id=t.unit_id and l.condominium_id=t.condominium_id\n        and (l.entry_date <= t.transfer_date or (l.deliberation_date is not null and l.deliberation_date <= t.transfer_date))\n   ),'[]'::jsonb)\n ) into result;\n return result;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 69
+    },
+    {
+      "oid": "25317",
+      "schema_name": "public",
+      "name": "get_my_workspace_access",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_my_workspace_access()\n RETURNS TABLE(workspace_id uuid, role text, permissions jsonb)\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select\n    wm.workspace_id,\n    wm.role,\n    coalesce(wm.permissions, '{}'::jsonb)\n  from public.workspace_members wm\n  where wm.user_id = (select auth.uid())\n    and wm.active = true\n  order by wm.workspace_id\n  limit 1\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+      "rn": 70
+    }
+  ]
+}
