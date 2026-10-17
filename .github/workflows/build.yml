@@ -23,5 +23,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Diagnostic — Production migration source gaps (known blocker)
+        run: npm run audit:production-ledger
+        continue-on-error: true
+
       - name: Build
         run: npm run build
