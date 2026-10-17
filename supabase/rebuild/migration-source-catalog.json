@@ -6,7 +6,13 @@
     "backup/recovery-flow-20261005",
     "bethag-migration-repair",
     "bethag-migration-repair-clean",
-    "feat/member-transfer-rpc-client"
+    "feat/member-transfer-rpc-client",
+    "feature/preserve-member-database-uuid",
+    "feature/subentro-rpc-client-20261002",
+    "fix/member-transfer-coowners-20261002",
+    "fix/member-transfer-workspace-members-lookup",
+    "fix/migration-reconciliation-20261005",
+    "fix/migration-timestamp-collisions"
   ],
   "files": [
     {
@@ -21,7 +27,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -36,7 +48,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -51,7 +69,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -66,7 +90,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -81,7 +111,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -93,7 +129,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -108,7 +148,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -123,7 +169,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -138,7 +190,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -153,7 +211,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -168,7 +232,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -183,7 +253,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -198,7 +274,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -213,7 +295,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -228,7 +316,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -243,7 +337,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -258,7 +358,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -273,7 +379,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -288,7 +400,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -303,7 +421,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -318,7 +442,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -333,7 +463,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -348,7 +484,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -362,7 +504,12 @@
         "backup/pre-rollback-20261001",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -377,7 +524,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -392,7 +545,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -407,7 +566,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -422,7 +587,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -437,7 +608,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -452,7 +629,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -467,7 +650,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -482,7 +671,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -497,7 +692,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -512,7 +713,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -527,7 +734,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -542,7 +755,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -557,7 +776,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -572,7 +797,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -587,7 +818,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -601,7 +838,12 @@
         "backup/pre-rollback-20261001",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -615,7 +857,12 @@
         "backup/pre-rollback-20261001",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -630,7 +877,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -645,7 +898,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -660,7 +919,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -675,7 +940,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -690,7 +961,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -705,7 +982,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -720,7 +1003,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -735,7 +1024,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -750,7 +1045,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -765,7 +1066,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -779,7 +1086,12 @@
         "backup/pre-rollback-20261001",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -794,7 +1106,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -809,7 +1127,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -824,7 +1148,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -839,7 +1169,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -854,7 +1190,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -869,7 +1211,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -884,7 +1232,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -899,7 +1253,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -914,7 +1274,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -929,7 +1295,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -944,7 +1316,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -959,7 +1337,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -974,7 +1358,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -989,7 +1379,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1004,7 +1400,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1019,7 +1421,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1034,7 +1442,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1049,7 +1463,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1064,7 +1484,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1079,7 +1505,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1094,7 +1526,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1109,7 +1547,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1124,7 +1568,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1139,7 +1589,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1154,7 +1610,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1169,7 +1631,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1184,7 +1652,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1199,7 +1673,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1214,7 +1694,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1229,7 +1715,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1244,7 +1736,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1259,7 +1757,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1274,7 +1778,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1289,7 +1799,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1304,7 +1820,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1319,7 +1841,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1334,7 +1862,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1349,7 +1883,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1364,7 +1904,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1379,7 +1925,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1394,7 +1946,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1409,7 +1967,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1424,7 +1988,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1439,7 +2009,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1454,7 +2030,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1469,7 +2051,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1484,7 +2072,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1499,7 +2093,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1514,7 +2114,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1529,7 +2135,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1544,7 +2156,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1559,7 +2177,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1574,7 +2198,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1589,7 +2219,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1604,7 +2240,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1619,7 +2261,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1634,7 +2282,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1649,7 +2303,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1664,7 +2324,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1679,7 +2345,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1694,7 +2366,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1709,7 +2387,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1724,7 +2408,12 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1738,7 +2427,12 @@
         "backup/pre-rollback-20261001",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -1753,7 +2447,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1768,7 +2468,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1783,7 +2489,12 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1798,7 +2509,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1813,7 +2530,13 @@
         "backup/recovery-flow-20261005",
         "bethag-migration-repair",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1826,7 +2549,13 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1839,7 +2568,13 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "bethag-migration-repair-clean",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/preserve-member-database-uuid",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-coowners-20261002",
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1851,7 +2586,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1863,7 +2602,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1875,7 +2618,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1887,7 +2634,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1899,7 +2650,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1911,7 +2666,11 @@
       "branches": [
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
-        "bethag-migration-repair-clean"
+        "bethag-migration-repair-clean",
+        "feature/preserve-member-database-uuid",
+        "fix/member-transfer-coowners-20261002",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1922,7 +2681,9 @@
       "name": "preserve_transfer_extraordinary_allocations",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1933,7 +2694,9 @@
       "name": "expose_captured_transfer_snapshot",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1944,7 +2707,9 @@
       "name": "expand_member_transfer_preview_installments",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1955,7 +2720,9 @@
       "name": "preserve_future_installments_transfer_snapshot",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1966,7 +2733,9 @@
       "name": "include_unit_unassigned_installments_in_transfer",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1977,7 +2746,9 @@
       "name": "include_unit_unassigned_carryovers_in_transfer",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -1988,7 +2759,9 @@
       "name": "block_transfer_close_with_unresolved_unit_carryovers",
       "branches": [
         "architecture-functional-alignment-20261003",
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2099,7 +2872,9 @@
       "name": "add_condomino_registration_workflow",
       "branches": [
         "backup/pre-rollback-20261001",
-        "feat/member-transfer-rpc-client"
+        "feat/member-transfer-rpc-client",
+        "feature/subentro-rpc-client-20261002",
+        "fix/member-transfer-workspace-members-lookup"
       ]
     },
     {
@@ -2197,7 +2972,9 @@
       "filename": "20260928043410_create_portal_access_baseline.sql",
       "name": "create_portal_access_baseline",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2207,7 +2984,9 @@
       "filename": "20260928094000_restore_workspace_module_management_helper.sql",
       "name": "restore_workspace_module_management_helper",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2217,7 +2996,9 @@
       "filename": "20261005080000_harden_portal_approval_workspace_scope_reconciled.sql",
       "name": "harden_portal_approval_workspace_scope_reconciled",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2227,7 +3008,9 @@
       "filename": "20261005090000_reconcile_portal_member_link_and_transfer_archive_state.sql",
       "name": "reconcile_portal_member_link_and_transfer_archive_state",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2237,7 +3020,9 @@
       "filename": "20261005100000_reconcile_complete_member_transfer_chain.sql",
       "name": "reconcile_complete_member_transfer_chain",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2247,7 +3032,9 @@
       "filename": "20261005103000_reconcile_member_transfer_preview_chain.sql",
       "name": "reconcile_member_transfer_preview_chain",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2257,7 +3044,9 @@
       "filename": "20261005110000_reconcile_portal_rpc_grants.sql",
       "name": "reconcile_portal_rpc_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2267,7 +3056,9 @@
       "filename": "20261005111000_reconcile_member_transfer_rpc_grants.sql",
       "name": "reconcile_member_transfer_rpc_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2277,7 +3068,9 @@
       "filename": "20261005112000_reconcile_portal_approval_rpc_security.sql",
       "name": "reconcile_portal_approval_rpc_security",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2287,7 +3080,9 @@
       "filename": "20261005124000_finalize_public_transfer_and_approval_invoker_wrappers.sql",
       "name": "finalize_public_transfer_and_approval_invoker_wrappers",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2297,7 +3092,9 @@
       "filename": "20261005125000_harden_private_portal_registration_execute.sql",
       "name": "harden_private_portal_registration_execute",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2307,7 +3104,9 @@
       "filename": "20261005130000_reconcile_private_portal_rpc_implementations.sql",
       "name": "reconcile_private_portal_rpc_implementations",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2317,7 +3116,9 @@
       "filename": "20261005131000_revoke_direct_private_portal_rpc_execute.sql",
       "name": "revoke_direct_private_portal_rpc_execute",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2327,7 +3128,9 @@
       "filename": "20261005132000_reconcile_resident_archive_visibility.sql",
       "name": "reconcile_resident_archive_visibility",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2337,7 +3140,9 @@
       "filename": "20261005133000_harden_resident_condominium_archive_access.sql",
       "name": "harden_resident_condominium_archive_access",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2347,7 +3152,9 @@
       "filename": "20261005140000_revoke_direct_portal_trigger_execute.sql",
       "name": "revoke_direct_portal_trigger_execute",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2357,7 +3164,9 @@
       "filename": "20261005141000_reconcile_member_portal_sync_trigger.sql",
       "name": "reconcile_member_portal_sync_trigger",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2367,7 +3176,9 @@
       "filename": "20261005142000_reconcile_member_portal_integrity_triggers.sql",
       "name": "reconcile_member_portal_integrity_triggers",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2377,7 +3188,9 @@
       "filename": "20261005143000_reconcile_member_transfer_constraints.sql",
       "name": "reconcile_member_transfer_constraints",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2387,7 +3200,9 @@
       "filename": "20261005144000_reconcile_member_transfer_portal_indexes.sql",
       "name": "reconcile_member_transfer_portal_indexes",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2397,7 +3212,9 @@
       "filename": "20261005145000_reconcile_member_indexes.sql",
       "name": "reconcile_member_indexes",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2407,7 +3224,9 @@
       "filename": "20261005150000_reconcile_core_lookup_indexes.sql",
       "name": "reconcile_core_lookup_indexes",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2417,7 +3236,8 @@
       "filename": "20261005151000_reconcile_condominium_archive_fk.sql",
       "name": "reconcile_condominium_archive_fk",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2427,7 +3247,9 @@
       "filename": "20261005152000_finalize_public_portal_transfer_wrappers.sql",
       "name": "finalize_public_portal_transfer_wrappers",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2437,7 +3259,9 @@
       "filename": "20261005153000_reconcile_core_rls_policies.sql",
       "name": "reconcile_core_rls_policies",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2447,7 +3271,9 @@
       "filename": "20261005154000_reconcile_member_transfer_rls.sql",
       "name": "reconcile_member_transfer_rls",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2457,7 +3283,9 @@
       "filename": "20261005155000_reconcile_accounting_rls_policies.sql",
       "name": "reconcile_accounting_rls_policies",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2467,7 +3295,9 @@
       "filename": "20261005160000_reconcile_accounting_table_grants.sql",
       "name": "reconcile_accounting_table_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2477,7 +3307,8 @@
       "filename": "20261005161000_harden_accounting_rpc_grants.sql",
       "name": "harden_accounting_rpc_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2487,7 +3318,9 @@
       "filename": "20261005162000_harden_core_public_rpc_grants.sql",
       "name": "harden_core_public_rpc_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2497,7 +3330,9 @@
       "filename": "20261005163000_reconcile_budget_funds_millesimal_rls.sql",
       "name": "reconcile_budget_funds_millesimal_rls",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2507,7 +3342,9 @@
       "filename": "20261005164000_restore_communication_recipients_audit_log.sql",
       "name": "restore_communication_recipients_audit_log",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2517,7 +3354,9 @@
       "filename": "20261005165000_restore_operational_work_register_and_transform_tables.sql",
       "name": "restore_operational_work_register_and_transform_tables",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2527,7 +3366,9 @@
       "filename": "20261005170000_reconcile_operational_table_grants.sql",
       "name": "reconcile_operational_table_grants",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2537,7 +3378,8 @@
       "filename": "20261005170000_reconcile_operational_trigger_chain.sql",
       "name": "reconcile_operational_trigger_chain",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2547,7 +3389,9 @@
       "filename": "20261005171000_harden_fund_availability_rls.sql",
       "name": "harden_fund_availability_rls",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2557,7 +3401,8 @@
       "filename": "20261005172000_finalize_operational_constraint_parity.sql",
       "name": "finalize_operational_constraint_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2567,7 +3412,9 @@
       "filename": "20261005173000_reconcile_private_registration_grant.sql",
       "name": "reconcile_private_registration_grant",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2577,7 +3424,8 @@
       "filename": "20261005174000_reconcile_remaining_core_columns.sql",
       "name": "reconcile_remaining_core_columns",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2587,7 +3435,9 @@
       "filename": "20261005180000_reconcile_accounting_constraint_and_rls_parity.sql",
       "name": "reconcile_accounting_constraint_and_rls_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2597,7 +3447,9 @@
       "filename": "20261005183000_reconcile_public_table_privileges.sql",
       "name": "reconcile_public_table_privileges",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2607,7 +3459,9 @@
       "filename": "20261005184000_restore_missing_private_function_parity.sql",
       "name": "restore_missing_private_function_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2617,7 +3471,9 @@
       "filename": "20261005185000_restore_missing_public_function_parity.sql",
       "name": "restore_missing_public_function_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2627,7 +3483,9 @@
       "filename": "20261005190000_reconcile_public_function_acl.sql",
       "name": "reconcile_public_function_acl",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2637,7 +3495,8 @@
       "filename": "20261005190000_remove_obsolete_function_overload.sql",
       "name": "remove_obsolete_function_overload",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2647,7 +3506,8 @@
       "filename": "20261005191000_reconcile_fund_availability_view.sql",
       "name": "reconcile_fund_availability_view",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2657,7 +3517,8 @@
       "filename": "20261005191000_reconcile_public_function_security_parity.sql",
       "name": "reconcile_public_function_security_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2667,7 +3528,9 @@
       "filename": "20261005192000_reconcile_public_relation_acl.sql",
       "name": "reconcile_public_relation_acl",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2677,7 +3540,8 @@
       "filename": "20261005192000_remove_obsolete_schedule_overload_final.sql",
       "name": "remove_obsolete_schedule_overload_final",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2687,7 +3551,9 @@
       "filename": "20261005193000_harden_guard_installment_parent_delete_grant.sql",
       "name": "harden_guard_installment_parent_delete_grant",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2697,7 +3563,8 @@
       "filename": "20261005193000_reconcile_public_indexes.sql",
       "name": "reconcile_public_indexes",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005"
       ]
     },
     {
@@ -2707,7 +3574,9 @@
       "filename": "20261005194000_finalize_public_constraint_parity.sql",
       "name": "finalize_public_constraint_parity",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2717,7 +3586,9 @@
       "filename": "20261005195000_normalize_remaining_rls_policy_definitions.sql",
       "name": "normalize_remaining_rls_policy_definitions",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2727,7 +3598,9 @@
       "filename": "20261005200000_reconcile_public_triggers.sql",
       "name": "reconcile_public_triggers",
       "branches": [
-        "backup/recovery-flow-20261005"
+        "backup/recovery-flow-20261005",
+        "fix/migration-reconciliation-20261005",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2767,7 +3640,8 @@
       "filename": "20260930110100_allocation_criteria_scope.sql",
       "name": "allocation_criteria_scope",
       "branches": [
-        "bethag-migration-repair"
+        "bethag-migration-repair",
+        "fix/migration-timestamp-collisions"
       ]
     },
     {
@@ -2939,6 +3813,436 @@
       "name": "validate_outgoing_transfer_owner",
       "branches": [
         "feat/member-transfer-rpc-client"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002130000_generate_condominium_member_legacy_id.sql",
+      "sha": "39c468fab547be62e6dfb66698089fcbecb1c404",
+      "version": "20261002130000",
+      "filename": "20261002130000_generate_condominium_member_legacy_id.sql",
+      "name": "generate_condominium_member_legacy_id",
+      "branches": [
+        "feature/preserve-member-database-uuid"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003100000_validate_transfer_preview_current_owner.sql",
+      "sha": "a390f34d5da71b9de9915e91d1a14fa3c8ba5b01",
+      "version": "20261003100000",
+      "filename": "20261003100000_validate_transfer_preview_current_owner.sql",
+      "name": "validate_transfer_preview_current_owner",
+      "branches": [
+        "feature/preserve-member-database-uuid"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003110000_restrict_member_transfer_preview_to_managers.sql",
+      "sha": "f0364697be2830d063940b0441902277ee7a89cc",
+      "version": "20261003110000",
+      "filename": "20261003110000_restrict_member_transfer_preview_to_managers.sql",
+      "name": "restrict_member_transfer_preview_to_managers",
+      "branches": [
+        "feature/preserve-member-database-uuid"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003120000_restrict_transfer_snapshot_to_managers.sql",
+      "sha": "a07230eb100506ffeed7b4550da8cb1fce694160",
+      "version": "20261003120000",
+      "filename": "20261003120000_restrict_transfer_snapshot_to_managers.sql",
+      "name": "restrict_transfer_snapshot_to_managers",
+      "branches": [
+        "feature/preserve-member-database-uuid"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003130000_restrict_member_transfer_to_admins.sql",
+      "sha": "9b089b5b8ca5b6aceb5ea939fd4b077d279c623a",
+      "version": "20261003130000",
+      "filename": "20261003130000_restrict_member_transfer_to_admins.sql",
+      "name": "restrict_member_transfer_to_admins",
+      "branches": [
+        "feature/preserve-member-database-uuid"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001110000_add_member_transfer_accounting_snapshot.sql",
+      "sha": "7a28afcccfe9de5eb2478d1404fbb7bbd9b31497",
+      "version": "20261001110000",
+      "filename": "20261001110000_add_member_transfer_accounting_snapshot.sql",
+      "name": "add_member_transfer_accounting_snapshot",
+      "branches": [
+        "feature/subentro-rpc-client-20261002"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001113000_add_member_transfer_preview.sql",
+      "sha": "5ec02a47d80520511a4129a63799c146f1eb2c86",
+      "version": "20261001113000",
+      "filename": "20261001113000_add_member_transfer_preview.sql",
+      "name": "add_member_transfer_preview",
+      "branches": [
+        "feature/subentro-rpc-client-20261002"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002074500_sync_unit_owner_refs_on_transfer.sql",
+      "sha": "128625e90812f4316e4c8a2bd62d6798e9f1fa85",
+      "version": "20261002074500",
+      "filename": "20261002074500_sync_unit_owner_refs_on_transfer.sql",
+      "name": "sync_unit_owner_refs_on_transfer",
+      "branches": [
+        "feature/subentro-rpc-client-20261002"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002130000_close_transfer_financial_cutoff.sql",
+      "sha": "62f2a1c83ad20cf51c5fe847864bced399d396e9",
+      "version": "20261002130000",
+      "filename": "20261002130000_close_transfer_financial_cutoff.sql",
+      "name": "close_transfer_financial_cutoff",
+      "branches": [
+        "feature/subentro-rpc-client-20261002"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002120001_allow_coowner_member_transfer.sql",
+      "sha": "465e17faf1719945a46f8c0dd4fb7a00ac5413c1",
+      "version": "20261002120001",
+      "filename": "20261002120001_allow_coowner_member_transfer.sql",
+      "name": "allow_coowner_member_transfer",
+      "branches": [
+        "fix/member-transfer-coowners-20261002"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930200000_clean_deleted_member_owner_references.sql",
+      "sha": "84b65f5c82630715c0371144352752172820f09b",
+      "version": "20260930200000",
+      "filename": "20260930200000_clean_deleted_member_owner_references.sql",
+      "name": "clean_deleted_member_owner_references",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930200100_harden_payment_movements_access.sql",
+      "sha": "16917bb3a2120c24b645122796265f3b9656c09e",
+      "version": "20260930200100",
+      "filename": "20260930200100_harden_payment_movements_access.sql",
+      "name": "harden_payment_movements_access",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930210100_validate_allocation_rule_scope.sql",
+      "sha": "49a180d0da6e6e1d023ef710d675f215af7481f1",
+      "version": "20260930210100",
+      "filename": "20260930210100_validate_allocation_rule_scope.sql",
+      "name": "validate_allocation_rule_scope",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001110100_harden_current_owner_installment_generation.sql",
+      "sha": "61a3c49d59c6a5051c7263f11d7bba5707eb28ba",
+      "version": "20261001110100",
+      "filename": "20261001110100_harden_current_owner_installment_generation.sql",
+      "name": "harden_current_owner_installment_generation",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005151000_reconcile_condominium_archive_fk.sql",
+      "sha": "74416d0831e51890f50a70e388f6f781dded8c0b",
+      "version": "20261005151000",
+      "filename": "20261005151000_reconcile_condominium_archive_fk.sql",
+      "name": "reconcile_condominium_archive_fk",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005161000_harden_accounting_rpc_grants.sql",
+      "sha": "30f95d3b27c265ddb805ae9b4cf1b70479c56c79",
+      "version": "20261005161000",
+      "filename": "20261005161000_harden_accounting_rpc_grants.sql",
+      "name": "harden_accounting_rpc_grants",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005164605_harden_login_workspace_access_invoker.sql",
+      "sha": "ce4d04ea4d9d401d9a3393fc26016c58b9e04969",
+      "version": "20261005164605",
+      "filename": "20261005164605_harden_login_workspace_access_invoker.sql",
+      "name": "harden_login_workspace_access_invoker",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005165658_revoke_direct_trigger_function_execute.sql",
+      "sha": "574c7f4f4093452e0dc46325d2505b2519b771ef",
+      "version": "20261005165658",
+      "filename": "20261005165658_revoke_direct_trigger_function_execute.sql",
+      "name": "revoke_direct_trigger_function_execute",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005170100_reconcile_operational_trigger_chain.sql",
+      "sha": "d70c4aa30fc1ba2084ae34e45a9a79bb353c8ca2",
+      "version": "20261005170100",
+      "filename": "20261005170100_reconcile_operational_trigger_chain.sql",
+      "name": "reconcile_operational_trigger_chain",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005171105_restore_private_rls_helper_execute_grants.sql",
+      "sha": "091045180b06d9c508fb3f8355b862f484adeb83",
+      "version": "20261005171105",
+      "filename": "20261005171105_restore_private_rls_helper_execute_grants.sql",
+      "name": "restore_private_rls_helper_execute_grants",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005172000_finalize_operational_constraint_parity.sql",
+      "sha": "6f6995f0a9f8b0c8b4ae7a18d0fb637fcee09108",
+      "version": "20261005172000",
+      "filename": "20261005172000_finalize_operational_constraint_parity.sql",
+      "name": "finalize_operational_constraint_parity",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005174000_reconcile_remaining_core_columns.sql",
+      "sha": "639a3ff6e5ab1616a74b64f9bd6d236f52e08d0d",
+      "version": "20261005174000",
+      "filename": "20261005174000_reconcile_remaining_core_columns.sql",
+      "name": "reconcile_remaining_core_columns",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005190100_remove_obsolete_function_overload.sql",
+      "sha": "10717d8350950c5bf2d8da2cb9ad95def60a2a6d",
+      "version": "20261005190100",
+      "filename": "20261005190100_remove_obsolete_function_overload.sql",
+      "name": "remove_obsolete_function_overload",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005191000_reconcile_fund_availability_view.sql",
+      "sha": "af8e42b8fde91ef495569371745f8cd7a626a2f9",
+      "version": "20261005191000",
+      "filename": "20261005191000_reconcile_fund_availability_view.sql",
+      "name": "reconcile_fund_availability_view",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005191100_reconcile_public_function_security_parity.sql",
+      "sha": "0bb2ff16c41b4ce08188c5371be4c4fd9e697438",
+      "version": "20261005191100",
+      "filename": "20261005191100_reconcile_public_function_security_parity.sql",
+      "name": "reconcile_public_function_security_parity",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005192100_remove_obsolete_schedule_overload_final.sql",
+      "sha": "3bceecfbda28782b321491492fcf7844e99de9d2",
+      "version": "20261005192100",
+      "filename": "20261005192100_remove_obsolete_schedule_overload_final.sql",
+      "name": "remove_obsolete_schedule_overload_final",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005193100_reconcile_public_indexes.sql",
+      "sha": "346c1606998a881c9cc2b028e17d69ec68ba9579",
+      "version": "20261005193100",
+      "filename": "20261005193100_reconcile_public_indexes.sql",
+      "name": "reconcile_public_indexes",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005201000_reconcile_login_workspace_access_rpc.sql",
+      "sha": "988ec6d77b442190ce0abb02a24fb456871cf031",
+      "version": "20261005201000",
+      "filename": "20261005201000_reconcile_login_workspace_access_rpc.sql",
+      "name": "reconcile_login_workspace_access_rpc",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005203000_expose_login_workspace_access_rpc.sql",
+      "sha": "da72f9aaf2d6e8b92268d748decaf4671efb3ea9",
+      "version": "20261005203000",
+      "filename": "20261005203000_expose_login_workspace_access_rpc.sql",
+      "name": "expose_login_workspace_access_rpc",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005205500_restore_save_condominium_rpc_execute.sql",
+      "sha": "f58539ef218f1deffa91970e496ca0940492cc22",
+      "version": "20261005205500",
+      "filename": "20261005205500_restore_save_condominium_rpc_execute.sql",
+      "name": "restore_save_condominium_rpc_execute",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005211000_restore_member_transfer_private_execute_grant.sql",
+      "sha": "458d8a1e07206e57e8d032588a1c65d7aeb54b69",
+      "version": "20261005211000",
+      "filename": "20261005211000_restore_member_transfer_private_execute_grant.sql",
+      "name": "restore_member_transfer_private_execute_grant",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261005212000_fix_member_transfer_workspace_members_update.sql",
+      "sha": "02577dbca703398789697c8a3562f2f21705c50a",
+      "version": "20261005212000",
+      "filename": "20261005212000_fix_member_transfer_workspace_members_update.sql",
+      "name": "fix_member_transfer_workspace_members_update",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261006032000_restore_closing_member_history.sql",
+      "sha": "b3b4420f76f0cef5baa489deb21b2d8b0d0a0042",
+      "version": "20261006032000",
+      "filename": "20261006032000_restore_closing_member_history.sql",
+      "name": "restore_closing_member_history",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261006032500_reconcile_existing_transfer_outgoing_history.sql",
+      "sha": "14e212ea20a0d47f7e0820799d15fb36d24dba04",
+      "version": "20261006032500",
+      "filename": "20261006032500_reconcile_existing_transfer_outgoing_history.sql",
+      "name": "reconcile_existing_transfer_outgoing_history",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261006034000_preserve_closing_member_history.sql",
+      "sha": "68293ef0c00aeae5c6cad42bf6022a78f0188fa8",
+      "version": "20261006034000",
+      "filename": "20261006034000_preserve_closing_member_history.sql",
+      "name": "preserve_closing_member_history",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261006040000_repair_deleted_member_owner_references.sql",
+      "sha": "cfeca4a326c866dadf2f3cc285de009d0ff0169d",
+      "version": "20261006040000",
+      "filename": "20261006040000_repair_deleted_member_owner_references.sql",
+      "name": "repair_deleted_member_owner_references",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261007072310_harden_trigger_function_security_for_launch.sql",
+      "sha": "c75c8062ee1373097277cea17d82562d992d29dc",
+      "version": "20261007072310",
+      "filename": "20261007072310_harden_trigger_function_security_for_launch.sql",
+      "name": "harden_trigger_function_security_for_launch",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261011110000_reconcile_launch_schema_parity.sql",
+      "sha": "3618170d29e5965997311caf7da1a21a0c28db75",
+      "version": "20261011110000",
+      "filename": "20261011110000_reconcile_launch_schema_parity.sql",
+      "name": "reconcile_launch_schema_parity",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261011120000_reconcile_function_body_and_acl_parity.sql",
+      "sha": "ca7423b64cfd1583681b9f635aa2549b82d0d4b9",
+      "version": "20261011120000",
+      "filename": "20261011120000_reconcile_function_body_and_acl_parity.sql",
+      "name": "reconcile_function_body_and_acl_parity",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261015155159_reconcile_numeric_column_precision.sql",
+      "sha": "0674e2efa8da1ecf3fa570bdb86fad2b77fc5516",
+      "version": "20261015155159",
+      "filename": "20261015155159_reconcile_numeric_column_precision.sql",
+      "name": "reconcile_numeric_column_precision",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261015160109_harden_member_transfer_wrapper_search_path.sql",
+      "sha": "9806110da4fa381a84ecb01497e4cca8180c1e09",
+      "version": "20261015160109",
+      "filename": "20261015160109_harden_member_transfer_wrapper_search_path.sql",
+      "name": "harden_member_transfer_wrapper_search_path",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261015162104_restore_fund_availability_view_acl.sql",
+      "sha": "e4dde0c1d0c19a46b9b551115fbb43acee4fa2d9",
+      "version": "20261015162104",
+      "filename": "20261015162104_restore_fund_availability_view_acl.sql",
+      "name": "restore_fund_availability_view_acl",
+      "branches": [
+        "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261015162156_use_invoker_for_transfer_wrapper.sql",
+      "sha": "f1454a9d966b90bd3287ad9e36ab06aad1836235",
+      "version": "20261015162156",
+      "filename": "20261015162156_use_invoker_for_transfer_wrapper.sql",
+      "name": "use_invoker_for_transfer_wrapper",
+      "branches": [
+        "fix/migration-timestamp-collisions"
       ]
     }
   ]
