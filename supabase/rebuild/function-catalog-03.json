@@ -1,0 +1,148 @@
+{
+  "captured_at_utc": "2026-10-17",
+  "project_ref": "tctcgptrsmvgajqjgnev",
+  "offset": 20,
+  "count": 10,
+  "functions": [
+    {
+      "oid": "21874",
+      "schema_name": "private",
+      "name": "generate_installments_from_allocations",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid DEFAULT NULL::uuid)\n RETURNS integer\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$ declare v_count_before integer; v_count_after integer; begin if p_due_date is null then raise exception 'Titolo e scadenza sono obbligatori'; end if; select count(*) into v_count_before from public.condominium_installments where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id; perform public.generate_installments_from_allocations_schedule(p_workspace_id,p_condominium_id,p_ledger_entry_id,p_title,array[p_due_date],p_fiscal_year_id,array[100]::numeric[],false); select count(*) into v_count_after from public.condominium_installments where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id; return v_count_after-v_count_before; end; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 21
+    },
+    {
+      "oid": "23576",
+      "schema_name": "private",
+      "name": "generate_installments_from_allocations_schedule",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+      "definition": "CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid DEFAULT NULL::uuid, p_percentages numeric[] DEFAULT NULL::numeric[], p_unify_by_member boolean DEFAULT false)\n RETURNS integer\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare a record; m record; i int; n int; part numeric; group_sum numeric; prior numeric; created_count integer:=0;\nbegin\nif not private.can_manage_workspace_module(p_workspace_id,'contabilita') then raise exception 'Autorizzazione gestione contabilità richiesta'; end if;\nperform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_workspace_id::text||':'||p_condominium_id::text||':'||p_ledger_entry_id::text,0));\nif exists(select 1 from public.condominiums c where c.id=p_condominium_id and c.workspace_id=p_workspace_id and c.archived_at is not null) then raise exception 'Il condominio è archiviato e non può essere modificato'; end if;\nif trim(coalesce(p_title,''))='' then raise exception 'Il titolo delle rate è obbligatorio'; end if;\nn:=coalesce(array_length(p_due_dates,1),0);\nif p_fiscal_year_id is not null and not exists(select 1 from public.condominium_fiscal_years fy where fy.id=p_fiscal_year_id and fy.workspace_id=p_workspace_id and fy.condominium_id=p_condominium_id) then raise exception 'Esercizio contabile selezionato non valido'; end if;\nif exists(select 1 from unnest(p_due_dates) d where (select count(*) from public.condominium_fiscal_years fy where fy.workspace_id=p_workspace_id and fy.condominium_id=p_condominium_id and d between fy.start_date and fy.end_date)<>1) then raise exception 'Ogni scadenza deve ricadere in un solo esercizio contabile valido'; end if;\nif p_fiscal_year_id is not null and exists(select 1 from public.condominium_fiscal_years fy where fy.id=p_fiscal_year_id and fy.status='Chiuso') then raise exception 'Esercizio contabile di riferimento della spesa chiuso'; end if;\nif exists(select 1 from unnest(p_due_dates) d join public.condominium_fiscal_years fy on fy.workspace_id=p_workspace_id and fy.condominium_id=p_condominium_id and d between fy.start_date and fy.end_date where fy.status='Chiuso') then raise exception 'Una o più scadenze ricadono in un esercizio contabile chiuso'; end if;\nif n<1 or n>12 then raise exception 'Indicare da 1 a 12 scadenze'; end if;\nfor i in 1..n loop if p_due_dates[i] is null or (i>1 and p_due_dates[i]<=p_due_dates[i-1]) then raise exception 'Le scadenze devono essere valide, cronologiche e non duplicate'; end if; end loop;\nif p_percentages is not null and (array_length(p_percentages,1)<>n or abs((select sum(x) from unnest(p_percentages) x)-100)>0.001 or exists(select 1 from unnest(p_percentages) x where x<=0)) then raise exception 'Percentuali rate non valide'; end if;\nif not exists(select 1 from public.condominium_ledger_entries where id=p_ledger_entry_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and direction='Uscita' and amount>0) then raise exception 'Spesa non valida'; end if;\nif exists(select 1 from public.condominium_installments where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id) then raise exception 'La spesa ha già rate collegate'; end if;\nif not exists(select 1 from public.condominium_expense_allocations where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id and amount>0) then raise exception 'La spesa non ha ripartizioni'; end if;\nif p_unify_by_member then\nif exists(select 1 from public.condominium_expense_allocations ea where ea.workspace_id=p_workspace_id and ea.condominium_id=p_condominium_id and ea.ledger_entry_id=p_ledger_entry_id and (select count(*) from public.condominium_members cm where cm.condominium_id=p_condominium_id and cm.unit_id=ea.unit_id and cm.active and trim(coalesce(cm.data->>'role',''))='Proprietario' and coalesce(cm.data->>'position_status','')<>'In chiusura')<>1) then raise exception 'Unificazione non consentita: ogni unità deve avere un unico proprietario corrente'; end if;\nif exists(select 1 from public.condominium_expense_allocations ea join public.condominium_members cm on cm.condominium_id=p_condominium_id and cm.unit_id=ea.unit_id and cm.active and trim(coalesce(cm.data->>'role',''))='Proprietario' and coalesce(cm.data->>'position_status','')<>'In chiusura' where ea.workspace_id=p_workspace_id and ea.condominium_id=p_condominium_id and ea.ledger_entry_id=p_ledger_entry_id and nullif(trim(cm.user_id::text),'') is null and nullif(lower(trim(coalesce(cm.email,''))),'') is null) then raise exception 'Unificazione non consentita: almeno un proprietario corrente non dispone di un identificativo stabile'; end if;\nend if;\nfor i in 1..n loop\nif p_unify_by_member then\nfor m in select (array_agg(cm.id order by cm.id))[1] member_id,case when cm.user_id is not null then 'u:'||cm.user_id::text else 'e:'||lower(trim(cm.email)) end owner_key from public.condominium_members cm where cm.condominium_id=p_condominium_id and cm.active and trim(coalesce(cm.data->>'role',''))='Proprietario' and coalesce(cm.data->>'position_status','')<>'In chiusura' and exists(select 1 from public.condominium_expense_allocations a2 where a2.workspace_id=p_workspace_id and a2.condominium_id=p_condominium_id and a2.ledger_entry_id=p_ledger_entry_id and a2.unit_id=cm.unit_id) group by case when cm.user_id is not null then 'u:'||cm.user_id::text else 'e:'||lower(trim(cm.email)) end order by (array_agg(cm.id order by cm.id))[1] loop\ngroup_sum:=0;\nfor a in select ea.* from public.condominium_expense_allocations ea join public.condominium_members cm2 on cm2.condominium_id=p_condominium_id and cm2.unit_id=ea.unit_id and cm2.active and trim(coalesce(cm2.data->>'role',''))='Proprietario' and coalesce(cm2.data->>'position_status','')<>'In chiusura' where ea.workspace_id=p_workspace_id and ea.condominium_id=p_condominium_id and ea.ledger_entry_id=p_ledger_entry_id and case when cm2.user_id is not null then 'u:'||cm2.user_id::text else 'e:'||lower(trim(cm2.email)) end=m.owner_key order by ea.id loop\nif i=n then if p_percentages is null then part:=round(a.amount-round(a.amount/n,2)*(n-1),2); else prior:=coalesce((select sum(round(a.amount*x/100,2)) from unnest(p_percentages[1:n-1]) x),0); part:=round(a.amount-prior,2); end if;\nelse if p_percentages is null then part:=round(a.amount/n,2); else part:=round(a.amount*p_percentages[i]/100,2); end if; end if;\ngroup_sum:=group_sum+part;\nend loop;\nif group_sum>0 then\ninsert into public.condominium_installments(workspace_id,condominium_id,fiscal_year_id,ledger_entry_id,member_id,unit_id,title,amount,paid_amount,status,due_date,notes)\nselect p_workspace_id,p_condominium_id,y.id,p_ledger_entry_id,m.member_id,null,trim(p_title)||' - rata '||i||'/'||n,round(group_sum,2),0,'Da pagare',p_due_dates[i],'Rata unificata per proprietario' from public.condominium_fiscal_years y where y.workspace_id=p_workspace_id and y.condominium_id=p_condominium_id and p_due_dates[i] between y.start_date and y.end_date order by y.start_date limit 1;\ncreated_count:=created_count+1;\nend if;\nend loop;\nelse\nfor a in select * from public.condominium_expense_allocations where workspace_id=p_workspace_id and condominium_id=p_condominium_id and ledger_entry_id=p_ledger_entry_id and amount>0 order by id loop\nif i=n then if p_percentages is null then part:=round(a.amount-round(a.amount/n,2)*(n-1),2); else prior:=coalesce((select sum(round(a.amount*x/100,2)) from unnest(p_percentages[1:n-1]) x),0); part:=round(a.amount-prior,2); end if;\nelse if p_percentages is null then part:=round(a.amount/n,2); else part:=round(a.amount*p_percentages[i]/100,2); end if; end if;\ninsert into public.condominium_installments(workspace_id,condominium_id,fiscal_year_id,ledger_entry_id,member_id,unit_id,title,amount,paid_amount,status,due_date,notes)\nselect p_workspace_id,p_condominium_id,y.id,p_ledger_entry_id,a.member_id,a.unit_id,trim(p_title)||' - rata '||i||'/'||n,part,0,'Da pagare',p_due_dates[i],coalesce(a.notes,'') from public.condominium_fiscal_years y where y.workspace_id=p_workspace_id and y.condominium_id=p_condominium_id and p_due_dates[i] between y.start_date and y.end_date order by y.start_date limit 1;\ncreated_count:=created_count+1;\nend loop;\nend if;\nend loop;\nreturn created_count;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 22
+    },
+    {
+      "oid": "25316",
+      "schema_name": "private",
+      "name": "get_my_workspace_access",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION private.get_my_workspace_access()\n RETURNS TABLE(workspace_id uuid, role text, permissions jsonb)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select\n    wm.workspace_id,\n    wm.role,\n    coalesce(wm.permissions, '{}'::jsonb)\n  from public.workspace_members wm\n  where wm.user_id = (select auth.uid())\n    and wm.active = true\n  order by wm.workspace_id\n  limit 1\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "rn": 23
+    },
+    {
+      "oid": "24063",
+      "schema_name": "private",
+      "name": "guard_confirmed_intake_immutability",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION private.guard_confirmed_intake_immutability()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n if tg_op='DELETE' and old.status='Confermato' then\n   raise exception 'Un''acquisizione confermata non può essere eliminata';\n end if;\n if tg_op='UPDATE' and old.status='Confermato' then\n   raise exception 'Un''acquisizione confermata non può essere modificata';\n end if;\n return coalesce(new,old);\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres}",
+      "rn": 24
+    },
+    {
+      "oid": "17910",
+      "schema_name": "private",
+      "name": "handle_new_user",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION private.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  insert into public.profiles (id, full_name, email)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'full_name', ''),\n    new.email\n  )\n  on conflict (id) do update\n    set email = excluded.email,\n        full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name),\n        updated_at = now();\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 25
+    },
+    {
+      "oid": "17865",
+      "schema_name": "private",
+      "name": "is_workspace_admin",
+      "identity_arguments": "target_workspace uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.is_workspace_admin(target_workspace uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1 from public.workspace_members wm\n    where wm.workspace_id = target_workspace\n      and wm.user_id = (select auth.uid())\n      and wm.active = true\n      and wm.role = 'admin'\n  );\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+      "rn": 26
+    },
+    {
+      "oid": "21381",
+      "schema_name": "private",
+      "name": "is_workspace_manager",
+      "identity_arguments": "target_workspace uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.is_workspace_manager(target_workspace uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (\n    select 1\n    from public.workspace_members wm\n    where wm.workspace_id = target_workspace\n      and wm.user_id = auth.uid()\n      and wm.active = true\n      and wm.role in ('admin','collaborator')\n  );\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres}",
+      "rn": 27
+    },
+    {
+      "oid": "17864",
+      "schema_name": "private",
+      "name": "is_workspace_member",
+      "identity_arguments": "target_workspace uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.is_workspace_member(target_workspace uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$ select exists (\n  select 1 from public.workspace_members wm\n  where wm.workspace_id = target_workspace\n    and wm.user_id = auth.uid()\n    and wm.active = true\n); $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+      "rn": 28
+    },
+    {
+      "oid": "17899",
+      "schema_name": "private",
+      "name": "is_workspace_staff",
+      "identity_arguments": "target_workspace uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.is_workspace_staff(target_workspace uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$ select exists (\n  select 1 from public.workspace_members wm\n  where wm.workspace_id = target_workspace\n    and wm.user_id = auth.uid()\n    and wm.active = true\n    and wm.role in ('admin','collaborator')\n); $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 29
+    },
+    {
+      "oid": "23670",
+      "schema_name": "private",
+      "name": "list_archived_condominiums",
+      "identity_arguments": "p_workspace_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.list_archived_condominiums(p_workspace_id uuid)\n RETURNS SETOF condominiums\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if auth.uid() is null then\n    raise exception 'Autenticazione richiesta';\n  end if;\n\n  if not private.can_manage_workspace_module(p_workspace_id, 'condomini') then\n    raise exception 'Autorizzazione gestione condomini richiesta';\n  end if;\n\n  return query\n  select c.*\n  from public.condominiums c\n  where c.workspace_id = p_workspace_id\n    and c.archived_at is not null\n  order by c.archived_at desc, c.name asc;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 30
+    }
+  ]
+}
