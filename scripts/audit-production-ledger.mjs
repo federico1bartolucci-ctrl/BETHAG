@@ -18,21 +18,23 @@ export function auditLedger(ledger, sourceCatalog) {
     const normalized = normalizeMigrationName(entry.name);
     const candidates = sources.filter((source) => source.normalizedName === normalized);
     if (candidates.length === 0) return { ...entry, status: "missing_source", candidates: [] };
-    const distinctBlobs = [...new Set(candidates.map((source) => source.sha))];
+    const exactVersionCandidates = candidates.filter((source) => source.version === entry.version);
+    const relevantCandidates = exactVersionCandidates.length ? exactVersionCandidates : candidates;
+    const distinctBlobs = [...new Set(relevantCandidates.map((source) => source.sha))];
     if (distinctBlobs.length > 1) {
       return {
         ...entry,
         status: "ambiguous_name",
         distinct_blobs: distinctBlobs.length,
-        candidates: candidates.map(({ path, version, sha, branches }) => ({ path, version, sha, branches })),
+        candidates: relevantCandidates.map(({ path, version, sha, branches }) => ({ path, version, sha, branches })),
       };
     }
-    const source = candidates.find((candidate) => candidate.version === entry.version) ?? candidates[0];
+    const source = relevantCandidates[0];
     return {
       ...entry,
-      status: source.version === entry.version ? "exact" : "version_mismatch",
+      status: exactVersionCandidates.length ? "exact" : "version_mismatch",
       source: { path: source.path, version: source.version, sha: source.sha },
-      branches: [...new Set(candidates.flatMap((candidate) => candidate.branches))].sort(),
+      branches: [...new Set(relevantCandidates.flatMap((candidate) => candidate.branches))].sort(),
     };
   });
 }
