@@ -18,7 +18,7 @@ test("distinguishes exact source, version mismatch, missing source, and conflict
     { path: "supabase/migrations/20261001000000_first_migration.sql", version: "20261001000000", name: "first_migration", sha: "a", branches: ["main"] },
     { path: "supabase/migrations/20261002010000_second_migration.sql", version: "20261002010000", name: "second_migration", sha: "b", branches: ["main"] },
     { path: "supabase/migrations/20261004000000_duplicate_migration.sql", version: "20261004000000", name: "duplicate_migration", sha: "c", branches: ["main"] },
-    { path: "supabase/migrations/20261005000000_duplicate_migration.sql", version: "20261005000000", name: "duplicate_migration", sha: "d", branches: ["recovery"] },
+    { path: "supabase/migrations/20261004000000_duplicate_migration.sql", version: "20261004000000", name: "duplicate_migration", sha: "d", branches: ["recovery"] },
   ];
   assert.deepEqual(auditLedger(ledger, sources).map((x) => x.status), [
     "exact", "version_mismatch", "missing_source", "ambiguous_name",
