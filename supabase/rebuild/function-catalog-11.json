@@ -1,0 +1,148 @@
+{
+  "captured_at_utc": "2026-10-17",
+  "project_ref": "tctcgptrsmvgajqjgnev",
+  "offset": 100,
+  "count": 10,
+  "functions": [
+    {
+      "oid": "23102",
+      "schema_name": "public",
+      "name": "prevent_condominium_unit_delete_with_members",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_condominium_unit_delete_with_members()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if exists (select 1 from public.condominium_members where unit_id = old.id) then\n    raise exception 'UNIT_HAS_MEMBERS: impossibile eliminare l''unità % perché contiene uno o più condòmini. Spostare prima i condòmini ad altra unità oppure eliminarli esplicitamente.', old.unit_code\n      using errcode = '23503';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 101
+    },
+    {
+      "oid": "23054",
+      "schema_name": "public",
+      "name": "prevent_financial_unit_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_financial_unit_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_alloc integer; v_inst integer;\nbegin\n  select count(*) into v_alloc from public.condominium_expense_allocations\n  where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  select count(*) into v_inst from public.condominium_installments\n  where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  if v_alloc>0 or v_inst>0 then\n    raise exception 'L''unità ha movimenti contabili o rate collegate e non può essere eliminata';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 102
+    },
+    {
+      "oid": "23488",
+      "schema_name": "public",
+      "name": "prevent_fiscal_year_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_fiscal_year_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare v_count bigint;\nbegin\n select count(*) into v_count from public.condominium_ledger_entries where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene movimenti contabili'; end if;\n select count(*) into v_count from public.condominium_installments where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene rate'; end if;\n select count(*) into v_count from public.condominium_budgets where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene voci di preventivo'; end if;\n select count(*) into v_count from public.condominium_consumption_readings where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene dati di consumo'; end if;\n select count(*) into v_count from public.condominium_fiscal_carryovers where source_fiscal_year_id=old.id or target_fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: esistono partite riportate collegate'; end if;\n if old.status='Chiuso' then raise exception 'Un esercizio chiuso non può essere cancellato'; end if;\n return old;\nend; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 103
+    },
+    {
+      "oid": "24224",
+      "schema_name": "public",
+      "name": "prevent_member_delete_with_financial_history",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_member_delete_with_financial_history()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n     or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n     or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id)\n  then raise exception 'MEMBER_FINANCIAL_HISTORY_LOCK: non è possibile eliminare un membro con storico contabile; disattivare la posizione o creare una nuova posizione anagrafica'; end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 104
+    },
+    {
+      "oid": "24222",
+      "schema_name": "public",
+      "name": "prevent_member_unit_reassignment_with_financial_history",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_member_unit_reassignment_with_financial_history()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if new.unit_id is distinct from old.unit_id and (\n    exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n    or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n    or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id))\n  then raise exception 'MEMBER_UNIT_HISTORY_LOCK: non è possibile riassegnare l''unità di un membro con storico contabile; creare una nuova posizione anagrafica per il nuovo intestatario'; end if;\n  if new.condominium_id is distinct from old.condominium_id and (\n    exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n    or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n    or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id))\n  then raise exception 'MEMBER_CONDOMINIUM_HISTORY_LOCK: non è possibile spostare un membro con storico contabile in un altro condominio'; end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 105
+    },
+    {
+      "oid": "23052",
+      "schema_name": "public",
+      "name": "prevent_paid_allocation_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_paid_allocation_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if coalesce(old.paid_amount,0)>0 then\n    raise exception 'Non è possibile cancellare una ripartizione con pagamenti registrati';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 106
+    },
+    {
+      "oid": "23050",
+      "schema_name": "public",
+      "name": "prevent_paid_installment_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_paid_installment_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if coalesce(old.paid_amount,0)>0 then\n    raise exception 'Non è possibile cancellare una rata con pagamenti registrati: utilizzare una procedura di rettifica del pagamento';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 107
+    },
+    {
+      "oid": "24219",
+      "schema_name": "public",
+      "name": "prevent_payment_core_mutation",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_payment_core_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if new.amount is distinct from old.amount\n     or new.payment_date is distinct from old.payment_date\n     or new.installment_id is distinct from old.installment_id\n     or new.workspace_id is distinct from old.workspace_id\n     or new.condominium_id is distinct from old.condominium_id then\n    raise exception 'Importo, data e collegamento del pagamento sono immutabili: utilizzare lo storno con motivazione';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 108
+    },
+    {
+      "oid": "24198",
+      "schema_name": "public",
+      "name": "prevent_profile_privilege_self_change",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_profile_privilege_self_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$ begin if auth.uid() is not null and (new.role is distinct from old.role or new.active is distinct from old.active) then raise exception 'I campi role e active del profilo non sono modificabili dall utente'; end if; return new; end; $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 109
+    },
+    {
+      "oid": "23076",
+      "schema_name": "public",
+      "name": "prevent_unsafe_condominium_unit_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_unsafe_condominium_unit_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_members integer; v_children integer; v_alloc integer; v_inst integer;\nbegin\n  select count(*) into v_members from public.condominium_members where condominium_id=old.condominium_id and unit_id=old.id;\n  if v_members>0 then raise exception 'L''unità è associata a uno o più condòmini e non può essere eliminata. Rimuovi prima le associazioni.'; end if;\n  select count(*) into v_children from public.condominium_units where condominium_id=old.condominium_id and id<>old.id and nullif(trim(coalesce(data->>'incorporatedInUnitId','')), '')=old.id::text;\n  if v_children>0 then raise exception 'L''unità è collegata come unità principale di una o più pertinenze e non può essere eliminata. Rimuovi prima i collegamenti.'; end if;\n  select count(*) into v_alloc from public.condominium_expense_allocations where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  select count(*) into v_inst from public.condominium_installments where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  if v_alloc>0 or v_inst>0 then raise exception 'L''unità ha movimenti contabili o rate collegate e non può essere eliminata.'; end if;\n  return old;\nend; $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 110
+    }
+  ]
+}
