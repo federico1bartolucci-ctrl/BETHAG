@@ -12,7 +12,14 @@
     "fix/member-transfer-coowners-20261002",
     "fix/member-transfer-workspace-members-lookup",
     "fix/migration-reconciliation-20261005",
-    "fix/migration-timestamp-collisions"
+    "fix/migration-timestamp-collisions",
+    "fix/owner-reference-migration-20261003",
+    "fix/portal-identity-flow-20261003",
+    "fix/portal-transfer-reactivation",
+    "integration/subentro-portal-identity-20261003",
+    "main",
+    "migration-reconciliation-audit-20261003",
+    "sync/send-email-supabase-v7"
   ],
   "files": [
     {
@@ -33,7 +40,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -54,7 +66,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -75,7 +94,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -96,7 +122,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -117,7 +150,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -133,7 +173,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -154,7 +199,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -175,7 +227,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -196,7 +255,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -217,7 +283,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -238,7 +311,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -259,7 +337,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -280,7 +365,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -301,7 +393,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -322,7 +419,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -343,7 +445,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -364,7 +471,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -385,7 +499,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -406,7 +527,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -427,7 +555,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -448,7 +583,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -469,7 +611,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -490,7 +637,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -509,7 +663,11 @@
         "feature/subentro-rpc-client-20261002",
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -530,7 +688,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -551,7 +714,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -572,7 +742,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -593,7 +768,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -614,7 +794,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -635,7 +820,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -656,7 +846,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -677,7 +872,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -698,7 +898,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -719,7 +924,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -740,7 +950,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -761,7 +976,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -782,7 +1002,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -803,7 +1028,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -824,7 +1056,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -843,7 +1082,10 @@
         "feature/subentro-rpc-client-20261002",
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "fix/portal-transfer-reactivation",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -862,7 +1104,12 @@
         "feature/subentro-rpc-client-20261002",
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -883,7 +1130,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -904,7 +1158,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -925,7 +1186,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -946,7 +1214,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -967,7 +1242,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -988,7 +1270,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1009,7 +1298,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1030,7 +1326,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1051,7 +1354,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1072,7 +1382,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1091,7 +1406,11 @@
         "feature/subentro-rpc-client-20261002",
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1112,7 +1431,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1133,7 +1457,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1154,7 +1483,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1175,7 +1509,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1196,7 +1535,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1217,7 +1561,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1238,7 +1589,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1259,7 +1617,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1280,7 +1645,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1301,7 +1673,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1322,7 +1701,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1343,7 +1729,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1364,7 +1757,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1385,7 +1783,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1406,7 +1809,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1427,7 +1835,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1448,7 +1861,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1469,7 +1887,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1490,7 +1913,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1511,7 +1941,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1532,7 +1969,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1553,7 +1997,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1574,7 +2025,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1595,7 +2053,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1616,7 +2081,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1637,7 +2109,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1658,7 +2137,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1679,7 +2165,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1700,7 +2193,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1721,7 +2221,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1742,7 +2249,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1763,7 +2277,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1784,7 +2305,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1805,7 +2333,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1826,7 +2361,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1847,7 +2387,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1868,7 +2413,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1889,7 +2439,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1910,7 +2465,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1931,7 +2491,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1952,7 +2517,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1973,7 +2545,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -1994,7 +2571,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2015,7 +2597,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2036,7 +2625,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2057,7 +2653,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2078,7 +2679,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2099,7 +2707,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2120,7 +2735,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2141,7 +2763,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2162,7 +2791,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2183,7 +2819,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2204,7 +2847,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2225,7 +2873,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2246,7 +2899,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2267,7 +2927,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2288,7 +2953,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2309,7 +2979,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2330,7 +3007,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2351,7 +3033,12 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2372,7 +3059,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2393,7 +3087,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2413,7 +3114,13 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2432,7 +3139,11 @@
         "feature/subentro-rpc-client-20261002",
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "fix/portal-transfer-reactivation",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2453,7 +3164,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2474,7 +3192,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2494,7 +3219,13 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2515,7 +3246,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2536,7 +3274,14 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2555,7 +3300,13 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "fix/portal-transfer-reactivation",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2574,7 +3325,10 @@
         "fix/member-transfer-coowners-20261002",
         "fix/member-transfer-workspace-members-lookup",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2590,7 +3344,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2606,7 +3365,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2622,7 +3386,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2638,7 +3407,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2654,7 +3428,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2670,7 +3449,12 @@
         "feature/preserve-member-database-uuid",
         "fix/member-transfer-coowners-20261002",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2683,7 +3467,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2696,7 +3482,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2709,7 +3497,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2722,7 +3512,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2735,7 +3527,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2748,7 +3542,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2761,7 +3557,9 @@
         "architecture-functional-alignment-20261003",
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main",
+        "migration-reconciliation-audit-20261003"
       ]
     },
     {
@@ -2874,7 +3672,9 @@
         "backup/pre-rollback-20261001",
         "feat/member-transfer-rpc-client",
         "feature/subentro-rpc-client-20261002",
-        "fix/member-transfer-workspace-members-lookup"
+        "fix/member-transfer-workspace-members-lookup",
+        "fix/portal-transfer-reactivation",
+        "sync/send-email-supabase-v7"
       ]
     },
     {
@@ -2974,7 +3774,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -2986,7 +3787,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -2998,7 +3800,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3010,7 +3813,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3022,7 +3826,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3034,7 +3839,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3046,7 +3852,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3058,7 +3865,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3070,7 +3878,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3082,7 +3891,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3094,7 +3904,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3106,7 +3917,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3118,7 +3930,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3130,7 +3943,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3142,7 +3956,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3154,7 +3969,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3166,7 +3982,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3178,7 +3995,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3190,7 +4008,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3202,7 +4021,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3214,7 +4034,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3226,7 +4047,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3249,7 +4071,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3261,7 +4084,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3273,7 +4097,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3285,7 +4110,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3297,7 +4123,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3320,7 +4147,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3332,7 +4160,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3344,7 +4173,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3356,7 +4186,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3368,7 +4199,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3379,7 +4211,8 @@
       "name": "reconcile_operational_trigger_chain",
       "branches": [
         "backup/recovery-flow-20261005",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "main"
       ]
     },
     {
@@ -3391,7 +4224,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3414,7 +4248,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3437,7 +4272,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3449,7 +4285,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3461,7 +4298,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3473,7 +4311,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3485,7 +4324,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3496,7 +4336,8 @@
       "name": "remove_obsolete_function_overload",
       "branches": [
         "backup/recovery-flow-20261005",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "main"
       ]
     },
     {
@@ -3518,7 +4359,8 @@
       "name": "reconcile_public_function_security_parity",
       "branches": [
         "backup/recovery-flow-20261005",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "main"
       ]
     },
     {
@@ -3530,7 +4372,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3541,7 +4384,8 @@
       "name": "remove_obsolete_schedule_overload_final",
       "branches": [
         "backup/recovery-flow-20261005",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "main"
       ]
     },
     {
@@ -3553,7 +4397,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3564,7 +4409,8 @@
       "name": "reconcile_public_indexes",
       "branches": [
         "backup/recovery-flow-20261005",
-        "fix/migration-reconciliation-20261005"
+        "fix/migration-reconciliation-20261005",
+        "main"
       ]
     },
     {
@@ -3576,7 +4422,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3588,7 +4435,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3600,7 +4448,8 @@
       "branches": [
         "backup/recovery-flow-20261005",
         "fix/migration-reconciliation-20261005",
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3922,7 +4771,8 @@
       "filename": "20260930200000_clean_deleted_member_owner_references.sql",
       "name": "clean_deleted_member_owner_references",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3962,7 +4812,8 @@
       "filename": "20261005151000_reconcile_condominium_archive_fk.sql",
       "name": "reconcile_condominium_archive_fk",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3972,7 +4823,8 @@
       "filename": "20261005161000_harden_accounting_rpc_grants.sql",
       "name": "harden_accounting_rpc_grants",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3982,7 +4834,8 @@
       "filename": "20261005164605_harden_login_workspace_access_invoker.sql",
       "name": "harden_login_workspace_access_invoker",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -3992,7 +4845,8 @@
       "filename": "20261005165658_revoke_direct_trigger_function_execute.sql",
       "name": "revoke_direct_trigger_function_execute",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4012,7 +4866,8 @@
       "filename": "20261005171105_restore_private_rls_helper_execute_grants.sql",
       "name": "restore_private_rls_helper_execute_grants",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4022,7 +4877,8 @@
       "filename": "20261005172000_finalize_operational_constraint_parity.sql",
       "name": "finalize_operational_constraint_parity",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4032,7 +4888,8 @@
       "filename": "20261005174000_reconcile_remaining_core_columns.sql",
       "name": "reconcile_remaining_core_columns",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4052,7 +4909,8 @@
       "filename": "20261005191000_reconcile_fund_availability_view.sql",
       "name": "reconcile_fund_availability_view",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4092,7 +4950,8 @@
       "filename": "20261005201000_reconcile_login_workspace_access_rpc.sql",
       "name": "reconcile_login_workspace_access_rpc",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4102,7 +4961,8 @@
       "filename": "20261005203000_expose_login_workspace_access_rpc.sql",
       "name": "expose_login_workspace_access_rpc",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4112,7 +4972,8 @@
       "filename": "20261005205500_restore_save_condominium_rpc_execute.sql",
       "name": "restore_save_condominium_rpc_execute",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4122,7 +4983,8 @@
       "filename": "20261005211000_restore_member_transfer_private_execute_grant.sql",
       "name": "restore_member_transfer_private_execute_grant",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4132,7 +4994,8 @@
       "filename": "20261005212000_fix_member_transfer_workspace_members_update.sql",
       "name": "fix_member_transfer_workspace_members_update",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4142,7 +5005,8 @@
       "filename": "20261006032000_restore_closing_member_history.sql",
       "name": "restore_closing_member_history",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4152,7 +5016,8 @@
       "filename": "20261006032500_reconcile_existing_transfer_outgoing_history.sql",
       "name": "reconcile_existing_transfer_outgoing_history",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4162,7 +5027,8 @@
       "filename": "20261006034000_preserve_closing_member_history.sql",
       "name": "preserve_closing_member_history",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4172,7 +5038,8 @@
       "filename": "20261006040000_repair_deleted_member_owner_references.sql",
       "name": "repair_deleted_member_owner_references",
       "branches": [
-        "fix/migration-timestamp-collisions"
+        "fix/migration-timestamp-collisions",
+        "main"
       ]
     },
     {
@@ -4243,6 +5110,1012 @@
       "name": "use_invoker_for_transfer_wrapper",
       "branches": [
         "fix/migration-timestamp-collisions"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930110001_allocation_criteria_scope.sql",
+      "sha": "d8aecef57396daf7676de3a0500869efa542fd51",
+      "version": "20260930110001",
+      "filename": "20260930110001_allocation_criteria_scope.sql",
+      "name": "allocation_criteria_scope",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930210001_validate_allocation_rule_scope.sql",
+      "sha": "49a180d0da6e6e1d023ef710d675f215af7481f1",
+      "version": "20260930210001",
+      "filename": "20260930210001_validate_allocation_rule_scope.sql",
+      "name": "validate_allocation_rule_scope",
+      "branches": [
+        "fix/owner-reference-migration-20261003",
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001110000_add_member_transfer_accounting_snapshot.sql",
+      "sha": "b22221332b9503ecc87b7753920582639de5fae1",
+      "version": "20261001110000",
+      "filename": "20261001110000_add_member_transfer_accounting_snapshot.sql",
+      "name": "add_member_transfer_accounting_snapshot",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001110001_harden_current_owner_installment_generation.sql",
+      "sha": "61a3c49d59c6a5051c7263f11d7bba5707eb28ba",
+      "version": "20261001110001",
+      "filename": "20261001110001_harden_current_owner_installment_generation.sql",
+      "name": "harden_current_owner_installment_generation",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001113000_add_member_transfer_preview.sql",
+      "sha": "bcdc90c480355c4950da649ec3e5b7eb20cbdc93",
+      "version": "20261001113000",
+      "filename": "20261001113000_add_member_transfer_preview.sql",
+      "name": "add_member_transfer_preview",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050000_preserve_transfer_extraordinary_allocations.sql",
+      "sha": "1c156b202f99930c7c16834b6fcdd38e26877c1e",
+      "version": "20261003050000",
+      "filename": "20261003050000_preserve_transfer_extraordinary_allocations.sql",
+      "name": "preserve_transfer_extraordinary_allocations",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003052000_expose_captured_transfer_snapshot.sql",
+      "sha": "ad8bb5996efb6026f27321219b6449681ec2d50f",
+      "version": "20261003052000",
+      "filename": "20261003052000_expose_captured_transfer_snapshot.sql",
+      "name": "expose_captured_transfer_snapshot",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003060000_expand_member_transfer_preview_installments.sql",
+      "sha": "ec7a759fbe1121a3d1518867fcf20da154f31345",
+      "version": "20261003060000",
+      "filename": "20261003060000_expand_member_transfer_preview_installments.sql",
+      "name": "expand_member_transfer_preview_installments",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003061000_preserve_future_installments_transfer_snapshot.sql",
+      "sha": "4952882c3aecb4213bed4873b7e8ba9bc3631415",
+      "version": "20261003061000",
+      "filename": "20261003061000_preserve_future_installments_transfer_snapshot.sql",
+      "name": "preserve_future_installments_transfer_snapshot",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003062000_include_unit_unassigned_installments_in_transfer.sql",
+      "sha": "298119ab87fb7289358434f6c6563140d0eb0ada",
+      "version": "20261003062000",
+      "filename": "20261003062000_include_unit_unassigned_installments_in_transfer.sql",
+      "name": "include_unit_unassigned_installments_in_transfer",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003063000_include_unit_unassigned_carryovers_in_transfer.sql",
+      "sha": "17e20b21c8c020d5b0a201701fd4bb22b6bb9bd7",
+      "version": "20261003063000",
+      "filename": "20261003063000_include_unit_unassigned_carryovers_in_transfer.sql",
+      "name": "include_unit_unassigned_carryovers_in_transfer",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql",
+      "sha": "b7262f1e6eeb881f144c152a97a00cc440a06504",
+      "version": "20261003064000",
+      "filename": "20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql",
+      "name": "block_transfer_close_with_unresolved_unit_carryovers",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003070000_repair_deleted_member_owner_references.sql",
+      "sha": "0e776c0b12224da554e83ff334ffa9e7959fda89",
+      "version": "20261003070000",
+      "filename": "20261003070000_repair_deleted_member_owner_references.sql",
+      "name": "repair_deleted_member_owner_references",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003071000_block_transfer_close_with_unassigned_installments.sql",
+      "sha": "caad322bb0a328be5f751294abf23cfd25d2c80c",
+      "version": "20261003071000",
+      "filename": "20261003071000_block_transfer_close_with_unassigned_installments.sql",
+      "name": "block_transfer_close_with_unassigned_installments",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003072000_capture_transfer_unit_expenses.sql",
+      "sha": "e82d9a07915f87e12076e56d573d86c04084d556",
+      "version": "20261003072000",
+      "filename": "20261003072000_capture_transfer_unit_expenses.sql",
+      "name": "capture_transfer_unit_expenses",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003073000_scope_transfer_unit_expenses.sql",
+      "sha": "ee516773355f74415b54ae7205ca3f781829754f",
+      "version": "20261003073000",
+      "filename": "20261003073000_scope_transfer_unit_expenses.sql",
+      "name": "scope_transfer_unit_expenses",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003074000_scope_extraordinary_transfer_allocations.sql",
+      "sha": "e2aacb83ad9a1ccfedaf38ab282847e3433ae21d",
+      "version": "20261003074000",
+      "filename": "20261003074000_scope_extraordinary_transfer_allocations.sql",
+      "name": "scope_extraordinary_transfer_allocations",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003075000_scope_transfer_installment_queries.sql",
+      "sha": "0aef90e66b9d4eb22ec4c6c686a092daafcd4d1f",
+      "version": "20261003075000",
+      "filename": "20261003075000_scope_transfer_installment_queries.sql",
+      "name": "scope_transfer_installment_queries",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003076000_scope_transfer_allocation_totals.sql",
+      "sha": "1c49cf05d438fae784c440f381daab1474b358ed",
+      "version": "20261003076000",
+      "filename": "20261003076000_scope_transfer_allocation_totals.sql",
+      "name": "scope_transfer_allocation_totals",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003077000_scope_preview_extraordinary_allocations.sql",
+      "sha": "160a02ba1af1dd8a0fb5ed2b4ee822d980dd10ef",
+      "version": "20261003077000",
+      "filename": "20261003077000_scope_preview_extraordinary_allocations.sql",
+      "name": "scope_preview_extraordinary_allocations",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003078000_scope_snapshot_installment_totals.sql",
+      "sha": "6671941851de1a25af9adc9fc4143ddcac3ef8be",
+      "version": "20261003078000",
+      "filename": "20261003078000_scope_snapshot_installment_totals.sql",
+      "name": "scope_snapshot_installment_totals",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003079000_scope_transfer_close_financial_positions.sql",
+      "sha": "f0024be7a1fd762ff39affa2b3a006c25121b91d",
+      "version": "20261003079000",
+      "filename": "20261003079000_scope_transfer_close_financial_positions.sql",
+      "name": "scope_transfer_close_financial_positions",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003080000_harden_member_delete_financial_history.sql",
+      "sha": "720c340f950454a95187401dcd157f8ac4a32bca",
+      "version": "20261003080000",
+      "filename": "20261003080000_harden_member_delete_financial_history.sql",
+      "name": "harden_member_delete_financial_history",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003080100_scope_transfer_confirmation_snapshot.sql",
+      "sha": "23ac766a066e73e42e56f084fc0d66c94dd1252d",
+      "version": "20261003080100",
+      "filename": "20261003080100_scope_transfer_confirmation_snapshot.sql",
+      "name": "scope_transfer_confirmation_snapshot",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004090000_fix_member_transfer_status_constraint.sql",
+      "sha": "ecee21f41b4750ebb0a2afe09f61377a321b961e",
+      "version": "20261004090000",
+      "filename": "20261004090000_fix_member_transfer_status_constraint.sql",
+      "name": "fix_member_transfer_status_constraint",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004091000_preserve_outgoing_current_owner_flag.sql",
+      "sha": "9ecf9e1556356650019eac40001eb2884984cda2",
+      "version": "20261004091000",
+      "filename": "20261004091000_preserve_outgoing_current_owner_flag.sql",
+      "name": "preserve_outgoing_current_owner_flag",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004092000_reject_empty_installment_percentages.sql",
+      "sha": "a96a246d85e3e9fb079bd5a9a02e4ec4056ea219",
+      "version": "20261004092000",
+      "filename": "20261004092000_reject_empty_installment_percentages.sql",
+      "name": "reject_empty_installment_percentages",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004100000_allow_installment_overpayment_movements.sql",
+      "sha": "f950b7c386c3f72aa1d09890657b34a9db8a8f72",
+      "version": "20261004100000",
+      "filename": "20261004100000_allow_installment_overpayment_movements.sql",
+      "name": "allow_installment_overpayment_movements",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004101000_route_public_carryovers_to_hardened_function.sql",
+      "sha": "0571cddda1aef7b930aaf7b5d1db07b81e425351",
+      "version": "20261004101000",
+      "filename": "20261004101000_route_public_carryovers_to_hardened_function.sql",
+      "name": "route_public_carryovers_to_hardened_function",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004102000_sync_unit_owner_refs_on_member_change.sql",
+      "sha": "bffb0c82e23e868636c5b41414204d61657326be",
+      "version": "20261004102000",
+      "filename": "20261004102000_sync_unit_owner_refs_on_member_change.sql",
+      "name": "sync_unit_owner_refs_on_member_change",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004103000_validate_unit_owner_refs_same_unit.sql",
+      "sha": "841ccafdae5da75fc6d5cee5bbf41b9c862ef015",
+      "version": "20261004103000",
+      "filename": "20261004103000_validate_unit_owner_refs_same_unit.sql",
+      "name": "validate_unit_owner_refs_same_unit",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004104000_restore_unit_lifecycle_genealogy_guard.sql",
+      "sha": "214223cb39db95114190422a37b718971bda1b89",
+      "version": "20261004104000",
+      "filename": "20261004104000_restore_unit_lifecycle_genealogy_guard.sql",
+      "name": "restore_unit_lifecycle_genealogy_guard",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004105000_restore_unit_delete_legacy_guards.sql",
+      "sha": "911a48d45f7a185e4f457fc05c35b59a691d185a",
+      "version": "20261004105000",
+      "filename": "20261004105000_restore_unit_delete_legacy_guards.sql",
+      "name": "restore_unit_delete_legacy_guards",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004110000_restore_member_transfer_security_definer_wrappers.sql",
+      "sha": "c29bb3fbbf8fbe491f9725d964e357193ba43ca8",
+      "version": "20261004110000",
+      "filename": "20261004110000_restore_member_transfer_security_definer_wrappers.sql",
+      "name": "restore_member_transfer_security_definer_wrappers",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261004200000_revoke_public_execute_orphaned_trigger_functions.sql",
+      "sha": "e5605e911eacc42b6a90b1cee21fde753696a338",
+      "version": "20261004200000",
+      "filename": "20261004200000_revoke_public_execute_orphaned_trigger_functions.sql",
+      "name": "revoke_public_execute_orphaned_trigger_functions",
+      "branches": [
+        "fix/owner-reference-migration-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260928045907_expose_first_admin_bootstrap.sql",
+      "sha": "fac77a0fe4b762d7ed06bc5ebea6915609833403",
+      "version": "20260928045907",
+      "filename": "20260928045907_expose_first_admin_bootstrap.sql",
+      "name": "expose_first_admin_bootstrap",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260928154019_handle_registration_email_mismatch.sql",
+      "sha": "5eb0a9045a44d9213c860365d43cff31e5dc5f7a",
+      "version": "20260928154019",
+      "filename": "20260928154019_handle_registration_email_mismatch.sql",
+      "name": "handle_registration_email_mismatch",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929081735_add_condominium_insurance_policies.sql",
+      "sha": "1f9b955f85d338299ceb46aeb2928f87a04c67d8",
+      "version": "20260929081735",
+      "filename": "20260929081735_add_condominium_insurance_policies.sql",
+      "name": "add_condominium_insurance_policies",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929144737_complete_condominium_units.sql",
+      "sha": "f0d0865f87899394ef01a583d08faf66fbf2d918",
+      "version": "20260929144737",
+      "filename": "20260929144737_complete_condominium_units.sql",
+      "name": "complete_condominium_units",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929150453_remove_member_millesimi.sql",
+      "sha": "45bfec28303a1a8c32092b22f176d27f9e7f7ef8",
+      "version": "20260929150453",
+      "filename": "20260929150453_remove_member_millesimi.sql",
+      "name": "remove_member_millesimi",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929171530_optimize_insurance_rls_auth_calls.sql",
+      "sha": "838e8d81155dde2b34df5f684ce3a0b8d1a802de",
+      "version": "20260929171530",
+      "filename": "20260929171530_optimize_insurance_rls_auth_calls.sql",
+      "name": "optimize_insurance_rls_auth_calls",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929232302_harden_millesimal_trigger_function_execute.sql",
+      "sha": "e6be3444600d8327886c295c9760a5e8e8d8a6ea",
+      "version": "20260929232302",
+      "filename": "20260929232302_harden_millesimal_trigger_function_execute.sql",
+      "name": "harden_millesimal_trigger_function_execute",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929232531_validate_unit_pertinence_relationship.sql",
+      "sha": "2287a44427e5602fe6f81879f1cebffad527062a",
+      "version": "20260929232531",
+      "filename": "20260929232531_validate_unit_pertinence_relationship.sql",
+      "name": "validate_unit_pertinence_relationship",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929233045_remove_duplicate_unit_relationship_trigger.sql",
+      "sha": "d1c42ad3283584c437567c4d11d604145f78b0af",
+      "version": "20260929233045",
+      "filename": "20260929233045_remove_duplicate_unit_relationship_trigger.sql",
+      "name": "remove_duplicate_unit_relationship_trigger",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260929233222_harden_unit_delete_integrity.sql",
+      "sha": "f6a138de174c53b049ebae53b5b7107ebea22998",
+      "version": "20260929233222",
+      "filename": "20260929233222_harden_unit_delete_integrity.sql",
+      "name": "harden_unit_delete_integrity",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930080253_optional_account_security.sql",
+      "sha": "ef67ae580a2e5c389fcd3bd86b953534981790c0",
+      "version": "20260930080253",
+      "filename": "20260930080253_optional_account_security.sql",
+      "name": "optional_account_security",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930080309_ensure_millesimal_rows_for_units.sql",
+      "sha": "a2e14b7208bfcd17e48ddbb766026dfd4ca3ff90",
+      "version": "20260930080309",
+      "filename": "20260930080309_ensure_millesimal_rows_for_units.sql",
+      "name": "ensure_millesimal_rows_for_units",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930080325_allow_authorized_unit_delete.sql",
+      "sha": "a1be69fdc58c7e97dd43ec491d8a9f9b90f93f9a",
+      "version": "20260930080325",
+      "filename": "20260930080325_allow_authorized_unit_delete.sql",
+      "name": "allow_authorized_unit_delete",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930080331_clean_deleted_member_owner_references.sql",
+      "sha": "be9307d0d264d9354f7bf2404fa07177f4d29b9b",
+      "version": "20260930080331",
+      "filename": "20260930080331_clean_deleted_member_owner_references.sql",
+      "name": "clean_deleted_member_owner_references",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930080838_complete_condominium_hard_delete.sql",
+      "sha": "cb2364d34e78be9816e556b4279b91004fd1df12",
+      "version": "20260930080838",
+      "filename": "20260930080838_complete_condominium_hard_delete.sql",
+      "name": "complete_condominium_hard_delete",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930100924_installment_percentages.sql",
+      "sha": "53306ffade9665e0c9ad9e06d083a97faccd112c",
+      "version": "20260930100924",
+      "filename": "20260930100924_installment_percentages.sql",
+      "name": "installment_percentages",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930100945_allocation_rules_and_consumption.sql",
+      "sha": "64a6dafa22e7f651509e6474d5fe4192c40a7319",
+      "version": "20260930100945",
+      "filename": "20260930100945_allocation_rules_and_consumption.sql",
+      "name": "allocation_rules_and_consumption",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930103120_20260930250000_manual_ai_allocation_intake.sql",
+      "sha": "857da6cdb6782e0bb8605f16a46800ae8c76efcb",
+      "version": "20260930103120",
+      "filename": "20260930103120_20260930250000_manual_ai_allocation_intake.sql",
+      "name": "20260930250000_manual_ai_allocation_intake",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930103124_20260930260000_harden_allocation_intake_validation.sql",
+      "sha": "64739dd8bb82a4a7aec140992d4dfdd1ce24ddbd",
+      "version": "20260930103124",
+      "filename": "20260930103124_20260930260000_harden_allocation_intake_validation.sql",
+      "name": "20260930260000_harden_allocation_intake_validation",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930103128_20260930270000_validate_allocation_table_scope.sql",
+      "sha": "61138503fa211c44dc7e6918eb811c8a9fb82528",
+      "version": "20260930103128",
+      "filename": "20260930103128_20260930270000_validate_allocation_table_scope.sql",
+      "name": "20260930270000_validate_allocation_table_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930103432_20260930120000_fix_building_scope_allocation_rpc.sql",
+      "sha": "b2438a529a68f75671fe1a02cbebf6433f238413",
+      "version": "20260930103432",
+      "filename": "20260930103432_20260930120000_fix_building_scope_allocation_rpc.sql",
+      "name": "20260930120000_fix_building_scope_allocation_rpc",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930103819_20260930130000_harden_installment_payment.sql",
+      "sha": "93640049977a6fd61f43e1f3bbf3cd0a0b851708",
+      "version": "20260930103819",
+      "filename": "20260930103819_20260930130000_harden_installment_payment.sql",
+      "name": "20260930130000_harden_installment_payment",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930104150_20260930150000_harden_fiscal_carryover_member_scope.sql",
+      "sha": "5900328665908cfe4bdc376b2bcb627706a2e7f3",
+      "version": "20260930104150",
+      "filename": "20260930104150_20260930150000_harden_fiscal_carryover_member_scope.sql",
+      "name": "20260930150000_harden_fiscal_carryover_member_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930104416_20260930160000_fiscal_carryover_compensation.sql",
+      "sha": "a9ff415a0c23952e9013650580c799e525f9498b",
+      "version": "20260930104416",
+      "filename": "20260930104416_20260930160000_fiscal_carryover_compensation.sql",
+      "name": "20260930160000_fiscal_carryover_compensation",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930104518_20260930161000_harden_carryover_compensation_semantics.sql",
+      "sha": "5fd9bb751675860c33894f69d5b46f328334cc28",
+      "version": "20260930104518",
+      "filename": "20260930104518_20260930161000_harden_carryover_compensation_semantics.sql",
+      "name": "20260930161000_harden_carryover_compensation_semantics",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930110001_allocation_criteria_scope.sql",
+      "sha": "c1fe382dae4dedab388d3eedcc06899c80b87087",
+      "version": "20260930110001",
+      "filename": "20260930110001_allocation_criteria_scope.sql",
+      "name": "allocation_criteria_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930114719_guard_unit_scope_changes.sql",
+      "sha": "b65975dd8cfa4067693f04e40cbeb9d7c6c9d6a7",
+      "version": "20260930114719",
+      "filename": "20260930114719_guard_unit_scope_changes.sql",
+      "name": "guard_unit_scope_changes",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930114808_revoke_trigger_security_definer_execute.sql",
+      "sha": "483672eed8eb2fd17a2985548750b6abd8b4db48",
+      "version": "20260930114808",
+      "filename": "20260930114808_revoke_trigger_security_definer_execute.sql",
+      "name": "revoke_trigger_security_definer_execute",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930114835_revoke_trigger_security_definer_execute_explicit_roles.sql",
+      "sha": "71c027bc5ab0406d25b58ed5c6328b458e0d2040",
+      "version": "20260930114835",
+      "filename": "20260930114835_revoke_trigger_security_definer_execute_explicit_roles.sql",
+      "name": "revoke_trigger_security_definer_execute_explicit_roles",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930115502_repair_unit_owner_references.sql",
+      "sha": "247f9d31c26203464a870fe37ff60a9d9caf91c1",
+      "version": "20260930115502",
+      "filename": "20260930115502_repair_unit_owner_references.sql",
+      "name": "repair_unit_owner_references",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930115644_validate_unit_owner_member_refs.sql",
+      "sha": "428e91a190fde962cfe457572f48924a075a77f6",
+      "version": "20260930115644",
+      "filename": "20260930115644_validate_unit_owner_member_refs.sql",
+      "name": "validate_unit_owner_member_refs",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930162854_work_accounting_integrity_indexes.sql",
+      "sha": "8953e8ecc8bdbf5da79f00d1055be32af2b94c65",
+      "version": "20260930162854",
+      "filename": "20260930162854_work_accounting_integrity_indexes.sql",
+      "name": "work_accounting_integrity_indexes",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930174121_20260930460000_harden_condominium_member_visibility.sql",
+      "sha": "aa5d30b67a77783ce026561c8bff8759ac54b672",
+      "version": "20260930174121",
+      "filename": "20260930174121_20260930460000_harden_condominium_member_visibility.sql",
+      "name": "20260930460000_harden_condominium_member_visibility",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930175443_20260930470000_harden_portal_approval_workspace_scope.sql",
+      "sha": "a751ca8c327d71faabc76977da47db2da5fab1f6",
+      "version": "20260930175443",
+      "filename": "20260930175443_20260930470000_harden_portal_approval_workspace_scope.sql",
+      "name": "20260930470000_harden_portal_approval_workspace_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930175759_20260930480000_scope_condominium_delete_portal_requests.sql",
+      "sha": "036be70af8c0cb0839e9e28d86194094761ec892",
+      "version": "20260930175759",
+      "filename": "20260930175759_20260930480000_scope_condominium_delete_portal_requests.sql",
+      "name": "20260930480000_scope_condominium_delete_portal_requests",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930180022_20260930490000_harden_profile_column_permissions.sql",
+      "sha": "5395fe3e2202d7b98f8f44253d77882880c56563",
+      "version": "20260930180022",
+      "filename": "20260930180022_20260930490000_harden_profile_column_permissions.sql",
+      "name": "20260930490000_harden_profile_column_permissions",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930180302_20260930500000_harden_condominium_visibility.sql",
+      "sha": "e93338b497d485eaa5979a6ae45f9ed8febe2a42",
+      "version": "20260930180302",
+      "filename": "20260930180302_20260930500000_harden_condominium_visibility.sql",
+      "name": "20260930500000_harden_condominium_visibility",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930181023_harden_unit_workspace_scope.sql",
+      "sha": "100b7568a6392b2dbeb56d8273b41d781afb100f",
+      "version": "20260930181023",
+      "filename": "20260930181023_harden_unit_workspace_scope.sql",
+      "name": "harden_unit_workspace_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930183113_fix_portal_registration_case_insensitive_upsert.sql",
+      "sha": "6eb8f041841df4db3ed63efb7ee61ff57589f965",
+      "version": "20260930183113",
+      "filename": "20260930183113_fix_portal_registration_case_insensitive_upsert.sql",
+      "name": "fix_portal_registration_case_insensitive_upsert",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930183408_harden_condominium_delete_carryover_compensations.sql",
+      "sha": "4bec1128ae543d38af87759b38640fa817befc55",
+      "version": "20260930183408",
+      "filename": "20260930183408_harden_condominium_delete_carryover_compensations.sql",
+      "name": "harden_condominium_delete_carryover_compensations",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260930200001_harden_payment_movements_access.sql",
+      "sha": "16917bb3a2120c24b645122796265f3b9656c09e",
+      "version": "20260930200001",
+      "filename": "20260930200001_harden_payment_movements_access.sql",
+      "name": "harden_payment_movements_access",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001063530_lock_down_financial_rpc_anon_execute.sql",
+      "sha": "ed4a29aae1d3f7a0c34a636381b3dffd9abfda24",
+      "version": "20261001063530",
+      "filename": "20261001063530_lock_down_financial_rpc_anon_execute.sql",
+      "name": "lock_down_financial_rpc_anon_execute",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001081847_20261001093000_transfer_current_owner_and_portal_lifecycle.sql",
+      "sha": "dff9880f7bfac8361899424c90aef15d3b8452f9",
+      "version": "20261001081847",
+      "filename": "20261001081847_20261001093000_transfer_current_owner_and_portal_lifecycle.sql",
+      "name": "20261001093000_transfer_current_owner_and_portal_lifecycle",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001081917_20261001094000_index_transfer_closed_by.sql",
+      "sha": "0500a3f0448aa49eaece58171a6e06c87e3ee0ba",
+      "version": "20261001081917",
+      "filename": "20261001081917_20261001094000_index_transfer_closed_by.sql",
+      "name": "20261001094000_index_transfer_closed_by",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001082509_20261001095000_add_unit_cadastral_transformations.sql",
+      "sha": "ec83741bbb80396238380a97eb0aaf890858e591",
+      "version": "20261001082509",
+      "filename": "20261001082509_20261001095000_add_unit_cadastral_transformations.sql",
+      "name": "20261001095000_add_unit_cadastral_transformations",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001082537_20261001095700_index_unit_transformation_audit_fks.sql",
+      "sha": "7febbce607da3660b1ac5672a6af3df7e8721c30",
+      "version": "20261001082537",
+      "filename": "20261001082537_20261001095700_index_unit_transformation_audit_fks.sql",
+      "name": "20261001095700_index_unit_transformation_audit_fks",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001082731_20261001102100_unit_transformation_snapshots.sql",
+      "sha": "76120553d13d372937f3ccc345f60e37fe01dc6b",
+      "version": "20261001082731",
+      "filename": "20261001082731_20261001102100_unit_transformation_snapshots.sql",
+      "name": "20261001102100_unit_transformation_snapshots",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261001083704_harden_current_owner_installment_generation.sql",
+      "sha": "61a3c49d59c6a5051c7263f11d7bba5707eb28ba",
+      "version": "20261001083704",
+      "filename": "20261001083704_harden_current_owner_installment_generation.sql",
+      "name": "harden_current_owner_installment_generation",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002045022_fix_member_portal_workspace_transfer.sql",
+      "sha": "8504f8908291e8739bea581d2dce4ca4f4b38db7",
+      "version": "20261002045022",
+      "filename": "20261002045022_fix_member_portal_workspace_transfer.sql",
+      "name": "fix_member_portal_workspace_transfer",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261002045430_fix_member_transfer_workspace_members_lookup.sql",
+      "sha": "22635cad70738651615cd1f37533dce96e2f486a",
+      "version": "20261002045430",
+      "filename": "20261002045430_fix_member_transfer_workspace_members_lookup.sql",
+      "name": "fix_member_transfer_workspace_members_lookup",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003021711_fix_deleted_member_owner_references_workspace_scope.sql",
+      "sha": "f670135456bfb5e588439c5c16e514a8bbd13d93",
+      "version": "20261003021711",
+      "filename": "20261003021711_fix_deleted_member_owner_references_workspace_scope.sql",
+      "name": "fix_deleted_member_owner_references_workspace_scope",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003022110_block_unverified_transfer_identity.sql",
+      "sha": "e8061e7c3028ede9fccb550b3e5b91cbc315923c",
+      "version": "20261003022110",
+      "filename": "20261003022110_block_unverified_transfer_identity.sql",
+      "name": "block_unverified_transfer_identity",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003022133_gate_portal_registration_verified_identity.sql",
+      "sha": "81b9cff06f4a6b3b05789fd086c16fa35c7debdc",
+      "version": "20261003022133",
+      "filename": "20261003022133_gate_portal_registration_verified_identity.sql",
+      "name": "gate_portal_registration_verified_identity",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003030800_restrict_audit_log_to_workspace_admins.sql",
+      "sha": "7e755f3107d3e2e0dfdeb4c5f794991eb3b464a3",
+      "version": "20261003030800",
+      "filename": "20261003030800_restrict_audit_log_to_workspace_admins.sql",
+      "name": "restrict_audit_log_to_workspace_admins",
+      "branches": [
+        "fix/portal-identity-flow-20261003",
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050000_integrate_verified_member_transfer_and_owner_refs.sql",
+      "sha": "128625e90812f4316e4c8a2bd62d6798e9f1fa85",
+      "version": "20261003050000",
+      "filename": "20261003050000_integrate_verified_member_transfer_and_owner_refs.sql",
+      "name": "integrate_verified_member_transfer_and_owner_refs",
+      "branches": [
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050100_integrate_transfer_financial_cutoff.sql",
+      "sha": "62f2a1c83ad20cf51c5fe847864bced399d396e9",
+      "version": "20261003050100",
+      "filename": "20261003050100_integrate_transfer_financial_cutoff.sql",
+      "name": "integrate_transfer_financial_cutoff",
+      "branches": [
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050200_integrate_member_transfer_accounting_snapshot.sql",
+      "sha": "8c4b4aecf726ca6dd064fce65ea9501bb09641e6",
+      "version": "20261003050200",
+      "filename": "20261003050200_integrate_member_transfer_accounting_snapshot.sql",
+      "name": "integrate_member_transfer_accounting_snapshot",
+      "branches": [
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050300_integrate_member_transfer_preview.sql",
+      "sha": "f8731b71a78f68ec1a09c4f689071b14f4f8a754",
+      "version": "20261003050300",
+      "filename": "20261003050300_integrate_member_transfer_preview.sql",
+      "name": "integrate_member_transfer_preview",
+      "branches": [
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261003050400_ensure_condominium_member_legacy_id_trigger.sql",
+      "sha": "126825da62a5698e6db30afa592874a2ea1ec1d4",
+      "version": "20261003050400",
+      "filename": "20261003050400_ensure_condominium_member_legacy_id_trigger.sql",
+      "name": "ensure_condominium_member_legacy_id_trigger",
+      "branches": [
+        "integration/subentro-portal-identity-20261003"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20261007072310_harden_trigger_function_security_for_launch.sql",
+      "sha": "86ad93a889f3dbd2bebeddd637d3c1ee7d3fbcab",
+      "version": "20261007072310",
+      "filename": "20261007072310_harden_trigger_function_security_for_launch.sql",
+      "name": "harden_trigger_function_security_for_launch",
+      "branches": [
+        "main"
       ]
     }
   ]
