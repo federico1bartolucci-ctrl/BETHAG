@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node scripts/test-clean-bootstrap.mjs",
-    "verify:baseline": "node scripts/verify-clean-baseline.mjs"
+    "verify:baseline": "node scripts/verify-clean-baseline.mjs && node scripts/plan-migration-cutover.mjs",
+    "plan:migration-cutover": "node scripts/plan-migration-cutover.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.1.1",
