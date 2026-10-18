@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 
 const directory = "supabase/migrations";
+const ledgerPath = "supabase/rebuild/production-ledger-20261017.json";
 const expectedFiles = [
   "20261017000001_bethag_baseline_schema.sql",
   "20261017000002_bethag_baseline_indexes_views.sql",
@@ -13,6 +14,25 @@ const expectedFiles = [
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.deepEqual(actualFiles, expectedFiles, "The clean branch must contain only the five ordered baseline migrations.");
 
+const ledger = JSON.parse(await readFile(ledgerPath, "utf8"));
+assert.equal(ledger.project_ref, "tctcgptrsmvgajqjgnev", "The ledger must be the captured BETHAG Production ledger.");
+assert.equal(ledger.count, ledger.migrations.length, "Production ledger count does not match its records.");
+assert.equal(ledger.count, 243, "Refresh the captured Production ledger and update this assertion if Production history changes.");
+
+const ledgerVersions = ledger.migrations.map(({ version }) => version);
+assert.ok(ledgerVersions.every((version) => /^\\d{14}$/.test(version)), "Every Production migration version must be 14 digits.");
+assert.equal(new Set(ledgerVersions).size, ledgerVersions.length, "Production ledger contains duplicate migration versions.");
+assert.deepEqual(ledgerVersions, [...ledgerVersions].sort(), "Production ledger versions must be in ascending order.");
+
+const baselineVersions = actualFiles.map((name) => name.slice(0, 14));
+assert.equal(new Set(baselineVersions).size, baselineVersions.length, "Baseline contains duplicate migration versions.");
+assert.ok(baselineVersions.every((version) => /^\\d{14}$/.test(version)), "Every baseline version must be 14 digits.");
+const latestProductionVersion = ledgerVersions.at(-1);
+assert.ok(
+  baselineVersions.every((version) => version > latestProductionVersion),
+  "Baseline versions must follow the latest captured Production migration version.",
+);
+
 const sql = Object.fromEntries(await Promise.all(expectedFiles.map(async (name) => [
   name,
   await readFile(`${directory}/${name}`, "utf8"),
@@ -21,11 +41,14 @@ const count = (text, pattern) => (text.match(pattern) ?? []).length;
 
 const result = {
   migration_files: actualFiles.length,
+  production_ledger_records: ledger.count,
+  production_latest_version: latestProductionVersion,
+  baseline_versions: baselineVersions,
   tables: count(sql[expectedFiles[0]], /^CREATE TABLE /gm),
   constraints: count(sql[expectedFiles[0]], /^ALTER TABLE .* ADD CONSTRAINT /gm),
   indexes: count(sql[expectedFiles[1]], /^CREATE (?:UNIQUE )?INDEX /gm),
   views: count(sql[expectedFiles[1]], /^CREATE OR REPLACE VIEW /gm),
-  functions: count(sql[expectedFiles[2]], /^CREATE OR REPLACE (?:FUNCTION|PROCEDURE)\b/gm),
+  functions: count(sql[expectedFiles[2]], /^CREATE OR REPLACE (?:FUNCTION|PROCEDURE)\\b/gm),
   policies: count(sql[expectedFiles[3]], /^CREATE POLICY /gm),
   triggers: count(sql[expectedFiles[3]], /^CREATE (?:CONSTRAINT )?TRIGGER /gm),
   grants: count(sql[expectedFiles[4]], /^GRANT /gm) + count(sql[expectedFiles[4]], /^ALTER DEFAULT PRIVILEGES /gm),
@@ -40,4 +63,10 @@ assert.equal(result.policies, 103, "Production RLS policy count changed.");
 assert.equal(result.triggers, 146, "Production trigger count changed.");
 assert.equal(result.grants, 905, "Production grants/default-privileges count changed.");
 
-console.log(JSON.stringify({ baseline: "PASS", ...result }, null, 2));
+console.log(JSON.stringify({
+  baseline_catalog_validation: "PASS",
+  production_ledger_integrity: "PASS",
+  migration_history_cutover: "NOT_APPLIED",
+  cutover_note: "This validates the captured ledger and baseline ordering only. It does not reconcile the remote schema_migrations table; do not run db push until the cutover procedure is explicitly executed and verified.",
+  ...result,
+}, null, 2));
