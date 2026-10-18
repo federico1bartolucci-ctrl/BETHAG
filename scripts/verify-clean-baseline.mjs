@@ -20,13 +20,13 @@ assert.equal(ledger.count, ledger.migrations.length, "Production ledger count do
 assert.equal(ledger.count, 243, "Refresh the captured Production ledger and update this assertion if Production history changes.");
 
 const ledgerVersions = ledger.migrations.map(({ version }) => version);
-assert.ok(ledgerVersions.every((version) => /^\\d{14}$/.test(version)), "Every Production migration version must be 14 digits.");
+assert.ok(ledgerVersions.every((version) => /^\d{14}$/.test(version)), "Every Production migration version must be 14 digits.");
 assert.equal(new Set(ledgerVersions).size, ledgerVersions.length, "Production ledger contains duplicate migration versions.");
 assert.deepEqual(ledgerVersions, [...ledgerVersions].sort(), "Production ledger versions must be in ascending order.");
 
 const baselineVersions = actualFiles.map((name) => name.slice(0, 14));
 assert.equal(new Set(baselineVersions).size, baselineVersions.length, "Baseline contains duplicate migration versions.");
-assert.ok(baselineVersions.every((version) => /^\\d{14}$/.test(version)), "Every baseline version must be 14 digits.");
+assert.ok(baselineVersions.every((version) => /^\d{14}$/.test(version)), "Every baseline version must be 14 digits.");
 const latestProductionVersion = ledgerVersions.at(-1);
 assert.ok(
   baselineVersions.every((version) => version > latestProductionVersion),
@@ -48,7 +48,7 @@ const result = {
   constraints: count(sql[expectedFiles[0]], /^ALTER TABLE .* ADD CONSTRAINT /gm),
   indexes: count(sql[expectedFiles[1]], /^CREATE (?:UNIQUE )?INDEX /gm),
   views: count(sql[expectedFiles[1]], /^CREATE OR REPLACE VIEW /gm),
-  functions: count(sql[expectedFiles[2]], /^CREATE OR REPLACE (?:FUNCTION|PROCEDURE)\\b/gm),
+  functions: count(sql[expectedFiles[2]], /^CREATE OR REPLACE (?:FUNCTION|PROCEDURE)\b/gm),
   policies: count(sql[expectedFiles[3]], /^CREATE POLICY /gm),
   triggers: count(sql[expectedFiles[3]], /^CREATE (?:CONSTRAINT )?TRIGGER /gm),
   grants: count(sql[expectedFiles[4]], /^GRANT /gm) + count(sql[expectedFiles[4]], /^ALTER DEFAULT PRIVILEGES /gm),
