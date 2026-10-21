@@ -31,6 +31,8 @@ test("rejects duplicate timestamps even when descriptions differ", () => {
   ]);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /Timestamp duplicato 20261011120000/);
+  assert.match(errors[0], /reconcile_schema\.sql/);
+  assert.match(errors[0], /reconcile_functions\.sql/);
 });
 
 test("rejects an empty migration inventory", () => {

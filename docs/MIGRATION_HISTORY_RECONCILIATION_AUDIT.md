@@ -1,6 +1,6 @@
 # BETHAG — audit della cronologia migrazioni
 
-Data inventario: 11 ottobre 2026.
+Data inventario: 15 ottobre 2026.
 
 ## Regole di lettura
 
@@ -11,7 +11,7 @@ Non eseguire `supabase db push`, `migration repair`, reset, merge o deploy sulla
 ## Conteggi
 
 - Production: 243 record di migrazione.
-- QA `bethag-migration-reconciliation-qa`: 159 record dopo le due migrazioni di riconciliazione.
+- QA `bethag-migration-reconciliation-qa`: 163 record (inventario verificato il 21 ottobre 2026).
 - File SQL distinti reperiti nell'unione dei branch (scan esteso): 341.
 - Record Production con una corrispondenza nominale univoca nel primo inventario: 132.
 - Record Production senza sorgente nominale recuperata dopo l'Addendum 2: 99.
