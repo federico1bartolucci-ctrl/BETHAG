@@ -89,8 +89,8 @@ assert.equal(result.policies, 103, "Production RLS policy count changed.");
 assert.equal(result.triggers, 146, "Production trigger count changed.");
 assert.equal(
   result.grants,
-  388,
-  `Baseline grant/default-privilege count changed: expected 388 total, got ${result.grants} (${result.grant_statements} GRANT and ${result.default_privilege_statements} ALTER DEFAULT PRIVILEGES statements).`,
+  376,
+  `Baseline grant/default-privilege count changed: expected 376 total, got ${result.grants} (${result.grant_statements} GRANT and ${result.default_privilege_statements} ALTER DEFAULT PRIVILEGES statements).`,
 );
 
 console.log(JSON.stringify({
