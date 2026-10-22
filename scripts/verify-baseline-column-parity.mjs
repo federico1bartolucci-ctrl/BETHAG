@@ -167,7 +167,7 @@ function parsePolicy(statement) {
   return { name: name.replace(/""/g, '"'), schema, table, permissive, command, roles, using, check };
 }
 
-const policyStatements = securitySql.split(/\n/).map((line) => line.trim()).filter((line) => line.startsWith("CREATE POLICY "));
+const policyStatements = [...securitySql.matchAll(/CREATE POLICY\b[\s\S]*?;/g)].map((match) => match[0].trim());
 const actualPolicyDefinitions = policyStatements.map(parsePolicy);
 const expectedPolicyDefinitions = snapshot.objects.policies.filter((policy) => policy.schema === "public");
 assert.equal(actualPolicyDefinitions.length, expectedPolicyDefinitions.length, "Policy definition count differs from Production snapshot.");
