@@ -10,7 +10,7 @@ const migrationFiles = (await readdir(migrationsDirectory))
 
 assert.equal(ledger.count, ledger.migrations.length, "Production ledger count mismatch.");
 assert.equal(new Set(ledger.migrations.map((item) => item.version)).size, ledger.migrations.length, "Duplicate Production migration version.");
-assert.equal(ledger.count, 243, "Refresh the Production ledger snapshot before generating a cutover plan.");
+assert.equal(ledger.count, 244, "Refresh the Production ledger snapshot before generating a cutover plan.");
 
 const expectedBaselineFiles = [
   "20261017000001_bethag_baseline_schema.sql",
