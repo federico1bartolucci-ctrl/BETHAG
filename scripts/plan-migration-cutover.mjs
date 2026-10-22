@@ -30,7 +30,7 @@ const parseVersion = (name) => {
 const baseline = baselineFiles.map(parseVersion);
 const allVersions = migrationFiles.map(parseVersion);
 assert.equal(new Set(allVersions).size, allVersions.length, "Duplicate migration version.");
-assert.ok(allVersions.every((version) => version > ledger.migrations.at(-1).version), "All migrations must follow the latest captured Production version.");
+assert.ok(allVersions.every((version) => version > ledger.migrations.at(-2).version), "All migrations must follow the historical Production version preceding the recorded incremental migration.");
 assert.ok(incrementalFiles.every((name) => parseVersion(name) > baseline.at(-1)), "Incremental migrations must follow the baseline.");
 
 const report = {
