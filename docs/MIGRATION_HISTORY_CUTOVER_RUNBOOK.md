@@ -6,7 +6,7 @@ Captured Production ledger: `supabase/rebuild/production-ledger-20261017.json`
 
 ## Verified starting point
 
-- Production records 243 migration versions; latest is `20261007072310`.
+- The refreshed read-only Production ledger contains 244 migration versions; the latest is `20261022202747` (`harden_close_member_transfer_search_path`). The first 243 entries are the historical chain through `20261007072310`; the 244th is the incremental hardening migration applied on 2026-10-22.
 - The clean baseline contains five migrations, versions `20261017000001` through `20261017000005`.
 - The baseline is chronologically newer than the captured Production ledger.
 - `npm run verify:baseline` checks the baseline object inventory and the integrity/order of the captured ledger.
@@ -14,7 +14,7 @@ Captured Production ledger: `supabase/rebuild/production-ledger-20261017.json`
 
 ## Cutover strategy
 
-The baseline replaces the unrecoverable historical source-file chain for **future clean installations**. It does not mean the old 243 Production records are equivalent to the five baseline files. The captured ledger JSON must be retained as the historical audit artifact.
+The baseline replaces the unrecoverable historical source-file chain for **future clean installations**. It does not mean the 243 historical Production records plus the later incremental migration are equivalent to the five baseline files. The refreshed 244-entry ledger JSON must be retained as the historical audit artifact; do not truncate it to 243 entries.
 
 Before changing migration tracking, independently verify the baseline against the live Production catalog, including:
 
@@ -56,7 +56,7 @@ Review of baseline migration `20261017000005_bethag_baseline_grants.sql` found t
 
 ## Branch-to-main migration-history delta (2026-10-22)
 
-The current branch comparison reports 100 commits ahead of `main`. The branch removes the 243 historical migration files and introduces five baseline migrations with versions later than the recorded Production head (`20261007072310`). This is an intentional history consolidation, not a normal additive migration rollout. Merging the branch alone would replace the repository's historical migration files; it would not reconcile the 243 remote ledger rows. Conversely, applying the five baseline SQL files to the populated Production database would be unsafe.
+The current branch comparison reports 100 commits ahead of `main`. The branch removes the 243 historical migration files and introduces five baseline migrations with versions later than the historical chain through `20261007072310`; the separately tracked incremental migration `20261022202747` is already present in the refreshed 244-entry Production ledger. This is an intentional history consolidation, not a normal additive migration rollout. Merging the branch alone would replace the repository's historical migration files; it would not reconcile the 244 remote ledger rows. Conversely, applying the five baseline SQL files to the populated Production database would be unsafe.
 
 The only acceptable path is the controlled tracking cutover below, after full schema/security/ACL parity and a confirmed recovery point. The cutover planner's checks are structural guards for the proposed sequence; they do not themselves prove semantic parity or create a backup. As of this review, relation ACL parity still has 34 unresolved `authenticated MAINTAIN` differences, and the live `postgres` default ACLs intentionally differ from the least-privilege baseline for `anon`/`authenticated`. Therefore the branch is **not approved for merge or Production cutover**.
 
@@ -64,7 +64,7 @@ The only acceptable path is the controlled tracking cutover below, after full sc
 
 Only after the semantic parity gate and a recoverable Production backup are confirmed:
 
-1. Keep `supabase/rebuild/production-ledger-20261017.json` unchanged as the record of the former 243-version history.
+1. Keep `supabase/rebuild/production-ledger-20261017.json` unchanged as the refreshed 244-entry audit record (243 historical versions plus the 2026-10-22 incremental hardening migration).
 2. Run `npm run verify:baseline`, `npm test`, and `npm run build`.
 3. Review the generated plan with `node scripts/plan-migration-cutover.mjs --print-commands`.
 4. Using the authorized Supabase CLI session linked explicitly to the Production project, mark the old ledger versions reverted and register the five baseline versions as applied. These commands alter migration tracking only; they must **not** execute the baseline SQL against the already populated Production schema.
