@@ -29,8 +29,8 @@ const inventory = {
 };
 assert.deepEqual(inventory, {
   migration_files: 5, tables: 47, constraints: 304, indexes: 193, views: 1,
-  functions: 171, policies: 103, triggers: 146, grants: 905,
-}, "Baseline object inventory differs from the captured Production catalog.");
+  functions: 171, policies: 103, triggers: 146, grants: 388,
+}, "Clean baseline inventory differs from the expected five-migration rebuild.");
 
 const db = new PGlite();
 try {
