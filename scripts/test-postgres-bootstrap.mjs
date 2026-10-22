@@ -45,7 +45,7 @@ for (const pattern of [
 const bootstrapSql = [
   "CREATE SCHEMA IF NOT EXISTS auth;",
   "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);",
-  "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $;",
+  "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;",
   "CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT NULL::text $$;",
   "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;",
   ...[...roles].sort().filter((role) => role !== "postgres").map((role) => {
