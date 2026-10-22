@@ -60,6 +60,10 @@ assert.equal(relationGrants.filter((grant) => grant.grantee === "postgres").leng
 assert.match(runbook, /Concrete privilege discrepancy found on 2026-10-22/);
 assert.match(runbook, /34 public relations/);
 assert.match(runbook, /ACL parity gate blocked/);
+assert.match(runbook, /82 expanded default-ACL privilege entries/);
+assert.match(runbook, /supabase_admin` table defaults also include `MAINTAIN`/);
+assert.match(runbook, /0 relation ACL entries with grant option/);
+assert.match(runbook, /0 explicit column ACL entries/);
 
 // Pin the known Production exception set so future runbook edits cannot
 // silently drop an affected relation from the release-blocker record.
