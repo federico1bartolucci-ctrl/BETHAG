@@ -23,6 +23,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Validate migration names and unique timestamps
+        run: npm run check:migrations
+
       - name: Diagnostic — Production migration source gaps (known blocker)
         run: npm run audit:production-ledger
         continue-on-error: true
