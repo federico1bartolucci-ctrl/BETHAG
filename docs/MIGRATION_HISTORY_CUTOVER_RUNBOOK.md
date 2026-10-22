@@ -44,6 +44,10 @@ A second targeted live query enumerated the 34 public relations where `authentic
 
 Do not add `MAINTAIN` to the baseline just to make counts match. Establish whether the live privilege is intentional, determine the exact ACL source/ownership/default-ACL behavior, and make the baseline reproduce the approved least-privilege target. This discrepancy keeps the ACL parity gate blocked.
 
+## Additional default-ACL finding (read-only, 2026-10-22)
+
+Review of baseline migration `20261017000005_bethag_baseline_grants.sql` found that default-privilege statements include `MAINTAIN` for application-facing roles `anon` and `authenticated`. This is separate from the 34 current relation grants: it can automatically confer the privilege on future tables. The existing guard is insufficient unless it also rejects unsafe default-privilege statements. The least-privilege correction should remove `MAINTAIN` from default grants to application-facing roles and then validate the clean bootstrap and expected default ACLs before cutover. This finding is documented only; Production remains unchanged.
+
 ## Controlled tracking cutover
 
 Only after the semantic parity gate and a recoverable Production backup are confirmed:
