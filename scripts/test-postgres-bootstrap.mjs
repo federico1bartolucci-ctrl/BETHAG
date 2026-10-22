@@ -139,13 +139,38 @@ SELECT json_build_object(
     JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname='public'
     WHERE has_table_privilege('authenticated', c.oid, 'MAINTAIN')
   ),
-  'default_maintain_grants', (SELECT n FROM default_acl_maintain)
+  'default_maintain_grants', (SELECT n FROM default_acl_maintain),
+  'public_function_execute_count', (
+    SELECT count(*)::int
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    WHERE n.nspname IN ('public', 'private')
+      AND a.grantee = 0
+      AND a.privilege_type = 'EXECUTE'
+  ),
+  'public_function_execute_targets', (
+    SELECT array_agg(n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid))
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    WHERE n.nspname IN ('public', 'private')
+      AND a.grantee = 0
+      AND a.privilege_type = 'EXECUTE'
+  )
 )::text;
 `;
 const aclChecks = JSON.parse(psql(["-A", "-t", "-c", aclChecksSql], undefined).trim());
 assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables in the MAINTAIN remediation.");
 assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
+assert.equal(aclChecks.public_function_execute_count, 4, "PUBLIC EXECUTE differs from the four-function Production ACL baseline.");
+assert.deepEqual(aclChecks.public_function_execute_targets, [
+  "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+  "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+  "public.normalize_zero_ownership_owner()",
+  "public.preserve_closing_condominium_member_history()",
+], "PUBLIC EXECUTE is present on unexpected functions or missing from expected functions.");
 console.log(JSON.stringify({ acl_remediation: "PASS", checks: aclChecks }, null, 2));
 
 const transferChecksSql = `
