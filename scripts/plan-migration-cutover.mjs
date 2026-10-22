@@ -24,7 +24,7 @@ const incrementalFiles = migrationFiles.filter((name) => !expectedBaselineFiles.
 assert.deepEqual(baselineFiles, expectedBaselineFiles, "Expected the five ordered baseline migrations.");
 const parseVersion = (name) => {
   const match = /^(\d{14})_[a-z0-9][a-z0-9_-]*\.sql$/.exec(name);
-  assert.ok(match, \`Invalid migration filename: \${name}\`);
+  assert.ok(match, `Invalid migration filename: ${name}`);
   return match[1];
 };
 const baseline = baselineFiles.map(parseVersion);
