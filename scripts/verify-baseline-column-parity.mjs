@@ -31,7 +31,7 @@ for (const match of sql.matchAll(tableStart)) {
 assert.equal(tableBlocks.size, expectedTables.length, "Baseline and snapshot public table counts differ.");
 
 function parseColumnLine(line) {
-  const match = line.match(/^\s{2}"([^"]+)"\s+(.+?)\s*,$?$/);
+  const match = line.match(/^\s{2}"([^"]+)"\s+(.+?),?$/);
   if (!match) return null;
   const [, name, remainder] = match;
   // Type ends before the column DEFAULT or NOT NULL clauses. Parenthesized
