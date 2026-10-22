@@ -209,9 +209,10 @@ assert.equal(triggerStatements.length, expectedTriggerDefinitions.length, "Trigg
 const triggerDifferences = [];
 const triggerKey = (schema, table, name) => schema + "." + table + "." + name;
 const actualTriggersByKey = new Map(triggerStatements.map((statement) => {
-  const match = statement.match(/^CREATE (?:CONSTRAINT )?TRIGGER "?([^"\s]+)"?[\s\S]*?\sON\s+"?([^".\s]+)"?\."?([^"\s]+)"?\s/i);
-  assert.ok(match, "Could not parse trigger declaration: " + statement.slice(0, 160));
-  return [triggerKey("public", match[3], match[1]), statement];
+  const nameMatch = statement.match(/^CREATE (?:CONSTRAINT )?TRIGGER "?([^"\s]+)"?/i);
+  const tableMatch = statement.match(/\sON\s+(?:"public"\.)?"?([^"\s.]+)"?\s/i);
+  assert.ok(nameMatch && tableMatch, "Could not parse trigger declaration: " + statement.slice(0, 160));
+  return [triggerKey("public", tableMatch[1], nameMatch[1]), statement];
 }));
 for (const expected of expectedTriggerDefinitions) {
   const key = triggerKey(expected.schema, expected.table, expected.name);
