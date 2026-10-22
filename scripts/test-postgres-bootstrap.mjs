@@ -16,6 +16,7 @@ const incrementalMigrations = [
   "20261022210629_restrict_private_function_public_execute.sql",
   "20261022210630_harden_default_privileges_and_private_execute.sql",
   "20261022213544_restrict_close_member_transfer_execute.sql",
+  "20261022233440_align_public_function_execute.sql",
   "20261023000001_revoke_authenticated_maintain.sql",
   "20261023000002_revoke_default_maintain.sql",
 ];
