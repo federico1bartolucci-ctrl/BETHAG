@@ -39,6 +39,20 @@ const sql = Object.fromEntries(await Promise.all(expectedFiles.map(async (name) 
 ])));
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
 
+// Fail fast if a table is missing either RLS activation or at least one policy.
+const tableNames = [...sql[expectedFiles[0]].matchAll(/^CREATE TABLE "public"\."([^"]+)"/gm)]
+  .map(([, name]) => name)
+  .sort();
+const rlsEnabledTableNames = [...sql[expectedFiles[3]].matchAll(/^ALTER TABLE "public"\."([^"]+)" ENABLE ROW LEVEL SECURITY;/gm)]
+  .map(([, name]) => name)
+  .sort();
+const policyTableNames = [...new Set([...sql[expectedFiles[3]].matchAll(/^CREATE POLICY .*? ON "public"\."([^"]+)"/gm)]
+  .map(([, name]) => name))]
+  .sort();
+assert.equal(tableNames.length, 47, "Expected 47 public tables in the baseline.");
+assert.deepEqual(rlsEnabledTableNames, tableNames, "Every public table must have RLS enabled exactly once.");
+assert.deepEqual(policyTableNames, tableNames, "Every public table must have at least one RLS policy.");
+
 const result = {
   migration_files: actualFiles.length,
   production_ledger_records: ledger.count,
