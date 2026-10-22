@@ -75,7 +75,7 @@ assert.equal(result.views, 1, "Expected the production fund-availability view.")
 assert.equal(result.functions, 171, "Production function/procedure count changed.");
 assert.equal(result.policies, 103, "Production RLS policy count changed.");
 assert.equal(result.triggers, 146, "Production trigger count changed.");
-assert.equal(result.grants, 905, "Production grants/default-privileges count changed.");
+assert.equal(result.grants, 388, "Baseline grant/default-privilege count changed after removing 517 column ACL and grant-option statements.");
 
 console.log(JSON.stringify({
   baseline_catalog_validation: "PASS",
