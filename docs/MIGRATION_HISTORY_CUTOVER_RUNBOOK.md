@@ -26,7 +26,7 @@ Before changing migration tracking, independently verify the baseline against th
 
 ## ACL parity limitation (explicit release blocker)
 
-The captured access catalog `supabase/rebuild/production-access-catalog-corrected-20261017.json` currently records function EXECUTE ACLs, schema ACLs, and default ACLs only. It does **not** contain a complete snapshot of table-level or column-level ACLs, object ownership, or grant-option chains. The baseline grants migration includes table and column grants, but the existing automated parity check compares only the captured function EXECUTE grants. Therefore, passing CI must not be interpreted as complete grants/ownership parity. Before migration-history cutover or release, capture those ACL/ownership catalogs from the intended source and add semantic comparisons against the baseline, including grant options and default privileges. Do not infer missing privileges from the SQL migration alone.
+The captured access catalog `supabase/rebuild/production-access-catalog-corrected-20261017.json` records function EXECUTE ACLs, schema ACLs, and default ACLs, but not a complete object-by-object table ACL or ownership snapshot. The baseline grants migration contains no explicit column-level ACL statements. A live read-only comparison is now recorded below: it confirms function EXECUTE grant parity and object-owner counts, but still finds relation ACL and default-ACL differences. CI checks alone are not complete grants/ownership parity. Do not infer missing privileges from the SQL migration alone.
 
 The current count-based checks are necessary but not sufficient for this semantic parity gate.
 
@@ -53,6 +53,38 @@ A fresh read-only comparison against the live Production relation ACL catalog no
 ## Additional default-ACL finding (read-only, 2026-10-22)
 
 Review of baseline migration `20261017000005_bethag_baseline_grants.sql` found that default-privilege statements included `MAINTAIN` for application-facing roles `anon` and `authenticated`. This is separate from the 34 current relation grants: it can automatically confer the privilege on future tables. On 2026-10-22, commit `592ea0eed3c8f77d0a2e7b57a5bfb8493b0f0f79` removed `MAINTAIN` from all four default-privilege statements targeting those roles. Commit `20eefe62986cd969048aee735003cb2e4ba3f0b4` expanded `scripts/verify-authenticated-maintain-guard.mjs` to reject both explicit authenticated `MAINTAIN` grants and default `MAINTAIN` grants to `anon` or `authenticated`. GitHub Actions run [39779104661](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/39779104661) completed successfully for both build and PostgreSQL 17 bootstrap. This validates the corrected baseline in CI; it does not resolve the 34 live relation privilege discrepancies or prove complete ACL/ownership parity. A further read-only catalog query on 2026-10-22 corrected the earlier summary: Production has **82 expanded default-ACL privilege entries** across `public` (grouped by owner, object type, and grantee), not six individual privilege entries. Both live owners, `postgres` and `supabase_admin`, have table default ACLs granting `MAINTAIN` to `anon` and `authenticated`. The baseline intentionally omits `MAINTAIN` from default grants to those application roles for both owners, while retaining it for `postgres` and `service_role`. This is a four-way owner/grantee divergence, not an isolated exception; do not describe the baseline as default-ACL parity. The same read-only query found **0 relation ACL entries with grant option** and **0 explicit column ACL entries** across `public` and `private`. These zero counts narrow two parity checks, but do not establish ownership, effective privilege, schema/function ACL, or semantic security parity. Before cutover, compare every default-ACL group against the baseline, verify that no production workflow depends on inherited `MAINTAIN`, and record an approved target policy. Production remains unchanged.
+
+
+### Full read-only ACL and ownership comparison (2026-10-23)
+
+A fresh comparison was performed against the connected Production catalog and the current five-file baseline; no SQL writes or migration tracking changes were executed.
+
+**Ownership**
+- All 48 application relations in `public` (47 tables and one view) are owned by `postgres`; all 257 indexes in `public` are owned by `postgres`.
+- All 171 application functions are owned by `postgres` (41 in `private`, 130 in `public`). The captured function snapshot also records `postgres` as owner for all 171.
+- The `private` schema is owned by `postgres`; the `public` schema is owned by `pg_database_owner`. Those are the expected Supabase schema ownership patterns. This verifies observed Production ownership counts against the baseline's create-as-`postgres` model for application objects; the baseline does not emit explicit `ALTER ... OWNER` statements, so a clean bootstrap must run under the intended owner and be checked after creation.
+- No relation or function ACL entry in the queried application scopes had grant option enabled.
+
+**Explicit relation privileges**
+- Exact object/role/privilege comparison: `postgres` 384/384 pairs match; `service_role` 384/384 pairs match.
+- `authenticated` has 34 live relation privilege pairs absent from the baseline: `MAINTAIN` on the 34 relations listed in the earlier finding. There are no baseline-only relation privilege pairs for this role.
+- `anon` has no explicit relation privilege pairs in the live catalog or baseline. The additional `REFERENCES`, `TRIGGER`, and `TRUNCATE` grants for `authenticated` on `condominium_fund_availability` are present in both Production and baseline; they are not extra mismatches.
+- Therefore the current explicit relation ACL comparison has exactly 34 differences, all `authenticated MAINTAIN`. This remains a release blocker until the intended least-privilege target is formally selected; do not blindly grant these privileges in the baseline.
+
+**Function EXECUTE ACLs**
+- Exact live-to-baseline comparison: 218 non-`postgres` function EXECUTE grant entries match 218/218; no live-only or baseline-only entries were found. This covers 153 distinct functions with non-`postgres` ACL entries.
+- The live catalog contains 171 application functions total, all owned by `postgres`; `postgres`'s owner-level EXECUTE rights are not included in the 218 explicit non-`postgres` grant comparison.
+
+**Schema ACLs**
+- The baseline's explicit schema grants for `public` and `private` are present in Production.
+- Production also shows owner-derived privileges: `CREATE/USAGE` for `postgres` on `private`, and `CREATE/USAGE` for `pg_database_owner` on `public`. These are owner capabilities, not missing explicit baseline GRANT statements. The Supabase-managed `auth` and `extensions` schema ACLs are platform-owned and must not be recreated or normalized by the application baseline.
+
+**Default privileges — exact unresolved difference**
+- Production has 82 expanded default-ACL privilege entries for `public`; baseline statements do not reproduce all 82.
+- Ten table default-privilege pairs are intentionally absent from the current baseline: `MAINTAIN` for `anon` and `authenticated` under each of the two default-ACL owners (`postgres` and `supabase_admin`), plus `REFERENCES`, `TRIGGER`, and `TRUNCATE` for `anon` and `authenticated` under the `postgres` owner (six additional pairs). The baseline retains the other matching default privileges, including all eight table privileges for `postgres` and `service_role` under both owners where configured.
+- These omissions are a least-privilege divergence from Production, not parity. The baseline must not be called fully permission-identical until the product/security owner approves the target policy and the verifier encodes that policy explicitly. Do not copy excessive future-table privileges from Production automatically.
+
+**Conclusion:** ownership counts and function EXECUTE grants match; explicit relation ACL parity is blocked by 34 `authenticated MAINTAIN` entries; default-ACL parity is blocked by the ten table-default differences above. The current baseline is **not fully ACL/ownership-parity verified for release**. Production remains unchanged.
 
 ## Branch-to-main migration-history delta (2026-10-22)
 
