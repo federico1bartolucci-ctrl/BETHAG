@@ -33,7 +33,7 @@ for (const match of functionSql.matchAll(declaration)) {
   const schema = match[1].replaceAll('"', "");
   const name = match[2].replaceAll('"', "");
   const pathMatch = header.match(/SET\s+search_path\s+(?:TO|=)\s*([^;\n]+)/i);
- const normalizePath = (value) => value.split(",").map((part) => part.trim().replace(/^ ['"]|['"]$/g, "").trim()).join(",");
+  const normalizePath = (value) => value.split(",").map((part) => part.trim().replace(/^["]|["]$/g, "").trim()).join(",");
   actualFunctions.push({
     key: key(schema, name),
     securityDefiner: /\bSECURITY\s+DEFINER\b/i.test(header),
