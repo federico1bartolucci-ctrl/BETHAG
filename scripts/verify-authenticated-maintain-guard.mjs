@@ -128,7 +128,9 @@ console.log(JSON.stringify({
   unsafe_application_default_maintain_grants_found: unsafeApplicationDefaultMaintainGrants.length,
   service_role_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "service_role").length,
   postgres_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "postgres").length,
-  authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,\n  baseline_column_acl_statements_found: columnGrantLines.length,\n  baseline_relation_grant_options_found: relationGrantOptionLines.length,
+  authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
+  baseline_column_acl_statements_found: columnGrantLines.length,
+  baseline_relation_grant_options_found: relationGrantOptionLines.length,
   production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
   release_acl_parity: "BLOCKED_PENDING_RECONCILIATION",
 }, null, 2));
