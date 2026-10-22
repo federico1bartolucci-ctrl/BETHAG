@@ -95,3 +95,29 @@ const expected = {
 };
 assert.deepEqual(inventory, expected, "Real PostgreSQL baseline inventory differs from the Production catalog.");
 console.log(JSON.stringify({ bootstrap: "PASS", engine: "PostgreSQL", inventory }, null, 2));
+
+const transferChecksSql = `
+SELECT json_build_object(
+  'public_wrapper_exists', to_regprocedure('public.close_condominium_member_transfer(uuid)') IS NOT NULL,
+  'private_implementation_exists', to_regprocedure('private.close_condominium_member_transfer(uuid)') IS NOT NULL,
+  'anon_denied_public_wrapper', NOT has_function_privilege('anon', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'authenticated_can_call_wrapper', has_function_privilege('authenticated', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'private_not_executable_by_public', NOT has_function_privilege('public', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'private_not_executable_by_anon', NOT has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'private_not_executable_by_authenticated', NOT has_function_privilege('authenticated', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'public_wrapper_search_path_empty', (SELECT proconfig @> ARRAY['search_path=""'] FROM pg_proc WHERE oid=to_regprocedure('public.close_condominium_member_transfer(uuid)')),
+  'private_implementation_search_path_empty', (SELECT proconfig @> ARRAY['search_path=""'] FROM pg_proc WHERE oid=to_regprocedure('private.close_condominium_member_transfer(uuid)')),
+  'checks_authentication', (SELECT position('AUTH_REQUIRED' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
+  'checks_workspace_permission', (SELECT position('can_manage_workspace_module' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
+  'rejects_open_financial_positions', (SELECT position('TRANSFER_FINANCIAL_POSITIONS_OPEN' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
+  'rejects_ownership_share_closure', (SELECT position('TRANSFER_QUOTA_NOT_CLOSABLE' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
+  'archives_outgoing_member', (SELECT position('position_status' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0 AND position('active=false' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
+  'marks_transfer_closed', (SELECT position('financial_positions_closed' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0 AND position('status=''Chiuso''' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0)
+)::text;
+`;
+const transferChecks = JSON.parse(psql(["-A", "-t", "-c", transferChecksSql], undefined).trim());
+for (const [check, passed] of Object.entries(transferChecks)) {
+  assert.equal(passed, true, `Transfer closure security/invariant check failed: ${check}`);
+}
+console.log(JSON.stringify({ transfer_closure_security_and_invariants: "PASS", checks: transferChecks }, null, 2));
+
