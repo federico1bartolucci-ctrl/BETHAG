@@ -11,8 +11,16 @@ const migrationFiles = [
   "20261017000004_bethag_baseline_security.sql",
   "20261017000005_bethag_baseline_grants.sql",
 ];
+const incrementalMigrations = [
+  "20261022202747_harden_close_member_transfer_search_path.sql",
+  "20261022210629_restrict_private_function_public_execute.sql",
+  "20261022210630_harden_default_privileges_and_private_execute.sql",
+  "20261022213000_restrict_close_member_transfer_execute.sql",
+];
+const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
-assert.deepEqual(actualFiles, migrationFiles, "The clean branch must contain only the five baseline migrations.");
+assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the four reviewed hardening migrations.");
+const migrationsToApply = actualFiles;
 
 function psql(args, input) {
   return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", ...args], {
@@ -48,7 +56,7 @@ const bootstrapSql = [
 ].join("\n");
 psql(["-c", bootstrapSql]);
 
-for (const filename of migrationFiles) {
+for (const filename of migrationsToApply) {
   console.log(`Applying ${filename} to isolated PostgreSQL...`);
   psql(["-f", path.join(directory, filename)]);
 }
