@@ -11,13 +11,19 @@ const migrationFiles = [
   "20261017000005_bethag_baseline_grants.sql",
 ];
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
-assert.deepEqual(actualFiles, migrationFiles, "The clean branch must contain only the five baseline migrations.");
+const baselineFiles = actualFiles.filter((name) => migrationFiles.includes(name));
+assert.deepEqual(baselineFiles, migrationFiles, "The clean branch must contain the five ordered baseline migrations.");
+const incrementalFiles = actualFiles.filter((name) => !migrationFiles.includes(name));
+for (const name of incrementalFiles) {
+  assert.match(name, /^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/, "Invalid incremental migration filename: " + name);
+}
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, actualFiles.length, "Duplicate migration version detected.");
 
 const migrations = await Promise.all(migrationFiles.map((name) => readFile(`${directory}/${name}`, "utf8")));
 const [schemaSql, indexSql, functionSql, securitySql, grantSql] = migrations;
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
 const inventory = {
-  migration_files: actualFiles.length,
+  migration_files: migrationFiles.length,
   tables: count(schemaSql, /^CREATE TABLE /gm),
   constraints: count(schemaSql, /^ALTER TABLE .* ADD CONSTRAINT /gm),
   indexes: count(indexSql, /^CREATE (?:UNIQUE )?INDEX /gm),
