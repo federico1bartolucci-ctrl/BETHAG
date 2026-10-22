@@ -36,6 +36,14 @@ A read-only query against the connected Production project confirmed 48 relation
 
 The live check was read-only. It did not modify Production, alter migration tracking, or establish that a recoverable backup exists.
 
+### Concrete privilege discrepancy found on 2026-10-22
+
+A second targeted live query enumerated the 34 public relations where `authenticated` has the PostgreSQL 17 `MAINTAIN` privilege. The baseline grants migration's explicit table grants for `authenticated` specify `DELETE, INSERT, SELECT, UPDATE` (and omit `MAINTAIN`); this is a confirmed difference between the current live relation ACLs and the explicit baseline grant statements, not a reason to blindly copy privileges. The 34 affected objects are:
+
+`communication_recipients`, `condominium_accounting_settings`, `condominium_allocation_intakes`, `condominium_allocation_rules`, `condominium_audit_log`, `condominium_budgets`, `condominium_consumption_readings`, `condominium_creation_intakes`, `condominium_expense_allocations`, `condominium_fiscal_carryover_compensations`, `condominium_fiscal_carryovers`, `condominium_fiscal_years`, `condominium_fund_availability`, `condominium_funds`, `condominium_installments`, `condominium_insurance_policies`, `condominium_ledger_entries`, `condominium_legal_cases`, `condominium_member_transfers`, `condominium_millesimal_tables`, `condominium_millesimal_values`, `condominium_payment_movements`, `condominium_register_items`, `condominium_suppliers`, `condominium_tax_obligations`, `condominium_unit_transformation_items`, `condominium_unit_transformations`, `condominium_units`, `condominium_work_documents`, `condominium_work_events`, `condominium_work_progress`, `condominium_works`, `portal_registration_requests`, `user_security_settings`.
+
+Do not add `MAINTAIN` to the baseline just to make counts match. Establish whether the live privilege is intentional, determine the exact ACL source/ownership/default-ACL behavior, and make the baseline reproduce the approved least-privilege target. This discrepancy keeps the ACL parity gate blocked.
+
 ## Controlled tracking cutover
 
 Only after the semantic parity gate and a recoverable Production backup are confirmed:
