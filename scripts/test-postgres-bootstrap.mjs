@@ -219,10 +219,41 @@ INSERT INTO public.condominium_members (id, condominium_id, name, role, active, 
 VALUES
  ('55555555-5555-4555-8555-555555555555', '33333333-3333-4333-8333-333333333333', 'Outgoing owner', 'resident', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444'),
  ('66666666-6666-4666-8666-666666666666', '33333333-3333-4333-8333-333333333333', 'Incoming owner', 'resident', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444');
+INSERT INTO auth.users (id) VALUES ('99999999-9999-4999-8999-999999999999');
+INSERT INTO public.profiles (id, full_name, email, role, active)
+VALUES ('99999999-9999-4999-8999-999999999999', 'CI unauthorized user', 'ci-outsider@example.invalid', 'resident', true);
 INSERT INTO public.condominium_member_transfers
  (id, workspace_id, condominium_id, unit_id, outgoing_member_id, incoming_member_id, transfer_date, status, data, created_by)
 VALUES
  ('77777777-7777-4777-8777-777777777777', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444', '55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666', DATE '2026-10-01', 'Confermato', '{}'::jsonb, '11111111-1111-4111-8111-111111111111');
+
+-- Negative authorization tests: outsider in a different workspace and no authenticated identity.
+DO $authz$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '99999999-9999-4999-8999-999999999999', true);
+  BEGIN
+    PERFORM public.close_condominium_member_transfer('77777777-7777-4777-8777-777777777777');
+    RAISE EXCEPTION 'UNAUTHORIZED_USER_CLOSED_TRANSFER';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT IN ('FORBIDDEN') THEN RAISE; END IF;
+  END;
+  IF NOT EXISTS (SELECT 1 FROM public.condominium_member_transfers WHERE id='77777777-7777-4777-8777-777777777777' AND status='Confermato' AND closed_at IS NULL) THEN
+    RAISE EXCEPTION 'UNAUTHORIZED_ATTEMPT_CHANGED_TRANSFER';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  BEGIN
+    PERFORM public.close_condominium_member_transfer('77777777-7777-4777-8777-777777777777');
+    RAISE EXCEPTION 'ANONYMOUS_USER_CLOSED_TRANSFER';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT IN ('AUTH_REQUIRED') THEN RAISE; END IF;
+  END;
+  IF NOT EXISTS (SELECT 1 FROM public.condominium_member_transfers WHERE id='77777777-7777-4777-8777-777777777777' AND status='Confermato' AND closed_at IS NULL) THEN
+    RAISE EXCEPTION 'ANONYMOUS_ATTEMPT_CHANGED_TRANSFER';
+  END IF;
+  PERFORM set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
+END;
+$authz$;
 
 DO $test$
 DECLARE v_ok boolean;
@@ -257,7 +288,9 @@ psql(["-v", "ON_ERROR_STOP=1"], functionalTransferSql);
 console.log(JSON.stringify({
   transfer_functional_test: "PASS",
   assertions: [
-    "confirmed transfer closes and records closed_at/closed_by",
+    "unauthenticated caller is rejected with AUTH_REQUIRED and cannot mutate transfer",
+    "authenticated outsider is rejected with FORBIDDEN and cannot mutate transfer",
+    "authorized workspace admin closes and records closed_at/closed_by",
     "outgoing owner archived and current_owner=false",
     "incoming owner remains active",
     "open unpaid installment blocks closure",
