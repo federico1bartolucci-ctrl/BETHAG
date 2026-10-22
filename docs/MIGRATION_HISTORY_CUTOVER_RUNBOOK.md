@@ -120,3 +120,9 @@ Only after the semantic parity gate and a recoverable Production backup are conf
 ## Safety boundary
 
 The planner only prints a proposed command sequence. It does not connect to Supabase and does not mutate the schema, data, or migration ledger. Do not use `db push`, reset, or baseline replay on Production as a substitute for the tracking cutover.
+
+### Supabase-managed default ACL boundary correction (2026-10-23)
+
+The clean baseline grant migration previously included `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin` statements. Hosted validation established that the migration connection is `postgres`, is not a member of `supabase_admin`, and receives SQLSTATE `42501` when attempting to change that role's default privileges. Those 12 statements have now been removed from `20261017000005_bethag_baseline_grants.sql`; the baseline no longer attempts to mutate a Supabase-managed role's ACL. The guard script now fails if such statements are reintroduced.
+
+This fixes the **unauthorized migration operation**; it does not magically erase the four Production catalog entries previously observed under `supabase_admin`. They are platform-owned defaults outside the connected role's authority. They remain an explicit catalog divergence until an authorized Supabase-supported operation or a documented platform policy establishes their disposition. Do not claim complete raw default-ACL parity, and do not try to gain membership in `supabase_admin` or alter its role privileges as a workaround. Production remains unchanged.
