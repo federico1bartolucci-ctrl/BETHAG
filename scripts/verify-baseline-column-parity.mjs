@@ -12,7 +12,7 @@ const expectedTables = snapshot.objects.tables.filter((table) => table.schema_na
 assert.equal(expectedTables.length, 47, "Expected 47 captured public tables.");
 
 const tableBlocks = new Map();
-const tableStart = /CREATE TABLE "public"\."([^"]+)" \(/g;
+const tableStart = /CREATE TABLE "public"\\."([^"]+)" \\(/g;
 for (const match of sql.matchAll(tableStart)) {
   const start = match.index + match[0].length;
   let depth = 1;
@@ -31,11 +31,9 @@ for (const match of sql.matchAll(tableStart)) {
 assert.equal(tableBlocks.size, expectedTables.length, "Baseline and snapshot public table counts differ.");
 
 function parseColumnLine(line) {
-  const match = line.match(/^\s{2}"([^"]+)"\s+(.+?),?$/);
+  const match = line.match(/^\\s{2}"([^"]+)"\\s+(.+?),?$/);
   if (!match) return null;
   const [, name, remainder] = match;
-  // Type ends before the column DEFAULT or NOT NULL clauses. Parenthesized
-  // type modifiers (for example numeric(14,2)) are retained.
   let type = "";
   let depth = 0;
   let quote = false;
@@ -52,7 +50,7 @@ function parseColumnLine(line) {
     }
   }
   if (!type) type = remainder.replace(/,$/, "").trim();
-  return { name, type: type.replaceAll('"', "").replace(/\s+/g, " ").trim(), notNull: /\bNOT NULL\b/i.test(remainder) };
+  return { name, type: type.replaceAll('"', "").replace(/\\s+/g, " ").trim(), notNull: /\\bNOT NULL\\b/i.test(remainder) };
 }
 
 const mismatches = [];
@@ -60,7 +58,7 @@ let columnsChecked = 0;
 for (const table of expectedTables) {
   const block = tableBlocks.get(table.table_name);
   assert.ok(block, `Baseline is missing table public.${table.table_name}`);
-  const actualColumns = block.split("\n").map(parseColumnLine).filter(Boolean);
+  const actualColumns = block.split("\\n").map(parseColumnLine).filter(Boolean);
   const expectedColumns = [...table.columns].sort((a, b) => a.position - b.position);
   const actualByName = new Map(actualColumns.map((column) => [column.name, column]));
   const expectedNames = expectedColumns.map((column) => column.name);
@@ -72,7 +70,7 @@ for (const table of expectedTables) {
     const actual = actualByName.get(expected.name);
     if (!actual) continue;
     columnsChecked++;
-    const normalizedExpectedType = expected.type.replace(/\s+/g, " ").trim().toLowerCase();
+    const normalizedExpectedType = expected.type.replace(/\\s+/g, " ").trim().toLowerCase();
     const normalizedActualType = actual.type.toLowerCase();
     if (normalizedActualType !== normalizedExpectedType || actual.notNull !== expected.not_null) {
       columnDifferences.push({
@@ -88,16 +86,15 @@ for (const table of expectedTables) {
 }
 assert.deepEqual(mismatches, [], "Baseline column names, SQL types, or NOT NULL attributes differ from captured Production schema.");
 
-
-const schemaSql = sql;
 const indexesSql = await readFile("supabase/migrations/20261017000002_bethag_baseline_indexes_views.sql", "utf8");
 const securitySql = await readFile("supabase/migrations/20261017000004_bethag_baseline_security.sql", "utf8");
 const expectedConstraints = expectedTables.flatMap((table) => table.constraints.map((constraint) => constraint.name)).sort();
-const actualConstraints = [...schemaSql.matchAll(/ADD CONSTRAINT "([^"]+)"/g)].map((match) => match[1]).sort();
+const actualConstraints = [...sql.matchAll(/ADD CONSTRAINT "([^"]+)"/g)].map((match) => match[1]).sort();
 assert.deepEqual(actualConstraints, expectedConstraints, "Baseline constraint names differ from captured Production schema.");
 
-const constraintBackedIndexNames = new Set(expectedConstraints);\nconst expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema === "public" && !constraintBackedIndexNames.has(index.name)).map((index) => index.name).sort();
-const actualIndexes = [...indexesSql.matchAll(/^CREATE (?:UNIQUE )?INDEX "?([^" ]+)"?\s/gm)].map((match) => match[1]).sort();
+const constraintBackedIndexNames = new Set(expectedConstraints);
+const expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema === "public" && !constraintBackedIndexNames.has(index.name)).map((index) => index.name).sort();
+const actualIndexes = [...indexesSql.matchAll(/^CREATE (?:UNIQUE )?INDEX "?([^" ]+)"?\\s/gm)].map((match) => match[1]).sort();
 assert.deepEqual(actualIndexes, expectedIndexes, "Baseline index names differ from captured Production schema.");
 
 const expectedPolicies = snapshot.objects.policies.filter((policy) => policy.schema === "public").map((policy) => policy.name).sort();
@@ -113,6 +110,10 @@ console.log(JSON.stringify({
   source_snapshot_date: snapshot.captured_at_utc,
   tables_checked: expectedTables.length,
   columns_checked: columnsChecked,
-  attributes_checked: ["column name", "SQL type", "NOT NULL"],\n  constraints_checked: actualConstraints.length,\n  indexes_checked: actualIndexes.length,\n  policies_checked: actualPolicies.length,\n  triggers_checked: actualTriggers.length,
-  note: "This compares the baseline with the captured read-only Production schema snapshot; defaults, constraints, indexes, policies and triggers require separate checks. No live Production connection or writes are performed.",
+  attributes_checked: ["column name", "SQL type", "NOT NULL"],
+  constraints_checked: actualConstraints.length,
+  indexes_checked: actualIndexes.length,
+  policies_checked: actualPolicies.length,
+  triggers_checked: actualTriggers.length,
+  note: "This compares the baseline with the captured read-only Production schema snapshot. No live Production connection or writes are performed.",
 }, null, 2));
