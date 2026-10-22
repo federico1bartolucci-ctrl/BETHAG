@@ -42,12 +42,12 @@ function parseColumnLine(line) {
     }
   }
   if (!type) type = remainder.replace(/,$/, "").trim();
-  const defaultMatch = remainder.match(/\bDEFAULT\\s+(.+?)(?=\s+NOT NULL\b|$)/i);
+    const defaultMatch = remainder.match(/\bDEFAULT\s+(.+?)(?=\s+NOT NULL\b|$)/i);
   const defaultValue = defaultMatch ? defaultMatch[1].replace(/,$/, "").trim() : null;
   return {
     name,
     type: type.replaceAll('"', "").replace(/\s+/g, " ").trim(),
-    notNull: /\bNOT NULL\\b/i.test(remainder),
+        notNull: /\bNOT NULL\b/i.test(remainder),
     defaultValue,
   };
 }
