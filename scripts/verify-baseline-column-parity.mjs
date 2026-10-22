@@ -97,6 +97,30 @@ const expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema 
 const actualIndexes = [...indexesSql.matchAll(/^CREATE (?:UNIQUE )?INDEX "?([^" ]+)"?\s/gm)].map((match) => match[1]).sort();
 assert.deepEqual(actualIndexes, expectedIndexes, "Baseline index names differ from captured Production schema.");
 
+const expectedStandaloneIndexes = snapshot.objects.indexes.filter((index) =>
+  index.schema === "public" && !constraintBackedIndexNames.has(index.name));
+const actualIndexStatements = [...indexesSql.matchAll(/CREATE (?:UNIQUE )?INDEX\b[\s\S]*?;/gi)].map((match) => match[0].trim());
+assert.equal(actualIndexStatements.length, expectedStandaloneIndexes.length, "Standalone index definition count differs from Production snapshot.");
+const actualIndexDefinitions = new Map(actualIndexStatements.map((statement) => {
+  const nameMatch = statement.match(/^CREATE (?:UNIQUE )?INDEX\s+"?([^"\s]+)"?/i);
+  assert.ok(nameMatch, "Could not parse index declaration: " + statement.slice(0, 160));
+  return [nameMatch[1], normalizeSql(statement)];
+}));
+const indexDefinitionDifferences = [];
+for (const expected of expectedStandaloneIndexes) {
+  const actual = actualIndexDefinitions.get(expected.name);
+  if (!actual || actual !== normalizeSql(expected.definition)) {
+    indexDefinitionDifferences.push({
+      name: expected.name,
+      expected: normalizeSql(expected.definition),
+      actual: actual ?? null,
+    });
+  }
+}
+assert.deepEqual(indexDefinitionDifferences, [], "Standalone index definitions differ from captured Production semantics.");
+
+
+
 const expectedPolicies = snapshot.objects.policies.filter((policy) => policy.schema === "public").map((policy) => policy.name).sort();
 const actualPolicies = [...securitySql.matchAll(/^CREATE POLICY "([^"]+)"/gm)].map((match) => match[1]).sort();
 assert.deepEqual(actualPolicies, expectedPolicies, "Baseline RLS policy names differ from captured Production schema.");
@@ -268,6 +292,7 @@ console.log(JSON.stringify({
   semantic_trigger_parity: "PASS",
   semantic_constraint_parity: "PASS",
   semantic_view_parity: "PASS",
+  semantic_index_parity: "PASS",
   source_snapshot_date: snapshot.captured_at_utc,
   tables_checked: expectedTables.length,
   columns_checked: columnsChecked,
