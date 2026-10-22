@@ -64,6 +64,7 @@ SELECT json_build_object(
   'functions', (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private') AND p.prokind IN ('f','p')),
   'policies', (SELECT count(*)::int FROM pg_policies WHERE schemaname IN ('public','private')),
   'rls_enabled_tables', (SELECT count(*)::int FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname IN ('public','private') AND t.relkind IN ('r','p') AND t.relrowsecurity),
+  'rls_policy_tables', (SELECT count(DISTINCT schemaname || '.' || tablename)::int FROM pg_policies WHERE schemaname IN ('public','private')),
   'triggers', (SELECT count(*)::int FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','private') AND NOT t.tgisinternal),
   'btree_gist', (SELECT count(*)::int FROM pg_extension WHERE extname='btree_gist')
 )::text;
@@ -80,6 +81,7 @@ const expected = {
   functions: 171,
   policies: 103,
   rls_enabled_tables: 47,
+  rls_policy_tables: 47,
   triggers: 146,
   btree_gist: 1,
 };
