@@ -241,7 +241,7 @@ BEGIN
     RAISE EXCEPTION 'UNAUTHORIZED_ATTEMPT_CHANGED_TRANSFER';
   END IF;
 
-  PERFORM set_config('request.jwt.claim.sub', '', true);
+  EXECUTE 'RESET request.jwt.claim.sub';
   BEGIN
     PERFORM public.close_condominium_member_transfer('77777777-7777-4777-8777-777777777777');
     RAISE EXCEPTION 'ANONYMOUS_USER_CLOSED_TRANSFER';
