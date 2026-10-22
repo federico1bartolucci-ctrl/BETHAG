@@ -43,7 +43,7 @@ assert.deepEqual(
 const relationGrantLines = grantsSql
   .split("\n")
   .map((line) => line.trim())
-  .filter((line) => /^GRANT\b/i.test(line) && /\bON TABLE public\./i.test(line) && !/\bUPDATE\s*\(/i.test(line));
+  .filter((line) => /^GRANT\b/i.test(line) && /\bON TABLE public\./i.test(line) && !/^GRANT\s+(?:SELECT|UPDATE|INSERT|REFERENCES)\s*\(/i.test(line));
 const relationGrants = relationGrantLines.map((line) => {
   const match = line.match(/^GRANT\s+(.+?)\s+ON TABLE public\.([a-zA-Z0-9_]+)\s+TO\s+([a-zA-Z0-9_]+)(?:\s+WITH GRANT OPTION)?;$/i);
   assert.ok(match, `Cannot parse relation grant: ${line}`);
