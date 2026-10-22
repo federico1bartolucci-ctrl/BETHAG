@@ -75,7 +75,7 @@ assert.match(runbook, /Concrete privilege discrepancy found on 2026-10-22/);
 assert.match(runbook, /34 public relations/);
 assert.match(runbook, /ACL parity gate blocked/);
 assert.match(runbook, /82 expanded default-ACL privilege entries/);
-assert.match(runbook, /supabase_admin` table defaults also include `MAINTAIN`/);
+assert.match(runbook, /Both live owners, `postgres` and `supabase_admin`, have table default ACLs granting `MAINTAIN` to `anon` and `authenticated`/);
 assert.match(runbook, /0 relation ACL entries with grant option/);
 assert.match(runbook, /0 explicit column ACL entries/);
 
