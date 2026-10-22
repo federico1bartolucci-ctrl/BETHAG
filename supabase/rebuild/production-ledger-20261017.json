@@ -1,8 +1,8 @@
 {
-  "captured_at_utc": "2026-10-17",
+  "captured_at_utc": "2026-10-22",
   "project_ref": "tctcgptrsmvgajqjgnev",
-  "source": "Supabase Production migration ledger; read-only export",
-  "count": 243,
+  "source": "Supabase Production migration ledger; read-only export refreshed after production hardening migration",
+  "count": 244,
   "migrations": [
     {
       "version": "20260928021707",
@@ -975,6 +975,10 @@
     {
       "version": "20261007072310",
       "name": "harden_trigger_function_security_for_launch"
+    },
+    {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
     }
   ]
 }
