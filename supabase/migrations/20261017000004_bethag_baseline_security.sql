@@ -215,6 +215,7 @@ CREATE POLICY "residents read own portal access" ON "public"."portal_access" AS 
    FROM condominiums c
   WHERE ((c.id = portal_access.condominium_id) AND (c.archived_at IS NULL)))) AND ((user_id = ( SELECT auth.uid() AS uid)) OR ((user_id IS NULL) AND (lower(email) = lower(COALESCE((( SELECT auth.jwt() AS jwt) ->> 'email'::text), ''::text)))))));
 
+DROP POLICY IF EXISTS "managers read portal registration requests" ON "public"."portal_registration_requests";
 CREATE POLICY "managers read portal registration requests" ON "public"."portal_registration_requests" AS PERMISSIVE FOR SELECT TO "authenticated" USING (private.can_manage_workspace_module(workspace_id, 'portale'::text));
 
 CREATE POLICY "managers update portal registration requests" ON "public"."portal_registration_requests" AS PERMISSIVE FOR UPDATE TO "authenticated" USING (private.can_manage_workspace_module(workspace_id, 'portale'::text)) WITH CHECK (private.can_manage_workspace_module(workspace_id, 'portale'::text));
