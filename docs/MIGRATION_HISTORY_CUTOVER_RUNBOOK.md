@@ -90,6 +90,16 @@ A fresh comparison was performed against the connected Production catalog and th
 
 **Conclusion:** ownership counts and function EXECUTE grants match; explicit relation ACL parity is blocked by 34 `authenticated MAINTAIN` entries; default-ACL parity is blocked by the four table-default differences above. The current baseline is **not fully ACL/ownership-parity verified for release**. Production remains unchanged.
 
+### ACL remediation CI verification (2026-10-23; Production unchanged)
+
+The branch now stages a second migration, `20261023000002_revoke_default_maintain.sql`, to remove `MAINTAIN` from default table ACLs for `anon` and `authenticated` under both `postgres` and `supabase_admin`. This complements `20261023000001_revoke_authenticated_maintain.sql`, which revokes the 34 direct grants.
+
+The PostgreSQL bootstrap test now asserts that the 34 target tables exist, that `authenticated` has no effective `MAINTAIN` on those tables after the migration chain, and that no `MAINTAIN` entries remain in the two owners' default ACLs for `anon` or `authenticated`. Commit `d3ebc047c91d5f42b841f8a855aeafce57cbaf37` passed:
+- [Build and real PostgreSQL 17 bootstrap](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/39865318708)
+- [Baseline safety checks](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/39865318709)
+
+This is a verified result on the CI PostgreSQL environment, not proof that hosted Supabase permits changing `supabase_admin` default ACLs in the same way under the Production migration role. Before release, validate the migration with a Supabase staging project using the same role/permissions as the intended deployment, then re-read the Production catalog after any separately approved rollout. Neither migration has been applied to Production; no Production schema, data, or migration ledger was changed. The overall release/cutover gate remains blocked until the broader catalog parity and recovery-point requirements in this runbook are satisfied.
+
 ## Branch-to-main migration-history delta (2026-10-22)
 
 The current branch comparison reports 100 commits ahead of `main`. The branch removes the 243 historical migration files and introduces five baseline migrations with versions later than the historical chain through `20261007072310`; the separately tracked incremental migration `20261022202747` is already present in the refreshed 244-entry Production ledger. This is an intentional history consolidation, not a normal additive migration rollout. Merging the branch alone would replace the repository's historical migration files; it would not reconcile the 244 remote ledger rows. Conversely, applying the five baseline SQL files to the populated Production database would be unsafe.
