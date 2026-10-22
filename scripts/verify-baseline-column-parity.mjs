@@ -105,8 +105,168 @@ const expectedTriggers = snapshot.objects.triggers.filter((trigger) => trigger.s
 const actualTriggers = [...securitySql.matchAll(/^CREATE (?:CONSTRAINT )?TRIGGER "?([^" ]+)"?/gm)].map((match) => match[1]).sort();
 assert.deepEqual(actualTriggers, expectedTriggers, "Baseline trigger names differ from captured Production schema.");
 
+
+function normalizeSql(value) {
+  return value
+    .replace(/"((?:""|[^"])*)"/g, (_, identifier) => identifier.replace(/""/g, '"'))
+    .replace(/\bpublic\./gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([(),;])\s*/g, "$1")
+    .trim()
+    .replace(/;$/, "")
+    .toLowerCase();
+}
+
+function readBalancedParentheses(text, openIndex) {
+  assert.equal(text[openIndex], "(", "Expected opening parenthesis.");
+  let depth = 0;
+  let singleQuoted = false;
+  let doubleQuoted = false;
+  for (let i = openIndex; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (singleQuoted) {
+      if (char === "'" && next === "'") { i += 1; continue; }
+      if (char === "'") singleQuoted = false;
+      continue;
+    }
+    if (doubleQuoted) {
+      if (char === '"' && next === '"') { i += 1; continue; }
+      if (char === '"') doubleQuoted = false;
+      continue;
+    }
+    if (char === "'") { singleQuoted = true; continue; }
+    if (char === '"') { doubleQuoted = true; continue; }
+    if (char === "(") depth += 1;
+    if (char === ")" && --depth === 0) return { value: text.slice(openIndex + 1, i), end: i + 1 };
+  }
+  assert.fail("Unbalanced SQL parentheses.");
+}
+
+function parsePolicy(statement) {
+  const header = statement.match(/^CREATE POLICY "((?:""|[^"])*)" ON "([^"]+)"\."([^"]+)" AS (PERMISSIVE|RESTRICTIVE) FOR (ALL|SELECT|INSERT|UPDATE|DELETE) TO (.+?)\s+(USING|WITH CHECK)\s*\(/i);
+  assert.ok(header, "Could not parse policy declaration: " + statement.slice(0, 140));
+  const [, name, schema, table, permissive, command, roleText, firstClause] = header;
+  const roles = roleText.split(",").map((role) => role.trim().replace(/^"|"$/g, "").toLowerCase()).sort();
+  let cursor = header[0].length - 1;
+  const first = readBalancedParentheses(statement, cursor);
+  let using = null, check = null;
+  if (firstClause.toUpperCase() === "USING") using = first.value;
+  else check = first.value;
+  cursor = first.end;
+  const rest = statement.slice(cursor).trim().replace(/;\s*$/, "");
+  if (rest) {
+    const next = rest.match(/^(USING|WITH CHECK)\s*\(/i);
+    assert.ok(next, "Unexpected trailing policy SQL for " + name + ": " + rest);
+    const open = cursor + statement.slice(cursor).search(/\S/) + next[0].lastIndexOf("(");
+    const parsed = readBalancedParentheses(statement, open);
+    if (next[1].toUpperCase() === "USING") using = parsed.value;
+    else check = parsed.value;
+    assert.equal(statement.slice(parsed.end).trim().replace(/;$/, ""), "", "Unexpected trailing policy text for " + name);
+  }
+  return { name: name.replace(/""/g, '"'), schema, table, permissive, command, roles, using, check };
+}
+
+const policyStatements = securitySql.split(/\n/).map((line) => line.trim()).filter((line) => line.startsWith("CREATE POLICY "));
+const actualPolicyDefinitions = policyStatements.map(parsePolicy);
+const expectedPolicyDefinitions = snapshot.objects.policies.filter((policy) => policy.schema === "public");
+assert.equal(actualPolicyDefinitions.length, expectedPolicyDefinitions.length, "Policy definition count differs from Production snapshot.");
+const actualPoliciesByName = new Map(actualPolicyDefinitions.map((policy) => [policy.name, policy]));
+const policyDefinitionDifferences = [];
+for (const expected of expectedPolicyDefinitions) {
+  const actual = actualPoliciesByName.get(expected.name);
+  if (!actual) {
+    policyDefinitionDifferences.push({ name: expected.name, reason: "missing declaration" });
+    continue;
+  }
+  const comparable = {
+    schema: actual.schema,
+    table: actual.table,
+    permissive: actual.permissive.toUpperCase(),
+    command: actual.command.toUpperCase(),
+    roles: actual.roles,
+    using: actual.using === null ? null : normalizeSql(actual.using),
+    check: actual.check === null ? null : normalizeSql(actual.check),
+  };
+  const wanted = {
+    schema: expected.schema,
+    table: expected.table,
+    permissive: expected.permissive.toUpperCase(),
+    command: expected.command.toUpperCase(),
+    roles: [...expected.roles].map((role) => role.toLowerCase()).sort(),
+    using: expected.using === null ? null : normalizeSql(expected.using),
+    check: expected.check === null ? null : normalizeSql(expected.check),
+  };
+  if (JSON.stringify(comparable) !== JSON.stringify(wanted)) {
+    policyDefinitionDifferences.push({ name: expected.name, expected: wanted, actual: comparable });
+  }
+}
+assert.deepEqual(policyDefinitionDifferences, [], "RLS policy definitions differ from captured Production semantics.");
+
+const triggerStatements = securitySql.split(/\n/).map((line) => line.trim()).filter((line) => /^CREATE (?:CONSTRAINT )?TRIGGER\b/i.test(line));
+const expectedTriggerDefinitions = snapshot.objects.triggers.filter((trigger) => trigger.schema === "public");
+assert.equal(triggerStatements.length, expectedTriggerDefinitions.length, "Trigger definition count differs from Production snapshot.");
+const triggerDifferences = [];
+const triggerKey = (schema, table, name) => schema + "." + table + "." + name;
+const actualTriggersByKey = new Map(triggerStatements.map((statement) => {
+  const match = statement.match(/^CREATE (?:CONSTRAINT )?TRIGGER "?([^"\s]+)"?[\s\S]*?\sON\s+"?([^".\s]+)"?\."?([^"\s]+)"?\s/i);
+  assert.ok(match, "Could not parse trigger declaration: " + statement.slice(0, 160));
+  return [triggerKey("public", match[3], match[1]), statement];
+}));
+for (const expected of expectedTriggerDefinitions) {
+  const key = triggerKey(expected.schema, expected.table, expected.name);
+  const actual = actualTriggersByKey.get(key);
+  if (!actual || normalizeSql(actual) !== normalizeSql(expected.definition)) {
+    triggerDifferences.push({ key, expected: normalizeSql(expected.definition), actual: actual ? normalizeSql(actual) : null });
+  }
+}
+assert.deepEqual(triggerDifferences, [], "Trigger definitions differ from captured Production semantics.");
+
+const expectedConstraintDefinitions = expectedTables.flatMap((table) => table.constraints
+  .filter((constraint) => constraint.type !== "t")
+  .map((constraint) => ({ table: table.table_name, ...constraint })));
+const constraintStatements = [...sql.matchAll(/^ALTER TABLE "public"\."([^"]+)" ADD CONSTRAINT "([^"]+)" ([\s\S]*?);$/gm)];
+assert.equal(constraintStatements.length, expectedConstraintDefinitions.length, "Constraint definition count differs from Production snapshot.");
+const actualConstraintDefinitions = new Map(constraintStatements.map((match) => [
+  match[1] + "." + match[2],
+  normalizeSql(match[3]),
+]));
+const constraintDifferences = [];
+for (const expected of expectedConstraintDefinitions) {
+  const key = expected.table + "." + expected.name;
+  const actual = actualConstraintDefinitions.get(key);
+  if (actual !== normalizeSql(expected.definition)) {
+    constraintDifferences.push({ key, expected: normalizeSql(expected.definition), actual: actual ?? null });
+  }
+}
+assert.deepEqual(constraintDifferences, [], "Constraint definitions differ from captured Production semantics.");
+
+const expectedViews = snapshot.objects.views.filter((view) => view.schema === "public");
+const actualViewStatements = [...indexesSql.matchAll(/CREATE OR REPLACE VIEW "public"\."([^"]+)"(?:\s+WITH\s*\(([^)]*)\))?\s+AS\s+([\s\S]*?);/gi)];
+assert.equal(actualViewStatements.length, expectedViews.length, "View definition count differs from Production snapshot.");
+const viewDifferences = [];
+for (const expected of expectedViews) {
+  const actual = actualViewStatements.find((match) => match[1] === expected.name);
+  if (!actual) {
+    viewDifferences.push({ name: expected.name, reason: "missing declaration" });
+    continue;
+  }
+  const actualOptions = (actual[2] ?? "").split(",").map((option) => option.replace(/\s+/g, "").toLowerCase()).filter(Boolean).sort();
+  const expectedOptions = [...(expected.options ?? [])].map((option) => option.replace(/\s+/g, "").toLowerCase()).sort();
+  const actualDefinition = normalizeSql(actual[3]);
+  const expectedDefinition = normalizeSql(expected.definition);
+  if (JSON.stringify(actualOptions) !== JSON.stringify(expectedOptions) || actualDefinition !== expectedDefinition) {
+    viewDifferences.push({ name: expected.name, expectedOptions, actualOptions, expectedDefinition, actualDefinition });
+  }
+}
+assert.deepEqual(viewDifferences, [], "View definitions or security options differ from captured Production semantics.");
+
 console.log(JSON.stringify({
   baseline_schema_column_parity: "PASS",
+  semantic_policy_parity: "PASS",
+  semantic_trigger_parity: "PASS",
+  semantic_constraint_parity: "PASS",
+  semantic_view_parity: "PASS",
   source_snapshot_date: snapshot.captured_at_utc,
   tables_checked: expectedTables.length,
   columns_checked: columnsChecked,
