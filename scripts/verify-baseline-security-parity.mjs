@@ -27,14 +27,18 @@ for (const match of functionSql.matchAll(declaration)) {
   const bodyStart = functionSql.indexOf("AS $function$", start);
   assert.notEqual(bodyStart, -1, `Function declaration has no AS $function$: ${match[0]}`);
   const header = functionSql.slice(start, bodyStart);
+  const bodyEnd = functionSql.indexOf("$function$", bodyStart + "AS $function$".length);
+  assert.notEqual(bodyEnd, -1, `Function body has no closing $function$: ${match[0]}`);
+  const body = functionSql.slice(bodyStart + "AS $function$".length, bodyEnd).replace(/\r\n/g, "\n").trim();
   const schema = match[1].replaceAll('"', "");
   const name = match[2].replaceAll('"', "");
   const pathMatch = header.match(/SET\s+search_path\s+(?:TO|=)\s*([^;\n]+)/i);
-  const normalizePath = (value) => value.split(",").map((part) => part.trim().replace(/^['"]|['"]$/g, "").trim()).join(",");
+ const normalizePath = (value) => value.split(",").map((part) => part.trim().replace(/^ ['"]|['"]$/g, "").trim()).join(",");
   actualFunctions.push({
     key: key(schema, name),
     securityDefiner: /\bSECURITY\s+DEFINER\b/i.test(header),
     searchPath: pathMatch ? normalizePath(pathMatch[1]) : null,
+    body,
   });
 }
 assert.equal(actualFunctions.length, productionFunctions.length, "Baseline function count differs from Production snapshot.");
@@ -63,6 +67,23 @@ for (const [name, expected] of expectedByKey) {
 assert.deepEqual(securityMismatches, [], "SECURITY DEFINER settings differ from the captured Production catalog.");
 assert.deepEqual(searchPathMismatches, [], "Function search_path settings differ from the captured Production catalog.");
 
+const extractProductionBody = (definition) => {
+  const start = definition.indexOf("AS $function$");
+  if (start < 0) return null;
+  const end = definition.indexOf("$function$", start + "AS $function$".length);
+  if (end < 0) return null;
+  return definition.slice(start + "AS $function$".length, end).replace(/\r\n/g, "\n").trim();
+};
+const bodyMismatches = [];
+for (const [name, expected] of expectedByKey) {
+  const actual = actualByKey.get(name);
+  const expectedBody = extractProductionBody(expected.definition);
+  if (expectedBody === null || actual.body !== expectedBody) {
+    bodyMismatches.push({ function: name, productionBodyCaptured: expectedBody !== null, baselineBodyMatches: actual.body === expectedBody });
+  }
+}
+assert.deepEqual(bodyMismatches, [], "Function bodies differ from the captured Production definitions.");
+
 const productionFunctionGrants = accessCatalog.objects.functionGrants
   .filter((grant) => grant.grantee !== "postgres")
   .map((grant) => `${grant.schema}.${grant.function}|${grant.grantee}|${Boolean(grant.grantable)}`)
@@ -83,6 +104,7 @@ console.log(JSON.stringify({
   captured_production_functions: productionFunctions.length,
   security_definer_settings_checked: productionFunctions.length,
   search_path_settings_checked: productionFunctions.length,
+  exact_function_bodies_checked: productionFunctions.length,
   function_execute_grants_checked: productionFunctionGrants.length,
   source_snapshot_date: accessCatalog.captured_at_utc,
   note: "Compares the baseline with the captured read-only Production catalog from 2026-10-17; it does not query live Production or perform a deployment.",
