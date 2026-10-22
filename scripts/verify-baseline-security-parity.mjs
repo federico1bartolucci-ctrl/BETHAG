@@ -72,7 +72,7 @@ const parsedBaselineGrants = baselineGrantLines.map((line) => {
   const match = line.match(/^GRANT EXECUTE ON FUNCTION "?([^".]+)"?\."?([^"(]+)"?\([^)]*\) TO ([^;]+);$/i);
   assert.ok(match, `Cannot parse function grant: ${line}`);
   const recipient = match[3].replace(/ WITH GRANT OPTION/i, "").trim();
-  return `${match[1]}.${match[2]}|${recipient}|/i.test("") ? "" : `${match[1]}.${match[2]}|${recipient}|${/WITH GRANT OPTION/i.test(match[3])}`;
+  return `${match[1]}.${match[2]}|${recipient}|${/WITH GRANT OPTION/i.test(match[3])}`;
 }).sort();
 assert.equal(productionFunctionGrants.length, 218, "Captured Production function grant count changed.");
 assert.equal(parsedBaselineGrants.length, productionFunctionGrants.length, "Function EXECUTE grant count differs from Production.");
