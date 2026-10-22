@@ -24,7 +24,7 @@ assert.ok(incrementalFiles.every((name) => name.slice(0, 14) > expectedFiles.at(
 const ledger = JSON.parse(await readFile(ledgerPath, "utf8"));
 assert.equal(ledger.project_ref, "tctcgptrsmvgajqjgnev", "The ledger must be the captured BETHAG Production ledger.");
 assert.equal(ledger.count, ledger.migrations.length, "Production ledger count does not match its records.");
-assert.equal(ledger.count, 243, "Refresh the captured Production ledger and update this assertion if Production history changes.");
+assert.equal(ledger.count, 244, "Refresh the captured Production ledger and update this assertion if Production history changes.");
 
 const ledgerVersions = ledger.migrations.map(({ version }) => version);
 assert.ok(ledgerVersions.every((version) => /^\d{14}$/.test(version)), "Every Production migration version must be 14 digits.");
