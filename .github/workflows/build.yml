@@ -23,6 +23,9 @@ jobs:
       - name: Verify clean database baseline
         run: npm run verify:baseline
 
+      - name: Verify Production function security and ACL parity
+        run: npm run verify:security-parity
+
       - name: Test fresh PostgreSQL bootstrap
         run: npm test
 
