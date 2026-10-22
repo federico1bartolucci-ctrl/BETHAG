@@ -123,10 +123,11 @@ console.log(JSON.stringify({ transfer_closure_security_and_invariants: "PASS", c
 
 // End-to-end transfer closure test on disposable PostgreSQL fixtures.
 // Every fixture is inside a transaction that is rolled back at the end.
-const functionalTransferSql = \`
+const functionalTransferSql = `
 BEGIN;
 SET LOCAL search_path = public, private, auth, extensions;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
+INSERT INTO auth.users (id) VALUES ('11111111-1111-4111-8111-111111111111');
 INSERT INTO public.profiles (id, full_name, email, role, active)
 VALUES ('11111111-1111-4111-8111-111111111111', 'CI transfer admin', 'ci-transfer-admin@example.invalid', 'admin', true);
 INSERT INTO public.workspaces (id, name, plan)
@@ -139,8 +140,8 @@ INSERT INTO public.condominium_units (id, workspace_id, condominium_id, unit_cod
 VALUES ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'CI-01');
 INSERT INTO public.condominium_members (id, condominium_id, name, role, active, data, unit_id)
 VALUES
- ('55555555-5555-4555-8555-555555555555', '33333333-3333-4333-8333-333333333333', 'Outgoing owner', 'owner', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444'),
- ('66666666-6666-4666-8666-666666666666', '33333333-3333-4333-8333-333333333333', 'Incoming owner', 'owner', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444');
+ ('55555555-5555-4555-8555-555555555555', '33333333-3333-4333-8333-333333333333', 'Outgoing owner', 'resident', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444'),
+ ('66666666-6666-4666-8666-666666666666', '33333333-3333-4333-8333-333333333333', 'Incoming owner', 'resident', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444');
 INSERT INTO public.condominium_member_transfers
  (id, workspace_id, condominium_id, unit_id, outgoing_member_id, incoming_member_id, transfer_date, status, data, created_by)
 VALUES
@@ -174,7 +175,7 @@ BEGIN
 END;
 $test$;
 ROLLBACK;
-\`;
+`;
 psql(["-v", "ON_ERROR_STOP=1"], functionalTransferSql);
 console.log(JSON.stringify({
   transfer_functional_test: "PASS",
