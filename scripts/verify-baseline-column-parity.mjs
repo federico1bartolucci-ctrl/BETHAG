@@ -96,7 +96,7 @@ const expectedConstraints = expectedTables.flatMap((table) => table.constraints.
 const actualConstraints = [...schemaSql.matchAll(/ADD CONSTRAINT "([^"]+)"/g)].map((match) => match[1]).sort();
 assert.deepEqual(actualConstraints, expectedConstraints, "Baseline constraint names differ from captured Production schema.");
 
-const expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema === "public").map((index) => index.name).sort();
+const constraintBackedIndexNames = new Set(expectedConstraints);\nconst expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema === "public" && !constraintBackedIndexNames.has(index.name)).map((index) => index.name).sort();
 const actualIndexes = [...indexesSql.matchAll(/^CREATE (?:UNIQUE )?INDEX "?([^" ]+)"?\s/gm)].map((match) => match[1]).sort();
 assert.deepEqual(actualIndexes, expectedIndexes, "Baseline index names differ from captured Production schema.");
 
