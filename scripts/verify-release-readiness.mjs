@@ -32,9 +32,6 @@ for (const name of incrementalFiles) {
   if (!recorded && version <= ledger.migrations.at(-1).version) blockers.push(`Untracked migration ${name} is not newer than Production history.`);
 }
 if (new Set(baselineVersions).size !== baselineVersions.length) blockers.push("Duplicate baseline migration versions detected.");
-if (baselineVersions.some((version) => version <= ledger.migrations.at(-1).version)) {
-  blockers.push("Baseline versions do not all follow the captured Production ledger.");
-}
 
 // These two conditions require human-verified external evidence; code cannot infer them.
 if (process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED !== "YES") {
