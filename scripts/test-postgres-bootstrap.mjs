@@ -98,6 +98,55 @@ const expected = {
 assert.deepEqual(inventory, expected, "Real PostgreSQL baseline inventory differs from the Production catalog.");
 console.log(JSON.stringify({ bootstrap: "PASS", engine: "PostgreSQL", inventory }, null, 2));
 
+const aclChecksSql = `
+WITH target_tables(table_name) AS (
+  VALUES
+  ('communication_recipients'), ('condominium_accounting_settings'),
+  ('condominium_allocation_intakes'), ('condominium_allocation_rules'),
+  ('condominium_audit_log'), ('condominium_budgets'),
+  ('condominium_consumption_readings'), ('condominium_creation_intakes'),
+  ('condominium_expense_allocations'), ('condominium_fiscal_carryover_compensations'),
+  ('condominium_fiscal_carryovers'), ('condominium_fiscal_years'),
+  ('condominium_fund_availability'), ('condominium_funds'),
+  ('condominium_installments'), ('condominium_insurance_policies'),
+  ('condominium_ledger_entries'), ('condominium_legal_cases'),
+  ('condominium_member_transfers'), ('condominium_millesimal_tables'),
+  ('condominium_millesimal_values'), ('condominium_payment_movements'),
+  ('condominium_register_items'), ('condominium_suppliers'),
+  ('condominium_tax_obligations'), ('condominium_unit_transformation_items'),
+  ('condominium_unit_transformations'), ('condominium_units'),
+  ('condominium_work_documents'), ('condominium_work_events'),
+  ('condominium_work_progress'), ('condominium_works'),
+  ('portal_registration_requests'), ('user_security_settings')
+),
+default_acl_maintain AS (
+  SELECT count(*)::int AS n
+  FROM pg_default_acl d
+  CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+  WHERE d.defaclnamespace = 'public'::regnamespace
+    AND d.defaclobjtype = 'r'
+    AND d.defaclrole IN ('postgres'::regrole, 'supabase_admin'::regrole)
+    AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole)
+    AND a.privilege_type = 'MAINTAIN'
+)
+SELECT json_build_object(
+  'target_table_count', (SELECT count(*)::int FROM target_tables),
+  'authenticated_maintain_grants', (
+    SELECT count(*)::int
+    FROM target_tables t
+    JOIN pg_class c ON c.relname=t.table_name
+    JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname='public'
+    WHERE has_table_privilege('authenticated', c.oid, 'MAINTAIN')
+  ),
+  'default_maintain_grants', (SELECT n FROM default_acl_maintain)
+)::text;
+`;
+const aclChecks = JSON.parse(psql(["-A", "-t", "-c", aclChecksSql], undefined).trim());
+assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables in the MAINTAIN remediation.");
+assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
+assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres/supabase_admin default ACLs for anon/authenticated.");
+console.log(JSON.stringify({ acl_remediation: "PASS", checks: aclChecks }, null, 2));
+
 const transferChecksSql = `
 SELECT json_build_object(
   'public_wrapper_exists', to_regprocedure('public.close_condominium_member_transfer(uuid)') IS NOT NULL,
