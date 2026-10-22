@@ -38,7 +38,7 @@ assert.ok(baselineVersions.every((version) => /^\d{14}$/.test(version)), "Every 
 const latestProductionVersion = ledgerVersions.at(-2);
 assert.ok(
   allMigrationVersions.every((version) => version > latestProductionVersion),
-  "Baseline versions must follow the latest captured Production migration version.",
+  "Baseline and incremental versions must follow the historical ledger preceding the incremental migration.",
 );
 
 const sql = Object.fromEntries(await Promise.all(expectedFiles.map(async (name) => [
