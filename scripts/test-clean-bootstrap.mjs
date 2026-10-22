@@ -35,7 +35,7 @@ const inventory = {
 };
 assert.deepEqual(inventory, {
   migration_files: 5, tables: 47, constraints: 304, indexes: 193, views: 1,
-  functions: 171, policies: 103, triggers: 146, grants: 376,
+  functions: 171, policies: 103, triggers: 146, grants: 378,
 }, "Clean baseline inventory differs from the expected five-migration rebuild.");
 
 const db = new PGlite();
