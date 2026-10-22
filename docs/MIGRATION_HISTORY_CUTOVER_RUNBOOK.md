@@ -30,6 +30,12 @@ The captured access catalog `supabase/rebuild/production-access-catalog-correcte
 
 The current count-based checks are necessary but not sufficient for this semantic parity gate.
 
+## Live Production ACL spot-check (read-only, 2026-10-22)
+
+A read-only query against the connected Production project confirmed 48 relation-like objects in `public` (47 tables and one view), explicit relation ACL entries on all 48, six default ACL records, and no explicit column-level ACL entries in `public` or `private`. The effective ACL summary shows `authenticated` has broad privileges on most tables (SELECT on 48; DELETE on 43; INSERT/UPDATE on 42; MAINTAIN on 34), while `service_role` and `postgres` have all eight relation privileges on all 48 objects. This is a factual snapshot, not a parity pass: the existing baseline grants file must be compared object-by-object and privilege-by-privilege against these live ACLs before release. In particular, the generated baseline SQL includes `WITH GRANT OPTION` for postgres in many statements, while the read-only ACL expansion does not report grantable flags for the current relation ACL entries; ownership-derived capabilities must be distinguished from explicit grant options rather than normalized away.
+
+The live check was read-only. It did not modify Production, alter migration tracking, or establish that a recoverable backup exists.
+
 ## Controlled tracking cutover
 
 Only after the semantic parity gate and a recoverable Production backup are confirmed:
