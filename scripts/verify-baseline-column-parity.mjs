@@ -42,7 +42,14 @@ function parseColumnLine(line) {
     }
   }
   if (!type) type = remainder.replace(/,$/, "").trim();
-  return { name, type: type.replaceAll('"', "").replace(/\s+/g, " ").trim(), notNull: /\bNOT NULL\b/i.test(remainder) };
+  const defaultMatch = remainder.match(/\\bDEFAULT\\s+(.+?)(?=\\s+NOT NULL\\b|$)/i);
+  const defaultValue = defaultMatch ? defaultMatch[1].replace(/,$/, "").trim() : null;
+  return {
+    name,
+    type: type.replaceAll('"', "").replace(/\\s+/g, " ").trim(),
+    notNull: /\\bNOT NULL\\b/i.test(remainder),
+    defaultValue,
+  };
 }
 
 const mismatches = [];
@@ -64,13 +71,19 @@ for (const table of expectedTables) {
     columnsChecked++;
     const normalizedExpectedType = expected.type.replace(/\s+/g, " ").trim().toLowerCase();
     const normalizedActualType = actual.type.toLowerCase();
-    if (normalizedActualType !== normalizedExpectedType || actual.notNull !== expected.not_null) {
-      columnDifferences.push({ column: expected.name, expected: { type: normalizedExpectedType, not_null: expected.not_null }, actual: { type: normalizedActualType, not_null: actual.notNull } });
+    const normalizedExpectedDefault = expected.default === null ? null : expected.default.replace(/\\s+/g, " ").trim().toLowerCase();
+    const normalizedActualDefault = actual.defaultValue === null ? null : actual.defaultValue.replace(/\\s+/g, " ").trim().toLowerCase();
+    if (
+      normalizedActualType !== normalizedExpectedType ||
+      actual.notNull !== expected.not_null ||
+      normalizedActualDefault !== normalizedExpectedDefault
+    ) {
+      columnDifferences.push({ column: expected.name, expected: { type: normalizedExpectedType, not_null: expected.not_null, default: normalizedExpectedDefault }, actual: { type: normalizedActualType, not_null: actual.notNull, default: normalizedActualDefault } });
     }
   }
   if (missing.length || unexpected.length || columnDifferences.length) mismatches.push({ table: table.table_name, missing, unexpected, columnDifferences });
 }
-assert.deepEqual(mismatches, [], "Baseline column names, SQL types, or NOT NULL attributes differ from captured Production schema.");
+assert.deepEqual(mismatches, [], "Baseline column names, SQL types, NOT NULL attributes, or defaults differ from captured Production schema.");
 
 const indexesSql = await readFile("supabase/migrations/20261017000002_bethag_baseline_indexes_views.sql", "utf8");
 const securitySql = await readFile("supabase/migrations/20261017000004_bethag_baseline_security.sql", "utf8");
@@ -96,7 +109,7 @@ console.log(JSON.stringify({
   source_snapshot_date: snapshot.captured_at_utc,
   tables_checked: expectedTables.length,
   columns_checked: columnsChecked,
-  attributes_checked: ["column name", "SQL type", "NOT NULL"],
+  attributes_checked: ["column name", "SQL type", "NOT NULL", "DEFAULT", "column order"],
   constraints_checked: actualConstraints.length,
   indexes_checked: actualIndexes.length,
   policies_checked: actualPolicies.length,
