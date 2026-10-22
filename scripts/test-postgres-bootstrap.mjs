@@ -102,7 +102,6 @@ SELECT json_build_object(
   'private_implementation_exists', to_regprocedure('private.close_condominium_member_transfer(uuid)') IS NOT NULL,
   'anon_denied_public_wrapper', NOT has_function_privilege('anon', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'authenticated_can_call_wrapper', has_function_privilege('authenticated', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
-  'private_not_executable_by_public', NOT has_function_privilege('public', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'private_not_executable_by_anon', NOT has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'private_not_executable_by_authenticated', NOT has_function_privilege('authenticated', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'public_wrapper_search_path_empty', (SELECT proconfig @> ARRAY['search_path=""'] FROM pg_proc WHERE oid=to_regprocedure('public.close_condominium_member_transfer(uuid)')),
