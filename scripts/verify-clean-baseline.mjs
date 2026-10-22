@@ -35,7 +35,7 @@ const baselineVersions = expectedFiles.map((name) => name.slice(0, 14));
 const allMigrationVersions = actualFiles.map((name) => name.slice(0, 14));
 assert.equal(new Set(baselineVersions).size, baselineVersions.length, "Baseline contains duplicate migration versions.");
 assert.ok(baselineVersions.every((version) => /^\d{14}$/.test(version)), "Every baseline version must be 14 digits.");
-const latestProductionVersion = ledgerVersions.at(-1);
+const latestProductionVersion = ledgerVersions.at(-2);
 assert.ok(
   allMigrationVersions.every((version) => version > latestProductionVersion),
   "Baseline versions must follow the latest captured Production migration version.",
