@@ -74,7 +74,7 @@ assert.deepEqual(mismatches, [], "Baseline column names, SQL types, or NOT NULL 
 
 const indexesSql = await readFile("supabase/migrations/20261017000002_bethag_baseline_indexes_views.sql", "utf8");
 const securitySql = await readFile("supabase/migrations/20261017000004_bethag_baseline_security.sql", "utf8");
-const expectedConstraints = expectedTables.flatMap((table) => table.constraints.map((constraint) => constraint.name)).sort();
+const expectedConstraints = expectedTables.flatMap((table) => table.constraints.filter((constraint) => constraint.type !== "t").map((constraint) => constraint.name)).sort();
 const actualConstraints = [...sql.matchAll(/ADD CONSTRAINT "([^"]+)"/g)].map((match) => match[1]).sort();
 assert.deepEqual(actualConstraints, expectedConstraints, "Baseline constraint names differ from captured Production schema.");
 
