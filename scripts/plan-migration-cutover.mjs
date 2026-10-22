@@ -25,6 +25,7 @@ const report = {
   production_project_ref: ledger.project_ref,
   production_records_to_reconcile: ledger.migrations.length,
   baseline_records_to_register: baseline.length,
+  incremental_migrations_after_baseline: incrementalFiles.map((name) => ({ name, version: parseVersion(name) })),
   production_latest_version: ledger.migrations.at(-1).version,
   baseline_versions: baseline,
   action: "NOT_EXECUTED",
