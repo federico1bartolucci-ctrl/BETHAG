@@ -17,7 +17,7 @@ assert.deepEqual(actualFiles, migrationFiles, "The clean branch must contain onl
 function psql(args, input) {
   return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", ...args], {
     encoding: "utf8",
-    stdio: input === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
+    stdio: ["pipe", "pipe", "inherit"],
     input,
   });
 }
