@@ -39,6 +39,14 @@ assert.deepEqual(
   "Baseline must not grant MAINTAIN by default to anon or authenticated.",
 );
 
+// supabase_admin is a Supabase-managed role. The hosted migration role is not
+// authorized to alter its default ACL; the baseline must not attempt to do so.
+assert.doesNotMatch(
+  grantsSql,
+  /ALTER DEFAULT PRIVILEGES\\s+FOR\\s+ROLE\\s+supabase_admin\\b/i,
+  "Baseline must not attempt to mutate Supabase-managed supabase_admin default privileges.",
+);
+
 // Relation-level grants are distinct from column-level UPDATE grants.
 // Production's catalog has no explicit column ACLs and no relation grant
 // options. Keep the baseline aligned with that observed state.
