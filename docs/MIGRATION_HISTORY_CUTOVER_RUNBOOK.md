@@ -24,6 +24,10 @@ Before changing migration tracking, independently verify the baseline against th
 - RLS enabled state, policies, triggers, grants, and default privileges;
 - extension-dependent objects, including `btree_gist`.
 
+## ACL parity limitation (explicit release blocker)
+
+The captured access catalog `supabase/rebuild/production-access-catalog-corrected-20261017.json` currently records function EXECUTE ACLs, schema ACLs, and default ACLs only. It does **not** contain a complete snapshot of table-level or column-level ACLs, object ownership, or grant-option chains. The baseline grants migration includes table and column grants, but the existing automated parity check compares only the captured function EXECUTE grants. Therefore, passing CI must not be interpreted as complete grants/ownership parity. Before migration-history cutover or release, capture those ACL/ownership catalogs from the intended source and add semantic comparisons against the baseline, including grant options and default privileges. Do not infer missing privileges from the SQL migration alone.
+
 The current count-based checks are necessary but not sufficient for this semantic parity gate.
 
 ## Controlled tracking cutover
