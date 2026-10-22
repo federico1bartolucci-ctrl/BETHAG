@@ -43,7 +43,7 @@ const count = (text, pattern) => (text.match(pattern) ?? []).length;
 const tableNames = [...sql[expectedFiles[0]].matchAll(/CREATE TABLE "public"\."([^"]+)"/g)]
   .map(([, name]) => name)
   .sort();
-const rlsEnabledTableNames = [...sql[expectedFiles[3]].matchAll(/ALTER TABLE "public"\."([^"]+)" ENABLE ROW LEVEL SECURITY;/g)]
+const rlsEnabledTableNames = [...sql[expectedFiles[0]].matchAll(/ALTER TABLE "public"\."([^"]+)" ENABLE ROW LEVEL SECURITY;/g)]
   .map(([, name]) => name)
   .sort();
 const policyTableNames = [...new Set([...sql[expectedFiles[3]].matchAll(/CREATE POLICY .*? ON "public"\."([^"]+)"/g)]
