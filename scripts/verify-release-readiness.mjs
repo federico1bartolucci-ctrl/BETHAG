@@ -5,12 +5,25 @@ import { readFile, readdir } from "node:fs/promises";
 // This script deliberately does not connect to or modify Production.
 const ledger = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261017.json", "utf8"));
 const migrationFiles = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
-const baselineVersions = migrationFiles.map((name) => name.slice(0, 14));
+const expectedBaselineFiles = [
+  "20261017000001_bethag_baseline_schema.sql",
+  "20261017000002_bethag_baseline_indexes_views.sql",
+  "20261017000003_bethag_baseline_functions.sql",
+  "20261017000004_bethag_baseline_security.sql",
+  "20261017000005_bethag_baseline_grants.sql",
+];
+const baselineFiles = migrationFiles.filter((name) => expectedBaselineFiles.includes(name));
+const incrementalFiles = migrationFiles.filter((name) => !expectedBaselineFiles.includes(name));
+const baselineVersions = baselineFiles.map((name) => name.slice(0, 14));
+const allVersions = migrationFiles.map((name) => name.slice(0, 14));
 
 const blockers = [];
 if (ledger.count !== ledger.migrations.length) blockers.push("Captured Production migration ledger count is inconsistent.");
-if (ledger.count !== 243) blockers.push("Captured Production migration ledger is stale; refresh it from the live project.");
-if (migrationFiles.length !== 5) blockers.push("Expected exactly five clean baseline migrations.");
+if (ledger.count !== 244) blockers.push("Captured Production migration ledger is stale; refresh it from the live project.");
+if (JSON.stringify(baselineFiles) !== JSON.stringify(expectedBaselineFiles)) blockers.push("The five ordered baseline migrations are missing or out of order.");
+if (new Set(allVersions).size !== allVersions.length) blockers.push("Duplicate migration versions detected.");
+if (incrementalFiles.some((name) => !/^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/.test(name))) blockers.push("Invalid incremental migration filename.");
+if (allVersions.some((version) => version <= ledger.migrations.at(-1).version)) blockers.push("A migration does not follow the captured Production history.");
 if (new Set(baselineVersions).size !== baselineVersions.length) blockers.push("Duplicate baseline migration versions detected.");
 if (baselineVersions.some((version) => version <= ledger.migrations.at(-1).version)) {
   blockers.push("Baseline versions do not all follow the captured Production ledger.");
