@@ -16,7 +16,7 @@ const baselineFiles = actualFiles.filter((name) => expectedFiles.includes(name))
 const incrementalFiles = actualFiles.filter((name) => !expectedFiles.includes(name));
 assert.deepEqual(baselineFiles, expectedFiles, "The clean branch must contain the five ordered baseline migrations.");
 for (const name of incrementalFiles) {
-  assert.match(name, /^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/, `Invalid incremental migration filename: ${name}`);
+  assert.match(name, /^\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/, `Invalid incremental migration filename: ${name}`);
 }
 assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, actualFiles.length, "Duplicate migration version detected.");
 assert.ok(incrementalFiles.every((name) => name.slice(0, 14) > expectedFiles.at(-1).slice(0, 14)), "Incremental migrations must follow the five baseline migrations.");
