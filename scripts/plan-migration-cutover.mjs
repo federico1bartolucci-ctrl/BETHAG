@@ -12,14 +12,26 @@ assert.equal(ledger.count, ledger.migrations.length, "Production ledger count mi
 assert.equal(new Set(ledger.migrations.map((item) => item.version)).size, ledger.migrations.length, "Duplicate Production migration version.");
 assert.equal(ledger.count, 243, "Refresh the Production ledger snapshot before generating a cutover plan.");
 
-const baseline = migrationFiles.map((name) => {
+const expectedBaselineFiles = [
+  "20261017000001_bethag_baseline_schema.sql",
+  "20261017000002_bethag_baseline_indexes_views.sql",
+  "20261017000003_bethag_baseline_functions.sql",
+  "20261017000004_bethag_baseline_security.sql",
+  "20261017000005_bethag_baseline_grants.sql",
+];
+const baselineFiles = migrationFiles.filter((name) => expectedBaselineFiles.includes(name));
+const incrementalFiles = migrationFiles.filter((name) => !expectedBaselineFiles.includes(name));
+assert.deepEqual(baselineFiles, expectedBaselineFiles, "Expected the five ordered baseline migrations.");
+const parseVersion = (name) => {
   const match = /^(\d{14})_[a-z0-9][a-z0-9_-]*\.sql$/.exec(name);
-  assert.ok(match, `Invalid baseline migration filename: ${name}`);
+  assert.ok(match, \`Invalid migration filename: \${name}\`);
   return match[1];
-});
-assert.equal(migrationFiles.length, 5, "Expected exactly five baseline migrations.");
-assert.equal(new Set(baseline).size, baseline.length, "Duplicate baseline migration version.");
-assert.ok(baseline.every((version) => version > ledger.migrations.at(-1).version), "Baseline must follow the latest Production migration.");
+};
+const baseline = baselineFiles.map(parseVersion);
+const allVersions = migrationFiles.map(parseVersion);
+assert.equal(new Set(allVersions).size, allVersions.length, "Duplicate migration version.");
+assert.ok(allVersions.every((version) => version > ledger.migrations.at(-1).version), "All migrations must follow the latest captured Production version.");
+assert.ok(incrementalFiles.every((name) => parseVersion(name) > baseline.at(-1)), "Incremental migrations must follow the baseline.");
 
 const report = {
   production_project_ref: ledger.project_ref,
