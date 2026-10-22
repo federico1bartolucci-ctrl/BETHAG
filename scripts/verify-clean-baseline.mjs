@@ -65,6 +65,8 @@ const result = {
   functions: count(sql[expectedFiles[2]], /^CREATE OR REPLACE (?:FUNCTION|PROCEDURE)\b/gm),
   policies: count(sql[expectedFiles[3]], /^CREATE POLICY /gm),
   triggers: count(sql[expectedFiles[3]], /^CREATE (?:CONSTRAINT )?TRIGGER /gm),
+  grant_statements: count(sql[expectedFiles[4]], /^GRANT /gm),
+  default_privilege_statements: count(sql[expectedFiles[4]], /^ALTER DEFAULT PRIVILEGES /gm),
   grants: count(sql[expectedFiles[4]], /^GRANT /gm) + count(sql[expectedFiles[4]], /^ALTER DEFAULT PRIVILEGES /gm),
 };
 
@@ -75,7 +77,11 @@ assert.equal(result.views, 1, "Expected the production fund-availability view.")
 assert.equal(result.functions, 171, "Production function/procedure count changed.");
 assert.equal(result.policies, 103, "Production RLS policy count changed.");
 assert.equal(result.triggers, 146, "Production trigger count changed.");
-assert.equal(result.grants, 388, "Baseline grant/default-privilege count changed after removing 517 column ACL and grant-option statements.");
+assert.equal(
+  result.grants,
+  388,
+  `Baseline grant/default-privilege count changed: expected 388 total, got ${result.grants} (${result.grant_statements} GRANT and ${result.default_privilege_statements} ALTER DEFAULT PRIVILEGES statements).`,
+);
 
 console.log(JSON.stringify({
   baseline_catalog_validation: "PASS",
