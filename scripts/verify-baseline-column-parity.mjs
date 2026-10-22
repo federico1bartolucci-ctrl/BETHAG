@@ -19,7 +19,7 @@ for (const match of sql.matchAll(/CREATE TABLE "public"\."([^"]+)" \(/g)) {
     if (!quote && char === "(") depth++;
     if (!quote && char === ")" && --depth === 0) break;
   }
-  assert.ok(end < sql.length, \`Unterminated CREATE TABLE for \${match[1]}\`);
+  assert.ok(end < sql.length, `Unterminated CREATE TABLE for \${match[1]}`);
   tableBlocks.set(match[1], sql.slice(start, end));
 }
 assert.equal(tableBlocks.size, expectedTables.length, "Baseline and snapshot public table counts differ.");
@@ -49,7 +49,7 @@ const mismatches = [];
 let columnsChecked = 0;
 for (const table of expectedTables) {
   const block = tableBlocks.get(table.table_name);
-  assert.ok(block, \`Baseline is missing table public.\${table.table_name}\`);
+  assert.ok(block, `Baseline is missing table public.\${table.table_name}`);
   const actualColumns = block.split("\n").map(parseColumnLine).filter(Boolean);
   const expectedColumns = [...table.columns].sort((a, b) => a.position - b.position);
   const actualByName = new Map(actualColumns.map((column) => [column.name, column]));
