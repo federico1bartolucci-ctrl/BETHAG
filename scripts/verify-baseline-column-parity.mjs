@@ -88,11 +88,31 @@ for (const table of expectedTables) {
 }
 assert.deepEqual(mismatches, [], "Baseline column names, SQL types, or NOT NULL attributes differ from captured Production schema.");
 
+
+const schemaSql = sql;
+const indexesSql = await readFile("supabase/migrations/20261017000002_bethag_baseline_indexes_views.sql", "utf8");
+const securitySql = await readFile("supabase/migrations/20261017000004_bethag_baseline_security.sql", "utf8");
+const expectedConstraints = expectedTables.flatMap((table) => table.constraints.map((constraint) => constraint.name)).sort();
+const actualConstraints = [...schemaSql.matchAll(/ADD CONSTRAINT "([^"]+)"/g)].map((match) => match[1]).sort();
+assert.deepEqual(actualConstraints, expectedConstraints, "Baseline constraint names differ from captured Production schema.");
+
+const expectedIndexes = snapshot.objects.indexes.filter((index) => index.schema === "public").map((index) => index.name).sort();
+const actualIndexes = [...indexesSql.matchAll(/^CREATE (?:UNIQUE )?INDEX "?([^" ]+)"?\s/gm)].map((match) => match[1]).sort();
+assert.deepEqual(actualIndexes, expectedIndexes, "Baseline index names differ from captured Production schema.");
+
+const expectedPolicies = snapshot.objects.policies.filter((policy) => policy.schema === "public").map((policy) => policy.name).sort();
+const actualPolicies = [...securitySql.matchAll(/^CREATE POLICY "([^"]+)"/gm)].map((match) => match[1]).sort();
+assert.deepEqual(actualPolicies, expectedPolicies, "Baseline RLS policy names differ from captured Production schema.");
+
+const expectedTriggers = snapshot.objects.triggers.filter((trigger) => trigger.schema === "public").map((trigger) => trigger.name).sort();
+const actualTriggers = [...securitySql.matchAll(/^CREATE (?:CONSTRAINT )?TRIGGER "?([^" ]+)"?/gm)].map((match) => match[1]).sort();
+assert.deepEqual(actualTriggers, expectedTriggers, "Baseline trigger names differ from captured Production schema.");
+
 console.log(JSON.stringify({
   baseline_schema_column_parity: "PASS",
   source_snapshot_date: snapshot.captured_at_utc,
   tables_checked: expectedTables.length,
   columns_checked: columnsChecked,
-  attributes_checked: ["column name", "SQL type", "NOT NULL"],
+  attributes_checked: ["column name", "SQL type", "NOT NULL"],\n  constraints_checked: actualConstraints.length,\n  indexes_checked: actualIndexes.length,\n  policies_checked: actualPolicies.length,\n  triggers_checked: actualTriggers.length,
   note: "This compares the baseline with the captured read-only Production schema snapshot; defaults, constraints, indexes, policies and triggers require separate checks. No live Production connection or writes are performed.",
 }, null, 2));
