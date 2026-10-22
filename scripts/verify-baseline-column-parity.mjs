@@ -42,12 +42,12 @@ function parseColumnLine(line) {
     }
   }
   if (!type) type = remainder.replace(/,$/, "").trim();
-  const defaultMatch = remainder.match(/\\bDEFAULT\\s+(.+?)(?=\\s+NOT NULL\\b|$)/i);
+  const defaultMatch = remainder.match(/\bDEFAULT\\s+(.+?)(?=\s+NOT NULL\b|$)/i);
   const defaultValue = defaultMatch ? defaultMatch[1].replace(/,$/, "").trim() : null;
   return {
     name,
-    type: type.replaceAll('"', "").replace(/\\s+/g, " ").trim(),
-    notNull: /\\bNOT NULL\\b/i.test(remainder),
+    type: type.replaceAll('"', "").replace(/\s+/g, " ").trim(),
+    notNull: /\bNOT NULL\\b/i.test(remainder),
     defaultValue,
   };
 }
@@ -72,8 +72,8 @@ for (const table of expectedTables) {
     columnsChecked++;
     const normalizedExpectedType = expected.type.replace(/\s+/g, " ").trim().toLowerCase();
     const normalizedActualType = actual.type.toLowerCase();
-    const normalizedExpectedDefault = expected.default === null ? null : expected.default.replace(/\\s+/g, " ").trim().toLowerCase();
-    const normalizedActualDefault = actual.defaultValue === null ? null : actual.defaultValue.replace(/\\s+/g, " ").trim().toLowerCase();
+    const normalizedExpectedDefault = expected.default === null ? null : expected.default.replace(/\s+/g, " ").trim().toLowerCase();
+    const normalizedActualDefault = actual.defaultValue === null ? null : actual.defaultValue.replace(/\s+/g, " ").trim().toLowerCase();
     if (
       normalizedActualType !== normalizedExpectedType ||
       actual.notNull !== expected.not_null ||
