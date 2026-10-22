@@ -40,6 +40,20 @@ assert.deepEqual(
 );
 
 // Relation-level grants are distinct from column-level UPDATE grants.
+// Production's catalog has no explicit column ACLs and no relation grant
+// options. Keep the baseline aligned with that observed state.
+const columnGrantLines = grantsSql
+  .split("\n")
+  .map((line) => line.trim())
+  .filter((line) => /^GRANT\s+(?:SELECT|UPDATE|INSERT|REFERENCES)\s*\(/i.test(line) && /\bON TABLE public\./i.test(line));
+assert.deepEqual(columnGrantLines, [], "Baseline must not introduce column ACLs absent from Production.");
+
+const relationGrantOptionLines = grantsSql
+  .split("\n")
+  .map((line) => line.trim())
+  .filter((line) => /^GRANT\b/i.test(line) && /\bON TABLE public\./i.test(line) && !/^GRANT\s+(?:SELECT|UPDATE|INSERT|REFERENCES)\s*\(/i.test(line) && /\bWITH GRANT OPTION\s*;/i.test(line));
+assert.deepEqual(relationGrantOptionLines, [], "Baseline must not introduce relation grant options absent from Production.");
+
 const relationGrantLines = grantsSql
   .split("\n")
   .map((line) => line.trim())
@@ -114,7 +128,7 @@ console.log(JSON.stringify({
   unsafe_application_default_maintain_grants_found: unsafeApplicationDefaultMaintainGrants.length,
   service_role_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "service_role").length,
   postgres_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "postgres").length,
-  authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
+  authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,\n  baseline_column_acl_statements_found: columnGrantLines.length,\n  baseline_relation_grant_options_found: relationGrantOptionLines.length,
   production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
   release_acl_parity: "BLOCKED_PENDING_RECONCILIATION",
 }, null, 2));
