@@ -61,6 +61,49 @@ assert.match(runbook, /Concrete privilege discrepancy found on 2026-10-22/);
 assert.match(runbook, /34 public relations/);
 assert.match(runbook, /ACL parity gate blocked/);
 
+// Pin the known Production exception set so future runbook edits cannot
+// silently drop an affected relation from the release-blocker record.
+const productionAuthenticatedMaintainRelations = [
+  "communication_recipients",
+  "condominium_accounting_settings",
+  "condominium_allocation_intakes",
+  "condominium_allocation_rules",
+  "condominium_audit_log",
+  "condominium_budgets",
+  "condominium_consumption_readings",
+  "condominium_creation_intakes",
+  "condominium_expense_allocations",
+  "condominium_fiscal_carryover_compensations",
+  "condominium_fiscal_carryovers",
+  "condominium_fiscal_years",
+  "condominium_fund_availability",
+  "condominium_funds",
+  "condominium_installments",
+  "condominium_insurance_policies",
+  "condominium_ledger_entries",
+  "condominium_legal_cases",
+  "condominium_member_transfers",
+  "condominium_millesimal_tables",
+  "condominium_millesimal_values",
+  "condominium_payment_movements",
+  "condominium_register_items",
+  "condominium_suppliers",
+  "condominium_tax_obligations",
+  "condominium_unit_transformation_items",
+  "condominium_unit_transformations",
+  "condominium_units",
+  "condominium_work_documents",
+  "condominium_work_events",
+  "condominium_work_progress",
+  "condominium_works",
+  "portal_registration_requests",
+  "user_security_settings",
+];
+assert.equal(productionAuthenticatedMaintainRelations.length, 34, "Expected the complete 34-relation Production exception register.");
+for (const relation of productionAuthenticatedMaintainRelations) {
+  assert.ok(runbook.includes(relation), `Runbook must keep the Production MAINTAIN exception for ${relation} documented.`);
+}
+
 console.log(JSON.stringify({
   authenticated_maintain_guard: "PASS",
   unsafe_baseline_grants_found: authenticatedMaintainGrants.length,
@@ -68,6 +111,6 @@ console.log(JSON.stringify({
   service_role_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "service_role").length,
   postgres_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "postgres").length,
   authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
-  production_discrepancy_relations_documented: 34,
+  production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
   release_acl_parity: "BLOCKED_PENDING_RECONCILIATION",
 }, null, 2));
