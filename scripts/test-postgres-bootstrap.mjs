@@ -16,10 +16,11 @@ const incrementalMigrations = [
   "20261022210629_restrict_private_function_public_execute.sql",
   "20261022210630_harden_default_privileges_and_private_execute.sql",
   "20261022213000_restrict_close_member_transfer_execute.sql",
+  "20261023000001_revoke_authenticated_maintain.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
-assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the four reviewed hardening migrations.");
+assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
 const migrationsToApply = actualFiles;
 
 function psql(args, input) {
