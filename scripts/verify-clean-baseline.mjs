@@ -40,13 +40,13 @@ const sql = Object.fromEntries(await Promise.all(expectedFiles.map(async (name) 
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
 
 // Fail fast if a table is missing either RLS activation or at least one policy.
-const tableNames = [...sql[expectedFiles[0]].matchAll(/^CREATE TABLE "public"\."([^"]+)"/gm)]
+const tableNames = [...sql[expectedFiles[0]].matchAll(/CREATE TABLE "public"\."([^"]+)"/g)]
   .map(([, name]) => name)
   .sort();
-const rlsEnabledTableNames = [...sql[expectedFiles[3]].matchAll(/^ALTER TABLE "public"\."([^"]+)" ENABLE ROW LEVEL SECURITY;/gm)]
+const rlsEnabledTableNames = [...sql[expectedFiles[3]].matchAll(/ALTER TABLE "public"\."([^"]+)" ENABLE ROW LEVEL SECURITY;/g)]
   .map(([, name]) => name)
   .sort();
-const policyTableNames = [...new Set([...sql[expectedFiles[3]].matchAll(/^CREATE POLICY .*? ON "public"\."([^"]+)"/gm)]
+const policyTableNames = [...new Set([...sql[expectedFiles[3]].matchAll(/CREATE POLICY .*? ON "public"\."([^"]+)"/g)]
   .map(([, name]) => name))]
   .sort();
 assert.equal(tableNames.length, 47, "Expected 47 public tables in the baseline.");
