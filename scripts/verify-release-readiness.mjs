@@ -22,8 +22,15 @@ if (ledger.count !== ledger.migrations.length) blockers.push("Captured Productio
 if (ledger.count !== 244) blockers.push("Captured Production migration ledger is stale; refresh it from the live project.");
 if (JSON.stringify(baselineFiles) !== JSON.stringify(expectedBaselineFiles)) blockers.push("The five ordered baseline migrations are missing or out of order.");
 if (new Set(allVersions).size !== allVersions.length) blockers.push("Duplicate migration versions detected.");
-if (incrementalFiles.some((name) => !/^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/.test(name))) blockers.push("Invalid incremental migration filename.");
-if (allVersions.some((version) => version <= ledger.migrations.at(-1).version)) blockers.push("A migration does not follow the captured Production history.");
+if (incrementalFiles.some((name) => !/^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/.test(name))) blockers.push("Invalid incremental migration filename.");
+const baselineCutoverVersion = ledger.migrations.at(-2).version;
+if (baselineVersions.some((version) => version <= baselineCutoverVersion)) blockers.push("Baseline versions do not follow the historical ledger captured before incremental migrations.");
+for (const name of incrementalFiles) {
+  const version = name.slice(0, 14);
+  const recorded = ledger.migrations.find((migration) => migration.version === version);
+  if (recorded && recorded.name !== name.slice(15, -4)) blockers.push(`Incremental migration ${name} does not match its Production ledger record.`);
+  if (!recorded && version <= ledger.migrations.at(-1).version) blockers.push(`Untracked migration ${name} is not newer than Production history.`);
+}
 if (new Set(baselineVersions).size !== baselineVersions.length) blockers.push("Duplicate baseline migration versions detected.");
 if (baselineVersions.some((version) => version <= ledger.migrations.at(-1).version)) {
   blockers.push("Baseline versions do not all follow the captured Production ledger.");
