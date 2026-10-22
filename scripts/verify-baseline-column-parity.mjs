@@ -64,6 +64,7 @@ for (const table of expectedTables) {
   const actualNames = actualColumns.map((column) => column.name);
   const missing = expectedNames.filter((name) => !actualByName.has(name));
   const unexpected = actualNames.filter((name) => !expectedNames.includes(name));
+  const orderMismatch = JSON.stringify(actualNames) !== JSON.stringify(expectedNames);
   const columnDifferences = [];
   for (const expected of expectedColumns) {
     const actual = actualByName.get(expected.name);
@@ -81,7 +82,7 @@ for (const table of expectedTables) {
       columnDifferences.push({ column: expected.name, expected: { type: normalizedExpectedType, not_null: expected.not_null, default: normalizedExpectedDefault }, actual: { type: normalizedActualType, not_null: actual.notNull, default: normalizedActualDefault } });
     }
   }
-  if (missing.length || unexpected.length || columnDifferences.length) mismatches.push({ table: table.table_name, missing, unexpected, columnDifferences });
+  if (missing.length || unexpected.length || orderMismatch || columnDifferences.length) mismatches.push({ table: table.table_name, missing, unexpected, orderMismatch, expectedOrder: orderMismatch ? expectedNames : undefined, actualOrder: orderMismatch ? actualNames : undefined, columnDifferences });
 }
 assert.deepEqual(mismatches, [], "Baseline column names, SQL types, NOT NULL attributes, or defaults differ from captured Production schema.");
 
