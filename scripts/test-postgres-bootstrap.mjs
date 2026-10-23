@@ -19,6 +19,7 @@ const incrementalMigrations = [
   "20261022233440_align_public_function_execute.sql",
   "20261023000001_revoke_authenticated_maintain.sql",
   "20261023000002_revoke_default_maintain.sql",
+  "20261023000003_use_invoker_for_close_transfer_rpc.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
@@ -179,8 +180,9 @@ SELECT json_build_object(
   'private_implementation_exists', to_regprocedure('private.close_condominium_member_transfer(uuid)') IS NOT NULL,
   'anon_denied_public_wrapper', NOT has_function_privilege('anon', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'authenticated_can_call_wrapper', has_function_privilege('authenticated', 'public.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'public_wrapper_is_invoker', (SELECT NOT prosecdef FROM pg_proc WHERE oid=to_regprocedure('public.close_condominium_member_transfer(uuid)')),
   'private_not_executable_by_anon', NOT has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
-  'private_not_executable_by_authenticated', NOT has_function_privilege('authenticated', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
+  'private_callable_by_authenticated_for_invoker_wrapper', has_function_privilege('authenticated', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE'),
   'public_wrapper_search_path_empty', (SELECT proconfig @> ARRAY['search_path=""'] FROM pg_proc WHERE oid=to_regprocedure('public.close_condominium_member_transfer(uuid)')),
   'private_implementation_search_path_empty', (SELECT proconfig @> ARRAY['search_path=""'] FROM pg_proc WHERE oid=to_regprocedure('private.close_condominium_member_transfer(uuid)')),
   'checks_authentication', (SELECT position('AUTH_REQUIRED' in pg_get_functiondef(to_regprocedure('private.close_condominium_member_transfer(uuid)'))) > 0),
