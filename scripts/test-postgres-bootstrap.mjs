@@ -78,7 +78,32 @@ SELECT json_build_object(
   'rls_enabled_tables', (SELECT count(*)::int FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname IN ('public','private') AND t.relkind IN ('r','p') AND t.relrowsecurity),
   'rls_policy_tables', (SELECT count(DISTINCT schemaname || '.' || tablename)::int FROM pg_policies WHERE schemaname IN ('public','private')),
   'triggers', (SELECT count(*)::int FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','private') AND NOT t.tgisinternal),
-  'btree_gist', (SELECT count(*)::int FROM pg_extension WHERE extname='btree_gist')
+  'btree_gist', (SELECT count(*)::int FROM pg_extension WHERE extname='btree_gist'),
+  'relation_owners', (
+    SELECT json_object_agg(owner, object_count ORDER BY owner)
+    FROM (
+      SELECT pg_get_userbyid(c.relowner) AS owner, count(*)::int AS object_count
+      FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname IN ('public','private') AND c.relkind IN ('r','p','v','m','S','f')
+      GROUP BY pg_get_userbyid(c.relowner)
+    ) owners
+  ),
+  'function_owners', (
+    SELECT json_object_agg(owner, object_count ORDER BY owner)
+    FROM (
+      SELECT pg_get_userbyid(p.proowner) AS owner, count(*)::int AS object_count
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname IN ('public','private') AND p.prokind IN ('f','p')
+      GROUP BY pg_get_userbyid(p.proowner)
+    ) owners
+  ),
+  'schema_owners', (
+    SELECT json_object_agg(schema_name, owner ORDER BY schema_name)
+    FROM (
+      SELECT n.nspname AS schema_name, pg_get_userbyid(n.nspowner) AS owner
+      FROM pg_namespace n WHERE n.nspname IN ('public','private')
+    ) owners
+  )
 )::text;
 `;
 const result = psql(["-A", "-t", "-c", query], undefined).trim();
@@ -96,6 +121,9 @@ const expected = {
   rls_policy_tables: 47,
   triggers: 146,
   btree_gist: 1,
+  relation_owners: { postgres: 48 },
+  function_owners: { postgres: 171 },
+  schema_owners: { private: "postgres", public: "pg_database_owner" },
 };
 assert.deepEqual(inventory, expected, "Five-file baseline inventory differs from the Production catalog.");
 console.log(JSON.stringify({ bootstrap: "BASELINE_ONLY_PASS", engine: "PostgreSQL", applied_migrations: migrationFiles, inventory }, null, 2));
