@@ -139,3 +139,14 @@ The official Supabase role documentation identifies `supabase_admin` as an inter
 5. Do not revoke `USAGE` on `public` from `authenticated` as a workaround: that would interfere with BETHAG's normal Data API access. A schema-level revoke for `anon` is only valid if the product deliberately disallows all anonymous access; it does not solve `authenticated`'s `MAINTAIN` default and is not a fix for this finding.
 
 PostgreSQL 17 documents `MAINTAIN` as permission to run maintenance commands including `VACUUM`, `ANALYZE`, `CLUSTER`, `REFRESH MATERIALIZED VIEW`, `REINDEX`, and `LOCK TABLE`. It is not a read/write data privilege, but it is still a real maintenance capability and should not be silently normalized as harmless. Current BETHAG application tables are owned by `postgres`; the confirmed direct `authenticated MAINTAIN` grants and `postgres`-owned defaults are separately remediable. The residual `supabase_admin`-owned defaults require the platform-side path above.
+
+### Live ownership/default-ACL verification (read-only, 2026-10-23)
+
+A fresh read-only catalog query against Production confirmed:
+- All 48 public relations (47 tables and the fund-availability view) are owned by `postgres`.
+- All 171 functions in `public` and `private` are owned by `postgres`.
+- The `public` schema owner is `pg_database_owner`; the `private` schema owner is `postgres`.
+- Default ACLs remain present for both `postgres` and `supabase_admin`. Both owners' table defaults grant `MAINTAIN` to `anon` and `authenticated`; this read-only check does not claim those grants are remediated. The existing incremental migration removes the `postgres`-owned default grants only. The connected role cannot alter `supabase_admin` defaults, so that platform-managed divergence remains a release blocker requiring a documented platform-level resolution or an explicitly approved exception.
+- The live relation ACL query still finds 34 explicit `MAINTAIN` grants to `authenticated`. The staged revocation is not applied to Production.
+
+The isolated PostgreSQL 17 bootstrap now also asserts relation/function ownership and schema owners in addition to object inventory and ACL checks. Passing CI establishes reproducibility on a clean database; it does not replace the live ACL/default-ACL release gate.
