@@ -150,3 +150,8 @@ A fresh read-only catalog query against Production confirmed:
 - The live relation ACL query still finds 34 explicit `MAINTAIN` grants to `authenticated`. The staged revocation is not applied to Production.
 
 The isolated PostgreSQL 17 bootstrap now also asserts relation/function ownership and schema owners in addition to object inventory and ACL checks. Passing CI establishes reproducibility on a clean database; it does not replace the live ACL/default-ACL release gate.
+
+
+### Production backup/restore drill (next release-readiness step)
+
+The detailed execution checklist and evidence template are now maintained in [`docs/PRODUCTION_BACKUP_RESTORE_DRILL.md`](PRODUCTION_BACKUP_RESTORE_DRILL.md). This is a procedure only: **no backup restore has been claimed or performed by this documentation change**. The next operational action is to obtain a real recovery point and restore it into a separately identified non-Production target, then record validation evidence. Keep `BETHAG_PRODUCTION_BACKUP_VERIFIED` unset until that drill passes. Production remains untouched.
