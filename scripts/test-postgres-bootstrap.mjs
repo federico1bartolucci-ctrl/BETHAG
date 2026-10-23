@@ -24,7 +24,7 @@ const incrementalMigrations = [
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
-const migrationsToApply = actualFiles;
+const migrationsToApply = migrationFiles;
 
 function psql(args, input) {
   return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", ...args], {
@@ -97,8 +97,54 @@ const expected = {
   triggers: 146,
   btree_gist: 1,
 };
-assert.deepEqual(inventory, expected, "Real PostgreSQL baseline inventory differs from the Production catalog.");
-console.log(JSON.stringify({ bootstrap: "PASS", engine: "PostgreSQL", inventory }, null, 2));
+assert.deepEqual(inventory, expected, "Five-file baseline inventory differs from the Production catalog.");
+console.log(JSON.stringify({ bootstrap: "BASELINE_ONLY_PASS", engine: "PostgreSQL", applied_migrations: migrationFiles, inventory }, null, 2));
+
+// Validate least-privilege ACL properties before incremental hardening can mask
+// a defect in the five-file baseline itself.
+const baselineAclSql = `
+SELECT json_build_object(
+  'authenticated_maintain_relations', (
+    SELECT count(*)::int
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','v','m')
+      AND has_table_privilege('authenticated', c.oid, 'MAINTAIN')
+  ),
+  'default_maintain_grants', (
+    SELECT count(*)::int
+    FROM pg_default_acl d
+    CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclobjtype='r'
+      AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole)
+      AND a.privilege_type='MAINTAIN'
+  ),
+  'public_function_execute_targets', (
+    SELECT array_agg(n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid))
+    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    WHERE n.nspname IN ('public','private') AND a.grantee=0 AND a.privilege_type='EXECUTE'
+  )
+)::text;`;
+const baselineAcl = JSON.parse(psql(["-A", "-t", "-c", baselineAclSql], undefined).trim());
+assert.equal(baselineAcl.authenticated_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to authenticated.");
+assert.equal(baselineAcl.default_maintain_grants, 0, "Five-file baseline must not create unsafe default MAINTAIN grants.");
+assert.deepEqual(baselineAcl.public_function_execute_targets, [
+  "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+  "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+  "public.normalize_zero_ownership_owner()",
+  "public.preserve_closing_condominium_member_history()",
+], "Five-file baseline PUBLIC EXECUTE ACL differs from the approved four-function exception set.");
+console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAcl }, null, 2));
+
+// Only after the baseline passes independently, apply the reviewed incremental
+// hardening migrations and verify that they preserve the structural inventory.
+for (const filename of incrementalMigrations) {
+  console.log(`Applying incremental migration ${filename} to isolated PostgreSQL...`);
+  psql(["-f", path.join(directory, filename)]);
+}
+const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
+assert.deepEqual(finalInventory, expected, "Incremental hardening migrations changed the expected structural inventory.");
+console.log(JSON.stringify({ incremental_hardening: "PASS", applied_migrations: incrementalMigrations, inventory: finalInventory }, null, 2));
 
 const aclChecksSql = `
 WITH target_tables(table_name) AS (
