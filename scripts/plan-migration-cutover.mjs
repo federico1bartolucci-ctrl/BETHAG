@@ -25,7 +25,8 @@ const baselineVersions = baselineFiles.map(parseVersion);
 const incrementalFiles = migrationFiles.filter((name) => !expectedBaselineFiles.includes(name));
 assert.ok(incrementalFiles.every((name) => parseVersion(name) > baselineVersions.at(-1)), "Incremental migrations must follow the baseline.");
 
-// Explicitly list stale QA history; never derive QA repair commands from Production history.
+// Historical QA entries previously identified for review; do not treat this list
+// as a substitute for capturing the live ledger immediately before a repair.
 const staleQaVersions = [
   "20260928021707", "20260928021808", "20260928021935", "20260928021944",
   "20260928022046", "20260928022126", "20260928022526", "20260928022821",
@@ -41,12 +42,19 @@ const generatedQaVersions = [
   "20261022205919", "20261022210623", "20261022210626", "20261022210628",
   "20261022210904", "20261022210908", "20261022210911",
 ];
+// Read from the Supabase migration ledger for mxhciszzpqzvsaqcnwhg on 2026-10-23.
+// These four are QA-only test migrations and must never be applied to Production.
+const currentQaOnlyVersionsObserved = [
+  "20261023010544", "20261023010548", "20261023011431", "20261023011435",
+];
 const report = {
   scope: "QA ONLY",
+  qa_project_ref_observed: "mxhciszzpqzvsaqcnwhg",
+  qa_only_versions_observed_2026_10_23: currentQaOnlyVersionsObserved,
   baseline_files: baselineFiles,
   canonical_incremental_files: incrementalFiles,
   canonical_versions_to_mark_applied: allVersions,
-  stale_qa_versions_to_mark_reverted: [...new Set([...staleQaVersions, ...generatedQaVersions])].sort(),
+  historical_qa_versions_to_review_for_revert: [...new Set([...staleQaVersions, ...generatedQaVersions])].sort(),
   production: "DO NOT MODIFY; production ledger must never be used to generate QA repair commands",
   action: "PLAN_ONLY_REQUIRES_SUPABASE_CLI",
 };
