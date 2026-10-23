@@ -140,6 +140,12 @@ SELECT json_build_object(
     WHERE n.nspname='public' AND c.relkind IN ('r','v','m')
       AND has_table_privilege('authenticated', c.oid, 'MAINTAIN')
   ),
+  'service_role_maintain_relations', (
+    SELECT count(*)::int
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','f')
+      AND has_table_privilege('service_role', c.oid, 'MAINTAIN')
+  ),
   'default_maintain_grants', (
     SELECT count(*)::int
     FROM pg_default_acl d
@@ -157,6 +163,7 @@ SELECT json_build_object(
 )::text;`;
 const baselineAcl = JSON.parse(psql(["-A", "-t", "-c", baselineAclSql], undefined).trim());
 assert.equal(baselineAcl.authenticated_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to authenticated.");
+assert.equal(baselineAcl.service_role_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to service_role.");
 assert.equal(baselineAcl.default_maintain_grants, 0, "Five-file baseline must not create unsafe default MAINTAIN grants.");
 assert.deepEqual(baselineAcl.public_function_execute_targets, [
   "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
@@ -216,6 +223,12 @@ SELECT json_build_object(
     JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname='public'
     WHERE has_table_privilege('authenticated', c.oid, 'MAINTAIN')
   ),
+  'service_role_maintain_grants', (
+    SELECT count(*)::int
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','f')
+      AND has_table_privilege('service_role', c.oid, 'MAINTAIN')
+  ),
   'default_maintain_grants', (SELECT n FROM default_acl_maintain),
   'public_function_execute_count', (
     SELECT count(*)::int
@@ -240,6 +253,7 @@ SELECT json_build_object(
 const aclChecks = JSON.parse(psql(["-A", "-t", "-c", aclChecksSql], undefined).trim());
 assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables in the MAINTAIN remediation.");
 assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
+assert.equal(aclChecks.service_role_maintain_grants, 0, "service_role still has MAINTAIN on a public relation.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
 assert.equal(aclChecks.public_function_execute_count, 4, "PUBLIC EXECUTE differs from the four-function Production ACL baseline.");
 assert.deepEqual(aclChecks.public_function_execute_targets, [
