@@ -71,10 +71,10 @@ const relationGrants = relationGrantLines.map((line) => {
   assert.ok(match, `Cannot parse relation grant: ${line}`);
   return { privileges: match[1].split(",").map((value) => value.trim().toUpperCase()), table: match[2], grantee: match[3] };
 });
-const serviceRoleTablesMissingMaintain = relationGrants.filter((grant) => grant.grantee === "service_role" && !grant.privileges.includes("MAINTAIN"));
+const serviceRoleTablesWithMaintain = relationGrants.filter((grant) => grant.grantee === "service_role" && grant.privileges.includes("MAINTAIN"));
 const postgresTablesMissingMaintain = relationGrants.filter((grant) => grant.grantee === "postgres" && !grant.privileges.includes("MAINTAIN"));
 const authenticatedTablesWithMaintain = relationGrants.filter((grant) => grant.grantee === "authenticated" && grant.privileges.includes("MAINTAIN"));
-assert.equal(serviceRoleTablesMissingMaintain.length, 0, "Baseline must preserve MAINTAIN on all explicit service_role table grants.");
+assert.equal(serviceRoleTablesWithMaintain.length, 0, "Baseline must not grant MAINTAIN to the application service_role.");
 assert.equal(postgresTablesMissingMaintain.length, 0, "Baseline must preserve MAINTAIN on all explicit postgres table grants.");
 assert.equal(authenticatedTablesWithMaintain.length, 0, "Baseline must not explicitly grant MAINTAIN to authenticated.");
 assert.equal(relationGrants.filter((grant) => grant.grantee === "service_role").length, 48, "Expected relation grants for service_role on 48 public relations.");
@@ -135,6 +135,7 @@ console.log(JSON.stringify({
   unsafe_baseline_grants_found: authenticatedMaintainGrants.length,
   unsafe_application_default_maintain_grants_found: unsafeApplicationDefaultMaintainGrants.length,
   service_role_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "service_role").length,
+  service_role_maintain_grants_found: serviceRoleTablesWithMaintain.length,
   postgres_relation_grants_checked: relationGrants.filter((grant) => grant.grantee === "postgres").length,
   authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
   baseline_column_acl_statements_found: columnGrantLines.length,
