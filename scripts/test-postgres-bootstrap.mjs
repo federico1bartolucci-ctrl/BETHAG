@@ -223,7 +223,11 @@ VALUES
  ('66666666-6666-4666-8666-666666666666', '33333333-3333-4333-8333-333333333333', 'Incoming owner', 'resident', true, '{"current_owner":true}'::jsonb, '44444444-4444-4444-8444-444444444444');
 INSERT INTO auth.users (id) VALUES ('99999999-9999-4999-8999-999999999999');
 INSERT INTO public.profiles (id, full_name, email, role, active)
-VALUES ('99999999-9999-4999-8999-999999999999', 'CI unauthorized user', 'ci-outsider@example.invalid', 'resident', true);
+VALUES ('99999999-9999-4999-8999-999999999999', 'CI unauthorized user', 'ci-outsider@example.invalid', 'admin', true);
+INSERT INTO public.workspaces (id, name, plan)
+VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'CI other workspace', 'professional');
+INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions)
+VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '99999999-9999-4999-8999-999999999999', 'admin', true, '{}'::jsonb);
 INSERT INTO public.condominium_member_transfers
  (id, workspace_id, condominium_id, unit_id, outgoing_member_id, incoming_member_id, transfer_date, status, data, created_by)
 VALUES
