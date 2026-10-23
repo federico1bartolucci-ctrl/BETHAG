@@ -155,3 +155,14 @@ The isolated PostgreSQL 17 bootstrap now also asserts relation/function ownershi
 ### Production backup/restore drill (next release-readiness step)
 
 The detailed execution checklist and evidence template are now maintained in [`docs/PRODUCTION_BACKUP_RESTORE_DRILL.md`](PRODUCTION_BACKUP_RESTORE_DRILL.md). This is a procedure only: **no backup restore has been claimed or performed by this documentation change**. The next operational action is to obtain a real recovery point and restore it into a separately identified non-Production target, then record validation evidence. Keep `BETHAG_PRODUCTION_BACKUP_VERIFIED` unset until that drill passes. Production remains untouched.
+
+
+### Supabase Support response received (2026-10-23; evidence supplied by project owner)
+
+Supabase Support confirmed in writing that the `supabase_admin` default privileges in the `public` schema are part of the standard managed-project configuration and are not changed for individual projects; such changes could be restored during maintenance or upgrades. Support states that the customer controls the `postgres` defaults and points to the official API security guide for revoking automatic grants to `anon`, `authenticated`, and `service_role`.
+
+Support further states that the Data API switches from `authenticator` to `anon`/`authenticated`, and does not expose direct requests for `TRUNCATE`, `REFERENCES`, `TRIGGER`, or `MAINTAIN` unless a customer-exposed function provides such a path. Table grants and RLS govern the operations exposed by the API; `service_role` bypasses RLS by design and its key must remain server-side.
+
+**Decision for BETHAG:** do not attempt a customer-side revocation of `supabase_admin` default ACLs again. Record this as a confirmed platform-managed configuration, not as a customer-remediable SQL defect. Keep `postgres` defaults least-privileged and continue checking exposed functions, table grants, and RLS. The support reply narrows the threat model for the Data API but is not a full security certification and does not prove migration/schema parity or backup recoverability.
+
+**Release-gate disposition:** the raw catalog difference for `supabase_admin` remains observable but is not actionable through supported customer SQL according to Support. The release owner must explicitly document acceptance of this platform-managed behavior (or obtain a separate approved exception) before the migration-history cutover. Independent blockers remain: 34 direct `authenticated MAINTAIN` grants still require controlled remediation/verification; QA migration history must be reconciled against source files without blindly repairing the ledger; the 244-entry Production history cutover requires semantic catalog parity; and the backup restore drill is still NOT RUN. No Production change is authorized by this support response.
