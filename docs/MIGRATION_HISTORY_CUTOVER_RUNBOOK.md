@@ -166,3 +166,27 @@ Support further states that the Data API switches from `authenticator` to `anon`
 **Decision for BETHAG:** do not attempt a customer-side revocation of `supabase_admin` default ACLs again. Record this as a confirmed platform-managed configuration, not as a customer-remediable SQL defect. Keep `postgres` defaults least-privileged and continue checking exposed functions, table grants, and RLS. The support reply narrows the threat model for the Data API but is not a full security certification and does not prove migration/schema parity or backup recoverability.
 
 **Release-gate disposition:** the raw catalog difference for `supabase_admin` remains observable but is not actionable through supported customer SQL according to Support. The release owner must explicitly document acceptance of this platform-managed behavior (or obtain a separate approved exception) before the migration-history cutover. Independent blockers remain: 34 direct `authenticated MAINTAIN` grants still require controlled remediation/verification; QA migration history must be reconciled against source files without blindly repairing the ledger; the 244-entry Production history cutover requires semantic catalog parity; and the backup restore drill is still NOT RUN. No Production change is authorized by this support response.
+
+
+### QA ledger-to-file reconciliation snapshot (read-only, 2026-10-23)
+
+The live QA ledger for `mxhciszzpqzvsaqcnwhg` was queried again and contains 17 rows. Comparison with the branch's current `supabase/migrations` directory gives the following disposition; **no migration repair or SQL write was performed**.
+
+| QA ledger version | QA ledger name | Branch file / disposition |
+|---|---|---|
+| `20261017000001`–`20261017000005` | Five `bethag_baseline_*` entries | Exact matching five baseline filenames exist. |
+| `20261022202747` | `harden_close_member_transfer_search_path` | Exact matching file exists. |
+| `20261022210629` | `restrict_private_function_public_execute` | Exact matching file exists. |
+| `20261022210630` | `harden_default_privileges_and_private_execute` | Exact matching file exists. |
+| `20261022213544` | `restrict_close_member_transfer_execute` | Exact matching file exists. |
+| `20261022230901` | `revoke_authenticated_maintain` | No file with this version. Branch has `20261023000001_revoke_authenticated_maintain.sql`; same-name semantic equivalence and intended tracking treatment require review. |
+| `20261022230908` | `revoke_default_maintain` | No file with this version. Branch has `20261023000002_revoke_default_maintain.sql`; same-name semantic equivalence and intended tracking treatment require review. |
+| `20261022233440` | `align_public_function_execute` | Exact matching file exists. |
+| `20261023000733` | `use_invoker_for_close_transfer_rpc` | Exact matching file exists. |
+| `20261023010544`, `20261023010548` | `qa_test_revoke_authenticated_maintain_20261023`, `qa_test_revoke_default_maintain_20261023` | QA-only test ledger entries; no matching canonical-version files. Do not promote to Production. |
+| `20261023011431` | `revoke_service_role_maintain_qa_test` | QA-only ledger entry. Branch has `20261023000003_revoke_service_role_maintain.sql`; do not assume equivalence or promote the QA ledger version without content review. |
+| `20261023011435` | `define_application_default_table_privileges_qa` | QA-only ledger entry. Branch has `20261023000004_application_default_table_privileges.sql`; do not assume equivalence or promote the QA ledger version without content review. |
+
+**Result:** QA is not version-aligned with the branch's full incremental migration set. In particular, local versions `20261023000001`–`20261023000004` are not all represented by the same version IDs in the QA ledger; QA-only test entries exist, and the `20261022230901/30908` entries predate the current local filenames. The matching names alone do not establish equal SQL contents or safe ledger repair.
+
+**Next safe action:** compare the SQL bodies and intended effects of each paired migration, document which are canonical production migrations versus QA-only tests, then test the canonical chain on a disposable PostgreSQL 17/Supabase environment. Only after that, prepare a project-specific QA tracking proposal for independent review. Do not run generic linked repair commands, do not modify Production, and do not mark the ledger aligned based solely on migration names.
