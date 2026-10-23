@@ -43,7 +43,7 @@ assert.deepEqual(
 // authorized to alter its default ACL; the baseline must not attempt to do so.
 assert.doesNotMatch(
   grantsSql,
-  /ALTER DEFAULT PRIVILEGES\\s+FOR\\s+ROLE\\s+supabase_admin\\b/i,
+  /ALTER DEFAULT PRIVILEGES\s+FOR\s+ROLE\s+supabase_admin\b/i,
   "Baseline must not attempt to mutate Supabase-managed supabase_admin default privileges.",
 );
 
