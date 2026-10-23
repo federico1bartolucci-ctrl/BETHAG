@@ -71,5 +71,5 @@ if (process.argv.includes("--print-review-checklist")) {
     "5. Obtain independent review of the exact command list before running any migration repair.",
     "6. After repair, re-read the ledger and confirm exact local/remote alignment.",
     "7. Stop if the target reference or current ledger cannot be verified."
-  ].join("\\n"));
+  ].join("\n"));
 }
