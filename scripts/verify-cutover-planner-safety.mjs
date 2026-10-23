@@ -12,9 +12,9 @@ assert.doesNotMatch(
 );
 assert.match(planner, /BLOCKED: generic --linked repair commands are unsafe/);
 assert.match(planner, /--print-review-checklist/);
-assert.match(planner, /explicitly verified QA project/);
-assert.match(planner, /fresh QA ledger capture/);
-assert.match(planner, /Never run this plan while linked to Production|never use this plan while linked to Production/i);
+assert.match(planner, /target project must be explicitly verified/);
+assert.match(planner, /live ledger must be captured before any repair/);
+assert.match(planner, /never use this plan while linked to Production/i);
 
 console.log(JSON.stringify({
   cutover_planner_safety: "PASS",
