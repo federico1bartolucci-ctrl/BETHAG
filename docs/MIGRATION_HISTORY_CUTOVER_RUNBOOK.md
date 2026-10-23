@@ -190,3 +190,20 @@ The live QA ledger for `mxhciszzpqzvsaqcnwhg` was queried again and contains 17 
 **Result:** QA is not version-aligned with the branch's full incremental migration set. In particular, local versions `20261023000001`–`20261023000004` are not all represented by the same version IDs in the QA ledger; QA-only test entries exist, and the `20261022230901/30908` entries predate the current local filenames. The matching names alone do not establish equal SQL contents or safe ledger repair.
 
 **Next safe action:** compare the SQL bodies and intended effects of each paired migration, document which are canonical production migrations versus QA-only tests, then test the canonical chain on a disposable PostgreSQL 17/Supabase environment. Only after that, prepare a project-specific QA tracking proposal for independent review. Do not run generic linked repair commands, do not modify Production, and do not mark the ledger aligned based solely on migration names.
+
+
+### QA effective MAINTAIN verification (read-only, 2026-10-23)
+
+A read-only query on QA project `mxhciszzpqzvsaqcnwhg` checked effective `MAINTAIN` privileges for `authenticated` and `service_role` across the public relation objects returned by the catalog query. Every returned row reported `false` for both roles. A separate query for `MAINTAIN` entries in `public` default ACLs returned no rows.
+
+This is useful evidence that the current QA branch's effective privileges/defaults are not exposing the same `MAINTAIN` state observed in Production. It does **not** reconcile the version/name drift in the 17-row QA migration ledger, prove the exact migration body responsible for each state, or establish Production parity. No SQL writes were performed.
+
+### Migration body review — paired canonical candidates (2026-10-23)
+
+Reviewed current branch SQL bodies for:
+- `20261023000001_revoke_authenticated_maintain.sql`: revokes direct `MAINTAIN` on the 34 previously identified relations from `authenticated`.
+- `20261023000002_revoke_default_maintain.sql`: revokes `MAINTAIN` from `anon` and `authenticated` only in `postgres`-owned `public` table defaults; it explicitly does not attempt to alter `supabase_admin` defaults.
+- `20261023000003_revoke_service_role_maintain.sql`: revokes `MAINTAIN` on the listed public tables from `service_role` and revokes its `postgres`-owned table default.
+- `20261023000004_application_default_table_privileges.sql`: defines ordinary data defaults for `authenticated` and backend data/structural defaults for `service_role`, omitting `MAINTAIN`.
+
+The QA ledger records `20261023011431` and `20261023011435` with QA-test names, while these candidate files use earlier canonical version IDs `20261023000003` and `20261023000004`. The effective QA privilege query is consistent with the intended least-privilege result, but it cannot prove that each ledger entry executed the exact same SQL body. Treat these as **effectively tested in QA, not yet version-reconciled**. Do not add QA test version IDs to Production or mark them repaired by inference.
