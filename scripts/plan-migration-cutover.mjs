@@ -15,7 +15,7 @@ const expectedBaselineFiles = [
 const baselineFiles = migrationFiles.filter((name) => expectedBaselineFiles.includes(name));
 assert.deepEqual(baselineFiles, expectedBaselineFiles, "Expected the five ordered baseline migrations.");
 const parseVersion = (name) => {
-  const match = /^(\\d{14})_[a-z0-9][a-z0-9_-]*\\.sql$/.exec(name);
+  const match = /^(\d{14})_[a-z0-9][a-z0-9_-]*\.sql$/.exec(name);
   assert.ok(match, `Invalid migration filename: ${name}`);
   return match[1];
 };
@@ -88,5 +88,5 @@ if (process.argv.includes("--print-review-checklist")) {
     "6. Obtain independent review of the exact project-specific migration-tracking plan.",
     "7. After any approved repair, re-read the ledger and prove exact local/remote alignment.",
     "8. Stop if any target, source mapping, restore evidence, or catalog/ACL parity is uncertain.",
-  ].join("\\n"));
+  ].join("\n"));
 }
