@@ -6,7 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node scripts/test-clean-bootstrap.mjs",
+    "verify:baseline": "node scripts/verify-migration-history-reconciliation.mjs && node scripts/verify-clean-baseline.mjs && node scripts/plan-migration-cutover.mjs && node scripts/verify-cutover-planner-safety.mjs && node scripts/verify-baseline-column-parity.mjs && npm run verify:security-parity && npm run verify:authenticated-maintain-guard",
+    "verify:release-readiness": "node scripts/verify-release-readiness.mjs",
+    "plan:migration-cutover": "node scripts/plan-migration-cutover.mjs",
+    "backup:list": "node scripts/list-supabase-backups.mjs",
+    "verify:security-parity": "node scripts/verify-baseline-security-parity.mjs",
+    "verify:authenticated-maintain-guard": "node scripts/verify-authenticated-maintain-guard.mjs",
+    "verify:migration-history": "node scripts/verify-migration-history-reconciliation.mjs",
+    "verify:cutover-planner-safety": "node scripts/verify-cutover-planner-safety.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.1.1",
@@ -16,5 +25,7 @@
     "react-dom": "19.3.0",
     "@supabase/supabase-js": "2.117.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14"
+  }
 }
