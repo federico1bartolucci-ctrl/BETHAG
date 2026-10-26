@@ -98,7 +98,9 @@ BEGIN
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'public'
-    AND (has_table_privilege('authenticated', c.oid, 'MAINTAIN')
+    AND c.relkind IN ('r','p','v','m','f')
+    AND (has_table_privilege('anon', c.oid, 'MAINTAIN')
+      OR has_table_privilege('authenticated', c.oid, 'MAINTAIN')
       OR has_table_privilege('service_role', c.oid, 'MAINTAIN'));
 
   IF bad_count <> 0 THEN
