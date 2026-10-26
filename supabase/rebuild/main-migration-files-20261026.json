@@ -1,0 +1,1023 @@
+{
+  "captured_at_utc": "2026-10-26",
+  "branch": "main",
+  "source": "GitHub supabase/migrations file inventory",
+  "count": 203,
+  "files": [
+    {
+      "file": "20260928043410_create_portal_access_baseline.sql",
+      "version": "20260928043410",
+      "name": "create_portal_access_baseline"
+    },
+    {
+      "file": "20260928060000_expose_first_admin_bootstrap.sql",
+      "version": "20260928060000",
+      "name": "expose_first_admin_bootstrap"
+    },
+    {
+      "file": "20260928070000_save_condominium_rpc.sql",
+      "version": "20260928070000",
+      "name": "save_condominium_rpc"
+    },
+    {
+      "file": "20260928081000_delete_condominium_rpc.sql",
+      "version": "20260928081000",
+      "name": "delete_condominium_rpc"
+    },
+    {
+      "file": "20260928090000_collaborator_module_write_permissions.sql",
+      "version": "20260928090000",
+      "name": "collaborator_module_write_permissions"
+    },
+    {
+      "file": "20260928093000_align_portal_request_access.sql",
+      "version": "20260928093000",
+      "name": "align_portal_request_access"
+    },
+    {
+      "file": "20260928094000_restore_workspace_module_management_helper.sql",
+      "version": "20260928094000",
+      "name": "restore_workspace_module_management_helper"
+    },
+    {
+      "file": "20260928153242_add_condomino_registration_workflow.sql",
+      "version": "20260928153242",
+      "name": "add_condomino_registration_workflow"
+    },
+    {
+      "file": "20260928153246_add_portal_access_unique_identity.sql",
+      "version": "20260928153246",
+      "name": "add_portal_access_unique_identity"
+    },
+    {
+      "file": "20260928153301_fix_portal_registration_upsert.sql",
+      "version": "20260928153301",
+      "name": "fix_portal_registration_upsert"
+    },
+    {
+      "file": "20260928153422_normalize_portal_access_upsert_key.sql",
+      "version": "20260928153422",
+      "name": "normalize_portal_access_upsert_key"
+    },
+    {
+      "file": "20260928153526_route_unmatched_registration_single_workspace.sql",
+      "version": "20260928153526",
+      "name": "route_unmatched_registration_single_workspace"
+    },
+    {
+      "file": "20260928154000_handle_registration_email_mismatch.sql",
+      "version": "20260928154000",
+      "name": "handle_registration_email_mismatch"
+    },
+    {
+      "file": "20260928160001_include_regolamento_inquilino.sql",
+      "version": "20260928160001",
+      "name": "include_regolamento_inquilino"
+    },
+    {
+      "file": "20260928183000_harden_resident_portal_access.sql",
+      "version": "20260928183000",
+      "name": "harden_resident_portal_access"
+    },
+    {
+      "file": "20260929110000_add_condominium_insurance_policies.sql",
+      "version": "20260929110000",
+      "name": "add_condominium_insurance_policies"
+    },
+    {
+      "file": "20260929165000_complete_condominium_units.sql",
+      "version": "20260929165000",
+      "name": "complete_condominium_units"
+    },
+    {
+      "file": "20260929170500_remove_member_millesimi.sql",
+      "version": "20260929170500",
+      "name": "remove_member_millesimi"
+    },
+    {
+      "file": "20260929201500_fix_resident_portal_rls.sql",
+      "version": "20260929201500",
+      "name": "fix_resident_portal_rls"
+    },
+    {
+      "file": "20260929230350_harden_millesimal_allocation_integrity.sql",
+      "version": "20260929230350",
+      "name": "harden_millesimal_allocation_integrity"
+    },
+    {
+      "file": "20260929230443_sync_allocation_payment_status.sql",
+      "version": "20260929230443",
+      "name": "sync_allocation_payment_status"
+    },
+    {
+      "file": "20260929230529_harden_accounting_delete_and_allocation_scope.sql",
+      "version": "20260929230529",
+      "name": "harden_accounting_delete_and_allocation_scope"
+    },
+    {
+      "file": "20260929232000_harden_fiscal_year_closure.sql",
+      "version": "20260929232000",
+      "name": "harden_fiscal_year_closure"
+    },
+    {
+      "file": "20260930090000_optional_account_security.sql",
+      "version": "20260930090000",
+      "name": "optional_account_security"
+    },
+    {
+      "file": "20260930110000_accounting_consumption_and_installment_percentages.sql",
+      "version": "20260930110000",
+      "name": "accounting_consumption_and_installment_percentages"
+    },
+    {
+      "file": "20260930110000_allocation_criteria_scope.sql",
+      "version": "20260930110000",
+      "name": "allocation_criteria_scope"
+    },
+    {
+      "file": "20260930120000_fix_building_scope_allocation_rpc.sql",
+      "version": "20260930120000",
+      "name": "fix_building_scope_allocation_rpc"
+    },
+    {
+      "file": "20260930125903_condominium_creation_intakes.sql",
+      "version": "20260930125903",
+      "name": "condominium_creation_intakes"
+    },
+    {
+      "file": "20260930130000_harden_installment_payment.sql",
+      "version": "20260930130000",
+      "name": "harden_installment_payment"
+    },
+    {
+      "file": "20260930150000_harden_fiscal_carryover_member_scope.sql",
+      "version": "20260930150000",
+      "name": "harden_fiscal_carryover_member_scope"
+    },
+    {
+      "file": "20260930160000_fiscal_carryover_compensation.sql",
+      "version": "20260930160000",
+      "name": "fiscal_carryover_compensation"
+    },
+    {
+      "file": "20260930161000_harden_carryover_compensation_semantics.sql",
+      "version": "20260930161000",
+      "name": "harden_carryover_compensation_semantics"
+    },
+    {
+      "file": "20260930180000_ensure_millesimal_rows_for_units.sql",
+      "version": "20260930180000",
+      "name": "ensure_millesimal_rows_for_units"
+    },
+    {
+      "file": "20260930183000_harden_millesimal_trigger_function_execute.sql",
+      "version": "20260930183000",
+      "name": "harden_millesimal_trigger_function_execute"
+    },
+    {
+      "file": "20260930184500_validate_unit_pertinence_relationship.sql",
+      "version": "20260930184500",
+      "name": "validate_unit_pertinence_relationship"
+    },
+    {
+      "file": "20260930190000_remove_duplicate_unit_relationship_trigger.sql",
+      "version": "20260930190000",
+      "name": "remove_duplicate_unit_relationship_trigger"
+    },
+    {
+      "file": "20260930191500_harden_unit_delete_integrity.sql",
+      "version": "20260930191500",
+      "name": "harden_unit_delete_integrity"
+    },
+    {
+      "file": "20260930193000_allow_authorized_unit_delete.sql",
+      "version": "20260930193000",
+      "name": "allow_authorized_unit_delete"
+    },
+    {
+      "file": "20260930194500_optimize_insurance_rls_auth_calls.sql",
+      "version": "20260930194500",
+      "name": "optimize_insurance_rls_auth_calls"
+    },
+    {
+      "file": "20260930195000_atomic_fiscal_year_transition.sql",
+      "version": "20260930195000",
+      "name": "atomic_fiscal_year_transition"
+    },
+    {
+      "file": "20260930197000_guard_linked_ledger_entries.sql",
+      "version": "20260930197000",
+      "name": "guard_linked_ledger_entries"
+    },
+    {
+      "file": "20260930200000_clean_deleted_member_owner_references.sql",
+      "version": "20260930200000",
+      "name": "clean_deleted_member_owner_references"
+    },
+    {
+      "file": "20260930200000_harden_payment_movements_access.sql",
+      "version": "20260930200000",
+      "name": "harden_payment_movements_access"
+    },
+    {
+      "file": "20260930201000_guard_installment_paid_amount.sql",
+      "version": "20260930201000",
+      "name": "guard_installment_paid_amount"
+    },
+    {
+      "file": "20260930202000_guard_millesimal_integrity.sql",
+      "version": "20260930202000",
+      "name": "guard_millesimal_integrity"
+    },
+    {
+      "file": "20260930203000_harden_fiscal_carryover_access.sql",
+      "version": "20260930203000",
+      "name": "harden_fiscal_carryover_access"
+    },
+    {
+      "file": "20260930204000_protect_fiscal_year_deletion.sql",
+      "version": "20260930204000",
+      "name": "protect_fiscal_year_deletion"
+    },
+    {
+      "file": "20260930205000_guard_accounting_cascade_deletes.sql",
+      "version": "20260930205000",
+      "name": "guard_accounting_cascade_deletes"
+    },
+    {
+      "file": "20260930206000_guard_expense_allocation_integrity.sql",
+      "version": "20260930206000",
+      "name": "guard_expense_allocation_integrity"
+    },
+    {
+      "file": "20260930207000_allow_payment_rpc_allocation_update.sql",
+      "version": "20260930207000",
+      "name": "allow_payment_rpc_allocation_update"
+    },
+    {
+      "file": "20260930208000_guard_consumption_and_opening_balance.sql",
+      "version": "20260930208000",
+      "name": "guard_consumption_and_opening_balance"
+    },
+    {
+      "file": "20260930209000_guard_fund_integrity.sql",
+      "version": "20260930209000",
+      "name": "guard_fund_integrity"
+    },
+    {
+      "file": "20260930210000_complete_condominium_hard_delete.sql",
+      "version": "20260930210000",
+      "name": "complete_condominium_hard_delete"
+    },
+    {
+      "file": "20260930210000_validate_allocation_rule_scope.sql",
+      "version": "20260930210000",
+      "name": "validate_allocation_rule_scope"
+    },
+    {
+      "file": "20260930211000_guard_unit_scope_changes.sql",
+      "version": "20260930211000",
+      "name": "guard_unit_scope_changes"
+    },
+    {
+      "file": "20260930212000_revoke_trigger_security_definer_execute.sql",
+      "version": "20260930212000",
+      "name": "revoke_trigger_security_definer_execute"
+    },
+    {
+      "file": "20260930213000_revoke_trigger_security_definer_execute_explicit_roles.sql",
+      "version": "20260930213000",
+      "name": "revoke_trigger_security_definer_execute_explicit_roles"
+    },
+    {
+      "file": "20260930214000_repair_unit_owner_references.sql",
+      "version": "20260930214000",
+      "name": "repair_unit_owner_references"
+    },
+    {
+      "file": "20260930215000_validate_unit_owner_member_refs.sql",
+      "version": "20260930215000",
+      "name": "validate_unit_owner_member_refs"
+    },
+    {
+      "file": "20260930230000_fiscal_year_carryovers.sql",
+      "version": "20260930230000",
+      "name": "fiscal_year_carryovers"
+    },
+    {
+      "file": "20260930231000_correct_carryover_payment_basis.sql",
+      "version": "20260930231000",
+      "name": "correct_carryover_payment_basis"
+    },
+    {
+      "file": "20260930232000_installment_schedules.sql",
+      "version": "20260930232000",
+      "name": "installment_schedules"
+    },
+    {
+      "file": "20260930233000_link_funds_to_ledger.sql",
+      "version": "20260930233000",
+      "name": "link_funds_to_ledger"
+    },
+    {
+      "file": "20260930234000_multiyear_installment_schedules.sql",
+      "version": "20260930234000",
+      "name": "multiyear_installment_schedules"
+    },
+    {
+      "file": "20260930235000_accounting_settings.sql",
+      "version": "20260930235000",
+      "name": "accounting_settings"
+    },
+    {
+      "file": "20260930235500_classify_expense_type.sql",
+      "version": "20260930235500",
+      "name": "classify_expense_type"
+    },
+    {
+      "file": "20260930240000_installment_percentages.sql",
+      "version": "20260930240000",
+      "name": "installment_percentages"
+    },
+    {
+      "file": "20260930241000_allocation_rules_and_consumption.sql",
+      "version": "20260930241000",
+      "name": "allocation_rules_and_consumption"
+    },
+    {
+      "file": "20260930250000_manual_ai_allocation_intake.sql",
+      "version": "20260930250000",
+      "name": "manual_ai_allocation_intake"
+    },
+    {
+      "file": "20260930260000_harden_allocation_intake_validation.sql",
+      "version": "20260930260000",
+      "name": "harden_allocation_intake_validation"
+    },
+    {
+      "file": "20260930270000_validate_allocation_table_scope.sql",
+      "version": "20260930270000",
+      "name": "validate_allocation_table_scope"
+    },
+    {
+      "file": "20260930280000_work_accounting_integrity_indexes.sql",
+      "version": "20260930280000",
+      "name": "work_accounting_integrity_indexes"
+    },
+    {
+      "file": "20260930290000_fix_installment_rounding_and_unification.sql",
+      "version": "20260930290000",
+      "name": "fix_installment_rounding_and_unification"
+    },
+    {
+      "file": "20260930300000_harden_accounting_rls_permissions.sql",
+      "version": "20260930300000",
+      "name": "harden_accounting_rls_permissions"
+    },
+    {
+      "file": "20260930310000_harden_remaining_module_rls.sql",
+      "version": "20260930310000",
+      "name": "harden_remaining_module_rls"
+    },
+    {
+      "file": "20260930320000_harden_portal_approval_rpc.sql",
+      "version": "20260930320000",
+      "name": "harden_portal_approval_rpc"
+    },
+    {
+      "file": "20260930340000_add_missing_fk_indexes.sql",
+      "version": "20260930340000",
+      "name": "add_missing_fk_indexes"
+    },
+    {
+      "file": "20260930350000_harden_document_storage_rls.sql",
+      "version": "20260930350000",
+      "name": "harden_document_storage_rls"
+    },
+    {
+      "file": "20260930360000_harden_resident_document_visibility.sql",
+      "version": "20260930360000",
+      "name": "harden_resident_document_visibility"
+    },
+    {
+      "file": "20260930370000_harden_portal_insurance_visibility.sql",
+      "version": "20260930370000",
+      "name": "harden_portal_insurance_visibility"
+    },
+    {
+      "file": "20260930380000_harden_resident_unit_visibility.sql",
+      "version": "20260930380000",
+      "name": "harden_resident_unit_visibility"
+    },
+    {
+      "file": "20260930390000_harden_portal_registration_response.sql",
+      "version": "20260930390000",
+      "name": "harden_portal_registration_response"
+    },
+    {
+      "file": "20260930400000_harden_portal_access_visibility.sql",
+      "version": "20260930400000",
+      "name": "harden_portal_access_visibility"
+    },
+    {
+      "file": "20260930410000_portal_publication_visibility.sql",
+      "version": "20260930410000",
+      "name": "portal_publication_visibility"
+    },
+    {
+      "file": "20260930420000_harden_document_storage_visibility.sql",
+      "version": "20260930420000",
+      "name": "harden_document_storage_visibility"
+    },
+    {
+      "file": "20260930430000_optimize_portal_rls_auth_initplan.sql",
+      "version": "20260930430000",
+      "name": "optimize_portal_rls_auth_initplan"
+    },
+    {
+      "file": "20260930440000_optimize_portal_authorization_helpers.sql",
+      "version": "20260930440000",
+      "name": "optimize_portal_authorization_helpers"
+    },
+    {
+      "file": "20260930450000_harden_resident_request_member_scope.sql",
+      "version": "20260930450000",
+      "name": "harden_resident_request_member_scope"
+    },
+    {
+      "file": "20260930460000_harden_condominium_member_visibility.sql",
+      "version": "20260930460000",
+      "name": "harden_condominium_member_visibility"
+    },
+    {
+      "file": "20260930470000_harden_portal_approval_workspace_scope.sql",
+      "version": "20260930470000",
+      "name": "harden_portal_approval_workspace_scope"
+    },
+    {
+      "file": "20260930480000_scope_condominium_delete_portal_requests.sql",
+      "version": "20260930480000",
+      "name": "scope_condominium_delete_portal_requests"
+    },
+    {
+      "file": "20260930490000_harden_profile_column_permissions.sql",
+      "version": "20260930490000",
+      "name": "harden_profile_column_permissions"
+    },
+    {
+      "file": "20260930500000_harden_condominium_visibility.sql",
+      "version": "20260930500000",
+      "name": "harden_condominium_visibility"
+    },
+    {
+      "file": "20260930510000_harden_unit_workspace_scope.sql",
+      "version": "20260930510000",
+      "name": "harden_unit_workspace_scope"
+    },
+    {
+      "file": "20260930520000_harden_portal_email_uniqueness.sql",
+      "version": "20260930520000",
+      "name": "harden_portal_email_uniqueness"
+    },
+    {
+      "file": "20260930530000_fix_portal_registration_case_insensitive_upsert.sql",
+      "version": "20260930530000",
+      "name": "fix_portal_registration_case_insensitive_upsert"
+    },
+    {
+      "file": "20260930540000_harden_condominium_delete_carryover_compensations.sql",
+      "version": "20260930540000",
+      "name": "harden_condominium_delete_carryover_compensations"
+    },
+    {
+      "file": "20260930550000_harden_archived_condominium_visibility.sql",
+      "version": "20260930550000",
+      "name": "harden_archived_condominium_visibility"
+    },
+    {
+      "file": "20261001063435_final_performance_indexes_communication_recipients.sql",
+      "version": "20261001063435",
+      "name": "final_performance_indexes_communication_recipients"
+    },
+    {
+      "file": "20261001063800_lock_down_financial_rpc_anon_execute.sql",
+      "version": "20261001063800",
+      "name": "lock_down_financial_rpc_anon_execute"
+    },
+    {
+      "file": "20261001081500_lock_down_legacy_admin_rpc_anon_execute.sql",
+      "version": "20261001081500",
+      "name": "lock_down_legacy_admin_rpc_anon_execute"
+    },
+    {
+      "file": "20261001081600_lock_down_restore_condominium_rpc_anon_execute.sql",
+      "version": "20261001081600",
+      "name": "lock_down_restore_condominium_rpc_anon_execute"
+    },
+    {
+      "file": "20261001081700_protect_profile_privilege_fields.sql",
+      "version": "20261001081700",
+      "name": "protect_profile_privilege_fields"
+    },
+    {
+      "file": "20261001082000_fix_fiscal_carryover_regeneration.sql",
+      "version": "20261001082000",
+      "name": "fix_fiscal_carryover_regeneration"
+    },
+    {
+      "file": "20261001083000_payment_reversal_audit_and_reconciliation.sql",
+      "version": "20261001083000",
+      "name": "payment_reversal_audit_and_reconciliation"
+    },
+    {
+      "file": "20261001083500_lock_concurrent_installment_generation.sql",
+      "version": "20261001083500",
+      "name": "lock_concurrent_installment_generation"
+    },
+    {
+      "file": "20261001093000_transfer_current_owner_and_portal_lifecycle.sql",
+      "version": "20261001093000",
+      "name": "transfer_current_owner_and_portal_lifecycle"
+    },
+    {
+      "file": "20261001094000_index_transfer_closed_by.sql",
+      "version": "20261001094000",
+      "name": "index_transfer_closed_by"
+    },
+    {
+      "file": "20261001094100_protect_member_financial_history.sql",
+      "version": "20261001094100",
+      "name": "protect_member_financial_history"
+    },
+    {
+      "file": "20261001095000_add_unit_cadastral_transformations.sql",
+      "version": "20261001095000",
+      "name": "add_unit_cadastral_transformations"
+    },
+    {
+      "file": "20261001095700_index_unit_transformation_audit_fks.sql",
+      "version": "20261001095700",
+      "name": "index_unit_transformation_audit_fks"
+    },
+    {
+      "file": "20261001100000_protect_member_delete_financial_history.sql",
+      "version": "20261001100000",
+      "name": "protect_member_delete_financial_history"
+    },
+    {
+      "file": "20261001101500_fix_member_portal_workspace_transfer.sql",
+      "version": "20261001101500",
+      "name": "fix_member_portal_workspace_transfer"
+    },
+    {
+      "file": "20261001102100_unit_transformation_snapshots.sql",
+      "version": "20261001102100",
+      "name": "unit_transformation_snapshots"
+    },
+    {
+      "file": "20261001103000_add_expense_deliberation_metadata.sql",
+      "version": "20261001103000",
+      "name": "add_expense_deliberation_metadata"
+    },
+    {
+      "file": "20261001104500_add_condominium_member_transfer.sql",
+      "version": "20261001104500",
+      "name": "add_condominium_member_transfer"
+    },
+    {
+      "file": "20261001110000_add_member_transfer_accounting_snapshot.sql",
+      "version": "20261001110000",
+      "name": "add_member_transfer_accounting_snapshot"
+    },
+    {
+      "file": "20261001110000_harden_current_owner_installment_generation.sql",
+      "version": "20261001110000",
+      "name": "harden_current_owner_installment_generation"
+    },
+    {
+      "file": "20261001111000_enrich_unit_transformation_preview.sql",
+      "version": "20261001111000",
+      "name": "enrich_unit_transformation_preview"
+    },
+    {
+      "file": "20261001111500_capture_transfer_accounting_snapshot.sql",
+      "version": "20261001111500",
+      "name": "capture_transfer_accounting_snapshot"
+    },
+    {
+      "file": "20261001113000_add_member_transfer_preview.sql",
+      "version": "20261001113000",
+      "name": "add_member_transfer_preview"
+    },
+    {
+      "file": "20261001114500_index_member_transfer_foreign_keys.sql",
+      "version": "20261001114500",
+      "name": "index_member_transfer_foreign_keys"
+    },
+    {
+      "file": "20261001120000_transfer_lifecycle_keep_outgoing_active.sql",
+      "version": "20261001120000",
+      "name": "transfer_lifecycle_keep_outgoing_active"
+    },
+    {
+      "file": "20261002045106_prevent_portal_reactivation_for_transferred_members.sql",
+      "version": "20261002045106",
+      "name": "prevent_portal_reactivation_for_transferred_members"
+    },
+    {
+      "file": "20261002060000_fix_member_transfer_workspace_members_lookup.sql",
+      "version": "20261002060000",
+      "name": "fix_member_transfer_workspace_members_lookup"
+    },
+    {
+      "file": "20261002110000_serialize_member_transfer_by_unit.sql",
+      "version": "20261002110000",
+      "name": "serialize_member_transfer_by_unit"
+    },
+    {
+      "file": "20261002110808_validate_transfer_outgoing_owner.sql",
+      "version": "20261002110808",
+      "name": "validate_transfer_outgoing_owner"
+    },
+    {
+      "file": "20261002113421_revoke_excess_public_table_privileges.sql",
+      "version": "20261002113421",
+      "name": "revoke_excess_public_table_privileges"
+    },
+    {
+      "file": "20261002113618_secure_default_function_and_sequence_privileges.sql",
+      "version": "20261002113618",
+      "name": "secure_default_function_and_sequence_privileges"
+    },
+    {
+      "file": "20261002113631_revoke_default_sequence_update_privilege.sql",
+      "version": "20261002113631",
+      "name": "revoke_default_sequence_update_privilege"
+    },
+    {
+      "file": "20261002120000_preserve_closed_fiscal_year_accounting.sql",
+      "version": "20261002120000",
+      "name": "preserve_closed_fiscal_year_accounting"
+    },
+    {
+      "file": "20261003050000_preserve_transfer_extraordinary_allocations.sql",
+      "version": "20261003050000",
+      "name": "preserve_transfer_extraordinary_allocations"
+    },
+    {
+      "file": "20261003052000_expose_captured_transfer_snapshot.sql",
+      "version": "20261003052000",
+      "name": "expose_captured_transfer_snapshot"
+    },
+    {
+      "file": "20261003060000_expand_member_transfer_preview_installments.sql",
+      "version": "20261003060000",
+      "name": "expand_member_transfer_preview_installments"
+    },
+    {
+      "file": "20261003061000_preserve_future_installments_transfer_snapshot.sql",
+      "version": "20261003061000",
+      "name": "preserve_future_installments_transfer_snapshot"
+    },
+    {
+      "file": "20261003062000_include_unit_unassigned_installments_in_transfer.sql",
+      "version": "20261003062000",
+      "name": "include_unit_unassigned_installments_in_transfer"
+    },
+    {
+      "file": "20261003063000_include_unit_unassigned_carryovers_in_transfer.sql",
+      "version": "20261003063000",
+      "name": "include_unit_unassigned_carryovers_in_transfer"
+    },
+    {
+      "file": "20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql",
+      "version": "20261003064000",
+      "name": "block_transfer_close_with_unresolved_unit_carryovers"
+    },
+    {
+      "file": "20261005080000_harden_portal_approval_workspace_scope_reconciled.sql",
+      "version": "20261005080000",
+      "name": "harden_portal_approval_workspace_scope_reconciled"
+    },
+    {
+      "file": "20261005090000_reconcile_portal_member_link_and_transfer_archive_state.sql",
+      "version": "20261005090000",
+      "name": "reconcile_portal_member_link_and_transfer_archive_state"
+    },
+    {
+      "file": "20261005100000_reconcile_complete_member_transfer_chain.sql",
+      "version": "20261005100000",
+      "name": "reconcile_complete_member_transfer_chain"
+    },
+    {
+      "file": "20261005103000_reconcile_member_transfer_preview_chain.sql",
+      "version": "20261005103000",
+      "name": "reconcile_member_transfer_preview_chain"
+    },
+    {
+      "file": "20261005110000_reconcile_portal_rpc_grants.sql",
+      "version": "20261005110000",
+      "name": "reconcile_portal_rpc_grants"
+    },
+    {
+      "file": "20261005111000_reconcile_member_transfer_rpc_grants.sql",
+      "version": "20261005111000",
+      "name": "reconcile_member_transfer_rpc_grants"
+    },
+    {
+      "file": "20261005112000_reconcile_portal_approval_rpc_security.sql",
+      "version": "20261005112000",
+      "name": "reconcile_portal_approval_rpc_security"
+    },
+    {
+      "file": "20261005124000_finalize_public_transfer_and_approval_invoker_wrappers.sql",
+      "version": "20261005124000",
+      "name": "finalize_public_transfer_and_approval_invoker_wrappers"
+    },
+    {
+      "file": "20261005125000_harden_private_portal_registration_execute.sql",
+      "version": "20261005125000",
+      "name": "harden_private_portal_registration_execute"
+    },
+    {
+      "file": "20261005130000_reconcile_private_portal_rpc_implementations.sql",
+      "version": "20261005130000",
+      "name": "reconcile_private_portal_rpc_implementations"
+    },
+    {
+      "file": "20261005131000_revoke_direct_private_portal_rpc_execute.sql",
+      "version": "20261005131000",
+      "name": "revoke_direct_private_portal_rpc_execute"
+    },
+    {
+      "file": "20261005132000_reconcile_resident_archive_visibility.sql",
+      "version": "20261005132000",
+      "name": "reconcile_resident_archive_visibility"
+    },
+    {
+      "file": "20261005133000_harden_resident_condominium_archive_access.sql",
+      "version": "20261005133000",
+      "name": "harden_resident_condominium_archive_access"
+    },
+    {
+      "file": "20261005140000_revoke_direct_portal_trigger_execute.sql",
+      "version": "20261005140000",
+      "name": "revoke_direct_portal_trigger_execute"
+    },
+    {
+      "file": "20261005141000_reconcile_member_portal_sync_trigger.sql",
+      "version": "20261005141000",
+      "name": "reconcile_member_portal_sync_trigger"
+    },
+    {
+      "file": "20261005142000_reconcile_member_portal_integrity_triggers.sql",
+      "version": "20261005142000",
+      "name": "reconcile_member_portal_integrity_triggers"
+    },
+    {
+      "file": "20261005143000_reconcile_member_transfer_constraints.sql",
+      "version": "20261005143000",
+      "name": "reconcile_member_transfer_constraints"
+    },
+    {
+      "file": "20261005144000_reconcile_member_transfer_portal_indexes.sql",
+      "version": "20261005144000",
+      "name": "reconcile_member_transfer_portal_indexes"
+    },
+    {
+      "file": "20261005145000_reconcile_member_indexes.sql",
+      "version": "20261005145000",
+      "name": "reconcile_member_indexes"
+    },
+    {
+      "file": "20261005150000_reconcile_core_lookup_indexes.sql",
+      "version": "20261005150000",
+      "name": "reconcile_core_lookup_indexes"
+    },
+    {
+      "file": "20261005151000_reconcile_condominium_archive_fk.sql",
+      "version": "20261005151000",
+      "name": "reconcile_condominium_archive_fk"
+    },
+    {
+      "file": "20261005152000_finalize_public_portal_transfer_wrappers.sql",
+      "version": "20261005152000",
+      "name": "finalize_public_portal_transfer_wrappers"
+    },
+    {
+      "file": "20261005153000_reconcile_core_rls_policies.sql",
+      "version": "20261005153000",
+      "name": "reconcile_core_rls_policies"
+    },
+    {
+      "file": "20261005154000_reconcile_member_transfer_rls.sql",
+      "version": "20261005154000",
+      "name": "reconcile_member_transfer_rls"
+    },
+    {
+      "file": "20261005155000_reconcile_accounting_rls_policies.sql",
+      "version": "20261005155000",
+      "name": "reconcile_accounting_rls_policies"
+    },
+    {
+      "file": "20261005160000_reconcile_accounting_table_grants.sql",
+      "version": "20261005160000",
+      "name": "reconcile_accounting_table_grants"
+    },
+    {
+      "file": "20261005161000_harden_accounting_rpc_grants.sql",
+      "version": "20261005161000",
+      "name": "harden_accounting_rpc_grants"
+    },
+    {
+      "file": "20261005162000_harden_core_public_rpc_grants.sql",
+      "version": "20261005162000",
+      "name": "harden_core_public_rpc_grants"
+    },
+    {
+      "file": "20261005163000_reconcile_budget_funds_millesimal_rls.sql",
+      "version": "20261005163000",
+      "name": "reconcile_budget_funds_millesimal_rls"
+    },
+    {
+      "file": "20261005164000_restore_communication_recipients_audit_log.sql",
+      "version": "20261005164000",
+      "name": "restore_communication_recipients_audit_log"
+    },
+    {
+      "file": "20261005164605_harden_login_workspace_access_invoker.sql",
+      "version": "20261005164605",
+      "name": "harden_login_workspace_access_invoker"
+    },
+    {
+      "file": "20261005165000_restore_operational_work_register_and_transform_tables.sql",
+      "version": "20261005165000",
+      "name": "restore_operational_work_register_and_transform_tables"
+    },
+    {
+      "file": "20261005165658_revoke_direct_trigger_function_execute.sql",
+      "version": "20261005165658",
+      "name": "revoke_direct_trigger_function_execute"
+    },
+    {
+      "file": "20261005170000_reconcile_operational_table_grants.sql",
+      "version": "20261005170000",
+      "name": "reconcile_operational_table_grants"
+    },
+    {
+      "file": "20261005170000_reconcile_operational_trigger_chain.sql",
+      "version": "20261005170000",
+      "name": "reconcile_operational_trigger_chain"
+    },
+    {
+      "file": "20261005171000_harden_fund_availability_rls.sql",
+      "version": "20261005171000",
+      "name": "harden_fund_availability_rls"
+    },
+    {
+      "file": "20261005171105_restore_private_rls_helper_execute_grants.sql",
+      "version": "20261005171105",
+      "name": "restore_private_rls_helper_execute_grants"
+    },
+    {
+      "file": "20261005172000_finalize_operational_constraint_parity.sql",
+      "version": "20261005172000",
+      "name": "finalize_operational_constraint_parity"
+    },
+    {
+      "file": "20261005173000_reconcile_private_registration_grant.sql",
+      "version": "20261005173000",
+      "name": "reconcile_private_registration_grant"
+    },
+    {
+      "file": "20261005174000_reconcile_remaining_core_columns.sql",
+      "version": "20261005174000",
+      "name": "reconcile_remaining_core_columns"
+    },
+    {
+      "file": "20261005180000_reconcile_accounting_constraint_and_rls_parity.sql",
+      "version": "20261005180000",
+      "name": "reconcile_accounting_constraint_and_rls_parity"
+    },
+    {
+      "file": "20261005183000_reconcile_public_table_privileges.sql",
+      "version": "20261005183000",
+      "name": "reconcile_public_table_privileges"
+    },
+    {
+      "file": "20261005184000_restore_missing_private_function_parity.sql",
+      "version": "20261005184000",
+      "name": "restore_missing_private_function_parity"
+    },
+    {
+      "file": "20261005185000_restore_missing_public_function_parity.sql",
+      "version": "20261005185000",
+      "name": "restore_missing_public_function_parity"
+    },
+    {
+      "file": "20261005190000_reconcile_public_function_acl.sql",
+      "version": "20261005190000",
+      "name": "reconcile_public_function_acl"
+    },
+    {
+      "file": "20261005190000_remove_obsolete_function_overload.sql",
+      "version": "20261005190000",
+      "name": "remove_obsolete_function_overload"
+    },
+    {
+      "file": "20261005191000_reconcile_fund_availability_view.sql",
+      "version": "20261005191000",
+      "name": "reconcile_fund_availability_view"
+    },
+    {
+      "file": "20261005191000_reconcile_public_function_security_parity.sql",
+      "version": "20261005191000",
+      "name": "reconcile_public_function_security_parity"
+    },
+    {
+      "file": "20261005192000_reconcile_public_relation_acl.sql",
+      "version": "20261005192000",
+      "name": "reconcile_public_relation_acl"
+    },
+    {
+      "file": "20261005192000_remove_obsolete_schedule_overload_final.sql",
+      "version": "20261005192000",
+      "name": "remove_obsolete_schedule_overload_final"
+    },
+    {
+      "file": "20261005193000_harden_guard_installment_parent_delete_grant.sql",
+      "version": "20261005193000",
+      "name": "harden_guard_installment_parent_delete_grant"
+    },
+    {
+      "file": "20261005193000_reconcile_public_indexes.sql",
+      "version": "20261005193000",
+      "name": "reconcile_public_indexes"
+    },
+    {
+      "file": "20261005194000_finalize_public_constraint_parity.sql",
+      "version": "20261005194000",
+      "name": "finalize_public_constraint_parity"
+    },
+    {
+      "file": "20261005195000_normalize_remaining_rls_policy_definitions.sql",
+      "version": "20261005195000",
+      "name": "normalize_remaining_rls_policy_definitions"
+    },
+    {
+      "file": "20261005200000_reconcile_public_triggers.sql",
+      "version": "20261005200000",
+      "name": "reconcile_public_triggers"
+    },
+    {
+      "file": "20261005201000_reconcile_login_workspace_access_rpc.sql",
+      "version": "20261005201000",
+      "name": "reconcile_login_workspace_access_rpc"
+    },
+    {
+      "file": "20261005203000_expose_login_workspace_access_rpc.sql",
+      "version": "20261005203000",
+      "name": "expose_login_workspace_access_rpc"
+    },
+    {
+      "file": "20261005205500_restore_save_condominium_rpc_execute.sql",
+      "version": "20261005205500",
+      "name": "restore_save_condominium_rpc_execute"
+    },
+    {
+      "file": "20261005211000_restore_member_transfer_private_execute_grant.sql",
+      "version": "20261005211000",
+      "name": "restore_member_transfer_private_execute_grant"
+    },
+    {
+      "file": "20261005212000_fix_member_transfer_workspace_members_update.sql",
+      "version": "20261005212000",
+      "name": "fix_member_transfer_workspace_members_update"
+    },
+    {
+      "file": "20261006032000_restore_closing_member_history.sql",
+      "version": "20261006032000",
+      "name": "restore_closing_member_history"
+    },
+    {
+      "file": "20261006032500_reconcile_existing_transfer_outgoing_history.sql",
+      "version": "20261006032500",
+      "name": "reconcile_existing_transfer_outgoing_history"
+    },
+    {
+      "file": "20261006034000_preserve_closing_member_history.sql",
+      "version": "20261006034000",
+      "name": "preserve_closing_member_history"
+    },
+    {
+      "file": "20261006040000_repair_deleted_member_owner_references.sql",
+      "version": "20261006040000",
+      "name": "repair_deleted_member_owner_references"
+    },
+    {
+      "file": "20261007072310_harden_trigger_function_security_for_launch.sql",
+      "version": "20261007072310",
+      "name": "harden_trigger_function_security_for_launch"
+    }
+  ]
+}
