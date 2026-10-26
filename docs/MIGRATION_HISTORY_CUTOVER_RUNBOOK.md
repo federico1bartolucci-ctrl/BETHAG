@@ -155,3 +155,36 @@ The isolated PostgreSQL 17 bootstrap now also asserts relation/function ownershi
 ### Production backup/restore drill (next release-readiness step)
 
 The detailed execution checklist and evidence template are now maintained in [`docs/PRODUCTION_BACKUP_RESTORE_DRILL.md`](PRODUCTION_BACKUP_RESTORE_DRILL.md). This is a procedure only: **no backup restore has been claimed or performed by this documentation change**. The next operational action is to obtain a real recovery point and restore it into a separately identified non-Production target, then record validation evidence. Keep `BETHAG_PRODUCTION_BACKUP_VERIFIED` unset until that drill passes. Production remains untouched.
+
+
+## Current migration-history reconciliation — read-only capture (2026-10-26)
+
+Fresh live migration ledgers and source-file inventories were captured into these versioned audit artifacts:
+
+- `supabase/rebuild/production-ledger-20261026.json` — current Production ledger, **244** entries; latest `20261022202747_harden_close_member_transfer_search_path`.
+- `supabase/rebuild/qa-ledger-20261026.json` — current QA ledger, **17** entries; latest `20261023011435_define_application_default_table_privileges_qa`.
+- `supabase/rebuild/main-migration-files-20261026.json` — source inventory from `main`, **203** SQL migration files.
+- `supabase/rebuild/migration-history-reconciliation-20261026.json` — version/name mapping report.
+
+The deterministic verifier `scripts/verify-migration-history-reconciliation.mjs` checks that these captures and the current clean-branch migration directory agree with the recorded report. It is included in `npm run verify:baseline`.
+
+### Comparison result
+
+| Comparison | Exact version + name | Same name, different version | No source match / other mismatch |
+|---|---:|---:|---:|
+| Production ledger (244 rows) vs source files on `main` | 19 | 88 | 137 have no matching version or name |
+| Clean branch (15 migration files) vs Production | 1 version match | — | 14 clean-branch files are not registered in Production |
+| Clean branch vs QA ledger (17 rows) | 11 exact matches | — | 6 QA ledger rows have no exact clean-branch file; 4 clean-branch files are not registered in QA |
+
+The 88 same-name/different-version rows are **not** assumed equivalent: the SQL body and intended effects must be reviewed before any tracking decision. The six QA-only ledger entries likewise must not be promoted to Production just because QA reports them as applied.
+
+### Decision and remaining boundary
+
+The **inventory and source mapping are now recorded and mechanically checked**. This resolves the ambiguity about which versions have exact source matches and which do not; it does **not** mean the remote migration ledgers are aligned.
+
+- Production retains its 244-row historical ledger. The clean branch intentionally consolidates future fresh installs into five baseline migrations plus incremental migrations; it must not replay the baseline against the populated Production schema.
+- The migration planner is now read-only. It no longer prints generic `supabase migration repair --linked` commands; `--print-commands` exits blocked and `--print-review-checklist` prints only a review checklist.
+- No Production or QA migration ledger, schema, or data was modified by this reconciliation.
+- The Production tracking cutover remains blocked until the isolated backup/restore drill in `docs/PRODUCTION_BACKUP_RESTORE_DRILL.md` succeeds and the catalog/ACL parity and platform-managed default-ACL disposition are formally signed off.
+
+**Next step after this reconciliation:** perform the isolated backup/restore drill. Do not perform migration tracking repair before that recovery point is proven.
