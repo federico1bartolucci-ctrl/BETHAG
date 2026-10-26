@@ -28,12 +28,12 @@ assert.equal(main.count, 203, "Refresh main migration-file inventory when main c
 assert.equal(currentFiles.length, 15, "Clean branch migration inventory changed; refresh reconciliation report.");
 for (const list of [production.migrations, qa.migrations]) {
   const versions = list.map((entry) => entry.version);
-  assert.ok(versions.every((version) => /^\\d{14}$/.test(version)));
+  assert.ok(versions.every((version) => /^\d{14}$/.test(version)));
   assert.equal(new Set(versions).size, versions.length, "Duplicate migration version in captured ledger.");
   assert.deepEqual(versions, [...versions].sort(), "Captured ledger is not ordered by version.");
 }
 for (const file of [...main.files, ...currentFiles]) {
-  assert.match(file.file, /^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/);
+  assert.match(file.file, /^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/);
   assert.equal(file.version, file.file.slice(0, 14));
 }
 
