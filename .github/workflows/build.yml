@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Verify clean database baseline
+      - name: Verify migration history reconciliation and clean database baseline
         run: npm run verify:baseline
 
       - name: Verify Production function security and ACL parity
