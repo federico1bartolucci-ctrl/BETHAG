@@ -1,0 +1,1733 @@
+{
+  "captured_at_utc": "2026-10-26",
+  "scope": "Read-only migration history reconciliation inventory; no schema, data, or remote migration ledger was changed.",
+  "production": {
+    "project_ref": "tctcgptrsmvgajqjgnev",
+    "ledger_count": 244,
+    "latest": {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
+    }
+  },
+  "qa": {
+    "project_ref": "mxhciszzpqzvsaqcnwhg",
+    "ledger_count": 17,
+    "latest": {
+      "version": "20261023011435",
+      "name": "define_application_default_table_privileges_qa"
+    }
+  },
+  "repository_main": {
+    "migration_files": 203,
+    "exact_version_and_name_matches": 19,
+    "same_name_but_different_version": 88,
+    "no_matching_source_file": 137,
+    "same_version_different_name": 0
+  },
+  "production_to_main": {
+    "exact_version_and_name_matches": [
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260928153242",
+        "productionName": "add_condomino_registration_workflow",
+        "repositoryFile": "20260928153242_add_condomino_registration_workflow.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260928153246",
+        "productionName": "add_portal_access_unique_identity",
+        "repositoryFile": "20260928153246_add_portal_access_unique_identity.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260928153301",
+        "productionName": "fix_portal_registration_upsert",
+        "repositoryFile": "20260928153301_fix_portal_registration_upsert.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260928153422",
+        "productionName": "normalize_portal_access_upsert_key",
+        "repositoryFile": "20260928153422_normalize_portal_access_upsert_key.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260928153526",
+        "productionName": "route_unmatched_registration_single_workspace",
+        "repositoryFile": "20260928153526_route_unmatched_registration_single_workspace.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260929230350",
+        "productionName": "harden_millesimal_allocation_integrity",
+        "repositoryFile": "20260929230350_harden_millesimal_allocation_integrity.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260929230443",
+        "productionName": "sync_allocation_payment_status",
+        "repositoryFile": "20260929230443_sync_allocation_payment_status.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260929230529",
+        "productionName": "harden_accounting_delete_and_allocation_scope",
+        "repositoryFile": "20260929230529_harden_accounting_delete_and_allocation_scope.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20260930125903",
+        "productionName": "condominium_creation_intakes",
+        "repositoryFile": "20260930125903_condominium_creation_intakes.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261001063435",
+        "productionName": "final_performance_indexes_communication_recipients",
+        "repositoryFile": "20261001063435_final_performance_indexes_communication_recipients.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261002045106",
+        "productionName": "prevent_portal_reactivation_for_transferred_members",
+        "repositoryFile": "20261002045106_prevent_portal_reactivation_for_transferred_members.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261002110808",
+        "productionName": "validate_transfer_outgoing_owner",
+        "repositoryFile": "20261002110808_validate_transfer_outgoing_owner.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261002113421",
+        "productionName": "revoke_excess_public_table_privileges",
+        "repositoryFile": "20261002113421_revoke_excess_public_table_privileges.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261002113618",
+        "productionName": "secure_default_function_and_sequence_privileges",
+        "repositoryFile": "20261002113618_secure_default_function_and_sequence_privileges.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261002113631",
+        "productionName": "revoke_default_sequence_update_privilege",
+        "repositoryFile": "20261002113631_revoke_default_sequence_update_privilege.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261005164605",
+        "productionName": "harden_login_workspace_access_invoker",
+        "repositoryFile": "20261005164605_harden_login_workspace_access_invoker.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261005165658",
+        "productionName": "revoke_direct_trigger_function_execute",
+        "repositoryFile": "20261005165658_revoke_direct_trigger_function_execute.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261005171105",
+        "productionName": "restore_private_rls_helper_execute_grants",
+        "repositoryFile": "20261005171105_restore_private_rls_helper_execute_grants.sql"
+      },
+      {
+        "classification": "exact_version_and_name",
+        "productionVersion": "20261007072310",
+        "productionName": "harden_trigger_function_security_for_launch",
+        "repositoryFile": "20261007072310_harden_trigger_function_security_for_launch.sql"
+      }
+    ],
+    "same_name_but_different_version": [
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260928045907",
+        "productionName": "expose_first_admin_bootstrap",
+        "repositoryFiles": [
+          "20260928060000_expose_first_admin_bootstrap.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260928154019",
+        "productionName": "handle_registration_email_mismatch",
+        "repositoryFiles": [
+          "20260928154000_handle_registration_email_mismatch.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929081735",
+        "productionName": "add_condominium_insurance_policies",
+        "repositoryFiles": [
+          "20260929110000_add_condominium_insurance_policies.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929144737",
+        "productionName": "complete_condominium_units",
+        "repositoryFiles": [
+          "20260929165000_complete_condominium_units.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929150453",
+        "productionName": "remove_member_millesimi",
+        "repositoryFiles": [
+          "20260929170500_remove_member_millesimi.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929171530",
+        "productionName": "optimize_insurance_rls_auth_calls",
+        "repositoryFiles": [
+          "20260930194500_optimize_insurance_rls_auth_calls.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929232302",
+        "productionName": "harden_millesimal_trigger_function_execute",
+        "repositoryFiles": [
+          "20260930183000_harden_millesimal_trigger_function_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929232531",
+        "productionName": "validate_unit_pertinence_relationship",
+        "repositoryFiles": [
+          "20260930184500_validate_unit_pertinence_relationship.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929233045",
+        "productionName": "remove_duplicate_unit_relationship_trigger",
+        "repositoryFiles": [
+          "20260930190000_remove_duplicate_unit_relationship_trigger.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260929233222",
+        "productionName": "harden_unit_delete_integrity",
+        "repositoryFiles": [
+          "20260930191500_harden_unit_delete_integrity.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080253",
+        "productionName": "optional_account_security",
+        "repositoryFiles": [
+          "20260930090000_optional_account_security.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080309",
+        "productionName": "ensure_millesimal_rows_for_units",
+        "repositoryFiles": [
+          "20260930180000_ensure_millesimal_rows_for_units.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080312",
+        "productionName": "harden_millesimal_trigger_function_execute",
+        "repositoryFiles": [
+          "20260930183000_harden_millesimal_trigger_function_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080317",
+        "productionName": "validate_unit_pertinence_relationship",
+        "repositoryFiles": [
+          "20260930184500_validate_unit_pertinence_relationship.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080320",
+        "productionName": "remove_duplicate_unit_relationship_trigger",
+        "repositoryFiles": [
+          "20260930190000_remove_duplicate_unit_relationship_trigger.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080323",
+        "productionName": "harden_unit_delete_integrity",
+        "repositoryFiles": [
+          "20260930191500_harden_unit_delete_integrity.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080325",
+        "productionName": "allow_authorized_unit_delete",
+        "repositoryFiles": [
+          "20260930193000_allow_authorized_unit_delete.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080328",
+        "productionName": "optimize_insurance_rls_auth_calls",
+        "repositoryFiles": [
+          "20260930194500_optimize_insurance_rls_auth_calls.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080331",
+        "productionName": "clean_deleted_member_owner_references",
+        "repositoryFiles": [
+          "20260930200000_clean_deleted_member_owner_references.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930080838",
+        "productionName": "complete_condominium_hard_delete",
+        "repositoryFiles": [
+          "20260930210000_complete_condominium_hard_delete.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930100924",
+        "productionName": "installment_percentages",
+        "repositoryFiles": [
+          "20260930240000_installment_percentages.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930100945",
+        "productionName": "allocation_rules_and_consumption",
+        "repositoryFiles": [
+          "20260930241000_allocation_rules_and_consumption.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930114719",
+        "productionName": "guard_unit_scope_changes",
+        "repositoryFiles": [
+          "20260930211000_guard_unit_scope_changes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930114808",
+        "productionName": "revoke_trigger_security_definer_execute",
+        "repositoryFiles": [
+          "20260930212000_revoke_trigger_security_definer_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930114835",
+        "productionName": "revoke_trigger_security_definer_execute_explicit_roles",
+        "repositoryFiles": [
+          "20260930213000_revoke_trigger_security_definer_execute_explicit_roles.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930115502",
+        "productionName": "repair_unit_owner_references",
+        "repositoryFiles": [
+          "20260930214000_repair_unit_owner_references.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930115644",
+        "productionName": "validate_unit_owner_member_refs",
+        "repositoryFiles": [
+          "20260930215000_validate_unit_owner_member_refs.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930162854",
+        "productionName": "work_accounting_integrity_indexes",
+        "repositoryFiles": [
+          "20260930280000_work_accounting_integrity_indexes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930181023",
+        "productionName": "harden_unit_workspace_scope",
+        "repositoryFiles": [
+          "20260930510000_harden_unit_workspace_scope.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930183113",
+        "productionName": "fix_portal_registration_case_insensitive_upsert",
+        "repositoryFiles": [
+          "20260930530000_fix_portal_registration_case_insensitive_upsert.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20260930183408",
+        "productionName": "harden_condominium_delete_carryover_compensations",
+        "repositoryFiles": [
+          "20260930540000_harden_condominium_delete_carryover_compensations.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261001063530",
+        "productionName": "lock_down_financial_rpc_anon_execute",
+        "repositoryFiles": [
+          "20261001063800_lock_down_financial_rpc_anon_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261001083704",
+        "productionName": "harden_current_owner_installment_generation",
+        "repositoryFiles": [
+          "20261001110000_harden_current_owner_installment_generation.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261002045022",
+        "productionName": "fix_member_portal_workspace_transfer",
+        "repositoryFiles": [
+          "20261001101500_fix_member_portal_workspace_transfer.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261002045430",
+        "productionName": "fix_member_transfer_workspace_members_lookup",
+        "repositoryFiles": [
+          "20261002060000_fix_member_transfer_workspace_members_lookup.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003043520",
+        "productionName": "preserve_transfer_extraordinary_allocations",
+        "repositoryFiles": [
+          "20261003050000_preserve_transfer_extraordinary_allocations.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003043706",
+        "productionName": "expose_captured_transfer_snapshot",
+        "repositoryFiles": [
+          "20261003052000_expose_captured_transfer_snapshot.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003045727",
+        "productionName": "expand_member_transfer_preview_installments",
+        "repositoryFiles": [
+          "20261003060000_expand_member_transfer_preview_installments.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003045905",
+        "productionName": "preserve_future_installments_transfer_snapshot",
+        "repositoryFiles": [
+          "20261003061000_preserve_future_installments_transfer_snapshot.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003050209",
+        "productionName": "include_unit_unassigned_installments_in_transfer",
+        "repositoryFiles": [
+          "20261003062000_include_unit_unassigned_installments_in_transfer.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003050443",
+        "productionName": "include_unit_unassigned_carryovers_in_transfer",
+        "repositoryFiles": [
+          "20261003063000_include_unit_unassigned_carryovers_in_transfer.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261003050722",
+        "productionName": "block_transfer_close_with_unresolved_unit_carryovers",
+        "repositoryFiles": [
+          "20261003064000_block_transfer_close_with_unresolved_unit_carryovers.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131809",
+        "productionName": "harden_portal_approval_workspace_scope_reconciled",
+        "repositoryFiles": [
+          "20261005080000_harden_portal_approval_workspace_scope_reconciled.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131827",
+        "productionName": "reconcile_portal_member_link_and_transfer_archive_state",
+        "repositoryFiles": [
+          "20261005090000_reconcile_portal_member_link_and_transfer_archive_state.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131836",
+        "productionName": "reconcile_complete_member_transfer_chain",
+        "repositoryFiles": [
+          "20261005100000_reconcile_complete_member_transfer_chain.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131842",
+        "productionName": "reconcile_member_transfer_preview_chain",
+        "repositoryFiles": [
+          "20261005103000_reconcile_member_transfer_preview_chain.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131847",
+        "productionName": "reconcile_portal_rpc_grants",
+        "repositoryFiles": [
+          "20261005110000_reconcile_portal_rpc_grants.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131856",
+        "productionName": "reconcile_member_transfer_rpc_grants",
+        "repositoryFiles": [
+          "20261005111000_reconcile_member_transfer_rpc_grants.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131902",
+        "productionName": "reconcile_portal_approval_rpc_security",
+        "repositoryFiles": [
+          "20261005112000_reconcile_portal_approval_rpc_security.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131907",
+        "productionName": "finalize_public_transfer_and_approval_invoker_wrappers",
+        "repositoryFiles": [
+          "20261005124000_finalize_public_transfer_and_approval_invoker_wrappers.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131913",
+        "productionName": "harden_private_portal_registration_execute",
+        "repositoryFiles": [
+          "20261005125000_harden_private_portal_registration_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131922",
+        "productionName": "reconcile_private_portal_rpc_implementations",
+        "repositoryFiles": [
+          "20261005130000_reconcile_private_portal_rpc_implementations.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131932",
+        "productionName": "revoke_direct_private_portal_rpc_execute",
+        "repositoryFiles": [
+          "20261005131000_revoke_direct_private_portal_rpc_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131938",
+        "productionName": "reconcile_resident_archive_visibility",
+        "repositoryFiles": [
+          "20261005132000_reconcile_resident_archive_visibility.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131943",
+        "productionName": "harden_resident_condominium_archive_access",
+        "repositoryFiles": [
+          "20261005133000_harden_resident_condominium_archive_access.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131948",
+        "productionName": "revoke_direct_portal_trigger_execute",
+        "repositoryFiles": [
+          "20261005140000_revoke_direct_portal_trigger_execute.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005131958",
+        "productionName": "reconcile_member_portal_sync_trigger",
+        "repositoryFiles": [
+          "20261005141000_reconcile_member_portal_sync_trigger.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132005",
+        "productionName": "reconcile_member_portal_integrity_triggers",
+        "repositoryFiles": [
+          "20261005142000_reconcile_member_portal_integrity_triggers.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132012",
+        "productionName": "reconcile_member_transfer_constraints",
+        "repositoryFiles": [
+          "20261005143000_reconcile_member_transfer_constraints.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132016",
+        "productionName": "reconcile_member_transfer_portal_indexes",
+        "repositoryFiles": [
+          "20261005144000_reconcile_member_transfer_portal_indexes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132021",
+        "productionName": "reconcile_member_indexes",
+        "repositoryFiles": [
+          "20261005145000_reconcile_member_indexes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132026",
+        "productionName": "reconcile_core_lookup_indexes",
+        "repositoryFiles": [
+          "20261005150000_reconcile_core_lookup_indexes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132053",
+        "productionName": "finalize_public_portal_transfer_wrappers",
+        "repositoryFiles": [
+          "20261005152000_finalize_public_portal_transfer_wrappers.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132058",
+        "productionName": "reconcile_core_rls_policies",
+        "repositoryFiles": [
+          "20261005153000_reconcile_core_rls_policies.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132103",
+        "productionName": "reconcile_member_transfer_rls",
+        "repositoryFiles": [
+          "20261005154000_reconcile_member_transfer_rls.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132108",
+        "productionName": "reconcile_accounting_rls_policies",
+        "repositoryFiles": [
+          "20261005155000_reconcile_accounting_rls_policies.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132116",
+        "productionName": "reconcile_accounting_table_grants",
+        "repositoryFiles": [
+          "20261005160000_reconcile_accounting_table_grants.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132208",
+        "productionName": "harden_core_public_rpc_grants",
+        "repositoryFiles": [
+          "20261005162000_harden_core_public_rpc_grants.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132213",
+        "productionName": "reconcile_budget_funds_millesimal_rls",
+        "repositoryFiles": [
+          "20261005163000_reconcile_budget_funds_millesimal_rls.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132235",
+        "productionName": "restore_operational_work_register_and_transform_tables",
+        "repositoryFiles": [
+          "20261005165000_restore_operational_work_register_and_transform_tables.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132241",
+        "productionName": "reconcile_operational_table_grants",
+        "repositoryFiles": [
+          "20261005170000_reconcile_operational_table_grants.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132246",
+        "productionName": "reconcile_operational_trigger_chain",
+        "repositoryFiles": [
+          "20261005170000_reconcile_operational_trigger_chain.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132321",
+        "productionName": "reconcile_private_registration_grant",
+        "repositoryFiles": [
+          "20261005173000_reconcile_private_registration_grant.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132407",
+        "productionName": "reconcile_public_table_privileges",
+        "repositoryFiles": [
+          "20261005183000_reconcile_public_table_privileges.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132415",
+        "productionName": "restore_missing_private_function_parity",
+        "repositoryFiles": [
+          "20261005184000_restore_missing_private_function_parity.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132420",
+        "productionName": "restore_missing_public_function_parity",
+        "repositoryFiles": [
+          "20261005185000_restore_missing_public_function_parity.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132430",
+        "productionName": "reconcile_public_function_acl",
+        "repositoryFiles": [
+          "20261005190000_reconcile_public_function_acl.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132441",
+        "productionName": "remove_obsolete_function_overload",
+        "repositoryFiles": [
+          "20261005190000_remove_obsolete_function_overload.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132509",
+        "productionName": "reconcile_public_function_security_parity",
+        "repositoryFiles": [
+          "20261005191000_reconcile_public_function_security_parity.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132514",
+        "productionName": "reconcile_public_relation_acl",
+        "repositoryFiles": [
+          "20261005192000_reconcile_public_relation_acl.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132518",
+        "productionName": "remove_obsolete_schedule_overload_final",
+        "repositoryFiles": [
+          "20261005192000_remove_obsolete_schedule_overload_final.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132524",
+        "productionName": "harden_guard_installment_parent_delete_grant",
+        "repositoryFiles": [
+          "20261005193000_harden_guard_installment_parent_delete_grant.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132529",
+        "productionName": "reconcile_public_indexes",
+        "repositoryFiles": [
+          "20261005193000_reconcile_public_indexes.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132555",
+        "productionName": "normalize_remaining_rls_policy_definitions",
+        "repositoryFiles": [
+          "20261005195000_normalize_remaining_rls_policy_definitions.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005132605",
+        "productionName": "reconcile_public_triggers",
+        "repositoryFiles": [
+          "20261005200000_reconcile_public_triggers.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005134740",
+        "productionName": "reconcile_login_workspace_access_rpc",
+        "repositoryFiles": [
+          "20261005201000_reconcile_login_workspace_access_rpc.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261005135425",
+        "productionName": "expose_login_workspace_access_rpc",
+        "repositoryFiles": [
+          "20261005203000_expose_login_workspace_access_rpc.sql"
+        ]
+      },
+      {
+        "classification": "same_name_different_version",
+        "productionVersion": "20261006011620",
+        "productionName": "restore_closing_member_history",
+        "repositoryFiles": [
+          "20261006032000_restore_closing_member_history.sql"
+        ]
+      }
+    ],
+    "no_matching_source_file": [
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928021707",
+        "productionName": "initial_bethag_backend"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928021808",
+        "productionName": "tighten_portal_rls"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928021935",
+        "productionName": "sync_auth_profiles"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928021944",
+        "productionName": "privatize_rls_functions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928022046",
+        "productionName": "add_legacy_ids_for_migration"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928022126",
+        "productionName": "tighten_condominium_member_visibility"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928022526",
+        "productionName": "add_condominium_member_legacy_unique_key"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928022821",
+        "productionName": "add_workspace_legacy_unique_constraints"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928024823",
+        "productionName": "bootstrap_first_workspace_admin"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928024931",
+        "productionName": "harden_first_admin_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928040840",
+        "productionName": "allow_portal_residents_read_condominiums"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928041428",
+        "productionName": "persist_collaborator_legacy_ids"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928042328",
+        "productionName": "enforce_collaborator_module_permissions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928042333",
+        "productionName": "refine_collaborator_permission_scope"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043406",
+        "productionName": "harden_authenticated_request_policies"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043415",
+        "productionName": "finish_authenticated_rls_hardening"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043547",
+        "productionName": "restrict_data_api_table_grants"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043604",
+        "productionName": "optimize_rls_auth_checks"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043608",
+        "productionName": "add_foreign_key_indexes"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043618",
+        "productionName": "optimize_portal_access_auth_check"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043823",
+        "productionName": "restrict_private_security_definer_functions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928043835",
+        "productionName": "remove_anon_private_function_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928045050",
+        "productionName": "enforce_portal_content_permissions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928072127",
+        "productionName": "add_save_condominium_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928072401",
+        "productionName": "lock_down_save_condominium_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928152153",
+        "productionName": "tighten_public_bootstrap_rpc_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928154553",
+        "productionName": "add_condominium_units_and_member_unit_link_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928154629",
+        "productionName": "enforce_owner_tenant_portal_permissions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928154639",
+        "productionName": "privatize_portal_member_permissions_trigger"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928164443",
+        "productionName": "security_hardening_and_fk_indexes"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928164852",
+        "productionName": "complete_condominium_delete_rpc_and_rls_optimization"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928164904",
+        "productionName": "restrict_delete_condominium_rpc_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928164912",
+        "productionName": "optimize_portal_access_email_rls"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260928222840",
+        "productionName": "grant_is_workspace_manager_execute_to_authenticated"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929065325",
+        "productionName": "add_allocation_table_reference"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929065406",
+        "productionName": "add_expense_allocation_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929065622",
+        "productionName": "add_installments_from_allocations_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929070002",
+        "productionName": "add_condominium_budget"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929070815",
+        "productionName": "protect_closed_accounting_periods"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929070857",
+        "productionName": "fix_closed_accounting_trigger_return"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929071057",
+        "productionName": "add_condominium_register_and_suppliers"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929071403",
+        "productionName": "link_register_items_to_suppliers"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929071513",
+        "productionName": "add_condominium_works"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929071728",
+        "productionName": "add_work_documents_link"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929072149",
+        "productionName": "fix_work_document_legacy_id"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929072255",
+        "productionName": "link_works_special_funds"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929072411",
+        "productionName": "add_work_progress_sal"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929072831",
+        "productionName": "link_work_progress_accounting"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929073258",
+        "productionName": "add_work_event_history"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929074236",
+        "productionName": "link_work_progress_accounting"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929075201",
+        "productionName": "add_condominium_audit_log"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929075312",
+        "productionName": "protect_work_economic_values"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929080009",
+        "productionName": "lock_trigger_function_execution"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929080144",
+        "productionName": "index_condominium_module_foreign_keys"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929093700",
+        "productionName": "align_condominium_manager_authorization"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929093800",
+        "productionName": "optimize_insurance_fk_and_portal_rls"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929093830",
+        "productionName": "optimize_portal_access_jwt_rls_initplan"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929094656",
+        "productionName": "align_condominium_insurance_schema_20260929"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929205021",
+        "productionName": "add_expense_allocation_engine"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929205053",
+        "productionName": "harden_expense_allocation_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929205121",
+        "productionName": "fix_expense_allocation_rpc_unit_alias"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929205155",
+        "productionName": "harden_installment_generation"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929225302",
+        "productionName": "tighten_unit_permissions_and_workspace_condo_read"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260929225423",
+        "productionName": "align_insurance_permissions_with_condomini_module"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930081022",
+        "productionName": "allow_authorized_collaborator_save_condominium"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103120",
+        "productionName": "20260930250000_manual_ai_allocation_intake"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103124",
+        "productionName": "20260930260000_harden_allocation_intake_validation"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103128",
+        "productionName": "20260930270000_validate_allocation_table_scope"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103254",
+        "productionName": "20260930240000_installment_percentages"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103432",
+        "productionName": "20260930120000_fix_building_scope_allocation_rpc"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930103819",
+        "productionName": "20260930130000_harden_installment_payment"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930104150",
+        "productionName": "20260930150000_harden_fiscal_carryover_member_scope"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930104416",
+        "productionName": "20260930160000_fiscal_carryover_compensation"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930104518",
+        "productionName": "20260930161000_harden_carryover_compensation_semantics"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930142230",
+        "productionName": "add_bethag_document_storage"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930174121",
+        "productionName": "20260930460000_harden_condominium_member_visibility"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930175443",
+        "productionName": "20260930470000_harden_portal_approval_workspace_scope"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930175759",
+        "productionName": "20260930480000_scope_condominium_delete_portal_requests"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930180022",
+        "productionName": "20260930490000_harden_profile_column_permissions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930180302",
+        "productionName": "20260930500000_harden_condominium_visibility"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930181813",
+        "productionName": "harden_portal_email_uniqueness_case_insensitive"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930185301",
+        "productionName": "optimize_workspace_manager_rls_auth_check"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930185307",
+        "productionName": "restore_workspace_manager_rls_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930185324",
+        "productionName": "optimize_private_auth_rls_helpers"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930190330",
+        "productionName": "fix_installment_schedule_unified_branch_record_reference"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930190401",
+        "productionName": "fix_installment_schedule_fiscal_year_alias_collision"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930190434",
+        "productionName": "allow_payment_rpc_installment_sync_guard_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930190448",
+        "productionName": "honor_payment_rpc_installment_guard_flag"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930235538",
+        "productionName": "harden_public_rpc_security_definer_boundaries"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930235554",
+        "productionName": "restore_private_claim_admin_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20260930235652",
+        "productionName": "remove_client_schema_privileges"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001063537",
+        "productionName": "remove_public_financial_rpc_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001063734",
+        "productionName": "lock_down_condominium_creation_rpc_anon_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001063901",
+        "productionName": "lock_down_portal_registration_rpc_anon_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001063908",
+        "productionName": "remove_public_portal_registration_rpc_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001081847",
+        "productionName": "20261001093000_transfer_current_owner_and_portal_lifecycle"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001081917",
+        "productionName": "20261001094000_index_transfer_closed_by"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001082509",
+        "productionName": "20261001095000_add_unit_cadastral_transformations"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001082537",
+        "productionName": "20261001095700_index_unit_transformation_audit_fks"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001082636",
+        "productionName": "20261001100500_unit_lifecycle_current_owner_guard"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001082731",
+        "productionName": "20261001102100_unit_transformation_snapshots"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001082758",
+        "productionName": "20261001102500_unit_transformation_preview"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001090203",
+        "productionName": "validate_unit_transformation_preview_inputs"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001090447",
+        "productionName": "guard_confirmed_unit_transformation_integrity"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001090613",
+        "productionName": "lock_confirmed_unit_transformation_audit"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001090904",
+        "productionName": "require_trusted_unit_transformation_confirmation"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001091036",
+        "productionName": "require_confirmed_genealogy_for_unit_lifecycle"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001091151",
+        "productionName": "validate_confirmed_unit_transformation_genealogy"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001091322",
+        "productionName": "require_active_units_for_transformation_confirmation"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261001091431",
+        "productionName": "require_resolved_reviews_for_confirmed_unit_transformations"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002050057",
+        "productionName": "secure_member_transfer_public_wrappers"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002050232",
+        "productionName": "assign_missing_condominium_member_legacy_id"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002050900",
+        "productionName": "fix_member_transfer_archived_column_check"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002073557",
+        "productionName": "tighten_resident_portal_identity_binding"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002074251",
+        "productionName": "fix_member_transfer_status_constraint"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261002074541",
+        "productionName": "prevent_duplicate_confirmed_member_transfers"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261003021711",
+        "productionName": "fix_deleted_member_owner_references_workspace_scope"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261003022110",
+        "productionName": "block_unverified_transfer_identity"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261003022133",
+        "productionName": "gate_portal_registration_verified_identity"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261003030800",
+        "productionName": "20261003040000_restrict_audit_log_to_workspace_admins"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005132158",
+        "productionName": "harden_accounting_rpc_grants_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005132314",
+        "productionName": "finalize_operational_constraint_parity_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005132340",
+        "productionName": "reconcile_remaining_core_columns_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005132458",
+        "productionName": "reconcile_fund_availability_view_v2"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005165522",
+        "productionName": "harden_trigger_function_execute_grants"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005185327",
+        "productionName": "20261005205500_restore_save_condominium_rpc_execute"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005190825",
+        "productionName": "20261005191000_restore_member_transfer_private_execute_grant"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261005190940",
+        "productionName": "20261005192000_fix_member_transfer_workspace_members_update"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006011629",
+        "productionName": "restore_member_transfer_outgoing_history_state"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006011953",
+        "productionName": "preserve_closing_member_history_trigger"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006020802",
+        "productionName": "20261006040000_repair_deleted_member_owner_references"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006143811",
+        "productionName": "add_transfer_closure_preflight"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006144220",
+        "productionName": "fix_transfer_closure_rpc_permissions"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006181654",
+        "productionName": "support_multiple_incoming_coowners_subentro"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261006181713",
+        "productionName": "preserve_legacy_single_incoming_subentro_payload"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261007062039",
+        "productionName": "fix_zero_ownership_transfer_owner_state"
+      },
+      {
+        "classification": "no_matching_source_file",
+        "productionVersion": "20261022202747",
+        "productionName": "harden_close_member_transfer_search_path"
+      }
+    ]
+  },
+  "clean_baseline_branch": {
+    "branch": "rebuild/bethag-clean-aligned-20261022",
+    "migration_files": 15,
+    "production_version_matches": [
+      {
+        "file": "20261022202747_harden_close_member_transfer_search_path.sql",
+        "version": "20261022202747",
+        "productionName": "harden_close_member_transfer_search_path"
+      }
+    ],
+    "files_not_registered_in_production": [
+      {
+        "file": "20261017000001_bethag_baseline_schema.sql",
+        "version": "20261017000001",
+        "name": "bethag_baseline_schema"
+      },
+      {
+        "file": "20261017000002_bethag_baseline_indexes_views.sql",
+        "version": "20261017000002",
+        "name": "bethag_baseline_indexes_views"
+      },
+      {
+        "file": "20261017000003_bethag_baseline_functions.sql",
+        "version": "20261017000003",
+        "name": "bethag_baseline_functions"
+      },
+      {
+        "file": "20261017000004_bethag_baseline_security.sql",
+        "version": "20261017000004",
+        "name": "bethag_baseline_security"
+      },
+      {
+        "file": "20261017000005_bethag_baseline_grants.sql",
+        "version": "20261017000005",
+        "name": "bethag_baseline_grants"
+      },
+      {
+        "file": "20261022210629_restrict_private_function_public_execute.sql",
+        "version": "20261022210629",
+        "name": "restrict_private_function_public_execute"
+      },
+      {
+        "file": "20261022210630_harden_default_privileges_and_private_execute.sql",
+        "version": "20261022210630",
+        "name": "harden_default_privileges_and_private_execute"
+      },
+      {
+        "file": "20261022213544_restrict_close_member_transfer_execute.sql",
+        "version": "20261022213544",
+        "name": "restrict_close_member_transfer_execute"
+      },
+      {
+        "file": "20261022233440_align_public_function_execute.sql",
+        "version": "20261022233440",
+        "name": "align_public_function_execute"
+      },
+      {
+        "file": "20261023000001_revoke_authenticated_maintain.sql",
+        "version": "20261023000001",
+        "name": "revoke_authenticated_maintain"
+      },
+      {
+        "file": "20261023000002_revoke_default_maintain.sql",
+        "version": "20261023000002",
+        "name": "revoke_default_maintain"
+      },
+      {
+        "file": "20261023000003_revoke_service_role_maintain.sql",
+        "version": "20261023000003",
+        "name": "revoke_service_role_maintain"
+      },
+      {
+        "file": "20261023000004_application_default_table_privileges.sql",
+        "version": "20261023000004",
+        "name": "application_default_table_privileges"
+      },
+      {
+        "file": "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+        "version": "20261023000733",
+        "name": "use_invoker_for_close_transfer_rpc"
+      }
+    ],
+    "qa_exact_version_and_name_matches": [
+      {
+        "file": "20261017000001_bethag_baseline_schema.sql",
+        "version": "20261017000001",
+        "name": "bethag_baseline_schema"
+      },
+      {
+        "file": "20261017000002_bethag_baseline_indexes_views.sql",
+        "version": "20261017000002",
+        "name": "bethag_baseline_indexes_views"
+      },
+      {
+        "file": "20261017000003_bethag_baseline_functions.sql",
+        "version": "20261017000003",
+        "name": "bethag_baseline_functions"
+      },
+      {
+        "file": "20261017000004_bethag_baseline_security.sql",
+        "version": "20261017000004",
+        "name": "bethag_baseline_security"
+      },
+      {
+        "file": "20261017000005_bethag_baseline_grants.sql",
+        "version": "20261017000005",
+        "name": "bethag_baseline_grants"
+      },
+      {
+        "file": "20261022202747_harden_close_member_transfer_search_path.sql",
+        "version": "20261022202747",
+        "name": "harden_close_member_transfer_search_path"
+      },
+      {
+        "file": "20261022210629_restrict_private_function_public_execute.sql",
+        "version": "20261022210629",
+        "name": "restrict_private_function_public_execute"
+      },
+      {
+        "file": "20261022210630_harden_default_privileges_and_private_execute.sql",
+        "version": "20261022210630",
+        "name": "harden_default_privileges_and_private_execute"
+      },
+      {
+        "file": "20261022213544_restrict_close_member_transfer_execute.sql",
+        "version": "20261022213544",
+        "name": "restrict_close_member_transfer_execute"
+      },
+      {
+        "file": "20261022233440_align_public_function_execute.sql",
+        "version": "20261022233440",
+        "name": "align_public_function_execute"
+      },
+      {
+        "file": "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+        "version": "20261023000733",
+        "name": "use_invoker_for_close_transfer_rpc"
+      }
+    ],
+    "qa_entries_not_in_clean_branch": [
+      {
+        "version": "20261022230901",
+        "name": "revoke_authenticated_maintain"
+      },
+      {
+        "version": "20261022230908",
+        "name": "revoke_default_maintain"
+      },
+      {
+        "version": "20261023010544",
+        "name": "qa_test_revoke_authenticated_maintain_20261023"
+      },
+      {
+        "version": "20261023010548",
+        "name": "qa_test_revoke_default_maintain_20261023"
+      },
+      {
+        "version": "20261023011431",
+        "name": "revoke_service_role_maintain_qa_test"
+      },
+      {
+        "version": "20261023011435",
+        "name": "define_application_default_table_privileges_qa"
+      }
+    ],
+    "clean_files_not_in_qa": [
+      {
+        "file": "20261023000001_revoke_authenticated_maintain.sql",
+        "version": "20261023000001",
+        "name": "revoke_authenticated_maintain"
+      },
+      {
+        "file": "20261023000002_revoke_default_maintain.sql",
+        "version": "20261023000002",
+        "name": "revoke_default_maintain"
+      },
+      {
+        "file": "20261023000003_revoke_service_role_maintain.sql",
+        "version": "20261023000003",
+        "name": "revoke_service_role_maintain"
+      },
+      {
+        "file": "20261023000004_application_default_table_privileges.sql",
+        "version": "20261023000004",
+        "name": "application_default_table_privileges"
+      }
+    ]
+  },
+  "cutover_status": {
+    "production_ledger_modified": false,
+    "qa_ledger_modified": false,
+    "production_schema_or_data_modified": false,
+    "ready_for_production_tracking_cutover": false,
+    "reason": "The production ledger's 243 historical rows do not have matching individual source files in the clean baseline branch; the clean branch replaces history with a 5-file baseline plus incremental migrations. Migration tracking must not be repaired until a verified restore point and catalog/ACL sign-off exist."
+  }
+}
