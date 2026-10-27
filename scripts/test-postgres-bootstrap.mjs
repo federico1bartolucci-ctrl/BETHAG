@@ -429,3 +429,61 @@ console.log(JSON.stringify({
     "test fixtures rolled back"
   ]
 }, null, 2));
+
+
+// Cross-workspace RLS regression test on disposable fixtures.
+// It runs as the authenticated API role and rolls back every synthetic row.
+const workspaceIsolationSql = `
+BEGIN;
+SET LOCAL search_path = public, private, auth, extensions;
+INSERT INTO auth.users (id) VALUES
+ ('12121212-1212-4121-8121-121212121212'),
+ ('13131313-1313-4131-8131-131313131313');
+INSERT INTO public.profiles (id, full_name, email, role, active) VALUES
+ ('12121212-1212-4121-8121-121212121212', 'CI Workspace A Admin', 'ci-ws-a@example.invalid', 'admin', true),
+ ('13131313-1313-4131-8131-131313131313', 'CI Workspace B Admin', 'ci-ws-b@example.invalid', 'admin', true);
+INSERT INTO public.workspaces (id, name, plan) VALUES
+ ('14141414-1414-4141-8141-141414141414', 'CI Isolation Workspace A', 'professional'),
+ ('15151515-1515-4151-8151-151515151515', 'CI Isolation Workspace B', 'professional');
+INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions) VALUES
+ ('14141414-1414-4141-8141-141414141414', '12121212-1212-4121-8121-121212121212', 'admin', true, '{}'::jsonb),
+ ('15151515-1515-4151-8151-151515151515', '13131313-1313-4131-8131-131313131313', 'admin', true, '{}'::jsonb);
+INSERT INTO public.condominiums (id, workspace_id, name) VALUES
+ ('16161616-1616-4161-8161-161616161616', '14141414-1414-4141-8141-141414141414', 'CI Isolation Condominium A'),
+ ('17171717-1717-4171-8171-171717171717', '15151515-1515-4151-8151-151515151515', 'CI Isolation Condominium B');
+
+SELECT set_config('request.jwt.claim.sub', '12121212-1212-4121-8121-121212121212', true);
+SET LOCAL ROLE authenticated;
+DO $rls$
+DECLARE own_count integer; foreign_count integer; affected integer;
+BEGIN
+  SELECT count(*) INTO own_count FROM public.condominiums WHERE id='16161616-1616-4161-8161-161616161616';
+  SELECT count(*) INTO foreign_count FROM public.condominiums WHERE id='17171717-1717-4171-8171-171717171717';
+  IF own_count <> 1 THEN RAISE EXCEPTION 'RLS_WORKSPACE_ADMIN_CANNOT_READ_OWN_CONDOMINIUM'; END IF;
+  IF foreign_count <> 0 THEN RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_CONDOMINIUM_LEAK'; END IF;
+  UPDATE public.condominiums SET name='CI unauthorized overwrite'
+   WHERE id='17171717-1717-4171-8171-171717171717';
+  GET DIAGNOSTICS affected = ROW_COUNT;
+  IF affected <> 0 THEN RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_UPDATE_NOT_BLOCKED'; END IF;
+END;
+$rls$;
+RESET ROLE;
+DO $post_rls$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.condominiums WHERE id='17171717-1717-4171-8171-171717171717' AND name='CI Isolation Condominium B') THEN
+    RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_UPDATE_CHANGED_FOREIGN_ROW';
+  END IF;
+END;
+$post_rls$;
+ROLLBACK;
+`;
+psql(["-v", "ON_ERROR_STOP=1"], workspaceIsolationSql);
+console.log(JSON.stringify({
+  workspace_isolation_rls_test: "PASS",
+  assertions: [
+    "authenticated workspace admin can read own condominium",
+    "authenticated workspace admin cannot read another workspace condominium",
+    "cross-workspace UPDATE affects zero rows and leaves foreign record unchanged",
+    "synthetic fixtures rolled back"
+  ]
+}, null, 2));
