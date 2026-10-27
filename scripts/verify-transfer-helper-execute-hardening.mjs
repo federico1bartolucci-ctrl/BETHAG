@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const [remediation, canonicalAcl] = await Promise.all([
+  readFile("supabase/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql", "utf8"),
+  readFile("supabase/migrations/20261022233440_align_public_function_execute.sql", "utf8"),
+]);
+
+for (const schema of ["private", "public"]) {
+  assert.match(
+    remediation,
+    new RegExp("REVOKE EXECUTE ON FUNCTION " + schema + "\\.check_condominium_member_transfer_closure\\(uuid\\) FROM PUBLIC, anon;"),
+    schema + " transfer closure helper must not be executable by PUBLIC or anon.",
+  );
+  assert.match(
+    remediation,
+    new RegExp("GRANT EXECUTE ON FUNCTION " + schema + "\\.check_condominium_member_transfer_closure\\(uuid\\) TO authenticated, service_role;"),
+    schema + " transfer closure helper must remain callable by the intended application roles.",
+  );
+}
+assert.doesNotMatch(remediation, /GRANT EXECUTE ON FUNCTION .* TO PUBLIC/i);
+assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.normalize_zero_ownership_owner\(\) TO PUBLIC;/);
+assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.preserve_closing_condominium_member_history\(\) TO PUBLIC;/);
+assert.doesNotMatch(canonicalAcl, /GRANT EXECUTE ON FUNCTION (?:private|public)\.check_condominium_member_transfer_closure\(uuid\) TO PUBLIC;/);
+
+console.log(JSON.stringify({
+  transfer_helper_execute_hardening: "PASS",
+  helper_functions_public_execute: false,
+  trigger_function_public_execute_exceptions_preserved: 2,
+}, null, 2));
