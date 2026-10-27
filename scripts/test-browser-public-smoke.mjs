@@ -47,12 +47,28 @@ try {
   await page.getByRole("button", { name: "Accedi", exact: true }).last().click();
   await page.getByRole("alert").getByText("Inserisci l'indirizzo e-mail.").waitFor();
 
+  // Test the reset-password page without calling Supabase or using real credentials.
+  // A minimal auth mock makes this deterministic and proves the invalid-link guard renders.
+  await page.route("https://esm.sh/@supabase/supabase-js@2.117.1*", route => route.fulfill({
+    status: 200,
+    contentType: "application/javascript; charset=utf-8",
+    body: `export function createClient() {
+      return { auth: {
+        onAuthStateChange() {},
+        getSession: async () => ({ data: { session: null }, error: null }),
+      } };
+    }`,
+  }));
+  await page.goto(new URL("/reset-password.html", baseURL).toString(), { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Reimposta la password" }).waitFor();
+  await page.getByText("Link di recupero non valido o scaduto. Richiedi un nuovo link.").waitFor();
+
   if (pageErrors.length) {
     throw new Error(`Browser uncaught errors: ${pageErrors.join(" | ")}`);
   }
 
   console.log("BETHAG_PUBLIC_BROWSER_SMOKE_PASS");
-  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected with validation feedback; no uncaught browser exceptions.");
+  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected with validation feedback; reset-password page rejects an invalid link without a live Supabase call; no uncaught browser exceptions.");
 } catch (error) {
   console.error("BETHAG_PUBLIC_BROWSER_SMOKE_FAIL");
   console.error(error);
