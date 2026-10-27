@@ -80,7 +80,20 @@
       },
       "close_transfer_security_definer": null,
       "rebase_requested": true,
-      "rebase_status_at_capture": "CREATING_PROJECT"
+      "rebase_status_at_capture": "MIGRATIONS_FAILED_AFTER_PARTIAL_REBASE; RETRY_REQUESTED; LAST OBSERVED STATUS CREATING_PROJECT",
+      "rebase_failure": "Production rebase failed on ALTER POLICY \"residents read own portal access\" because the policy was absent from the divergent develop schema. The policy was recreated from the repository's canonical baseline definition and a rebase retry was requested; completion not yet verified.",
+      "rebase_partial_progress": [
+        "20260928043547_restrict_data_api_table_grants",
+        "20260928043604_optimize_rls_auth_checks",
+        "20260928043608_add_foreign_key_indexes"
+      ],
+      "schema_before_rebase": {
+        "tables": 20,
+        "columns": 229,
+        "authenticated_tables_with_maintain": 20,
+        "service_role_tables_with_maintain": 20,
+        "close_transfer_security_definer": null
+      }
     },
     {
       "name": "bethag-member-transfer-qa",
