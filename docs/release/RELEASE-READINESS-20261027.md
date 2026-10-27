@@ -30,12 +30,12 @@ Fresh `list_migrations` reads returned these counts and heads:
 | Environment | Project ref | Ledger entries | Latest identity |
 |---|---|---:|---|
 | Production | `tctcgptrsmvgajqjgnev` | 244 | `20261022202747_harden_close_member_transfer_search_path` |
-| Develop (recovered) | `wvokvcfglduxmjxlnfeh` | 15 | `20261023000733_use_invoker_for_close_transfer_rpc` |
-| Continuity QA | `srkucrdcoswlozifvztr` | 17 | `20261027012138_revoke_remaining_service_role_maintain_legal_cases` |
-| Member-transfer QA | `gcorwfvnslnehcxmtixn` | 15 | `20261027012123_use_invoker_for_close_transfer_rpc` |
-| Migration-reconciliation QA | `mxhciszzpqzvsaqcnwhg` | 17 | `20261023011435_define_application_default_table_privileges_qa` |
+| Develop (recovered) | `wvokvcfglduxmjxlnfeh` | 16 | `20261027093101_revoke_public_execute_from_transfer_closure_helpers` |
+| Continuity QA | `srkucrdcoswlozifvztr` | 18 | `20261027093117_revoke_public_execute_from_transfer_closure_helpers` |
+| Member-transfer QA | `gcorwfvnslnehcxmtixn` | 16 | `20261027093126_revoke_public_execute_from_transfer_closure_helpers` |
+| Migration-reconciliation QA | `mxhciszzpqzvsaqcnwhg` | 18 | `20261027093119_revoke_public_execute_from_transfer_closure_helpers` |
 
-The recovered develop environment has the five canonical baseline migrations, the existing Production head, and nine incremental migrations. It has 47 public table/partition relations, RLS enabled on all 47, no effective table `MAINTAIN` for `authenticated` or `service_role`, and the close-transfer wrapper is `SECURITY INVOKER`.
+The recovered develop environment has the five canonical baseline migrations, the existing Production head, nine original incremental migrations, and the new transfer-helper EXECUTE correction. It has 47 public table/partition relations, RLS enabled on all 47, no effective table `MAINTAIN` for `authenticated` or `service_role`, and the close-transfer wrapper is `SECURITY INVOKER`.
 
 The QA ledgers are not identical. They contain alternate timestamps/names, QA-specific privilege cleanup, and two QA-only test rows. Preserve every recorded row as truthful execution history. Do not delete, rename, normalize, or mark ledger rows applied merely to make the ledgers look alike. A matching name is not proof that two SQL files have the same effects.
 
@@ -43,7 +43,7 @@ Production's 244-row ledger remains historical evidence. The repository's earlie
 
 ## 3. Canonical incremental migration sequence for isolated rehearsal
 
-These nine migrations are not recorded in Production after its current head. They are a proposed sequence to rehearse and validate, **not authorization to apply them**:
+These ten migrations are not recorded in Production after its current head. They are a proposed sequence to rehearse and validate, **not authorization to apply them**:
 
 1. `20261022210629_restrict_private_function_public_execute.sql`
 2. `20261022210630_harden_default_privileges_and_private_execute.sql`
@@ -53,7 +53,7 @@ These nine migrations are not recorded in Production after its current head. The
 6. `20261023000002_revoke_default_maintain.sql`
 7. `20261023000003_revoke_service_role_maintain.sql`
 8. `20261023000004_application_default_table_privileges.sql`
-9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`
+9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`\n10. `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql`
 
 Before any Production execution, rehearse the exact ordered set against an isolated target and prove: exact relation-list preconditions; no unintended current-table CRUD grants removed; no `MAINTAIN` reintroduced by defaults; only reviewed function EXECUTE exceptions remain; the close-transfer implementation preserves user/workspace authorization; and the migration ledger is changed only by the approved forward sequence.
 
@@ -71,7 +71,7 @@ Required isolated smoke-test matrix:
 - Resident portal registration/access and portal-post visibility.
 - Accounting: create/update/read permissions, closed-period protections, installment/payment allocation integrity.
 - Subentro: authorized close succeeds; unauthorized close fails; open accounting positions reject closure; successful closure archives the outgoing member and retains incoming co-owners; failure rolls back every partial change.
-- Post-migration Security Advisor and function EXECUTE allowlist.
+- Post-migration Security Advisor and function EXECUTE allowlist. Live ACL queries after the new migration confirm that the two transfer-closure helpers are not PUBLIC-executable in all four QA/development environments; only the two intended trigger functions remain PUBLIC-executable.
 - Regression check for storage/document access, noting database backups do not themselves back up Storage object contents.
 
 ## 5. Physical-backup risk disposition
@@ -90,7 +90,7 @@ No approval is recorded by this document. The release approver must complete and
 
 - Approver name/role:
 - Exact repository commit:
-- Exact nine-migration sequence (or approved revised sequence):
+- Exact ten-migration sequence (or approved revised sequence):
 - Evidence reference for ACL/owner/default-privilege parity:
 - Evidence reference for isolated application smoke tests:
 - Physical-restore disposition: provider proof / residual risk accepted:
@@ -100,3 +100,8 @@ No approval is recorded by this document. The release approver must complete and
 - Approval timestamp (UTC):
 
 **Decision until completed:** NO-GO. Production remains unchanged.
+
+
+### QA helper ACL remediation — 2026-10-27
+
+The earlier function ACL migration identity had already been recorded in QA before the source SQL was corrected. A new idempotent migration, `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql`, was added and applied to all four non-Production environments. Live read-only checks confirmed the public and private closure-check helpers now have `PUBLIC EXECUTE = false` and `authenticated/service_role EXECUTE = true`. The two intentional trigger exceptions remain PUBLIC-executable. Current QA ledger counts and heads are shown above; the original historical ledger rows were preserved. Production has not received this migration.
