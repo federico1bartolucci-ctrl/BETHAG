@@ -11,6 +11,15 @@ const [production, qa, mainInventory, reconciliation, liveStatus] = await Promis
   readFile(`${root}/live-environment-status-20261027.json`, "utf8").then(JSON.parse),
 ]);
 
+const restoreGate = liveStatus.backup_restore_gate;
+assert.ok(restoreGate, "Missing provider backup/restore release gate.");
+assert.equal(restoreGate.source_project_ref, "tctcgptrsmvgajqjgnev");
+assert.equal(restoreGate.release_gate_passed, false, "Do not pass release readiness without verified provider restore.");
+assert.equal(restoreGate.schema_acl_parity, "NOT VERIFIED", "Provider restore parity must be explicitly verified.");
+assert.equal(restoreGate.target_project_ref, null, "Do not record a restore target before a real isolated restore exists.");
+assert.equal(restoreGate.restore_completed_at_utc, null, "Do not record completion before provider restore evidence exists.");
+assert.match(restoreGate.status, /BLOCKED/i, "Provider restore gate must remain blocked until evidenced.");
+
 const environments = [
   ...liveStatus.environments.map((environment) => ({ name: environment.name, project_ref: environment.project_ref, ledger_count: environment.ledger_count, ledger_head: environment.ledger_head, rebase_status: environment.rebase_status_at_capture ?? "not-applicable" })),
 ];
