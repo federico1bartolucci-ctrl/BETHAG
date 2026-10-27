@@ -115,7 +115,7 @@
     ],
     "wrapper_security_definer": false,
     "private_schema_usage_service_role": {
-      "develop": false,
+      "develop": true,
       "continuity_qa": true,
       "member_transfer_qa": true,
       "migration_reconciliation_qa": true
@@ -128,9 +128,9 @@
       "migration_reconciliation_qa": false
     },
     "private_close_service_role_execute_after_qa_correction": {
-      "develop": false,
-      "continuity_qa": false,
-      "member_transfer_qa": false,
+      "develop": true,
+      "continuity_qa": true,
+      "member_transfer_qa": true,
       "migration_reconciliation_qa": true
     }
   },
@@ -226,24 +226,24 @@
   ],
   "qa_ledgers": {
     "develop": {
-      "count": 16,
+      "count": 17,
       "head": {
-        "version": "20261027093101",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101109",
+        "name": "repair_service_role_transfer_invoker_path"
       }
     },
     "continuity_qa": {
-      "count": 18,
+      "count": 19,
       "head": {
-        "version": "20261027093117",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101123",
+        "name": "repair_service_role_transfer_invoker_path"
       }
     },
     "member_transfer_qa": {
-      "count": 16,
+      "count": 17,
       "head": {
-        "version": "20261027093126",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101130",
+        "name": "repair_service_role_transfer_invoker_path"
       }
     },
     "migration_reconciliation_qa": {
@@ -251,8 +251,7 @@
       "head": {
         "version": "20261027100507",
         "name": "repair_service_role_transfer_invoker_path"
-      },
-      "note": "The Supabase apply_migration API assigned this environment-specific version; do not rewrite it to the canonical repository version."
+      }
     }
   },
   "cutover": {
@@ -266,11 +265,30 @@
     "physical_backup_restore": "not tested; documented residual risk; named written acceptance required"
   },
   "qa_correction_test": {
-    "project_ref": "mxhciszzpqzvsaqcnwhg",
     "migration_file": "20261027110000_repair_service_role_transfer_invoker_path.sql",
     "repository_blob_sha": "0b50853114442b946abb2cac8ab37fe6db64e074",
-    "live_ledger_version": "20261027100507",
-    "apply_result": "success",
+    "applied_to_nonproduction_projects": [
+      {
+        "name": "develop",
+        "project_ref": "wvokvcfglduxmjxlnfeh",
+        "ledger_version": "20261027101109"
+      },
+      {
+        "name": "continuity-qa",
+        "project_ref": "srkucrdcoswlozifvztr",
+        "ledger_version": "20261027101123"
+      },
+      {
+        "name": "member-transfer-qa",
+        "project_ref": "gcorwfvnslnehcxmtixn",
+        "ledger_version": "20261027101130"
+      },
+      {
+        "name": "migration-reconciliation-qa",
+        "project_ref": "mxhciszzpqzvsaqcnwhg",
+        "ledger_version": "20261027100507"
+      }
+    ],
     "postcheck": {
       "private_schema_usage_service_role": true,
       "private_close_execute_service_role": true,
