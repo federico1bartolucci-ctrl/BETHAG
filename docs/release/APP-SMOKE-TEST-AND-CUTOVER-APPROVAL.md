@@ -11,7 +11,14 @@
 - [ ] Confirm CI build and PostgreSQL 17 bootstrap are green on the exact release commit.
 - [ ] Confirm Security Advisor findings are reviewed; Production's current authenticated SECURITY DEFINER RPC warning remains until the approved forward migration changes the RPC to SECURITY INVOKER.
 
-## 2. Role-based application smoke tests
+## 2. Automated public-interface smoke test (partial coverage)
+
+- CI workflow: [run 40494478195](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40494478195), commit `1dae501099cd7510522df76d211a869340767be4` — **PASS** (build and PostgreSQL 17 jobs).
+- Added `scripts/test-browser-public-smoke.mjs`, run in CI after the production build using a local Vite preview and headless Chromium.
+- Automated checks cover the public landing page, opening the login panel, rendering the administrator/collaborator/resident role selectors, rejecting an empty login with validation feedback, and absence of uncaught browser exceptions.
+- This is intentionally only a public-interface smoke test. It does not authenticate against Supabase or prove real role authorization, resident data isolation, accounting flows, document storage, or member-transfer behavior. APP-01–APP-15 remain NOT RUN until the remaining isolated role-based tests have evidence.
+
+## 3. Role-based application smoke tests
 
 For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evidence link, and issue ID if failed. Use synthetic QA data only.
 
