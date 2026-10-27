@@ -17,7 +17,6 @@ REVOKE MAINTAIN ON TABLE
   public.condominium_fiscal_carryover_compensations,
   public.condominium_fiscal_carryovers,
   public.condominium_fiscal_years,
-  public.condominium_fund_availability,
   public.condominium_funds,
   public.condominium_installments,
   public.condominium_insurance_policies,
