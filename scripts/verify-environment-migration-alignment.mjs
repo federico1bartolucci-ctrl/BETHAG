@@ -70,6 +70,18 @@ assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_service_role_execute, true);
 assert.equal(liveQaExecuteHardening.qa_environments.length, 4);
 assert.ok(liveQaExecuteHardening.qa_environments.every((environment) => environment.security_advisor_lints === 0), "All four QA/development environments must have zero security advisor lints after helper ACL hardening.");
+assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.insert, 41);
+assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.update, 41);
+assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.delete, 42);
+assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.service_role.maintain, 47);
+const qaByName = Object.fromEntries(liveQaExecuteHardening.qa_environments.map((environment) => [environment.name, environment]));
+for (const name of ["bethag-continuity-qa", "bethag-member-transfer-qa", "bethag-migration-reconciliation-qa"]) {
+  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.insert, 41, name + " current-table INSERT grants must match Production.");
+  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.update, 41, name + " current-table UPDATE grants must match Production.");
+  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.delete, 42, name + " current-table DELETE grants must match Production.");
+  assert.equal(qaByName[name].effective_current_table_privileges.service_role.maintain, 0, name + " must have no service_role MAINTAIN.");
+}
+assert.equal(qaByName["bethag-develop"].effective_current_table_privileges.authenticated.insert, 47, "Develop has broader current-table CRUD and must not be treated as Production ACL parity.");
 assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
 assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
 
