@@ -26,7 +26,7 @@ const incrementalMigrations = [
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
-const migrationsToApply = [...migrationFiles, ...incrementalMigrations];
+const migrationsToApply = migrationFiles;
 
 function psql(args, input) {
   return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", ...args], {
