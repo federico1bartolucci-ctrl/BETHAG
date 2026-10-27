@@ -47,6 +47,12 @@ Each migration's GitHub blob SHA identifies the reviewed repository file at the 
 | 10 | `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql` | `5b7a34ee56f4a1cb1b1a145760aff5880e84e5f7` | Not complete: the two closure helpers remain PUBLIC-executable | QA effect is present under environment-specific versions `20261027093101`, `20261027093117`, `20261027093126`, `20261027093119` respectively | Before: confirm the helper identity/ACL and preserve both trigger exceptions. After: PUBLIC/anon cannot execute either closure helper; authenticated/service_role can. Preserve the two trigger PUBLIC exceptions. |
 | 11 | `20261027110000_repair_service_role_transfer_invoker_path.sql` | Added as a forward-only correction after live comparison | Not complete: service_role lacks private schema USAGE and private implementation EXECUTE | Same function EXECUTE gap across QA; schema USAGE varies | Before: run effective privilege checks, not only raw ACL inspection. After: `has_schema_privilege('service_role','private','USAGE')` and `has_function_privilege('service_role','private.close_condominium_member_transfer(uuid)','EXECUTE')` both true; anon remains denied; authenticated remains permitted. Do not edit or replay migration 9. |
 
+## QA rehearsal of the new forward correction — 2026-10-27
+
+The new correction was applied only to migration-reconciliation QA (`mxhciszzpqzvsaqcnwhg`) using the exact SQL in `20261027110000_repair_service_role_transfer_invoker_path.sql`. Supabase assigned the QA ledger identity `20261027100507_repair_service_role_transfer_invoker_path`; preserve this environment-specific version and do not rewrite it to the repository version. QA ledger is now 19 rows, head `20261027100507`.
+
+Post-application read-only checks **passed**: service_role has private-schema USAGE and EXECUTE on the private implementation; authenticated retains EXECUTE; anon remains denied; the public wrapper remains SECURITY INVOKER; service_role can execute the public wrapper and anon cannot. This verifies the permission path, not the business operation itself. Transfer success/denial/rollback tests remain pending. Production was not changed. The other three QA environments have not received this new correction.
+
 ## Definitive candidate execution order
 
 1. Fresh preflight and freeze schema-changing activity.
