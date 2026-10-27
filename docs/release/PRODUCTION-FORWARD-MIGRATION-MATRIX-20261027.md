@@ -103,3 +103,13 @@ A fresh read of the three existing QA ledgers shows that the migration identitie
 - `mxhciszzpqzvsaqcnwhg` (migration-reconciliation QA) records older versions for authenticated/default MAINTAIN and an older execution order, plus QA-only test migration entries.
 
 These differences are evidence of ledger divergence, not permission to rewrite history or mark files applied by guess. Before Production cutover, generate an explicit mapping of each QA ledger row to the exact canonical file and verified catalog effect; classify duplicate/QA-only entries separately; then rehearse the canonical forward-only sequence on an isolated target. Production remains unchanged, and no QA ledger rows should be deleted or rewritten as part of this documentation update.
+
+
+### CI and QA catalog checkpoint — 2026-10-27
+
+- GitHub Actions run **40479743704** on commit **6df025a4e4414e136faecbaad86c9122e1137c46** completed successfully. Both jobs passed: `postgres-bootstrap` (real PostgreSQL 17 baseline/bootstrap) and `build`, including migration-history reconciliation, Production function-security/ACL checks, PostgreSQL bootstrap test and application build.
+- The successful CI result validates the repository's fresh-bootstrap target, not the already-existing QA databases nor Production.
+- Read-only catalog snapshots from all three QA projects agree on 47 public table/partition relations, zero current MAINTAIN grants for `authenticated`, and zero for `service_role`.
+- However, all three QA projects still report four routines with effective `PUBLIC EXECUTE`: the two closure-check helpers plus the two named trigger functions. The updated canonical migration expects only the two trigger functions to remain PUBLIC-executable. Therefore the helper-function ACL correction is **not yet demonstrated on existing QA catalogs**; it must be rehearsed on an isolated target using the exact canonical migration and followed by a function ACL/application smoke-test. Do not treat passing CI as evidence that this live-QA difference is resolved.
+- Production's nine canonical incremental migration identities remain pending after the captured Production head. The QA ledgers are historically divergent; no ledger rows have been rewritten, no migrations were marked applied by guess, and Production has not been changed.
+
