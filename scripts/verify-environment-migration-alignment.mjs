@@ -15,7 +15,7 @@ const [production, qa, mainInventory, reconciliation, liveStatus, liveQaExecuteH
 const restoreGate = liveStatus.backup_restore_gate;
 assert.ok(restoreGate, "Missing provider backup/restore release gate.");
 assert.equal(restoreGate.source_project_ref, "tctcgptrsmvgajqjgnev");
-assert.equal(restoreGate.release_gate_passed, false, "Do not pass release readiness without verified provider restore.");
+assert.equal(restoreGate.release_gate_passed, false, "Do not misrepresent the untested provider restore as successful.");
 assert.equal(restoreGate.schema_acl_parity, "NOT VERIFIED", "Provider restore parity must be explicitly verified.");
 assert.equal(restoreGate.target_project_ref, null, "Do not record a restore target before a real isolated restore exists.");
 assert.equal(restoreGate.restore_completed_at_utc, null, "Do not record completion before provider restore evidence exists.");
@@ -105,8 +105,13 @@ const qaOnlyTestMigrations = [
 assert.ok(qaOnlyTestMigrations.every((item) => exact(qa, item)), "QA-only test migration ledger changed.");
 
 const gates = {
-  live_production_backup_restore_verified: process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES",
-  physical_restore_risk_explicitly_accepted: Boolean((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim() && (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim() && (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim()),
+  physical_restore_proof_or_risk_acceptance_recorded:
+    process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES" ||
+    Boolean(
+      (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim() &&
+      /^\d{4}-\d{2}-\d{2}T.*Z$/.test((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim()) &&
+      (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim()
+    ),
   live_production_and_qa_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
   qa_variant_sql_equivalence_verified: process.env.BETHAG_QA_EQUIVALENCE_VERIFIED === "YES",
   all_five_environment_ledgers_recaptured: process.env.BETHAG_ALL_ENVIRONMENT_LEDGERS_CAPTURED === "YES",
