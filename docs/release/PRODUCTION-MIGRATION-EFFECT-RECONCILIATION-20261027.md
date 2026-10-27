@@ -6,6 +6,17 @@
 **Observed Production migration ledger:** 244 rows; head `20261022202747_harden_close_member_transfer_search_path`  
 **Safety:** no Production migration was applied and no ledger row was changed during this review.
 
+## Fresh Production read-only verification — 2026-10-27
+
+A fresh read-only catalog query was run after the cutover-gate documentation was reconciled. It confirms the Production security finding is still live and that none of the candidate migrations has been applied:
+
+- Migration ledger: **244 rows**, head `20261022202747_harden_close_member_transfer_search_path`.
+- Public RPC `public.close_condominium_member_transfer(uuid)`: `prosecdef=true`; EXECUTE is effective for `authenticated` and `service_role`, denied to `anon`.
+- Private implementation path: `authenticated` has private-schema USAGE but no effective EXECUTE on the implementation; `service_role` has neither private-schema USAGE nor implementation EXECUTE.
+- Security Advisor still reports `authenticated_security_definer_function_executable` for this RPC.
+
+This is fresh evidence from the live Production catalog, not a rehearsal. No Production DDL, grants, data, or migration-ledger rows were changed. The user has explicitly accepted the residual physical-backup restore risk after local logical-restore verification; the remaining no-go items are APP-01–APP-15 end-to-end evidence and named written cutover approval with the exact commit, migration hashes, maintenance window, and rollback criteria.
+
 ## Executive result
 
 The ten canonical incremental migrations originally listed after the Production head were compared with their SQL bodies and the current effective catalog. The review found one further defect: the service-role path for the `SECURITY INVOKER` close-transfer wrapper is not actually complete in Production or QA, despite the intent recorded in `20261023000733_use_invoker_for_close_transfer_rpc.sql`. A new idempotent forward-only correction was added as migration **11**: `20261027110000_repair_service_role_transfer_invoker_path.sql`. Do not edit or replay the already-recorded migration 9 to repair its history.
