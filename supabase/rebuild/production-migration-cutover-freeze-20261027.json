@@ -247,14 +247,14 @@
   },
   "critical_execution_constraint": {
     "observed": "Initial QA apply_migration calls generated environment-specific versions. The repository-based canonical runner has now completed an end-to-end rehearsal on isolated local PostgreSQL 17 using all eleven real SQL files.",
-    "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until backup/restore risk disposition, APP-01–APP-15 evidence, and named written approval are complete.",
+    "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete; the residual physical-backup restore risk has been explicitly accepted by the user.",
     "status": "REHEARSAL_PASSED_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
   "no_go_gates": [
-    "No verified isolated physical-backup restore and no named written acceptance of residual risk.",
-    "APP-01–APP-15 end-to-end evidence not recorded.",
-    "Named approver, maintenance window and rollback approval not recorded.",
-    "End-to-end runner rehearsal passed; this does not authorize Production execution before the other release gates and written approval."
+    "Backup restore gate: user explicitly accepted the residual risk on 2026-10-27 after local Docker/PostgreSQL logical-restore verification; provider-backed physical restore was not performed and must not be claimed.",
+    "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
+    "Named cutover approver, approved exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
+    "End-to-end runner rehearsal passed; this does not authorize Production execution before the remaining release gates and written approval."
   ],
   "safety": "This freezes the reviewed migration SQL blobs and candidate order for review only. No Production DDL or ledger writes were performed; this is not authorization to execute.",
   "rehearsal_evidence": {
