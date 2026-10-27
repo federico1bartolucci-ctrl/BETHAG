@@ -53,6 +53,7 @@ const expectedPending = [
   ["20261023000004", "application_default_table_privileges"],
   ["20261023000733", "use_invoker_for_close_transfer_rpc"],
   ["20261027100000", "revoke_public_execute_from_transfer_closure_helpers"],
+  ["20261027110000", "repair_service_role_transfer_invoker_path"],
 ].map(([version, name]) => ({ version, name }));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
@@ -62,7 +63,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
 assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
 assert.equal(mainInventory.count, mainInventory.files.length);
-assert.equal(files.length, 16, "Canonical baseline + incremental migration inventory changed.");
+assert.equal(files.length, 17, "Canonical baseline + incremental migration inventory changed.");
 assert.equal(liveQaExecuteHardening.production_modified, false, "QA ACL hardening evidence must not claim Production was modified.");
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.projects_checked, 4);
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_public_execute, false);
