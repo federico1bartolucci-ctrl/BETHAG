@@ -13,9 +13,9 @@
 
 ## 2. Automated public-interface smoke test (partial coverage)
 
-- CI workflow: [run 40494478195](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40494478195), commit `1dae501099cd7510522df76d211a869340767be4` — **PASS** (build and PostgreSQL 17 jobs).
+- CI workflow: [run 40496322497](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40496322497), commit `1934e2dc36670eb45f22ea870fd462e82d51d460` — **PASS** (build, browser smoke, PostgreSQL 17 bootstrap, all 11 canonical migrations, ACL postconditions and guarded ledger rehearsal).
 - Added `scripts/test-browser-public-smoke.mjs`, run in CI after the production build using a local Vite preview and headless Chromium.
-- Automated checks cover the public landing page, opening the login panel, rendering the administrator/collaborator/resident role selectors, rejecting an empty login with validation feedback, and absence of uncaught browser exceptions.
+- Automated checks cover the public landing page, opening the login panel, rendering the administrator/collaborator/resident role selectors, rejecting an empty login with validation feedback, rejecting an invalid recovery link, and rejecting mismatched recovery passwords before `updateUser` can run. The recovery-flow tests use synthetic sessions and mocked Supabase calls; no real account is modified.
 - This is intentionally only a public-interface smoke test. It does not authenticate against Supabase or prove real role authorization, resident data isolation, accounting flows, document storage, or member-transfer behavior. APP-01–APP-15 remain NOT RUN until the remaining isolated role-based tests have evidence.
 
 ## 3. Role-based application smoke tests
