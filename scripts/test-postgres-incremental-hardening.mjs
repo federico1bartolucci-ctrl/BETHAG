@@ -16,6 +16,7 @@ const incrementalMigrations = [
   "20261023000004_application_default_table_privileges.sql",
   "20261023000733_use_invoker_for_close_transfer_rpc.sql",
   "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+  "20261027110000_repair_service_role_transfer_invoker_path.sql",
 ];
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.ok(actualFiles.includes(incrementalMigrations.at(-1)), "Missing the latest helper ACL correction.");
@@ -54,6 +55,7 @@ SELECT json_build_object(
       AND a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)
       AND a.privilege_type='MAINTAIN'
   ),
+  'private_schema_usage', json_build_object('authenticated',has_schema_privilege('authenticated','private','USAGE'),'service_role',has_schema_privilege('service_role','private','USAGE'),'anon',has_schema_privilege('anon','private','USAGE')),
   'close_rpc', (
     SELECT json_build_object(
       'security_definer', p.prosecdef,
@@ -91,6 +93,7 @@ assert.equal(result.authenticated_maintain,0);
 assert.equal(result.service_role_maintain,0);
 assert.equal(result.authenticated_structural,0);
 assert.equal(result.default_maintain_grants,0);
+assert.deepEqual(result.private_schema_usage,{authenticated:true,service_role:true,anon:false});
 assert.deepEqual(result.close_rpc,{security_definer:false,public_execute:false,anon_execute:false,authenticated_execute:true,service_role_execute:true});
 assert.deepEqual(result.public_execute_targets,[
  "public.normalize_zero_ownership_owner()",
