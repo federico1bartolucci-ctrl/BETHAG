@@ -49,8 +49,8 @@ if (process.env.BETHAG_ENVIRONMENT_ALIGNMENT_VERIFIED !== "YES") {
 if (process.env.BETHAG_QA_EQUIVALENCE_VERIFIED !== "YES") {
   blockers.push("QA alternate migration SQL effects and QA-only test migrations have not been reconciled against the canonical migration sequence.");
 }
-if (process.env.BETHAG_LIVE_LEDGER_CAPTURED !== "YES") {
-  blockers.push("Fresh live migration ledgers have not been captured for every target environment.");
+if (process.env.BETHAG_ALL_ENVIRONMENT_LEDGERS_CAPTURED !== "YES") {
+  blockers.push("Fresh live migration ledgers have not been captured for Production and all four Supabase QA/development branches.");
 }
 
 const report = {
