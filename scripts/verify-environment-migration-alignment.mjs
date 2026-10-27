@@ -68,7 +68,7 @@ assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.projects_checked
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_public_execute, false);
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_authenticated_execute, true);
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_service_role_execute, true);
-assert.equal(liveQaExecuteHardening.qa_environments.length, 4);
+assert.equal(liveQaExecuteHardening.qa_environments.length, 4);\nassert.ok(liveQaExecuteHardening.qa_environments.every((environment) => environment.security_advisor_lints === 0), "All four QA/development environments must have zero security advisor lints after helper ACL hardening.");
 assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
 assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
 
