@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-10-27T01:46:00Z",
+  "captured_at_utc": "2026-10-27T01:48:00Z",
   "note": "Live read-only observations after QA hardening. The develop branch rebase was requested at 2026-10-27 and remains in CREATING_PROJECT at capture time; its pre-rebase observations are retained and must not be interpreted as post-rebase state.",
   "environments": [
     {
@@ -35,6 +35,11 @@
         "member_transfers": 11,
         "portal_access": 1,
         "documents": 4
+      },
+      "default_acl_maintain": {
+        "anon": 1,
+        "authenticated": 1,
+        "service_role": 1
       }
     },
     {
@@ -70,7 +75,12 @@
         "application_default_table_privileges",
         "use_invoker_for_close_transfer_rpc",
         "revoke_remaining_service_role_maintain_legal_cases"
-      ]
+      ],
+      "default_acl_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
+      }
     },
     {
       "name": "bethag-develop",
@@ -95,9 +105,9 @@
         "service_role_tables_with_maintain": 0
       },
       "close_transfer_security_definer": false,
-      "rebase_requested": true,
-      "rebase_status_at_capture": "RUNNING_MIGRATIONS after reset to canonical 20261023000733; schema currently matches canonical fingerprints; final provider status and post-reset ledger recheck pending",
-      "rebase_failure": "Legacy replay failed on historical policy dependencies. Rebuilt this with_data=false development branch from the canonical 5-file baseline plus existing head and 9 pending migrations. All 12 legacy public tables were verified at exactly 0 rows before removal; no production or application data was touched. Canonical ledger now has 15 entries. Supabase reports RUNNING_MIGRATIONS after reset to canonical head; wait for completion and re-audit.",
+      "rebase_requested": false,
+      "rebase_status_at_capture": "RECOVERED: FUNCTIONS_DEPLOYED / ACTIVE_HEALTHY; canonical 15-entry ledger; security advisor clear",
+      "rebase_failure": "Historical rebase was abandoned after out-of-order policy dependencies. Because this with_data=false branch's 12 existing tables were each verified at exactly 0 rows, its empty application schema was rebuilt from the canonical 5-file baseline, current Production head, and 9 ordered hardening migrations. Migration ledger was normalized to the 15 canonical identities and reset successfully to 20261023000733. Production was not changed.",
       "rebase_partial_progress": [
         "20260928043547_restrict_data_api_table_grants",
         "20260928043604_optimize_rls_auth_checks",
@@ -128,6 +138,11 @@
         "policies": "08c8ca172749839d4d3afa4ca79d205e",
         "triggers": "d5ea4cd52ddb53f1e2965591dd5237b8",
         "table_grants": "4ae540884f6adb1365fc52cef5c03a24"
+      },
+      "default_acl_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
       }
     },
     {
@@ -161,7 +176,12 @@
         "revoke_service_role_maintain",
         "application_default_table_privileges",
         "use_invoker_for_close_transfer_rpc"
-      ]
+      ],
+      "default_acl_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
+      }
     },
     {
       "name": "bethag-migration-reconciliation-qa",
@@ -186,7 +206,12 @@
         "service_role_tables_with_maintain": 0
       },
       "close_transfer_security_definer": false,
-      "changes_made_by_this_run": false
+      "changes_made_by_this_run": false,
+      "default_acl_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
+      }
     }
   ],
   "catalog_fingerprint_check": {
