@@ -1,6 +1,12 @@
--- Reconcile Production's excessive direct MAINTAIN grants to authenticated.
--- PostgreSQL 17+. This migration is intentionally additive and must be reviewed
--- and applied through the controlled release process; it has NOT been run on Production.
+-- Remove structural table privileges that ordinary API roles do not need.
+-- RLS does not govern TRUNCATE. Keep ordinary CRUD grants intact for
+-- authenticated; the RLS policies remain the row-level authorization boundary.
+-- This is a controlled-release migration and has NOT been run on Production.
+REVOKE TRUNCATE, REFERENCES, TRIGGER
+  ON ALL TABLES IN SCHEMA public
+  FROM anon, authenticated;
+
+-- Reconcile excessive direct MAINTAIN grants to authenticated (PostgreSQL 17+).
 REVOKE MAINTAIN ON TABLE
   public.communication_recipients,
   public.condominium_accounting_settings,
