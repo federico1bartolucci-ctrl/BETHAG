@@ -32,6 +32,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Chromium for browser smoke tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run isolated public-login browser smoke test
+        run: node scripts/test-browser-public-smoke.mjs
+
   postgres-bootstrap:
     runs-on: ubuntu-latest
     services:
