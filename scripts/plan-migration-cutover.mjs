@@ -38,8 +38,8 @@ assert.equal(production.migrations.at(-1).version, "20261022202747", "Refresh th
 assert.equal(qa.count, qa.migrations.length);
 assert.equal(reconciliation.production.ledger_count, production.count);
 assert.equal(reconciliation.qa.ledger_count, qa.count);
-assert.equal(reconciliation.clean_baseline_branch.migration_files, migrationFiles.length - 1, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
-assert.equal(incrementalFiles.at(-1), "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql", "Latest incremental migration must be the reviewed transfer-helper EXECUTE remediation.");
+assert.equal(reconciliation.clean_baseline_branch.migration_files, 15, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
+assert.equal(incrementalFiles.at(-1), "20261027110000_repair_service_role_transfer_invoker_path.sql", "Latest incremental migration must repair the verified service_role invoker execution path.");
 
 const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
 const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
