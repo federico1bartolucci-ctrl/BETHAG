@@ -268,5 +268,27 @@
       "member_transfer_qa": "4ae540884f6adb1365fc52cef5c03a24",
       "migration_reconciliation_qa": "90e3ae6918a634130e09f1a596d51fd0"
     }
+  },
+  "backup_restore_gate": {
+    "status": "BLOCKED — provider-managed physical backup restore not yet executed or evidenced",
+    "source_project_ref": "tctcgptrsmvgajqjgnev",
+    "source_project_name": "BETHAG",
+    "source_database_version": "17.6.1.166",
+    "scheduled_backup_visibility": "Prior audit recorded scheduled Supabase backups through 2026-10-26T03:10:58Z; visibility is not proof of successful restore.",
+    "local_dump_restore": "Verified separately; does not satisfy this gate.",
+    "restore_method_required": "Supabase Dashboard → source project BETHAG → Database → Backups → Restore to a New Project; select an actual scheduled physical backup and complete provider-managed restore to an isolated new project. If dashboard exposes only in-place restore, stop and do not use it for this test.",
+    "verification_required": [
+      "Record source project ref, selected physical backup identifier/timestamp, restore target project ref, and UTC completion time.",
+      "Confirm the restore operation completed successfully in Supabase, not merely that the backup is listed.",
+      "Run read-only schema/data checks on the isolated restored project; compare critical counts with source snapshot.",
+      "Compare migration ledger, extensions, schemas, tables, columns, constraints, indexes, views, functions, triggers, RLS policies, owners, explicit grants, and default ACLs.",
+      "Save provider restore status and query outputs as evidence; do not expose secrets."
+    ],
+    "target_project_ref": null,
+    "selected_backup_timestamp_utc": null,
+    "restore_completed_at_utc": null,
+    "schema_acl_parity": "NOT VERIFIED",
+    "release_gate_passed": false,
+    "note": "No restore was initiated through the available Supabase connector: its restore_project action is not documented as a restore-from-physical-backup-to-new-project operation and may affect an existing project. Production remains untouched. Do not mark this gate passed until the provider restore and isolated-target parity check are evidenced."
   }
 }
