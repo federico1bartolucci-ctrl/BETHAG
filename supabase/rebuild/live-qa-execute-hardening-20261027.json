@@ -1,5 +1,4 @@
 {
-  "captured_at_utc": "2026-10-27T09:32:00Z",
   "purpose": "Fresh read-only release evidence captured after applying the idempotent transfer-closure helper EXECUTE remediation to the four non-Production Supabase environments. This is not a Production change or a cutover approval.",
   "production_modified": false,
   "production": {
@@ -101,5 +100,7 @@
     "The 244-row Production migration history remains unmodified and still needs row-by-row source/effect reconciliation.",
     "End-to-end auth, RBAC, accounting, transfer success/rejection/rollback and portal smoke tests have not been demonstrated by this snapshot.",
     "The provider-managed physical backup has not been restored in isolation; keep this as a documented residual risk unless a named approver accepts it in writing."
-  ]
+  ],
+  "captured_date_utc": "2026-10-27",
+  "captured_time_utc": null
 }
