@@ -36,7 +36,8 @@ assert.equal(production.count, production.migrations.length);
 assert.equal(qa.count, qa.migrations.length);
 assert.equal(reconciliation.production.ledger_count, production.count);
 assert.equal(reconciliation.qa.ledger_count, qa.count);
-assert.equal(reconciliation.clean_baseline_branch.migration_files, migrationFiles.length);
+assert.equal(reconciliation.clean_baseline_branch.migration_files, migrationFiles.length - 1, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
+assert.equal(incrementalFiles.at(-1), "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql", "Latest incremental migration must be the reviewed transfer-helper EXECUTE remediation.");
 
 const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
 const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
@@ -90,7 +91,7 @@ const report = {
     },
     rule: "Never re-run baseline or already-applied equivalent SQL to repair history. First prove catalog/effective ACL parity and QA variant equivalence; only then normalize tracking metadata and apply genuinely pending Production migrations.",
   },
-  next_gate: "Verified isolated backup restore, exact live ledger recapture, baseline/catalog parity, QA variant SQL proof, and approved cutover are prerequisites before any remote ledger/schema change.",
+  next_gate: "Verified isolated backup restore OR explicit named written acceptance of the documented physical-restore risk, exact live ledger recapture, baseline/catalog parity, QA variant SQL proof, application smoke tests, and approved cutover are prerequisites before any remote ledger/schema change.",
   action: "PLAN_ONLY_NO_COMMANDS",
 };
 console.log(JSON.stringify(report, null, 2));
@@ -112,7 +113,7 @@ if (process.argv.includes("--print-review-checklist")) {
     "2. Never run a repair while the CLI may be linked to Production unless the approved cutover explicitly requires it.",
     "3. Capture the target's live migration ledger immediately before any proposed repair.",
     "4. Compare every proposed version and SQL body with the canonical source and identify QA-only tests.",
-    "5. Verify a recoverable Production backup by restoring it into a separately identified isolated target.",
+    "5. Verify a recoverable Production backup by restoring it into an isolated target, or record explicit named written acceptance of the documented physical-restore risk; never claim an unperformed restore.",
     "6. Obtain independent review of the exact project-specific migration-tracking plan.",
     "7. After any approved repair, re-read the ledger and prove exact local/remote alignment.",
     "8. Stop if any target, source mapping, restore evidence, or catalog/ACL parity is uncertain.",
