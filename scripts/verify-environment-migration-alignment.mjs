@@ -1,0 +1,108 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+
+const root = "supabase/rebuild";
+const migrationDir = "supabase/migrations";
+const [production, qa, mainInventory] = await Promise.all([
+  readFile(`${root}/production-ledger-20261026.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/qa-ledger-20261026.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/main-migration-files-20261026.json`, "utf8").then(JSON.parse),
+]);
+
+const files = (await readdir(migrationDir))
+  .filter((file) => file.endsWith(".sql"))
+  .sort()
+  .map((file) => ({ file, version: file.slice(0, 14), name: file.slice(15, -4) }));
+
+const baselineNames = [
+  "bethag_baseline_schema",
+  "bethag_baseline_indexes_views",
+  "bethag_baseline_functions",
+  "bethag_baseline_security",
+  "bethag_baseline_grants",
+];
+const expectedBaseline = baselineNames.map((name, i) => ({
+  version: `2026101700000${i + 1}`,
+  name,
+}));
+const productionHead = { version: "20261022202747", name: "harden_close_member_transfer_search_path" };
+const expectedPending = [
+  ["20261022210629", "restrict_private_function_public_execute"],
+  ["20261022210630", "harden_default_privileges_and_private_execute"],
+  ["20261022213544", "restrict_close_member_transfer_execute"],
+  ["20261022233440", "align_public_function_execute"],
+  ["20261023000001", "revoke_authenticated_maintain"],
+  ["20261023000002", "revoke_default_maintain"],
+  ["20261023000003", "revoke_service_role_maintain"],
+  ["20261023000004", "application_default_table_privileges"],
+  ["20261023000733", "use_invoker_for_close_transfer_rpc"],
+].map(([version, name]) => ({ version, name }));
+
+assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
+assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg");
+assert.equal(production.count, production.migrations.length);
+assert.equal(qa.count, qa.migrations.length);
+assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
+assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
+assert.equal(mainInventory.count, mainInventory.files.length);
+assert.equal(files.length, 15, "Canonical baseline + incremental migration inventory changed.");
+assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
+assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
+
+const exact = (ledger, item) => ledger.migrations.some((entry) => entry.version === item.version && entry.name === item.name);
+assert.ok(expectedBaseline.every((item) => exact(qa, item)), "QA baseline adoption is not present in the captured ledger.");
+assert.ok(exact(production, productionHead), "Production head migration differs from the captured canonical head.");
+assert.ok(exact(qa, productionHead), "QA head migration differs from the captured canonical head.");
+
+const productionPending = files
+  .filter(({ version, name }) => !exact(production, { version, name }))
+  .filter(({ version }) => version > productionHead.version);
+assert.deepEqual(
+  productionPending.map(({ version, name }) => ({ version, name })),
+  expectedPending,
+  "Production pending migration list differs from the approved canonical sequence.",
+);
+
+const qaEquivalentCandidates = [
+  { canonical: "20261023000001_revoke_authenticated_maintain", observed: "20261022230901_revoke_authenticated_maintain" },
+  { canonical: "20261023000002_revoke_default_maintain", observed: "20261022230908_revoke_default_maintain" },
+  { canonical: "20261023000003_revoke_service_role_maintain", observed: "20261023011431_revoke_service_role_maintain_qa_test" },
+  { canonical: "20261023000004_application_default_table_privileges", observed: "20261023011435_define_application_default_table_privileges_qa" },
+];
+for (const mapping of qaEquivalentCandidates) {
+  const [canonicalVersion, canonicalName] = [mapping.canonical.slice(0, 14), mapping.canonical.slice(15)];
+  const [observedVersion, observedName] = [mapping.observed.slice(0, 14), mapping.observed.slice(15)];
+  assert.ok(files.some((file) => file.version === canonicalVersion && file.name === canonicalName), `Missing canonical migration: ${mapping.canonical}`);
+  assert.ok(qa.migrations.some((entry) => entry.version === observedVersion && entry.name === observedName), `QA ledger snapshot changed: ${mapping.observed}`);
+}
+const qaOnlyTestMigrations = [
+  { version: "20261023010544", name: "qa_test_revoke_authenticated_maintain_20261023" },
+  { version: "20261023010548", name: "qa_test_revoke_default_maintain_20261023" },
+];
+assert.ok(qaOnlyTestMigrations.every((item) => exact(qa, item)), "QA-only test migration ledger changed.");
+
+const gates = {
+  live_production_backup_restore_verified: process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES",
+  live_production_and_qa_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
+  qa_variant_sql_equivalence_verified: process.env.BETHAG_QA_EQUIVALENCE_VERIFIED === "YES",
+  current_live_ledgers_recaptured: process.env.BETHAG_LIVE_LEDGER_CAPTURED === "YES",
+  cutover_plan_approved: process.env.BETHAG_CUTOVER_APPROVED === "YES",
+};
+const blockers = Object.entries(gates).filter(([, passed]) => !passed).map(([gate]) => gate);
+
+console.log(JSON.stringify({
+  migration_alignment_inventory: "PASS",
+  canonical_baseline_migrations: expectedBaseline.length,
+  canonical_incremental_migrations: expectedPending.length + 1,
+  production_ledger_records: production.count,
+  production_pending_canonical_migrations: productionPending,
+  qa_ledger_records: qa.count,
+  qa_equivalent_migrations_requiring_SQL_proof: qaEquivalentCandidates,
+  qa_only_test_migrations_requiring_disposition: qaOnlyTestMigrations,
+  original_main_inventory_files: mainInventory.count,
+  original_main_exact_version_and_name_matches_production: 19,
+  note: "The snapshots establish the planned sequence, not current live equality. Do not rewrite remote migration ledgers or apply pending SQL until all gates are independently evidenced.",
+  cutover_ready: blockers.length === 0,
+  blockers,
+}, null, 2));
+if (blockers.length) process.exitCode = 1;
