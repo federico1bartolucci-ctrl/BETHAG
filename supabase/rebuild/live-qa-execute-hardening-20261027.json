@@ -1,0 +1,105 @@
+{
+  "captured_at_utc": "2026-10-27T09:32:00Z",
+  "purpose": "Fresh read-only release evidence captured after applying the idempotent transfer-closure helper EXECUTE remediation to the four non-Production Supabase environments. This is not a Production change or a cutover approval.",
+  "production_modified": false,
+  "production": {
+    "project_ref": "tctcgptrsmvgajqjgnev",
+    "ledger_count": 244,
+    "ledger_head": {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
+    },
+    "public_table_partition_relations": 47,
+    "all_47_rls_enabled": true,
+    "owner_counts": {
+      "postgres": 47
+    },
+    "effective_maintain": {
+      "anon": 0,
+      "authenticated": 33,
+      "service_role": 47
+    },
+    "postgres_owned_public_table_default_maintain": {
+      "anon": true,
+      "authenticated": true,
+      "service_role": true
+    },
+    "close_transfer_rpc_security": "SECURITY DEFINER",
+    "public_execute_routines": [
+      "private.check_condominium_member_transfer_closure(uuid)",
+      "public.check_condominium_member_transfer_closure(uuid)",
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "release_disposition": "NOT READY; no schema, data, ACL, or migration ledger writes were performed"
+  },
+  "qa_environments": [
+    {
+      "name": "bethag-develop",
+      "project_ref": "wvokvcfglduxmjxlnfeh",
+      "ledger_count": 16,
+      "ledger_head": {
+        "version": "20261027093101",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    {
+      "name": "bethag-continuity-qa",
+      "project_ref": "srkucrdcoswlozifvztr",
+      "ledger_count": 18,
+      "ledger_head": {
+        "version": "20261027093117",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    {
+      "name": "bethag-member-transfer-qa",
+      "project_ref": "gcorwfvnslnehcxmtixn",
+      "ledger_count": 16,
+      "ledger_head": {
+        "version": "20261027093126",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    {
+      "name": "bethag-migration-reconciliation-qa",
+      "project_ref": "mxhciszzpqzvsaqcnwhg",
+      "ledger_count": 18,
+      "ledger_head": {
+        "version": "20261027093119",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    }
+  ],
+  "qa_post_migration_acl_check": {
+    "projects_checked": 4,
+    "helper_functions_public_execute": false,
+    "helper_functions_authenticated_execute": true,
+    "helper_functions_service_role_execute": true,
+    "intentional_public_execute_exceptions": [
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "effective_table_maintain": {
+      "authenticated": 0,
+      "service_role": 0
+    },
+    "close_transfer_rpc_security": "SECURITY INVOKER",
+    "result": "PASS for the specific live function-ACL and table-MAINTAIN checks; not an end-to-end application smoke test"
+  },
+  "migration": {
+    "canonical_file": "supabase/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+    "purpose": "Correct QA databases where the earlier align_public_function_execute migration identity was already recorded with the old helper allowlist.",
+    "applied_to_nonproduction_only": true,
+    "production_pending": true,
+    "sql_effects": "REVOKE EXECUTE FROM PUBLIC, anon on public/private closure-check helpers; GRANT EXECUTE to authenticated, service_role; leave the two trigger exceptions unchanged.",
+    "verification": "Direct read-only ACL query after application confirmed the helpers are no longer PUBLIC-executable on all four QA environments."
+  },
+  "limitations": [
+    "The Production ACL/default-privilege drift remains unresolved.",
+    "Supabase-managed supabase_admin default ACLs are not changed.",
+    "The 244-row Production migration history remains unmodified and still needs row-by-row source/effect reconciliation.",
+    "End-to-end auth, RBAC, accounting, transfer success/rejection/rollback and portal smoke tests have not been demonstrated by this snapshot.",
+    "The provider-managed physical backup has not been restored in isolation; keep this as a documented residual risk unless a named approver accepts it in writing."
+  ]
+}
