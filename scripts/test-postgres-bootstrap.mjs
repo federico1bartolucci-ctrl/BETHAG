@@ -22,6 +22,7 @@ const incrementalMigrations = [
   "20261023000003_revoke_service_role_maintain.sql",
   "20261023000004_application_default_table_privileges.sql",
   "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+  "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
