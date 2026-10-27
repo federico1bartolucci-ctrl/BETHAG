@@ -84,7 +84,7 @@ try {
     }`,
   }));
   await page.goto(new URL("reset-password.html?code=synthetic-qa-code", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
-  await page.getByLabel("Nuova password").fill("Password123");
+  await page.getByRole("textbox", { name: "Nuova password", exact: true }).fill("Password123");
   await page.getByLabel("Conferma nuova password").fill("Password456");
   await page.getByRole("button", { name: "Salva nuova password" }).click();
   await page.getByText("Le password non coincidono.").waitFor();
