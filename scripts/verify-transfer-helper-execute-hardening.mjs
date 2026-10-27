@@ -8,16 +8,10 @@ const [remediation, canonicalAcl, invokerPathFix] = await Promise.all([
 ]);
 
 for (const schema of ["private", "public"]) {
-  assert.match(
-    remediation,
-    new RegExp("REVOKE EXECUTE ON FUNCTION " + schema + "\.check_condominium_member_transfer_closure\(uuid\) FROM PUBLIC, anon;"),
-    schema + " transfer closure helper must not be executable by PUBLIC or anon.",
-  );
-  assert.match(
-    remediation,
-    new RegExp("GRANT EXECUTE ON FUNCTION " + schema + "\.check_condominium_member_transfer_closure\(uuid\) TO authenticated, service_role;"),
-    schema + " transfer closure helper must remain callable by the intended application roles.",
-  );
+  const revoke = "REVOKE EXECUTE ON FUNCTION " + schema + ".check_condominium_member_transfer_closure(uuid) FROM PUBLIC, anon;";
+  const grant = "GRANT EXECUTE ON FUNCTION " + schema + ".check_condominium_member_transfer_closure(uuid) TO authenticated, service_role;";
+  assert.ok(remediation.includes(revoke), schema + " transfer closure helper must not be executable by PUBLIC or anon.");
+  assert.ok(remediation.includes(grant), schema + " transfer closure helper must remain callable by the intended application roles.");
 }
 assert.doesNotMatch(remediation, /GRANT EXECUTE ON FUNCTION .* TO PUBLIC/i);
 assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.normalize_zero_ownership_owner\(\) TO PUBLIC;/);
