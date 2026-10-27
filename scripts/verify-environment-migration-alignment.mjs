@@ -51,6 +51,7 @@ const expectedPending = [
   ["20261023000003", "revoke_service_role_maintain"],
   ["20261023000004", "application_default_table_privileges"],
   ["20261023000733", "use_invoker_for_close_transfer_rpc"],
+  ["20261027100000", "revoke_public_execute_from_transfer_closure_helpers"],
 ].map(([version, name]) => ({ version, name }));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
@@ -60,7 +61,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
 assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
 assert.equal(mainInventory.count, mainInventory.files.length);
-assert.equal(files.length, 15, "Canonical baseline + incremental migration inventory changed.");
+assert.equal(files.length, 16, "Canonical baseline + incremental migration inventory changed.");
 assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
 assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
 
@@ -98,6 +99,7 @@ assert.ok(qaOnlyTestMigrations.every((item) => exact(qa, item)), "QA-only test m
 
 const gates = {
   live_production_backup_restore_verified: process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES",
+  physical_restore_risk_explicitly_accepted: Boolean((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim() && (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim() && (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim()),
   live_production_and_qa_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
   qa_variant_sql_equivalence_verified: process.env.BETHAG_QA_EQUIVALENCE_VERIFIED === "YES",
   all_five_environment_ledgers_recaptured: process.env.BETHAG_ALL_ENVIRONMENT_LEDGERS_CAPTURED === "YES",
