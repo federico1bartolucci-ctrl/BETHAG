@@ -5,6 +5,12 @@
 **Scope:** Read-only Production checks, QA ledger review, repository CI evidence, and release-gate reconciliation.  
 **Production writes:** None. No migration was applied to Production.
 
+## Current live migration ledger reconciliation — 2026-10-27
+
+A fresh read-only capture is stored in `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`. Production still has 244 historical ledger entries and head `20261022202747_harden_close_member_transfer_search_path`; the ten canonical incremental migrations remain absent from its ledger. No Production migration row was edited and no migration was applied.
+
+The four non-Production ledgers currently have 16 entries in develop, 18 in continuity QA, 16 in member-transfer QA, and 18 in migration-reconciliation QA. Their helper-ACL correction is recorded under environment-specific versions (`20261027093101`, `20261027093117`, `20261027093126`, `20261027093119`) rather than the canonical repository version `20261027100000`. Continuity/member-transfer/reconciliation QA also have several earlier security migrations under environment-specific version IDs. This is recorded as a **source/effect reconciliation task**, not permission to rewrite ledger history or to mark Production migrations applied without verifying their effects.
+
 ## 1. Current live privilege and function-security state
 
 Read-only queries against Production `tctcgptrsmvgajqjgnev` returned:
