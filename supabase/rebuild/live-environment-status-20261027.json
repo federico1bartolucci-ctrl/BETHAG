@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-10-27T01:22:00Z",
+  "captured_at_utc": "2026-10-27T01:42:00Z",
   "note": "Live read-only observations after QA hardening. The develop branch rebase was requested at 2026-10-27 and remains in CREATING_PROJECT at capture time; its pre-rebase observations are retained and must not be interpreted as post-rebase state.",
   "environments": [
     {
@@ -65,23 +65,29 @@
     {
       "name": "bethag-develop",
       "project_ref": "wvokvcfglduxmjxlnfeh",
-      "ledger_count": 37,
+      "ledger_count": 15,
       "ledger_head": {
-        "version": "20261001141623",
-        "name": "unit_transformation_snapshots"
+        "version": "20260928043406",
+        "name": "harden_authenticated_request_policies"
       },
       "schema": {
-        "tables": 20,
-        "columns": 229
+        "tables": 12,
+        "views": 0,
+        "columns": 118,
+        "constraints": 46,
+        "indexes": 40,
+        "functions": 8,
+        "policies": 26,
+        "triggers": 0
       },
       "acl": {
-        "authenticated_tables_with_maintain": 20,
-        "service_role_tables_with_maintain": 20
+        "authenticated_tables_with_maintain": 12,
+        "service_role_tables_with_maintain": 12
       },
       "close_transfer_security_definer": null,
       "rebase_requested": true,
-      "rebase_status_at_capture": "MIGRATIONS_FAILED_AFTER_PARTIAL_REBASE; RETRY_REQUESTED; LAST OBSERVED STATUS CREATING_PROJECT",
-      "rebase_failure": "Production rebase failed on ALTER POLICY \"residents read own portal access\" because the policy was absent from the divergent develop schema. The policy was recreated from the repository's canonical baseline definition and a rebase retry was requested; completion not yet verified.",
+      "rebase_status_at_capture": "CREATING_PROJECT after reset to 20260928043406 and rebase retry; schema/ledger not yet at Production parity",
+      "rebase_failure": "Historical replay previously failed on absent/duplicate policies. Branch reset to common migration 20260928043406 succeeded; a new rebase was requested, but provider still reports CREATING_PROJECT and the current schema is only the 12-table historical baseline. Do not claim recovery complete.",
       "rebase_partial_progress": [
         "20260928043547_restrict_data_api_table_grants",
         "20260928043604_optimize_rls_auth_checks",
@@ -153,5 +159,60 @@
       "close_transfer_security_definer": false,
       "changes_made_by_this_run": false
     }
-  ]
+  ],
+  "catalog_fingerprint_check": {
+    "method": "Read-only PostgreSQL catalog signatures: ordered MD5 aggregates for columns, constraints, indexes, functions, RLS policies, triggers, table grants, and RLS flags.",
+    "production_and_full_schema_qa_match": [
+      "columns_sig",
+      "constraints_sig",
+      "indexes_sig",
+      "policies_sig",
+      "triggers_sig",
+      "rls_sig"
+    ],
+    "expected_differences": [
+      "functions_sig (SECURITY INVOKER hardening applied only in QA)",
+      "table_grants_sig (MAINTAIN privileges revoked only in continuity/member-transfer QA)"
+    ],
+    "production": {
+      "tables": 47,
+      "views": 1,
+      "columns": 626,
+      "columns_sig": "be8ad9bee85d486df1f23c290829b75b",
+      "constraints": 304,
+      "constraints_sig": "9bff9ed83871431ffa6647e00df09c7f",
+      "indexes": 257,
+      "indexes_sig": "c45b2a09bf3e310224035b4a43e1ca91",
+      "functions": 171,
+      "functions_sig": "274df2dd7306711c8d5dd1613fe9c662",
+      "policies": 103,
+      "policies_sig": "08c8ca172749839d4d3afa4ca79d205e",
+      "triggers": 146,
+      "triggers_sig": "d5ea4cd52ddb53f1e2965591dd5237b8",
+      "table_grants_sig": "90e3ae6918a634130e09f1a596d51fd0",
+      "rls_sig": "2f4422830210cae70f4ab967fc410f13"
+    },
+    "full_schema_qa_shared": {
+      "tables": 47,
+      "views": 1,
+      "columns": 626,
+      "columns_sig": "be8ad9bee85d486df1f23c290829b75b",
+      "constraints": 304,
+      "constraints_sig": "9bff9ed83871431ffa6647e00df09c7f",
+      "indexes": 257,
+      "indexes_sig": "c45b2a09bf3e310224035b4a43e1ca91",
+      "functions": 171,
+      "functions_sig": "3c57935159ccd2ddf6b7d0e893be403a",
+      "policies": 103,
+      "policies_sig": "08c8ca172749839d4d3afa4ca79d205e",
+      "triggers": 146,
+      "triggers_sig": "d5ea4cd52ddb53f1e2965591dd5237b8",
+      "rls_sig": "2f4422830210cae70f4ab967fc410f13"
+    },
+    "grant_signatures": {
+      "continuity_qa": "4ae540884f6adb1365fc52cef5c03a24",
+      "member_transfer_qa": "4ae540884f6adb1365fc52cef5c03a24",
+      "migration_reconciliation_qa": "90e3ae6918a634130e09f1a596d51fd0"
+    }
+  }
 }
