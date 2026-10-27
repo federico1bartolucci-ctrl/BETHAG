@@ -123,7 +123,8 @@ console.log(JSON.stringify({
   })),
   original_main_inventory_files: mainInventory.count,
   original_main_exact_version_and_name_matches_production: reconciliation.repository_main.exact_version_and_name_matches,
-  note: "The live status file is a dated evidence snapshot, not a live query. Develop is not considered aligned until its rebase is healthy and its ledger/catalog are recaptured. Do not rewrite Production migration history or apply Production SQL until all gates are independently evidenced.",
+  production_live_security_drift: (() => { const production = liveStatus.environments.find((environment) => environment.name === "production"); return { current_table_maintain: production.acl, default_acl_maintain: production.default_acl_maintain, close_transfer_security_definer: production.close_transfer_security_definer, application_row_counts: production.application_row_counts }; })(),
+  note: "The live status file is a dated evidence snapshot, not a live query. bethag-develop recovery is complete at the captured 15-entry canonical ledger and healthy branch status. Production remains blocked by current/default MAINTAIN grants, SECURITY DEFINER, unresolved QA alias SQL semantics, backup-restore evidence, and approval. Do not rewrite Production migration history or apply Production SQL until all gates are independently evidenced.",
   cutover_ready: blockers.length === 0,
   blockers,
 }, null, 2));
