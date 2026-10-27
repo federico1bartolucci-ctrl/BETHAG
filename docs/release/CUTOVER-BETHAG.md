@@ -43,7 +43,7 @@
   8. `20261023000004_application_default_table_privileges.sql`
   9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`
 - Read-only Production inspection found 48 relations in schema `public` (47 table/partition relations plus one view), all owned by `postgres`. Effective privilege checks on the 47 table/partition relations found `MAINTAIN` on 33 tables for `authenticated` and on all 47 for `service_role`. `service_role` also has `TRUNCATE`, `REFERENCES`, and `TRIGGER` on all 47; `anon` has none of these structural privileges. `authenticated` has none of these structural privileges according to `has_table_privilege` checks.
-- GitHub Actions run `40430679828` for commit `8d6f05edb4f9b5c7a1ca9ec48b7ac8a94d02f073` completed successfully: `build` and `postgres-bootstrap` both passed. This is CI evidence, not a live Production cutover test.
+- GitHub Actions run `40473549315` for commit `0f8a70f767b226c6cf9adbac9cc3bb8fe49b60a4` completed successfully on 2026-10-27: `build` and `postgres-bootstrap` both passed. The build job also completed migration-history reconciliation, Production function-security/ACL parity checks, fresh PostgreSQL bootstrap, and application build. This is CI evidence, not a live Production cutover test.
 - Live Supabase Security Advisor at 2026-10-27 01:10 UTC still reports one warning: `public.close_condominium_member_transfer(uuid)` is executable by `authenticated` while marked `SECURITY DEFINER`. Migration `20261023000733_use_invoker_for_close_transfer_rpc.sql` is the planned remediation, but it is not recorded in Production yet.
 - Live Performance Advisor reports 62 unused-index notices and 21 multiple-permissive-policy notices. These are recorded for a separate measured performance/policy review; do not drop indexes or rewrite RLS policies as part of this privilege cutover without usage and access-path validation.
 - Production has not been modified. Security hardening was applied only to the two isolated QA branches `bethag-continuity-qa` and `bethag-member-transfer-qa`; `bethag-migration-reconciliation-qa` was already hardened. PR #24 remains open/draft. Cutover is blocked until the develop rebase completes, ledger identities are reconciled, Production backup/restore and catalog parity are verified, and the canonical plan is approved.
@@ -62,6 +62,8 @@
 
 
 ## Migration identity reconciliation — 2026-10-27
+
+**Update after the first cutover-plan draft:** the continuity-only SQL recovery is complete and documented above; the historical QA row remains preserved. Production remains unchanged.
 
 The live ledgers show that QA variants must be treated as environment-specific execution history. A filename with a similar name is not sufficient proof of equivalent effects.
 
@@ -83,7 +85,7 @@ The live ledgers show that QA variants must be treated as environment-specific e
 
 - Continuity QA (`srkucrdcoswlozifvztr`) has 17 rows, including `20261027012022_restrict_close_member_transfer_execute_canonical`, `20261027012025_align_public_function_execute`, `20261027012027_revoke_authenticated_maintain`, `20261027012029_revoke_default_maintain`, `20261027012032_revoke_service_role_maintain`, `20261027012034_application_default_table_privileges`, `20261027012037_use_invoker_for_close_transfer_rpc`, and `20261027012138_revoke_remaining_service_role_maintain_legal_cases`.
 - Member-transfer QA (`gcorwfvnslnehcxmtixn`) has 15 rows with alternate versions for function ACL alignment and privilege changes; its close-transfer restriction is recorded as `20261022213542_restrict_close_member_transfer_execute`.
-- The continuity-only `revoke_remaining_service_role_maintain_legal_cases` entry has no canonical source file identified in the current 15-file branch inventory. Its exact SQL and object scope must be recovered and reviewed before release planning.
+- The continuity-only `20261027012138_revoke_remaining_service_role_maintain_legal_cases` entry was recovered from the live continuity-QA migration ledger. Its exact statement is `REVOKE MAINTAIN ON TABLE public.condominium_legal_cases FROM service_role;`. A read-only post-check confirms zero public tables with `MAINTAIN` for `service_role` in continuity QA. It is a QA-only historical execution record, not a new canonical Production migration; preserve its ledger identity and do not replay it on Production.
 
 **Decision:** preserve every existing QA and Production ledger row as evidence. Do not normalize ledger metadata, delete test rows, or replay alias SQL merely to make names match. The effective QA security state (zero application-table `MAINTAIN`, public close-transfer wrapper `SECURITY INVOKER`) is a separate verification from migration identity. The Production release list must be derived from its live schema and ledger and must exclude any effect already present.
 
