@@ -67,7 +67,7 @@ The three migration ledgers must be reconciled by identity and effect, not made 
 
 | QA ledger identity | Canonical repository SQL file | Required treatment |
 |---|---|---|
-| `20261027012027_restrict_close_member_transfer_execute_canonical` | `20261022213544_restrict_close_member_transfer_execute.sql` (same purpose; verify exact SQL/effect before treating as equivalent) | Alias candidate; do not replay automatically |
+| `20261027012022_restrict_close_member_transfer_execute_canonical` | `20261022213544_restrict_close_member_transfer_execute.sql` (same purpose; verify exact SQL/effect before treating as equivalent) | Alias candidate; do not replay automatically |
 | `20261027012025_align_public_function_execute` | `20261022233440_align_public_function_execute.sql` | Alias candidate; verify SQL/effect |
 | `20261027012027_revoke_authenticated_maintain` | `20261023000001_revoke_authenticated_maintain.sql` | Alias candidate; verify SQL/effect |
 | `20261027012029_revoke_default_maintain` | `20261023000002_revoke_default_maintain.sql` | Alias candidate; verify SQL/effect |
