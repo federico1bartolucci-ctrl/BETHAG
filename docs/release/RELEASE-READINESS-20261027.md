@@ -53,7 +53,8 @@ These ten migrations are not recorded in Production after its current head. They
 6. `20261023000002_revoke_default_maintain.sql`
 7. `20261023000003_revoke_service_role_maintain.sql`
 8. `20261023000004_application_default_table_privileges.sql`
-9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`\n10. `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql`
+9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`
+10. `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql`
 
 Before any Production execution, rehearse the exact ordered set against an isolated target and prove: exact relation-list preconditions; no unintended current-table CRUD grants removed; no `MAINTAIN` reintroduced by defaults; only reviewed function EXECUTE exceptions remain; the close-transfer implementation preserves user/workspace authorization; and the migration ledger is changed only by the approved forward sequence.
 
