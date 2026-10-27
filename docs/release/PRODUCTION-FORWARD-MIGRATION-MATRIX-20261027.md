@@ -92,3 +92,14 @@ A direct comparison of the current Production function definitions/ACLs with can
 The exact live relation inventory matches the 47-table list in `20261023000003_revoke_service_role_maintain.sql`: read-only comparison returned no missing expected relations and no extra live table/partition relations. Six Production tables currently lack one or more ordinary CRUD privileges for `authenticated` (audit/carryover/payment tables and `profiles`); this is an existing intentional-looking ACL asymmetry that must not be blindly overwritten by migration 4, which changes defaults for future objects only. Confirm those table-level grants against RLS policies and app call paths before changing any current-table grants.
 
 These corrections were committed on the working branch only. Production was not modified. Re-run migration inventory, SQL syntax/bootstrap checks and the application/function smoke tests against isolated QA after these commits; do not consider the branch release-ready based only on static review.
+
+
+### QA migration-ledger reconciliation — 2026-10-27
+
+A fresh read of the three existing QA ledgers shows that the migration identities are not interchangeable and must not be treated as proof that the nine canonical files have run uniformly:
+
+- `gcorwfvnslnehcxmtixn` (member-transfer QA) records generated versions `20261027012112` through `20261027012123` for the recent ACL sequence; its close-transfer restriction is recorded as `20261022213542`, while the canonical repository file is `20261022213544_restrict_close_member_transfer_execute.sql`.
+- `srkucrdcoswlozifvztr` (continuity QA) records a mix of older versions, a duplicate canonicalization entry (`20261027012022_restrict_close_member_transfer_execute_canonical`), and an extra `20261027012138_revoke_remaining_service_role_maintain_legal_cases` entry.
+- `mxhciszzpqzvsaqcnwhg` (migration-reconciliation QA) records older versions for authenticated/default MAINTAIN and an older execution order, plus QA-only test migration entries.
+
+These differences are evidence of ledger divergence, not permission to rewrite history or mark files applied by guess. Before Production cutover, generate an explicit mapping of each QA ledger row to the exact canonical file and verified catalog effect; classify duplicate/QA-only entries separately; then rehearse the canonical forward-only sequence on an isolated target. Production remains unchanged, and no QA ledger rows should be deleted or rewritten as part of this documentation update.
