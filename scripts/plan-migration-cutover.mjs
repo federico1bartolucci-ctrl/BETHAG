@@ -33,6 +33,8 @@ const [production, qa, reconciliation] = await Promise.all([
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev", "Production project reference mismatch.");
 assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg", "QA project reference mismatch.");
 assert.equal(production.count, production.migrations.length);
+assert.equal(production.count, 244, "Refresh the Production ledger before planning cutover.");
+assert.equal(production.migrations.at(-1).version, "20261022202747", "Refresh the Production head before planning cutover.");
 assert.equal(qa.count, qa.migrations.length);
 assert.equal(reconciliation.production.ledger_count, production.count);
 assert.equal(reconciliation.qa.ledger_count, qa.count);
@@ -68,30 +70,31 @@ const report = {
     production: {
       current_records: production.count,
       preserve_exact_canonical_head: production.migrations.at(-1),
-      retire_historical_tracking_rows_after_baseline_parity: production.count - 1,
-      insert_baseline_tracking_rows_as_applied_after_catalog_parity: baselineFiles.map((file) => ({ version: parseVersion(file), name: file.slice(15, -4) })),
-      then_apply_pending_canonical_migrations_in_order: canonical.filter((file) => file.version > production.migrations.at(-1).version).map((file) => ({ version: file.version, name: file.name })),
-      target_record_count: canonical.length,
+      historical_rows_to_preserve_without_rewrite_or_deletion: production.count,
+      baseline_tracking_rows_to_insert_into_existing_production: [],
+      then_apply_only_reviewed_pending_incremental_migrations_in_order: canonical.filter((file) => file.version > production.migrations.at(-1).version).map((file) => ({ version: file.version, name: file.name })),
+      expected_record_count_if_all_pending_increments_are_approved_and_applied: production.count + canonical.filter((file) => file.version > production.migrations.at(-1).version).length,
       schema_or_data_recreated: false,
     },
     qa: {
       current_records: qa.count,
-      candidate_identity_replacements: [
-        { from: "20261022230901_revoke_authenticated_maintain", to: "20261023000001_revoke_authenticated_maintain" },
-        { from: "20261022230908_revoke_default_maintain", to: "20261023000002_revoke_default_maintain" },
-        { from: "20261023011431_revoke_service_role_maintain_qa_test", to: "20261023000003_revoke_service_role_maintain" },
-        { from: "20261023011435_define_application_default_table_privileges_qa", to: "20261023000004_application_default_table_privileges" },
+      preserve_all_environment_specific_tracking_rows: true,
+      identity_aliases_requiring_source_and_effect_review: [
+        { observed: "20261022230901_revoke_authenticated_maintain", canonical_candidate: "20261023000001_revoke_authenticated_maintain" },
+        { observed: "20261022230908_revoke_default_maintain", canonical_candidate: "20261023000002_revoke_default_maintain" },
+        { observed: "20261023011431_revoke_service_role_maintain_qa_test", canonical_candidate: "20261023000003_revoke_service_role_maintain" },
+        { observed: "20261023011435_define_application_default_table_privileges_qa", canonical_candidate: "20261023000004_application_default_table_privileges" }
       ],
-      qa_only_records_requiring_effect_review_before_removal: [
+      qa_only_records_to_preserve_until_individually_reconciled: [
         "20261023010544_qa_test_revoke_authenticated_maintain_20261023",
-        "20261023010548_qa_test_revoke_default_maintain_20261023",
+        "20261023010548_qa_test_revoke_default_maintain_20261023"
       ],
-      target_record_count: canonical.length,
-      execute_no_SQL_during_identity_normalization: true,
+      do_not_rewrite_or_delete_migration_ledger_rows: true,
     },
-    rule: "Never re-run baseline or already-applied equivalent SQL to repair history. First prove catalog/effective ACL parity and QA variant equivalence; only then normalize tracking metadata and apply genuinely pending Production migrations.",
+    rule: "Never re-run baseline migrations on existing Production, never delete/rewrite historical migration rows, and never mark an unverified effect applied. Reconcile QA identity aliases by source/effect evidence while preserving QA history; then apply only reviewed pending incremental migrations to Production after the approved cutover.",
   },
-  next_gate: "Verified isolated backup restore OR explicit named written acceptance of the documented physical-restore risk, exact live ledger recapture, baseline/catalog parity, QA variant SQL proof, application smoke tests, and approved cutover are prerequisites before any remote ledger/schema change.",
+  next_gate: "Verified isolated backup restore OR explicit named written acceptance of the documented physical-restore risk, fresh live ledger recapture, baseline/catalog parity, QA variant SQL proof, application smoke tests, and approved cutover are prerequisites before any remote ledger/schema change.",
+  ledger_safety: "Preserve all 244 Production ledger rows. Never insert the five clean-bootstrap baseline rows into existing Production, never delete/rewrite historical Production or QA rows, and never mark unverified effects applied.",
   action: "PLAN_ONLY_NO_COMMANDS",
 };
 console.log(JSON.stringify(report, null, 2));
