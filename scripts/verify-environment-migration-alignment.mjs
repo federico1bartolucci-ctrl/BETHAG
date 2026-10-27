@@ -3,19 +3,16 @@ import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
 const migrationDir = "supabase/migrations";
-const [production, qa, mainInventory, reconciliation] = await Promise.all([
+const [production, qa, mainInventory, reconciliation, liveStatus] = await Promise.all([
   readFile(`${root}/production-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/qa-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/main-migration-files-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/migration-history-reconciliation-20261026.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/live-environment-status-20261027.json`, "utf8").then(JSON.parse),
 ]);
 
 const environments = [
-  { name: "production", project_ref: "tctcgptrsmvgajqjgnev", ledger_snapshot: "production-ledger-20261026.json" },
-  { name: "bethag-continuity-qa", project_ref: "srkucrdcoswlozifvztr", ledger_snapshot: null },
-  { name: "bethag-develop", project_ref: "wvokvcfglduxmjxlnfeh", ledger_snapshot: null },
-  { name: "bethag-member-transfer-qa", project_ref: "gcorwfvnslnehcxmtixn", ledger_snapshot: null },
-  { name: "bethag-migration-reconciliation-qa", project_ref: "mxhciszzpqzvsaqcnwhg", ledger_snapshot: "qa-ledger-20261026.json" },
+  ...liveStatus.environments.map((environment) => ({ name: environment.name, project_ref: environment.project_ref, ledger_count: environment.ledger_count, ledger_head: environment.ledger_head, rebase_status: environment.rebase_status_at_capture ?? "not-applicable" })),
 ];
 
 const files = (await readdir(migrationDir))
@@ -102,7 +99,8 @@ const blockers = Object.entries(gates).filter(([, passed]) => !passed).map(([gat
 console.log(JSON.stringify({
   migration_alignment_inventory: "PASS",
   environments,
-  environments_without_captured_ledger: environments.filter((environment) => !environment.ledger_snapshot).map((environment) => environment.name),
+  environments_without_captured_ledger: liveStatus.environments.filter((environment) => !environment.ledger_count || !environment.ledger_head).map((environment) => environment.name),
+  environments_requiring_reaudit_after_rebase: liveStatus.environments.filter((environment) => environment.rebase_requested).map((environment) => environment.name),
   canonical_baseline_migrations: expectedBaseline.length,
   canonical_incremental_migrations: expectedPending.length + 1,
   production_ledger_records: production.count,
@@ -110,9 +108,19 @@ console.log(JSON.stringify({
   qa_ledger_records: qa.count,
   qa_equivalent_migrations_requiring_SQL_proof: qaEquivalentCandidates,
   qa_only_test_migrations_requiring_disposition: qaOnlyTestMigrations,
+  live_environment_status_captured_at_utc: liveStatus.captured_at_utc,
+  live_environment_evidence: liveStatus.environments.map((environment) => ({
+    name: environment.name,
+    ledger_count: environment.ledger_count,
+    ledger_head: environment.ledger_head,
+    schema: environment.schema,
+    acl: environment.acl,
+    close_transfer_security_definer: environment.close_transfer_security_definer,
+    rebase_status: environment.rebase_status_at_capture ?? "not-applicable",
+  })),
   original_main_inventory_files: mainInventory.count,
   original_main_exact_version_and_name_matches_production: reconciliation.repository_main.exact_version_and_name_matches,
-  note: "The snapshots establish the planned sequence, not current live equality. Do not rewrite remote migration ledgers or apply pending SQL until all gates are independently evidenced.",
+  note: "The live status file is a dated evidence snapshot, not a live query. Develop is not considered aligned until its rebase is healthy and its ledger/catalog are recaptured. Do not rewrite Production migration history or apply Production SQL until all gates are independently evidenced.",
   cutover_ready: blockers.length === 0,
   blockers,
 }, null, 2));
