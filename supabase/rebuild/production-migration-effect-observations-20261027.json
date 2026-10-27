@@ -300,5 +300,13 @@
     },
     "application_level_transfer_test": "NOT RUN",
     "production_unchanged": true
+  },
+  "qa_postflight_script_smoke": {
+    "script": "supabase/rebuild/production-cutover-postflight-20261027.sql",
+    "develop": "EXPECTED_FAIL_CLOSED_ON_KNOWN_AUTHENTICATED_CURRENT_TABLE_CRUD_DIVERGENCE",
+    "continuity_qa": "ACL_DEFAULT_ACL_FUNCTION_ASSERTIONS_PASSED; STOPPED_AT_EXPECTED_PRODUCTION_LEDGER_COUNT_HEAD_GUARD",
+    "member_transfer_qa": "ACL_DEFAULT_ACL_FUNCTION_ASSERTIONS_PASSED; STOPPED_AT_EXPECTED_PRODUCTION_LEDGER_COUNT_HEAD_GUARD",
+    "migration_reconciliation_qa": "ACL_DEFAULT_ACL_FUNCTION_ASSERTIONS_PASSED; STOPPED_AT_EXPECTED_PRODUCTION_LEDGER_COUNT_HEAD_GUARD",
+    "production_sql_executed": false
   }
 }
