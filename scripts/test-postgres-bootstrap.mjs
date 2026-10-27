@@ -255,10 +255,8 @@ assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables 
 assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
 assert.equal(aclChecks.service_role_maintain_grants, 0, "service_role still has MAINTAIN on a public relation.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
-assert.equal(aclChecks.public_function_execute_count, 4, "PUBLIC EXECUTE differs from the four-function Production ACL baseline.");
+assert.equal(aclChecks.public_function_execute_count, 2, "PUBLIC EXECUTE must be limited to the two explicitly approved trigger functions.");
 assert.deepEqual(aclChecks.public_function_execute_targets, [
-  "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
-  "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
   "public.normalize_zero_ownership_owner()",
   "public.preserve_closing_condominium_member_history()",
 ], "PUBLIC EXECUTE is present on unexpected functions or missing from expected functions.");
