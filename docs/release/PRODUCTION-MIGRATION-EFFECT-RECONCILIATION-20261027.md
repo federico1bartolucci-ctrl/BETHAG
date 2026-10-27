@@ -58,7 +58,7 @@ The new correction was applied only to the four non-Production environments usin
 | member-transfer QA | `gcorwfvnslnehcxmtixn` | 17 | `20261027101130` |
 | migration-reconciliation QA | `mxhciszzpqzvsaqcnwhg` | 19 | `20261027100507` |
 
-Post-application read-only checks **passed in all four**: service_role has private-schema USAGE and EXECUTE on the private implementation; authenticated retains EXECUTE; anon remains denied; the public wrapper remains SECURITY INVOKER; service_role can execute the public wrapper and anon cannot. This verifies the permission path, not the business operation itself. Transfer success/denial/rollback tests remain pending. Production was not changed.
+The Production postflight assertion script was also exercised read-only on the QA environments. Continuity, member-transfer, and migration-reconciliation QA passed every ACL/default-ACL/function assertion and stopped only at the expected Production-specific ledger count/head guard (their ledgers are not 255/head `20261027110000`). Develop stopped earlier on the intentional current-table CRUD divergence (authenticated has CRUD on 47 relations there versus Production's 41/41/42 writes); this confirms develop must not be treated as ACL-parity evidence. No Production SQL was executed. Post-application read-only checks **passed in all four**: service_role has private-schema USAGE and EXECUTE on the private implementation; authenticated retains EXECUTE; anon remains denied; the public wrapper remains SECURITY INVOKER; service_role can execute the public wrapper and anon cannot. This verifies the permission path, not the business operation itself. Transfer success/denial/rollback tests remain pending. Production was not changed.
 
 ## Definitive candidate execution order
 
