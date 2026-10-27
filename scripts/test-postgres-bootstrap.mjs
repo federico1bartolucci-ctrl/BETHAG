@@ -135,6 +135,12 @@ console.log(JSON.stringify({ bootstrap: "BASELINE_ONLY_PASS", engine: "PostgreSQ
 // a defect in the five-file baseline itself.
 const baselineAclSql = `
 SELECT json_build_object(
+  'authenticated_crud', json_build_object(
+    'select', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'SELECT')),
+    'insert', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'INSERT')),
+    'update', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'UPDATE')),
+    'delete', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'DELETE'))
+  ),
   'authenticated_maintain_relations', (
     SELECT count(*)::int
     FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -163,6 +169,7 @@ SELECT json_build_object(
   )
 )::text;`;
 const baselineAcl = JSON.parse(psql(["-A", "-t", "-c", baselineAclSql], undefined).trim());
+assert.deepEqual(baselineAcl.authenticated_crud, { select: 47, insert: 41, update: 41, delete: 42 }, "Five-file baseline current-table CRUD grants must match the reviewed Production-aligned target.");
 assert.equal(baselineAcl.authenticated_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to authenticated.");
 assert.equal(baselineAcl.service_role_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to service_role.");
 assert.equal(baselineAcl.default_maintain_grants, 0, "Five-file baseline must not create unsafe default MAINTAIN grants.");
