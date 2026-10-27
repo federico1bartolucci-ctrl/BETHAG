@@ -63,6 +63,21 @@ try {
   await page.getByRole("heading", { name: "Reimposta la password" }).waitFor();
   await page.getByText("Link di recupero non valido o scaduto. Richiedi un nuovo link.").waitFor();
 
+  // A present but expired/invalid code must be rejected when Supabase exchange fails.
+  await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
+  await page.route("https://esm.sh/@supabase/supabase-js@2.117.1*", route => route.fulfill({
+    status: 200,
+    contentType: "application/javascript; charset=utf-8",
+    body: `export function createClient() {
+      return { auth: {
+        onAuthStateChange() {},
+        exchangeCodeForSession: async () => ({ error: { message: "synthetic expired code" } }),
+      } };
+    }`,
+  }));
+  await page.goto(new URL("reset-password.html?code=synthetic-expired-code", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
+  await page.getByText("Il link di recupero non è più valido. Richiedi un nuovo link.").waitFor();
+
   // Simulate a valid recovery session and verify client-side password mismatch validation.
   // updateUser deliberately throws if reached: this test must never change any account.
   await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
