@@ -38,7 +38,7 @@ function gitBlobSha(content) {
 
 function runPsql(args, { input } = {}) {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn("psql", ["-X", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", ...args], {
+    const child = spawn("psql", ["-X", "--no-psqlrc", "--dbname", process.env.DATABASE_URL, "-v", "ON_ERROR_STOP=1", ...args], {
       env: process.env,
       stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
