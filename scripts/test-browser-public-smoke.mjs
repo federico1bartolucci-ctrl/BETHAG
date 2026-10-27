@@ -59,7 +59,7 @@ try {
       } };
     }`,
   }));
-  await page.goto(new URL("/reset-password.html", baseURL).toString(), { waitUntil: "networkidle" });
+  await page.goto(new URL("reset-password.html", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Reimposta la password" }).waitFor();
   await page.getByText("Link di recupero non valido o scaduto. Richiedi un nuovo link.").waitFor();
 
