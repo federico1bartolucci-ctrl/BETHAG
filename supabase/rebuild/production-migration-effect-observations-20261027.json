@@ -1,0 +1,256 @@
+{
+  "captured_at_utc": "2026-10-27",
+  "scope": "Read-only live catalog and migration-ledger comparison; no database changes were made",
+  "production": {
+    "project_ref": "tctcgptrsmvgajqjgnev",
+    "ledger_count": 244,
+    "ledger_head": {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
+    },
+    "public_relations": 47,
+    "effective_privileges": {
+      "anon": {
+        "select": 0,
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "truncate": 0,
+        "references": 0,
+        "trigger": 0,
+        "maintain": 0
+      },
+      "authenticated": {
+        "select": 47,
+        "insert": 41,
+        "update": 41,
+        "delete": 42,
+        "truncate": 0,
+        "references": 0,
+        "trigger": 0,
+        "maintain": 33
+      },
+      "service_role": {
+        "select": 47,
+        "insert": 47,
+        "update": 47,
+        "delete": 47,
+        "truncate": 47,
+        "references": 47,
+        "trigger": 47,
+        "maintain": 47
+      }
+    },
+    "postgres_public_table_default_acl": {
+      "anon": [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "MAINTAIN"
+      ],
+      "authenticated": [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "MAINTAIN"
+      ],
+      "service_role": [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "REFERENCES",
+        "TRIGGER",
+        "TRUNCATE",
+        "MAINTAIN"
+      ]
+    },
+    "public_execute_allowlist_before": [
+      "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+      "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "close_transfer_wrapper_security_definer": true,
+    "close_transfer_wrapper_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_schema_usage": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": false
+    },
+    "private_close_transfer_execute": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": false
+    },
+    "helper_execute": {
+      "private": {
+        "anon": true,
+        "authenticated": true,
+        "service_role": true
+      },
+      "public": {
+        "anon": true,
+        "authenticated": true,
+        "service_role": true
+      }
+    },
+    "production_unchanged": true
+  },
+  "qa_catalog": {
+    "all_full_schema_qa_public_relations": 47,
+    "authenticated_crud_counts_match_production": true,
+    "authenticated_maintain": 0,
+    "service_role_maintain": 0,
+    "anon_current_table_privileges": 0,
+    "public_execute_allowlist": [
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "wrapper_security_definer": false,
+    "private_close_service_role_execute": false,
+    "private_schema_usage_service_role": {
+      "develop": false,
+      "continuity_qa": true,
+      "member_transfer_qa": true,
+      "migration_reconciliation_qa": true
+    },
+    "note": "Catalog effect is not interchangeable with migration ledger identity; the recorded migration 20261023000733 did not produce the intended service_role private implementation EXECUTE in the queried QA environments."
+  },
+  "pending_migrations": [
+    {
+      "order": 1,
+      "version": "20261022210629",
+      "name": "restrict_private_function_public_execute",
+      "blob_sha": "1476e921de9a43e3c046ef448a91c28d3515fd8c",
+      "production_effect": "NOT COMPLETE",
+      "reason": "private closure helper still PUBLIC-executable"
+    },
+    {
+      "order": 2,
+      "version": "20261022210630",
+      "name": "harden_default_privileges_and_private_execute",
+      "blob_sha": "09751ed091c507d1db13ac48deba5f336e835a13",
+      "production_effect": "NOT COMPLETE",
+      "reason": "postgres-owned public table defaults still grant app-role MAINTAIN and anon CRUD"
+    },
+    {
+      "order": 3,
+      "version": "20261022213544",
+      "name": "restrict_close_member_transfer_execute",
+      "blob_sha": "7cf291acd1c1734959c5fef6c6f0477bbe0e24bf",
+      "production_effect": "ALREADY SATISFIED IN CATALOG; CANONICAL LEDGER ENTRY PENDING",
+      "reason": "wrapper denies anon/PUBLIC and grants authenticated/service_role"
+    },
+    {
+      "order": 4,
+      "version": "20261022233440",
+      "name": "align_public_function_execute",
+      "blob_sha": "6987025124872b7f98c53c689bb014262624cba6",
+      "production_effect": "NOT COMPLETE",
+      "reason": "public/private closure helpers still PUBLIC-executable; broad routine allowlist must be checked"
+    },
+    {
+      "order": 5,
+      "version": "20261023000001",
+      "name": "revoke_authenticated_maintain",
+      "blob_sha": "b5c1cab798c61eeb63794400f6087767596c7372",
+      "production_effect": "PARTIAL",
+      "reason": "authenticated structural grants already absent, but MAINTAIN remains on 33 relations"
+    },
+    {
+      "order": 6,
+      "version": "20261023000002",
+      "name": "revoke_default_maintain",
+      "blob_sha": "8e55313ed2c9f6009f53c8f0ca1eb9dfbd042f79",
+      "production_effect": "NOT COMPLETE",
+      "reason": "postgres-owned public defaults still grant anon/authenticated/service_role MAINTAIN"
+    },
+    {
+      "order": 7,
+      "version": "20261023000003",
+      "name": "revoke_service_role_maintain",
+      "blob_sha": "ca2115dbbbb64fd3868b54d9651f65e299a62edb",
+      "production_effect": "NOT COMPLETE",
+      "reason": "service_role MAINTAIN remains on all 47 relations; explicit list must match exactly"
+    },
+    {
+      "order": 8,
+      "version": "20261023000004",
+      "name": "application_default_table_privileges",
+      "blob_sha": "20ebaed750f028e6e10172c7a85e67356a2ef21d",
+      "production_effect": "MOSTLY SATISFIED IN CATALOG; RECHECK AFTER STEP 6",
+      "reason": "intended CRUD/structural defaults are present but MAINTAIN must be removed"
+    },
+    {
+      "order": 9,
+      "version": "20261023000733",
+      "name": "use_invoker_for_close_transfer_rpc",
+      "blob_sha": "bcbde9f82db1c931b5d2503987fa1da2b2b13b0a",
+      "production_effect": "NOT COMPLETE",
+      "reason": "wrapper remains SECURITY DEFINER; service_role private path missing"
+    },
+    {
+      "order": 10,
+      "version": "20261027100000",
+      "name": "revoke_public_execute_from_transfer_closure_helpers",
+      "blob_sha": "5b7a34ee56f4a1cb1b1a145760aff5880e84e5f7",
+      "production_effect": "NOT COMPLETE",
+      "reason": "both closure helpers remain PUBLIC-executable"
+    },
+    {
+      "order": 11,
+      "version": "20261027110000",
+      "name": "repair_service_role_transfer_invoker_path",
+      "blob_sha": "NEW_FILE_ADDED_2026-10-27",
+      "production_effect": "NEW FORWARD-ONLY CORRECTION",
+      "reason": "grants service_role private schema USAGE and private implementation EXECUTE without editing/replaying migration 9"
+    }
+  ],
+  "qa_ledgers": {
+    "develop": {
+      "count": 16,
+      "head": {
+        "version": "20261027093101",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    "continuity_qa": {
+      "count": 18,
+      "head": {
+        "version": "20261027093117",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    "member_transfer_qa": {
+      "count": 16,
+      "head": {
+        "version": "20261027093126",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    },
+    "migration_reconciliation_qa": {
+      "count": 18,
+      "head": {
+        "version": "20261027093119",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      }
+    }
+  },
+  "cutover": {
+    "pending_incremental_migrations": 11,
+    "expected_ledger_count_after_approved_application": 255,
+    "required_preflight": "supabase/rebuild/production-cutover-preflight-20261027.sql",
+    "required_postflight": "supabase/rebuild/production-cutover-postflight-20261027.sql",
+    "historical_ledger_rows_to_preserve": 244,
+    "apply_baseline_migrations_to_existing_production": false,
+    "production_execution_authorized": false,
+    "physical_backup_restore": "not tested; documented residual risk; named written acceptance required"
+  }
+}
