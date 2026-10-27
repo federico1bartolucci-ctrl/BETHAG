@@ -1,0 +1,260 @@
+{
+  "artifact": "BETHAG Production migration cutover freeze",
+  "captured_date": "2026-10-27",
+  "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
+  "reviewed_source_commit": "ecc8803c347434a1708d303bc8053367b4dfcc5c",
+  "repository": "federico1bartolucci-ctrl/BETHAG",
+  "branch": "fix/least-privilege-public-table-grants-20261027",
+  "production_project_ref": "tctcgptrsmvgajqjgnev",
+  "live_ledger": {
+    "rows": 244,
+    "head_version": "20261022202747",
+    "head_name": "harden_close_member_transfer_search_path",
+    "stored_snapshot_rows": 244,
+    "exact_version_name_pair_match": true,
+    "historical_rows_to_preserve": 244,
+    "baseline_rows_to_insert": 0,
+    "delete_or_rewrite_historical_rows": false
+  },
+  "live_catalog": {
+    "public_relations": 47,
+    "authenticated": {
+      "select": 47,
+      "insert": 41,
+      "update": 41,
+      "delete": 42,
+      "maintain": 33,
+      "truncate": 0,
+      "references": 0,
+      "trigger": 0
+    },
+    "service_role": {
+      "select": 47,
+      "insert": 47,
+      "update": 47,
+      "delete": 47,
+      "maintain": 47,
+      "truncate": 47,
+      "references": 47,
+      "trigger": 47
+    },
+    "anon_current_table_privileges": 0,
+    "service_role_private_schema_usage": false,
+    "authenticated_private_schema_usage": true,
+    "public_close_wrapper_security_definer": true,
+    "private_close_implementation_security_definer": true,
+    "public_close_wrapper_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_close_execute": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": false
+    },
+    "routines_inventoried": 171,
+    "routines_with_public_execute": 4,
+    "service_role_maintain_list_exactly_matches_live_relations": true,
+    "supabase_admin_defaults_untouched": true
+  },
+  "sequence": [
+    {
+      "order": 1,
+      "file": "20261022210629_restrict_private_function_public_execute.sql",
+      "git_blob_sha": "1476e921de9a43e3c046ef448a91c28d3515fd8c",
+      "purpose": "Revoke PUBLIC EXECUTE on private routines.",
+      "postcondition": "Private closure helper denied to PUBLIC/anon; explicit authenticated/service_role grants verified.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 2,
+      "file": "20261022210630_harden_default_privileges_and_private_execute.sql",
+      "git_blob_sha": "09751ed091c507d1db13ac48deba5f336e835a13",
+      "purpose": "Revoke anon/authenticated table defaults and private routine PUBLIC defaults.",
+      "postcondition": "No postgres-owned anon/authenticated public table defaults; no private PUBLIC routine execution; preserve supabase_admin defaults.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 3,
+      "file": "20261022213544_restrict_close_member_transfer_execute.sql",
+      "git_blob_sha": "7cf291acd1c1734959c5fef6c6f0477bbe0e24bf",
+      "purpose": "Restrict close-transfer wrapper EXECUTE to authenticated/service_role.",
+      "postcondition": "Wrapper callable by authenticated/service_role, not anon/PUBLIC.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 4,
+      "file": "20261022233440_align_public_function_execute.sql",
+      "git_blob_sha": "6987025124872b7f98c53c689bb014262624cba6",
+      "purpose": "Revoke PUBLIC EXECUTE from public/private functions, grant two closure helpers to app roles and preserve two trigger exceptions.",
+      "postcondition": "Only four of 171 current routines are PUBLIC-executable; after migration only the two named trigger routines remain PUBLIC-executable.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 5,
+      "file": "20261023000001_revoke_authenticated_maintain.sql",
+      "git_blob_sha": "b5c1cab798c61eeb63794400f6087767596c7372",
+      "purpose": "Revoke MAINTAIN from anon/authenticated and structural privileges from anon/authenticated.",
+      "postcondition": "authenticated MAINTAIN/structural privileges zero; CRUD stays SELECT 47, INSERT 41, UPDATE 41, DELETE 42.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 6,
+      "file": "20261023000002_revoke_default_maintain.sql",
+      "git_blob_sha": "8e55313ed2c9f6009f53c8f0ca1eb9dfbd042f79",
+      "purpose": "Remove postgres-owned global/public table defaults for anon and MAINTAIN/structural defaults for app roles.",
+      "postcondition": "No postgres-owned anon/PUBLIC table defaults or app-role MAINTAIN defaults; supabase_admin defaults unchanged.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 7,
+      "file": "20261023000003_revoke_service_role_maintain.sql",
+      "git_blob_sha": "ca2115dbbbb64fd3868b54d9651f65e299a62edb",
+      "purpose": "Revoke service_role MAINTAIN from explicit list and public-schema defaults.",
+      "postcondition": "List matches all 47 live relations exactly; service_role MAINTAIN zero, CRUD+structural retained.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 8,
+      "file": "20261023000004_application_default_table_privileges.sql",
+      "git_blob_sha": "20ebaed750f028e6e10172c7a85e67356a2ef21d",
+      "purpose": "Set postgres-owned public table defaults: authenticated CRUD; service_role CRUD+structural.",
+      "postcondition": "Defaults exactly intended grants; neither app role receives MAINTAIN.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 9,
+      "file": "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+      "git_blob_sha": "bcbde9f82db1c931b5d2503987fa1da2b2b13b0a",
+      "purpose": "Change public close-transfer wrapper to SECURITY INVOKER and grant private path.",
+      "postcondition": "Wrapper INVOKER; authenticated/service_role private schema+function access; anon denied; no-JWT/open-balance/rollback tests pass.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 10,
+      "file": "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+      "git_blob_sha": "5b7a34ee56f4a1cb1b1a145760aff5880e84e5f7",
+      "purpose": "Remove PUBLIC/anon EXECUTE from both closure helpers.",
+      "postcondition": "Both helpers not PUBLIC/anon executable; authenticated/service_role granted; trigger exceptions preserved.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 11,
+      "file": "20261027110000_repair_service_role_transfer_invoker_path.sql",
+      "git_blob_sha": "0b50853114442b946abb2cac8ab37fe6db64e074",
+      "purpose": "Forward-only fix for service_role private schema USAGE and private function EXECUTE.",
+      "postcondition": "service_role schema+function access true; authenticated remains authorized; anon denied; no-JWT call returns AUTH_REQUIRED without side effect.",
+      "production_status": "PENDING_NOT_APPLIED"
+    }
+  ],
+  "execution_order": [
+    "Refresh live preflight and compare all 244 version/name pairs to the frozen snapshot.",
+    "Freeze schema-changing activity and save preflight, relation inventory, routine ACLs and default ACLs.",
+    "Apply migrations 1-8 in canonical filename order, one at a time; save and verify postcondition after each.",
+    "Apply migration 9; immediately test authenticated success, unauthorized rejection, no-user-JWT rejection, open balances and rollback.",
+    "Apply migration 10; verify both closure helpers are not PUBLIC/anon executable.",
+    "Apply migration 11; verify service_role path without bypassing auth.uid().",
+    "Run postflight; prove original 244 rows unchanged and total ledger 255 with eleven canonical version/name pairs.",
+    "Run APP-01–APP-15 on isolated environment and save evidence.",
+    "Obtain written approval naming commit, migration hashes, maintenance window, rollback criteria and backup-risk disposition."
+  ],
+  "expected_postflight": {
+    "ledger_rows": 255,
+    "original_244_rows_unchanged": true,
+    "new_canonical_rows": [
+      {
+        "version": "20261022210629",
+        "name": "restrict_private_function_public_execute"
+      },
+      {
+        "version": "20261022210630",
+        "name": "harden_default_privileges_and_private_execute"
+      },
+      {
+        "version": "20261022213544",
+        "name": "restrict_close_member_transfer_execute"
+      },
+      {
+        "version": "20261022233440",
+        "name": "align_public_function_execute"
+      },
+      {
+        "version": "20261023000001",
+        "name": "revoke_authenticated_maintain"
+      },
+      {
+        "version": "20261023000002",
+        "name": "revoke_default_maintain"
+      },
+      {
+        "version": "20261023000003",
+        "name": "revoke_service_role_maintain"
+      },
+      {
+        "version": "20261023000004",
+        "name": "application_default_table_privileges"
+      },
+      {
+        "version": "20261023000733",
+        "name": "use_invoker_for_close_transfer_rpc"
+      },
+      {
+        "version": "20261027100000",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      },
+      {
+        "version": "20261027110000",
+        "name": "repair_service_role_transfer_invoker_path"
+      }
+    ],
+    "authenticated": {
+      "select": 47,
+      "insert": 41,
+      "update": 41,
+      "delete": 42,
+      "maintain": 0,
+      "truncate": 0,
+      "references": 0,
+      "trigger": 0
+    },
+    "service_role": {
+      "select": 47,
+      "insert": 47,
+      "update": 47,
+      "delete": 47,
+      "maintain": 0,
+      "truncate": 47,
+      "references": 47,
+      "trigger": 47
+    },
+    "anon_current_table_privileges": 0,
+    "public_execute_allowlist": [
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "public_close_wrapper_security_definer": false,
+    "private_schema_usage": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_close_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    }
+  },
+  "critical_execution_constraint": {
+    "observed": "QA calls to Supabase apply_migration generated environment-specific migration versions instead of preserving canonical filename versions; the current postflight expects canonical version/name pairs.",
+    "rule": "Do not use apply_migration API for Production. First rehearse a repository-based deployment path that preserves canonical migration versions. If the incomplete local historical migration set prevents this, STOP and resolve source/history alignment before Production.",
+    "status": "BLOCKING_UNTIL_DEPLOYMENT_PATH_REHEARSED"
+  },
+  "no_go_gates": [
+    "No verified isolated physical-backup restore and no named written acceptance of residual risk.",
+    "APP-01–APP-15 end-to-end evidence not recorded.",
+    "Named approver, maintenance window and rollback approval not recorded.",
+    "Canonical-version-preserving deployment path not rehearsed."
+  ],
+  "safety": "This freezes the reviewed migration SQL blobs and candidate order for review only. No Production DDL or ledger writes were performed; this is not authorization to execute."
+}
