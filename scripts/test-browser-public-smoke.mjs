@@ -63,12 +63,38 @@ try {
   await page.getByRole("heading", { name: "Reimposta la password" }).waitFor();
   await page.getByText("Link di recupero non valido o scaduto. Richiedi un nuovo link.").waitFor();
 
+  // Simulate a valid recovery session and verify client-side password mismatch validation.
+  // updateUser deliberately throws if reached: this test must never change any account.
+  await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
+  await page.route("https://esm.sh/@supabase/supabase-js@2.117.1*", route => route.fulfill({
+    status: 200,
+    contentType: "application/javascript; charset=utf-8",
+    body: `export function createClient() {
+      const session = { user: { id: "synthetic-qa-user" } };
+      return { auth: {
+        onAuthStateChange(callback) {
+          callback("PASSWORD_RECOVERY", session);
+          return { data: { subscription: { unsubscribe() {} } } };
+        },
+        exchangeCodeForSession: async () => ({ error: null }),
+        getSession: async () => ({ data: { session }, error: null }),
+        updateUser: async () => { throw new Error("updateUser must not run for mismatched passwords"); },
+        signOut: async () => ({ error: null }),
+      } };
+    }`,
+  }));
+  await page.goto(new URL("reset-password.html?code=synthetic-qa-code", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
+  await page.getByLabel("Nuova password").fill("Password123");
+  await page.getByLabel("Conferma nuova password").fill("Password456");
+  await page.getByRole("button", { name: "Salva nuova password" }).click();
+  await page.getByText("Le password non coincidono.").waitFor();
+
   if (pageErrors.length) {
     throw new Error(`Browser uncaught errors: ${pageErrors.join(" | ")}`);
   }
 
   console.log("BETHAG_PUBLIC_BROWSER_SMOKE_PASS");
-  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected with validation feedback; reset-password page rejects an invalid link without a live Supabase call; no uncaught browser exceptions.");
+  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected; invalid recovery links are rejected; mismatched new passwords are rejected before updateUser; no uncaught browser exceptions. Supabase auth is mocked; no real account is changed.");
 } catch (error) {
   console.error("BETHAG_PUBLIC_BROWSER_SMOKE_FAIL");
   console.error(error);
