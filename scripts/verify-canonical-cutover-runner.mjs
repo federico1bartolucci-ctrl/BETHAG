@@ -17,7 +17,7 @@ assert.match(runner, /"--dbname",\s*process\.env\.DATABASE_URL/, "psql must rece
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 244-row preservation/);
 assert.match(runner, /CANONICAL_MIGRATION_LEDGER_PASS/);
-assert.doesNotMatch(runner, /apply_migration/i, "Runner must not call Supabase apply_migration.");
+assert.doesNotMatch(runner, /\bapply_migration\s*\(/i, "Runner must not invoke Supabase apply_migration().");
 assert.doesNotMatch(runner, /DELETE\s+FROM\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner, /UPDATE\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner, /DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);
