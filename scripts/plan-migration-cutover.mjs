@@ -62,7 +62,35 @@ const report = {
   qa_ledger_entries_without_exact_canonical_file: qaOnly,
   canonical_files_not_registered_in_qa: canonicalNotQa.map((file) => file.file),
   production: "DO NOT MODIFY. The historical ledger is not equivalent to the clean baseline.",
-  next_gate: "Verified isolated backup restore and approved catalog/ACL parity are prerequisites before any Production tracking cutover.",
+  canonical_target_ledger: canonical.map((file) => ({ version: file.version, name: file.name })),
+  migration_ledger_alignment_plan: {
+    production: {
+      current_records: production.count,
+      preserve_exact_canonical_head: production.migrations.at(-1),
+      retire_historical_tracking_rows_after_baseline_parity: production.count - 1,
+      insert_baseline_tracking_rows_as_applied_after_catalog_parity: baselineFiles.map((file) => ({ version: parseVersion(file), name: file.slice(15, -4) })),
+      then_apply_pending_canonical_migrations_in_order: canonical.filter((file) => file.version > production.migrations.at(-1).version).map((file) => ({ version: file.version, name: file.name })),
+      target_record_count: canonical.length,
+      schema_or_data_recreated: false,
+    },
+    qa: {
+      current_records: qa.count,
+      candidate_identity_replacements: [
+        { from: "20261022230901_revoke_authenticated_maintain", to: "20261023000001_revoke_authenticated_maintain" },
+        { from: "20261022230908_revoke_default_maintain", to: "20261023000002_revoke_default_maintain" },
+        { from: "20261023011431_revoke_service_role_maintain_qa_test", to: "20261023000003_revoke_service_role_maintain" },
+        { from: "20261023011435_define_application_default_table_privileges_qa", to: "20261023000004_application_default_table_privileges" },
+      ],
+      qa_only_records_requiring_effect_review_before_removal: [
+        "20261023010544_qa_test_revoke_authenticated_maintain_20261023",
+        "20261023010548_qa_test_revoke_default_maintain_20261023",
+      ],
+      target_record_count: canonical.length,
+      execute_no_SQL_during_identity_normalization: true,
+    },
+    rule: "Never re-run baseline or already-applied equivalent SQL to repair history. First prove catalog/effective ACL parity and QA variant equivalence; only then normalize tracking metadata and apply genuinely pending Production migrations.",
+  },
+  next_gate: "Verified isolated backup restore, exact live ledger recapture, baseline/catalog parity, QA variant SQL proof, and approved cutover are prerequisites before any remote ledger/schema change.",
   action: "PLAN_ONLY_NO_COMMANDS",
 };
 console.log(JSON.stringify(report, null, 2));
