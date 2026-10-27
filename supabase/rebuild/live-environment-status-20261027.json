@@ -274,7 +274,7 @@
     "source_project_ref": "tctcgptrsmvgajqjgnev",
     "source_project_name": "BETHAG",
     "source_database_version": "17.6.1.166",
-    "scheduled_backup_visibility": "Prior audit recorded scheduled Supabase backups through 2026-10-26T03:10:58Z; visibility is not proof of successful restore.",
+    "scheduled_backup_visibility": "Supabase Dashboard screenshot supplied 2026-10-27 shows completed scheduled physical backup at 2026-10-27T03:04:50Z; visibility is not proof of successful restore.",
     "local_dump_restore": "Verified separately; does not satisfy this gate.",
     "restore_method_required": "Supabase Dashboard → source project BETHAG → Database → Backups → Restore to a New Project; select an actual scheduled physical backup and complete provider-managed restore to an isolated new project. If dashboard exposes only in-place restore, stop and do not use it for this test.",
     "verification_required": [
@@ -289,6 +289,6 @@
     "restore_completed_at_utc": null,
     "schema_acl_parity": "NOT VERIFIED",
     "release_gate_passed": false,
-    "note": "No restore was initiated through the available Supabase connector: its restore_project action is not documented as a restore-from-physical-backup-to-new-project operation and may affect an existing project. Production remains untouched. Do not mark this gate passed until the provider restore and isolated-target parity check are evidenced."
+    "note": "No restore was initiated through the available Supabase connector: its restore_project action is not documented as a restore-from-physical-backup-to-new-project operation and may affect an existing project. The Dashboard confirmation for Restore to a New Project showed an additional monthly compute cost of $9.68; the user declined this paid route in favor of the agreed free local recovery path. Continue local recovery validation, but keep this provider-specific physical-restore gate blocked because local dump restore is not equivalent proof. Production remains untouched. Do not mark this gate passed until the provider restore and isolated-target parity check are evidenced."
   }
 }
