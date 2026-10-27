@@ -73,13 +73,24 @@ function quoteSqlLiteral(value) {
 }
 
 async function main() {
-  assert.equal(process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS, "YES",
-    "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
-  assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
-    `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
+  const rehearsal = process.env.BETHAG_CUTOVER_REHEARSAL === "YES";
   assert.ok(process.env.DATABASE_URL, "Blocked: DATABASE_URL is required; do not print or log it.");
   assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
     "Blocked: DATABASE_URL appears to be a placeholder.");
+  if (rehearsal) {
+    let target;
+    try { target = new URL(process.env.DATABASE_URL); } catch { throw new Error("Blocked: invalid DATABASE_URL."); }
+    assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname),
+      "Blocked: rehearsal mode is restricted to a local PostgreSQL host.");
+    assert.ok(!process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS && !process.env.BETHAG_PRODUCTION_PROJECT_REF,
+      "Blocked: rehearsal mode must not be combined with Production authorization variables.");
+    console.log("REHEARSAL MODE: local PostgreSQL only; Production credentials/authorization are not accepted.");
+  } else {
+    assert.equal(process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS, "YES",
+      "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
+    assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
+      `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
+  }
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
@@ -160,7 +171,8 @@ async function main() {
       "Final canonical incremental migration sequence");
     console.log(JSON.stringify({
       status: "CANONICAL_MIGRATION_LEDGER_PASS",
-      production_project_ref: projectRef,
+      target: rehearsal ? "isolated-local-postgresql-rehearsal" : "production",
+      production_project_ref: rehearsal ? null : projectRef,
       preserved_historical_rows: expectedLedgerCount,
       canonical_incremental_rows_added: migrationBodies.length,
       final_ledger_count: finalLedger.length,
