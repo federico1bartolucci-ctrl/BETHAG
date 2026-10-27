@@ -25,13 +25,16 @@ assert.equal(main.count, main.files.length);
 assert.equal(production.count, 244, "Refresh Production ledger snapshot when live migration history changes.");
 assert.equal(qa.count, 17, "Refresh QA ledger snapshot when live migration history changes.");
 assert.equal(main.count, 203, "Refresh main migration-file inventory when main changes.");
-assert.equal(currentFiles.length, 16, "Canonical migration inventory changed.");
-const postSnapshotRemediationFile = "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql";
-assert.ok(currentFiles.some((file) => file.file === postSnapshotRemediationFile), "Missing the new transfer-helper EXECUTE remediation migration.");
+assert.equal(currentFiles.length, 17, "Canonical migration inventory changed.");
+const postSnapshotRemediationFiles = [
+  "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+  "20261027110000_repair_service_role_transfer_invoker_path.sql",
+];
+assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
 // The saved reconciliation report is a historical snapshot based on the 15-file
 // clean branch and 2026-10-26 ledgers. Keep that comparison reproducible while
-// validating the newer remediation migration separately above.
-const snapshotFiles = currentFiles.filter((file) => file.file !== postSnapshotRemediationFile);
+// validating both newer remediation migrations separately above.
+const snapshotFiles = currentFiles.filter((file) => !postSnapshotRemediationFiles.includes(file.file));
 for (const list of [production.migrations, qa.migrations]) {
   const versions = list.map((entry) => entry.version);
   assert.ok(versions.every((version) => /^\d{14}$/.test(version)));
@@ -125,7 +128,7 @@ console.log(JSON.stringify({
   qa_ledger_rows: qa.count,
   main_migration_files: main.count,
   clean_branch_migration_files: currentFiles.length,
-  post_snapshot_remediation_migrations: currentFiles.filter((file) => file.file === postSnapshotRemediationFile).map((file) => file.file),
+  post_snapshot_remediation_migrations: currentFiles.filter((file) => postSnapshotRemediationFiles.includes(file.file)).map((file) => file.file),
   production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
   clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
   clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
