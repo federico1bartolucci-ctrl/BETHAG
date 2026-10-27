@@ -385,6 +385,33 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.condominium_members WHERE id='66666666-6666-4666-8666-666666666666' AND active=true AND coalesce(data->>'position_status','') <> 'Archiviato') THEN RAISE EXCEPTION 'FAILED_CLOSURE_DID_NOT_ROLL_BACK_OWNER'; END IF;
 END;
 $test$;
+
+-- service_role has the permission path through the SECURITY INVOKER wrapper,
+-- but a backend call without a user JWT must still be rejected by auth.uid().
+SET LOCAL ROLE service_role;
+SELECT set_config('request.jwt.claim.sub', '', true);
+DO $service_role_auth$
+BEGIN
+  BEGIN
+    PERFORM public.close_condominium_member_transfer('88888888-8888-4888-8888-888888888888');
+    RAISE EXCEPTION 'SERVICE_ROLE_WITHOUT_USER_JWT_BYPASSED_AUTH';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'AUTH_REQUIRED' THEN RAISE; END IF;
+  END;
+END;
+$service_role_auth$;
+RESET ROLE;
+DO $service_role_no_side_effect$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.condominium_member_transfers
+    WHERE id='88888888-8888-4888-8888-888888888888'
+      AND status='Confermato' AND closed_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'SERVICE_ROLE_WITHOUT_USER_JWT_CHANGED_TRANSFER';
+  END IF;
+END;
+$service_role_no_side_effect$;
 ROLLBACK;
 `;
 psql(["-v", "ON_ERROR_STOP=1"], functionalTransferSql);
@@ -398,6 +425,7 @@ console.log(JSON.stringify({
     "incoming owner remains active",
     "open unpaid installment blocks closure",
     "failed closure leaves transfer and owner unchanged",
+    "service_role without a user JWT is rejected with AUTH_REQUIRED and causes no side effect",
     "test fixtures rolled back"
   ]
 }, null, 2));
