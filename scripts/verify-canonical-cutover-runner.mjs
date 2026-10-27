@@ -13,6 +13,7 @@ assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
 assert.equal(manifest.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION");
 assert.match(runner, /BETHAG_ALLOW_PRODUCTION_MIGRATIONS/);
 assert.match(runner, /BETHAG_PRODUCTION_PROJECT_REF/);
+assert.match(runner, /"--dbname",\s*process\.env\.DATABASE_URL/, "psql must receive DATABASE_URL as its database connection string.");
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 244-row preservation/);
 assert.match(runner, /CANONICAL_MIGRATION_LEDGER_PASS/);
