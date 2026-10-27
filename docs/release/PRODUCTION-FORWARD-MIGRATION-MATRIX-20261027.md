@@ -1,18 +1,18 @@
 # BETHAG — Production forward-only migration execution matrix
 
 **Prepared:** 2026-10-27  
-**Status:** PREPARATION ONLY — NOT APPROVED FOR EXECUTION  
+**Status:** PREPARATION ONLY — NOT APPROVED FOR EXECUTION; physical-backup recoverability is an explicitly documented residual risk, not a paid-project prerequisite  
 **Production project:** `tctcgptrsmvgajqjgnev`  
 **Repository head reviewed:** `051200613585d46660b931ef1abadcded4a282b3`  
 **Production ledger head observed:** `20261022202747_harden_close_member_transfer_search_path`
 
-This matrix is an operator checklist, not authorization to execute. Production must remain unchanged until the provider-managed physical-backup restore is verified, the restored target passes parity checks, the final migration list is reviewed, and the cutover is explicitly approved. Do not rewrite or delete any of the 244 Production ledger rows. Do not apply the five clean-bootstrap baseline migrations to existing Production.
+This matrix is an operator checklist, not authorization to execute. Production must remain unchanged until live ACL/ownership/default-privilege parity is verified, the final migration list is reconciled, application smoke tests pass, and the cutover is explicitly approved. The provider-managed physical-backup restore remains untested; this is a documented residual risk that must be explicitly accepted in writing by the named approver if no provider restore proof is obtained. Do not rewrite or delete any of the 244 Production ledger rows. Do not apply the five clean-bootstrap baseline migrations to existing Production.
 
 ## Release gates
 
 | Gate | Evidence required | Current disposition |
 |---|---|---|
-| Provider physical backup restore | Selected Supabase scheduled backup restored to an isolated target; record source ref, backup timestamp/id, target ref, completion result | **BLOCKED** — local dump restore is supplemental only; provider restore not proven |
+| Provider physical backup restore | Either provider-backed restore proof, or a named release approver's written acceptance of the documented residual risk; retain backup timestamp/evidence and never claim an unperformed restore | **NOT TESTED — RESIDUAL RISK**; no paid project required. Cutover still needs explicit written risk acceptance if no restore proof is obtained |
 | Restored-target integrity | Critical data counts, schema objects, function definitions, RLS, owners, explicit grants, global and schema default ACLs | **BLOCKED** — complete provider-restored target evidence absent |
 | Migration identity | Fresh Production ledger capture; preserve all 244 existing rows; identify pending migrations without replaying baseline | **PARTIAL** — head and count captured; per-migration source/effect matching remains a release task |
 | Security target | Current/default MAINTAIN removed from app roles; RPC security-invoker wrapper validated with application smoke tests | **NOT MET IN PRODUCTION** — observed authenticated MAINTAIN on 33 tables, service_role on 47; default MAINTAIN for anon/authenticated/service_role; RPC remains SECURITY DEFINER |
