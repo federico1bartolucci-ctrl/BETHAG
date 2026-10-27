@@ -164,3 +164,10 @@ A read-only ACL query found that the two closure-check helper functions were sti
 - Application acceptance checklist: `docs/release/APP-SMOKE-TEST-AND-CUTOVER-APPROVAL.md`. It defines 15 role, accounting, transfer, portal, isolation and rollback checks. They are prepared but not yet evidenced as executed end-to-end.
 - Latest CI is required on the exact PR head. Passing build and PostgreSQL 17 bootstrap are necessary but do not substitute for the application smoke tests or named cutover approval.
 - Production remains unchanged. Do not apply any migration until the exact ordered list, live ACL/default-ACL comparison, application results, rollback plan and explicit named approval are recorded. The physical-backup restore remains untested and documented as a residual risk.
+
+
+## Live migration effect review — 2026-10-27
+
+The detailed, source-hash-backed review is `docs/release/PRODUCTION-MIGRATION-EFFECT-RECONCILIATION-20261027.md`; the live catalog evidence is `supabase/rebuild/production-migration-effect-observations-20261027.json`. The original ten pending migrations are now **eleven** because a real effective-privilege check found that the `SECURITY INVOKER` wrapper's service-role call path is incomplete: Production has no `service_role` USAGE on `private` and no EXECUTE on `private.close_condominium_member_transfer(uuid)`. This mismatch also exists in the queried QA function ACLs despite migration 9 being recorded there. A new forward-only correction, `20261027110000_repair_service_role_transfer_invoker_path.sql`, has been added; no historical migration was edited or replayed.
+
+Fail-closed read-only assertions are prepared in `supabase/rebuild/production-cutover-preflight-20261027.sql` and `supabase/rebuild/production-cutover-postflight-20261027.sql`. They have not been run as a release rehearsal and do not authorize execution. Candidate total is 11 new canonical records after the 244-row historical Production ledger (expected count 255 only after all eleven are approved/applied). Production remains unchanged.
