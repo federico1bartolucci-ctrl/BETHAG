@@ -1803,43 +1803,49 @@
     }
   },
   "qa_alias_sql_review": {
-    "status": "NOT_EQUIVALENT_BY_SQL_TEXT; EFFECTIVE PRIVILEGE STATE VERIFIED, BUT LEDGER NORMALIZATION STILL BLOCKED",
+    "status": "RECONCILIATION COMPLETE — six QA ledger rows reviewed; preserve applied history, do not rewrite aliases as canonical identities",
     "rows": [
       {
         "version": "20261022230901",
         "name": "revoke_authenticated_maintain",
         "sql_hash": "8eb6df55d78c7756863b56e5f483e32b",
-        "finding": "Explicit subset of current table names plus a view; canonical migration uses ALL TABLES and also revokes TRUNCATE/REFERENCES/TRIGGER from anon/authenticated."
+        "finding": "Explicit subset of current table names plus a view; canonical migration uses ALL TABLES and also revokes TRUNCATE/REFERENCES/TRIGGER from anon/authenticated.",
+        "disposition": "NON-EQUIVALENT: explicit object list (including a view) is narrower than canonical ALL TABLES and omits structural privilege revocations. Preserve historical row; no rename."
       },
       {
         "version": "20261022230908",
         "name": "revoke_default_maintain",
         "sql_hash": "cc26c3c5724c6a72d5d05fd6cd78c229",
-        "finding": "Revokes only MAINTAIN from anon/authenticated defaults; canonical migration also revokes anon defaults broadly, authenticated structural defaults, and service_role MAINTAIN."
+        "finding": "Revokes only MAINTAIN from anon/authenticated defaults; canonical migration also revokes anon defaults broadly, authenticated structural defaults, and service_role MAINTAIN.",
+        "disposition": "NON-EQUIVALENT: only MAINTAIN defaults for anon/authenticated; omits broader anon revocation, authenticated structural-default revocations, and service_role MAINTAIN default revocation. Preserve historical row; no rename."
       },
       {
         "version": "20261023010544",
         "name": "qa_test_revoke_authenticated_maintain_20261023",
         "sql_hash": "a851b8e9b9d7e7d372679b43df673803",
-        "finding": "QA-only repeat of the explicit-table MAINTAIN revocation; retain until test-row disposition is approved."
+        "finding": "QA-only repeat of the explicit-table MAINTAIN revocation; retain until test-row disposition is approved.",
+        "disposition": "IDEMPOTENT REPEAT: repeats explicit-table MAINTAIN revocation already represented by prior QA work; no distinct schema/data effect established. Preserve applied history; do not delete ledger row."
       },
       {
         "version": "20261023010548",
         "name": "qa_test_revoke_default_maintain_20261023",
         "sql_hash": "fcd251169fbd5111426898ead21c7d6c",
-        "finding": "QA-only repeat of the MAINTAIN default revocation; retain until test-row disposition is approved."
+        "finding": "QA-only repeat of the MAINTAIN default revocation; retain until test-row disposition is approved.",
+        "disposition": "IDEMPOTENT REPEAT: repeats default MAINTAIN revocation; no distinct schema/data effect established. Preserve applied history; do not delete ledger row."
       },
       {
         "version": "20261023011431",
         "name": "revoke_service_role_maintain_qa_test",
         "sql_hash": "1dc03abeb018fcb0b97f8cfcc027f916",
-        "finding": "Explicit list and service_role default MAINTAIN revocation; effective state currently matches canonical target but SQL body differs."
+        "finding": "Explicit list and service_role default MAINTAIN revocation; effective state currently matches canonical target but SQL body differs.",
+        "disposition": "NON-EQUIVALENT: explicit list plus service_role default MAINTAIN revocation differs in scope from canonical ALL TABLES revocation and separately managed defaults. Effective target ACL is met, but SQL identity is not equivalent. Preserve row."
       },
       {
         "version": "20261023011435",
         "name": "define_application_default_table_privileges_qa",
         "sql_hash": "69db33122639d162e9f90a439ca25f8c",
-        "finding": "Default CRUD grants for authenticated and CRUD plus REFERENCES/TRIGGER/TRUNCATE for service_role; semantically aligned to canonical grants but not byte-identical."
+        "finding": "Default CRUD grants for authenticated and CRUD plus REFERENCES/TRIGGER/TRUNCATE for service_role; semantically aligned to canonical grants but not byte-identical.",
+        "disposition": "EFFECT-ALIGNED, NOT IDENTICAL: defines ordinary CRUD for authenticated and CRUD plus structural grants for service_role; SQL differs from canonical migration and must remain historical identity. Preserve row."
       }
     ],
     "canonical_sql_hashes_on_develop": {
@@ -1848,6 +1854,35 @@
       "20261023000003_revoke_service_role_maintain": "62eaf1a8c13e1e2962b8595caedc430d",
       "20261023000004_application_default_table_privileges": "277c747f8a19d576bed1ac91645b24c8"
     },
-    "next_action": "Do not normalize QA migration identities solely from matching effective ACL state. Complete a reviewed, project-specific SQL-equivalence proof or rebuild the empty QA branch from canonical baseline."
+    "next_action": "QA ledger reconciliation is dispositioned: retain all six applied identities without rewriting history; verify this disposition in CI. Production cutover remains separately blocked.",
+    "disposition": {
+      "completed_at_utc": "2026-10-27",
+      "method": "Compared recorded SQL hashes and reviewed SQL effects against the four canonical migrations; checked live QA catalog fingerprints and effective current/default MAINTAIN grants.",
+      "result": "The QA environment reaches the intended effective least-privilege state, but the six ledger rows are not six interchangeable canonical identities. Four aliases differ in SQL scope/content; two test rows repeat already-applied revoke effects. No schema or data changes are needed to reconcile this history.",
+      "normalization_decision": "Do not delete, rename, or reinsert applied QA ledger rows. Preserve the exact executed history. Record the four aliases as non-equivalent historical implementations and the two test rows as idempotent repeat operations. Future canonical migrations remain the source of truth for fresh environments; do not replay these SQL statements just to normalize the ledger.",
+      "verified_live_state": {
+        "current_table_maintain": {
+          "authenticated": 0,
+          "service_role": 0
+        },
+        "default_table_maintain": {
+          "anon": 0,
+          "authenticated": 0,
+          "service_role": 0
+        },
+        "close_transfer_security_definer": false,
+        "catalog_counts": {
+          "tables": 47,
+          "views": 1,
+          "columns": 626,
+          "constraints": 304,
+          "indexes": 257,
+          "functions": 171,
+          "policies": 103,
+          "triggers": 146
+        }
+      },
+      "unresolved_for_release": "This closes QA ledger disposition only. It does not satisfy Production backup/restore proof, Production ACL remediation, or cutover approval."
+    }
   }
 }
