@@ -23,6 +23,8 @@
 - **Closed accounting period guard — PASS (live QA SQL subset, 2026-10-27):** in a rolled-back synthetic transaction, attempted updates to both a ledger entry and an installment in a closed fiscal year were rejected by the database trigger; both amounts remained unchanged. Follow-up queries confirmed zero synthetic workspaces, condominiums, fiscal years, ledger entries, or installments remained. This is database guard evidence only; APP-07 browser workflow remains NOT RUN.
 - **QA Security Advisor — PASS:** latest security advisor query on `bethag-continuity-qa` (`srkucrdcoswlozifvztr`) returned `lints: []`. This is QA-only evidence and does not clear Production's finding.
 
+- **Member-transfer database checks — PASS (isolated QA, 2026-10-27):** a user from a different workspace was denied with `FORBIDDEN` without changing the transfer; the authorized workspace administrator closed the synthetic transfer and the owner states were updated correctly; a second transfer with an unpaid installment was rejected and its state remained unchanged. Follow-up SQL confirmed the transaction left zero synthetic workspace, transfer, and installment rows. This is database/function evidence only; browser tests APP-08–APP-11 remain NOT RUN.
+
 ## 3. Role-based application smoke tests
 
 ### Isolated QA SQL/RLS execution — 2026-10-27
