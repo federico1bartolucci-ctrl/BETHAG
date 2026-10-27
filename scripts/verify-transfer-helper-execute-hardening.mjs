@@ -10,12 +10,12 @@ const [remediation, canonicalAcl, invokerPathFix] = await Promise.all([
 for (const schema of ["private", "public"]) {
   assert.match(
     remediation,
-    new RegExp("REVOKE EXECUTE ON FUNCTION " + schema + "\\.check_condominium_member_transfer_closure\\(uuid\\) FROM PUBLIC, anon;"),
+    new RegExp("REVOKE EXECUTE ON FUNCTION " + schema + "\.check_condominium_member_transfer_closure\(uuid\) FROM PUBLIC, anon;"),
     schema + " transfer closure helper must not be executable by PUBLIC or anon.",
   );
   assert.match(
     remediation,
-    new RegExp("GRANT EXECUTE ON FUNCTION " + schema + "\\.check_condominium_member_transfer_closure\\(uuid\\) TO authenticated, service_role;"),
+    new RegExp("GRANT EXECUTE ON FUNCTION " + schema + "\.check_condominium_member_transfer_closure\(uuid\) TO authenticated, service_role;"),
     schema + " transfer closure helper must remain callable by the intended application roles.",
   );
 }
@@ -25,8 +25,8 @@ assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.preserve_closing_c
 assert.doesNotMatch(canonicalAcl, /GRANT EXECUTE ON FUNCTION (?:private|public)\.check_condominium_member_transfer_closure\(uuid\) TO PUBLIC;/);
 
 assert.match(invokerPathFix, /GRANT USAGE ON SCHEMA private TO service_role;/);
-assert.match(invokerPathFix, /GRANT EXECUTE ON FUNCTION private\\.close_condominium_member_transfer\\(uuid\\) TO service_role;/);
-assert.match(invokerPathFix, /REVOKE EXECUTE ON FUNCTION private\\.close_condominium_member_transfer\\(uuid\\) FROM PUBLIC, anon;/);
+assert.match(invokerPathFix, /GRANT EXECUTE ON FUNCTION private\.close_condominium_member_transfer\(uuid\) TO service_role;/);
+assert.match(invokerPathFix, /REVOKE EXECUTE ON FUNCTION private\.close_condominium_member_transfer\(uuid\) FROM PUBLIC, anon;/);
 
 console.log(JSON.stringify({
   transfer_helper_execute_hardening: "PASS",
