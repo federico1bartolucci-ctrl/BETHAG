@@ -8,13 +8,22 @@
 
 | Gate | Required evidence | Status |
 |---|---|---|
-| Backup identified | Backup artifact, source project, creation timestamp, format, and size recorded | BLOCKED |
-| Restore test | Restore backup into an isolated disposable PostgreSQL/Supabase target; record commands, completion result, schema/data checks, and any warnings | BLOCKED |
-| Restore integrity | Compare critical table row counts, migration history, extensions, roles/ACLs, functions, and RLS policies against the backup/source evidence | BLOCKED |
-| Migration reconciliation | Compare production migration history with repository migrations; explain every missing, duplicated, or divergent version; agree on exact ordered migration set | PENDING EVIDENCE |
-| Security/ACL parity | Capture and compare object owners, grants, default privileges, RLS policies, and function security settings; document intentional Supabase-managed differences | CI PASSED; LIVE EVIDENCE REQUIRED |
+| Backup identified | Supabase scheduled physical backups visible; latest shown 2026-10-26 03:10:58 UTC. Exact artifact metadata still to record | PARTIALLY VERIFIED |
+| Restore test | Local Docker restore already performed; prior checks recorded 6 condominiums, 65 units, 20 residents, 11 transfers. Preserve the existing logs; do not repeat the restore | COMPLETED — EXISTING EVIDENCE |
+| Restore integrity | Data-count checks and local ACL checks were performed; full owner/default-ACL/RLS/function parity evidence still needs consolidation | PARTIAL |
+| Migration reconciliation | Production ledger currently ends at 20261022202747; nine later repository migrations are not recorded in Production. Ordered reconciliation required before release | BLOCKED — DIVERGENCE IDENTIFIED |
+| Security/ACL parity | CI run 40429495150 passed both jobs; live Production shows structural grants still present and MAINTAIN grants remain on existing tables. Owner summary: 48 public relations owned by postgres; full default-ACL/RLS/function parity still required | BLOCKED — LIVE DIFFERENCES |
 | Application validation | Build and focused smoke tests pass against the restored isolated target; confirm sign-in, role access, condominium data, accounting and portal workflows | PENDING |
 | Cutover approval | Named approver accepts backup/restore evidence, migration plan, outage window, rollback criteria, and communication plan | NOT APPROVED |
+
+## Evidence snapshot — 2026-10-27
+
+- Supabase Dashboard shows scheduled physical backups for 2026-10-20 through 2026-10-26; latest shown is 2026-10-26 03:10:58 UTC. Storage API objects are not included in database backups.
+- The local Docker restore was already completed in the existing workflow; previous validation recorded 6 condominiums, 65 units, 20 residents, and 11 member transfers. Do not repeat the restore merely to satisfy this checklist. Attach or preserve the existing command/output logs when available.
+- Production migration ledger currently ends at `20261022202747`. The following repository migrations are not recorded in the current Production ledger and require explicit reconciliation: `20261022210629`, `20261022210630`, `20261022213544`, `20261022233440`, `20261023000001`, `20261023000002`, `20261023000003`, `20261023000004`, `20261023000733`.
+- Read-only Production inspection found 48 relations in schema `public`, all owned by `postgres`. Structural privileges remain on 48 tables for `service_role`; one table has `TRUNCATE`, `REFERENCES`, and `TRIGGER` granted to `authenticated`. Separate catalog inspection also found `MAINTAIN` privileges on existing tables for `authenticated` and `service_role`.
+- GitHub Actions run `40429495150` for commit `a8d47df2953430917f06e0a71907393ab139c156` completed successfully: both `build` and `postgres-bootstrap` passed, including migration reconciliation, Production function-security/ACL parity checks, PostgreSQL 17 bootstrap, and build.
+- No Production migration has been applied as part of this evidence collection. PR #24 remains open/draft; the current release is not approved.
 
 ## Pre-cutover procedure
 
