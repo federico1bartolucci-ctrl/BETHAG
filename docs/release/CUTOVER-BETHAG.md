@@ -55,10 +55,28 @@
 3. Restore the actual Supabase scheduled physical backup through Dashboard → Database → Backups → Restore to a New Project, to an isolated target that cannot write to Production. Record the source ref, exact selected backup timestamp/identifier, target ref, UTC completion time, and provider success result. A local `db dump` restore is useful supplemental evidence but does not satisfy this provider-backup gate. Do not create the paid restore project merely to clear the checklist; continue with free local recovery validation and keep this provider-specific gate explicitly blocked until a zero-cost valid method is available. Never use Production as the restore-test destination.
 4. Verify restore integrity: migration ledger, required schemas/tables, extensions, critical row counts, functions/triggers, RLS policies, object ownership, grants, and default privileges.
 5. Compare the restored live catalog against the five canonical baseline migrations plus the already-applied Production head migration. Compare tables/columns, constraints, indexes, views, functions and bodies, triggers, RLS policies, grants, ownership, and global/schema default ACLs. Stop on any unexplained difference.
-6. Prepare a migration-ledger rebase plan for Production: preserve the live schema and data, replace only the 244 historical tracking rows with the five baseline identities plus the existing head identity, then apply the nine canonical pending migrations in order. This is a metadata operation followed by real DDL; it is not an instruction to execute until the exact preflight output and backup restore are approved.
+6. **Do not delete, replace, or rewrite Production's 244 historical migration rows.** The Production schema and ledger are live evidence. Prepare a forward-only migration plan by matching each applied Production migration to its source SQL or a documented equivalent, marking unmatched entries for manual classification, and selecting only migrations that are proven not to have been applied. Never re-run the five baseline creation migrations on Production. Apply no DDL until the exact preflight output, backup restore evidence, and cutover approval are available.
 7. For every QA/development branch, retain the live ledger and catalog snapshot. The three full-schema QA branches now have matching structural counts and least-privilege results, but their migration ledger identities still differ. For migration-reconciliation QA, prove the four alternate migration identities have the same intended effects as the canonical migrations and establish whether the two QA-only test rows introduced any unique state. Normalize tracking only after that proof; do not replay equivalent SQL. Verify the develop rebase completes and then compare its schema/ACL state. Production remains blocked.
 8. Run the complete release migrations and application smoke tests on the isolated restored target. Save logs and query outputs.
 9. Obtain explicit approval for the exact commit, migration list, outage window, rollback threshold, and responsible operator.
+
+
+## Migration identity reconciliation — 2026-10-27
+
+The three migration ledgers must be reconciled by identity and effect, not made artificially identical by deleting history. The continuity QA ledger records the following version/name identities that differ from the repository's canonical SQL filenames:
+
+| QA ledger identity | Canonical repository SQL file | Required treatment |
+|---|---|---|
+| `20261027012027_restrict_close_member_transfer_execute_canonical` | `20261022213544_restrict_close_member_transfer_execute.sql` (same purpose; verify exact SQL/effect before treating as equivalent) | Alias candidate; do not replay automatically |
+| `20261027012025_align_public_function_execute` | `20261022233440_align_public_function_execute.sql` | Alias candidate; verify SQL/effect |
+| `20261027012027_revoke_authenticated_maintain` | `20261023000001_revoke_authenticated_maintain.sql` | Alias candidate; verify SQL/effect |
+| `20261027012029_revoke_default_maintain` | `20261023000002_revoke_default_maintain.sql` | Alias candidate; verify SQL/effect |
+| `20261027012032_revoke_service_role_maintain` | `20261023000003_revoke_service_role_maintain.sql` | Alias candidate; verify SQL/effect |
+| `20261027012034_application_default_table_privileges` | `20261023000004_application_default_table_privileges.sql` | Alias candidate; verify SQL/effect |
+| `20261027012037_use_invoker_for_close_transfer_rpc` | `20261023000733_use_invoker_for_close_transfer_rpc.sql` | Alias candidate; verify SQL/effect |
+| `20261027012138_revoke_remaining_service_role_maintain_legal_cases` | No canonical file identified in the current 15-file branch inventory | Missing source; inspect exact SQL/effect before any release |
+
+**Important:** these are identity candidates, not authorization to alter a ledger. The observed QA ledgers also contain environment-specific timestamps and test-only entries. Before release, capture each environment's exact `version`, `name`, and migration SQL where available; compare function bodies, grants, default ACLs and resulting catalog state. Keep all 244 Production records unchanged and apply only a reviewed forward migration set.
 
 ## Cutover runbook (only after approval)
 
