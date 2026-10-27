@@ -79,3 +79,25 @@
 ## Evidence log
 
 Record for each gate: operator, UTC timestamp, target identifier, command/procedure, output or log link, result, and reviewer. Never place database passwords, service-role keys, or other secrets in this file or in Git history.
+
+
+## Free local restore validation (no new Supabase project)
+
+The local dump restore is supplemental evidence, not proof of restoring a provider-managed physical backup. To continue the free validation path, run the read-only audit from the repository root against the already restored local PostgreSQL database:
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:YOUR_LOCAL_PASSWORD@localhost:5432/YOUR_LOCAL_DATABASE"
+psql -X -v ON_ERROR_STOP=1 -d $env:DATABASE_URL -f scripts/audit-local-restore.sql > bethag-local-restore-audit.txt
+```
+
+Use the actual local database name/port/password; do not paste credentials into GitHub or chat. The SQL script makes no changes. It reports row counts, relation inventory, constraint validation, invalid indexes, owners, direct ACL entries, default ACLs, RLS/policy coverage, and sequence owners/ACLs. In the direct-ACL section, distinguish explicit grants from effective privilege functions; do not treat a previous has_table_privilege report alone as proof that the ACL entries are directly granted.
+
+Review the output for:
+- invalid or not-ready indexes: none expected;
+- unvalidated constraints: none expected unless explicitly documented;
+- every public/private application object owner recorded;
+- direct grants to PUBLIC / anon limited to intentional entries;
+- anon, authenticated, and service_role default privileges consistent with the approved migration set;
+- RLS enabled and policy counts consistent with the baseline.
+
+This does not modify Production. Keep the provider physical-restore release gate blocked until a valid no-cost provider restore route or other formally accepted evidence exists.
