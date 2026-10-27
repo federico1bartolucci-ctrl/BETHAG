@@ -23,6 +23,8 @@ The default-ACL query also confirmed that Production's `postgres`-owned `public`
 
 The query separately found `supabase_admin`-owned defaults in several Supabase-managed schemas, including `public`. **Do not attempt to change `supabase_admin` defaults with the application migration role.** QA's effective application-owned `public` defaults are hardened, but provider-managed defaults still appear in catalog queries under their actual owner. Any owner/default-ACL parity report must compare owner and schema scope, not simply count all `MAINTAIN` ACL entries together.
 
+The effective current-table CRUD counts were also compared. Production and the three full-schema QA environments (continuity, member-transfer, migration-reconciliation) match for `authenticated`: SELECT 47/47, INSERT 41/47, UPDATE 41/47, DELETE 42/47. Those three QA environments have zero `MAINTAIN` for `authenticated` and `service_role`. Recovered develop is different: `authenticated` has INSERT/UPDATE/DELETE on all 47 relations. Treat develop's broader current-table CRUD as a known divergence; do not use it alone as evidence of Production ACL parity and do not blindly overwrite Production's existing CRUD grants.
+
 ## 2. Live migration ledgers
 
 Fresh `list_migrations` reads returned these counts and heads:
