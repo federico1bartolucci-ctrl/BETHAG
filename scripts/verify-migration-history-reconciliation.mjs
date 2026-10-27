@@ -102,7 +102,16 @@ const calculated = {
     reason: "The production ledger's 243 historical rows do not have matching individual source files in the clean baseline branch; the clean branch replaces history with a 5-file baseline plus incremental migrations. Migration tracking must not be repaired until a verified restore point and catalog/ACL sign-off exist.",
   },
 };
-assert.deepEqual(savedReport, calculated, "The reconciliation report is stale or does not match the captured ledgers and repository inventories.");
+const { live_security_status_captured_at_utc, live_security_status, qa_alias_sql_review, ...historicalInventory } = savedReport;
+assert.deepEqual(historicalInventory, calculated, "The historical reconciliation inventory is stale or does not match the captured ledgers and repository inventories.");
+assert.equal(qa_alias_sql_review?.rows?.length, 6, "QA alias disposition must cover all six non-canonical ledger rows.");
+assert.match(qa_alias_sql_review?.status ?? "", /RECONCILIATION COMPLETE/);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.authenticated, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.service_role, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.anon, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.authenticated, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.service_role, 0);
+assert.ok(qa_alias_sql_review.rows.every((row) => typeof row.disposition === "string" && row.disposition.length > 10), "Every QA alias/test row needs an explicit disposition.");
 
 console.log(JSON.stringify({
   migration_history_reconciliation: "PASS — inventory and mapping artifact are internally consistent",
