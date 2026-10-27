@@ -1729,5 +1729,125 @@
     "production_schema_or_data_modified": false,
     "ready_for_production_tracking_cutover": false,
     "reason": "The production ledger's 243 historical rows do not have matching individual source files in the clean baseline branch; the clean branch replaces history with a 5-file baseline plus incremental migrations. Migration tracking must not be repaired until a verified restore point and catalog/ACL sign-off exist."
+  },
+  "live_security_status_captured_at_utc": "2026-10-27T01:48:00Z",
+  "live_security_status": {
+    "production": {
+      "current_table_maintain": {
+        "authenticated": 33,
+        "service_role": 47
+      },
+      "default_table_maintain": {
+        "anon": 1,
+        "authenticated": 1,
+        "service_role": 1
+      },
+      "close_transfer_security_definer": true,
+      "application_rows": {
+        "workspaces": 1,
+        "profiles": 1,
+        "condominiums": 6,
+        "units": 65,
+        "members": 20,
+        "member_transfers": 11,
+        "portal_access": 1,
+        "documents": 4
+      }
+    },
+    "develop": {
+      "branch_status": "FUNCTIONS_DEPLOYED / ACTIVE_HEALTHY",
+      "canonical_ledger_records": 15,
+      "canonical_head": "20261023000733_use_invoker_for_close_transfer_rpc",
+      "current_table_maintain": {
+        "authenticated": 0,
+        "service_role": 0
+      },
+      "default_table_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
+      },
+      "close_transfer_security_definer": false,
+      "application_rows": {
+        "workspaces": 0,
+        "profiles": 0,
+        "condominiums": 0,
+        "units": 0,
+        "members": 0,
+        "member_transfers": 0,
+        "portal_access": 0,
+        "documents": 0
+      }
+    },
+    "all_full_schema_qa": {
+      "catalog_counts": {
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
+      },
+      "current_table_maintain": {
+        "authenticated": 0,
+        "service_role": 0
+      },
+      "default_table_maintain": {
+        "anon": 0,
+        "authenticated": 0,
+        "service_role": 0
+      },
+      "close_transfer_security_definer": false
+    }
+  },
+  "qa_alias_sql_review": {
+    "status": "NOT_EQUIVALENT_BY_SQL_TEXT; EFFECTIVE PRIVILEGE STATE VERIFIED, BUT LEDGER NORMALIZATION STILL BLOCKED",
+    "rows": [
+      {
+        "version": "20261022230901",
+        "name": "revoke_authenticated_maintain",
+        "sql_hash": "8eb6df55d78c7756863b56e5f483e32b",
+        "finding": "Explicit subset of current table names plus a view; canonical migration uses ALL TABLES and also revokes TRUNCATE/REFERENCES/TRIGGER from anon/authenticated."
+      },
+      {
+        "version": "20261022230908",
+        "name": "revoke_default_maintain",
+        "sql_hash": "cc26c3c5724c6a72d5d05fd6cd78c229",
+        "finding": "Revokes only MAINTAIN from anon/authenticated defaults; canonical migration also revokes anon defaults broadly, authenticated structural defaults, and service_role MAINTAIN."
+      },
+      {
+        "version": "20261023010544",
+        "name": "qa_test_revoke_authenticated_maintain_20261023",
+        "sql_hash": "a851b8e9b9d7e7d372679b43df673803",
+        "finding": "QA-only repeat of the explicit-table MAINTAIN revocation; retain until test-row disposition is approved."
+      },
+      {
+        "version": "20261023010548",
+        "name": "qa_test_revoke_default_maintain_20261023",
+        "sql_hash": "fcd251169fbd5111426898ead21c7d6c",
+        "finding": "QA-only repeat of the MAINTAIN default revocation; retain until test-row disposition is approved."
+      },
+      {
+        "version": "20261023011431",
+        "name": "revoke_service_role_maintain_qa_test",
+        "sql_hash": "1dc03abeb018fcb0b97f8cfcc027f916",
+        "finding": "Explicit list and service_role default MAINTAIN revocation; effective state currently matches canonical target but SQL body differs."
+      },
+      {
+        "version": "20261023011435",
+        "name": "define_application_default_table_privileges_qa",
+        "sql_hash": "69db33122639d162e9f90a439ca25f8c",
+        "finding": "Default CRUD grants for authenticated and CRUD plus REFERENCES/TRIGGER/TRUNCATE for service_role; semantically aligned to canonical grants but not byte-identical."
+      }
+    ],
+    "canonical_sql_hashes_on_develop": {
+      "20261023000001_revoke_authenticated_maintain": "74335ca9a0e8558330edda65c0fabcd4",
+      "20261023000002_revoke_default_maintain": "fca8d5a907ee37bf66004cf97be17915",
+      "20261023000003_revoke_service_role_maintain": "62eaf1a8c13e1e2962b8595caedc430d",
+      "20261023000004_application_default_table_privileges": "277c747f8a19d576bed1ac91645b24c8"
+    },
+    "next_action": "Do not normalize QA migration identities solely from matching effective ACL state. Complete a reviewed, project-specific SQL-equivalence proof or rebuild the empty QA branch from canonical baseline."
   }
 }
