@@ -3,12 +3,12 @@ import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
 const migrationDir = "supabase/migrations";
-const [production, qa, mainInventory, reconciliation, liveStatus] = await Promise.all([
+const [production, qa, mainInventory, reconciliation, liveStatus, liveQaExecuteHardening] = await Promise.all([
   readFile(`${root}/production-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/qa-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/main-migration-files-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/migration-history-reconciliation-20261026.json`, "utf8").then(JSON.parse),
-  readFile(`${root}/live-environment-status-20261027.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/live-environment-status-20261027.json`, "utf8").then(JSON.parse),\n  readFile(`${root}/live-qa-execute-hardening-20261027.json`, "utf8").then(JSON.parse),
 ]);
 
 const restoreGate = liveStatus.backup_restore_gate;
@@ -61,7 +61,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
 assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
 assert.equal(mainInventory.count, mainInventory.files.length);
-assert.equal(files.length, 16, "Canonical baseline + incremental migration inventory changed.");
+assert.equal(files.length, 16, "Canonical baseline + incremental migration inventory changed.");\nassert.equal(liveQaExecuteHardening.production_modified, false, "QA ACL hardening evidence must not claim Production was modified.");\nassert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.projects_checked, 4);\nassert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_public_execute, false);\nassert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_authenticated_execute, true);\nassert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_service_role_execute, true);\nassert.equal(liveQaExecuteHardening.qa_environments.length, 4);
 assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
 assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
 
@@ -119,7 +119,7 @@ console.log(JSON.stringify({
   qa_ledger_records: qa.count,
   qa_equivalent_migrations_requiring_SQL_proof: qaEquivalentCandidates,
   qa_only_test_migrations_requiring_disposition: qaOnlyTestMigrations,
-  live_environment_status_captured_at_utc: liveStatus.captured_at_utc,
+  live_environment_status_captured_at_utc: liveStatus.captured_at_utc,\n  live_qa_execute_hardening: liveQaExecuteHardening,
   live_environment_evidence: liveStatus.environments.map((environment) => ({
     name: environment.name,
     ledger_count: environment.ledger_count,
