@@ -30,7 +30,7 @@
       "public.normalize_zero_ownership_owner()",
       "public.preserve_closing_condominium_member_history()"
     ],
-    "release_disposition": "NOT READY; no schema, data, ACL, or migration ledger writes were performed",
+    "release_disposition": "NOT READY; no Production schema, data, ACL, or migration-ledger writes were performed",
     "effective_current_table_privileges": {
       "anon": {
         "select": 0,
@@ -68,10 +68,10 @@
     {
       "name": "bethag-develop",
       "project_ref": "wvokvcfglduxmjxlnfeh",
-      "ledger_count": 16,
+      "ledger_count": 17,
       "ledger_head": {
-        "version": "20261027093101",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101109",
+        "name": "repair_service_role_transfer_invoker_path"
       },
       "security_advisor_lints": 0,
       "effective_current_table_privileges": {
@@ -105,15 +105,19 @@
           "trigger": 47,
           "maintain": 0
         }
-      }
+      },
+      "service_role_private_schema_usage": true,
+      "service_role_private_close_execute": true,
+      "anon_private_close_execute": false,
+      "close_transfer_rpc_security": "SECURITY INVOKER"
     },
     {
       "name": "bethag-continuity-qa",
       "project_ref": "srkucrdcoswlozifvztr",
-      "ledger_count": 18,
+      "ledger_count": 19,
       "ledger_head": {
-        "version": "20261027093117",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101123",
+        "name": "repair_service_role_transfer_invoker_path"
       },
       "security_advisor_lints": 0,
       "effective_current_table_privileges": {
@@ -147,15 +151,19 @@
           "trigger": 47,
           "maintain": 0
         }
-      }
+      },
+      "service_role_private_schema_usage": true,
+      "service_role_private_close_execute": true,
+      "anon_private_close_execute": false,
+      "close_transfer_rpc_security": "SECURITY INVOKER"
     },
     {
       "name": "bethag-member-transfer-qa",
       "project_ref": "gcorwfvnslnehcxmtixn",
-      "ledger_count": 16,
+      "ledger_count": 17,
       "ledger_head": {
-        "version": "20261027093126",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027101130",
+        "name": "repair_service_role_transfer_invoker_path"
       },
       "security_advisor_lints": 0,
       "effective_current_table_privileges": {
@@ -189,15 +197,19 @@
           "trigger": 47,
           "maintain": 0
         }
-      }
+      },
+      "service_role_private_schema_usage": true,
+      "service_role_private_close_execute": true,
+      "anon_private_close_execute": false,
+      "close_transfer_rpc_security": "SECURITY INVOKER"
     },
     {
       "name": "bethag-migration-reconciliation-qa",
       "project_ref": "mxhciszzpqzvsaqcnwhg",
-      "ledger_count": 18,
+      "ledger_count": 19,
       "ledger_head": {
-        "version": "20261027093119",
-        "name": "revoke_public_execute_from_transfer_closure_helpers"
+        "version": "20261027100507",
+        "name": "repair_service_role_transfer_invoker_path"
       },
       "security_advisor_lints": 0,
       "effective_current_table_privileges": {
@@ -231,7 +243,11 @@
           "trigger": 47,
           "maintain": 0
         }
-      }
+      },
+      "service_role_private_schema_usage": true,
+      "service_role_private_close_execute": true,
+      "anon_private_close_execute": false,
+      "close_transfer_rpc_security": "SECURITY INVOKER"
     }
   ],
   "qa_post_migration_acl_check": {
@@ -248,14 +264,17 @@
       "service_role": 0
     },
     "close_transfer_rpc_security": "SECURITY INVOKER",
-    "result": "PASS for the specific live function-ACL and table-MAINTAIN checks; not an end-to-end application smoke test",
+    "result": "PASS for live function ACL, private invocation path, and table-MAINTAIN checks; not an end-to-end application smoke test",
     "security_advisor_lints_by_environment": {
       "bethag-develop": 0,
       "bethag-continuity-qa": 0,
       "bethag-member-transfer-qa": 0,
       "bethag-migration-reconciliation-qa": 0
     },
-    "security_advisor_result": "PASS — zero security lints in all four non-Production environments"
+    "security_advisor_result": "PASS — zero security lints in all four non-Production environments",
+    "service_role_private_schema_usage": true,
+    "service_role_private_close_execute": true,
+    "anon_private_close_execute": false
   },
   "migration": {
     "canonical_file": "supabase/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
@@ -279,5 +298,12 @@
     "Recovered develop has authenticated CRUD on all 47 public table/partition relations, broader than Production's 41 INSERT, 41 UPDATE and 42 DELETE grants. Treat this as a known current-table ACL divergence; do not use develop alone as proof of Production ACL parity and do not blindly grant/revoke current-table CRUD in Production.",
     "All QA environments and Production show zero anon CRUD on public table/partition relations and service_role CRUD/structural grants on all 47; service_role MAINTAIN is the difference to remove in Production.",
     "Default ACL comparisons must be owner- and schema-scoped. The postgres-owned public defaults for app roles are removed in QA; supabase_admin-owned defaults remain platform-managed and must not be changed by application migrations."
-  ]
+  ],
+  "correction_migration": "20261027110000_repair_service_role_transfer_invoker_path.sql",
+  "correction_ledger_versions": {
+    "bethag-develop": "20261027101109",
+    "bethag-continuity-qa": "20261027101123",
+    "bethag-member-transfer-qa": "20261027101130",
+    "bethag-migration-reconciliation-qa": "20261027100507"
+  }
 }
