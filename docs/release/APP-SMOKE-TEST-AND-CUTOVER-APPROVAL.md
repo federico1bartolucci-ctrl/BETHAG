@@ -6,7 +6,7 @@
 ## 1. Environment and build evidence
 
 - [ ] Record the exact commit SHA and deployment/build artifact.
-- [ ] Record isolated Supabase project ref and restore source (logical dump or provider physical backup).
+- [x] Restore gate disposition (decision recorded 2026-10-27): local Docker/PostgreSQL logical restore was completed and verified; per the user's explicit decision, treat the backup-restore prerequisite as SATISFIED for this cutover without paying for a new Supabase project. Provider-backed physical restore was not performed; its residual risk is accepted for this release and must not be misrepresented as a physical-restore test.
 - [ ] Confirm schema, RLS, function ACL, owner and default-privilege evidence is attached.
 - [ ] Confirm CI build and PostgreSQL 17 bootstrap are green on the exact release commit.
 - [ ] Confirm Security Advisor findings are reviewed; Production's current authenticated SECURITY DEFINER RPC warning remains until the approved forward migration changes the RPC to SECURITY INVOKER.
@@ -57,7 +57,7 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 - Exact ordered migration list/hash: **NOT APPROVED**
 - Maintenance window and communication plan: **NOT APPROVED**
 - Rollback triggers and responsible operator: **NOT APPROVED**
-- Physical-backup restore risk: **NOT TESTED**; written acceptance by named approver required if provider-backed restore evidence is not obtained.
+- Backup restore gate: **ACCEPTED AS SATISFIED BY EXPLICIT USER DECISION (2026-10-27)** on the basis of the verified local Docker/PostgreSQL logical restore and the decision not to incur the additional Supabase project cost. Provider-backed physical restore was not performed; residual risk is explicitly accepted for this cutover.
 - Final decision: **NO-GO until test evidence and written approval are recorded.**
 
 A green build, QA ACL result, or local logical-dump restore does not by itself authorize Production cutover.
