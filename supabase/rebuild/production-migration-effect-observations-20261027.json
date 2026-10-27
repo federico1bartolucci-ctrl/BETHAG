@@ -114,19 +114,25 @@
       "public.preserve_closing_condominium_member_history()"
     ],
     "wrapper_security_definer": false,
-    "private_close_service_role_execute": {
-      "develop": false,
-      "continuity_qa": false,
-      "member_transfer_qa": false,
-      "migration_reconciliation_qa": "true_after_forward_fix"
-    },
     "private_schema_usage_service_role": {
       "develop": false,
       "continuity_qa": true,
       "member_transfer_qa": true,
       "migration_reconciliation_qa": true
     },
-    "note": "Catalog effect is not interchangeable with migration ledger identity; the recorded migration 20261023000733 did not produce the intended service_role private implementation EXECUTE in the queried QA environments."
+    "note": "Catalog effect is not interchangeable with migration ledger identity; the recorded migration 20261023000733 did not produce the intended service_role private implementation EXECUTE in the queried QA environments.",
+    "private_close_service_role_execute_before_correction": {
+      "develop": false,
+      "continuity_qa": false,
+      "member_transfer_qa": false,
+      "migration_reconciliation_qa": false
+    },
+    "private_close_service_role_execute_after_qa_correction": {
+      "develop": false,
+      "continuity_qa": false,
+      "member_transfer_qa": false,
+      "migration_reconciliation_qa": true
+    }
   },
   "pending_migrations": [
     {
