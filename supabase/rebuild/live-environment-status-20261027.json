@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-10-27T01:42:00Z",
+  "captured_at_utc": "2026-10-27T01:46:00Z",
   "note": "Live read-only observations after QA hardening. The develop branch rebase was requested at 2026-10-27 and remains in CREATING_PROJECT at capture time; its pre-rebase observations are retained and must not be interpreted as post-rebase state.",
   "environments": [
     {
@@ -25,7 +25,17 @@
         "service_role_tables_with_maintain": 47
       },
       "close_transfer_security_definer": true,
-      "changes_made_by_this_run": false
+      "changes_made_by_this_run": false,
+      "application_row_counts": {
+        "workspaces": 1,
+        "profiles": 1,
+        "condominiums": 6,
+        "units": 65,
+        "members": 20,
+        "member_transfers": 11,
+        "portal_access": 1,
+        "documents": 4
+      }
     },
     {
       "name": "bethag-continuity-qa",
@@ -67,27 +77,27 @@
       "project_ref": "wvokvcfglduxmjxlnfeh",
       "ledger_count": 15,
       "ledger_head": {
-        "version": "20260928043406",
-        "name": "harden_authenticated_request_policies"
+        "version": "20261023000733",
+        "name": "use_invoker_for_close_transfer_rpc"
       },
       "schema": {
-        "tables": 12,
-        "views": 0,
-        "columns": 118,
-        "constraints": 46,
-        "indexes": 40,
-        "functions": 8,
-        "policies": 26,
-        "triggers": 0
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
       },
       "acl": {
-        "authenticated_tables_with_maintain": 12,
-        "service_role_tables_with_maintain": 12
+        "authenticated_tables_with_maintain": 0,
+        "service_role_tables_with_maintain": 0
       },
-      "close_transfer_security_definer": null,
+      "close_transfer_security_definer": false,
       "rebase_requested": true,
-      "rebase_status_at_capture": "CREATING_PROJECT after reset to 20260928043406 and rebase retry; schema/ledger not yet at Production parity",
-      "rebase_failure": "Historical replay previously failed on absent/duplicate policies. Branch reset to common migration 20260928043406 succeeded; a new rebase was requested, but provider still reports CREATING_PROJECT and the current schema is only the 12-table historical baseline. Do not claim recovery complete.",
+      "rebase_status_at_capture": "RUNNING_MIGRATIONS after reset to canonical 20261023000733; schema currently matches canonical fingerprints; final provider status and post-reset ledger recheck pending",
+      "rebase_failure": "Legacy replay failed on historical policy dependencies. Rebuilt this with_data=false development branch from the canonical 5-file baseline plus existing head and 9 pending migrations. All 12 legacy public tables were verified at exactly 0 rows before removal; no production or application data was touched. Canonical ledger now has 15 entries. Supabase reports RUNNING_MIGRATIONS after reset to canonical head; wait for completion and re-audit.",
       "rebase_partial_progress": [
         "20260928043547_restrict_data_api_table_grants",
         "20260928043604_optimize_rls_auth_checks",
@@ -99,6 +109,25 @@
         "authenticated_tables_with_maintain": 20,
         "service_role_tables_with_maintain": 20,
         "close_transfer_security_definer": null
+      },
+      "application_row_counts": {
+        "workspaces": 0,
+        "profiles": 0,
+        "condominiums": 0,
+        "units": 0,
+        "members": 0,
+        "member_transfers": 0,
+        "portal_access": 0,
+        "documents": 0
+      },
+      "catalog_fingerprints": {
+        "columns": "be8ad9bee85d486df1f23c290829b75b",
+        "constraints": "9bff9ed83871431ffa6647e00df09c7f",
+        "indexes": "c45b2a09bf3e310224035b4a43e1ca91",
+        "functions": "3c57935159ccd2ddf6b7d0e893be403a",
+        "policies": "08c8ca172749839d4d3afa4ca79d205e",
+        "triggers": "d5ea4cd52ddb53f1e2965591dd5237b8",
+        "table_grants": "4ae540884f6adb1365fc52cef5c03a24"
       }
     },
     {
