@@ -130,3 +130,22 @@ Review the output for:
 - RLS enabled and policy counts consistent with the baseline.
 
 This does not modify Production. Keep the provider physical-restore release gate blocked until a valid no-cost provider restore route or other formally accepted evidence exists.
+
+
+## Decision update — backup evidence and release work (2026-10-27)
+
+The team accepts the Supabase Dashboard confirmation of scheduled physical backups as the available backup-existence evidence. A paid “Restore to a New Project” test is explicitly **not required** and must not be purchased solely to satisfy this checklist. This decision does not claim that a restore was physically tested; it records a proportionate risk decision based on the provider-managed backup service and avoids unnecessary recurring cost.
+
+Accordingly, the former provider physical-backup restore gate is replaced by:
+- **Backup existence:** VERIFIED by the Supabase Dashboard evidence recorded above.
+- **Backup recoverability:** no restore-test claim is made; retain as a documented residual risk, not an automatic blocker requiring a paid project.
+- **Release still blocked** until live ACL/default-privilege remediation is prepared and validated, the exact Production migration sequence/history is reconciled without replaying baseline migrations, application smoke tests pass, and the cutover is explicitly approved.
+
+### Concrete current Production security baseline (read-only live queries, 2026-10-27)
+
+- 47 public table/partition relations checked.
+- Effective MAINTAIN: anon 0/47, authenticated 33/47, service_role 47/47.
+- public.close_condominium_member_transfer(uuid) is still SECURITY DEFINER; explicit EXECUTE ACL currently includes postgres, authenticated, and service_role.
+- The live public schema default-ACL catalog includes MAINTAIN entries associated with both postgres and supabase_admin. Do not modify platform-managed supabase_admin defaults; classify the postgres entries by grantee and ACL before applying the planned defaults migration.
+
+These are read-only observations; no Production database changes were made.
