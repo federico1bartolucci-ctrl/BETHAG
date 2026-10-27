@@ -129,5 +129,5 @@ console.log(JSON.stringify({
   production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
   clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
   clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
-  production_tracking_cutover: "BLOCKED — verified restore point and semantic catalog/ACL sign-off required",
+  production_tracking_cutover: "BLOCKED — verified restore point OR named written physical-restore risk acceptance, semantic catalog/ACL sign-off, and approved cutover required",
 }, null, 2));
