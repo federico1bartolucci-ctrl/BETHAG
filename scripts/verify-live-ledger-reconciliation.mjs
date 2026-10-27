@@ -10,7 +10,6 @@ const env = Object.fromEntries(report.environments.map((entry) => [entry.name, e
 assert.equal(env.production.ledger_count, 244);
 assert.equal(env.production.ledger_head.version, "20261022202747");
 assert.equal(env.develop.ledger_count, 16);
-assert.equal(env.continuity-qa, undefined);
 assert.equal(env["continuity-qa"].ledger_count, 18);
 assert.equal(env["member-transfer-qa"].ledger_count, 16);
 assert.equal(env["migration-reconciliation-qa"].ledger_count, 18);
