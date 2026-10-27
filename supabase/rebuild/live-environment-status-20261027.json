@@ -1,0 +1,144 @@
+{
+  "captured_at_utc": "2026-10-27T01:22:00Z",
+  "note": "Live read-only observations after QA hardening. The develop branch rebase was requested at 2026-10-27 and remains in CREATING_PROJECT at capture time; its pre-rebase observations are retained and must not be interpreted as post-rebase state.",
+  "environments": [
+    {
+      "name": "production",
+      "project_ref": "tctcgptrsmvgajqjgnev",
+      "ledger_count": 244,
+      "ledger_head": {
+        "version": "20261022202747",
+        "name": "harden_close_member_transfer_search_path"
+      },
+      "schema": {
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
+      },
+      "acl": {
+        "authenticated_tables_with_maintain": 33,
+        "service_role_tables_with_maintain": 47
+      },
+      "close_transfer_security_definer": true,
+      "changes_made_by_this_run": false
+    },
+    {
+      "name": "bethag-continuity-qa",
+      "project_ref": "srkucrdcoswlozifvztr",
+      "ledger_count": 17,
+      "ledger_head": {
+        "version": "20261027012138",
+        "name": "revoke_remaining_service_role_maintain_legal_cases"
+      },
+      "schema": {
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
+      },
+      "acl": {
+        "authenticated_tables_with_maintain": 0,
+        "service_role_tables_with_maintain": 0
+      },
+      "close_transfer_security_definer": false,
+      "changes_made_by_this_run": true,
+      "changes": [
+        "revoke_close_member_transfer_execute_canonical",
+        "align_public_function_execute",
+        "revoke_authenticated_maintain",
+        "revoke_default_maintain",
+        "revoke_service_role_maintain",
+        "application_default_table_privileges",
+        "use_invoker_for_close_transfer_rpc",
+        "revoke_remaining_service_role_maintain_legal_cases"
+      ]
+    },
+    {
+      "name": "bethag-develop",
+      "project_ref": "wvokvcfglduxmjxlnfeh",
+      "ledger_count": 37,
+      "ledger_head": {
+        "version": "20261001141623",
+        "name": "unit_transformation_snapshots"
+      },
+      "schema": {
+        "tables": 20,
+        "columns": 229
+      },
+      "acl": {
+        "authenticated_tables_with_maintain": 20,
+        "service_role_tables_with_maintain": 20
+      },
+      "close_transfer_security_definer": null,
+      "rebase_requested": true,
+      "rebase_status_at_capture": "CREATING_PROJECT"
+    },
+    {
+      "name": "bethag-member-transfer-qa",
+      "project_ref": "gcorwfvnslnehcxmtixn",
+      "ledger_count": 15,
+      "ledger_head": {
+        "version": "20261027012123",
+        "name": "use_invoker_for_close_transfer_rpc"
+      },
+      "schema": {
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
+      },
+      "acl": {
+        "authenticated_tables_with_maintain": 0,
+        "service_role_tables_with_maintain": 0
+      },
+      "close_transfer_security_definer": false,
+      "changes_made_by_this_run": true,
+      "changes": [
+        "align_public_function_execute",
+        "revoke_authenticated_maintain",
+        "revoke_default_maintain",
+        "revoke_service_role_maintain",
+        "application_default_table_privileges",
+        "use_invoker_for_close_transfer_rpc"
+      ]
+    },
+    {
+      "name": "bethag-migration-reconciliation-qa",
+      "project_ref": "mxhciszzpqzvsaqcnwhg",
+      "ledger_count": 17,
+      "ledger_head": {
+        "version": "20261023011435",
+        "name": "define_application_default_table_privileges_qa"
+      },
+      "schema": {
+        "tables": 47,
+        "views": 1,
+        "columns": 626,
+        "constraints": 304,
+        "indexes": 257,
+        "functions": 171,
+        "policies": 103,
+        "triggers": 146
+      },
+      "acl": {
+        "authenticated_tables_with_maintain": 0,
+        "service_role_tables_with_maintain": 0
+      },
+      "close_transfer_security_definer": false,
+      "changes_made_by_this_run": false
+    }
+  ]
+}
