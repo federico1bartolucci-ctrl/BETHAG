@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [remediation, canonicalAcl] = await Promise.all([
+const [remediation, canonicalAcl, invokerPathFix] = await Promise.all([
   readFile("supabase/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql", "utf8"),
   readFile("supabase/migrations/20261022233440_align_public_function_execute.sql", "utf8"),
+  readFile("supabase/migrations/20261027110000_repair_service_role_transfer_invoker_path.sql", "utf8"),
 ]);
 
 for (const schema of ["private", "public"]) {
