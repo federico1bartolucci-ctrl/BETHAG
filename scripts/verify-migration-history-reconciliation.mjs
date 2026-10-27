@@ -64,17 +64,17 @@ const sameName = classify.filter((item) => item.classification === "same_name_di
 const noSource = classify.filter((item) => item.classification === "no_matching_source_file");
 const productionVersions = new Set(production.migrations.map((item) => item.version));
 const qaVersions = new Set(qa.migrations.map((item) => item.version));
-const productionMatches = currentFiles
+const productionMatches = snapshotFiles
   .filter((file) => productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, productionName: production.migrations.find((item) => item.version === file.version).name }));
-const notInProduction = currentFiles
+const notInProduction = snapshotFiles
   .filter((file) => !productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaMatches = currentFiles
+const qaMatches = snapshotFiles
   .filter((file) => qa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
 const qaOnly = qa.migrations.filter((item) => !snapshotFiles.some((file) => file.version === item.version && file.name === item.name));
-const cleanOnly = currentFiles
+const cleanOnly = snapshotFiles
   .filter((file) => !qa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
 
@@ -124,7 +124,7 @@ console.log(JSON.stringify({
   production_ledger_rows: production.count,
   qa_ledger_rows: qa.count,
   main_migration_files: main.count,
-  clean_branch_migration_files: currentFiles.length,\n  post_snapshot_remediation_migrations: currentFiles.filter((file) => file.file === postSnapshotRemediationFile).map((file) => file.file),
+  clean_branch_migration_files: snapshotFiles.length,\n  post_snapshot_remediation_migrations: currentFiles.filter((file) => file.file === postSnapshotRemediationFile).map((file) => file.file),
   production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
   clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
   clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
