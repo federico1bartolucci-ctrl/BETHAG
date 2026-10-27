@@ -13,7 +13,7 @@ This matrix is an operator checklist, not authorization to execute. Production m
 | Gate | Evidence required | Current disposition |
 |---|---|---|
 | Provider physical backup restore | Either provider-backed restore proof, or a named release approver's written acceptance of the documented residual risk; retain backup timestamp/evidence and never claim an unperformed restore | **NOT TESTED — RESIDUAL RISK**; no paid project required. Cutover still needs explicit written risk acceptance if no restore proof is obtained |
-| Restored-target integrity | Critical data counts, schema objects, function definitions, RLS, owners, explicit grants, global and schema default ACLs | **BLOCKED** — complete provider-restored target evidence absent |
+| Restored-target integrity | Critical data counts, schema objects, function definitions, RLS, owners, explicit grants, global and schema default ACLs | **PARTIAL** — local logical-dump restore was verified; physical restore remains untested and must be explicitly accepted as a residual risk if no provider proof is obtained |
 | Migration identity | Fresh Production ledger capture; preserve all 244 existing rows; identify pending migrations without replaying baseline | **PARTIAL** — head and count captured; per-migration source/effect matching remains a release task |
 | Security target | Current/default MAINTAIN removed from app roles; RPC security-invoker wrapper validated with application smoke tests | **NOT MET IN PRODUCTION** — observed authenticated MAINTAIN on 33 tables, service_role on 47; default MAINTAIN for anon/authenticated/service_role; RPC remains SECURITY DEFINER |
 | App acceptance | Auth, role access, condominium records, accounting, transfer close/rollback, portal workflows on isolated restored target | **PENDING** |
@@ -25,7 +25,7 @@ The order below follows the canonical migration identities after the observed Pr
 
 | Order | Canonical migration | Intended effect | Required specific verification / risk |
 |---:|---|---|---|
-| 1 | `20261022210629_restrict_private_function_public_execute.sql` | Revoke implicit PUBLIC EXECUTE on routines in schema `private` | Capture before/after routine ACLs. Later migration 4 deliberately grants PUBLIC EXECUTE to four named helper/trigger routines; confirm those exact exceptions are intentional and remain the only required exceptions. |
+| 1 | `20261022210629_restrict_private_function_public_execute.sql` | Revoke implicit PUBLIC EXECUTE on routines in schema `private` | Capture before/after routine ACLs. Migration 4 grants the two closure-check helpers to authenticated/service_role and retains PUBLIC EXECUTE only for two named trigger routines; migration 10 corrects QA environments where the older migration identity was already recorded. |
 | 2 | `20261022210630_harden_default_privileges_and_private_execute.sql` | Revoke table defaults for anon/authenticated under `postgres`; revoke private routine PUBLIC defaults and existing private routine PUBLIC EXECUTE | Compare global and `public`-schema defaults separately. This does not revoke current-table grants. Do not change `supabase_admin` defaults. |
 | 3 | `20261022213544_restrict_close_member_transfer_execute.sql` | Restrict the close-transfer RPC to authenticated/service_role rather than PUBLIC/anon | Test anonymous denial, authenticated authorized close, unauthorized workspace denial, open-accounting-position rejection, and full rollback on failure. This alone does not remove SECURITY DEFINER. |
 | 4 | `20261022233440_align_public_function_execute.sql` | Revoke PUBLIC EXECUTE broadly; grant closure-check helpers to authenticated/service_role; restore only two named trigger routines to PUBLIC; tighten postgres default routine EXECUTE | The helper allowlist was corrected after this migration had already been recorded in QA. Entry 10 reapplies the helper-specific correction without replaying entry 4. Compare every public/private function ACL against the reviewed allowlist. |
@@ -43,7 +43,7 @@ The order below follows the canonical migration identities after the observed Pr
 4. Verify the exact relation list used by migration 7 against live Production metadata. If it is not exactly the expected 47 public table/partition relations, stop and revise the migration through review before execution.
 5. Inspect the effective grants for every function affected by migrations 1, 3, 4 and 9. Produce an allowlist with a justification for every PUBLIC or authenticated EXECUTE grant; no wildcard assumption.
 6. Run the complete ten-migration sequence against the isolated restored target only. Save logs and run the postflight checks below.
-7. Run application smoke tests on that isolated target, including transfer-close positive and negative paths and rollback-on-error.
+7. Run application smoke tests on that explicitly identified isolated target, including transfer-close positive and negative paths and rollback-on-error.
 8. Obtain explicit approval for the exact commit, exact migration sequence, backup evidence, outage window, rollback criteria and responsible operator. No approval means no Production DDL.
 
 ## Required postflight assertions
