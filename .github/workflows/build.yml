@@ -55,7 +55,21 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Bootstrap baseline on real PostgreSQL 17
-        run: node scripts/test-postgres-bootstrap.mjs && node scripts/test-postgres-incremental-hardening.mjs
+        run: node scripts/test-postgres-bootstrap.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Execute all 11 real canonical migrations through the guarded runner on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-runner.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+
+      - name: Verify incremental hardening catalog and ACL postconditions
+        run: node scripts/test-postgres-incremental-hardening.mjs
         env:
           PGHOST: localhost
           PGPORT: 5432
