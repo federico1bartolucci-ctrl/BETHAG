@@ -78,6 +78,26 @@ try {
   await page.goto(new URL("reset-password.html?code=synthetic-expired-code", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
   await page.getByText("Il link di recupero non è più valido. Richiedi un nuovo link.").waitFor();
 
+  // Legacy implicit-flow links carry access_token and refresh_token in the URL hash.
+  await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
+  await page.route("https://esm.sh/@supabase/supabase-js@2.117.1*", route => route.fulfill({
+    status: 200,
+    contentType: "application/javascript; charset=utf-8",
+    body: `export function createClient() {
+      const session = { user: { id: "synthetic-qa-user" } };
+      return { auth: {
+        onAuthStateChange() {},
+        setSession: async ({ access_token, refresh_token }) =>
+          access_token === "synthetic-access" && refresh_token === "synthetic-refresh"
+            ? { data: { session }, error: null }
+            : { data: { session: null }, error: { message: "invalid synthetic tokens" } },
+        getSession: async () => ({ data: { session }, error: null }),
+      } };
+    }`,
+  }));
+  await page.goto(new URL("reset-password.html#access_token=synthetic-access&refresh_token=synthetic-refresh&type=recovery", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
+  await page.getByRole("textbox", { name: "Nuova password", exact: true }).waitFor();
+
   // Simulate a valid recovery session and verify client-side password mismatch validation.
   // updateUser deliberately throws if reached: this test must never change any account.
   await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
