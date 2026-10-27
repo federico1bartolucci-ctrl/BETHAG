@@ -6,9 +6,10 @@ REVOKE TRUNCATE, REFERENCES, TRIGGER
   ON ALL TABLES IN SCHEMA public
   FROM anon, authenticated;
 
--- Remove existing MAINTAIN grants from API roles and service_role.
--- Default-privilege revocations alone do not affect existing tables.
--- PostgreSQL 17+.
+-- Remove existing MAINTAIN grants from API-facing roles.
+-- service_role is handled by the following explicit migration so the change
+-- remains independently auditable. Default ACL revocations do not affect
+-- existing tables. PostgreSQL 17+.
 REVOKE MAINTAIN
   ON ALL TABLES IN SCHEMA public
-  FROM anon, authenticated, service_role;
+  FROM anon, authenticated;
