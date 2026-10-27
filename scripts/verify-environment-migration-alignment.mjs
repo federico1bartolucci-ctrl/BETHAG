@@ -10,6 +10,14 @@ const [production, qa, mainInventory, reconciliation] = await Promise.all([
   readFile(`${root}/migration-history-reconciliation-20261026.json`, "utf8").then(JSON.parse),
 ]);
 
+const environments = [
+  { name: "production", project_ref: "tctcgptrsmvgajqjgnev", ledger_snapshot: "production-ledger-20261026.json" },
+  { name: "bethag-continuity-qa", project_ref: "srkucrdcoswlozifvztr", ledger_snapshot: null },
+  { name: "bethag-develop", project_ref: "wvokvcfglduxmjxlnfeh", ledger_snapshot: null },
+  { name: "bethag-member-transfer-qa", project_ref: "gcorwfvnslnehcxmtixn", ledger_snapshot: null },
+  { name: "bethag-migration-reconciliation-qa", project_ref: "mxhciszzpqzvsaqcnwhg", ledger_snapshot: "qa-ledger-20261026.json" },
+];
+
 const files = (await readdir(migrationDir))
   .filter((file) => file.endsWith(".sql"))
   .sort()
@@ -86,13 +94,15 @@ const gates = {
   live_production_backup_restore_verified: process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES",
   live_production_and_qa_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
   qa_variant_sql_equivalence_verified: process.env.BETHAG_QA_EQUIVALENCE_VERIFIED === "YES",
-  current_live_ledgers_recaptured: process.env.BETHAG_LIVE_LEDGER_CAPTURED === "YES",
+  all_five_environment_ledgers_recaptured: process.env.BETHAG_ALL_ENVIRONMENT_LEDGERS_CAPTURED === "YES",
   cutover_plan_approved: process.env.BETHAG_CUTOVER_APPROVED === "YES",
 };
 const blockers = Object.entries(gates).filter(([, passed]) => !passed).map(([gate]) => gate);
 
 console.log(JSON.stringify({
   migration_alignment_inventory: "PASS",
+  environments,
+  environments_without_captured_ledger: environments.filter((environment) => !environment.ledger_snapshot).map((environment) => environment.name),
   canonical_baseline_migrations: expectedBaseline.length,
   canonical_incremental_migrations: expectedPending.length + 1,
   production_ledger_records: production.count,
