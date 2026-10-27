@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node scripts/test-clean-bootstrap.mjs",
-    "verify:baseline": "node scripts/verify-migration-history-reconciliation.mjs && node scripts/verify-clean-baseline.mjs && node scripts/plan-migration-cutover.mjs && node scripts/verify-cutover-planner-safety.mjs && npm run verify:environment-alignment && node scripts/verify-baseline-column-parity.mjs && npm run verify:security-parity && npm run verify:authenticated-maintain-guard && node scripts/verify-transfer-helper-execute-hardening.mjs && node --check scripts/verify-release-readiness.mjs && node scripts/verify-live-ledger-reconciliation.mjs",
+    "verify:baseline": "node scripts/verify-migration-history-reconciliation.mjs && node scripts/verify-clean-baseline.mjs && node scripts/plan-migration-cutover.mjs && node scripts/verify-cutover-planner-safety.mjs && node scripts/verify-canonical-cutover-runner.mjs && npm run verify:environment-alignment && node scripts/verify-baseline-column-parity.mjs && npm run verify:security-parity && npm run verify:authenticated-maintain-guard && node scripts/verify-transfer-helper-execute-hardening.mjs && node --check scripts/verify-release-readiness.mjs && node scripts/verify-live-ledger-reconciliation.mjs",
     "verify:release-readiness": "node scripts/verify-release-readiness.mjs",
     "plan:migration-cutover": "node scripts/plan-migration-cutover.mjs",
     "backup:list": "node scripts/list-supabase-backups.mjs",
