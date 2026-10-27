@@ -11,7 +11,7 @@
 | Backup identified | Supabase scheduled physical backups visible; latest shown 2026-10-26 03:10:58 UTC. Exact artifact metadata still to record | PARTIALLY VERIFIED |
 | Restore test | Local Docker restore already performed; prior checks recorded 6 condominiums, 65 units, 20 residents, 11 transfers. Preserve the existing logs; do not repeat the restore | COMPLETED — EXISTING EVIDENCE |
 | Restore integrity | Data-count checks and local ACL checks were performed; full owner/default-ACL/RLS/function parity evidence still needs consolidation | PARTIAL |
-| Migration reconciliation | Production ledger currently ends at 20261022202747; nine later repository migrations are not recorded in Production. Ordered reconciliation required before release | BLOCKED — DIVERGENCE IDENTIFIED |
+| Migration reconciliation | Production has 244 historical ledger rows; QA has 17 rows with four alternate migration identities and two QA-only test rows. A canonical 15-entry ledger must be proven before any rewrite | BLOCKED — DIVERGENCE IDENTIFIED |
 | Security/ACL parity | CI run 40429495150 passed both jobs; live Production shows structural grants still present and MAINTAIN grants remain on existing tables. Owner summary: 48 public relations owned by postgres; full default-ACL/RLS/function parity still required | BLOCKED — LIVE DIFFERENCES |
 | Application validation | Build and focused smoke tests pass against the restored isolated target; confirm sign-in, role access, condominium data, accounting and portal workflows | PENDING |
 | Cutover approval | Named approver accepts backup/restore evidence, migration plan, outage window, rollback criteria, and communication plan | NOT APPROVED |
@@ -21,7 +21,9 @@
 - Supabase scheduled physical backups are visible for 2026-10-20 through 2026-10-26; latest shown is 2026-10-26 03:10:58 UTC. Storage API objects are excluded from database backups.
 - The local Docker restore was already completed in the existing workflow; previous validation recorded 6 condominiums, 65 units, 20 residents, and 11 member transfers. Do not repeat the restore. Existing command/output evidence should be linked here when available.
 - Live Production migration ledger contains 244 records and ends at `20261022202747_harden_close_member_transfer_search_path`.
-- The clean branch has 15 migration files: five rebuild-baseline files dated 20261017 plus ten incremental migrations. The five baseline files are for clean bootstrap and **must not be pushed to existing Production as ordinary pending migrations**, because the objects already exist there and the live ledger is historical, not the clean-baseline ledger.
+- The canonical branch has exactly 15 migration files: five baseline migrations, the already-applied Production head migration `20261022202747`, and nine ordered follow-on migrations. The five baseline files are for clean bootstrap and **must not be pushed to existing Production as ordinary pending migrations**. Existing environments require a controlled migration-ledger rebase only after baseline/catalog parity is proven; no tables or application data should be recreated.
+- QA ledger differs from the canonical sequence: it contains four alternate identities that may correspond to canonical migrations—`20261022230901_revoke_authenticated_maintain`, `20261022230908_revoke_default_maintain`, `20261023011431_revoke_service_role_maintain_qa_test`, and `20261023011435_define_application_default_table_privileges_qa`—plus two QA-only test rows (`20261023010544`, `20261023010548`). These are **not yet treated as equivalent**: compare the exact SQL effects and live ACL state before normalizing the QA ledger. Do not rerun their SQL merely to rename migration history.
+- The automated gate `npm run verify:environment-alignment` now checks the canonical 15-file sequence, the nine Production-pending migrations, and the known QA ledger divergences. A passing inventory check is not a release approval; it reports cutover blocked until restore, live parity, QA equivalence, fresh ledger capture, and approval are attested.
 - Nine incremental migrations after the current Production head are not registered in Production and need semantic/order reconciliation before execution:
   1. `20261022210629_restrict_private_function_public_execute.sql`
   2. `20261022210630_harden_default_privileges_and_private_execute.sql`
@@ -36,7 +38,7 @@
 - GitHub Actions run `40430679828` for commit `8d6f05edb4f9b5c7a1ca9ec48b7ac8a94d02f073` completed successfully: `build` and `postgres-bootstrap` both passed. This is CI evidence, not a live Production cutover test.
 - Live Supabase Security Advisor at 2026-10-27 01:10 UTC still reports one warning: `public.close_condominium_member_transfer(uuid)` is executable by `authenticated` while marked `SECURITY DEFINER`. Migration `20261023000733_use_invoker_for_close_transfer_rpc.sql` is the planned remediation, but it is not recorded in Production yet.
 - Live Performance Advisor reports 62 unused-index notices and 21 multiple-permissive-policy notices. These are recorded for a separate measured performance/policy review; do not drop indexes or rewrite RLS policies as part of this privilege cutover without usage and access-path validation.
-- Production has not been modified by this evidence collection. PR #24 remains open/draft. Cutover is blocked until the nine incremental migrations are reviewed against live schema and ACL state, object/default ACL/RLS/function parity is documented, and the release plan is approved.
+- Production has not been modified by this evidence collection. PR #24 remains open/draft. Cutover is blocked until the baseline/catalog parity, QA SQL-equivalence checks, canonical ledger-rebase plan, object/default ACL/RLS/function parity, verified restore, and release approval are documented.
 
 ## Pre-cutover procedure
 
@@ -44,9 +46,11 @@
 2. Produce a fresh provider-supported backup or database dump. Record UTC timestamp, source project identifier, artifact checksum, and secure storage location.
 3. Restore the backup to an isolated target that cannot write to Production. Never use Production as the restore-test destination.
 4. Verify restore integrity: migration ledger, required schemas/tables, extensions, critical row counts, functions/triggers, RLS policies, object ownership, grants, and default privileges.
-5. Reconcile the live Production migration ledger with repository migration files. Produce an ordered list of migrations to apply and a list of any drift; do not infer that a successful CI run proves Production parity.
-6. Run the release migrations and application smoke tests on the isolated restored target. Save logs and query outputs.
-7. Obtain explicit approval for the exact commit, migration list, outage window, rollback threshold, and responsible operator.
+5. Compare the restored live catalog against the five canonical baseline migrations plus the already-applied Production head migration. Compare tables/columns, constraints, indexes, views, functions and bodies, triggers, RLS policies, grants, ownership, and global/schema default ACLs. Stop on any unexplained difference.
+6. Prepare a migration-ledger rebase plan for Production: preserve the live schema and data, replace only the 244 historical tracking rows with the five baseline identities plus the existing head identity, then apply the nine canonical pending migrations in order. This is a metadata operation followed by real DDL; it is not an instruction to execute until the exact preflight output and backup restore are approved.
+7. For QA, prove the four alternate migration identities have the same intended effects as the canonical migrations and establish whether the two QA-only test rows introduced any unique state. Normalize tracking only after that proof; do not replay equivalent SQL. Bring every environment to the same 15 canonical identities and verify effective catalog/ACL parity.
+8. Run the complete release migrations and application smoke tests on the isolated restored target. Save logs and query outputs.
+9. Obtain explicit approval for the exact commit, migration list, outage window, rollback threshold, and responsible operator.
 
 ## Cutover runbook (only after approval)
 
