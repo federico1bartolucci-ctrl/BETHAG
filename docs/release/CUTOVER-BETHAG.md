@@ -63,20 +63,29 @@
 
 ## Migration identity reconciliation — 2026-10-27
 
-The three migration ledgers must be reconciled by identity and effect, not made artificially identical by deleting history. The continuity QA ledger records the following version/name identities that differ from the repository's canonical SQL filenames:
+The live ledgers show that QA variants must be treated as environment-specific execution history. A filename with a similar name is not sufficient proof of equivalent effects.
 
-| QA ledger identity | Canonical repository SQL file | Required treatment |
+### Migration-reconciliation QA (`mxhciszzpqzvsaqcnwhg`)
+
+| Recorded QA identity | Canonical candidate | Disposition |
 |---|---|---|
-| `20261027012022_restrict_close_member_transfer_execute_canonical` | `20261022213544_restrict_close_member_transfer_execute.sql` (same purpose; verify exact SQL/effect before treating as equivalent) | Alias candidate; do not replay automatically |
-| `20261027012025_align_public_function_execute` | `20261022233440_align_public_function_execute.sql` | Alias candidate; verify SQL/effect |
-| `20261027012027_revoke_authenticated_maintain` | `20261023000001_revoke_authenticated_maintain.sql` | Alias candidate; verify SQL/effect |
-| `20261027012029_revoke_default_maintain` | `20261023000002_revoke_default_maintain.sql` | Alias candidate; verify SQL/effect |
-| `20261027012032_revoke_service_role_maintain` | `20261023000003_revoke_service_role_maintain.sql` | Alias candidate; verify SQL/effect |
-| `20261027012034_application_default_table_privileges` | `20261023000004_application_default_table_privileges.sql` | Alias candidate; verify SQL/effect |
-| `20261027012037_use_invoker_for_close_transfer_rpc` | `20261023000733_use_invoker_for_close_transfer_rpc.sql` | Alias candidate; verify SQL/effect |
-| `20261027012138_revoke_remaining_service_role_maintain_legal_cases` | No canonical file identified in the current 15-file branch inventory | Missing source; inspect exact SQL/effect before any release |
+| `20261022213544_restrict_close_member_transfer_execute` | `20261022213544_restrict_close_member_transfer_execute.sql` | Exact identity; inspect as applied history, do not replay |
+| `20261022230901_revoke_authenticated_maintain` | `20261023000001_revoke_authenticated_maintain.sql` | Different timestamp and narrower SQL scope; not interchangeable without a forward correction |
+| `20261022230908_revoke_default_maintain` | `20261023000002_revoke_default_maintain.sql` | Different timestamp/scope; keep the row and validate effective defaults separately |
+| `20261022233440_align_public_function_execute` | `20261022233440_align_public_function_execute.sql` | Exact identity |
+| `20261023000733_use_invoker_for_close_transfer_rpc` | `20261023000733_use_invoker_for_close_transfer_rpc.sql` | Exact identity |
+| `20261023010544_qa_test_revoke_authenticated_maintain_20261023` | QA-only test | Preserve as history; do not replay or delete |
+| `20261023010548_qa_test_revoke_default_maintain_20261023` | QA-only test | Preserve as history; do not replay or delete |
+| `20261023011431_revoke_service_role_maintain_qa_test` | `20261023000003_revoke_service_role_maintain.sql` | QA-specific scope/name; preserve identity and validate resulting grants |
+| `20261023011435_define_application_default_table_privileges_qa` | `20261023000004_application_default_table_privileges.sql` | QA-specific identity; preserve history and validate defaults |
 
-**Important:** these are identity candidates, not authorization to alter a ledger. The observed QA ledgers also contain environment-specific timestamps and test-only entries. Before release, capture each environment's exact `version`, `name`, and migration SQL where available; compare function bodies, grants, default ACLs and resulting catalog state. Keep all 244 Production records unchanged and apply only a reviewed forward migration set.
+### Continuity and member-transfer QA
+
+- Continuity QA (`srkucrdcoswlozifvztr`) has 17 rows, including `20261027012022_restrict_close_member_transfer_execute_canonical`, `20261027012025_align_public_function_execute`, `20261027012027_revoke_authenticated_maintain`, `20261027012029_revoke_default_maintain`, `20261027012032_revoke_service_role_maintain`, `20261027012034_application_default_table_privileges`, `20261027012037_use_invoker_for_close_transfer_rpc`, and `20261027012138_revoke_remaining_service_role_maintain_legal_cases`.
+- Member-transfer QA (`gcorwfvnslnehcxmtixn`) has 15 rows with alternate versions for function ACL alignment and privilege changes; its close-transfer restriction is recorded as `20261022213542_restrict_close_member_transfer_execute`.
+- The continuity-only `revoke_remaining_service_role_maintain_legal_cases` entry has no canonical source file identified in the current 15-file branch inventory. Its exact SQL and object scope must be recovered and reviewed before release planning.
+
+**Decision:** preserve every existing QA and Production ledger row as evidence. Do not normalize ledger metadata, delete test rows, or replay alias SQL merely to make names match. The effective QA security state (zero application-table `MAINTAIN`, public close-transfer wrapper `SECURITY INVOKER`) is a separate verification from migration identity. The Production release list must be derived from its live schema and ledger and must exclude any effect already present.
 
 ## Cutover runbook (only after approval)
 
