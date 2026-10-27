@@ -19,6 +19,12 @@ This matrix is an operator checklist, not authorization to execute. Production m
 | App acceptance | Auth, role access, condominium records, accounting, transfer close/rollback, portal workflows on isolated restored target | **PENDING** |
 | Approval | Named approver signs exact commit, migration sequence, maintenance window, rollback criteria and communications | **NOT APPROVED** |
 
+## Fresh evidence records
+
+- Live migration ledger capture and identity comparison: `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`.
+- Application smoke-test and named cutover approval record: `docs/release/APP-SMOKE-TEST-AND-CUTOVER-APPROVAL.md`.
+- These records are preparation artifacts. QA's environment-specific migration versions must be reconciled by effect/source; Production's 244 historical ledger rows remain untouched. No Production migration is authorized by this matrix.
+
 ## Proposed pending-migration matrix
 
 The order below follows the canonical migration identities after the observed Production head. Entries 1–4 touch function EXECUTE/default privileges; entry 10 is an idempotent follow-up for environments where the earlier version of entry 4 was already recorded. Validate the combined end state rather than treating each migration as an isolated final state. This is a proposed order to rehearse on the restored isolated target, not an instruction to apply directly to Production.
