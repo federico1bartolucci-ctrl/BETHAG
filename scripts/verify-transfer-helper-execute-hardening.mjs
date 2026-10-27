@@ -24,6 +24,10 @@ assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.normalize_zero_own
 assert.match(canonicalAcl, /GRANT EXECUTE ON FUNCTION public\.preserve_closing_condominium_member_history\(\) TO PUBLIC;/);
 assert.doesNotMatch(canonicalAcl, /GRANT EXECUTE ON FUNCTION (?:private|public)\.check_condominium_member_transfer_closure\(uuid\) TO PUBLIC;/);
 
+assert.match(invokerPathFix, /GRANT USAGE ON SCHEMA private TO service_role;/);
+assert.match(invokerPathFix, /GRANT EXECUTE ON FUNCTION private\\.close_condominium_member_transfer\\(uuid\\) TO service_role;/);
+assert.match(invokerPathFix, /REVOKE EXECUTE ON FUNCTION private\\.close_condominium_member_transfer\\(uuid\\) FROM PUBLIC, anon;/);
+
 console.log(JSON.stringify({
   transfer_helper_execute_hardening: "PASS",
   helper_functions_public_execute: false,
