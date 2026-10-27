@@ -89,12 +89,43 @@ try {
   await page.getByRole("button", { name: "Salva nuova password" }).click();
   await page.getByText("Le password non coincidono.").waitFor();
 
+  // Exercise the successful UI path using a synthetic recovery session only.
+  // Counters prove updateUser and local sign-out each run exactly once; no real account is contacted.
+  await page.unroute("https://esm.sh/@supabase/supabase-js@2.117.1*");
+  await page.route("https://esm.sh/@supabase/supabase-js@2.117.1*", route => route.fulfill({
+    status: 200,
+    contentType: "application/javascript; charset=utf-8",
+    body: `export function createClient() {
+      const session = { user: { id: "synthetic-qa-user" } };
+      window.__qaRecoveryCalls = { updateUser: 0, signOut: 0 };
+      return { auth: {
+        onAuthStateChange(callback) {
+          callback("PASSWORD_RECOVERY", session);
+          return { data: { subscription: { unsubscribe() {} } } };
+        },
+        exchangeCodeForSession: async () => ({ error: null }),
+        getSession: async () => ({ data: { session }, error: null }),
+        updateUser: async () => { window.__qaRecoveryCalls.updateUser += 1; return { error: null }; },
+        signOut: async () => { window.__qaRecoveryCalls.signOut += 1; return { error: null }; },
+      } };
+    }`,
+  }));
+  await page.goto(new URL("reset-password.html?code=synthetic-qa-code", new URL("BETHAG/", baseURL)).toString(), { waitUntil: "networkidle" });
+  await page.getByRole("textbox", { name: "Nuova password", exact: true }).fill("Password123");
+  await page.getByLabel("Conferma nuova password").fill("Password123");
+  await page.getByRole("button", { name: "Salva nuova password" }).click();
+  await page.getByText("Password aggiornata correttamente. Ora puoi accedere a BETHAG.").waitFor();
+  const recoveryCalls = await page.evaluate(() => window.__qaRecoveryCalls);
+  if (recoveryCalls?.updateUser !== 1 || recoveryCalls?.signOut !== 1) {
+    throw new Error(`Unexpected successful recovery calls: ${JSON.stringify(recoveryCalls)}`);
+  }
+
   if (pageErrors.length) {
     throw new Error(`Browser uncaught errors: ${pageErrors.join(" | ")}`);
   }
 
   console.log("BETHAG_PUBLIC_BROWSER_SMOKE_PASS");
-  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected; invalid recovery links are rejected; mismatched new passwords are rejected before updateUser; no uncaught browser exceptions. Supabase auth is mocked; no real account is changed.");
+  console.log("Checks: landing page loads; login panel opens; administrator/collaborator/resident role selectors render; empty login is rejected; invalid recovery links are rejected; mismatched new passwords are rejected before updateUser; successful recovery shows confirmation and calls updateUser/signOut once; no uncaught browser exceptions. Supabase auth is mocked; no real account is changed.");
 } catch (error) {
   console.error("BETHAG_PUBLIC_BROWSER_SMOKE_FAIL");
   console.error(error);
