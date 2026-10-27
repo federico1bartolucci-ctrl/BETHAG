@@ -33,9 +33,20 @@ for (const name of incrementalFiles) {
 }
 if (new Set(baselineVersions).size !== baselineVersions.length) blockers.push("Duplicate baseline migration versions detected.");
 
-// These two conditions require human-verified external evidence; code cannot infer them.
-if (process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED !== "YES") {
-  blockers.push("No verified, restorable Production backup attestation (set BETHAG_PRODUCTION_BACKUP_VERIFIED=YES only after a restore test).");
+// Physical restore proof is preferred, but the user explicitly declined the paid
+// Supabase "Restore to a New Project" route. If the physical restore remains
+// untested, only a named, timestamped, evidence-linked written risk acceptance
+// may satisfy this gate. This does not claim a physical restore succeeded.
+const physicalBackupRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
+const physicalRestoreRiskAcceptedBy = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim();
+const physicalRestoreRiskAcceptedAtUtc = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim();
+const physicalRestoreRiskAcceptanceEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
+const validPhysicalRestoreRiskAcceptance =
+  physicalRestoreRiskAcceptedBy.length > 0 &&
+  /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(physicalRestoreRiskAcceptedAtUtc) &&
+  physicalRestoreRiskAcceptanceEvidence.length > 0;
+if (!physicalBackupRestoreVerified && !validPhysicalRestoreRiskAcceptance) {
+  blockers.push("Physical backup restore is untested and no named, timestamped, evidence-linked written risk acceptance is recorded.");
 }
 if (process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED !== "YES") {
   blockers.push("Live object-by-object ACL/ownership/default-privilege parity has not been attested.");
@@ -58,6 +69,12 @@ const report = {
   captured_production_migrations: ledger.count,
   baseline_migrations: baselineVersions,
   production_modified: false,
+  physical_backup_restore_verified: physicalBackupRestoreVerified,
+  physical_restore_risk_acceptance: validPhysicalRestoreRiskAcceptance ? {
+    accepted_by: physicalRestoreRiskAcceptedBy,
+    accepted_at_utc: physicalRestoreRiskAcceptedAtUtc,
+    evidence_reference: physicalRestoreRiskAcceptanceEvidence,
+  } : null,
   ready_for_production_cutover: blockers.length === 0,
   blockers,
 };
