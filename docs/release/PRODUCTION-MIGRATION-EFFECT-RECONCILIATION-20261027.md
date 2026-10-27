@@ -80,3 +80,21 @@ The Production postflight assertion script was also exercised read-only on the Q
 ## Go/no-go and stop conditions
 
 **No Production execution is authorized by this document.** Stop before the next migration if the relation inventory, migration head/count, any function owner/security flag, any expected ACL, or any default ACL differs from the captured preflight without a reviewed explanation. After each migration, run the corresponding postcondition; if it fails, stop and retain logs. Do not use an in-place restore as a test or modify supabase_admin defaults. The provider physical backup remains untested; retain it as a documented residual risk requiring explicit written acceptance by the named approver.
+
+## Freeze review addendum — 2026-10-27
+
+The migration SQL and execution order are now pinned for review in `supabase/rebuild/production-migration-cutover-freeze-20261027.json`. Reviewed source commit: `ecc8803c347434a1708d303bc8053367b4dfcc5c`. The eleven migration blob SHAs in that manifest match the files fetched from that commit. This is a review freeze only; it is not Production authorization.
+
+Fresh read-only checks reconfirmed:
+- Live Production ledger is 244 rows with head `20261022202747_harden_close_member_transfer_search_path`.
+- All 244 live version/name pairs exactly match `production-ledger-20261026.json`; no missing or extra row.
+- The explicit `service_role MAINTAIN` revoke list matches the live public relation inventory exactly: 47 relations, no missing/extra names.
+- The live ACL baseline remains authenticated CRUD counts SELECT 47 / INSERT 41 / UPDATE 41 / DELETE 42 with MAINTAIN on 33; service_role has CRUD and structural privileges on all 47 and MAINTAIN on all 47; anon has no current-table privileges.
+- Catalog inventory covered 171 public/private routines. Exactly four currently have PUBLIC EXECUTE: the two closure-check helpers and the two intended trigger routines. Migration 4's impact is therefore understood; after the sequence only the two trigger routines should remain PUBLIC-executable.
+- The private implementation checks `auth.uid()`, workspace/module authorization, transfer status/scope, outstanding installments/allocations/carryovers and raises exceptions before any closure when checks fail.
+
+### Release-tooling blocker — do not skip
+
+The QA rehearsal showed that Supabase `apply_migration` calls create environment-specific migration version IDs rather than preserving the canonical filename version. The current postflight requires the eleven canonical version/name pairs and a ledger head of `20261027110000`. Therefore the Production sequence must not be run through that API as-is. Before cutover, rehearse a repository-based deployment method that preserves the canonical version IDs and works with the repository's incomplete set of historical migration files. If that cannot be proven on an isolated environment, stop and resolve the local-source/remote-ledger alignment first. Do not normalize history by deleting rows, changing old versions, or inserting the five clean-baseline records.
+
+No Production DDL or migration-ledger write was performed during this review. The remaining no-go gates are the deployment-method rehearsal, APP-01–APP-15 end-to-end evidence, and either a verified isolated physical-backup restore or named written acceptance of the documented residual risk, plus formal cutover approval.
