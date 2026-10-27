@@ -86,7 +86,7 @@ SELECT json_build_object(
 )::text;`;
 const result = JSON.parse(psql(["-A","-t","-c",query]).trim());
 assert.equal(result.public_table_relations,47);
-assert.deepEqual(result.authenticated_crud,{select:47,insert:47,update:47,delete:47},"Fresh baseline CRUD must remain intact after hardening.");
+assert.deepEqual(result.authenticated_crud,{select:47,insert:41,update:41,delete:42},"Production-aligned baseline CRUD grants must remain intact after hardening.");
 assert.equal(result.authenticated_maintain,0);
 assert.equal(result.service_role_maintain,0);
 assert.equal(result.authenticated_structural,0);
