@@ -83,7 +83,7 @@ const finalLedger = JSON.parse(await psql(["-At","-c",
 assert.equal(finalLedger.length,255);
 assert.deepEqual(finalLedger.slice(0,244),snapshot.migrations,"Historical ledger pairs changed.");
 const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261027.json","utf8"));
-assert.deepEqual(finalLedger.slice(244),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4})));
+assert.deepEqual(finalLedger.slice(244),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4)})));
 console.log(JSON.stringify({
  status:"PASS",
  test:"end-to-end canonical cutover runner rehearsal",
