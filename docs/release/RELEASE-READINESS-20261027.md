@@ -68,10 +68,10 @@ Before any Production execution, rehearse the exact ordered set against an isola
 
 ## 4. Application validation and CI evidence
 
-- GitHub Actions run [40474026685](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40474026685) for commit `051200613585d46660b931ef1abadcded4a282b3` completed successfully.
-- The recorded checks include application build and PostgreSQL 17 clean-bootstrap / migration validation.
-- These checks are repository/clean-bootstrap evidence. They do **not** prove end-to-end sign-in, role-specific authorization, resident portal behavior, accounting workflows, subentro closure, open-accounting rejection, rollback atomicity, or browser-level application acceptance against an isolated restored Production copy.
-- Repository search did not find a dedicated Playwright/Vitest end-to-end suite covering those acceptance paths. Do not report these smoke tests as passed until test logs and outputs are attached.
+- GitHub Actions run [40483684300](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40483684300) for commit `90f67908ed26d0f97f90e1d056224724f0620d08` completed successfully: both the build job and the PostgreSQL 17 job passed.
+- The CI build ran migration-history reconciliation, security parity checks, clean-bootstrap tests, and the application build. The PostgreSQL 17 job applied the baseline plus the complete ten-migration incremental sequence in an isolated database and verified that `authenticated`/`service_role` have no `MAINTAIN`, authenticated has no structural table privileges, the intended current-table CRUD grants remain unchanged, the close RPC is `SECURITY INVOKER`, and only the two intended trigger functions remain PUBLIC-executable.
+- Database-level transfer closure tests also passed: anonymous and unauthorized workspace callers are rejected without mutation; an authorized workspace admin closes the transfer; the outgoing owner is archived; the incoming owner remains active; an unpaid installment blocks closure; test fixtures roll back.
+- These are database/CI tests, not browser-level end-to-end acceptance against an isolated restored Production copy. No dedicated Playwright/Vitest end-to-end suite covering the full UI paths was found. Sign-in UI, role navigation, resident portal visibility, and accounting UI workflows still need isolated application smoke tests.
 
 Required isolated smoke-test matrix:
 - Sign-in and workspace membership for administrator, collaborator, resident, and council roles where supported.
