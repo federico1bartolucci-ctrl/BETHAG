@@ -63,3 +63,20 @@ The order below follows the canonical migration identities after the observed Pr
 - Do not roll back by deleting migration-ledger rows or replaying baseline migrations. For a failed transactional migration, capture the error and verify transaction rollback. For a successfully committed but incorrect security change, use a reviewed forward-fix migration and re-test on the isolated target first.
 - Do not run an in-place Production restore as a test, mutate `supabase_admin` defaults, or create a paid restore project to clear this gate.
 - This matrix does not authorize Production changes; all release gates above remain controlling.
+
+
+## Decision and live-baseline addendum — 2026-10-27
+
+The confirmed scheduled Supabase physical backup is accepted as evidence that a provider-managed backup exists. Do not create or pay for a separate restore project solely to clear this gate. No restore test is claimed; recoverability remains a documented residual risk rather than an automatic paid prerequisite. The original backup gate above is superseded on this point only. All security, migration-history, application-test and explicit-approval gates remain in force.
+
+### Fresh read-only Production observations
+
+- Public table/partition relations: 47.
+- Effective MAINTAIN grants: anon 0, authenticated 33, service_role 47.
+- public.close_condominium_member_transfer(uuid): SECURITY DEFINER; explicit EXECUTE ACL includes postgres, authenticated and service_role.
+- Public-schema default ACL catalog contains MAINTAIN entries associated with postgres and supabase_admin. Do not change supabase_admin defaults. Before applying the default-privilege migration, inspect each ACL entry's grantee and scope and ensure only the intended app-role defaults are changed.
+- Production migration ledger remains at head 20261022202747_harden_close_member_transfer_search_path; no migration was applied during these checks.
+
+### Execution boundary
+
+This matrix remains preparation-only. The nine incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
