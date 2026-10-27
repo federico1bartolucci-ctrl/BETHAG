@@ -114,3 +114,10 @@ No approval is recorded by this document. The release approver must complete and
 ### QA helper ACL remediation — 2026-10-27
 
 The earlier function ACL migration identity had already been recorded in QA before the source SQL was corrected. A new idempotent migration, `20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql`, was added and applied to all four non-Production environments. Live read-only checks confirmed the public and private closure-check helpers now have `PUBLIC EXECUTE = false` and `authenticated/service_role EXECUTE = true`. The two intentional trigger exceptions remain PUBLIC-executable. Current QA ledger counts and heads are shown above; the original historical ledger rows were preserved. Production has not received this migration.
+
+
+## Live migration effect comparison — 2026-10-27
+
+The source-hash-backed effect comparison is documented in `docs/release/PRODUCTION-MIGRATION-EFFECT-RECONCILIATION-20261027.md` and `supabase/rebuild/production-migration-effect-observations-20261027.json`. A material mismatch was found: the public close-transfer wrapper has EXECUTE for `service_role`, but the private schema/function path does not. QA also lacks EXECUTE for `service_role` on the private implementation, even where migration `20261023000733` is present in the ledger. A new forward-only correction `20261027110000_repair_service_role_transfer_invoker_path.sql` has been added rather than editing or replaying an already-recorded migration.
+
+The candidate release sequence now contains eleven incremental migrations after Production head `20261022202747`. Read-only fail-closed preflight/postflight SQL is available at `supabase/rebuild/production-cutover-preflight-20261027.sql` and `supabase/rebuild/production-cutover-postflight-20261027.sql`. Neither has been run as a Production release action; Production remains unchanged. All application smoke tests, ledger-diff verification, and named cutover approval remain outstanding.
