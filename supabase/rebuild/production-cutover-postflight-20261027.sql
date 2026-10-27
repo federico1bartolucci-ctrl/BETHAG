@@ -12,7 +12,7 @@ DECLARE
   public_routines text[];
   default_maintain integer;
   anon_defaults integer;
-  auth_structural_defaults integer;
+  public_defaults integer;
   auth_defaults text[];
   service_defaults text[];
   ledger_count integer;
@@ -66,6 +66,14 @@ BEGIN
     AND d.defaclobjtype='r' AND pg_get_userbyid(a.grantee)='anon';
   IF anon_defaults <> 0 THEN RAISE EXCEPTION 'FAIL: postgres-owned global/public table defaults still grant anon (% entries)', anon_defaults; END IF;
 
+  SELECT count(*)::integer INTO public_defaults
+  FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole
+  LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace
+  CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+  WHERE r.rolname='postgres' AND (n.nspname='public' OR d.defaclnamespace IS NULL)
+    AND d.defaclobjtype='r' AND a.grantee=0;
+  IF public_defaults <> 0 THEN RAISE EXCEPTION 'FAIL: PUBLIC has postgres-owned global/public table defaults (% entries)', public_defaults; END IF;
+
   SELECT array_agg(DISTINCT a.privilege_type ORDER BY a.privilege_type) INTO auth_defaults
   FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole
   JOIN pg_namespace n ON n.oid=d.defaclnamespace
@@ -111,6 +119,19 @@ BEGIN
      OR NOT has_function_privilege('authenticated','public.close_condominium_member_transfer(uuid)','EXECUTE')
      OR NOT has_function_privilege('service_role','public.close_condominium_member_transfer(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: authenticated/service_role transfer invocation path is incomplete';
+  END IF;
+
+  IF (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'SELECT')) <> 47
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'INSERT')) <> 41
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'UPDATE')) <> 41
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'DELETE')) <> 42 THEN
+    RAISE EXCEPTION 'FAIL: authenticated current-table CRUD counts changed from captured Production baseline';
+  END IF;
+  IF (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'SELECT')) <> 47
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'INSERT')) <> 47
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'UPDATE')) <> 47
+     OR (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'DELETE')) <> 47 THEN
+    RAISE EXCEPTION 'FAIL: service_role current-table CRUD counts changed from captured Production baseline';
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
