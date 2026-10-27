@@ -24,7 +24,7 @@ Please do not restore over or otherwise modify the live Production project.
 
 A separate local logical dump restore has been tested and key row counts matched (6 condominiums, 65 units, 20 members, 11 member transfers). That test is useful supplemental evidence, but it does not establish that the provider-managed physical backup is restorable, and it does not prove full owner/default-ACL parity for a physical restore.
 
-The cutover is blocked until this provider-specific question is resolved. No Production schema, data, ACL, or migration-ledger changes are authorized as part of this request.
+The self-service technical question is resolved by the current official documentation: there is no documented no-cost customer path to restore a managed physical backup into an isolated target or download it for local restoration. This does not prove the selected backup was physically restored. The remaining decision is risk acceptance: a named release approver must explicitly decide whether the untested physical restore is an acceptable residual risk or a release blocker. No Production schema, data, ACL, or migration-ledger changes are authorized as part of this request.
 
 ## Evidence to request / record
 
@@ -37,4 +37,4 @@ The cutover is blocked until this provider-specific question is resolved. No Pro
 
 ## Decision rule
 
-If Supabase cannot offer a zero-cost provider restore or equivalent acceptable evidence, keep the physical-restore release gate **BLOCKED**. Do not reinterpret the logical dump restore as proof, create a paid project, or perform an in-place Production restore to clear the gate.
+Do not reinterpret the logical dump restore as proof of a physical restore, create a paid project, or perform an in-place Production restore. Record the physical restore as **NOT TESTED**. The release approver must explicitly accept this residual risk in writing or require provider-supported evidence; until that decision is recorded, do not treat this item as technically verified.
