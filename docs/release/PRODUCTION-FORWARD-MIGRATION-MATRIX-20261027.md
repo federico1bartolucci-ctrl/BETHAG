@@ -120,3 +120,18 @@ These differences are evidence of ledger divergence, not permission to rewrite h
 - However, all three QA projects still report four routines with effective `PUBLIC EXECUTE`: the two closure-check helpers plus the two named trigger functions. The updated canonical migration expects only the two trigger functions to remain PUBLIC-executable. Therefore the helper-function ACL correction is **not yet demonstrated on existing QA catalogs**; it must be rehearsed on an isolated target using the exact canonical migration and followed by a function ACL/application smoke-test. Do not treat passing CI as evidence that this live-QA difference is resolved.
 - Production's nine canonical incremental migration identities remain pending after the captured Production head. The QA ledgers are historically divergent; no ledger rows have been rewritten, no migrations were marked applied by guess, and Production has not been changed.
 
+
+
+## Superseding live effect reconciliation — 2026-10-27
+
+The detailed effect-by-effect review is now maintained in [PRODUCTION-MIGRATION-EFFECT-RECONCILIATION-20261027.md](PRODUCTION-MIGRATION-EFFECT-RECONCILIATION-20261027.md), with machine-readable observations at `supabase/rebuild/production-migration-effect-observations-20261027.json`. That record supersedes the original ten-step matrix where it differs.
+
+The live comparison discovered a further defect: although `20261023000733_use_invoker_for_close_transfer_rpc.sql` grants `service_role` access in its current source, the live catalog shows that role lacks private-schema `USAGE` and private implementation `EXECUTE` in Production; the private function EXECUTE is also absent in all queried QA environments. The migration is already recorded in some QA ledgers, so it must not be edited/replayed to fix history. A new idempotent forward migration was added: `20261027110000_repair_service_role_transfer_invoker_path.sql`.
+
+The release candidate now has **eleven incremental migrations** after Production head `20261022202747`. Candidate order is ascending version: the original ten entries in the table above, followed by `20261027110000_repair_service_role_transfer_invoker_path.sql`. Expected Production ledger count after all eleven are approved and applied is 255 (244 historical rows preserved + 11 new rows). Do not insert baseline rows, delete or rename historical ledger rows, or apply anything to Production yet.
+
+New fail-closed SQL controls:
+- Preflight: `supabase/rebuild/production-cutover-preflight-20261027.sql` — asserts the captured relation set, ledger head/count, current privilege baseline and function allowlist; read-only.
+- Postflight: `supabase/rebuild/production-cutover-postflight-20261027.sql` — asserts least-privilege table/default ACLs, function invocation path, exact new ledger entries and expected ledger count; read-only.
+
+These controls have been authored but have **not** been run against Production as a rehearsal. First run them against the isolated restore/QA rehearsal target with target-specific expected ledger values adjusted under review; then run the Production preflight only immediately before a separately approved window. Production remains unchanged. The physical-backup restore risk remains documented and requires named written acceptance if provider proof is not obtained.
