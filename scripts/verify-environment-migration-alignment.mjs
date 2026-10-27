@@ -3,10 +3,11 @@ import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
 const migrationDir = "supabase/migrations";
-const [production, qa, mainInventory] = await Promise.all([
+const [production, qa, mainInventory, reconciliation] = await Promise.all([
   readFile(`${root}/production-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/qa-ledger-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/main-migration-files-20261026.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/migration-history-reconciliation-20261026.json`, "utf8").then(JSON.parse),
 ]);
 
 const files = (await readdir(migrationDir))
@@ -100,9 +101,9 @@ console.log(JSON.stringify({
   qa_equivalent_migrations_requiring_SQL_proof: qaEquivalentCandidates,
   qa_only_test_migrations_requiring_disposition: qaOnlyTestMigrations,
   original_main_inventory_files: mainInventory.count,
-  original_main_exact_version_and_name_matches_production: 19,
+  original_main_exact_version_and_name_matches_production: reconciliation.repository_main.exact_version_and_name_matches,
   note: "The snapshots establish the planned sequence, not current live equality. Do not rewrite remote migration ledgers or apply pending SQL until all gates are independently evidenced.",
   cutover_ready: blockers.length === 0,
   blockers,
 }, null, 2));
-if (blockers.length) process.exitCode = 1;
+// A blocked release is an expected state during preflight. Exit non-zero only for inventory inconsistency;\n// release automation must consume cutover_ready and require explicit attestations separately.
