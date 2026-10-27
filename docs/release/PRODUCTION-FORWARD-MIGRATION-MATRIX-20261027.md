@@ -80,3 +80,15 @@ The confirmed scheduled Supabase physical backup is accepted as evidence that a 
 ### Execution boundary
 
 This matrix remains preparation-only. The nine incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
+
+
+## Function-ACL review corrections — 2026-10-27
+
+A direct comparison of the current Production function definitions/ACLs with canonical migration effects identified two least-privilege corrections in the branch (not applied to Production):
+
+1. `20261022233440_align_public_function_execute.sql`: the closure-check helpers `private.check_condominium_member_transfer_closure(uuid)` and `public.check_condominium_member_transfer_closure(uuid)` previously restored `EXECUTE TO PUBLIC`. Their implementation requires `auth.uid()` and validates workspace authorization, so anonymous execution is not a supported application path. The migration now grants these helper functions to `authenticated, service_role` instead. The two trigger functions remain as the explicitly named exceptions and are not changed in this correction.
+2. `20261023000733_use_invoker_for_close_transfer_rpc.sql`: the public close-transfer wrapper already retains `EXECUTE` for `service_role`, but the migration previously granted the private schema and implementation function only to `authenticated`. The migration now grants private-schema `USAGE` and implementation `EXECUTE` to both `authenticated` and `service_role`, preserving ACL consistency when the public wrapper becomes `SECURITY INVOKER`. This is a privilege-path correction, not proof that a service-role call with no user JWT should pass the function's `auth.uid()` authorization guard; test both authenticated-user and backend invocation semantics before release.
+
+The exact live relation inventory matches the 47-table list in `20261023000003_revoke_service_role_maintain.sql`: read-only comparison returned no missing expected relations and no extra live table/partition relations. Six Production tables currently lack one or more ordinary CRUD privileges for `authenticated` (audit/carryover/payment tables and `profiles`); this is an existing intentional-looking ACL asymmetry that must not be blindly overwritten by migration 4, which changes defaults for future objects only. Confirm those table-level grants against RLS policies and app call paths before changing any current-table grants.
+
+These corrections were committed on the working branch only. Production was not modified. Re-run migration inventory, SQL syntax/bootstrap checks and the application/function smoke tests against isolated QA after these commits; do not consider the branch release-ready based only on static review.
