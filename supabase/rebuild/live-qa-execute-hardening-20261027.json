@@ -40,7 +40,8 @@
       "ledger_head": {
         "version": "20261027093101",
         "name": "revoke_public_execute_from_transfer_closure_helpers"
-      }
+      },
+      "security_advisor_lints": 0
     },
     {
       "name": "bethag-continuity-qa",
@@ -49,7 +50,8 @@
       "ledger_head": {
         "version": "20261027093117",
         "name": "revoke_public_execute_from_transfer_closure_helpers"
-      }
+      },
+      "security_advisor_lints": 0
     },
     {
       "name": "bethag-member-transfer-qa",
@@ -58,7 +60,8 @@
       "ledger_head": {
         "version": "20261027093126",
         "name": "revoke_public_execute_from_transfer_closure_helpers"
-      }
+      },
+      "security_advisor_lints": 0
     },
     {
       "name": "bethag-migration-reconciliation-qa",
@@ -67,7 +70,8 @@
       "ledger_head": {
         "version": "20261027093119",
         "name": "revoke_public_execute_from_transfer_closure_helpers"
-      }
+      },
+      "security_advisor_lints": 0
     }
   ],
   "qa_post_migration_acl_check": {
@@ -84,7 +88,14 @@
       "service_role": 0
     },
     "close_transfer_rpc_security": "SECURITY INVOKER",
-    "result": "PASS for the specific live function-ACL and table-MAINTAIN checks; not an end-to-end application smoke test"
+    "result": "PASS for the specific live function-ACL and table-MAINTAIN checks; not an end-to-end application smoke test",
+    "security_advisor_lints_by_environment": {
+      "bethag-develop": 0,
+      "bethag-continuity-qa": 0,
+      "bethag-member-transfer-qa": 0,
+      "bethag-migration-reconciliation-qa": 0
+    },
+    "security_advisor_result": "PASS — zero security lints in all four non-Production environments"
   },
   "migration": {
     "canonical_file": "supabase/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
