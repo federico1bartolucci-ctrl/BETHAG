@@ -16,13 +16,13 @@ Read-only follow-up for the continuity QA ledger row:
 
 ## Not established
 
-- The original SQL statements recorded for version `20261027012138` have not been recovered in this session.
-- The current effective ACL result does not prove the historical migration had only the same effects as the canonical migration.
-- No source file is added under the historical timestamp: reconstructing SQL from the migration name would be speculative.
+- The original SQL statements have now been recovered directly from the live continuity QA migration ledger. Exact statement: `REVOKE MAINTAIN ON TABLE public.condominium_legal_cases FROM service_role;`.
+- This is a one-table revocation and is narrower than the canonical migration, which revokes `MAINTAIN` from `service_role` on all 47 named public tables and also revokes its default `MAINTAIN` grant for tables created by `postgres` in schema `public`.
+- The QA-only row is historical evidence of a targeted cleanup, not a replacement for the canonical migration. Keep its ledger identity intact; do not create a canonical source file under the QA timestamp or replay the row.
 
-## Access limitation encountered
+## Retrieval evidence
 
-The connected Supabase `execute_sql` action blocked before execution, including for a harmless `SELECT 1` connectivity probe. Therefore no claim is made that the stored `statements` column was queried or that the original SQL body was retrieved.
+Read-only query against `srkucrdcoswlozifvztr` selected `version`, `name`, and `statements` for version `20261027012138`. The returned row matched the recorded migration name and contained exactly the statement shown above. No write query was issued.
 
 ## Safe next step
 
