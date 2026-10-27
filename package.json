@@ -16,7 +16,8 @@
     "verify:authenticated-maintain-guard": "node scripts/verify-authenticated-maintain-guard.mjs",
     "verify:migration-history": "node scripts/verify-migration-history-reconciliation.mjs",
     "verify:cutover-planner-safety": "node scripts/verify-cutover-planner-safety.mjs",
-    "verify:environment-alignment": "node scripts/verify-environment-migration-alignment.mjs"
+    "verify:environment-alignment": "node scripts/verify-environment-migration-alignment.mjs",
+    "test:browser-smoke": "npm run build && node scripts/test-browser-public-smoke.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.1.1",
@@ -27,6 +28,7 @@
     "@supabase/supabase-js": "2.117.1"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.14"
+    "@electric-sql/pglite": "^0.3.14",
+    "playwright": "1.55.0"
   }
 }
