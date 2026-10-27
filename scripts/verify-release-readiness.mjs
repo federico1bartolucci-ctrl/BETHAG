@@ -43,7 +43,7 @@ const physicalRestoreRiskAcceptedAtUtc = (process.env.BETHAG_PHYSICAL_RESTORE_RI
 const physicalRestoreRiskAcceptanceEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
 const validPhysicalRestoreRiskAcceptance =
   physicalRestoreRiskAcceptedBy.length > 0 &&
-  /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(physicalRestoreRiskAcceptedAtUtc) &&
+  /^\d{4}-\d{2}-\d{2}T.*Z$/.test(physicalRestoreRiskAcceptedAtUtc) &&
   physicalRestoreRiskAcceptanceEvidence.length > 0;
 if (!physicalBackupRestoreVerified && !validPhysicalRestoreRiskAcceptance) {
   blockers.push("Physical backup restore is untested and no named, timestamped, evidence-linked written risk acceptance is recorded.");
