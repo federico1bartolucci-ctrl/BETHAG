@@ -18,12 +18,23 @@
 
 ## Evidence snapshot — 2026-10-27
 
-- Supabase Dashboard shows scheduled physical backups for 2026-10-20 through 2026-10-26; latest shown is 2026-10-26 03:10:58 UTC. Storage API objects are not included in database backups.
-- The local Docker restore was already completed in the existing workflow; previous validation recorded 6 condominiums, 65 units, 20 residents, and 11 member transfers. Do not repeat the restore merely to satisfy this checklist. Attach or preserve the existing command/output logs when available.
-- Production migration ledger currently ends at `20261022202747`. The following repository migrations are not recorded in the current Production ledger and require explicit reconciliation: `20261022210629`, `20261022210630`, `20261022213544`, `20261022233440`, `20261023000001`, `20261023000002`, `20261023000003`, `20261023000004`, `20261023000733`.
-- Read-only Production inspection found 48 relations in schema `public`, all owned by `postgres`. Structural privileges remain on 48 tables for `service_role`; one table has `TRUNCATE`, `REFERENCES`, and `TRIGGER` granted to `authenticated`. Separate catalog inspection also found `MAINTAIN` privileges on existing tables for `authenticated` and `service_role`.
-- GitHub Actions run `40429495150` for commit `a8d47df2953430917f06e0a71907393ab139c156` completed successfully: both `build` and `postgres-bootstrap` passed, including migration reconciliation, Production function-security/ACL parity checks, PostgreSQL 17 bootstrap, and build.
-- No Production migration has been applied as part of this evidence collection. PR #24 remains open/draft; the current release is not approved.
+- Supabase scheduled physical backups are visible for 2026-10-20 through 2026-10-26; latest shown is 2026-10-26 03:10:58 UTC. Storage API objects are excluded from database backups.
+- The local Docker restore was already completed in the existing workflow; previous validation recorded 6 condominiums, 65 units, 20 residents, and 11 member transfers. Do not repeat the restore. Existing command/output evidence should be linked here when available.
+- Live Production migration ledger contains 244 records and ends at `20261022202747_harden_close_member_transfer_search_path`.
+- The clean branch has 15 migration files: five rebuild-baseline files dated 20261017 plus ten incremental migrations. The five baseline files are for clean bootstrap and **must not be pushed to existing Production as ordinary pending migrations**, because the objects already exist there and the live ledger is historical, not the clean-baseline ledger.
+- Nine incremental migrations after the current Production head are not registered in Production and need semantic/order reconciliation before execution:
+  1. `20261022210629_restrict_private_function_public_execute.sql`
+  2. `20261022210630_harden_default_privileges_and_private_execute.sql`
+  3. `20261022213544_restrict_close_member_transfer_execute.sql`
+  4. `20261022233440_align_public_function_execute.sql`
+  5. `20261023000001_revoke_authenticated_maintain.sql`
+  6. `20261023000002_revoke_default_maintain.sql`
+  7. `20261023000003_revoke_service_role_maintain.sql`
+  8. `20261023000004_application_default_table_privileges.sql`
+  9. `20261023000733_use_invoker_for_close_transfer_rpc.sql`
+- Read-only Production inspection found 48 relations in schema `public`, all owned by `postgres`. Structural privileges remain on 48 tables for `service_role`; one table has `TRUNCATE`, `REFERENCES`, and `TRIGGER` granted to `authenticated`. Catalog inspection also found `MAINTAIN` privileges on existing tables for `authenticated` and `service_role`.
+- GitHub Actions run `40430679828` for commit `8d6f05edb4f9b5c7a1ca9ec48b7ac8a94d02f073` completed successfully: `build` and `postgres-bootstrap` both passed. This is CI evidence, not a live Production cutover test.
+- Production has not been modified by this evidence collection. PR #24 remains open/draft. Cutover is blocked until the nine incremental migrations are reviewed against live schema and ACL state, object/default ACL/RLS/function parity is documented, and the release plan is approved.
 
 ## Pre-cutover procedure
 
