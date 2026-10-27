@@ -49,9 +49,16 @@ Each migration's GitHub blob SHA identifies the reviewed repository file at the 
 
 ## QA rehearsal of the new forward correction — 2026-10-27
 
-The new correction was applied only to migration-reconciliation QA (`mxhciszzpqzvsaqcnwhg`) using the exact SQL in `20261027110000_repair_service_role_transfer_invoker_path.sql`. Supabase assigned the QA ledger identity `20261027100507_repair_service_role_transfer_invoker_path`; preserve this environment-specific version and do not rewrite it to the repository version. QA ledger is now 19 rows, head `20261027100507`.
+The new correction was applied only to the four non-Production environments using the exact SQL in `20261027110000_repair_service_role_transfer_invoker_path.sql`. The Supabase migration API assigned environment-specific ledger versions; preserve these rows as observed and do not rewrite them to the repository version:
 
-Post-application read-only checks **passed**: service_role has private-schema USAGE and EXECUTE on the private implementation; authenticated retains EXECUTE; anon remains denied; the public wrapper remains SECURITY INVOKER; service_role can execute the public wrapper and anon cannot. This verifies the permission path, not the business operation itself. Transfer success/denial/rollback tests remain pending. Production was not changed. The other three QA environments have not received this new correction.
+| Environment | Project ref | Ledger rows after correction | Generated version |
+|---|---|---:|---|
+| develop | `wvokvcfglduxmjxlnfeh` | 17 | `20261027101109` |
+| continuity QA | `srkucrdcoswlozifvztr` | 19 | `20261027101123` |
+| member-transfer QA | `gcorwfvnslnehcxmtixn` | 17 | `20261027101130` |
+| migration-reconciliation QA | `mxhciszzpqzvsaqcnwhg` | 19 | `20261027100507` |
+
+Post-application read-only checks **passed in all four**: service_role has private-schema USAGE and EXECUTE on the private implementation; authenticated retains EXECUTE; anon remains denied; the public wrapper remains SECURITY INVOKER; service_role can execute the public wrapper and anon cannot. This verifies the permission path, not the business operation itself. Transfer success/denial/rollback tests remain pending. Production was not changed.
 
 ## Definitive candidate execution order
 
