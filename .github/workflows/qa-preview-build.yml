@@ -60,3 +60,61 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 7
+
+  postgres-bootstrap:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install PostgreSQL client and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          npm install
+
+      - name: Bootstrap baseline on real PostgreSQL 17
+        run: node scripts/test-postgres-bootstrap.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Execute canonical migrations through guarded runner on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-runner.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+
+      - name: Verify incremental hardening catalog and ACL postconditions
+        run: node scripts/test-postgres-incremental-hardening.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Rehearse canonical-ledger transaction on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-ledger-rehearsal.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
