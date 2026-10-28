@@ -18,11 +18,8 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
 DELETE FROM public.workspace_members
 WHERE workspace_id='${workspace}'::uuid
   AND user_id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
-INSERT INTO auth.users(id,aud,role,email)
-VALUES
- ('${deniedUser}','authenticated','authenticated','qa-denied@example.invalid'),
- ('${allowedUser}','authenticated','authenticated','qa-allowed@example.invalid'),
- ('${missingUser}','authenticated','authenticated','qa-missing@example.invalid')
+INSERT INTO auth.users(id)
+VALUES ('${deniedUser}'),('${allowedUser}'),('${missingUser}')
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.profiles(id,full_name,email,role,active)
 VALUES
