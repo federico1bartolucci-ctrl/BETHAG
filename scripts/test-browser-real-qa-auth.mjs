@@ -55,7 +55,9 @@ try {
 
       const navigationChecks = [];
       if (account.role !== "Condomino") {
-        for (const label of ["Documenti", "Scadenze", "Comunicazioni", "Homepage"]) {
+        // Use pages that are available on the QA fixture's Free plan. Paid modules
+        // intentionally open an upgrade prompt and must not be treated as navigation failures.
+        for (const label of ["Registro e sicurezza", "Homepage"]) {
           const navItem = page.locator(".nav-item").filter({ hasText: label }).first();
           await navItem.waitFor({ state: "visible", timeout: 10000 });
           await navItem.click();
