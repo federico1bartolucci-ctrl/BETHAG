@@ -1,6 +1,6 @@
 {
   "artifact": "BETHAG Production migration cutover freeze",
-  "captured_date": "2026-10-27",
+  "captured_date": "2026-10-28",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
   "reviewed_source_commit": "ecc8803c347434a1708d303bc8053367b4dfcc5c",
   "repository": "federico1bartolucci-ctrl/BETHAG",
@@ -146,6 +146,14 @@
       "purpose": "Forward-only fix for service_role private schema USAGE and private function EXECUTE.",
       "postcondition": "service_role schema+function access true; authenticated remains authorized; anon denied; no-JWT call returns AUTH_REQUIRED without side effect.",
       "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 12,
+      "file": "20261028100000_fix_collaborator_module_permission_boolean.sql",
+      "git_blob_sha": "59d26932c17d82ab348162407be6244c5c55e169",
+      "purpose": "Require collaborator module permission values to be boolean true; key presence alone must not grant access.",
+      "postcondition": "A collaborator with {\"condomini\": false} cannot manage condominiums; a collaborator with {\"condomini\": true} can. Admin access remains intact.",
+      "production_status": "PENDING_NOT_APPLIED"
     }
   ],
   "execution_order": [
@@ -155,12 +163,13 @@
     "Apply migration 9; immediately test authenticated success, unauthorized rejection, no-user-JWT rejection, open balances and rollback.",
     "Apply migration 10; verify both closure helpers are not PUBLIC/anon executable.",
     "Apply migration 11; verify service_role path without bypassing auth.uid().",
-    "Run postflight; prove original 244 rows unchanged and total ledger 255 with eleven canonical version/name pairs.",
+    "Apply migration 12; prove collaborator permission values set to false deny module management while true values allow it.",
+    "Run postflight; prove original 244 rows unchanged and total ledger 256 with twelve canonical version/name pairs.",
     "Run APP-01–APP-15 on isolated environment and save evidence.",
     "Obtain written approval naming commit, migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
   "expected_postflight": {
-    "ledger_rows": 255,
+    "ledger_rows": 256,
     "original_244_rows_unchanged": true,
     "new_canonical_rows": [
       {
@@ -206,6 +215,10 @@
       {
         "version": "20261027110000",
         "name": "repair_service_role_transfer_invoker_path"
+      },
+      {
+        "version": "20261028100000",
+        "name": "fix_collaborator_module_permission_boolean"
       }
     ],
     "authenticated": {
@@ -246,9 +259,9 @@
     }
   },
   "critical_execution_constraint": {
-    "observed": "Initial QA apply_migration calls generated environment-specific versions. The repository-based canonical runner has now completed an end-to-end rehearsal on isolated local PostgreSQL 17 using all eleven real SQL files.",
+    "observed": "The guarded local-only canonical runner must rehearse all twelve pending migrations. The latest regression fix adds an explicit boolean-value check for collaborator module permissions.",
     "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete; the residual physical-backup restore risk has been explicitly accepted by the user.",
-    "status": "REHEARSAL_PASSED_PRODUCTION_STILL_NOT_AUTHORIZED"
+    "status": "UPDATED_FOR_REVIEW_REHEARSAL_REQUIRED_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
   "no_go_gates": [
     "Backup restore gate: user explicitly accepted the residual risk on 2026-10-27 after local Docker/PostgreSQL logical-restore verification; provider-backed physical restore was not performed and must not be claimed.",
@@ -258,15 +271,13 @@
   ],
   "safety": "This freezes the reviewed migration SQL blobs and candidate order for review only. No Production DDL or ledger writes were performed; this is not authorization to execute.",
   "rehearsal_evidence": {
-    "status": "PASS",
-    "date": "2026-10-27",
-    "workflow_run": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40492204847",
-    "commit": "7213136b90ec666e621c3703a19296266806a526",
+    "status": "PENDING_REHEARSAL",
+    "date": "2026-10-28",
     "target": "isolated local PostgreSQL 17",
-    "actual_canonical_sql_files_executed": 11,
+    "actual_canonical_sql_files_executed": 12,
     "historical_version_name_pairs_preserved": 244,
-    "canonical_rows_inserted_and_verified": 11,
-    "final_test_ledger_rows": 255,
+    "canonical_rows_expected": 12,
+    "final_test_ledger_rows": 256,
     "production_or_supabase_touched": false
   }
 }
