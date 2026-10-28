@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261027.json"), "utf8"));
 const runner = await readFile(join(root, "scripts/apply-reviewed-production-migrations.mjs"), "utf8");
-assert.equal(manifest.sequence.length, 11, "Frozen cutover must contain exactly eleven incremental migrations.");
+assert.equal(manifest.sequence.length, 12, "Frozen cutover must contain exactly twelve incremental migrations.");
 assert.equal(manifest.live_ledger.rows, 244);
 assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
 assert.equal(manifest.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION");
