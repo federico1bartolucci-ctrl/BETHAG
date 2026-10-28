@@ -34,7 +34,8 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           test "$VITE_SUPABASE_ENABLE" = "true" || { echo "QA environment must set VITE_SUPABASE_ENABLE=true"; exit 1; }
-          test "$VITE_SUPABASE_URL" = "https://srkucrdcoswlozifvztr.supabase.co" || { echo "QA URL missing or not the approved QA project"; exit 1; }
+          normalized_url="${VITE_SUPABASE_URL%/}"
+          test "$normalized_url" = "https://srkucrdcoswlozifvztr.supabase.co" || { echo "QA URL missing or not the approved QA project"; exit 1; }
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key is missing"; exit 1; }
 
       - name: Install dependencies
