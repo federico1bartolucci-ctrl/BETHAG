@@ -129,7 +129,7 @@ assert.deepEqual(result.default_table_acl, {
   authenticated:["DELETE","INSERT","SELECT","UPDATE"],
   service_role:["DELETE","INSERT","REFERENCES","SELECT","TRIGGER","TRUNCATE","UPDATE"]
 },"Default ACLs must match the canonical application roles: no PUBLIC/anon defaults, ordinary CRUD for authenticated, backend structural grants for service_role.");
-assert.deepEqual(result.public_relation_owners,{postgres:47},"All application relations in this canonical baseline must have the expected postgres owner.");
+assert.deepEqual(result.public_relation_owners,{postgres:48},"All application relations in this canonical baseline must have the expected postgres owner.");
 assert.equal(result.anon_direct_table_privileges,0,"anon must have no direct data or truncate privileges on public tables.");
 assert.deepEqual(result.private_schema_usage,{authenticated:true,service_role:true,anon:false});
 assert.deepEqual(result.close_rpc,{security_definer:false,public_execute:false,anon_execute:false,authenticated_execute:true,service_role_execute:true});
