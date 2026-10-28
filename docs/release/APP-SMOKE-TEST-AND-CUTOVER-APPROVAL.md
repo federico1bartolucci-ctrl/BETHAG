@@ -78,3 +78,12 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 - Final decision: **NO-GO until test evidence and written approval are recorded.**
 
 A green build, QA ACL result, or local logical-dump restore does not by itself authorize Production cutover.
+
+## QA evidence update — 2026-10-28
+
+- Latest verified CI run: [40616310237](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40616310237), commit `224b43e62c468d92b99650bcc5baf92a5c996697`. Both `build` and `postgres-bootstrap` jobs completed successfully. This includes migration-history reconciliation, Production function-security/ACL parity checks, fresh PostgreSQL 17 bootstrap, all 12 reviewed incremental migrations after the five-file baseline, guarded ledger rehearsal, build, and isolated public-interface browser smoke.
+- QA Security Advisor for `srkucrdcoswlozifvztr`: `lints: []` after enabling leaked-password protection in the QA Auth settings. This result applies only to QA; it does not clear Production findings.
+- QA role fixture integrity rechecked: exactly three active workspace memberships, one each for `admin`, `collaborator`, and `resident`; all three profile IDs match their membership user IDs. The resident portal fixture is active and consistently linked to the resident profile, condominium-member row, active test condominium, and unit.
+- The resident/collaborator `public.get_my_workspace_access()` lookup returned the expected workspace and role-specific permissions in QA checks. The administrator membership and role were independently verified in the fixture. These are database-level checks, not a substitute for signing in through the browser as each account.
+- The three fixture emails use `example.com` and have not completed a real sign-in. Real authenticated browser tests APP-01–APP-15 therefore remain NOT RUN unless separately evidenced. Do not mark role-based browser acceptance as passed from mocked auth or SQL fixture checks alone.
+- Production was not modified. No Production migration was applied. Cutover remains NO-GO pending remaining application evidence and written approval.
