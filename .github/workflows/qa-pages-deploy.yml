@@ -39,7 +39,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Validate QA-only Supabase configuration
         env:
@@ -53,7 +52,7 @@ jobs:
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key is missing"; exit 1; }
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build QA site
         env:
