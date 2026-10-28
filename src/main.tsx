@@ -19203,7 +19203,7 @@ class BethagAppErrorBoundary extends React.Component<
   static getDerivedStateFromError(error: unknown) {
     return {
       hasError: true,
-      message: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? (error.stack || error.message) : String(error),
     };
   }
 
