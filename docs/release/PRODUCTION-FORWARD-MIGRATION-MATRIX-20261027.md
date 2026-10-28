@@ -86,7 +86,7 @@ The confirmed scheduled Supabase physical backup is accepted as evidence that a 
 
 ### Execution boundary
 
-This matrix remains preparation-only. The eleven incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
+This matrix remains preparation-only. The twelve incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
 
 
 ## Function-ACL review corrections — 2026-10-27
@@ -128,7 +128,7 @@ The detailed effect-by-effect review is now maintained in [PRODUCTION-MIGRATION-
 
 The live comparison discovered a further defect: although `20261023000733_use_invoker_for_close_transfer_rpc.sql` grants `service_role` access in its current source, the live catalog shows that role lacks private-schema `USAGE` and private implementation `EXECUTE` in Production; the private function EXECUTE is also absent in all queried QA environments. The migration is already recorded in some QA ledgers, so it must not be edited/replayed to fix history. A new idempotent forward migration was added: `20261027110000_repair_service_role_transfer_invoker_path.sql`.
 
-The release candidate now has **eleven incremental migrations** after Production head `20261022202747`. Candidate order is ascending version: the original ten entries in the table above, followed by `20261027110000_repair_service_role_transfer_invoker_path.sql`. Expected Production ledger count after all eleven are approved and applied is 255 (244 historical rows preserved + 11 new rows). Do not insert baseline rows, delete or rename historical ledger rows, or apply anything to Production yet.
+The release candidate now has **twelve incremental migrations** after Production head `20261022202747`. Candidate order is ascending version: the original ten entries, followed by `20261027110000_repair_service_role_transfer_invoker_path.sql` and `20261028100000_fix_collaborator_module_permission_boolean.sql`. Expected Production ledger count after all twelve are approved and applied is 256 (244 historical rows preserved + 12 new rows). Do not insert baseline rows, delete or rename historical ledger rows, or apply anything to Production yet.
 
 New fail-closed SQL controls:
 - Preflight: `supabase/rebuild/production-cutover-preflight-20261027.sql` — asserts the captured relation set, ledger head/count, current privilege baseline and function allowlist; read-only.
