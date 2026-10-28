@@ -18,6 +18,12 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
 DELETE FROM public.workspace_members
 WHERE workspace_id='${workspace}'::uuid
   AND user_id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
+INSERT INTO public.profiles(id,full_name,email,role,active)
+VALUES
+ ('${deniedUser}','QA denied collaborator','qa-denied@example.invalid','collaborator',true),
+ ('${allowedUser}','QA allowed collaborator','qa-allowed@example.invalid','collaborator',true),
+ ('${missingUser}','QA missing permission','qa-missing@example.invalid','collaborator',true)
+ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role,active=true;
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES
  ('${workspace}','${deniedUser}','collaborator',true,'{"condomini":false}'::jsonb),
@@ -62,6 +68,7 @@ assert.equal(leftovers, 1, "Test condominiums must roll back; only the isolated 
 psql(`
 DELETE FROM public.workspace_members WHERE workspace_id='${workspace}'::uuid;
 DELETE FROM public.workspaces WHERE id='${workspace}'::uuid;
+DELETE FROM public.profiles WHERE id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
 `);
 console.log(JSON.stringify({
   test: "collaborator condominium module authorization",
