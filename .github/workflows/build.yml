@@ -83,6 +83,15 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
+      - name: Test collaborator module permission enforcement with RLS
+        run: node scripts/test-collaborator-module-permissions.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
       - name: Rehearse DATABASE_URL and canonical ledger transaction on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-ledger-rehearsal.mjs
         env:
