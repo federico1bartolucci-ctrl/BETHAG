@@ -86,7 +86,7 @@ The confirmed scheduled Supabase physical backup is accepted as evidence that a 
 
 ### Execution boundary
 
-This matrix remains preparation-only. The ten incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
+This matrix remains preparation-only. The eleven incremental migrations must be rehearsed and checked against the current live catalog. In particular, confirm the exact 47-relation list for service_role revocation and prove that the default-ACL migration removes app-role MAINTAIN without touching platform-managed defaults. Do not infer that migration files being present means they have been applied. Production remains unchanged.
 
 
 ## Function-ACL review corrections — 2026-10-27
