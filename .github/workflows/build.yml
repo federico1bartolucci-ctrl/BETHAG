@@ -32,6 +32,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Chromium for browser smoke tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run isolated public-login browser smoke test
+        run: node scripts/test-browser-public-smoke.mjs
+
   postgres-bootstrap:
     runs-on: ubuntu-latest
     services:
@@ -62,4 +68,32 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
+
+      - name: Execute all 11 real canonical migrations through the guarded runner on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-runner.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+
+      - name: Verify incremental hardening catalog and ACL postconditions
+        run: node scripts/test-postgres-incremental-hardening.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Test collaborator module permission enforcement with RLS
+        run: node scripts/test-collaborator-module-permissions.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Rehearse DATABASE_URL and canonical ledger transaction on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-ledger-rehearsal.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
 

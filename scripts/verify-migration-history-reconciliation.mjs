@@ -25,7 +25,17 @@ assert.equal(main.count, main.files.length);
 assert.equal(production.count, 244, "Refresh Production ledger snapshot when live migration history changes.");
 assert.equal(qa.count, 17, "Refresh QA ledger snapshot when live migration history changes.");
 assert.equal(main.count, 203, "Refresh main migration-file inventory when main changes.");
-assert.equal(currentFiles.length, 15, "Clean branch migration inventory changed; refresh reconciliation report.");
+assert.equal(currentFiles.length, 18, "Canonical migration inventory changed.");
+const postSnapshotRemediationFiles = [
+  "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+  "20261027110000_repair_service_role_transfer_invoker_path.sql",
+  "20261028100000_fix_collaborator_module_permission_boolean.sql",
+];
+assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
+// The saved reconciliation report is a historical snapshot based on the 15-file
+// clean branch and 2026-10-26 ledgers. Keep that comparison reproducible while
+// validating both newer remediation migrations separately above.
+const snapshotFiles = currentFiles.filter((file) => !postSnapshotRemediationFiles.includes(file.file));
 for (const list of [production.migrations, qa.migrations]) {
   const versions = list.map((entry) => entry.version);
   assert.ok(versions.every((version) => /^\d{14}$/.test(version)));
@@ -58,17 +68,17 @@ const sameName = classify.filter((item) => item.classification === "same_name_di
 const noSource = classify.filter((item) => item.classification === "no_matching_source_file");
 const productionVersions = new Set(production.migrations.map((item) => item.version));
 const qaVersions = new Set(qa.migrations.map((item) => item.version));
-const productionMatches = currentFiles
+const productionMatches = snapshotFiles
   .filter((file) => productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, productionName: production.migrations.find((item) => item.version === file.version).name }));
-const notInProduction = currentFiles
+const notInProduction = snapshotFiles
   .filter((file) => !productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaMatches = currentFiles
+const qaMatches = snapshotFiles
   .filter((file) => qa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaOnly = qa.migrations.filter((item) => !currentFiles.some((file) => file.version === item.version && file.name === item.name));
-const cleanOnly = currentFiles
+const qaOnly = qa.migrations.filter((item) => !snapshotFiles.some((file) => file.version === item.version && file.name === item.name));
+const cleanOnly = snapshotFiles
   .filter((file) => !qa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
 
@@ -87,7 +97,7 @@ const calculated = {
   production_to_main: { exact_version_and_name_matches: exact, same_name_but_different_version: sameName, no_matching_source_file: noSource },
   clean_baseline_branch: {
     branch: "rebuild/bethag-clean-aligned-20261022",
-    migration_files: currentFiles.length,
+    migration_files: snapshotFiles.length,
     production_version_matches: productionMatches,
     files_not_registered_in_production: notInProduction,
     qa_exact_version_and_name_matches: qaMatches,
@@ -102,7 +112,16 @@ const calculated = {
     reason: "The production ledger's 243 historical rows do not have matching individual source files in the clean baseline branch; the clean branch replaces history with a 5-file baseline plus incremental migrations. Migration tracking must not be repaired until a verified restore point and catalog/ACL sign-off exist.",
   },
 };
-assert.deepEqual(savedReport, calculated, "The reconciliation report is stale or does not match the captured ledgers and repository inventories.");
+const { live_security_status_captured_at_utc, live_security_status, qa_alias_sql_review, ...historicalInventory } = savedReport;
+assert.deepEqual(historicalInventory, calculated, "The historical reconciliation inventory is stale or does not match the captured ledgers and repository inventories.");
+assert.equal(qa_alias_sql_review?.rows?.length, 6, "QA alias disposition must cover all six non-canonical ledger rows.");
+assert.match(qa_alias_sql_review?.status ?? "", /RECONCILIATION COMPLETE/);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.authenticated, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.service_role, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.anon, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.authenticated, 0);
+assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.service_role, 0);
+assert.ok(qa_alias_sql_review.rows.every((row) => typeof row.disposition === "string" && row.disposition.length > 10), "Every QA alias/test row needs an explicit disposition.");
 
 console.log(JSON.stringify({
   migration_history_reconciliation: "PASS — inventory and mapping artifact are internally consistent",
@@ -110,8 +129,9 @@ console.log(JSON.stringify({
   qa_ledger_rows: qa.count,
   main_migration_files: main.count,
   clean_branch_migration_files: currentFiles.length,
+  post_snapshot_remediation_migrations: currentFiles.filter((file) => postSnapshotRemediationFiles.includes(file.file)).map((file) => file.file),
   production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
   clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
   clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
-  production_tracking_cutover: "BLOCKED — verified restore point and semantic catalog/ACL sign-off required",
+  production_tracking_cutover: "BLOCKED — verified restore point OR named written physical-restore risk acceptance, semantic catalog/ACL sign-off, and approved cutover required",
 }, null, 2));

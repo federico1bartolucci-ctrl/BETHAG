@@ -1,0 +1,1352 @@
+{
+  "captured_date_utc": "2026-10-27",
+  "source": "Live Supabase migration ledgers read through the Supabase connector; read-only capture",
+  "production_unchanged": true,
+  "canonical_branch_inventory": [
+    {
+      "version": "20261017000001",
+      "name": "bethag_baseline_schema"
+    },
+    {
+      "version": "20261017000002",
+      "name": "bethag_baseline_indexes_views"
+    },
+    {
+      "version": "20261017000003",
+      "name": "bethag_baseline_functions"
+    },
+    {
+      "version": "20261017000004",
+      "name": "bethag_baseline_security"
+    },
+    {
+      "version": "20261017000005",
+      "name": "bethag_baseline_grants"
+    },
+    {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
+    },
+    {
+      "version": "20261022210629",
+      "name": "restrict_private_function_public_execute"
+    },
+    {
+      "version": "20261022210630",
+      "name": "harden_default_privileges_and_private_execute"
+    },
+    {
+      "version": "20261022213544",
+      "name": "restrict_close_member_transfer_execute"
+    },
+    {
+      "version": "20261022233440",
+      "name": "align_public_function_execute"
+    },
+    {
+      "version": "20261023000001",
+      "name": "revoke_authenticated_maintain"
+    },
+    {
+      "version": "20261023000002",
+      "name": "revoke_default_maintain"
+    },
+    {
+      "version": "20261023000003",
+      "name": "revoke_service_role_maintain"
+    },
+    {
+      "version": "20261023000004",
+      "name": "application_default_table_privileges"
+    },
+    {
+      "version": "20261023000733",
+      "name": "use_invoker_for_close_transfer_rpc"
+    },
+    {
+      "version": "20261027100000",
+      "name": "revoke_public_execute_from_transfer_closure_helpers"
+    }
+  ],
+  "environments": [
+    {
+      "name": "production",
+      "project_ref": "tctcgptrsmvgajqjgnev",
+      "ledger_count": 244,
+      "ledger_head": {
+        "version": "20261022202747",
+        "name": "harden_close_member_transfer_search_path"
+      },
+      "canonical_entries_exact": 1,
+      "canonical_versions_with_name_mismatch": [],
+      "canonical_versions_missing": [
+        {
+          "version": "20261022210629",
+          "name": "restrict_private_function_public_execute"
+        },
+        {
+          "version": "20261022210630",
+          "name": "harden_default_privileges_and_private_execute"
+        },
+        {
+          "version": "20261022213544",
+          "name": "restrict_close_member_transfer_execute"
+        },
+        {
+          "version": "20261022233440",
+          "name": "align_public_function_execute"
+        },
+        {
+          "version": "20261023000001",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261023000002",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261023000003",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261023000004",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261023000733",
+          "name": "use_invoker_for_close_transfer_rpc"
+        },
+        {
+          "version": "20261027100000",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ],
+      "noncanonical_live_entries": [
+        {
+          "version": "20260928021707",
+          "name": "initial_bethag_backend"
+        },
+        {
+          "version": "20260928021808",
+          "name": "tighten_portal_rls"
+        },
+        {
+          "version": "20260928021935",
+          "name": "sync_auth_profiles"
+        },
+        {
+          "version": "20260928021944",
+          "name": "privatize_rls_functions"
+        },
+        {
+          "version": "20260928022046",
+          "name": "add_legacy_ids_for_migration"
+        },
+        {
+          "version": "20260928022126",
+          "name": "tighten_condominium_member_visibility"
+        },
+        {
+          "version": "20260928022526",
+          "name": "add_condominium_member_legacy_unique_key"
+        },
+        {
+          "version": "20260928022821",
+          "name": "add_workspace_legacy_unique_constraints"
+        },
+        {
+          "version": "20260928024823",
+          "name": "bootstrap_first_workspace_admin"
+        },
+        {
+          "version": "20260928024931",
+          "name": "harden_first_admin_rpc"
+        },
+        {
+          "version": "20260928040840",
+          "name": "allow_portal_residents_read_condominiums"
+        },
+        {
+          "version": "20260928041428",
+          "name": "persist_collaborator_legacy_ids"
+        },
+        {
+          "version": "20260928042328",
+          "name": "enforce_collaborator_module_permissions"
+        },
+        {
+          "version": "20260928042333",
+          "name": "refine_collaborator_permission_scope"
+        },
+        {
+          "version": "20260928043406",
+          "name": "harden_authenticated_request_policies"
+        },
+        {
+          "version": "20260928043415",
+          "name": "finish_authenticated_rls_hardening"
+        },
+        {
+          "version": "20260928043547",
+          "name": "restrict_data_api_table_grants"
+        },
+        {
+          "version": "20260928043604",
+          "name": "optimize_rls_auth_checks"
+        },
+        {
+          "version": "20260928043608",
+          "name": "add_foreign_key_indexes"
+        },
+        {
+          "version": "20260928043618",
+          "name": "optimize_portal_access_auth_check"
+        },
+        {
+          "version": "20260928043823",
+          "name": "restrict_private_security_definer_functions"
+        },
+        {
+          "version": "20260928043835",
+          "name": "remove_anon_private_function_execute"
+        },
+        {
+          "version": "20260928045050",
+          "name": "enforce_portal_content_permissions"
+        },
+        {
+          "version": "20260928045907",
+          "name": "expose_first_admin_bootstrap"
+        },
+        {
+          "version": "20260928072127",
+          "name": "add_save_condominium_rpc"
+        },
+        {
+          "version": "20260928072401",
+          "name": "lock_down_save_condominium_rpc"
+        },
+        {
+          "version": "20260928152153",
+          "name": "tighten_public_bootstrap_rpc_execute"
+        },
+        {
+          "version": "20260928153242",
+          "name": "add_condomino_registration_workflow"
+        },
+        {
+          "version": "20260928153246",
+          "name": "add_portal_access_unique_identity"
+        },
+        {
+          "version": "20260928153301",
+          "name": "fix_portal_registration_upsert"
+        },
+        {
+          "version": "20260928153422",
+          "name": "normalize_portal_access_upsert_key"
+        },
+        {
+          "version": "20260928153526",
+          "name": "route_unmatched_registration_single_workspace"
+        },
+        {
+          "version": "20260928154019",
+          "name": "handle_registration_email_mismatch"
+        },
+        {
+          "version": "20260928154553",
+          "name": "add_condominium_units_and_member_unit_link_v2"
+        },
+        {
+          "version": "20260928154629",
+          "name": "enforce_owner_tenant_portal_permissions"
+        },
+        {
+          "version": "20260928154639",
+          "name": "privatize_portal_member_permissions_trigger"
+        },
+        {
+          "version": "20260928164443",
+          "name": "security_hardening_and_fk_indexes"
+        },
+        {
+          "version": "20260928164852",
+          "name": "complete_condominium_delete_rpc_and_rls_optimization"
+        },
+        {
+          "version": "20260928164904",
+          "name": "restrict_delete_condominium_rpc_execute"
+        },
+        {
+          "version": "20260928164912",
+          "name": "optimize_portal_access_email_rls"
+        },
+        {
+          "version": "20260928222840",
+          "name": "grant_is_workspace_manager_execute_to_authenticated"
+        },
+        {
+          "version": "20260929065325",
+          "name": "add_allocation_table_reference"
+        },
+        {
+          "version": "20260929065406",
+          "name": "add_expense_allocation_rpc"
+        },
+        {
+          "version": "20260929065622",
+          "name": "add_installments_from_allocations_rpc"
+        },
+        {
+          "version": "20260929070002",
+          "name": "add_condominium_budget"
+        },
+        {
+          "version": "20260929070815",
+          "name": "protect_closed_accounting_periods"
+        },
+        {
+          "version": "20260929070857",
+          "name": "fix_closed_accounting_trigger_return"
+        },
+        {
+          "version": "20260929071057",
+          "name": "add_condominium_register_and_suppliers"
+        },
+        {
+          "version": "20260929071403",
+          "name": "link_register_items_to_suppliers"
+        },
+        {
+          "version": "20260929071513",
+          "name": "add_condominium_works"
+        },
+        {
+          "version": "20260929071728",
+          "name": "add_work_documents_link"
+        },
+        {
+          "version": "20260929072149",
+          "name": "fix_work_document_legacy_id"
+        },
+        {
+          "version": "20260929072255",
+          "name": "link_works_special_funds"
+        },
+        {
+          "version": "20260929072411",
+          "name": "add_work_progress_sal"
+        },
+        {
+          "version": "20260929072831",
+          "name": "link_work_progress_accounting"
+        },
+        {
+          "version": "20260929073258",
+          "name": "add_work_event_history"
+        },
+        {
+          "version": "20260929074236",
+          "name": "link_work_progress_accounting"
+        },
+        {
+          "version": "20260929075201",
+          "name": "add_condominium_audit_log"
+        },
+        {
+          "version": "20260929075312",
+          "name": "protect_work_economic_values"
+        },
+        {
+          "version": "20260929080009",
+          "name": "lock_trigger_function_execution"
+        },
+        {
+          "version": "20260929080144",
+          "name": "index_condominium_module_foreign_keys"
+        },
+        {
+          "version": "20260929081735",
+          "name": "add_condominium_insurance_policies"
+        },
+        {
+          "version": "20260929093700",
+          "name": "align_condominium_manager_authorization"
+        },
+        {
+          "version": "20260929093800",
+          "name": "optimize_insurance_fk_and_portal_rls"
+        },
+        {
+          "version": "20260929093830",
+          "name": "optimize_portal_access_jwt_rls_initplan"
+        },
+        {
+          "version": "20260929094656",
+          "name": "align_condominium_insurance_schema_20260929"
+        },
+        {
+          "version": "20260929144737",
+          "name": "complete_condominium_units"
+        },
+        {
+          "version": "20260929150453",
+          "name": "remove_member_millesimi"
+        },
+        {
+          "version": "20260929171530",
+          "name": "optimize_insurance_rls_auth_calls"
+        },
+        {
+          "version": "20260929205021",
+          "name": "add_expense_allocation_engine"
+        },
+        {
+          "version": "20260929205053",
+          "name": "harden_expense_allocation_rpc"
+        },
+        {
+          "version": "20260929205121",
+          "name": "fix_expense_allocation_rpc_unit_alias"
+        },
+        {
+          "version": "20260929205155",
+          "name": "harden_installment_generation"
+        },
+        {
+          "version": "20260929225302",
+          "name": "tighten_unit_permissions_and_workspace_condo_read"
+        },
+        {
+          "version": "20260929225423",
+          "name": "align_insurance_permissions_with_condomini_module"
+        },
+        {
+          "version": "20260929230350",
+          "name": "harden_millesimal_allocation_integrity"
+        },
+        {
+          "version": "20260929230443",
+          "name": "sync_allocation_payment_status"
+        },
+        {
+          "version": "20260929230529",
+          "name": "harden_accounting_delete_and_allocation_scope"
+        },
+        {
+          "version": "20260929232302",
+          "name": "harden_millesimal_trigger_function_execute"
+        },
+        {
+          "version": "20260929232531",
+          "name": "validate_unit_pertinence_relationship"
+        },
+        {
+          "version": "20260929233045",
+          "name": "remove_duplicate_unit_relationship_trigger"
+        },
+        {
+          "version": "20260929233222",
+          "name": "harden_unit_delete_integrity"
+        },
+        {
+          "version": "20260930080253",
+          "name": "optional_account_security"
+        },
+        {
+          "version": "20260930080309",
+          "name": "ensure_millesimal_rows_for_units"
+        },
+        {
+          "version": "20260930080312",
+          "name": "harden_millesimal_trigger_function_execute"
+        },
+        {
+          "version": "20260930080317",
+          "name": "validate_unit_pertinence_relationship"
+        },
+        {
+          "version": "20260930080320",
+          "name": "remove_duplicate_unit_relationship_trigger"
+        },
+        {
+          "version": "20260930080323",
+          "name": "harden_unit_delete_integrity"
+        },
+        {
+          "version": "20260930080325",
+          "name": "allow_authorized_unit_delete"
+        },
+        {
+          "version": "20260930080328",
+          "name": "optimize_insurance_rls_auth_calls"
+        },
+        {
+          "version": "20260930080331",
+          "name": "clean_deleted_member_owner_references"
+        },
+        {
+          "version": "20260930080838",
+          "name": "complete_condominium_hard_delete"
+        },
+        {
+          "version": "20260930081022",
+          "name": "allow_authorized_collaborator_save_condominium"
+        },
+        {
+          "version": "20260930100924",
+          "name": "installment_percentages"
+        },
+        {
+          "version": "20260930100945",
+          "name": "allocation_rules_and_consumption"
+        },
+        {
+          "version": "20260930103120",
+          "name": "20260930250000_manual_ai_allocation_intake"
+        },
+        {
+          "version": "20260930103124",
+          "name": "20260930260000_harden_allocation_intake_validation"
+        },
+        {
+          "version": "20260930103128",
+          "name": "20260930270000_validate_allocation_table_scope"
+        },
+        {
+          "version": "20260930103254",
+          "name": "20260930240000_installment_percentages"
+        },
+        {
+          "version": "20260930103432",
+          "name": "20260930120000_fix_building_scope_allocation_rpc"
+        },
+        {
+          "version": "20260930103819",
+          "name": "20260930130000_harden_installment_payment"
+        },
+        {
+          "version": "20260930104150",
+          "name": "20260930150000_harden_fiscal_carryover_member_scope"
+        },
+        {
+          "version": "20260930104416",
+          "name": "20260930160000_fiscal_carryover_compensation"
+        },
+        {
+          "version": "20260930104518",
+          "name": "20260930161000_harden_carryover_compensation_semantics"
+        },
+        {
+          "version": "20260930114719",
+          "name": "guard_unit_scope_changes"
+        },
+        {
+          "version": "20260930114808",
+          "name": "revoke_trigger_security_definer_execute"
+        },
+        {
+          "version": "20260930114835",
+          "name": "revoke_trigger_security_definer_execute_explicit_roles"
+        },
+        {
+          "version": "20260930115502",
+          "name": "repair_unit_owner_references"
+        },
+        {
+          "version": "20260930115644",
+          "name": "validate_unit_owner_member_refs"
+        },
+        {
+          "version": "20260930125903",
+          "name": "condominium_creation_intakes"
+        },
+        {
+          "version": "20260930142230",
+          "name": "add_bethag_document_storage"
+        },
+        {
+          "version": "20260930162854",
+          "name": "work_accounting_integrity_indexes"
+        },
+        {
+          "version": "20260930174121",
+          "name": "20260930460000_harden_condominium_member_visibility"
+        },
+        {
+          "version": "20260930175443",
+          "name": "20260930470000_harden_portal_approval_workspace_scope"
+        },
+        {
+          "version": "20260930175759",
+          "name": "20260930480000_scope_condominium_delete_portal_requests"
+        },
+        {
+          "version": "20260930180022",
+          "name": "20260930490000_harden_profile_column_permissions"
+        },
+        {
+          "version": "20260930180302",
+          "name": "20260930500000_harden_condominium_visibility"
+        },
+        {
+          "version": "20260930181023",
+          "name": "harden_unit_workspace_scope"
+        },
+        {
+          "version": "20260930181813",
+          "name": "harden_portal_email_uniqueness_case_insensitive"
+        },
+        {
+          "version": "20260930183113",
+          "name": "fix_portal_registration_case_insensitive_upsert"
+        },
+        {
+          "version": "20260930183408",
+          "name": "harden_condominium_delete_carryover_compensations"
+        },
+        {
+          "version": "20260930185301",
+          "name": "optimize_workspace_manager_rls_auth_check"
+        },
+        {
+          "version": "20260930185307",
+          "name": "restore_workspace_manager_rls_execute"
+        },
+        {
+          "version": "20260930185324",
+          "name": "optimize_private_auth_rls_helpers"
+        },
+        {
+          "version": "20260930190330",
+          "name": "fix_installment_schedule_unified_branch_record_reference"
+        },
+        {
+          "version": "20260930190401",
+          "name": "fix_installment_schedule_fiscal_year_alias_collision"
+        },
+        {
+          "version": "20260930190434",
+          "name": "allow_payment_rpc_installment_sync_guard_v2"
+        },
+        {
+          "version": "20260930190448",
+          "name": "honor_payment_rpc_installment_guard_flag"
+        },
+        {
+          "version": "20260930235538",
+          "name": "harden_public_rpc_security_definer_boundaries"
+        },
+        {
+          "version": "20260930235554",
+          "name": "restore_private_claim_admin_execute"
+        },
+        {
+          "version": "20260930235652",
+          "name": "remove_client_schema_privileges"
+        },
+        {
+          "version": "20261001063435",
+          "name": "final_performance_indexes_communication_recipients"
+        },
+        {
+          "version": "20261001063530",
+          "name": "lock_down_financial_rpc_anon_execute"
+        },
+        {
+          "version": "20261001063537",
+          "name": "remove_public_financial_rpc_execute"
+        },
+        {
+          "version": "20261001063734",
+          "name": "lock_down_condominium_creation_rpc_anon_execute"
+        },
+        {
+          "version": "20261001063901",
+          "name": "lock_down_portal_registration_rpc_anon_execute"
+        },
+        {
+          "version": "20261001063908",
+          "name": "remove_public_portal_registration_rpc_execute"
+        },
+        {
+          "version": "20261001081847",
+          "name": "20261001093000_transfer_current_owner_and_portal_lifecycle"
+        },
+        {
+          "version": "20261001081917",
+          "name": "20261001094000_index_transfer_closed_by"
+        },
+        {
+          "version": "20261001082509",
+          "name": "20261001095000_add_unit_cadastral_transformations"
+        },
+        {
+          "version": "20261001082537",
+          "name": "20261001095700_index_unit_transformation_audit_fks"
+        },
+        {
+          "version": "20261001082636",
+          "name": "20261001100500_unit_lifecycle_current_owner_guard"
+        },
+        {
+          "version": "20261001082731",
+          "name": "20261001102100_unit_transformation_snapshots"
+        },
+        {
+          "version": "20261001082758",
+          "name": "20261001102500_unit_transformation_preview"
+        },
+        {
+          "version": "20261001083704",
+          "name": "harden_current_owner_installment_generation"
+        },
+        {
+          "version": "20261001090203",
+          "name": "validate_unit_transformation_preview_inputs"
+        },
+        {
+          "version": "20261001090447",
+          "name": "guard_confirmed_unit_transformation_integrity"
+        },
+        {
+          "version": "20261001090613",
+          "name": "lock_confirmed_unit_transformation_audit"
+        },
+        {
+          "version": "20261001090904",
+          "name": "require_trusted_unit_transformation_confirmation"
+        },
+        {
+          "version": "20261001091036",
+          "name": "require_confirmed_genealogy_for_unit_lifecycle"
+        },
+        {
+          "version": "20261001091151",
+          "name": "validate_confirmed_unit_transformation_genealogy"
+        },
+        {
+          "version": "20261001091322",
+          "name": "require_active_units_for_transformation_confirmation"
+        },
+        {
+          "version": "20261001091431",
+          "name": "require_resolved_reviews_for_confirmed_unit_transformations"
+        },
+        {
+          "version": "20261002045022",
+          "name": "fix_member_portal_workspace_transfer"
+        },
+        {
+          "version": "20261002045106",
+          "name": "prevent_portal_reactivation_for_transferred_members"
+        },
+        {
+          "version": "20261002045430",
+          "name": "fix_member_transfer_workspace_members_lookup"
+        },
+        {
+          "version": "20261002050057",
+          "name": "secure_member_transfer_public_wrappers"
+        },
+        {
+          "version": "20261002050232",
+          "name": "assign_missing_condominium_member_legacy_id"
+        },
+        {
+          "version": "20261002050900",
+          "name": "fix_member_transfer_archived_column_check"
+        },
+        {
+          "version": "20261002073557",
+          "name": "tighten_resident_portal_identity_binding"
+        },
+        {
+          "version": "20261002074251",
+          "name": "fix_member_transfer_status_constraint"
+        },
+        {
+          "version": "20261002074541",
+          "name": "prevent_duplicate_confirmed_member_transfers"
+        },
+        {
+          "version": "20261002110808",
+          "name": "validate_transfer_outgoing_owner"
+        },
+        {
+          "version": "20261002113421",
+          "name": "revoke_excess_public_table_privileges"
+        },
+        {
+          "version": "20261002113618",
+          "name": "secure_default_function_and_sequence_privileges"
+        },
+        {
+          "version": "20261002113631",
+          "name": "revoke_default_sequence_update_privilege"
+        },
+        {
+          "version": "20261003021711",
+          "name": "fix_deleted_member_owner_references_workspace_scope"
+        },
+        {
+          "version": "20261003022110",
+          "name": "block_unverified_transfer_identity"
+        },
+        {
+          "version": "20261003022133",
+          "name": "gate_portal_registration_verified_identity"
+        },
+        {
+          "version": "20261003030800",
+          "name": "20261003040000_restrict_audit_log_to_workspace_admins"
+        },
+        {
+          "version": "20261003043520",
+          "name": "preserve_transfer_extraordinary_allocations"
+        },
+        {
+          "version": "20261003043706",
+          "name": "expose_captured_transfer_snapshot"
+        },
+        {
+          "version": "20261003045727",
+          "name": "expand_member_transfer_preview_installments"
+        },
+        {
+          "version": "20261003045905",
+          "name": "preserve_future_installments_transfer_snapshot"
+        },
+        {
+          "version": "20261003050209",
+          "name": "include_unit_unassigned_installments_in_transfer"
+        },
+        {
+          "version": "20261003050443",
+          "name": "include_unit_unassigned_carryovers_in_transfer"
+        },
+        {
+          "version": "20261003050722",
+          "name": "block_transfer_close_with_unresolved_unit_carryovers"
+        },
+        {
+          "version": "20261005131809",
+          "name": "harden_portal_approval_workspace_scope_reconciled"
+        },
+        {
+          "version": "20261005131827",
+          "name": "reconcile_portal_member_link_and_transfer_archive_state"
+        },
+        {
+          "version": "20261005131836",
+          "name": "reconcile_complete_member_transfer_chain"
+        },
+        {
+          "version": "20261005131842",
+          "name": "reconcile_member_transfer_preview_chain"
+        },
+        {
+          "version": "20261005131847",
+          "name": "reconcile_portal_rpc_grants"
+        },
+        {
+          "version": "20261005131856",
+          "name": "reconcile_member_transfer_rpc_grants"
+        },
+        {
+          "version": "20261005131902",
+          "name": "reconcile_portal_approval_rpc_security"
+        },
+        {
+          "version": "20261005131907",
+          "name": "finalize_public_transfer_and_approval_invoker_wrappers"
+        },
+        {
+          "version": "20261005131913",
+          "name": "harden_private_portal_registration_execute"
+        },
+        {
+          "version": "20261005131922",
+          "name": "reconcile_private_portal_rpc_implementations"
+        },
+        {
+          "version": "20261005131932",
+          "name": "revoke_direct_private_portal_rpc_execute"
+        },
+        {
+          "version": "20261005131938",
+          "name": "reconcile_resident_archive_visibility"
+        },
+        {
+          "version": "20261005131943",
+          "name": "harden_resident_condominium_archive_access"
+        },
+        {
+          "version": "20261005131948",
+          "name": "revoke_direct_portal_trigger_execute"
+        },
+        {
+          "version": "20261005131958",
+          "name": "reconcile_member_portal_sync_trigger"
+        },
+        {
+          "version": "20261005132005",
+          "name": "reconcile_member_portal_integrity_triggers"
+        },
+        {
+          "version": "20261005132012",
+          "name": "reconcile_member_transfer_constraints"
+        },
+        {
+          "version": "20261005132016",
+          "name": "reconcile_member_transfer_portal_indexes"
+        },
+        {
+          "version": "20261005132021",
+          "name": "reconcile_member_indexes"
+        },
+        {
+          "version": "20261005132026",
+          "name": "reconcile_core_lookup_indexes"
+        },
+        {
+          "version": "20261005132053",
+          "name": "finalize_public_portal_transfer_wrappers"
+        },
+        {
+          "version": "20261005132058",
+          "name": "reconcile_core_rls_policies"
+        },
+        {
+          "version": "20261005132103",
+          "name": "reconcile_member_transfer_rls"
+        },
+        {
+          "version": "20261005132108",
+          "name": "reconcile_accounting_rls_policies"
+        },
+        {
+          "version": "20261005132116",
+          "name": "reconcile_accounting_table_grants"
+        },
+        {
+          "version": "20261005132158",
+          "name": "harden_accounting_rpc_grants_v2"
+        },
+        {
+          "version": "20261005132208",
+          "name": "harden_core_public_rpc_grants"
+        },
+        {
+          "version": "20261005132213",
+          "name": "reconcile_budget_funds_millesimal_rls"
+        },
+        {
+          "version": "20261005132235",
+          "name": "restore_operational_work_register_and_transform_tables"
+        },
+        {
+          "version": "20261005132241",
+          "name": "reconcile_operational_table_grants"
+        },
+        {
+          "version": "20261005132246",
+          "name": "reconcile_operational_trigger_chain"
+        },
+        {
+          "version": "20261005132314",
+          "name": "finalize_operational_constraint_parity_v2"
+        },
+        {
+          "version": "20261005132321",
+          "name": "reconcile_private_registration_grant"
+        },
+        {
+          "version": "20261005132340",
+          "name": "reconcile_remaining_core_columns_v2"
+        },
+        {
+          "version": "20261005132407",
+          "name": "reconcile_public_table_privileges"
+        },
+        {
+          "version": "20261005132415",
+          "name": "restore_missing_private_function_parity"
+        },
+        {
+          "version": "20261005132420",
+          "name": "restore_missing_public_function_parity"
+        },
+        {
+          "version": "20261005132430",
+          "name": "reconcile_public_function_acl"
+        },
+        {
+          "version": "20261005132441",
+          "name": "remove_obsolete_function_overload"
+        },
+        {
+          "version": "20261005132458",
+          "name": "reconcile_fund_availability_view_v2"
+        },
+        {
+          "version": "20261005132509",
+          "name": "reconcile_public_function_security_parity"
+        },
+        {
+          "version": "20261005132514",
+          "name": "reconcile_public_relation_acl"
+        },
+        {
+          "version": "20261005132518",
+          "name": "remove_obsolete_schedule_overload_final"
+        },
+        {
+          "version": "20261005132524",
+          "name": "harden_guard_installment_parent_delete_grant"
+        },
+        {
+          "version": "20261005132529",
+          "name": "reconcile_public_indexes"
+        },
+        {
+          "version": "20261005132555",
+          "name": "normalize_remaining_rls_policy_definitions"
+        },
+        {
+          "version": "20261005132605",
+          "name": "reconcile_public_triggers"
+        },
+        {
+          "version": "20261005134740",
+          "name": "reconcile_login_workspace_access_rpc"
+        },
+        {
+          "version": "20261005135425",
+          "name": "expose_login_workspace_access_rpc"
+        },
+        {
+          "version": "20261005164605",
+          "name": "harden_login_workspace_access_invoker"
+        },
+        {
+          "version": "20261005165522",
+          "name": "harden_trigger_function_execute_grants"
+        },
+        {
+          "version": "20261005165658",
+          "name": "revoke_direct_trigger_function_execute"
+        },
+        {
+          "version": "20261005171105",
+          "name": "restore_private_rls_helper_execute_grants"
+        },
+        {
+          "version": "20261005185327",
+          "name": "20261005205500_restore_save_condominium_rpc_execute"
+        },
+        {
+          "version": "20261005190825",
+          "name": "20261005191000_restore_member_transfer_private_execute_grant"
+        },
+        {
+          "version": "20261005190940",
+          "name": "20261005192000_fix_member_transfer_workspace_members_update"
+        },
+        {
+          "version": "20261006011620",
+          "name": "restore_closing_member_history"
+        },
+        {
+          "version": "20261006011629",
+          "name": "restore_member_transfer_outgoing_history_state"
+        },
+        {
+          "version": "20261006011953",
+          "name": "preserve_closing_member_history_trigger"
+        },
+        {
+          "version": "20261006020802",
+          "name": "20261006040000_repair_deleted_member_owner_references"
+        },
+        {
+          "version": "20261006143811",
+          "name": "add_transfer_closure_preflight"
+        },
+        {
+          "version": "20261006144220",
+          "name": "fix_transfer_closure_rpc_permissions"
+        },
+        {
+          "version": "20261006181654",
+          "name": "support_multiple_incoming_coowners_subentro"
+        },
+        {
+          "version": "20261006181713",
+          "name": "preserve_legacy_single_incoming_subentro_payload"
+        },
+        {
+          "version": "20261007062039",
+          "name": "fix_zero_ownership_transfer_owner_state"
+        },
+        {
+          "version": "20261007072310",
+          "name": "harden_trigger_function_security_for_launch"
+        }
+      ]
+    },
+    {
+      "name": "develop",
+      "project_ref": "wvokvcfglduxmjxlnfeh",
+      "ledger_count": 16,
+      "ledger_head": {
+        "version": "20261027093101",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      },
+      "canonical_entries_exact": 15,
+      "canonical_versions_with_name_mismatch": [],
+      "canonical_versions_missing": [
+        {
+          "version": "20261027100000",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ],
+      "noncanonical_live_entries": [
+        {
+          "version": "20261027093101",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ]
+    },
+    {
+      "name": "continuity-qa",
+      "project_ref": "srkucrdcoswlozifvztr",
+      "ledger_count": 18,
+      "ledger_head": {
+        "version": "20261027093117",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      },
+      "canonical_entries_exact": 8,
+      "canonical_versions_with_name_mismatch": [],
+      "canonical_versions_missing": [
+        {
+          "version": "20261022213544",
+          "name": "restrict_close_member_transfer_execute"
+        },
+        {
+          "version": "20261022233440",
+          "name": "align_public_function_execute"
+        },
+        {
+          "version": "20261023000001",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261023000002",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261023000003",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261023000004",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261023000733",
+          "name": "use_invoker_for_close_transfer_rpc"
+        },
+        {
+          "version": "20261027100000",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ],
+      "noncanonical_live_entries": [
+        {
+          "version": "20261022213540",
+          "name": "restrict_close_member_transfer_execute"
+        },
+        {
+          "version": "20261027012022",
+          "name": "restrict_close_member_transfer_execute_canonical"
+        },
+        {
+          "version": "20261027012025",
+          "name": "align_public_function_execute"
+        },
+        {
+          "version": "20261027012027",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261027012029",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261027012032",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261027012034",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261027012037",
+          "name": "use_invoker_for_close_transfer_rpc"
+        },
+        {
+          "version": "20261027012138",
+          "name": "revoke_remaining_service_role_maintain_legal_cases"
+        },
+        {
+          "version": "20261027093117",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ]
+    },
+    {
+      "name": "member-transfer-qa",
+      "project_ref": "gcorwfvnslnehcxmtixn",
+      "ledger_count": 16,
+      "ledger_head": {
+        "version": "20261027093126",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      },
+      "canonical_entries_exact": 8,
+      "canonical_versions_with_name_mismatch": [],
+      "canonical_versions_missing": [
+        {
+          "version": "20261022213544",
+          "name": "restrict_close_member_transfer_execute"
+        },
+        {
+          "version": "20261022233440",
+          "name": "align_public_function_execute"
+        },
+        {
+          "version": "20261023000001",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261023000002",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261023000003",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261023000004",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261023000733",
+          "name": "use_invoker_for_close_transfer_rpc"
+        },
+        {
+          "version": "20261027100000",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ],
+      "noncanonical_live_entries": [
+        {
+          "version": "20261022213542",
+          "name": "restrict_close_member_transfer_execute"
+        },
+        {
+          "version": "20261027012112",
+          "name": "align_public_function_execute"
+        },
+        {
+          "version": "20261027012114",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261027012116",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261027012119",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261027012121",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261027012123",
+          "name": "use_invoker_for_close_transfer_rpc"
+        },
+        {
+          "version": "20261027093126",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ]
+    },
+    {
+      "name": "migration-reconciliation-qa",
+      "project_ref": "mxhciszzpqzvsaqcnwhg",
+      "ledger_count": 18,
+      "ledger_head": {
+        "version": "20261027093119",
+        "name": "revoke_public_execute_from_transfer_closure_helpers"
+      },
+      "canonical_entries_exact": 11,
+      "canonical_versions_with_name_mismatch": [],
+      "canonical_versions_missing": [
+        {
+          "version": "20261023000001",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261023000002",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261023000003",
+          "name": "revoke_service_role_maintain"
+        },
+        {
+          "version": "20261023000004",
+          "name": "application_default_table_privileges"
+        },
+        {
+          "version": "20261027100000",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ],
+      "noncanonical_live_entries": [
+        {
+          "version": "20261022230901",
+          "name": "revoke_authenticated_maintain"
+        },
+        {
+          "version": "20261022230908",
+          "name": "revoke_default_maintain"
+        },
+        {
+          "version": "20261023010544",
+          "name": "qa_test_revoke_authenticated_maintain_20261023"
+        },
+        {
+          "version": "20261023010548",
+          "name": "qa_test_revoke_default_maintain_20261023"
+        },
+        {
+          "version": "20261023011431",
+          "name": "revoke_service_role_maintain_qa_test"
+        },
+        {
+          "version": "20261023011435",
+          "name": "define_application_default_table_privileges_qa"
+        },
+        {
+          "version": "20261027093119",
+          "name": "revoke_public_execute_from_transfer_closure_helpers"
+        }
+      ]
+    }
+  ]
+}
