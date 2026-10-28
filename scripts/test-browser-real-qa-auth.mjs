@@ -51,7 +51,8 @@ try {
         await page.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 20000 });
       }
 
-      results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors"] });
+      assert.deepEqual(pageErrors, [], `Uncaught browser errors after refresh for role ${account.role}: ${pageErrors.join(" | ")}`);
+      results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors before and after refresh"] });
     } catch (error) {
       let visibleText = "";
       try { visibleText = (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 1200); } catch {}
