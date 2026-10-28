@@ -7,7 +7,7 @@
 
 ## Current live migration ledger reconciliation — 2026-10-27
 
-A fresh read-only capture is stored in `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`. Production still has 244 historical ledger entries and head `20261022202747_harden_close_member_transfer_search_path`; the eleven canonical incremental migrations remain absent from its ledger. No Production migration row was edited and no migration was applied.
+A fresh read-only capture is stored in `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`. Production still has 244 historical ledger entries and head `20261022202747_harden_close_member_transfer_search_path`; the twelve canonical incremental migrations (including `20261028100000_fix_collaborator_module_permission_boolean.sql`) remain absent from its ledger. No Production migration row was edited and no migration was applied.
 
 The four non-Production ledgers currently have 16 entries in develop, 18 in continuity QA, 16 in member-transfer QA, and 18 in migration-reconciliation QA. Their helper-ACL correction is recorded under environment-specific versions (`20261027093101`, `20261027093117`, `20261027093126`, `20261027093119`) rather than the canonical repository version `20261027100000`. Continuity/member-transfer/reconciliation QA also have several earlier security migrations under environment-specific version IDs. This is recorded as a **source/effect reconciliation task**, not permission to rewrite ledger history or to mark Production migrations applied without verifying their effects.
 
@@ -51,7 +51,7 @@ Production's 244-row ledger remains historical evidence. The repository's earlie
 
 ## 3. Canonical incremental migration sequence for isolated rehearsal
 
-These eleven migrations are not recorded in Production after its current head. They are a proposed sequence to rehearse and validate, **not authorization to apply them**:
+These twelve migrations are not recorded in Production after its current head. They are a proposed sequence to rehearse and validate, **not authorization to apply them**:
 
 1. `20261022210629_restrict_private_function_public_execute.sql`
 2. `20261022210630_harden_default_privileges_and_private_execute.sql`
@@ -70,7 +70,7 @@ Before any Production execution, rehearse the exact ordered set against an isola
 ## 4. Application validation and CI evidence
 
 - Latest GitHub Actions run [40632527406](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40632527406) for commit `72beb595421fc9e8c7f02f194f67ae6f295717b5` completed successfully: both `build` and `postgres-bootstrap` passed. It verifies repository and isolated PostgreSQL checks, not the full APP-01–APP-15 browser acceptance.
-- The CI build ran migration-history reconciliation, security parity checks, clean-bootstrap tests, and the application build. The PostgreSQL 17 job applied the baseline plus the complete eleven-migration incremental sequence in an isolated database and verified that `authenticated`/`service_role` have no `MAINTAIN`, authenticated has no structural table privileges, the intended current-table CRUD grants remain unchanged, the close RPC is `SECURITY INVOKER`, and only the two intended trigger functions remain PUBLIC-executable.
+- The CI build ran migration-history reconciliation, security parity checks, clean-bootstrap tests, and the application build. The PostgreSQL 17 job applied the baseline plus the complete twelve-migration incremental sequence in an isolated database and verified that `authenticated`/`service_role` have no `MAINTAIN`, authenticated has no structural table privileges, the intended current-table CRUD grants remain unchanged, the close RPC is `SECURITY INVOKER`, and only the two intended trigger functions remain PUBLIC-executable.
 - Database-level transfer closure tests also passed: anonymous and unauthorized workspace callers are rejected without mutation; an authorized workspace admin closes the transfer; the outgoing owner is archived; the incoming owner remains active; an unpaid installment blocks closure; test fixtures roll back.
 - These are database/CI tests, not browser-level end-to-end acceptance against an isolated restored Production copy. No dedicated Playwright/Vitest end-to-end suite covering the full UI paths was found. Sign-in UI, role navigation, resident portal visibility, and accounting UI workflows still need isolated application smoke tests.
 
@@ -121,7 +121,7 @@ The earlier function ACL migration identity had already been recorded in QA befo
 
 The source-hash-backed effect comparison is documented in `docs/release/PRODUCTION-MIGRATION-EFFECT-RECONCILIATION-20261027.md` and `supabase/rebuild/production-migration-effect-observations-20261027.json`. A material mismatch was found: the public close-transfer wrapper has EXECUTE for `service_role`, but the private schema/function path does not. QA also lacks EXECUTE for `service_role` on the private implementation, even where migration `20261023000733` is present in the ledger. A new forward-only correction `20261027110000_repair_service_role_transfer_invoker_path.sql` has been added rather than editing or replaying an already-recorded migration.
 
-The candidate release sequence now contains eleven incremental migrations after Production head `20261022202747`. Read-only fail-closed preflight/postflight SQL is available at `supabase/rebuild/production-cutover-preflight-20261027.sql` and `supabase/rebuild/production-cutover-postflight-20261027.sql`. Neither has been run as a Production release action; Production remains unchanged. All application smoke tests, ledger-diff verification, and named cutover approval remain outstanding.
+The candidate release sequence now contains twelve incremental migrations after Production head `20261022202747`. Read-only fail-closed preflight/postflight SQL is available at `supabase/rebuild/production-cutover-preflight-20261027.sql` and `supabase/rebuild/production-cutover-postflight-20261027.sql`. Neither has been run as a Production release action; Production remains unchanged. All application smoke tests, ledger-diff verification, and named cutover approval remain outstanding.
 
 
 The new service-role invocation-path migration was applied and post-checked on all four non-Production environments. Supabase recorded environment-specific versions: develop `20261027101109`, continuity QA `20261027101123`, member-transfer QA `20261027101130`, and migration-reconciliation QA `20261027100507`. Permission assertions passed in all four (service_role schema USAGE/function EXECUTE; authenticated retained; anon denied; wrapper SECURITY INVOKER). This is not an application transfer test and does not change Production. The complete role-based smoke-test suite remains pending.
