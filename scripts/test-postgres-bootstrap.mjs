@@ -488,3 +488,64 @@ console.log(JSON.stringify({
     "synthetic fixtures rolled back"
   ]
 }, null, 2));
+
+// Regression: a collaborator permission key set to false must not authorize
+// management. Then prove the same collaborator can manage the module when true.
+const collaboratorPermissionBooleanSql = `
+BEGIN;
+SET LOCAL search_path = public, private, auth, extensions;
+INSERT INTO auth.users (id) VALUES ('18181818-1818-4181-8181-181818181818');
+INSERT INTO public.profiles (id, full_name, email, role, active)
+VALUES ('18181818-1818-4181-8181-181818181818', 'CI Permission Boolean Collaborator', 'ci-permission-boolean@example.invalid', 'collaborator', true);
+INSERT INTO public.workspaces (id, name, plan)
+VALUES ('19191919-1919-4191-8191-191919191919', 'CI Permission Boolean Workspace', 'professional');
+INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions)
+VALUES ('19191919-1919-4191-8191-191919191919', '18181818-1818-4181-8181-181818181818', 'collaborator', true, '{"condomini":false,"documenti":true}'::jsonb);
+
+SELECT set_config('request.jwt.claim.sub', '18181818-1818-4181-8181-181818181818', true);
+SET LOCAL ROLE authenticated;
+DO $false_permission$
+DECLARE denied boolean := false;
+BEGIN
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'condomini') IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'FALSE_PERMISSION_VALUE_WAS_TREATED_AS_ALLOWED';
+  END IF;
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'documenti') IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'TRUE_PERMISSION_VALUE_WAS_NOT_ALLOWED';
+  END IF;
+  BEGIN
+    INSERT INTO public.condominiums (workspace_id, name)
+    VALUES ('19191919-1919-4191-8191-191919191919', 'CI must deny false collaborator permission');
+  EXCEPTION WHEN insufficient_privilege THEN
+    denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'RLS_ALLOWED_INSERT_WITH_FALSE_PERMISSION'; END IF;
+END;
+$false_permission$;
+RESET ROLE;
+UPDATE public.workspace_members
+SET permissions='{"condomini":true,"documenti":true}'::jsonb
+WHERE workspace_id='19191919-1919-4191-8191-191919191919'
+  AND user_id='18181818-1818-4181-8181-181818181818';
+SET LOCAL ROLE authenticated;
+DO $true_permission$
+BEGIN
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'condomini') IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'TRUE_PERMISSION_VALUE_WAS_NOT_ALLOWED_AFTER_GRANT';
+  END IF;
+  INSERT INTO public.condominiums (workspace_id, name)
+  VALUES ('19191919-1919-4191-8191-191919191919', 'CI allowed true collaborator permission');
+END;
+$true_permission$;
+ROLLBACK;
+`;
+psql(["-v", "ON_ERROR_STOP=1"], collaboratorPermissionBooleanSql);
+console.log(JSON.stringify({
+  collaborator_permission_boolean_regression: "PASS",
+  assertions: [
+    "collaborator permission value false does not authorize condominium management",
+    "false permission cannot insert a condominium through RLS",
+    "true permission authorizes the intended module",
+    "all synthetic rows rolled back"
+  ]
+}, null, 2));
