@@ -160,8 +160,8 @@ A read-only ACL query found that the two closure-check helper functions were sti
 
 ## Current release evidence and remaining execution gates
 
-- Live read-only migration ledger comparison: `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`. Production remains at 244 ledger entries/head `20261022202747`; ten canonical incremental migrations remain pending. QA ledgers use environment-specific version identities for several equivalent effects; reconcile source/effect before the cutover and never rewrite Production history.
-- Application acceptance checklist: `docs/release/APP-SMOKE-TEST-AND-CUTOVER-APPROVAL.md`. It defines 15 role, accounting, transfer, portal, isolation and rollback checks. They are prepared but not yet evidenced as executed end-to-end.
+- Live read-only migration ledger comparison: `supabase/rebuild/live-migration-ledger-reconciliation-20261027.json`. Production remains at 244 ledger entries/head `20261022202747`; eleven canonical incremental migrations remain pending. QA ledgers use environment-specific version identities for several equivalent effects; reconcile source/effect before the cutover and never rewrite Production history.
+- Application acceptance checklist: `docs/release/APP-SMOKE-TEST-AND-CUTOVER-APPROVAL.md`. It defines 15 role, accounting, transfer, portal, isolation and rollback checks. A narrow real-auth login/landing/session smoke passed for the three configured roles on QA Pages (CI run `40629723826`); the full APP-01–APP-15 acceptance suite remains NOT RUN.
 - Latest CI is required on the exact PR head. Passing build and PostgreSQL 17 bootstrap are necessary but do not substitute for the application smoke tests or named cutover approval.
 - Production remains unchanged. Do not apply any migration until the exact ordered list, live ACL/default-ACL comparison, application results, rollback plan and explicit named approval are recorded. The physical-backup restore remains untested and documented as a residual risk.
 
