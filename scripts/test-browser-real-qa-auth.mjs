@@ -52,7 +52,20 @@ try {
       }
 
       assert.deepEqual(pageErrors, [], `Uncaught browser errors after refresh for role ${account.role}: ${pageErrors.join(" | ")}`);
-      results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors before and after refresh"] });
+
+      const navigationChecks = [];
+      if (account.role !== "Condomino") {
+        for (const label of ["Documenti", "Scadenze", "Comunicazioni", "Homepage"]) {
+          const navItem = page.locator(".nav-item").filter({ hasText: label }).first();
+          await navItem.waitFor({ state: "visible", timeout: 10000 });
+          await navItem.click();
+          await page.locator(".nav-item.active").filter({ hasText: label }).waitFor({ state: "visible", timeout: 10000 });
+          navigationChecks.push(label);
+        }
+        assert.deepEqual(pageErrors, [], `Uncaught browser errors during navigation for role ${account.role}: ${pageErrors.join(" | ")}`);
+      }
+
+      results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors before and after refresh", ...(navigationChecks.length ? [`navigation: ${navigationChecks.join(", ")}`] : [])] });
     } catch (error) {
       let visibleText = "";
       try { visibleText = (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 1200); } catch {}
