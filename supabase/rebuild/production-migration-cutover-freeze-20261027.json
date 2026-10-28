@@ -163,10 +163,10 @@
     "Apply migration 9; immediately test authenticated success, unauthorized rejection, no-user-JWT rejection, open balances and rollback.",
     "Apply migration 10; verify both closure helpers are not PUBLIC/anon executable.",
     "Apply migration 11; verify service_role path without bypassing auth.uid().",
-    "Run postflight; prove original 244 rows unchanged and total ledger 255 with eleven canonical version/name pairs.",
+    "Apply migration 12; prove collaborator permission values set to false deny module management while true values allow it.",
+    "Run postflight; prove original 244 rows unchanged and total ledger 256 with twelve canonical version/name pairs.",
     "Run APP-01–APP-15 on isolated environment and save evidence.",
-    "Obtain written approval naming commit, migration hashes, maintenance window, rollback criteria and backup-risk disposition.",
-    "20261028100000_fix_collaborator_module_permission_boolean.sql"
+    "Obtain written approval naming commit, migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
   "expected_postflight": {
     "ledger_rows": 256,
