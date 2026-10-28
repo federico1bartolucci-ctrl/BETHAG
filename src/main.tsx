@@ -12604,6 +12604,11 @@ function PortalPage({
       member.active &&
       member.email.trim().toLowerCase() === sessionEmail.trim().toLowerCase()
   );
+  const portalPermissions: PortalPermission[] = Array.isArray(currentPortalMember?.permissions)
+    ? currentPortalMember.permissions
+    : typeof currentPortalMember?.permissions === "string"
+      ? (currentPortalMember.permissions as string).split(",").map((permission) => permission.trim()).filter(Boolean) as PortalPermission[]
+      : [];
   const residentCondominiumId = !isAdministrator ? currentPortalMember?.condominiumId : null;
   const visibleDocuments = documents.filter((d: DocumentItem) =>
     d.publication === "Condiviso" &&
@@ -12612,7 +12617,7 @@ function PortalPage({
       (
         residentCondominiumId != null &&
         d.condominiumId === residentCondominiumId &&
-        Boolean(currentPortalMember?.permissions.includes("documenti"))
+        Boolean(portalPermissions.includes("documenti"))
       )
     )
   );
@@ -12624,8 +12629,8 @@ function PortalPage({
         residentCondominiumId != null &&
         a.condominiumId === residentCondominiumId &&
         Boolean(
-          currentPortalMember?.permissions.includes("verbali") ||
-          currentPortalMember?.permissions.includes("assemblee")
+          portalPermissions.includes("verbali") ||
+          portalPermissions.includes("assemblee")
         )
       )
     )
@@ -12637,7 +12642,7 @@ function PortalPage({
       (
         residentCondominiumId != null &&
         communication.condominiumId === residentCondominiumId &&
-        Boolean(currentPortalMember?.permissions.includes("comunicazioni"))
+        Boolean(portalPermissions.includes("comunicazioni"))
       )
     )
   );
