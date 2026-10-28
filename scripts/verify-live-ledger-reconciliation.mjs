@@ -5,7 +5,7 @@ const report = JSON.parse(await readFile("supabase/rebuild/live-migration-ledger
 const files = (await readdir("supabase/migrations")).filter((file) => file.endsWith(".sql")).sort();
 assert.equal(report.production_unchanged, true, "The captured live ledger report must not imply Production was modified.");
 assert.equal(report.canonical_branch_inventory.length, 16, "Expected five baseline files, Production head, and ten incremental migrations.");
-assert.equal(files.length, 17, "Expected the ten original pending migrations plus the newly identified service_role invoker-path correction.");
+assert.equal(files.length, 18, "Expected the ten original pending migrations plus the service_role and collaborator-permission corrections.");
 assert.ok(files.includes("20261027110000_repair_service_role_transfer_invoker_path.sql"), "Missing service_role invoker-path correction.");
 const env = Object.fromEntries(report.environments.map((entry) => [entry.name, entry]));
 assert.equal(env.production.ledger_count, 244);
