@@ -1276,7 +1276,14 @@ function hasFeature(
 }
 
 function hasAddon(subscription: Subscription, addon: AddonId) {
-  return subscription.addons.includes(addon);
+  // I dati del piano possono provenire da profili legacy/API: non assumere
+  // che addons sia sempre un array durante il render di tutti i ruoli.
+  const addons = Array.isArray(subscription?.addons)
+    ? subscription.addons
+    : typeof subscription?.addons === "string"
+      ? subscription.addons.split(",").map((item) => item.trim()).filter(Boolean) as AddonId[]
+      : [];
+  return addons.includes(addon);
 }
 
 function hasEntitlement(subscription: Subscription, required: PlanId, addon?: AddonId) {
