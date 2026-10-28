@@ -88,3 +88,11 @@ A green build, QA ACL result, or local logical-dump restore does not by itself a
 - The resident/collaborator `public.get_my_workspace_access()` lookup returned the expected workspace and role-specific permissions in QA checks. The administrator membership and role were independently verified in the fixture. These are database-level checks, not a substitute for signing in through the browser as each account.
 - The three fixture emails use `example.com` and have not completed a real sign-in. Real authenticated browser tests APP-01–APP-15 therefore remain NOT RUN unless separately evidenced. Do not mark role-based browser acceptance as passed from mocked auth or SQL fixture checks alone.
 - Production was not modified. No Production migration was applied. Cutover remains NO-GO pending remaining application evidence and written approval.
+
+## QA Pages deployment evidence — 2026-10-28
+
+- Temporary public QA preview deployment: [GitHub Actions run 40622567956](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40622567956) — **PASS**, commit `402924875cb6bd2781e5b2d7f9243a383ae8013a`.
+- Matching QA build and isolated Chromium public-interface smoke test: [GitHub Actions run 40622567838](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40622567838) — **PASS**, same commit.
+- Temporary preview URL recorded by the successful Pages deployment: https://federico1bartolucci-ctrl.github.io/BETHAG/
+- The deploy workflow is restricted to `qa/preview-environment-20261028` and validates the exact QA Supabase project ref `srkucrdcoswlozifvztr`. Production was not modified.
+- Scope limitation: the external URL was not independently verified by the web inspection tool, and the Chromium smoke test uses mocked auth. Real authenticated browser tests APP-01–APP-15 remain **NOT RUN**. Public Pages must contain synthetic data only. Production cutover remains **NO-GO** pending test evidence and written approval.
