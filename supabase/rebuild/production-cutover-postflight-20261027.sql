@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE POSTFLIGHT. Run after all eleven approved migrations.
+-- READ-ONLY RELEASE POSTFLIGHT. Run after all twelve approved migrations.
 -- This script performs no schema/data/ledger writes. Compare the full ledger export
 -- with the saved preflight export to prove all original 244 rows remain unchanged.
 DO $postflight$
@@ -135,8 +135,8 @@ BEGIN
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 255 OR ledger_head <> '20261027110000' THEN
-    RAISE EXCEPTION 'FAIL: expected ledger count 255 and head 20261027110000, found count %, head %', ledger_count, ledger_head;
+  IF ledger_count <> 256 OR ledger_head <> '20261028100000' THEN
+    RAISE EXCEPTION 'FAIL: expected ledger count 256 and head 20261028100000, found count %, head %', ledger_count, ledger_head;
   END IF;
   IF (SELECT count(*) FROM supabase_migrations.schema_migrations
       WHERE (version,name) IN (
@@ -150,11 +150,12 @@ BEGIN
         ('20261023000004','application_default_table_privileges'),
         ('20261023000733','use_invoker_for_close_transfer_rpc'),
         ('20261027100000','revoke_public_execute_from_transfer_closure_helpers'),
-        ('20261027110000','repair_service_role_transfer_invoker_path')
-      )) <> 11 THEN
-    RAISE EXCEPTION 'FAIL: the eleven canonical forward migrations are not all recorded under exact version/name pairs';
+        ('20261027110000','repair_service_role_transfer_invoker_path'),
+        ('20261028100000','fix_collaborator_module_permission_boolean')
+      )) <> 12 THEN
+    RAISE EXCEPTION 'FAIL: the twelve canonical forward migrations are not all recorded under exact version/name pairs';
   END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants and eleven canonical migration records verified. Still compare the complete original ledger export and run application smoke tests before approval.';
+  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants and twelve canonical migration records verified. Still compare the complete original ledger export and run application smoke tests before approval.';
 END
 $postflight$;
