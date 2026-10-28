@@ -96,3 +96,9 @@ A green build, QA ACL result, or local logical-dump restore does not by itself a
 - Temporary preview URL recorded by the successful Pages deployment: https://federico1bartolucci-ctrl.github.io/BETHAG/
 - The deploy workflow is restricted to `qa/preview-environment-20261028` and validates the exact QA Supabase project ref `srkucrdcoswlozifvztr`. Production was not modified.
 - Scope limitation: the external URL was not independently verified by the web inspection tool, and the Chromium smoke test uses mocked auth. Real authenticated browser tests APP-01–APP-15 remain **NOT RUN**. Public Pages must contain synthetic data only. Production cutover remains **NO-GO** pending test evidence and written approval.
+
+## Real-auth QA smoke evidence — 2026-10-28 (latest)
+
+- **PASS:** [QA Pages run 40635572113](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40635572113), commit `f2bde88fabe1d451a2b6b59edcb836b1a9d677be`. The real authenticated role smoke step completed successfully with fail-closed secret validation enabled. The script signs in as administrator, collaborator, and resident against the QA preview, checks each role's expected landing page, refresh/session persistence, and uncaught browser errors both before and after refresh. A successful workflow now proves all three required password secrets were present and the script did not skip the test.
+- Matching isolated preview build and mocked public-interface browser smoke: [run 40635572099](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40635572099) — **PASS**, same commit.
+- Scope: this is real-auth smoke evidence for role sign-in, landing, refresh, and browser exceptions only. It does **not** prove full APP-01–APP-15 workflows, workspace isolation across two real accounts, accounting, transfer, email delivery, or document upload. Those acceptance rows remain NOT RUN until their dedicated evidence is recorded. Production was not modified.
