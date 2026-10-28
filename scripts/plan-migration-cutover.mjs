@@ -39,7 +39,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(reconciliation.production.ledger_count, production.count);
 assert.equal(reconciliation.qa.ledger_count, qa.count);
 assert.equal(reconciliation.clean_baseline_branch.migration_files, 15, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
-assert.equal(incrementalFiles.at(-1), "20261027110000_repair_service_role_transfer_invoker_path.sql", "Latest incremental migration must repair the verified service_role invoker execution path.");
+assert.equal(incrementalFiles.at(-1), "20261028100000_fix_collaborator_module_permission_boolean.sql", "Latest incremental migration must enforce boolean collaborator module permissions.");
 
 const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
 const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
