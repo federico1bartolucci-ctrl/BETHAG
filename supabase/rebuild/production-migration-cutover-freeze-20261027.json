@@ -150,9 +150,9 @@
     {
       "order": 12,
       "file": "20261028100000_fix_collaborator_module_permission_boolean.sql",
-      "git_blob_sha": "59d26932c17d82ab348162407be6244c5c55e169",
-      "purpose": "Require collaborator module permission values to be boolean true; key presence alone must not grant access.",
-      "postcondition": "A collaborator with {\"condomini\": false} cannot manage condominiums; a collaborator with {\"condomini\": true} can. Admin access remains intact.",
+      "git_blob_sha": "f2f7e559daa5145ef036e68d5366290798a44b9d",
+      "purpose": "Respect explicit boolean collaborator permissions for both module reads and writes; preserve legacy array permissions.",
+      "postcondition": "A collaborator with a module permission set to false is denied both read and write access; true grants access as appropriate; legacy array permission lists remain supported.",
       "production_status": "PENDING_NOT_APPLIED"
     }
   ],
