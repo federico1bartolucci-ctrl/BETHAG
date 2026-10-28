@@ -56,6 +56,37 @@ SELECT json_build_object(
       AND a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)
       AND a.privilege_type='MAINTAIN'
   ),
+  'default_table_acl', (
+    SELECT json_object_agg(grantee, privileges)
+    FROM (
+      SELECT CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END AS grantee,
+             array_agg(a.privilege_type ORDER BY a.privilege_type) AS privileges
+      FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+      WHERE d.defaclrole='postgres'::regrole AND d.defaclobjtype='r'
+        AND d.defaclnamespace='public'::regnamespace
+        AND (CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END)
+          IN ('PUBLIC','anon','authenticated','service_role')
+      GROUP BY 1
+    ) defaults
+  ),
+  'public_relation_owners', (
+    SELECT json_object_agg(owner_role, relation_count)
+    FROM (
+      SELECT pg_get_userbyid(c.relowner) AS owner_role, count(*)::int AS relation_count
+      FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','f')
+      GROUP BY pg_get_userbyid(c.relowner)
+    ) owners
+  ),
+  'anon_direct_table_privileges', (
+    SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p')
+      AND (has_table_privilege('anon',c.oid,'SELECT')
+        OR has_table_privilege('anon',c.oid,'INSERT')
+        OR has_table_privilege('anon',c.oid,'UPDATE')
+        OR has_table_privilege('anon',c.oid,'DELETE')
+        OR has_table_privilege('anon',c.oid,'TRUNCATE'))
+  ),
   'private_schema_usage', json_build_object('authenticated',has_schema_privilege('authenticated','private','USAGE'),'service_role',has_schema_privilege('service_role','private','USAGE'),'anon',has_schema_privilege('anon','private','USAGE')),
   'close_rpc', (
     SELECT json_build_object(
@@ -94,6 +125,12 @@ assert.equal(result.authenticated_maintain,0);
 assert.equal(result.service_role_maintain,0);
 assert.equal(result.authenticated_structural,0);
 assert.equal(result.default_maintain_grants,0);
+assert.deepEqual(result.default_table_acl, {
+  authenticated:["DELETE","INSERT","SELECT","UPDATE"],
+  service_role:["DELETE","INSERT","REFERENCES","SELECT","TRIGGER","TRUNCATE","UPDATE"]
+},"Default ACLs must match the canonical application roles: no PUBLIC/anon defaults, ordinary CRUD for authenticated, backend structural grants for service_role.");
+assert.deepEqual(result.public_relation_owners,{postgres:48},"All application relations in this canonical baseline must have the expected postgres owner.");
+assert.equal(result.anon_direct_table_privileges,0,"anon must have no direct data or truncate privileges on public tables.");
 assert.deepEqual(result.private_schema_usage,{authenticated:true,service_role:true,anon:false});
 assert.deepEqual(result.close_rpc,{security_definer:false,public_execute:false,anon_execute:false,authenticated_execute:true,service_role_execute:true});
 assert.deepEqual(result.public_execute_targets,[
