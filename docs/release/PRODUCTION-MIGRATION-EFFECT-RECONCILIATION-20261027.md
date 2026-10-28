@@ -21,7 +21,7 @@ This is fresh evidence from the live Production catalog, not a rehearsal. No Pro
 
 The ten canonical incremental migrations originally listed after the Production head were compared with their SQL bodies and the current effective catalog. The review found one further defect: the service-role path for the `SECURITY INVOKER` close-transfer wrapper is not actually complete in Production or QA, despite the intent recorded in `20261023000733_use_invoker_for_close_transfer_rpc.sql`. A new idempotent forward-only correction was added as migration **11**: `20261027110000_repair_service_role_transfer_invoker_path.sql`. Do not edit or replay the already-recorded migration 9 to repair its history.
 
-The new file is an additional candidate release migration, not applied anywhere. Therefore the current release candidate has **11 pending incremental migrations** after the observed Production head, subject to the gates below.
+The new file is an additional candidate release migration, not applied anywhere. Therefore the current release candidate has **12 pending incremental migrations** after the observed Production head, subject to the gates below.
 
 ## Live baseline and decisive differences
 
@@ -78,7 +78,7 @@ The Production postflight assertion script was also exercised read-only on the Q
 3. Apply migration 9 (`SECURITY INVOKER`) and immediately verify both positive and negative permission paths. Do not reopen traffic if the service-role path or user-authorized path fails.
 4. Apply migration 10 (closure-helper PUBLIC EXECUTE correction).
 5. Apply migration 11 (service-role private invocation-path correction).
-6. Run the full postflight SQL, recapture the migration ledger and compare all original 244 rows to the saved preflight snapshot. Expected ledger count after all eleven approved migrations is 255, with exact canonical versions/names for the eleven new rows and no deletion/rewrite of historical rows.
+6. Run the full postflight SQL, recapture the migration ledger and compare all original 244 rows to the saved preflight snapshot. Expected ledger count after all twelve approved migrations is 256, with exact canonical versions/names for the eleven new rows and no deletion/rewrite of historical rows.
 7. Run application smoke tests APP-01–APP-15 against an isolated environment and record evidence.
 8. Obtain named written approval for the exact commit, checksums, sequence, maintenance window, rollback criteria, and the documented physical-backup residual risk. Until then, NO-GO.
 
@@ -94,7 +94,7 @@ The Production postflight assertion script was also exercised read-only on the Q
 
 ## Freeze review addendum — 2026-10-27
 
-The migration SQL and execution order are now pinned for review in `supabase/rebuild/production-migration-cutover-freeze-20261027.json`. Reviewed source commit: `ecc8803c347434a1708d303bc8053367b4dfcc5c`. The eleven migration blob SHAs in that manifest match the files fetched from that commit. This is a review freeze only; it is not Production authorization.
+The migration SQL and execution order are now pinned for review in `supabase/rebuild/production-migration-cutover-freeze-20261027.json`. Reviewed source commit: `ecc8803c347434a1708d303bc8053367b4dfcc5c`. The eleven migration blob SHAs in that historical manifest match the files fetched from that commit. This is a review freeze only; it is not Production authorization.
 
 Fresh read-only checks reconfirmed:
 - Live Production ledger is 244 rows with head `20261022202747_harden_close_member_transfer_search_path`.
@@ -110,4 +110,4 @@ The QA rehearsal showed that Supabase `apply_migration` calls create environment
 
 Fresh Supabase Security Advisor read-only check at 2026-10-27 11:40 UTC still reports exactly one security warning: `authenticated_security_definer_function_executable` for `public.close_condominium_member_transfer(uuid)`, callable by authenticated users while still `SECURITY DEFINER`. This independently confirms the forward migration remains necessary; do not attempt to silence the warning manually in Production.
 
-No Production DDL or migration-ledger write was performed during this review. The remaining no-go gates are APP-01–APP-15 end-to-end evidence, and either a verified isolated physical-backup restore or named written acceptance of the documented residual risk, plus formal cutover approval. The repository-based runner rehearsal has now passed on isolated PostgreSQL 17 for all eleven canonical migrations and the expected 244-to-255 ledger transition.
+No Production DDL or migration-ledger write was performed during this review. The remaining no-go gates are APP-01–APP-15 end-to-end evidence, and either a verified isolated physical-backup restore or named written acceptance of the documented residual risk, plus formal cutover approval. The repository-based runner rehearsal has passed on isolated PostgreSQL 17 for the then-current eleven-migration sequence (244-to-255). The current candidate adds `20261028100000_fix_collaborator_module_permission_boolean.sql`; current target is twelve new rows, 244-to-256, pending fresh rehearsal evidence.
