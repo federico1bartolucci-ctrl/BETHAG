@@ -116,3 +116,11 @@ A green build, QA ACL result, or local logical-dump restore does not by itself a
 - **PASS (QA only):** a fresh read-only query against Supabase project `srkucrdcoswlozifvztr` returned zero `MAINTAIN` grants on public tables for `anon`, `authenticated`, and `service_role`.
 - **PASS (QA only):** a fresh read-only query of public-schema default ACLs returned zero `MAINTAIN` entries for `PUBLIC`, `anon`, `authenticated`, and `service_role`.
 - These checks support the QA privilege posture only. They do not establish Production parity or approve any Production migration; Production remains untouched and cutover remains **NO-GO**.
+
+
+## PostgreSQL 17 migration/ACL regression — 2026-10-28
+
+- **PASS:** [QA workflow run 40638823674](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40638823674), commit `3460a0012be6cd64717549726c00fc05a3b4ecdd`. Both `qa-preview` and `postgres-bootstrap` jobs completed successfully.
+- The QA preview job passed QA-only configuration validation, dependency installation, application build, isolated Chromium public-interface smoke, and build-artifact upload.
+- The isolated PostgreSQL 17 job passed baseline bootstrap, guarded execution of the canonical migration runner, incremental hardening catalog/ACL postconditions, and canonical-ledger transaction rehearsal. The job used an ephemeral local PostgreSQL service; it did not connect to or modify Supabase QA or Production.
+- This is migration/ACL regression evidence on the current QA branch commit, not a substitute for the remaining real-authenticated application acceptance rows APP-01–APP-15. Those rows remain NOT RUN until individually evidenced. Production was not modified; cutover remains **NO-GO**.
