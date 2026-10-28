@@ -1,0 +1,80 @@
+name: BETHAG temporary QA Pages deployment
+
+on:
+  push:
+    branches:
+      - qa/preview-environment-20261028
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "reset-password.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/qa-pages-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: bethag-temporary-qa-pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    if: github.ref == 'refs/heads/qa/preview-environment-20261028'
+    runs-on: ubuntu-latest
+    environment:
+      name: bethag-qa-preview
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout QA branch only
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Validate QA-only Supabase configuration
+        env:
+          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test "$VITE_SUPABASE_ENABLE" = "true" || { echo "QA environment must set VITE_SUPABASE_ENABLE=true"; exit 1; }
+          normalized_url="${VITE_SUPABASE_URL%/}"
+          test "$normalized_url" = "https://srkucrdcoswlozifvztr.supabase.co" || { echo "Refusing to publish: this is not the approved QA Supabase project"; exit 1; }
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key is missing"; exit 1; }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build QA site
+        env:
+          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - name: Run isolated public-interface smoke test
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/test-browser-public-smoke.mjs
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+      - name: Deploy temporary QA preview
+        id: deployment
+        uses: actions/deploy-pages@v4
