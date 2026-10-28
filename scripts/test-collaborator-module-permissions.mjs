@@ -18,6 +18,12 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
 DELETE FROM public.workspace_members
 WHERE workspace_id='${workspace}'::uuid
   AND user_id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
+INSERT INTO auth.users(id,aud,role,email)
+VALUES
+ ('${deniedUser}','authenticated','authenticated','qa-denied@example.invalid'),
+ ('${allowedUser}','authenticated','authenticated','qa-allowed@example.invalid'),
+ ('${missingUser}','authenticated','authenticated','qa-missing@example.invalid')
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.profiles(id,full_name,email,role,active)
 VALUES
  ('${deniedUser}','QA denied collaborator','qa-denied@example.invalid','collaborator',true),
@@ -69,6 +75,7 @@ psql(`
 DELETE FROM public.workspace_members WHERE workspace_id='${workspace}'::uuid;
 DELETE FROM public.workspaces WHERE id='${workspace}'::uuid;
 DELETE FROM public.profiles WHERE id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
+DELETE FROM auth.users WHERE id IN ('${deniedUser}'::uuid,'${allowedUser}'::uuid,'${missingUser}'::uuid);
 `);
 console.log(JSON.stringify({
   test: "collaborator condominium module authorization",
