@@ -79,14 +79,14 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Run real authenticated QA role smoke test
-        if: ${{ env.BETHAG_QA_ADMIN_PASSWORD != '' && env.BETHAG_QA_COLLABORATOR_PASSWORD != '' && env.BETHAG_QA_RESIDENT_PASSWORD != '' }}
         env:
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
           BETHAG_QA_BASE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: node scripts/test-browser-real-qa-auth.mjs
-
-      - name: Explain skipped real-auth test when credentials are not configured
-        if: ${{ env.BETHAG_QA_ADMIN_PASSWORD == '' || env.BETHAG_QA_COLLABORATOR_PASSWORD == '' || env.BETHAG_QA_RESIDENT_PASSWORD == '' }}
-        run: echo "Real-auth QA smoke test skipped: configure the three BETHAG_QA_*_PASSWORD repository Actions secrets; no passwords are stored in the repository."
+        run: |
+          if [ -z "$BETHAG_QA_ADMIN_PASSWORD" ] || [ -z "$BETHAG_QA_COLLABORATOR_PASSWORD" ] || [ -z "$BETHAG_QA_RESIDENT_PASSWORD" ]; then
+            echo "::warning::Real-auth QA smoke test skipped: configure the three BETHAG_QA_*_PASSWORD repository Actions secrets. Passwords are not stored in the repository."
+            exit 0
+          fi
+          node scripts/test-browser-real-qa-auth.mjs
