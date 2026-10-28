@@ -103,7 +103,7 @@ async function main() {
   comparePairs(snapshot.migrations, snapshot.migrations, "Stored Production snapshot self-check");
 
   const expected = manifest.sequence;
-  assert.equal(expected.length, 11, "Expected exactly eleven reviewed incremental migrations.");
+  assert.equal(expected.length, 12, "Expected exactly twelve reviewed incremental migrations.");
   const migrationBodies = [];
   for (const item of expected) {
     const filename = item.file;
@@ -165,7 +165,7 @@ async function main() {
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 255, "Final ledger must contain 244 historical + 11 canonical rows.");
+    assert.equal(finalLedger.length, 256, "Final ledger must contain 244 historical + 12 canonical rows.");
     comparePairs(finalLedger.slice(0, expectedLedgerCount), snapshot.migrations, "Final historical ledger preservation");
     comparePairs(finalLedger.slice(expectedLedgerCount), migrationBodies.map(({ version, name }) => ({ version, name })),
       "Final canonical incremental migration sequence");
