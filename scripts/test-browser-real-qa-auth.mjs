@@ -19,7 +19,12 @@ try {
     const context = await browser.newContext();
     const page = await context.newPage();
     const pageErrors = [];
+    const dialogs = [];
     page.on("pageerror", error => pageErrors.push(error.message));
+    page.on("dialog", async dialog => {
+      dialogs.push({ type: dialog.type(), message: dialog.message().slice(0, 300) });
+      await dialog.dismiss();
+    });
 
     try {
       await page.goto(baseURL, { waitUntil: "networkidle" });
@@ -48,7 +53,9 @@ try {
 
       results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors"] });
     } catch (error) {
-      results.push({ role: account.role, status: "FAIL", error: String(error?.message || error).slice(0, 500) });
+      let visibleText = "";
+      try { visibleText = (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 1200); } catch {}
+      results.push({ role: account.role, status: "FAIL", url: page.url(), error: String(error?.message || error).slice(0, 500), dialogs, pageErrors, visibleText });
     } finally {
       await context.close();
     }
