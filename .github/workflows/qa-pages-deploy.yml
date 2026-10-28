@@ -90,7 +90,7 @@ jobs:
           BETHAG_QA_BASE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           if [ -z "$BETHAG_QA_ADMIN_PASSWORD" ] || [ -z "$BETHAG_QA_COLLABORATOR_PASSWORD" ] || [ -z "$BETHAG_QA_RESIDENT_PASSWORD" ]; then
-            echo "::warning::Real-auth QA smoke test skipped: configure the three BETHAG_QA_*_PASSWORD repository Actions secrets. Passwords are not stored in the repository."
-            exit 0
+            echo "::error::Real-auth QA smoke test cannot be skipped: configure BETHAG_QA_ADMIN_PASSWORD, BETHAG_QA_COLLABORATOR_PASSWORD and BETHAG_QA_RESIDENT_PASSWORD as repository Actions secrets."
+            exit 1
           fi
           node scripts/test-browser-real-qa-auth.mjs
