@@ -109,3 +109,10 @@ A green build, QA ACL result, or local logical-dump restore does not by itself a
 - **PASS:** [QA Pages run 40636197889](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40636197889), commit `b48be339c61f0d467c0a72d7a07243bf26c8f030`. The workflow validated all three required password secrets and ran real Supabase sign-in for administrator, collaborator, and resident; each role reached its expected landing page, retained its session after refresh, and produced no uncaught browser errors before or after refresh. Administrator and collaborator also navigated through `Registro e sicurezza` and `Homepage`. The navigation smoke intentionally avoids paid modules blocked by the QA Free plan; that plan gate is not treated as an application defect.
 - Matching isolated QA preview build and mocked public-interface smoke: [run 40636197953](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40636197953) — **PASS**, same commit.
 - Scope remains limited to authentication, role landing, refresh/session persistence, core available navigation, and browser exceptions. It does **not** complete APP-01–APP-15, prove cross-workspace isolation across real accounts, or exercise accounting, member transfer, email delivery, or document upload. Those acceptance rows remain **NOT RUN** until dedicated evidence is recorded. Production was not modified; cutover remains **NO-GO**.
+
+
+## QA ACL read-only recheck — 2026-10-28
+
+- **PASS (QA only):** a fresh read-only query against Supabase project `srkucrdcoswlozifvztr` returned zero `MAINTAIN` grants on public tables for `anon`, `authenticated`, and `service_role`.
+- **PASS (QA only):** a fresh read-only query of public-schema default ACLs returned zero `MAINTAIN` entries for `PUBLIC`, `anon`, `authenticated`, and `service_role`.
+- These checks support the QA privilege posture only. They do not establish Production parity or approve any Production migration; Production remains untouched and cutover remains **NO-GO**.
