@@ -84,3 +84,35 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 - Final decision: **NO-GO until test evidence and written approval are recorded.**
 
 A green build, QA ACL result, or local logical-dump restore does not by itself authorize Production cutover.
+
+## 5. Additional isolated QA database evidence — 2026-10-28 08:26 UTC
+
+**Target:** Supabase QA branch `bethag-continuity-qa` (`srkucrdcoswlozifvztr`). Production was not queried for test mutations and was not modified. Synthetic fixture marker: `APP-01-15-20261028`.
+
+### Seeded synthetic fixtures
+
+- 1 new test condominium in the existing QA workspace and 1 separate foreign-workspace condominium.
+- 2 units, 5 synthetic condominium-member records, 2 fiscal years (one open and one closed), 2 ledger entries, 1 expense allocation, 1 unpaid installment, 1 document metadata row, 1 published communication, 1 pending communication recipient, and 3 draft transfer records.
+- Storage-object visibility was tested with temporary metadata rows inside a transaction; the transaction rolled back and no test storage-object rows remain.
+- No email was sent. The communication recipient remains `pending`; this is not proof of provider delivery.
+- The synthetic fixture remains in the QA database for a possible authenticated-browser run. Remove it after final browser acceptance using the marker above and dependency-safe cleanup; do not remove unrelated QA records.
+
+### Transactional SQL/RLS checks — PASS for the stated database subset
+
+- **APP-01 subset:** simulated authenticated administrator identity retains the expected accounting-module permission. Real sign-in/session persistence is covered only by the separate earlier real-auth smoke run noted above.
+- **APP-02 subset:** collaborator with `documenti=true` and `contabilita=false` is allowed document management and denied accounting access; unauthorized ledger reads return no rows.
+- **APP-03 subset:** linked resident can see the linked active condominium and the shared document metadata, but cannot read accounting ledger entries.
+- **APP-04 subset:** administrator cannot see the foreign-workspace condominium through RLS.
+- **APP-05 subset:** administrator created a synthetic condominium and unit, edited the condominium, and re-read the hierarchy successfully inside a transaction; temporary CRUD rows were rolled back.
+- **APP-06 subset:** synthetic expense allocation totals reconcile to the ledger amount (120.00); collaborator accounting access is denied.
+- **APP-07 subset:** an attempted update to a ledger entry in a closed fiscal year was rejected; the amount remained unchanged.
+- **APP-08 subset:** valid transfer closure returned success, archived the outgoing owner and retained the incoming owner as active. The enclosing transaction was rolled back for test isolation.
+- **APP-09 subset:** transfer closure with an unpaid installment raised `TRANSFER_FINANCIAL_POSITIONS_OPEN`; transfer state and outgoing-member active state remained unchanged.
+- **APP-10 subset:** closure attempts without an authenticated user, as a resident, and as a collaborator without condominium-management permission were rejected (`AUTH_REQUIRED` / `FORBIDDEN`).
+- **APP-11 subset:** after the successful-closure transaction was rolled back, the transfer remained in its original draft state and both members retained their pre-test active state. Temporary storage metadata also returned to zero.
+- **APP-12 subset:** resident can read the published portal communication and own pending-recipient record. Actual email provider delivery was not attempted and remains untested.
+- **APP-13 subset:** resident can read shared document metadata and a synthetic shared storage-object row, but cannot read a foreign-workspace object. Storage-object rows were transaction-scoped and rolled back. No real file bytes were uploaded/downloaded; full upload/download acceptance remains untested.
+- **APP-14 subset:** latest QA catalog query found 47 public tables, zero `MAINTAIN` grants to `authenticated` or `service_role` on those tables, zero app-role `MAINTAIN` defaults, and exactly the two intended `PUBLIC EXECUTE` trigger exceptions: `public.normalize_zero_ownership_owner()` and `public.preserve_closing_condominium_member_history()`.
+- **APP-15 subset:** latest CI run [40655615758](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40655615758), commit `8e02d92f5aff36794a82b40980f3580d7071a511`, passed `build` (including public browser smoke) and `postgres-bootstrap` (isolated PostgreSQL migration/ACL/RLS tests). It does not test authenticated navigation, refresh, sign-out/sign-in, or persisted UI state.
+
+**Important acceptance boundary:** these results are SQL/RLS and CI subsets only. The APP-01–APP-15 table above intentionally remains **NOT RUN** for the full authenticated browser acceptance scenarios. Do not mark the 15 application tests PASS until real role-specific browser flows, actual file upload/download, and email-delivery behavior have been exercised and evidence recorded.
