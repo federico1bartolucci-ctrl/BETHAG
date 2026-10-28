@@ -67,6 +67,23 @@ try {
         assert.deepEqual(pageErrors, [], `Uncaught browser errors during navigation for role ${account.role}: ${pageErrors.join(" | ")}`);
       }
 
+      // Verify seeded QA fixture visibility with real Supabase sessions.
+      // These checks are read-only and use the dedicated APP-01–APP-15 synthetic fixture.
+      if (account.role === "Amministratore") {
+        const condominiNav = page.locator(".nav-item").filter({ hasText: /^Condomini/ }).first();
+        await condominiNav.click();
+        await page.getByText("BETHAG APP QA FIXTURE 20261028", { exact: true }).waitFor({ timeout: 15000 });
+        navigationChecks.push("APP QA fixture condominium visible to administrator");
+      } else if (account.role === "Collaboratore") {
+        const condominiNav = page.locator(".nav-item").filter({ hasText: /^Condomini/ }).first();
+        await condominiNav.click();
+        const fixtureVisible = await page.getByText("BETHAG APP QA FIXTURE 20261028", { exact: true }).count();
+        assert.equal(fixtureVisible, 0, "Collaborator without condomini permission must not see the synthetic condominium");
+        navigationChecks.push("APP QA fixture hidden from collaborator without condomini permission");
+      }
+
+      assert.deepEqual(pageErrors, [], `Uncaught browser errors after fixture visibility checks for role ${account.role}: ${pageErrors.join(" | ")}`);
+
       results.push({ role: account.role, status: "PASS", checks: ["real Supabase sign-in", "role-specific landing", "refresh/session persistence", "no uncaught browser errors before and after refresh", ...(navigationChecks.length ? [`navigation: ${navigationChecks.join(", ")}`] : [])] });
     } catch (error) {
       let visibleText = "";
