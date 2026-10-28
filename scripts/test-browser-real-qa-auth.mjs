@@ -26,8 +26,8 @@ try {
       await page.getByRole("button", { name: "Accedi" }).first().click();
       await page.getByRole("heading", { name: "Accedi a BETHAG" }).waitFor();
       await page.getByRole("button", { name: account.role, exact: true }).click();
-      await page.getByLabel("E-mail").fill(account.email);
-      await page.getByLabel("Password", { exact: true }).fill(account.password);
+      await page.locator('input[type="email"]').first().fill(account.email);
+      await page.locator('input[autocomplete="current-password"]').first().fill(account.password);
       await page.getByRole("button", { name: "Accedi", exact: true }).last().click();
 
       if (account.role === "Condomino") {
