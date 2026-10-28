@@ -80,7 +80,7 @@ console.log(out);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,255);
+assert.equal(finalLedger.length,256);
 assert.deepEqual(finalLedger.slice(0,244),snapshot.migrations,"Historical ledger pairs changed.");
 const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261027.json","utf8"));
 assert.deepEqual(finalLedger.slice(244),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4)})));
@@ -90,7 +90,7 @@ console.log(JSON.stringify({
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
  frozen_historical_pairs_preserved:244,
- canonical_rows_added:11,
- final_ledger_rows:255,
+ canonical_rows_added:12,
+ final_ledger_rows:256,
  production_or_supabase_touched:false
 },null,2));
