@@ -1699,12 +1699,19 @@ function ResidentPortalView({
     : null;
 
   const hasPortalPermission = (permission: PortalPermission) => {
-    const permissions = member?.permissions ?? [];
+    // Gli accessi creati da versioni precedenti possono avere permissions
+    // serializzato come stringa oppure con una struttura non valida.
+    const rawPermissions = member?.permissions;
+    const permissions: string[] = Array.isArray(rawPermissions)
+      ? rawPermissions.filter((item): item is string => typeof item === "string")
+      : typeof rawPermissions === "string"
+        ? rawPermissions.split(",").map((item) => item.trim()).filter(Boolean)
+        : [];
     if (permissions.includes(permission)) return true;
     // Compatibilità sicura con i vecchi accessi: il vecchio permesso
     // generico "pagamenti" viene ricondotto esclusivamente alle spese ordinarie.
     if (permission === "pagamenti_ordinari") {
-      return (permissions as string[]).includes("pagamenti");
+      return permissions.includes("pagamenti");
     }
     return false;
   };
