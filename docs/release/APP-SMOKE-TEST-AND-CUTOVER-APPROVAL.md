@@ -8,7 +8,7 @@
 - [ ] Record the exact commit SHA and deployment/build artifact.
 - [x] Restore gate disposition (decision recorded 2026-10-27): local Docker/PostgreSQL logical restore was completed and verified; per the user's explicit decision, treat the backup-restore prerequisite as SATISFIED for this cutover without paying for a new Supabase project. Provider-backed physical restore was not performed; its residual risk is accepted for this release and must not be misrepresented as a physical-restore test.
 - [ ] Confirm schema, RLS, function ACL, owner and default-privilege evidence is attached.
-- [x] Latest PR CI validation: [run 40632411849](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40632411849), commit `d7e7e42decac333c99f21e72e11e972f08b1f66a` — **PASS** (`build` and `postgres-bootstrap`). This is repository/isolated PostgreSQL validation, not production deployment or full APP-01–APP-15 browser acceptance.
+- [x] Latest PR CI validation: [run 40633972708](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40633972708), commit `5b3ca4710da084b2a96d46e7dc3f65cb1e5a71bd` — **PASS** (`build` and `postgres-bootstrap`). This is repository/isolated PostgreSQL validation, not production deployment or full APP-01–APP-15 browser acceptance.
 - [ ] Confirm Security Advisor findings are reviewed; Production's current authenticated SECURITY DEFINER RPC warning remains until the approved forward migration changes the RPC to SECURITY INVOKER.
 
 ## 2. Automated public-interface smoke test (partial coverage)
