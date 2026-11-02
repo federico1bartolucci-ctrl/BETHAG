@@ -554,7 +554,23 @@ try {
   // The UI shell hydrated its member list before this isolated test fixture
   // was inserted. Request the same authoritative refresh used by successful
   // transfer flows and wait until the newly inserted current owner is visible.
+  const ownerRefreshResponse = adminPage.waitForResponse(async (response) => {
+    const requestUrl = new URL(response.url());
+    if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
+    const rows = await response.json().catch(() => []);
+    return Array.isArray(rows) && rows.some((row) =>
+      row.name === marker + "_CEDENTE_UI" &&
+      row.unit_id === transferUnit.data.id &&
+      row.condominium_id === created.id
+    );
+  }, { timeout: 20000 });
   await adminPage.evaluate(() => window.dispatchEvent(new Event("bethag-backend-refresh")));
+  const ownerRefreshResult = await ownerRefreshResponse;
+  console.log("APP08_OWNER_REFRESH_RESPONSE", JSON.stringify({
+    status: ownerRefreshResult.status(),
+    url: ownerRefreshResult.url(),
+    matchingOwnerReturned: true
+  }));
   await adminPage.getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
