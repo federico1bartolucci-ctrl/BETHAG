@@ -573,8 +573,10 @@ try {
   // Entering the condominium registry triggers the application's normal
   // authoritative workspace hydration. Return to the transfer module only
   // after that refresh has completed, then assert the owner in the actual UI.
-  await adminPage.getByRole("button", { name: "Condomini", exact: true }).click();
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Contabilità" }).first().click();
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).waitFor({ state: "visible", timeout: 15000 });
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
