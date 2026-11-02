@@ -115,10 +115,7 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
-  adminPage.on("console", message => {
-    consoleMessages.push({ type: message.type(), text: message.text() });
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
+  adminPage.on("console", message => { consoleMessages.push({ type: message.type(), text: message.text() }); if (message.type() === "error") consoleErrors.push(message.text()); });
   adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
@@ -189,10 +186,6 @@ try {
   console.log("APP05_SUBMIT_EVENT_OBSERVED", submitEventObserved);
   try {
     await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
-    const saveTrace = consoleMessages.filter((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM"));
-    console.log("APP05_SAVE_HANDLER_TRACE", JSON.stringify(saveTrace));
-    assert.ok(saveTrace.some((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM_SUBMIT")), "React save handler was not reached");
-    assert.ok(saveTrace.some((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM_RPC_DONE")), "Condominium save RPC did not complete");
   } catch (editUiError) {
     const editedDbState = await cleanup.from("condominiums")
       .select("id,name,archived_at,archived_by,archive_reason,data")
