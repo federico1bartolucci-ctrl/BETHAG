@@ -436,12 +436,15 @@ async function syncBackendStateNow(
   const canSyncCondomini = canSyncModule("condomini");
   const canSyncPortal = canSyncModule("portale");
 
-  const condominiumRows = canSyncCondomini ? (state.condominiums ?? []) : [];
+  // Condominium writes are handled by the explicit save/archive/restore/delete RPCs.
+  // Re-upserting the entire workspace snapshot here on every unrelated state
+  // change caused thousands of writes, row-lock contention and stalled edits.
+  // Only read the compact legacy-id map needed by dependent tables.
   const existingCondominiumRows: any[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase
       .from("condominiums")
-      .select("id, legacy_id, name, address, city, postal_code, province, archived_at, archived_by, archive_reason, data")
+      .select("id, legacy_id")
       .eq("workspace_id", workspaceId)
       .order("id", { ascending: true })
       .range(offset, offset + 999);
@@ -450,13 +453,12 @@ async function syncBackendStateNow(
     existingCondominiumRows.push(...batch);
     if (batch.length < 1000) break;
   }
-  const existingCondominiums = existingCondominiumRows;
-
-  // Postgres bigint legacy IDs may arrive as JSON numbers or strings.
-  // Normalize keys so every UI legacy ID resolves to the database UUID.
-  const condominiumDbIdByLegacyId = new Map<string, string>(
-    (existingCondominiums ?? []).map((row: any) => [String(row.legacy_id), row.id])
+  const condominiumDbIdByLegacyId = new Map(
+    existingCondominiumRows
+      .filter((row: any) => row.legacy_id !== null && row.legacy_id !== undefined)
+      .map((row: any) => [String(row.legacy_id), row.id])
   );
+
   const getCondominiumDbId = (legacyId: unknown) =>
     legacyId === null || legacyId === undefined || legacyId === ""
       ? undefined
