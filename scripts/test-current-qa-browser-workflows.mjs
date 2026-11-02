@@ -154,8 +154,23 @@ try {
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Modifica" }).click();
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
-  await field(adminPage, "Nome del condominio *").fill(editedCondoName);
-  await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
+  const editNameInput = field(adminPage, "Nome del condominio *");
+  await editNameInput.fill(editedCondoName);
+  assert.equal(await editNameInput.inputValue(), editedCondoName, "Edited condominium name was not present in the form");
+  const editSubmitButton = adminPage.getByRole("button", { name: "Salva modifiche" });
+  const editSubmitDebug = await editSubmitButton.evaluate((button) => ({
+    type: button.getAttribute("type"),
+    disabled: button.disabled,
+    closestForm: Boolean(button.closest("form")),
+    formMethod: button.closest("form")?.getAttribute("method") ?? null,
+    formAction: button.closest("form")?.getAttribute("action") ?? null,
+  }));
+  console.log("APP05_EDIT_SUBMIT_DEBUG", JSON.stringify({
+    inputValue: await editNameInput.inputValue(),
+    buttonCount: await editSubmitButton.count(),
+    ...editSubmitDebug,
+  }));
+  await editSubmitButton.click();
   await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const edited = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,name").eq("id", created.id).maybeSingle(),
