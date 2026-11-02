@@ -18,7 +18,11 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Build
+      - name: Build against approved QA project only
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          VITE_SUPABASE_ENABLE: "true"
         run: npm run build
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
