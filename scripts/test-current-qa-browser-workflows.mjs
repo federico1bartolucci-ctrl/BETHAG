@@ -249,11 +249,37 @@ try {
   await adminPage.getByRole("button", { name: "Salva", exact: true }).click();
   const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
   await commCard.waitFor({ timeout: 20000 });
+  const persistedCommunication = await waitForDbRow(
+    () => cleanup.from("communications").select("id,published,condominium_id,legacy_id,title,data").eq("title", communicationTitle).maybeSingle(),
+    row => Boolean(row?.published === true && row?.condominium_id === created.id),
+    "Published communication backend persistence"
+  );
+  assert.equal(persistedCommunication.published, true);
+  assert.equal(persistedCommunication.condominium_id, created.id);
+  const persistedPortalAccess = await cleanup.from("portal_access")
+    .select("id,active,user_id,condominium_id,permissions")
+    .eq("id", portalAccess.data.id)
+    .single();
+  assert.ifError(persistedPortalAccess.error);
+  assert.equal(persistedPortalAccess.data.active, true);
+  assert.equal(persistedPortalAccess.data.user_id, temporaryResidentId);
+  assert.equal(persistedPortalAccess.data.condominium_id, created.id);
+  assert.ok(persistedPortalAccess.data.permissions.includes("comunicazioni"));
 
   const residentContext = await browser.newContext();
   const residentPage = await residentContext.newPage();
   await signIn(residentPage, "Condomino", temporaryResidentEmail, temporaryResidentPassword, "Portale condòmino");
-  await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ timeout: 15000 });
+  try {
+    await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ timeout: 15000 });
+  } catch (visibilityError) {
+    console.log("APP12_RESIDENT_VISIBILITY_DEBUG", JSON.stringify({
+      body: (await residentPage.locator("body").innerText()).slice(0, 4000),
+      pageErrors,
+      communication: persistedCommunication,
+      portalAccess: persistedPortalAccess.data,
+    }));
+    throw visibilityError;
+  }
 
   await commCard.getByRole("button", { name: "Ritira" }).click();
   await residentPage.reload({ waitUntil: "networkidle" });
