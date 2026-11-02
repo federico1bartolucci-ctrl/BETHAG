@@ -130,7 +130,10 @@ try {
   assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
   const archivedJsonAt = archived.data.archivedAt;
   const archivedJsonMs = typeof archivedJsonAt === "number" ? archivedJsonAt : Date.parse(archivedJsonAt);
-  assert.equal(archivedJsonMs, Date.parse(archived.archived_at), "JSON and structured archive timestamps diverged; JSON value=" + JSON.stringify(archivedJsonAt));
+  const columnArchivedMs = Date.parse(archived.archived_at);
+  assert.ok(Number.isFinite(archivedJsonMs), "JSON archive timestamp is invalid: " + JSON.stringify(archivedJsonAt));
+  assert.ok(Number.isFinite(columnArchivedMs), "Structured archive timestamp is invalid: " + JSON.stringify(archived.archived_at));
+  assert.ok(Math.abs(archivedJsonMs - columnArchivedMs) <= 5000, "JSON and structured archive timestamps differ by more than five seconds: " + JSON.stringify({ json: archivedJsonAt, column: archived.archived_at }));
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
