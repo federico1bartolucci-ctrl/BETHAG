@@ -123,8 +123,6 @@ try {
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
-  await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
-
   const backendCollectionCacheKeys = [
     "bethag-condominiums-v5", "bethag-deadlines-v5", "bethag-documents-v5",
     "bethag-assemblies-v5", "bethag-suppliers-v5", "bethag-activities-v5",
@@ -132,6 +130,15 @@ try {
     "bethag-condominium-members-v1", "bethag-condominium-requests-v1",
     "bethag-portal-members-v2", "bethag-collaborators-v1",
   ];
+  // Simulate stale snapshots left by earlier versions; startup must purge them
+  // before the authenticated workflow can write any new local state.
+  await adminPage.goto(baseURL, { waitUntil: "networkidle" });
+  await adminPage.evaluate((keys) => keys.forEach((key) =>
+    localStorage.setItem(key, JSON.stringify([{ staleLegacySnapshot: true }]))), backendCollectionCacheKeys);
+  await adminPage.reload({ waitUntil: "networkidle" });
+
+  await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
+
   const persistedBackendCollections = await adminPage.evaluate((keys) =>
     keys.filter((key) => localStorage.getItem(key) !== null), backendCollectionCacheKeys);
   assert.deepEqual(persistedBackendCollections, [],
