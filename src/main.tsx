@@ -10157,6 +10157,7 @@ function CondominiumDetails(
             <button className="quick-action-card" onClick={onNewSupplier}>🔧<strong>Nuovo fornitore</strong><span>Aggiungi un servizio</span></button>
             <button className="quick-action-card" onClick={onNewActivity}>✓<strong>Nuova attività</strong><span>Organizza il lavoro</span></button>
             <button className="quick-action-card" onClick={() => onNewCommunication(item.id)}>✉️<strong>Nuova comunicazione</strong><span>Comunica ai condòmini</span></button>
+            <button className="quick-action-card" onClick={() => openCondominiumEmailComposer(item.id, undefined, "Tutti")}>📧<strong>Nuova e-mail</strong><span>Invia un messaggio via e-mail</span></button>
           </div>
         </section>
       )}
