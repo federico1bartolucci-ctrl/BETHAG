@@ -617,3 +617,4 @@ if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.st
 // Retry after QA-only EXECUTE grant for the guarded private condominium deletion RPC.
 // QA browser acceptance rerun after async restore hydration fix 2026-11-02
 // QA accounting UI rerun after actionable error banner 2026-11-02
+// QA accounting UI rerun after ISO date validator correction 2026-11-02
