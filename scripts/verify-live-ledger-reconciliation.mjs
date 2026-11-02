@@ -5,8 +5,10 @@ const report = JSON.parse(await readFile("supabase/rebuild/live-migration-ledger
 const files = (await readdir("supabase/migrations")).filter((file) => file.endsWith(".sql")).sort();
 assert.equal(report.production_unchanged, true, "The captured live ledger report must not imply Production was modified.");
 assert.equal(report.canonical_branch_inventory.length, 16, "Expected five baseline files, Production head, and ten incremental migrations.");
-assert.equal(files.length, 18, "Expected the ten original pending migrations plus the service_role and collaborator-permission corrections.");
+assert.equal(files.length, 20, "Expected the historical canonical inventory plus the two November collaborator/archive forward migrations.");
 assert.ok(files.includes("20261027110000_repair_service_role_transfer_invoker_path.sql"), "Missing service_role invoker-path correction.");
+assert.ok(files.includes("20261102100100_add_workspace_member_profile_data.sql"), "Missing collaborator metadata forward migration.");
+assert.ok(files.includes("20261102100200_preserve_server_owned_condominium_archive_state.sql"), "Missing archive lifecycle forward migration.");
 const env = Object.fromEntries(report.environments.map((entry) => [entry.name, entry]));
 assert.equal(env.production.ledger_count, 244);
 assert.equal(env.production.ledger_head.version, "20261022202747");
