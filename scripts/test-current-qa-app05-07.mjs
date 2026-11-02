@@ -65,3 +65,5 @@ try{
  await db.auth.signOut();
 }
 console.log(JSON.stringify({suite:"BETHAG_QA_APP05_07",target:"jhuyhlzzydcgghrzeexn",results:out,cleanup:"temporary APP-05/06 fixtures deleted; persistent APP-07 closed-year guard fixture retained"},null,2));
+
+// QA acceptance rerun after shared-environment concurrency serialization (2026-11-02).
