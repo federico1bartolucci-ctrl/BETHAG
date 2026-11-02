@@ -368,7 +368,7 @@ async function syncBackendStateNow(
   const condominiumRows = canSyncCondomini ? (state.condominiums ?? []) : [];
   const { data: existingCondominiums, error: condominiumError } = await supabase
     .from("condominiums")
-    .select("id, legacy_id, name, address, city, postal_code, province, data")
+    .select("id, legacy_id, name, address, city, postal_code, province, archived_at, archived_by, archive_reason, data")
     .eq("workspace_id", workspaceId);
 
   if (condominiumError) throw condominiumError;
@@ -404,7 +404,7 @@ async function syncBackendStateNow(
       const city = hasText(item.city) ? item.city : (existing?.city ?? existing?.data?.city ?? "");
       const postalCode = hasText(item.cap) ? item.cap : (existing?.postal_code ?? existing?.data?.cap ?? "");
       const province = hasText(item.province) ? item.province : (existing?.province ?? existing?.data?.province ?? "");
-      const mergedData = {
+      const mergedData: Record<string, any> = {
         ...(existing?.data && typeof existing.data === "object" ? existing.data : {}),
         ...item,
         name,
@@ -413,6 +413,19 @@ async function syncBackendStateNow(
         cap: postalCode,
         province,
       };
+
+      // Archive lifecycle is server-owned. Automatic state sync must never
+      // resurrect stale JSON flags after the dedicated restore RPC clears them.
+      const persistedArchivedAt = existing?.archived_at ?? existing?.data?.archivedAt;
+      if (persistedArchivedAt) {
+        mergedData.archivedAt = persistedArchivedAt;
+        mergedData.archivedBy = existing?.archived_by ?? existing?.data?.archivedBy;
+        mergedData.archiveReason = existing?.archive_reason ?? existing?.data?.archiveReason;
+      } else {
+        delete mergedData.archivedAt;
+        delete mergedData.archivedBy;
+        delete mergedData.archiveReason;
+      }
 
       return {
         workspace_id: workspaceId,
