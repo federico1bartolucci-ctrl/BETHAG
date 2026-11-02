@@ -457,7 +457,7 @@ type Communication = {
   status: CommunicationStatus;
   body: string;
   publishedToPortal: boolean;
-  emailStatus?: "Non inviata" | "Predisposta" | "Inviata";
+  emailStatus?: "Non inviata" | "Predisposta" | "Inviata" | "Parzialmente inviata" | "Errore";
   emailPreparedAt?: string;
 };
 
@@ -5892,7 +5892,7 @@ function App() {
             communication.id === communicationId
               ? {
                   ...communication,
-                  emailStatus: "Inviata",
+                  emailStatus: data.status || "Inviata",
                   emailPreparedAt: new Date().toISOString(),
                 }
               : communication
@@ -5900,9 +5900,15 @@ function App() {
         );
       }
 
-      alert(
-        `E-mail inviata correttamente a ${data.recipients ?? uniqueRecipients.length} destinatari.`
-      );
+      const sentCount = Number(data.sent ?? data.recipientCount ?? data.recipients ?? 0);
+      const failedCount = Number(data.failed ?? 0);
+      if (failedCount > 0) {
+        alert(`Invio parziale: ${sentCount} e-mail inviate, ${failedCount} non inviate. Controlla lo stato dei destinatari.`);
+      } else if (data.idempotent) {
+        alert(`Nessun nuovo invio: ${sentCount} destinatari risultano già elaborati.`);
+      } else {
+        alert(`E-mail inviata correttamente a ${sentCount} destinatari.`);
+      }
     } catch (error) {
       console.error("BETHAG email send failed", error);
       alert(
