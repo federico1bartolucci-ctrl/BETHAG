@@ -123,27 +123,36 @@ try {
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
   await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
-  const created = await cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).single();
-  assert.ifError(created.error);
-  const units = await cleanup.from("condominium_units").select("id", { count: "exact", head: true }).eq("condominium_id", created.data.id);
-  assert.ifError(units.error);
-  assert.equal(units.count, 5, "UI structure should persist 2 interiors + 3 autonomous appurtenances");
+  const created = await waitForDbRow(
+    () => cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).maybeSingle(),
+    row => Boolean(row?.id),
+    "Condominium creation persistence"
+  );
+  const units = await waitForDbRow(
+    () => cleanup.from("condominium_units").select("id").eq("condominium_id", created.id),
+    rows => Array.isArray(rows) && rows.length === 5,
+    "Condominium structure persistence"
+  );
+  assert.equal(units.length, 5, "UI structure should persist 2 interiors + 3 autonomous appurtenances");
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Modifica" }).click();
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(editedCondoName);
   await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
   await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
-  const edited = await cleanup.from("condominiums").select("id,name").eq("id", created.data.id).single();
-  assert.ifError(edited.error);
-  assert.equal(edited.data.name, editedCondoName);
+  const edited = await waitForDbRow(
+    () => cleanup.from("condominiums").select("id,name").eq("id", created.id).maybeSingle(),
+    row => row?.name === editedCondoName,
+    "Condominium edit persistence"
+  );
+  assert.equal(edited.name, editedCondoName);
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
   await archiveCard.waitFor({ timeout: 15000 });
   const archived = await waitForDbRow(
-    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single(),
+    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.id).single(),
     row => Boolean(row?.archived_at && row?.archived_by),
     "Condominium archive persistence"
   );
@@ -158,7 +167,7 @@ try {
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
-    () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single(),
+    () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.id).single(),
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
@@ -178,12 +187,12 @@ try {
   assert.ok(residentUser?.id, "QA resident account was not found for the portal fixture");
   const residentUnit = await cleanup.from("condominium_units")
     .select("id,unit_code")
-    .eq("condominium_id", created.data.id)
+    .eq("condominium_id", created.id)
     .limit(1)
     .single();
   assert.ifError(residentUnit.error);
   const member = await cleanup.from("condominium_members").insert({
-    condominium_id: created.data.id,
+    condominium_id: created.id,
     user_id: residentUser.id,
     name: "BETHAG QA UI Resident",
     email: residentUser.email,
@@ -196,7 +205,7 @@ try {
   assert.ifError(member.error);
   const portalAccess = await cleanup.from("portal_access").insert({
     workspace_id: created.data.workspace_id,
-    condominium_id: created.data.id,
+    condominium_id: created.id,
     name: "BETHAG QA UI Resident",
     email: residentUser.email,
     role: "resident",
