@@ -82,13 +82,22 @@ if (!member) member = check(await db.from("condominium_members").insert({
   permissions: {}, data: { firstName: "Condomino", lastName: "QA", role: "Proprietario", ownership_share: 1, current_owner: true, position_status: "Attivo" }
 }).select("id").single(), "create QA resident member");
 
-check(await db.from("portal_access").upsert({
+const portalQuery = await db.from("portal_access").select("id")
+  .eq("workspace_id", workspaceId).eq("condominium_id", condominiumId)
+  .ilike("email", required.resident[1]).maybeSingle();
+const portalExisting = check(portalQuery, "find resident portal access");
+const portalPayload = {
   workspace_id: workspaceId, condominium_id: condominiumId, name: "Condomino QA",
   email: required.resident[1], role: "resident", apartment: "A-01",
   permissions: ["documenti", "verbali", "regolamento", "pagamenti_ordinari", "assemblee"],
   active: true, user_id: users.resident.id, member_id: member.id,
   data: { bethag_qa_fixture: marker }
-}, { onConflict: "workspace_id,condominium_id,email" }), "upsert resident portal access");
+};
+if (portalExisting) {
+  check(await db.from("portal_access").update(portalPayload).eq("id", portalExisting.id), "update resident portal access");
+} else {
+  check(await db.from("portal_access").insert(portalPayload), "create resident portal access");
+}
 
 const summary = {
   target_project: "jhuyhlzzydcgghrzeexn",
