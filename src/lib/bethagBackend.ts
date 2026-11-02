@@ -41,6 +41,24 @@ export async function getActiveWorkspaceId(userId?: string | null, preferredWork
   return data?.workspace_id ?? null;
 }
 
+export async function getWorkspacePlan(preferredWorkspaceId?: string | null): Promise<"free" | "plus" | "professional" | "portal" | null> {
+  if (!supabase) return null;
+  const workspaceId = await getActiveWorkspaceId(undefined, preferredWorkspaceId);
+  if (!workspaceId) return null;
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("plan")
+    .eq("id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw error;
+  const plan = data?.plan;
+  return plan === "free" || plan === "plus" || plan === "professional" || plan === "portal"
+    ? plan
+    : null;
+}
+
 export async function loadBackendState(workspaceId: string): Promise<BackendState> {
   if (!supabase) throw new Error("Supabase non configurato.");
 
