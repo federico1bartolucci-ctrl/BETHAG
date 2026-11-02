@@ -539,7 +539,15 @@ async function syncBackendStateNow(
     }))] : null,
     canSyncModule("comunicazioni") ? ["communications", (state.communications ?? []).map((item: any) => ({
       workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
-      title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
+      title: item.title, body: item.body, published: item.publishedToPortal,
+      // Keep UI labels in JSON data; store only canonical values accepted by
+      // communications_email_status_check in the relational column.
+      email_status: item.emailStatus === "Predisposta" ? "prepared"
+        : item.emailStatus === "Non inviata" ? null
+        : ["prepared", "no_recipients", "In elaborazione", "Inviata", "Parzialmente inviata", "Errore", "Consegnata"].includes(item.emailStatus)
+          ? item.emailStatus
+          : null,
+      email_prepared_at: item.emailPreparedAt || null, data: item,
     }))] : null,
     canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).map((item: any) => ({
       id: item.id,
