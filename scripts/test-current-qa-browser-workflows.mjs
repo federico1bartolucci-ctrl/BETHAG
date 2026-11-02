@@ -551,15 +551,26 @@ try {
 
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
-  await adminPage.locator("label").filter({ hasText: "Unità immobiliare" }).locator("select").selectOption(transferUnit.data.id);
+  // The UI shell hydrated its member list before this isolated test fixture
+  // was inserted. Request the same authoritative refresh used by successful
+  // transfer flows and wait until the newly inserted current owner is visible.
+  await adminPage.evaluate(() => window.dispatchEvent(new Event("bethag-backend-refresh")));
+  await adminPage.getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
   await adminPage.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
   const previewButton = adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true });
-  await previewButton.waitFor({ state: "visible", timeout: 10000 });
-  // Selecting the unit/date can launch an automatic preview. Wait for that
-  // request to finish before clicking the disabled-while-busy manual action.
+  const automaticPreview = adminPage.waitForResponse(response =>
+    response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer"),
+    { timeout: 20000 }
+  );
+  await adminPage.locator("label").filter({ hasText: "Unità immobiliare" }).locator("select").selectOption(transferUnit.data.id);
+  const automaticPreviewResult = await automaticPreview;
+  if (!automaticPreviewResult.ok()) {
+    const responseBody = await automaticPreviewResult.text().catch(() => "");
+    throw new Error(`APP-08/11 automatic preview RPC failed: HTTP ${automaticPreviewResult.status()} ${responseBody.slice(0, 2000)}`);
+  }
   await adminPage.waitForFunction(() => {
     const button = Array.from(document.querySelectorAll("button"))
       .find(item => item.textContent?.trim() === "Aggiorna anteprima contabile");
