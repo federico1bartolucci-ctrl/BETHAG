@@ -308,3 +308,31 @@ The latest authenticated browser run `41392503198` has role navigation PASS; the
 The authenticated suites now provide positive evidence across APP-01–APP-15, but several entries are **PASS only for their stated API/RLS or UI subset**, not full end-to-end acceptance. Remaining launch blockers are: full accounting and member-transfer UI journeys; actual email-provider delivery; reconciliation of the QA branch's `MIGRATIONS_FAILED` status; final ordered migration/source reconciliation; and formal cutover approval. Do not mark the release GO based only on these green CI runs.
 
 **Final decision remains NO-GO.** PR #32 remains open and draft. No merge, Production migration, deployment, branch reset, or cutover was performed.
+
+
+## 18. Authenticated QA retest — 2026-11-02 08:30 UTC
+
+**Candidate commit:** `84d613a8218a85a43345455cc5369869648f86c8` on `qa/retest-local-cache-20261102`.  
+**Target:** isolated QA Supabase project `jhuyhlzzydcgghrzeexn`. No Production migration, deployment, data mutation, merge, or cutover was performed.
+
+### Latest CI evidence
+
+- **Build and isolated PostgreSQL bootstrap — PASS:** [run 41413223224](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41413223224). Both `build` and `postgres-bootstrap` completed successfully.
+- **APP-05–APP-07 authenticated accounting checks — PASS:** [run 41413223238](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41413223238). The test created/edited a condominium and hierarchical unit, persisted an expense/allocation/installment/payment, and verified that a ledger mutation in a closed fiscal year is rejected without changing the amount. Temporary APP-05/06 fixtures were deleted; the dedicated APP-07 closed-year guard fixture is intentionally retained.
+- **Role navigation and session regression — PASS:** [run 41413223543](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41413223543). Administrator, collaborator and resident sign-in/landing/navigation/refresh checks passed. The administrator also completed remote sign-out and a fresh sign-in in the same browser context. No uncaught page errors were reported.
+- **APP-08–APP-11 transfer acceptance — PASS for authenticated API/RPC scope:** included in the same navigation workflow. Valid transfer closure, unpaid-installment rejection (EUR 50), preserved transfer/member state after rejected closure, authorization boundaries, and rollback checks passed. This is not yet a full graphical end-to-end transfer journey.
+- **APP-12 communication acceptance — PASS for portal visibility and recipient-preparation scope:** the administrator created an unpublished communication; the resident could not read the draft, could read it after publication, and lost visibility after withdrawal. Recipient preparation and administrator-only queue reset passed; resident operations were denied. No email was sent, so provider delivery, bounce/webhook and inbox receipt remain NOT TESTED.
+- **APP-13 document storage — PASS:** authenticated collaborator upload and metadata creation succeeded; the resident downloaded the shared file bytes. The temporary object and metadata were removed during cleanup.
+- **APP-01–APP-04 — PASS for authenticated API/RLS scope:** own-workspace administrator read, collaborator module boundary, resident portal scope and foreign-workspace read/write isolation passed. This does not prove every module's full UI workflow.
+- **APP-14 — prior QA ACL evidence remains PASS within its stated scope:** see §15 (2026-11-02 05:15 UTC) for the 47/47 RLS-enabled tables, application-owned default ACLs, zero app-role MAINTAIN and Security Advisor result. A fresh full ACL/default-privilege catalog comparison was not available in this retest; do not represent it as newly rerun by the current CI.
+- **APP-15 — PASS for role navigation/session regression:** the three role paths, refresh, administrator sign-out/sign-in and no-uncaught-page-error checks passed. Broader regression of every module and persisted UI workflow remains pending.
+
+### Remaining release blockers
+
+1. **Full graphical acceptance is not complete.** APP-05/06 accounting and condominium checks and APP-08/11 transfer checks above are authenticated API/RPC acceptance, not complete browser UI journeys for every create/edit/archive/restore/accounting/subentro screen.
+2. **Email delivery is not tested.** APP-12 proves portal visibility and recipient queue authorization only; no provider email was sent.
+3. **QA branch state needs independent reconciliation.** The latest branch-list connector request was denied for permissions. Earlier recorded evidence in this document reports the QA branch as `MIGRATIONS_FAILED` while its preview database was healthy. Do not assume that discrepancy has cleared; verify it in the Supabase Dashboard or with an authorized branch-status read.
+4. **Migration provenance remains unresolved.** The current QA migration ledger contains 46 entries, including QA-only forward repairs. The ledger includes `20261102050437_backfill_condominium_archive_metadata`, whose original SQL source was not found in the repository paths previously inspected (§16). Do not fabricate or silently replace that source. Reconcile the QA-only migrations and recover or formally supersede the missing source before preparing a Production release manifest.
+5. **Production cutover controls remain pending.** The frozen Production migration inventory, ordered release manifest/hashes, Production preflight, maintenance window, rollback plan and written approval have not been completed.
+
+**Decision: NO-GO for launch/cutover.** PR #32 remains open and draft. Do not merge it, deploy, reset the QA branch, or apply any migration to Production without explicit approval and a reconciled release candidate. Production remains untouched.
