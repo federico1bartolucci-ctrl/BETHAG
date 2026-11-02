@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Public client configuration for the isolated Supabase QA preview only.
+    env:
+      VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,7 +52,6 @@ jobs:
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
           PREVIEW_PID=$!
