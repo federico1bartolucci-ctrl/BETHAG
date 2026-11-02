@@ -51,6 +51,23 @@ function field(page, label) {
   return page.locator(".modal .field > label").filter({ hasText: label }).first().locator("xpath=..").locator("input, textarea").first();
 }
 
+async function clickWithRetry(locator, afterLocator, attempts = 4) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      await locator.waitFor({ state: "visible", timeout: 10000 });
+      await locator.click({ timeout: 5000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (afterLocator && await afterLocator.count()) return;
+      if (!/detached from the DOM|not stable|Timeout/i.test(String(error))) throw error;
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+  }
+  throw lastError;
+}
+
 async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
@@ -166,7 +183,10 @@ try {
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
-  await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).click();
+  await clickWithRetry(
+    adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
+    adminPage.getByRole("heading", { name: "Nuovo condominio" })
+  );
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(condoName);
   await field(adminPage, "Indirizzo *").fill("Via QA UI 1");
