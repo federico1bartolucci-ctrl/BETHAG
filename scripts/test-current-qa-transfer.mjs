@@ -45,8 +45,8 @@ try{
   results.push({name:"APP-11 failed closure transaction leaves no partial changes",status:"PASS",detail:"transfer, outgoing/incoming owner states and unpaid installment values remained unchanged after rejected closure"});
 
   const foreignWs=await cleanup.from("workspaces").insert({name:marker+"_FOREIGN",plan:"portal"}).select("id").single();assert.ifError(foreignWs.error);foreignWorkspaceId=foreignWs.data.id;
-  const adminIdentity=await admin.auth.getUser();assert.ifError(adminIdentity.error);assert.ok(adminIdentity.data.user?.id);
-  const foreignMembership=await cleanup.from("workspace_members").insert({workspace_id:foreignWorkspaceId,user_id:adminIdentity.data.user.id,role:"admin",active:true,permissions:{}});assert.ifError(foreignMembership.error);
+  const adminUserId=a.data.user.id;assert.ok(adminUserId);
+  const foreignMembership=await cleanup.from("workspace_members").insert({workspace_id:foreignWorkspaceId,user_id:adminUserId,role:"admin",active:true,permissions:{}});assert.ifError(foreignMembership.error);
   const foreignCondo=await admin.from("condominiums").insert({workspace_id:foreignWorkspaceId,name:marker+"_FOREIGN_CONDO",address:"Via QA esterna",city:"Imola",data:{bethag_qa_marker:marker}}).select("id").single();assert.ifError(foreignCondo.error);foreignCondominiumId=foreignCondo.data.id;
   const foreignUnit=await admin.from("condominium_units").insert({workspace_id:foreignWorkspaceId,condominium_id:foreignCondominiumId,unit_code:"X-01",data:{bethag_qa_marker:marker}}).select("id").single();assert.ifError(foreignUnit.error);foreignUnitId=foreignUnit.data.id;
   const foreignOwner=await admin.from("condominium_members").insert({condominium_id:foreignCondominiumId,unit_id:foreignUnitId,name:"Cedente workspace esterno QA",role:"resident",active:true,data:{role:"Proprietario",ownership_share:100,current_owner:true,position_status:"Attivo",bethag_qa_marker:marker}}).select("id").single();assert.ifError(foreignOwner.error);foreignOwnerId=foreignOwner.data.id;
