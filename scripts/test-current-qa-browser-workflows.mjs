@@ -79,29 +79,24 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  const condoCard = adminPage.locator(".entity-card").filter({ hasText: condoName });
-  try { await condoCard.waitFor({ timeout: 20000 }); }
-  catch (e) { const visible = (await adminPage.locator("body").innerText()).slice(0, 3500); throw new Error("Condominium UI save did not render the card. Dialogs=" + JSON.stringify(dialogs) + " Visible=" + visible + " Cause=" + e.message); }
-
+  await adminPage.getByRole("heading", { name: condoName, exact: true }).waitFor({ timeout: 20000 });
   const created = await cleanup.from("condominiums").select("id").eq("name", condoName).single();
   assert.ifError(created.error);
   const units = await cleanup.from("condominium_units").select("id", { count: "exact", head: true }).eq("condominium_id", created.data.id);
   assert.ifError(units.error);
   assert.equal(units.count, 5, "UI structure should persist 2 interiors + 3 autonomous appurtenances");
 
-  await condoCard.getByRole("button", { name: "Modifica" }).click();
+  await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Modifica" }).click();
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(editedCondoName);
   await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
-  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+  await adminPage.getByRole("heading", { name: editedCondoName, exact: true }).waitFor({ timeout: 20000 });
   const edited = await cleanup.from("condominiums").select("id,name").eq("id", created.data.id).single();
   assert.ifError(edited.error);
   assert.equal(edited.data.name, editedCondoName);
 
-  const editedCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName });
-  await editedCard.getByRole("button", { name: "Dettagli" }).click();
-  await adminPage.getByRole("button", { name: "Elimina", exact: true }).click();
-  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ state: "detached", timeout: 20000 });
+  await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Elimina" }).click();
+  await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 20000 });
   const afterDelete = await cleanup.from("condominiums").select("id").eq("id", created.data.id);
   assert.ifError(afterDelete.error);
   assert.equal(afterDelete.data.length, 0);
