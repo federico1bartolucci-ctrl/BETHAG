@@ -81,7 +81,6 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   }
   const condominiums = { data: condominiumRows, error: null };
 
-  const condominiumIds = condominiumRows.map((row: any) => row.id);
   const client = supabase;
   const loadWorkspaceRows = async (
     table: string,
