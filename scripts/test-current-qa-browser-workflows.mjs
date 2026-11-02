@@ -558,7 +558,7 @@ try {
   // hydrates the authoritative owner row during normal startup. The refresh
   // event is reserved for testing app mutations, not out-of-band fixture writes.
   await adminPage.reload({ waitUntil: "domcontentloaded" });
-  await adminPage.getByRole("heading", { name: "Homepage", exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 20000 });
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
   const ownerHydrationResponse = adminPage.waitForResponse(async (response) => {
