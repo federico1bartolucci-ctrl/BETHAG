@@ -32,3 +32,5 @@ try{
  await resident.auth.signOut();await admin.auth.signOut();
 }
 // QA verification rerun 2026-11-02
+
+// QA publication acceptance rerun after shared-environment serialization (2026-11-02).
