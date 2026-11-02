@@ -529,3 +529,64 @@ CREATE TRIGGER trg_prevent_archived_condominium_mutation BEFORE INSERT OR UPDATE
 CREATE TRIGGER trg_validate_scope_suppliers BEFORE INSERT OR UPDATE ON "public"."suppliers" FOR EACH ROW EXECUTE FUNCTION validate_workspace_condominium_scope();
 
 CREATE TRIGGER trg_prevent_archived_condominium_mutation BEFORE INSERT OR UPDATE ON "public"."workspace_members" FOR EACH ROW EXECUTE FUNCTION prevent_archived_condominium_mutation();
+
+
+-- Supabase-managed Storage is not present in the isolated PGlite baseline test.
+-- When rebuilding on Supabase, restore the private document bucket and its object policies here.
+DO $bethag_storage_baseline$
+BEGIN
+  IF to_regclass('storage.buckets') IS NOT NULL
+     AND to_regclass('storage.objects') IS NOT NULL
+     AND to_regprocedure('storage.foldername(text)') IS NOT NULL THEN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit)
+    VALUES ('bethag-documents', 'bethag-documents', false, 104857600)
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name, public = false, file_size_limit = EXCLUDED.file_size_limit;
+
+    EXECUTE $policy$DROP POLICY IF EXISTS "BETHAG documents select" ON storage.objects$policy$;
+    EXECUTE $policy$CREATE POLICY "BETHAG documents select" ON storage.objects
+      FOR SELECT TO authenticated
+      USING (
+        bucket_id = 'bethag-documents'
+        AND (
+          private.can_access_workspace_module(((storage.foldername(name))[1])::uuid, 'documenti'::text)
+          OR EXISTS (
+            SELECT 1 FROM public.documents d
+            WHERE d.file_path = objects.name
+              AND d.condominium_id::text = (storage.foldername(objects.name))[2]
+              AND COALESCE(d.data ->> 'publication', '') = 'Condiviso'
+              AND private.can_access_resident_condominium_module(d.condominium_id, 'documenti'::text)
+          )
+        )
+      )$policy$;
+
+    EXECUTE $policy$DROP POLICY IF EXISTS "BETHAG documents insert" ON storage.objects$policy$;
+    EXECUTE $policy$CREATE POLICY "BETHAG documents insert" ON storage.objects
+      FOR INSERT TO authenticated
+      WITH CHECK (
+        bucket_id = 'bethag-documents'
+        AND private.can_manage_workspace_module(((storage.foldername(name))[1])::uuid, 'documenti'::text)
+      )$policy$;
+
+    EXECUTE $policy$DROP POLICY IF EXISTS "BETHAG documents update" ON storage.objects$policy$;
+    EXECUTE $policy$CREATE POLICY "BETHAG documents update" ON storage.objects
+      FOR UPDATE TO authenticated
+      USING (
+        bucket_id = 'bethag-documents'
+        AND private.can_manage_workspace_module(((storage.foldername(name))[1])::uuid, 'documenti'::text)
+      )
+      WITH CHECK (
+        bucket_id = 'bethag-documents'
+        AND private.can_manage_workspace_module(((storage.foldername(name))[1])::uuid, 'documenti'::text)
+      )$policy$;
+
+    EXECUTE $policy$DROP POLICY IF EXISTS "BETHAG documents delete" ON storage.objects$policy$;
+    EXECUTE $policy$CREATE POLICY "BETHAG documents delete" ON storage.objects
+      FOR DELETE TO authenticated
+      USING (
+        bucket_id = 'bethag-documents'
+        AND private.can_manage_workspace_module(((storage.foldername(name))[1])::uuid, 'documenti'::text)
+      )$policy$;
+  END IF;
+END
+$bethag_storage_baseline$;

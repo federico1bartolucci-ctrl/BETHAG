@@ -1,10 +1,25 @@
--- Remove excessive default MAINTAIN privileges from application-facing roles
--- for objects created under postgres, the owner used by the application baseline.
--- Hosted Supabase validation showed that the connected postgres role is not a
--- member of supabase_admin and receives permission denied when altering that
--- role's default ACL. Do not attempt to mutate Supabase-managed defaults here.
--- The supabase_admin default ACL difference remains documented as a platform-
--- owned divergence and must not be represented as remediated by this migration.
+-- Least-privilege default table ACLs for objects created by postgres.
+-- PostgreSQL default privileges are additive: schema-specific REVOKE statements
+-- do not cancel grants inherited from global defaults, so both scopes are handled.
+-- Hosted Supabase validation showed the connected postgres role is not a member
+-- of supabase_admin. Do not mutate supabase_admin defaults: they are platform-
+-- managed and must be reported as a platform-owned divergence, not remediated here.
 -- This migration has NOT been applied to Production.
+
+-- anon must receive no table privileges by default (global and public-schema ACLs).
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE ALL ON TABLES FROM anon;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE MAINTAIN ON TABLES FROM anon, authenticated;
+  REVOKE ALL ON TABLES FROM anon;
+
+-- authenticated retains ordinary CRUD only; remove maintenance and structural powers.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE MAINTAIN, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE MAINTAIN, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
+
+-- service_role keeps backend CRUD/structural privileges, but not MAINTAIN.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE MAINTAIN ON TABLES FROM service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE MAINTAIN ON TABLES FROM service_role;

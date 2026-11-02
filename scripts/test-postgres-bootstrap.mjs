@@ -22,6 +22,9 @@ const incrementalMigrations = [
   "20261023000003_revoke_service_role_maintain.sql",
   "20261023000004_application_default_table_privileges.sql",
   "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+  "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+  "20261027110000_repair_service_role_transfer_invoker_path.sql",
+  "20261028100000_fix_collaborator_module_permission_boolean.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
@@ -134,6 +137,12 @@ console.log(JSON.stringify({ bootstrap: "BASELINE_ONLY_PASS", engine: "PostgreSQ
 // a defect in the five-file baseline itself.
 const baselineAclSql = `
 SELECT json_build_object(
+  'authenticated_crud', json_build_object(
+    'select', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'SELECT')),
+    'insert', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'INSERT')),
+    'update', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'UPDATE')),
+    'delete', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'DELETE'))
+  ),
   'authenticated_maintain_relations', (
     SELECT count(*)::int
     FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -162,6 +171,7 @@ SELECT json_build_object(
   )
 )::text;`;
 const baselineAcl = JSON.parse(psql(["-A", "-t", "-c", baselineAclSql], undefined).trim());
+assert.deepEqual(baselineAcl.authenticated_crud, { select: 47, insert: 41, update: 41, delete: 42 }, "Five-file baseline current-table CRUD grants must match the reviewed Production-aligned target.");
 assert.equal(baselineAcl.authenticated_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to authenticated.");
 assert.equal(baselineAcl.service_role_maintain_relations, 0, "Five-file baseline must not grant MAINTAIN to service_role.");
 assert.equal(baselineAcl.default_maintain_grants, 0, "Five-file baseline must not create unsafe default MAINTAIN grants.");
@@ -255,10 +265,8 @@ assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables 
 assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
 assert.equal(aclChecks.service_role_maintain_grants, 0, "service_role still has MAINTAIN on a public relation.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
-assert.equal(aclChecks.public_function_execute_count, 4, "PUBLIC EXECUTE differs from the four-function Production ACL baseline.");
+assert.equal(aclChecks.public_function_execute_count, 2, "PUBLIC EXECUTE must be limited to the two explicitly approved trigger functions.");
 assert.deepEqual(aclChecks.public_function_execute_targets, [
-  "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
-  "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
   "public.normalize_zero_ownership_owner()",
   "public.preserve_closing_condominium_member_history()",
 ], "PUBLIC EXECUTE is present on unexpected functions or missing from expected functions.");
@@ -378,6 +386,33 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.condominium_members WHERE id='66666666-6666-4666-8666-666666666666' AND active=true AND coalesce(data->>'position_status','') <> 'Archiviato') THEN RAISE EXCEPTION 'FAILED_CLOSURE_DID_NOT_ROLL_BACK_OWNER'; END IF;
 END;
 $test$;
+
+-- service_role has the permission path through the SECURITY INVOKER wrapper,
+-- but a backend call without a user JWT must still be rejected by auth.uid().
+SET LOCAL ROLE service_role;
+SELECT set_config('request.jwt.claim.sub', '', true);
+DO $service_role_auth$
+BEGIN
+  BEGIN
+    PERFORM public.close_condominium_member_transfer('88888888-8888-4888-8888-888888888888');
+    RAISE EXCEPTION 'SERVICE_ROLE_WITHOUT_USER_JWT_BYPASSED_AUTH';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'AUTH_REQUIRED' THEN RAISE; END IF;
+  END;
+END;
+$service_role_auth$;
+RESET ROLE;
+DO $service_role_no_side_effect$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.condominium_member_transfers
+    WHERE id='88888888-8888-4888-8888-888888888888'
+      AND status='Confermato' AND closed_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'SERVICE_ROLE_WITHOUT_USER_JWT_CHANGED_TRANSFER';
+  END IF;
+END;
+$service_role_no_side_effect$;
 ROLLBACK;
 `;
 psql(["-v", "ON_ERROR_STOP=1"], functionalTransferSql);
@@ -391,6 +426,126 @@ console.log(JSON.stringify({
     "incoming owner remains active",
     "open unpaid installment blocks closure",
     "failed closure leaves transfer and owner unchanged",
+    "service_role without a user JWT is rejected with AUTH_REQUIRED and causes no side effect",
     "test fixtures rolled back"
+  ]
+}, null, 2));
+
+
+// Cross-workspace RLS regression test on disposable fixtures.
+// It runs as the authenticated API role and rolls back every synthetic row.
+const workspaceIsolationSql = `
+BEGIN;
+SET LOCAL search_path = public, private, auth, extensions;
+INSERT INTO auth.users (id) VALUES
+ ('12121212-1212-4121-8121-121212121212'),
+ ('13131313-1313-4131-8131-131313131313');
+INSERT INTO public.profiles (id, full_name, email, role, active) VALUES
+ ('12121212-1212-4121-8121-121212121212', 'CI Workspace A Admin', 'ci-ws-a@example.invalid', 'admin', true),
+ ('13131313-1313-4131-8131-131313131313', 'CI Workspace B Admin', 'ci-ws-b@example.invalid', 'admin', true);
+INSERT INTO public.workspaces (id, name, plan) VALUES
+ ('14141414-1414-4141-8141-141414141414', 'CI Isolation Workspace A', 'professional'),
+ ('15151515-1515-4151-8151-151515151515', 'CI Isolation Workspace B', 'professional');
+INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions) VALUES
+ ('14141414-1414-4141-8141-141414141414', '12121212-1212-4121-8121-121212121212', 'admin', true, '{}'::jsonb),
+ ('15151515-1515-4151-8151-151515151515', '13131313-1313-4131-8131-131313131313', 'admin', true, '{}'::jsonb);
+INSERT INTO public.condominiums (id, workspace_id, name) VALUES
+ ('16161616-1616-4161-8161-161616161616', '14141414-1414-4141-8141-141414141414', 'CI Isolation Condominium A'),
+ ('17171717-1717-4171-8171-171717171717', '15151515-1515-4151-8151-151515151515', 'CI Isolation Condominium B');
+
+SELECT set_config('request.jwt.claim.sub', '12121212-1212-4121-8121-121212121212', true);
+SET LOCAL ROLE authenticated;
+DO $rls$
+DECLARE own_count integer; foreign_count integer; affected integer;
+BEGIN
+  SELECT count(*) INTO own_count FROM public.condominiums WHERE id='16161616-1616-4161-8161-161616161616';
+  SELECT count(*) INTO foreign_count FROM public.condominiums WHERE id='17171717-1717-4171-8171-171717171717';
+  IF own_count <> 1 THEN RAISE EXCEPTION 'RLS_WORKSPACE_ADMIN_CANNOT_READ_OWN_CONDOMINIUM'; END IF;
+  IF foreign_count <> 0 THEN RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_CONDOMINIUM_LEAK'; END IF;
+  UPDATE public.condominiums SET name='CI unauthorized overwrite'
+   WHERE id='17171717-1717-4171-8171-171717171717';
+  GET DIAGNOSTICS affected = ROW_COUNT;
+  IF affected <> 0 THEN RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_UPDATE_NOT_BLOCKED'; END IF;
+END;
+$rls$;
+RESET ROLE;
+DO $post_rls$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.condominiums WHERE id='17171717-1717-4171-8171-171717171717' AND name='CI Isolation Condominium B') THEN
+    RAISE EXCEPTION 'RLS_CROSS_WORKSPACE_UPDATE_CHANGED_FOREIGN_ROW';
+  END IF;
+END;
+$post_rls$;
+ROLLBACK;
+`;
+psql(["-v", "ON_ERROR_STOP=1"], workspaceIsolationSql);
+console.log(JSON.stringify({
+  workspace_isolation_rls_test: "PASS",
+  assertions: [
+    "authenticated workspace admin can read own condominium",
+    "authenticated workspace admin cannot read another workspace condominium",
+    "cross-workspace UPDATE affects zero rows and leaves foreign record unchanged",
+    "synthetic fixtures rolled back"
+  ]
+}, null, 2));
+
+// Regression: a collaborator permission key set to false must not authorize
+// management. Then prove the same collaborator can manage the module when true.
+const collaboratorPermissionBooleanSql = `
+BEGIN;
+SET LOCAL search_path = public, private, auth, extensions;
+INSERT INTO auth.users (id) VALUES ('18181818-1818-4181-8181-181818181818');
+INSERT INTO public.profiles (id, full_name, email, role, active)
+VALUES ('18181818-1818-4181-8181-181818181818', 'CI Permission Boolean Collaborator', 'ci-permission-boolean@example.invalid', 'collaborator', true);
+INSERT INTO public.workspaces (id, name, plan)
+VALUES ('19191919-1919-4191-8191-191919191919', 'CI Permission Boolean Workspace', 'professional');
+INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions)
+VALUES ('19191919-1919-4191-8191-191919191919', '18181818-1818-4181-8181-181818181818', 'collaborator', true, '{"condomini":false,"documenti":true}'::jsonb);
+
+SELECT set_config('request.jwt.claim.sub', '18181818-1818-4181-8181-181818181818', true);
+SET LOCAL ROLE authenticated;
+DO $false_permission$
+DECLARE denied boolean := false;
+BEGIN
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'condomini') IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'FALSE_PERMISSION_VALUE_WAS_TREATED_AS_ALLOWED';
+  END IF;
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'documenti') IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'TRUE_PERMISSION_VALUE_WAS_NOT_ALLOWED';
+  END IF;
+  BEGIN
+    INSERT INTO public.condominiums (workspace_id, name)
+    VALUES ('19191919-1919-4191-8191-191919191919', 'CI must deny false collaborator permission');
+  EXCEPTION WHEN insufficient_privilege THEN
+    denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'RLS_ALLOWED_INSERT_WITH_FALSE_PERMISSION'; END IF;
+END;
+$false_permission$;
+RESET ROLE;
+UPDATE public.workspace_members
+SET permissions='{"condomini":true,"documenti":true}'::jsonb
+WHERE workspace_id='19191919-1919-4191-8191-191919191919'
+  AND user_id='18181818-1818-4181-8181-181818181818';
+SET LOCAL ROLE authenticated;
+DO $true_permission$
+BEGIN
+  IF private.can_manage_workspace_module('19191919-1919-4191-8191-191919191919', 'condomini') IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'TRUE_PERMISSION_VALUE_WAS_NOT_ALLOWED_AFTER_GRANT';
+  END IF;
+  INSERT INTO public.condominiums (workspace_id, name)
+  VALUES ('19191919-1919-4191-8191-191919191919', 'CI allowed true collaborator permission');
+END;
+$true_permission$;
+ROLLBACK;
+`;
+psql(["-v", "ON_ERROR_STOP=1"], collaboratorPermissionBooleanSql);
+console.log(JSON.stringify({
+  collaborator_permission_boolean_regression: "PASS",
+  assertions: [
+    "collaborator permission value false does not authorize condominium management",
+    "false permission cannot insert a condominium through RLS",
+    "true permission authorizes the intended module",
+    "all synthetic rows rolled back"
   ]
 }, null, 2));
