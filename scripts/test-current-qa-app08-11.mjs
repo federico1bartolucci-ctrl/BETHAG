@@ -45,3 +45,4 @@ try{
  if(ids.condo) await cleanup.from("condominiums").delete().eq("id",ids.condo);
  await resident.auth.signOut();await admin.auth.signOut();
 }
+// QA verification rerun 2026-11-02
