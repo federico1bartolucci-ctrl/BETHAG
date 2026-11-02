@@ -1114,7 +1114,27 @@ const emptyProfile: AdminProfile = {
    HELPERS
    ========================================================= */
 
+const BACKEND_COLLECTION_STORAGE_KEYS = new Set<string>([
+  KEYS.condominiums, KEYS.deadlines, KEYS.documents, KEYS.assemblies,
+  KEYS.suppliers, KEYS.activities, KEYS.condominiumWorks, KEYS.communications,
+  KEYS.condominiumMembers, KEYS.condominiumRequests, KEYS.portalMembers,
+  KEYS.collaborators,
+]);
+
+function persistLocalState(key: string, value: unknown) {
+  if (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key)) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // A storage quota failure must never interrupt a successful backend write.
+    console.warn("BETHAG local cache was not persisted", { key, error });
+  }
+}
+
 function load<T>(key: string, fallback: T): T {
+  // In backend mode, never hydrate server-owned collections from an old local
+  // snapshot: it can be incomplete, stale, or large enough to exhaust quota.
+  if (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key)) return fallback;
   try {
     const value = localStorage.getItem(key);
 
@@ -3299,8 +3319,9 @@ function App() {
 
       Object.entries(state).forEach(([key, value]) => {
         const storageKey = (KEYS as Record<string,string>)[key];
-        if (storageKey && value !== undefined && key !== "profile") {
-          localStorage.setItem(storageKey, JSON.stringify(value));
+        if (storageKey && value !== undefined && key !== "profile" &&
+            !(supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(storageKey))) {
+          persistLocalState(storageKey, value);
         }
       });
       if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
@@ -3312,7 +3333,8 @@ function App() {
       if (backup.localStorageData && typeof backup.localStorageData === "object") {
         const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
         Object.entries(backup.localStorageData as Record<string, unknown>).forEach(([storageKey, value]) => {
-          if (excludedRestoreKeys.has(storageKey) || value === undefined) return;
+          if (excludedRestoreKeys.has(storageKey) || value === undefined ||
+              (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(storageKey))) return;
           try {
             localStorage.setItem(
               storageKey,
@@ -3414,7 +3436,7 @@ function App() {
     const localStorageData: Record<string, unknown> = {};
     const excludedKeys = new Set([KEYS.session, KEYS.sessionEmail]);
     Object.values(KEYS).forEach((key) => {
-      if (excludedKeys.has(key)) return;
+      if (excludedKeys.has(key) || (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key))) return;
       const raw = localStorage.getItem(key);
       if (raw === null) return;
       try { localStorageData[key] = JSON.parse(raw); } catch { localStorageData[key] = raw; }
@@ -6639,102 +6661,20 @@ function App() {
     collaborators,
   ]);
 
-  useEffect(() => {
-    // Supabase is authoritative in backend mode. Persisting the full workspace
-    // snapshot locally duplicates thousands of rows and exceeds browser quota.
-    if (supabaseConfigured) return;
-    try {
-      localStorage.setItem(
-        KEYS.condominiums,
-        JSON.stringify(condominiums)
-      );
-    } catch (error) {
-      // Local-only fallback must not crash the application when storage is full.
-      console.warn("BETHAG local condominium cache was not persisted", error);
-    }
-  }, [condominiums]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.deadlines,
-      JSON.stringify(deadlines)
-    );
-  }, [deadlines]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.documents,
-      JSON.stringify(documents)
-    );
-  }, [documents]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.assemblies,
-      JSON.stringify(assemblies)
-    );
-  }, [assemblies]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.suppliers,
-      JSON.stringify(suppliers)
-    );
-  }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.activities,
-      JSON.stringify(activities)
-    );
-  }, [activities]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
-  }, [condominiumWorks]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.communications,
-      JSON.stringify(communications)
-    );
-  }, [communications]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
-  }, [condominiumMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
-  }, [condominiumRequests]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.profile,
-      JSON.stringify(profile)
-    );
-  }, [profile]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.portalMembers,
-      JSON.stringify(portalMembers)
-    );
-  }, [portalMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.subscription,
-      JSON.stringify(subscription)
-    );
-  }, [subscription]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.collaborators,
-      JSON.stringify(collaborators)
-    );
-  }, [collaborators]);
+  useEffect(() => persistLocalState(KEYS.condominiums, condominiums), [condominiums]);
+  useEffect(() => persistLocalState(KEYS.deadlines, deadlines), [deadlines]);
+  useEffect(() => persistLocalState(KEYS.documents, documents), [documents]);
+  useEffect(() => persistLocalState(KEYS.assemblies, assemblies), [assemblies]);
+  useEffect(() => persistLocalState(KEYS.suppliers, suppliers), [suppliers]);
+  useEffect(() => persistLocalState(KEYS.activities, activities), [activities]);
+  useEffect(() => persistLocalState(KEYS.condominiumWorks, condominiumWorks), [condominiumWorks]);
+  useEffect(() => persistLocalState(KEYS.communications, communications), [communications]);
+  useEffect(() => persistLocalState(KEYS.condominiumMembers, condominiumMembers), [condominiumMembers]);
+  useEffect(() => persistLocalState(KEYS.condominiumRequests, condominiumRequests), [condominiumRequests]);
+  useEffect(() => persistLocalState(KEYS.profile, profile), [profile]);
+  useEffect(() => persistLocalState(KEYS.portalMembers, portalMembers), [portalMembers]);
+  useEffect(() => persistLocalState(KEYS.subscription, subscription), [subscription]);
+  useEffect(() => persistLocalState(KEYS.collaborators, collaborators), [collaborators]);
 
 
   /* =======================================================
