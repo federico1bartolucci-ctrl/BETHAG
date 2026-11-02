@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 const url="https://jhuyhlzzydcgghrzeexn.supabase.co", key=process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const password=process.env.BETHAG_QA_ADMIN_PASSWORD;\nconst serviceKey=process.env.BETHAG_QA_SERVICE_ROLE_KEY;
+const password=process.env.BETHAG_QA_ADMIN_PASSWORD;
+const serviceKey=process.env.BETHAG_QA_SERVICE_ROLE_KEY;
 assert.ok(key&&password&&serviceKey,"QA key/password/service cleanup key missing");
-const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});\nconst cleanup=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+const cleanup=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const login=await db.auth.signInWithPassword({email:"bethag-admin-qa@example.com",password});
 assert.ifError(login.error);
 const marker="BETHAG_QA_APP05_07_"+Date.now();
@@ -29,7 +31,8 @@ try{
  const verifyInst=await db.from("condominium_installments").select("amount").eq("id",installmentId).single();assert.ifError(verifyInst.error);assert.equal(Number(verifyInst.data.amount),125.5);
  pass("APP-06 accounting expense/allocation/installment persistence","real administrator session; €125.50 expense, 1,000 millesimi allocation and installment persisted");
 
- const paid=await db.from("condominium_installments").update({paid_amount:125.5,status:"Pagato"}).eq("id",installmentId);assert.ifError(paid.error);\n const close=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_source_fiscal_year_id:fiscalYearId});assert.ifError(close.error);
+ const paid=await db.from("condominium_installments").update({paid_amount:125.5,status:"Pagato"}).eq("id",installmentId);assert.ifError(paid.error);
+ const close=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_source_fiscal_year_id:fiscalYearId});assert.ifError(close.error);
  const blocked=await db.from("condominium_ledger_entries").update({amount:126}).eq("id",ledgerId);
  assert.ok(blocked.error,"Closed fiscal period accepted ledger mutation");
  const unchanged=await db.from("condominium_ledger_entries").select("amount").eq("id",ledgerId).single();assert.ifError(unchanged.error);assert.equal(Number(unchanged.data.amount),125.5);
