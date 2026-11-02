@@ -139,6 +139,16 @@ try {
   console.error(JSON.stringify({ suite: "BETHAG_QA_AUTHENTICATED_RLS", status: "FAIL", results, error: String(error?.stack || error) }, null, 2));
   process.exitCode = 1;
 } finally {
+  if (originalCollaboratorPermissions !== null) {
+    const restorePermissions = await fixtureAdmin.from("workspace_members")
+      .update({ permissions: originalCollaboratorPermissions })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userIds.collaborator);
+    if (restorePermissions.error) {
+      console.error("Failed to restore original QA collaborator permissions", restorePermissions.error.message);
+      process.exitCode = 1;
+    }
+  }
   for (const client of Object.values(clients)) await client.auth.signOut();
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_AUTHENTICATED_RLS", target: "jhuyhlzzydcgghrzeexn", results }, null, 2));
