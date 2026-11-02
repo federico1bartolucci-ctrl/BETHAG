@@ -286,6 +286,7 @@ type CondominiumUnit = {
 type CondominiumMember = {
   id: number;
   userId?: string;
+  databaseId?: string;
   condominiumId: number;
   firstName: string;
   lastName: string;
@@ -419,6 +420,7 @@ type AdminProfile = {
 type PortalMember = {
   id: number;
   userId?: string;
+  memberId?: string;
   name: string;
   email: string;
   condominiumId: number;
@@ -1714,7 +1716,9 @@ function ResidentPortalView({
           (registryMember) =>
             registryMember.active &&
             registryMember.condominiumId === item.condominiumId &&
-            registryMember.email.trim().toLowerCase() === email.trim().toLowerCase()
+            (item.memberId
+              ? registryMember.databaseId === item.memberId
+              : registryMember.email.trim().toLowerCase() === email.trim().toLowerCase())
         )
     ) || null;
 
