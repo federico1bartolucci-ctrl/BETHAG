@@ -1886,6 +1886,37 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
   });
 }
 
+export async function setCommunicationPublication(
+  workspaceId: string,
+  legacyId: number,
+  published: boolean,
+  communicationData: any
+) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  return enqueueBackendSync(async () => {
+    const { data, error } = await supabase
+      .from("communications")
+      .update({
+        published,
+        data: {
+          ...(communicationData && typeof communicationData === "object" ? communicationData : {}),
+          publishedToPortal: published,
+          status: published ? "Pubblicata" : "Bozza",
+        },
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", legacyId)
+      .select("id,published")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Comunicazione non trovata nel workspace: pubblicazione non aggiornata.");
+    if (data.published !== published) throw new Error("Il server non ha confermato il nuovo stato di pubblicazione.");
+    return data;
+  });
+}
+
 export async function deleteWorkspaceRecord(
   workspaceId: string,
   table: "documents" | "deadlines" | "assemblies" | "suppliers" | "activities" | "communications",
