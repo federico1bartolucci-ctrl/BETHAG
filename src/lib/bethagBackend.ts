@@ -385,11 +385,11 @@ async function syncBackendStateNow(
 
   if (condominiumRows.length) {
     const existingByLegacyId = new Map(
-      (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row])
+      (existingCondominiums ?? []).map((row: any) => [String(row.legacy_id), row])
     );
 
     const rowsToPersist = condominiumRows.map((item: any) => {
-      const existing = existingByLegacyId.get(item.id);
+      const existing = existingByLegacyId.get(String(item.id));
 
       // La sincronizzazione automatica riceve anche stati locali parziali
       // (ad esempio durante hydration/refresh). Un valore assente o vuoto
