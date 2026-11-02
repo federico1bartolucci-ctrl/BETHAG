@@ -62,8 +62,8 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 | APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PARTIAL — rejected closure left transfer, both owner states and unpaid installment unchanged; full UI rollback pending |
 | APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publication, recipient prep and queue authorization passed; provider delivery not tested |
 | APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — authenticated collaborator upload and resident shared-file download passed; foreign/private access denied |
-| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PARTIAL — zero app-role MAINTAIN and clean Security Advisor; default-ACL parity and QA branch status unresolved |
-| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PARTIAL — real Auth refresh and 12 admin navigation destinations passed; complete regression/sign-out flow pending |
+| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — QA live catalog and isolated PostgreSQL 17 rehearsal; Production pre-cutover drift is explicitly recorded in §18 and remains a cutover blocker |
+| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — authenticated browser run 41459214926: all three roles sign in and retain session on refresh; 12 admin destinations and collaborator/resident restrictions pass; core UI workflows also pass |
 
 ## 3. Evidence to attach
 
@@ -289,3 +289,45 @@ The latest authenticated browser run `41392503198` has role navigation PASS; the
 - On that commit, CI build and isolated PostgreSQL migration/ACL checks PASS; authenticated role smoke PASS, including role-specific landing and refresh.
 - The full authenticated browser workflow then passed through condominium create/edit/archive persistence but failed to render the archived condominium card in the Archive UI. The next run adds an explicit Archive heading wait and captures the rendered page plus persisted DB row. APP-05 full UI remains PARTIAL pending that rerun.
 - After the failed run, service-role cleanup verification found zero synthetic condominium, communication or portal-access fixtures remaining.
+
+
+## 18. APP-14/APP-15 closure evidence — 2026-11-02 14:09 UTC
+
+### APP-15 — PASS (authenticated browser acceptance)
+
+Workflow [run 41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926), job `build`, completed successfully. Its authenticated QA browser step ran all three scripts and reported:
+
+- `BETHAG_QA_BROWSER_WORKFLOWS`: **PASS**. APP-05 create/edit/archive/restore persisted in the database; restored condominium was returned by the post-reload Supabase hydration response. APP-06 expense, 1,000-millesimi allocation and installment saved from the UI. APP-08/11 transfer preview, confirmation and closure completed; outgoing owner became inactive and incoming owner appeared after navigation without a hard reload. APP-12 communication was published and persisted with the synthetic resident fixture.
+- `BETHAG_QA_ROLE_NAVIGATION`: **3/3 roles PASS**. Administrator activated 12 navigation destinations and retained the Homepage route after refresh; collaborator did not see administrator-only accounting or collaborator-administration navigation; resident did not see staff navigation or accounting.
+- `BETHAG_CURRENT_QA_REAL_AUTH`: **3/3 roles PASS**. Administrator, collaborator and resident completed real Supabase Auth sign-in, role-specific landing and refresh/session persistence, with no uncaught browser page errors.
+- The browser run's cleanup checks removed the synthetic condominium, communication, portal-access and member fixtures. A single aborted background GET was logged during navigation; it did not fail the assertions or the workflow.
+
+**APP-15 is closed for the documented core navigation/session and workflow acceptance scope.** This is not a claim that every page in every optional module has been exhaustively explored.
+
+### APP-14 — PASS for QA and the canonical candidate rehearsal
+
+The same workflow completed both relevant jobs successfully:
+
+- **Isolated PostgreSQL 17 candidate rehearsal:** all five baseline migrations and all 14 canonical incremental migrations applied in order. The guarded ledger rehearsal preserved the exact 244 historical Production rows and recorded the 14 candidate migrations without rewriting or deleting history. Baseline ACL validation, incremental hardening, transfer closure invariants, workspace-isolation RLS, collaborator boolean-permission regression and post-migration ACL checks all passed.
+- **Live QA catalog:** 47 public tables plus one view; all 47 tables have RLS enabled; zero `MAINTAIN` grants to `authenticated` or `service_role`; zero application-role default `MAINTAIN`; `service_role` has `private.USAGE`; the public transfer wrapper is `SECURITY INVOKER`; its private implementation is executable by the intended authenticated/service roles and not by PUBLIC/anon.
+- **Migration provenance:** the previously reported missing SQL source `20261102050437_backfill_condominium_archive_metadata` has now been recovered in the branch at `supabase/rebuild/qa-only-migrations/20261102050437_backfill_condominium_archive_metadata.sql` (blob `66947779950253a3e01ff19d493a5f07c11392a6`). It remains a QA-only artifact pending semantic review; it has not been silently added to the canonical Production sequence.
+- CI step `Verify Production function security and ACL parity` compares the canonical baseline with the captured Production catalog snapshot. It is a snapshot comparison, not a live Production attestation.
+
+### Production boundary — still NO-GO for cutover
+
+A separate live, read-only SQL comparison on 2026-11-02 was run against Production project `tctcgptrsmvgajqjgnev` and QA project `jhuyhlzzydcgghrzeexn`. It confirms that QA/candidate acceptance must not be misrepresented as current Production parity:
+
+| Live check | Production | QA |
+|---|---:|---:|
+| Public base tables / views | 47 / 1 | 47 / 1 |
+| Public tables without RLS | 0 | 0 |
+| Effective `MAINTAIN` on public relations — authenticated | 34 | 0 |
+| Effective `MAINTAIN` on public relations — service_role | 48 | 0 |
+| `service_role` has `private.USAGE` | false | true |
+| Public transfer wrapper is SECURITY DEFINER | true | false |
+| Private transfer implementation EXECUTE for authenticated/service_role | false / false | true / true |
+| Application default-ACL `MAINTAIN` entry | present | absent |
+
+Production's 244-entry historical ledger is intentionally not rewritten. The canonical 14-migration candidate has passed isolated PostgreSQL 17 rehearsal, but its Production cutover has not been executed. The Production privilege differences above must be addressed by the approved forward migration sequence and rechecked after cutover; do not run ad-hoc SQL or mark Production aligned before that verification.
+
+**Disposition:** APP-14 is closed for the QA/live-candidate acceptance and isolated migration rehearsal. Production cutover remains **NO-GO** until the canonical migration plan is approved, applied in the authorized window, and live Production ACL postconditions are rechecked. APP-15 is closed for the tested authenticated browser scope. No Production SQL, merge, deployment, branch reset, or cutover was performed in this update.
