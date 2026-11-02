@@ -556,11 +556,20 @@ try {
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
   await adminPage.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
+  const previewButton = adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true });
+  await previewButton.waitFor({ state: "visible", timeout: 10000 });
+  // Selecting the unit/date can launch an automatic preview. Wait for that
+  // request to finish before clicking the disabled-while-busy manual action.
+  await adminPage.waitForFunction(() => {
+    const button = Array.from(document.querySelectorAll("button"))
+      .find(item => item.textContent?.trim() === "Aggiorna anteprima contabile");
+    return Boolean(button && !button.hasAttribute("disabled"));
+  }, null, { timeout: 15000 });
   const previewResponse = adminPage.waitForResponse(response =>
     response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer"),
     { timeout: 20000 }
   );
-  await adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true }).click();
+  await previewButton.click();
   const previewResult = await previewResponse;
   if (!previewResult.ok()) {
     const responseBody = await previewResult.text().catch(() => "");
