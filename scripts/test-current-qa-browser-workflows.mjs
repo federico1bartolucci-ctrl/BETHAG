@@ -101,7 +101,7 @@ try {
   assert.ifError(archived.error);
   assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted");
   assert.ok(archived.data.archived_by, "Condominium archive actor was not persisted");
-  assert.equal(archived.data.data.archivedAt, archived.data.archived_at, "JSON and structured archive timestamps diverged");
+  assert.equal(Date.parse(archived.data.data.archivedAt), Date.parse(archived.data.archived_at), "JSON and structured archive timestamps diverged");
   await adminPage.locator(".nav-item").filter({ hasText: "Archivio" }).first().click();
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
   await archiveCard.waitFor({ timeout: 15000 });
