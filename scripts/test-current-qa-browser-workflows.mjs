@@ -823,7 +823,9 @@ try {
     message.includes("BETHAG backend sync failed")
   );
   const abortedMemberSyncs = failedRequests.filter(request =>
-    request.error === "net::ERR_ABORTED" && request.url.includes("/rest/v1/condominium_members")
+    request.error === "net::ERR_ABORTED" &&
+    request.url.includes("/rest/v1/condominium_members") &&
+    request.url.includes("on_conflict=")
   );
   assert.equal(
     portalAccessSyncErrors.length,
