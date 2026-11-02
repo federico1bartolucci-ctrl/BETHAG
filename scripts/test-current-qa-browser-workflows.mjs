@@ -96,7 +96,7 @@ try {
   assert.equal(edited.data.name, editedCondoName);
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
-  await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const archived = await cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
   assert.ifError(archived.error);
   assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted");
