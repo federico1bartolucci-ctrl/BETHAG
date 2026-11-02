@@ -12139,7 +12139,7 @@ function CommunicationsPage({
   return (
     <>
 
-      {isAdministrator ? (
+      {onNew ? (
         <PageHeader
           eyebrow="Comunicazioni"
           title="Comunicazioni"
