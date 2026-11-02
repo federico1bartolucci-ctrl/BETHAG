@@ -24,3 +24,4 @@ jobs:
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
         run: node scripts/test-current-qa-app12.mjs
+# QA verification trigger refreshed 2026-11-02
