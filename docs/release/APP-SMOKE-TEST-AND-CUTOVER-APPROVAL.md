@@ -158,3 +158,11 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - **Cleanup — PASS:** the synthetic condominium, unit, fiscal year, ledger entry, allocation, installment, and payment movement were removed after the test; a follow-up count returned zero for every marker table.
 - **Release-plan impact:** this is a post-freeze follow-up migration applied only to QA. The original frozen 17-migration cutover inventory is now incomplete for any future release candidate and must not be used unchanged. Production remains untouched; no merge, deployment, or cutover was performed.
 - This is authenticated API/database evidence, not full browser acceptance. APP-01–APP-15 remain NOT RUN in the formal checklist until all complete acceptance criteria, including the remaining UI and workflow scenarios, are evidenced.
+
+## 10. Authenticated communication publication QA acceptance — 2026-11-02
+
+- Workflow [run 41384610747](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41384610747), commit `81811978a6d04fcbc1c1efaa0d949744149ec805` — **PASS** against the approved QA project using real administrator and resident Auth sessions.
+- **APP-12 partial — PASS:** administrator created a draft communication; resident could not read it; after publication the resident could read it; after unpublishing the resident lost visibility again. The synthetic communication was deleted after the test.
+- The QA resident fixture now includes the `comunicazioni` portal permission. This is test-fixture configuration only.
+- **Email provider delivery remains NOT TESTED:** no email was sent and no delivery provider was invoked. This evidence covers only in-portal publication visibility, not outbound email delivery or recipient delivery records.
+- Full APP-12 remains NOT RUN in the formal checklist until its complete acceptance criteria are met.
