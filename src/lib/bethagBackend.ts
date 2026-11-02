@@ -77,7 +77,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     (_, index) => index * condominiumPageSize
   );
   const condominiumRows: any[] = [];
-  const condominiumPageConcurrency = 6;
+  const condominiumPageConcurrency = 24;
   for (let index = 0; index < condominiumPageOffsets.length; index += condominiumPageConcurrency) {
     const pageResults = await Promise.all(
       condominiumPageOffsets.slice(index, index + condominiumPageConcurrency).map(async (offset) => {
