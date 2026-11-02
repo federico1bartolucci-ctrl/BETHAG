@@ -97,10 +97,25 @@ try {
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
   await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 20000 });
-  const archived = await cleanup.from("condominiums").select("id,archived_at").eq("id", created.data.id).single();
+  const archived = await cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
   assert.ifError(archived.error);
   assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted");
-  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "condominium archived from UI"] });
+  assert.ok(archived.data.archived_by, "Condominium archive actor was not persisted");
+  assert.equal(archived.data.data.archivedAt, archived.data.archived_at, "JSON and structured archive timestamps diverged");
+  await adminPage.locator(".nav-item").filter({ hasText: "Archivio" }).first().click();
+  const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
+  await archiveCard.waitFor({ timeout: 15000 });
+  await archiveCard.getByRole("button", { name: "Ripristina" }).click();
+  await archiveCard.waitFor({ state: "detached", timeout: 15000 });
+  const restored = await cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
+  assert.ifError(restored.error);
+  assert.equal(restored.data.archived_at, null);
+  assert.equal(restored.data.archived_by, null);
+  assert.equal(restored.data.archive_reason, null);
+  assert.equal(restored.data.data.archivedAt, undefined);
+  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 15000 });
+  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared"] });
 
   await adminPage.locator(".nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   await adminPage.getByRole("button", { name: "+ Nuova comunicazione" }).click();
