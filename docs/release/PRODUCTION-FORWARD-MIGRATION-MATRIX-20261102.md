@@ -41,3 +41,12 @@ The browser acceptance run is separately exercising the archive/restore UI again
 6. Apply only the reviewed migrations during the separately approved cutover, then run the read-only postflight and authenticated smoke tests.
 
 **Production was not modified while preparing this addendum.** A successful build or QA test is not authorization to deploy these migrations.
+
+
+## Rehearsal result
+
+<badge>PASS — isolated PostgreSQL 17</badge>
+
+The guarded cutover runner completed all fourteen canonical migrations in CI run [41398202209](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41398202209). The same job verified the 244 historical version/name pairs, the final 258-row ledger, incremental ACL/security postconditions, collaborator permission enforcement under RLS, and the canonical ledger transaction.
+
+The separate application QA run still has an unresolved edit-form acceptance failure. APP-01–APP-15 are therefore not signed off, and this successful database rehearsal is **not** Production authorization.
