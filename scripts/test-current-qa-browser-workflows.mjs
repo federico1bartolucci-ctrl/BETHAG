@@ -443,6 +443,7 @@ try {
   await adminPage.getByRole("button", { name: "+ Nuova rata", exact: true }).click();
   const installmentModal = adminPage.locator(".modal-card").last();
   await installmentModal.locator("label").filter({ hasText: "Titolo" }).locator("input").fill(marker + "_RATA_UI");
+  await installmentModal.locator("label").filter({ hasText: "Esercizio" }).locator("select").selectOption(accountingFiscalYearId);
   await installmentModal.locator("label").filter({ hasText: "Unità" }).locator("select").selectOption(accountingUnit.data.id);
   await installmentModal.locator("label").filter({ hasText: "Importo" }).locator("input").fill("125.50");
   await installmentModal.locator("label").filter({ hasText: "Scadenza" }).locator("input").fill("2026-12-15");
