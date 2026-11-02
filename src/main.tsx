@@ -6640,10 +6640,17 @@ function App() {
   ]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.condominiums,
-      JSON.stringify(condominiums)
-    );
+    // Supabase is authoritative in backend mode; avoid duplicating the
+    // complete workspace snapshot in browser storage.
+    if (supabaseConfigured) return;
+    try {
+      localStorage.setItem(
+        KEYS.condominiums,
+        JSON.stringify(condominiums)
+      );
+    } catch (error) {
+      console.warn("BETHAG local condominium cache was not persisted", error);
+    }
   }, [condominiums]);
 
   useEffect(() => {
