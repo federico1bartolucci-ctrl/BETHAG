@@ -576,10 +576,8 @@ try {
   // Reload after the service-role fixture insert so the authenticated browser
   // hydrates the authoritative owner row during normal startup. The refresh
   // event is reserved for testing app mutations, not out-of-band fixture writes.
-  await adminPage.reload({ waitUntil: "domcontentloaded" });
-  await adminPage.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 20000 });
-  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
-  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
+  // Register the network observer before reload: member hydration occurs during
+  // startup, so attaching the listener after navigation can miss the response.
   const ownerHydrationResponse = adminPage.waitForResponse(async (response) => {
     const requestUrl = new URL(response.url());
     if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
@@ -589,8 +587,12 @@ try {
       row.unit_id === transferUnit.data.id &&
       row.condominium_id === created.id
     );
-  }, { timeout: 20000 });
+  }, { timeout: 30000 });
+  await adminPage.reload({ waitUntil: "domcontentloaded" });
+  await adminPage.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 20000 });
   await ownerHydrationResponse;
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
+  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
   await adminPage.getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
