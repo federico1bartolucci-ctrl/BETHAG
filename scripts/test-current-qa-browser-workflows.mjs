@@ -156,7 +156,24 @@ try {
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(editedCondoName);
   await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
-  await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
+  try {
+    await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
+  } catch (editUiError) {
+    const editedDbState = await cleanup.from("condominiums")
+      .select("id,name,archived_at,archived_by,archive_reason,data")
+      .eq("id", created.id).maybeSingle();
+    console.log("APP05_EDIT_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      editedDbState: editedDbState.data,
+      editedDbError: editedDbState.error?.message,
+      dialogs,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+    }));
+    throw editUiError;
+  }
   const edited = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,name").eq("id", created.id).maybeSingle(),
     row => row?.name === editedCondoName,
