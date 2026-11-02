@@ -483,3 +483,4 @@ if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.st
 // Re-run marker: strict-mode heading selector uses the unique h1 after save.
 
 // Retry after QA-only EXECUTE grant for the guarded private condominium deletion RPC.
+// QA browser acceptance rerun after async restore hydration fix 2026-11-02
