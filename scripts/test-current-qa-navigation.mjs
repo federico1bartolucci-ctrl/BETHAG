@@ -44,16 +44,30 @@ try{
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});
     await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:20000});
     assert.match(page.url(), /[?&]page=homepage(?:&|$)/, "Refresh did not preserve the Homepage route");
-    results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","Homepage route survived refresh","no uncaught browser errors"]});
+    // Exercise a real remote sign-out followed by a fresh sign-in in the same browser context.
+    await page.locator(".nav-item").filter({hasText:"Esci"}).first().click();
+    await page.getByRole("button",{name:"Accedi"}).first().waitFor({timeout:15000});
+    await page.getByRole("button",{name:"Accedi"}).first().click();
+    await page.getByRole("heading",{name:"Accedi a BETHAG"}).waitFor();
+    await page.getByRole("button",{name:"Amministratore",exact:true}).click();
+    await page.locator('input[type="email"]').first().fill(a.email);
+    await page.locator('input[autocomplete="current-password"]').first().fill(a.password);
+    await page.getByRole("button",{name:"Accedi",exact:true}).last().click();
+    await page.getByText("Homepage",{exact:true}).first().waitFor({timeout:25000});
+    results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","Homepage route survived refresh","remote sign-out and fresh sign-in succeeded","no uncaught browser errors"]});
    }else if(a.role==="collaborator"){
     assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");
     assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");
     assert.ok(await page.locator(".nav-item.active").filter({hasText:"Homepage"}).count());
-    results.push({role:a.role,status:"PASS",checks:["administrator-only accounting navigation absent","collaborator administration absent","Homepage active","no uncaught browser errors"]});
+    await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+    await page.getByText("Homepage",{exact:true}).first().waitFor({timeout:20000});
+    results.push({role:a.role,status:"PASS",checks:["administrator-only accounting navigation absent","collaborator administration absent","Homepage active after refresh","no uncaught browser errors"]});
    }else{
     assert.equal(await page.locator(".nav-item").count(),0,"Resident unexpectedly sees staff navigation");
     assert.equal(await page.getByText("Contabilità",{exact:true}).count(),0,"Resident unexpectedly sees accounting");
-    results.push({role:a.role,status:"PASS",checks:["resident portal landing visible","staff navigation absent","accounting control absent","no uncaught browser errors"]});
+    await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+    await page.getByText("Portale condòmino",{exact:true}).first().waitFor({timeout:20000});
+    results.push({role:a.role,status:"PASS",checks:["resident portal landing visible after refresh","staff navigation absent","accounting control absent","no uncaught browser errors"]});
    }
    assert.deepEqual(errors,[]);
   }catch(e){results.push({role:a.role,status:"FAIL",error:String(e.message).slice(0,500),pageErrors:errors,dialogs,visible:(await page.locator("body").innerText()).slice(0,1200)});}
