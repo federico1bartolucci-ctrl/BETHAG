@@ -608,7 +608,7 @@ try {
   await browser.close();
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuyhlzzydcgghrzeexn", results, pageErrors, cleanup: "service-role cleanup verified" }, null, 2));
-if (results.length !== 2 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
+if (results.length !== 3 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
 if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
 if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
 
