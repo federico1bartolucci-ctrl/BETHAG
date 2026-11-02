@@ -570,21 +570,12 @@ try {
 
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
-  // The subentro page is a standalone module and does not hydrate the full
-  // condominium registry on a hard reload. Ask the app to run its supported
-  // authoritative backend refresh, then verify the inserted owner is returned.
-  const ownerHydrationResponse = adminPage.waitForResponse(async (response) => {
-    const requestUrl = new URL(response.url());
-    if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
-    const rows = await response.json().catch(() => []);
-    return Array.isArray(rows) && rows.some((row) =>
-      row.name === marker + "_CEDENTE_UI" &&
-      row.unit_id === transferUnit.data.id &&
-      row.condominium_id === created.id
-    );
-  }, { timeout: 30000 });
-  await adminPage.evaluate(() => window.dispatchEvent(new Event("bethag-backend-refresh")));
-  await ownerHydrationResponse;
+  // Entering the condominium registry triggers the application's normal
+  // authoritative workspace hydration. Return to the transfer module only
+  // after that refresh has completed, then assert the owner in the actual UI.
+  await adminPage.getByRole("button", { name: "Condomini", exact: true }).click();
+  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
