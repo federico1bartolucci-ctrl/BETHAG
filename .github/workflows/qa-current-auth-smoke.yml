@@ -11,6 +11,10 @@ on:
       - "vite.config.ts"
       - ".github/workflows/qa-current-auth-smoke.yml"
   workflow_dispatch:
+env:
+  VITE_SUPABASE_ENABLE: "true"
+  VITE_SUPABASE_URL: "https://jhuyhlzzydcgghrzeexn.supabase.co"
+  VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj"
 jobs:
   authenticated-smoke:
     runs-on: ubuntu-latest
@@ -21,10 +25,6 @@ jobs:
         with:
           node-version: 24
       - name: Validate target is the approved QA project
-        env:
-          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           test "$VITE_SUPABASE_ENABLE" = "true" || { echo "QA must be explicitly enabled"; exit 1; }
           test "${VITE_SUPABASE_URL%/}" = "https://jhuyhlzzydcgghrzeexn.supabase.co" || { echo "Refusing any non-approved Supabase target"; exit 1; }
@@ -32,10 +32,6 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Build against isolated QA
-        env:
-          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
