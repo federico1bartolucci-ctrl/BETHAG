@@ -280,3 +280,12 @@ The latest authenticated browser run `41392503198` has role navigation PASS; the
 - The live QA migration ledger records `20261102050437_backfill_condominium_archive_metadata`, but the corresponding SQL source is not present at the expected `supabase/migrations/`, `supabase/rebuild/`, or `supabase/rebuild/qa-only-migrations/` paths in the current branch. The original SQL body was not recoverable from prior conversation context.
 - Read-only QA data check: 1,029 condominium rows; 0 rows with structured `archived_at`; 0 rows with JSON-only `data.archivedAt`; 0 rows with structured archive timestamp but missing actor. The backfill therefore has no observed archived records to reconcile in the current QA dataset, but its original SQL must still be recovered or formally superseded before Production release.
 - Do not fabricate or silently replace the missing migration source. Keep this as an explicit migration provenance blocker in the release checklist.
+
+
+## 17. Large-workspace hydration and archive UI rerun — 2026-11-02 05:17 UTC
+
+- QA workspace contains approximately 1,029 condominium rows. The authenticated browser diagnostic identified HTTP 400 on the single PostgREST `condominium_units?condominium_id=in.(...)` request containing all condominium UUIDs; this caused backend hydration and navigation refresh to fail and prevented communication persistence.
+- Corrected `loadBackendState` to fetch condominium members, units and member transfers in batches of 100 condominium IDs. Commit `65709ac0966df0641064f6546ce16476215f242c`.
+- On that commit, CI build and isolated PostgreSQL migration/ACL checks PASS; authenticated role smoke PASS, including role-specific landing and refresh.
+- The full authenticated browser workflow then passed through condominium create/edit/archive persistence but failed to render the archived condominium card in the Archive UI. The next run adds an explicit Archive heading wait and captures the rendered page plus persisted DB row. APP-05 full UI remains PARTIAL pending that rerun.
+- After the failed run, service-role cleanup verification found zero synthetic condominium, communication or portal-access fixtures remaining.
