@@ -104,7 +104,7 @@ try {
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
 
-  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).click();
@@ -139,7 +139,7 @@ try {
   assert.equal(edited.data.name, editedCondoName);
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
-  await adminPage.locator(".nav-item").filter({ hasText: "Archivio" }).first().click();
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
   await archiveCard.waitFor({ timeout: 15000 });
   const archived = await waitForDbRow(
@@ -164,8 +164,8 @@ try {
   );
   assert.equal(restored.data.archivedAt, undefined);
   await adminPage.reload({ waitUntil: "networkidle" });
-  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
-  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
   // The synthetic condominium is removed by cleanupFixtures() in finally.
   // APP-05 covers create/edit/archive/restore; destructive deletion is not
@@ -209,8 +209,12 @@ try {
   }).select("id").single();
   assert.ifError(portalAccess.error);
 
-  await adminPage.locator(".nav-item").filter({ hasText: "Comunicazioni" }).first().click();
-  await adminPage.getByRole("button", { name: "+ Nuova comunicazione" }).click();
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
+  await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 });
+  const newCommunicationButton = adminPage.locator(".page-header").getByRole("button", { name: "+ Nuova comunicazione" });
+  try { await newCommunicationButton.waitFor({ state: "visible", timeout: 15000 }); }
+  catch (e) { const visible = (await adminPage.locator("body").innerText()).slice(0, 2500); throw new Error("Administrator communication action is missing. Body=" + visible + " Cause=" + e.message); }
+  await newCommunicationButton.click();
   await adminPage.getByRole("heading", { name: "Nuova comunicazione al Portale" }).waitFor();
   await field(adminPage, "Titolo *").fill(communicationTitle);
   await adminPage.locator(".modal .field").filter({ hasText: "Condominio" }).locator("select").first().selectOption({ label: editedCondoName });
