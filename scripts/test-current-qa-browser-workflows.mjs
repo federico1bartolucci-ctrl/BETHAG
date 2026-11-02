@@ -255,6 +255,13 @@ try {
   assert.equal(edited.name, editedCondoName);
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
+  // Do not navigate away while the archive RPC is still running. The click
+  // dispatches an async handler; wait for the committed server state first.
+  const archived = await waitForDbRow(
+    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason").eq("id", created.id).single(),
+    row => Boolean(row?.archived_at && row?.archived_by),
+    "Condominium archive persistence"
+  );
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
   await adminPage.getByRole("heading", { name: "Archivio", exact: true }).waitFor({ timeout: 10000 });
   // Target the actual archive article, not any generic .card wrapper that
@@ -279,11 +286,6 @@ try {
     }));
     throw archiveUiError;
   }
-  const archived = await waitForDbRow(
-    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason").eq("id", created.id).single(),
-    row => Boolean(row?.archived_at && row?.archived_by),
-    "Condominium archive persistence"
-  );
   assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
   assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
 
