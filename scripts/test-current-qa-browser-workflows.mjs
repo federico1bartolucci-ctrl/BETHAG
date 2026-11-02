@@ -167,7 +167,9 @@ try {
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
   await adminPage.getByRole("heading", { name: "Archivio", exact: true }).waitFor({ timeout: 10000 });
-  const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
+  // Target the actual archive article, not any generic .card wrapper that
+  // may contain the same text during React navigation.
+  const archiveCard = adminPage.locator("article.card").filter({ hasText: editedCondoName }).first();
   try {
     await archiveCard.waitFor({ timeout: 15000 });
   } catch (archiveUiError) {
