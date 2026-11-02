@@ -388,7 +388,7 @@ try {
   // expense, allocation and installment through the actual administrator UI.
   const accountingUnit = await cleanup.from("condominium_units").select("id,unit_code").eq("condominium_id", created.id).order("created_at", { ascending: true }).limit(1).single();
   assert.ifError(accountingUnit.error);
-  const accountingYear = await adminApi.from("condominium_fiscal_years").insert({
+  const accountingYear = await cleanup.from("condominium_fiscal_years").insert({
     workspace_id: created.workspace_id, condominium_id: created.id,
     name: marker + "_ESERCIZIO", start_date: "2026-01-01", end_date: "2026-12-31",
     status: "Aperto", opening_balance: 0, notes: marker
