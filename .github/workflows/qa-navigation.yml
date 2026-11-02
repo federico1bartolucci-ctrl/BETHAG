@@ -1,4 +1,5 @@
 name: BETHAG QA role navigation acceptance
+# Re-run after 2026-11-02 condominium sync and form diagnostics
 on:
   push:
     branches:
