@@ -44,3 +44,12 @@ jobs:
           BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
         run: node scripts/test-current-qa-navigation.mjs
+
+      - name: Run authenticated condominium and communication UI workflows
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+        run: node scripts/test-current-qa-browser-workflows.mjs
