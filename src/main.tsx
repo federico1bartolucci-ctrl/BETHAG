@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2357,6 +2357,23 @@ function App() {
         addons: Array.isArray(stored.addons) ? stored.addons : [],
       };
     });
+
+  useEffect(() => {
+    if (!supabaseConfigured || !profile.workspaceId) return;
+    let cancelled = false;
+    void getWorkspacePlan(profile.workspaceId)
+      .then((plan) => {
+        if (!cancelled && plan) {
+          setSubscription((current) => current.plan === plan ? current : { ...current, plan });
+        }
+      })
+      .catch((error) => {
+        console.warn("Impossibile caricare il piano del workspace:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.workspaceId]);
 
   const [search, setSearch] =
     useState("");
