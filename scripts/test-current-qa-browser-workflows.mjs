@@ -297,7 +297,17 @@ try {
   assert.ok(archiveAfterBackgroundSync.data?.archived_at, "Background sync cleared archived_at");
   assert.ok(archiveAfterBackgroundSync.data?.archived_by, "Background sync cleared archived_by");
 
-  await archiveCard.getByRole("button", { name: "Ripristina" }).click();
+  const archiveCardDebug = {
+    count: await archiveCard.count(),
+    text: await archiveCard.innerText().catch(() => ""),
+    buttons: await archiveCard.locator("button").allInnerTexts().catch(() => []),
+    restoreButtonCount: await archiveCard.getByRole("button", { name: "Ripristina", exact: true }).count(),
+    pageTitle: await adminPage.title(),
+    url: adminPage.url(),
+    archiveHeadingCount: await adminPage.getByRole("heading", { name: "Archivio", exact: true }).count()
+  };
+  console.log("APP05_ARCHIVE_CARD_ACTION_DEBUG", JSON.stringify(archiveCardDebug));
+  await archiveCard.getByRole("button", { name: "Ripristina", exact: true }).click({ timeout: 10000 });
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
     () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason").eq("id", created.id).single(),
