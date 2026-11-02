@@ -175,3 +175,13 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - **APP-10/11 partial — PASS:** a resident's attempt to close the transfer was rejected; after authorized closure, the outgoing member became inactive/archived and the incoming owner remained active/current.
 - **Cleanup — PASS:** all temporary condominiums, units, members, transfers, and installments were deleted. A follow-up QA query returned zero rows for each test marker.
 - Cross-workspace and unauthenticated closure denial remain separate acceptance items; this run does not complete APP-08–APP-11 in the formal checklist. All APP-01–APP-15 checklist entries remain NOT RUN pending full UI acceptance.
+
+## 12. QA database security/ACL evidence — 2026-11-02
+
+- Approved QA project `jhuyhlzzydcgghrzeexn`: 47/47 public base tables have RLS enabled; no public base table without RLS.
+- All 48 public relations (47 tables plus one view) are owned by `postgres`.
+- `anon`, `authenticated`, and `service_role` have no effective `MAINTAIN` privilege on the checked public application relation. Security Advisor returned `lints: []`.
+- No public SECURITY DEFINER function was found with effective PUBLIC EXECUTE in the targeted scan.
+- Current effective table grants observed: authenticated SELECT on 48 relations, INSERT/UPDATE/DELETE on a subset; service_role CRUD and operational grants on 48 relations. These broad service-role grants are expected to be constrained by trusted server-side use; they are not a user-session authorization proof.
+- Default ACL catalog includes both `postgres` and `supabase_admin` owners. The `postgres/public` defaults are narrowed (authenticated CRUD; service_role CRUD plus REFERENCES/TRIGGER/TRUNCATE; no anon table grants). The `supabase_admin/public` defaults retain broad Supabase-managed ACL entries and have not been changed. Owner-specific default ACL parity against the intended Production release state is still pending.
+- **APP-14 partial — PASS:** live RLS coverage, relation ownership, MAINTAIN absence, Security Advisor and targeted PUBLIC SECURITY DEFINER scan verified in QA. Full ACL/default-privilege parity is not certified until owner-specific defaults and every routine ACL are reconciled against the approved release manifest.
