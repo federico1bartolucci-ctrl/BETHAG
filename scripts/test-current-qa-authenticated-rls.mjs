@@ -17,13 +17,14 @@ const emails = {
   collaborator: "bethag-collaboratore-qa@example.com",
   resident: "bethag-condomino-qa@example.com",
 };
-const clients = {};
+const clients = {}, userIds = {};
 for (const role of Object.keys(emails)) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await client.auth.signInWithPassword({ email: emails[role], password: passwords[role] });
   assert.ifError(error);
   assert.ok(data.session?.access_token, role + " did not receive a session");
   clients[role] = client;
+  userIds[role] = data.user.id;
 }
 const [admin, collaborator, resident] = [clients.admin, clients.collaborator, clients.resident];
 const marker = "BETHAG_QA_RLS_" + Date.now();
@@ -52,7 +53,7 @@ try {
   assert.ok(collInsertErr, "Collaborator unexpectedly inserted an accounting entry");
   record("APP-02 collaborator module boundary", true, "permitted condominium read; accounting read empty and insert denied");
 
-  const { data: residentAccess, error: raErr } = await resident.from("portal_access").select("id,condominium_id").eq("user_id", (await resident.auth.getUser()).data.user.id).eq("active", true);
+  const { data: residentAccess, error: raErr } = await resident.from("portal_access").select("id,condominium_id").eq("user_id", userIds.resident).eq("active", true);
   assert.ifError(raErr); assert.ok(residentAccess.some(x => x.condominium_id === condominiumId));
   const { data: residentCondos, error: rcErr } = await resident.from("condominiums").select("id").eq("workspace_id", workspaceId);
   assert.ifError(rcErr); assert.ok(residentCondos.some(x => x.id === condominiumId));
