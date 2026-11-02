@@ -2373,7 +2373,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [profile.workspaceId]);
+  }, [profile.workspaceId, profile.email]);
 
   const [search, setSearch] =
     useState("");
