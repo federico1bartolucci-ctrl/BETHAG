@@ -6436,6 +6436,17 @@ function App() {
 
         if (!workspaceId || cancelled) return;
 
+        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+          .from("workspaces")
+          .select("plan")
+          .eq("id", workspaceId)
+          .maybeSingle();
+        if (workspaceSettingsError) throw workspaceSettingsError;
+        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
+        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
+        }
+
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
 
@@ -6487,6 +6498,17 @@ function App() {
     let cancelled = false;
     const refreshBackendState = async () => {
       try {
+        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+          .from("workspaces")
+          .select("plan")
+          .eq("id", profile.workspaceId)
+          .maybeSingle();
+        if (workspaceSettingsError) throw workspaceSettingsError;
+        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
+        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
+        }
+
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
         setCondominiums(backend.condominiums);
