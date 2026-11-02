@@ -4018,7 +4018,10 @@ function App() {
     try {
       let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
       if (supabaseConfigured && supabase) {
-        const workspaceId = profile.workspaceId || await getActiveWorkspaceId();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) throw new Error("Sessione autenticata non disponibile.");
+        const workspaceId = await getActiveWorkspaceId(user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
         const persisted = await archiveCondominiumBackend(workspaceId, item.id);
         archived = {
@@ -4041,7 +4044,10 @@ function App() {
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
     try {
       if (supabaseConfigured && supabase) {
-        const workspaceId = profile.workspaceId || await getActiveWorkspaceId();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) throw new Error("Sessione autenticata non disponibile.");
+        const workspaceId = await getActiveWorkspaceId(user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
         await restoreCondominiumBackend(workspaceId, item.id);
       }
@@ -4100,7 +4106,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
 
-        const workspaceId = profile.workspaceId || await getActiveWorkspaceId(session.user.id, null);
+        const workspaceId = await getActiveWorkspaceId(session.user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
         await deleteCondominiumBackend(workspaceId, item.id, securityCode);
