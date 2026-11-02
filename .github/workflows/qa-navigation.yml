@@ -1,0 +1,35 @@
+name: BETHAG QA role navigation acceptance
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-navigation.mjs"
+      - ".github/workflows/qa-navigation.yml"
+  workflow_dispatch:
+jobs:
+  navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start Vite preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/bethag-preview.log 2>&1 &
+      - name: Wait for preview
+        run: npx wait-on http://127.0.0.1:4173/BETHAG/
+      - name: Run role navigation acceptance against QA
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: node scripts/test-current-qa-navigation.mjs
