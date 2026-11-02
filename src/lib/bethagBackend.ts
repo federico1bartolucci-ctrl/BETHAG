@@ -641,6 +641,17 @@ async function syncBackendStateNow(
     );
   }
 
+  // Le bozze orfane possono provenire da snapshot locali precedenti, dopo
+  // l'eliminazione del condominio a cui erano associate. Non devono bloccare
+  // la sincronizzazione delle altre comunicazioni né essere riscritte con
+  // condominium_id NULL: il vincolo DB richiede un condominio esistente.
+  // Le comunicazioni pubblicate senza riferimento restano invece un errore
+  // esplicito, come verificato sopra.
+  const communicationEntry = rowsByTable.find(([table]) => table === "communications");
+  if (communicationEntry) {
+    communicationEntry[1] = communicationEntry[1].filter((row: any) => Boolean(row.condominium_id));
+  }
+
   for (const [table, rows] of rowsByTable) {
     if (!rows.length) continue;
     await upsertRows(table, rows, table === "condominium_works" ? "id" : undefined);
