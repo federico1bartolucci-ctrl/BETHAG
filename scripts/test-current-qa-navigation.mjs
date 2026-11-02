@@ -36,9 +36,15 @@ try{
      const activeText=(await active.innerText()).trim();
      assert.ok(activeText.includes(label),"Navigation did not activate "+label+"; active="+activeText);
     }
-    await page.reload({waitUntil:"networkidle"});
-    await page.getByText("Homepage",{exact:true}).first().waitFor({timeout:20000});
-    results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","refresh returned to stable Homepage","no uncaught browser errors"]});
+    // Return to Homepage before reloading; the previous version reloaded
+    // while still on the final "Portale condomini" destination and expected
+    // a different route, while networkidle waited for unrelated background sync.
+    await page.locator(".sidebar .nav-item").filter({hasText:"Homepage"}).first().click();
+    await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:10000});
+    await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+    await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:20000});
+    assert.match(page.url(), /[?&]page=homepage(?:&|$)/, "Refresh did not preserve the Homepage route");
+    results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","Homepage route survived refresh","no uncaught browser errors"]});
    }else if(a.role==="collaborator"){
     assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");
     assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");
