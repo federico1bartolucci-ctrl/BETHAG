@@ -175,7 +175,7 @@ try {
     email: residentUser.email,
     role: "resident",
     apartment: residentUnit.data.unit_code,
-    permissions: [],
+    permissions: ["comunicazioni"],
     active: true,
     user_id: residentUser.id,
     member_id: member.data.id,
