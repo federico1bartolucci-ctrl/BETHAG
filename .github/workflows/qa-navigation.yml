@@ -20,6 +20,9 @@ on:
       - "src/lib/bethagBackend.ts"
       - ".github/workflows/qa-navigation.yml"
   workflow_dispatch:
+concurrency:
+  group: bethag-qa-authenticated-write-tests-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   navigation:
     runs-on: ubuntu-latest
