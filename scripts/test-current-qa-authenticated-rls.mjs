@@ -101,3 +101,4 @@ try {
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_AUTHENTICATED_RLS", target: "jhuyhlzzydcgghrzeexn", results }, null, 2));
 if (results.some(x => x.status !== "PASS")) process.exitCode = 1;
+// QA verification rerun 2026-11-02
