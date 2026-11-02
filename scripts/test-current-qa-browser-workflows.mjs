@@ -799,7 +799,15 @@ try {
   const portalAccessSyncErrors = consoleErrors.filter(message =>
     message.includes("BETHAG backend sync failed")
   );
-  assert.deepEqual(portalAccessSyncErrors, [], "Portal access synchronization must not fail during authenticated browser workflows");
+  if (portalAccessSyncErrors.length) {
+    console.log("BETHAG_SYNC_FAILURE_DIAGNOSTIC", JSON.stringify({
+      syncErrors: portalAccessSyncErrors,
+      failedRequests: failedRequests.slice(-40),
+      consoleMessages: consoleMessages.slice(-80),
+      adminPageUrl: adminPage.url(),
+    }));
+  }
+  assert.deepEqual(portalAccessSyncErrors, [], "Backend synchronization must not fail during authenticated browser workflows");
   const portalAccessConflicts = failedRequests.filter(request =>
     request.url.includes("/rest/v1/portal_access") && request.status === 409
   );
