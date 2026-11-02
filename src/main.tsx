@@ -4128,6 +4128,9 @@ function App() {
       const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
       backendMutationRevision.current += 1;
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
+      // Return to the active registry after a successful restore so the
+      // restored condominium is immediately visible to the administrator.
+      navigate("condomini");
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
       alert(error instanceof Error ? "Il condominio non è stato ripristinato.\\n\\n" + error.message : "Il condominio non è stato ripristinato.");
