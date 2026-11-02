@@ -487,7 +487,7 @@ if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.st
 // Expand the same authenticated QA run to the independent RPC acceptance
 // suites. Both scripts use only the approved QA project and clean up their
 // temporary fixtures in finally blocks.
-for (const script of ["scripts/test-current-qa-app08-11.mjs"]) {
+for (const script of ["scripts/test-current-qa-app08-11.mjs", "scripts/test-current-qa-authenticated-rls.mjs"]) {
   console.log("BETHAG_QA_EXTENDED_SUITE_START", script);
   const child = spawnSync(process.execPath, [script], { stdio: "inherit", env: process.env });
   if (child.error) throw child.error;
