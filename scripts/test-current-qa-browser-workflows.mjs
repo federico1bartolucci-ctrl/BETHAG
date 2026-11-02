@@ -54,6 +54,14 @@ async function cleanupFixtures() {
     const del = await cleanup.from("communications").delete().eq("id", comm.id);
     if (del.error) throw del.error;
   }
+
+  const remainingCondos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
+  if (remainingCondos.error) throw remainingCondos.error;
+  if ((remainingCondos.data || []).length) throw new Error("QA cleanup left synthetic condominium fixtures behind.");
+
+  const remainingComms = await cleanup.from("communications").select("id").eq("title", communicationTitle);
+  if (remainingComms.error) throw remainingComms.error;
+  if ((remainingComms.data || []).length) throw new Error("QA cleanup left synthetic communication fixtures behind.");
 }
 
 try {
