@@ -68,7 +68,7 @@ try{
  if(fiscalYearId) { const x=await cleanup.from("condominium_fiscal_years").delete().eq("id",fiscalYearId);assert.ifError(x.error); }
  if(foreignTransferId) { const x=await cleanup.from("condominium_member_transfers").delete().eq("id",foreignTransferId);assert.ifError(x.error); }
  if(foreignCondominiumId) {
-  if(foreignOwnerId) { const x=await cleanup.from("condominium_members").delete().eq("id",foreignOwnerId);assert.ifError(x.error); }
+  const members=await cleanup.from("condominium_members").delete().eq("condominium_id",foreignCondominiumId);assert.ifError(members.error);
   if(foreignUnitId) { const x=await cleanup.from("condominium_units").delete().eq("id",foreignUnitId);assert.ifError(x.error); }
   const x=await cleanup.from("condominiums").delete().eq("id",foreignCondominiumId);assert.ifError(x.error);
  }
