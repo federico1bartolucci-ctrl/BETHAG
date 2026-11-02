@@ -436,56 +436,40 @@ async function syncBackendStateNow(
   const canSyncCondomini = canSyncModule("condomini");
   const canSyncPortal = canSyncModule("portale");
 
-  // Condominium writes are handled by the explicit save/archive/restore/delete RPCs.
-  // Re-upserting the entire workspace snapshot here on every unrelated state
-  // change caused thousands of writes, row-lock contention and stalled edits.
-  // Only read the compact legacy-id map needed by dependent tables.
-  const existingCondominiumRows: any[] = [];
-  for (let offset = 0; ; offset += 1000) {
+  // Condominium writes are handled by explicit save/archive/restore/delete RPCs.
+  // Resolve only legacy IDs referenced by the current state snapshot. Scanning
+  // every condominium on each background sync made unrelated saves depend on
+  // thousands of rows and caused browser requests to be aborted on navigation.
+  const referencedCondominiumLegacyIds = Array.from(new Set(
+    Object.values(state).flatMap((collection: any) =>
+      Array.isArray(collection)
+        ? collection
+            .map((item: any) => item?.condominiumId)
+            .filter((id: any) => id !== null && id !== undefined && id !== "")
+            .map((id: any) => String(id))
+        : []
+    )
+  ));
+  const condominiumDbIdByLegacyId = new Map<string, string>();
+  for (let offset = 0; offset < referencedCondominiumLegacyIds.length; offset += 100) {
+    const batch = referencedCondominiumLegacyIds.slice(offset, offset + 100);
     const { data, error } = await supabase
       .from("condominiums")
       .select("id, legacy_id")
       .eq("workspace_id", workspaceId)
-      .order("id", { ascending: true })
-      .range(offset, offset + 999);
+      .in("legacy_id", batch);
     if (error) throw error;
-    const batch = data ?? [];
-    existingCondominiumRows.push(...batch);
-    if (batch.length < 1000) break;
+    (data ?? []).forEach((row: any) => {
+      if (row.legacy_id !== null && row.legacy_id !== undefined) {
+        condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
+      }
+    });
   }
-  const condominiumDbIdByLegacyId = new Map(
-    existingCondominiumRows
-      .filter((row: any) => row.legacy_id !== null && row.legacy_id !== undefined)
-      .map((row: any) => [String(row.legacy_id), row.id])
-  );
 
   const getCondominiumDbId = (legacyId: unknown) =>
     legacyId === null || legacyId === undefined || legacyId === ""
       ? undefined
       : condominiumDbIdByLegacyId.get(String(legacyId));
-
-  // Resolve any communication condominium references that are not present
-  // in the initial workspace snapshot before constructing the upsert batch.
-  const communicationLegacyIds = Array.from(new Set(
-    (state.communications ?? [])
-      .map((item: any) => item.condominiumId)
-      .filter((id: any) => id !== null && id !== undefined && id !== "")
-      .map((id: any) => String(id))
-  ));
-  const missingCommunicationLegacyIds = communicationLegacyIds.filter(
-    (legacyId) => !condominiumDbIdByLegacyId.has(legacyId)
-  );
-  if (missingCommunicationLegacyIds.length) {
-    const { data: missingCondominiums, error: missingCondominiumsError } = await supabase
-      .from("condominiums")
-      .select("id, legacy_id")
-      .eq("workspace_id", workspaceId)
-      .in("legacy_id", missingCommunicationLegacyIds);
-    if (missingCondominiumsError) throw missingCondominiumsError;
-    (missingCondominiums ?? []).forEach((row: any) => {
-      condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
-    });
-  }
 
   // Condominium writes are performed only by the explicit save/archive/restore/delete RPCs.
   // Do not replay the whole workspace snapshot from background sync.
@@ -524,7 +508,7 @@ async function syncBackendStateNow(
         const condominiumDbId = getCondominiumDbId(Number(supplier.condominiumId));
         const candidateCondominiumIds = workCondominiumIds.length
           ? workCondominiumIds
-          : (condominiumDbId ? [condominiumDbId] : Array.from(condominiumDbIdByLegacyId.values()));
+          : (condominiumDbId ? [condominiumDbId] : []);
         const name = normalizeSupplierName(supplier.name);
         for (const workCondominiumId of candidateCondominiumIds) {
           const existing = (condominiumSuppliers ?? []).find((row: any) =>
