@@ -69,3 +69,5 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: node scripts/test-current-qa-browser-workflows.mjs
 # QA verification trigger refreshed 2026-11-02 (owner fixture hydration retest)
+
+# QA diagnostic rerun after owner refresh response instrumentation
