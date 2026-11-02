@@ -204,7 +204,26 @@ try {
   await adminPage.reload({ waitUntil: "networkidle" });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
-  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+  try {
+    await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 10000 });
+    await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+  } catch (restoreUiError) {
+    const restoredDbState = await cleanup.from("condominiums")
+      .select("id,name,archived_at,archived_by,archive_reason,data")
+      .eq("id", created.id).maybeSingle();
+    console.log("APP05_RESTORE_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      entityCards: await adminPage.locator(".entity-card").count(),
+      entityCardTexts: await adminPage.locator(".entity-card").allInnerTexts(),
+      restoredDbState: restoredDbState.data,
+      restoredDbError: restoredDbState.error?.message,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+    }));
+    throw restoreUiError;
+  }
   // The synthetic condominium is removed by cleanupFixtures() in finally.
   // APP-05 covers create/edit/archive/restore; destructive deletion is not
   // coupled to this acceptance flow.
