@@ -15,6 +15,10 @@ env:
   VITE_SUPABASE_ENABLE: "true"
   VITE_SUPABASE_URL: "https://jhuyhlzzydcgghrzeexn.supabase.co"
   VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj"
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
 jobs:
   authenticated-smoke:
     runs-on: ubuntu-latest
