@@ -10,8 +10,9 @@ export async function getActiveWorkspaceId(userId?: string | null, preferredWork
   // PostgREST creates an invalid UUID filter and pollutes the DB logs.
   let activeUserId = typeof userId === "string" ? userId.trim() : "";
   if (!activeUserId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    activeUserId = user?.id ?? "";
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    activeUserId = data.user?.id ?? "";
   }
   if (!activeUserId) return null;
 
