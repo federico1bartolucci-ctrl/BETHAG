@@ -28,3 +28,4 @@ jobs:
         run: |
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key secret missing"; exit 1; }
           node scripts/test-current-qa-authenticated-rls.mjs
+# QA verification trigger refreshed 2026-11-02
