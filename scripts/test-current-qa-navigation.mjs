@@ -24,7 +24,8 @@ try{
    await page.getByText(a.landing,{exact:true}).first().waitFor({timeout:25000});
    if(a.role==="admin"){
     const planNav=page.locator(".nav-item").filter({hasText:"Piano e upgrade"}).first();await planNav.click();
-    await page.getByRole("button",{name:"Prova struttura"}).last().click();
+    // The dedicated QA account already has the Portal plan; do not try to
+    // re-activate a trial CTA that is intentionally absent on an active plan.
     await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});
     await page.locator(".nav-item").filter({hasText:"Homepage"}).first().click();
     const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
