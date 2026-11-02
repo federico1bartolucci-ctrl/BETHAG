@@ -2209,6 +2209,10 @@ function App() {
       load(KEYS.session, null)
     );
 
+  // Resolve role flags before any callbacks/effects can reference them.
+  const isAdministrator = sessionRole === "admin";
+  const isCollaborator = sessionRole === "collaborator";
+
   // The authenticated session must be hydrated before rendering the public
   // login screen. This prevents a refresh from showing the login page while
   // Supabase is still restoring the persisted session.
@@ -6655,9 +6659,6 @@ function App() {
     condominiums.find(
       (c) => c.id === id
     )?.name || "Tutti i condomini";
-
-  const isAdministrator = sessionRole === "admin";
-  const isCollaborator = sessionRole === "collaborator";
 
   const currentCollaborator = useMemo(
     () =>
