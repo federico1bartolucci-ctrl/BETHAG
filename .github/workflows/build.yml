@@ -29,6 +29,9 @@ jobs:
       - name: Test fresh PostgreSQL bootstrap
         run: npm test
 
+      - name: Test communication send authorization and publication guards
+        run: npm run test:communication-guards
+
       - name: Build
         run: npm run build
 
