@@ -205,7 +205,7 @@ try {
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   try {
-    await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 10000 });
+    await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 10000 });
     await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
   } catch (restoreUiError) {
     const restoredDbState = await cleanup.from("condominiums")
