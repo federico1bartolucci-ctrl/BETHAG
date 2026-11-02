@@ -1388,49 +1388,56 @@ export async function saveCondominium(
 export async function archiveCondominium(workspaceId: string, legacyId: number, reason?: string | null) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const { data: condominium, error: lookupError } = await supabase
-    .from("condominiums")
-    .select("id")
-    .eq("workspace_id", workspaceId)
-    .eq("legacy_id", legacyId)
-    .maybeSingle();
-  if (lookupError) throw lookupError;
-  if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+  // Serialize lifecycle RPCs with background state sync. Without this queue,
+  // an older in-flight upsert can overwrite archive JSON immediately after
+  // the dedicated RPC has committed the structured archive columns.
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: lookupError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", legacyId)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-  const { error: archiveError } = await supabase.rpc("archive_condominium", {
-    p_workspace_id: workspaceId,
-    p_condominium_id: condominium.id,
-    p_reason: reason ?? null,
+    const { error: archiveError } = await supabase.rpc("archive_condominium", {
+      p_workspace_id: workspaceId,
+      p_condominium_id: condominium.id,
+      p_reason: reason ?? null,
+    });
+    if (archiveError) throw archiveError;
+
+    const { data, error } = await supabase
+      .from("condominiums")
+      .select("archived_at, archived_by, archive_reason, data")
+      .eq("id", condominium.id)
+      .eq("workspace_id", workspaceId)
+      .single();
+    if (error) throw error;
+    return data;
   });
-  if (archiveError) throw archiveError;
-
-  const { data, error } = await supabase
-    .from("condominiums")
-    .select("archived_at, archived_by, archive_reason, data")
-    .eq("id", condominium.id)
-    .eq("workspace_id", workspaceId)
-    .single();
-  if (error) throw error;
-  return data;
 }
 
 export async function restoreCondominium(workspaceId: string, legacyId: number) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const { data: condominium, error: lookupError } = await supabase
-    .from("condominiums")
-    .select("id")
-    .eq("workspace_id", workspaceId)
-    .eq("legacy_id", legacyId)
-    .maybeSingle();
-  if (lookupError) throw lookupError;
-  if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+  return enqueueBackendSync(async () => {
+    const { data: condominium, error: lookupError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", legacyId)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-  const { error: restoreError } = await supabase.rpc("restore_condominium", {
-    p_workspace_id: workspaceId,
-    p_condominium_id: condominium.id,
+    const { error: restoreError } = await supabase.rpc("restore_condominium", {
+      p_workspace_id: workspaceId,
+      p_condominium_id: condominium.id,
+    });
+    if (restoreError) throw restoreError;
   });
-  if (restoreError) throw restoreError;
 }
 
 export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
