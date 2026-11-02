@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -20,6 +21,9 @@ const communicationTitle = marker + "_COMM";
 const browser = await chromium.launch({ headless: true });
 const results = [];
 const pageErrors = [];
+let temporaryResidentId = null;
+let temporaryResidentEmail = null;
+let temporaryResidentPassword = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
@@ -95,6 +99,14 @@ async function cleanupFixtures() {
   const remainingMembers = await cleanup.from("condominium_members").select("id").eq("data->>source", marker);
   if (remainingMembers.error) throw remainingMembers.error;
   if ((remainingMembers.data || []).length) throw new Error("QA cleanup left synthetic condominium member fixtures behind.");
+
+  if (temporaryResidentId) {
+    const workspaceMemberships = await cleanup.from("workspace_members").delete().eq("user_id", temporaryResidentId);
+    if (workspaceMemberships.error) throw workspaceMemberships.error;
+    const deletedUser = await cleanup.auth.admin.deleteUser(temporaryResidentId);
+    if (deletedUser.error) throw deletedUser.error;
+    temporaryResidentId = null;
+  }
 }
 
 try {
@@ -174,10 +186,16 @@ try {
   // coupled to this acceptance flow.
   results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared"] });
 
-  const users = await cleanup.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  assert.ifError(users.error);
-  const residentUser = users.data.users.find(user => user.email?.toLowerCase() === "bethag-condomino-qa@example.com");
-  assert.ok(residentUser?.id, "QA resident account was not found for the portal fixture");
+  temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
+  temporaryResidentPassword = randomBytes(24).toString("base64url");
+  const temporaryResident = await cleanup.auth.admin.createUser({
+    email: temporaryResidentEmail,
+    password: temporaryResidentPassword,
+    email_confirm: true,
+    user_metadata: { source: marker, role: "resident" },
+  });
+  assert.ifError(temporaryResident.error);
+  temporaryResidentId = temporaryResident.data.user.id;
   const residentUnit = await cleanup.from("condominium_units")
     .select("id,unit_code")
     .eq("condominium_id", created.id)
@@ -186,9 +204,9 @@ try {
   assert.ifError(residentUnit.error);
   const member = await cleanup.from("condominium_members").insert({
     condominium_id: created.id,
-    user_id: residentUser.id,
+    user_id: temporaryResidentId,
     name: "BETHAG QA UI Resident",
-    email: residentUser.email,
+    email: temporaryResidentEmail,
     role: "resident",
     active: true,
     permissions: {},
@@ -200,12 +218,12 @@ try {
     workspace_id: created.workspace_id,
     condominium_id: created.id,
     name: "BETHAG QA UI Resident",
-    email: residentUser.email,
+    email: temporaryResidentEmail,
     role: "resident",
     apartment: residentUnit.data.unit_code,
     permissions: ["comunicazioni"],
     active: true,
-    user_id: residentUser.id,
+    user_id: temporaryResidentId,
     member_id: member.data.id,
     data: { source: marker },
   }).select("id").single();
@@ -234,7 +252,7 @@ try {
 
   const residentContext = await browser.newContext();
   const residentPage = await residentContext.newPage();
-  await signIn(residentPage, "Condomino", "bethag-condomino-qa@example.com", residentPassword, "Portale condòmino");
+  await signIn(residentPage, "Condomino", temporaryResidentEmail, temporaryResidentPassword, "Portale condòmino");
   await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ timeout: 15000 });
 
   await commCard.getByRole("button", { name: "Ritira" }).click();
