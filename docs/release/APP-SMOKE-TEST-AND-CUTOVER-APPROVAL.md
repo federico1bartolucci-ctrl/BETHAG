@@ -202,3 +202,29 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - **Acceptance boundary:** APP-01–APP-15 are not all complete. The table above distinguishes partial API/RLS checks from complete UI acceptance. Remaining work includes browser-level condominium/accounting/subentro/document workflows, actual email provider delivery, complete default-ACL parity, resolution of the QA branch migration status, and formal production migration inventory/cutover approval.
 
 **Final decision remains NO-GO.** No Production SQL, deployment, PR merge, or cutover was performed.
+
+## 13. Consolidated authenticated QA evidence — 2026-11-02 (latest reruns)
+
+**Target:** isolated Supabase QA project `jhuyhlzzydcgghrzeexn`. All runs below used dedicated QA Auth accounts; service-role credentials were restricted to fixture setup/cleanup. No Production migration, deployment, data mutation, or cutover was performed.
+
+| Scenario | Latest evidence | Result and boundary |
+|---|---|---|
+| APP-01–04 | [Authenticated RLS/storage run 41387258362](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387258362) | PASS for authenticated API/RLS: own-workspace admin read, collaborator module boundary, resident portal scope, foreign-workspace read/write denial. Not full browser UI. |
+| APP-05–07 | [Accounting run 41387923787](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387923787), commit `f7bd8596c59dc33beff0adb9112209fdc10f13af` | PASS for authenticated API workflows: create/edit condominium and unit; expense, allocation, installment/payment persistence; closed-year ledger mutation rejected with unchanged amount. Persistent QA-only closed-year fixture retained for repeatability. |
+| APP-08–11 | [Transfer run 41388097584](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41388097584), commit `2a601a364615dc6b6d556c6f774ba77ea0d1602d` | PASS: valid closure, unpaid-installment rejection, failed-closure invariants, unauthenticated denial and cross-workspace denial. Temporary fixtures cleaned; post-run catalog query found zero marked transfer workspaces, condominiums, or transfer rows. |
+| APP-12 | [Communication run 41387814274](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387814274), commit `a1277cb71df05dfd54dcdd8c24838bec490e9aea` | PASS for publish/unpublish visibility, recipient preparation, admin-only queue reset and resident denial. No provider email was sent; delivery remains NOT TESTED. |
+| APP-13 | [Authenticated RLS/storage run 41387258362](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387258362) | PASS for actual synthetic document-byte upload/download with role and workspace restrictions; temporary metadata and object removed. |
+| APP-14 | QA catalog/ACL checks in §12 | PARTIAL PASS: RLS, relation ownership, MAINTAIN absence and Security Advisor checked. Full owner-specific default-privilege and every-routine ACL parity against a release manifest is still pending. |
+| APP-15 | [Role navigation run 41386926063](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41386926063) | PASS for role navigation, refresh and no uncaught browser errors. Full browser regression of every core module and persisted business data remains pending. |
+
+### QA fixture cleanup verification
+
+After the latest transfer and communication runs, a direct QA catalog query returned zero temporary transfer workspaces, transfer condominiums, transfer rows, communication rows and recipient rows. The single `BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE` is intentionally retained as a clearly named QA-only regression fixture; it contains one unit, one closed fiscal year, one ledger entry, one allocation and one installment. Do not delete it until the repeatable APP-07 test is retired.
+
+### Communication RPC repair
+
+A QA-only forward migration artifact, `supabase/rebuild/qa-only-migrations/20261102041805_repair_authenticated_communication_rpc_private_execute.sql`, repairs authenticated EXECUTE on the private communication-recipient routines. The queue-reset implementation additionally checks authentication and workspace communication-management permission. The authenticated communication acceptance run passed recipient preparation, zero-row stale reset, and denial of resident queue manipulation without side effects. No real email delivery was invoked.
+
+**Important release boundary:** these results are authenticated API/database acceptance, plus the narrower browser navigation run. They do not yet establish all 15 complete UI acceptance scenarios. In particular, email provider delivery, full browser accounting and transfer journeys, every APP-14 ACL/default-privilege comparison, and complete APP-15 regression remain outstanding. The formal APP-01–APP-15 table above therefore continues to represent full acceptance as NOT RUN; the partial evidence is recorded here rather than overstated as full PASS.
+
+**Release decision remains NO-GO.** PR #25 remains a draft QA evidence PR and must not be merged. The QA-only communication RPC repair is not part of the frozen Production migration inventory; any future release candidate requires a newly reconciled, ordered migration manifest and fresh Production preflight. Production remains untouched.
