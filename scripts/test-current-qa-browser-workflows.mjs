@@ -196,6 +196,17 @@ try {
   );
   assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
   assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
+
+  // The React state change schedules a background sync after 500ms. Verify
+  // that this ordinary save path cannot clear the server-owned archive fields.
+  await adminPage.waitForTimeout(1800);
+  const archiveAfterBackgroundSync = await cleanup.from("condominiums")
+    .select("archived_at,archived_by,archive_reason")
+    .eq("id", created.id).single();
+  assert.ifError(archiveAfterBackgroundSync.error);
+  assert.ok(archiveAfterBackgroundSync.data?.archived_at, "Background sync cleared archived_at");
+  assert.ok(archiveAfterBackgroundSync.data?.archived_by, "Background sync cleared archived_by");
+
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
