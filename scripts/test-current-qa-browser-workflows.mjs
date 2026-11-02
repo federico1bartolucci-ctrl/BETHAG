@@ -115,7 +115,10 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
-  adminPage.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  adminPage.on("console", message => {
+    consoleMessages.push({ type: message.type(), text: message.text() });
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
   adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
