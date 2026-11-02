@@ -292,8 +292,11 @@ try {
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
-  await adminPage.reload({ waitUntil: "networkidle" });
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
+  // The archive route hydrates a large workspace in the background. Wait for
+  // document readiness, then assert the actual restored record after refresh;
+  // networkidle is not a reliable condition while paginated data is loading.
+  await adminPage.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 30000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
     !consoleErrors.some((message) => message.includes("Could not find the 'data' column of 'workspace_members'")),
