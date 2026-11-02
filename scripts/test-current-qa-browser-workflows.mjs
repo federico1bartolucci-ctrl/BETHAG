@@ -189,6 +189,10 @@ try {
   console.log("APP05_SUBMIT_EVENT_OBSERVED", submitEventObserved);
   try {
     await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
+    const saveTrace = consoleMessages.filter((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM"));
+    console.log("APP05_SAVE_HANDLER_TRACE", JSON.stringify(saveTrace));
+    assert.ok(saveTrace.some((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM_SUBMIT")), "React save handler was not reached");
+    assert.ok(saveTrace.some((entry) => entry.text.includes("BETHAG_SAVE_CONDOMINIUM_RPC_DONE")), "Condominium save RPC did not complete");
   } catch (editUiError) {
     const editedDbState = await cleanup.from("condominiums")
       .select("id,name,archived_at,archived_by,archive_reason,data")
