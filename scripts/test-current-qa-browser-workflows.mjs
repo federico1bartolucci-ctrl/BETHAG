@@ -409,11 +409,32 @@ try {
   await ledgerModal.locator("label").filter({ hasText: "Esercizio" }).locator("select").selectOption(accountingFiscalYearId);
   await ledgerModal.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
   await ledgerModal.getByRole("button", { name: "Salva", exact: true }).click();
-  const accountingLedger = await waitForDbRow(
-    () => cleanup.from("condominium_ledger_entries").select("id,amount,direction,description,fiscal_year_id").eq("workspace_id", created.workspace_id).eq("condominium_id", created.id).eq("description", marker + "_SPESA_UI").maybeSingle(),
-    row => Boolean(row?.id),
-    "APP-06 UI ledger movement persistence"
-  );
+  let accountingLedger;
+  try {
+    accountingLedger = await waitForDbRow(
+      () => cleanup.from("condominium_ledger_entries").select("id,amount,direction,description,fiscal_year_id,workspace_id,condominium_id").eq("workspace_id", created.workspace_id).eq("condominium_id", created.id).eq("description", marker + "_SPESA_UI").maybeSingle(),
+      row => Boolean(row?.id),
+      "APP-06 UI ledger movement persistence"
+    );
+  } catch (ledgerUiError) {
+    console.log("APP06_LEDGER_UI_DEBUG", JSON.stringify({
+      created,
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 7000),
+      visibleErrors: await adminPage.locator(".alert.error").allInnerTexts().catch(() => []),
+      modalText: await ledgerModal.innerText().catch(() => ""),
+      fieldValues: {
+        date: await ledgerModal.locator("label").filter({ hasText: "Data" }).locator("input").inputValue().catch(() => null),
+        category: await ledgerModal.locator("label").filter({ hasText: "Categoria" }).locator("input").inputValue().catch(() => null),
+        amount: await ledgerModal.locator("label").filter({ hasText: "Importo" }).locator("input").inputValue().catch(() => null),
+        description: await ledgerModal.locator("label").filter({ hasText: "Descrizione" }).locator("input").inputValue().catch(() => null),
+        fiscalYear: await ledgerModal.locator("label").filter({ hasText: "Esercizio" }).locator("select").inputValue().catch(() => null),
+      },
+      consoleErrors,
+      pageErrors,
+      failedRequests,
+    }));
+    throw ledgerUiError;
+  }
   accountingLedgerId = accountingLedger.id;
   assert.equal(Number(accountingLedger.amount), 125.5);
   assert.equal(accountingLedger.direction, "Uscita");
