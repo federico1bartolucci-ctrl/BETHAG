@@ -1,0 +1,47 @@
+name: BETHAG QA authenticated browser workflows
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-browser-workflows.mjs"
+      - "src/main.tsx"
+      - ".github/workflows/qa-browser-workflows.yml"
+  workflow_dispatch:
+jobs:
+  browser-workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build against approved QA project only
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          VITE_SUPABASE_ENABLE: "true"
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start Vite preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/bethag-preview.log 2>&1 &
+      - name: Wait for preview
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/BETHAG/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/bethag-preview.log
+          exit 1
+      - name: Run authenticated browser workflows against QA only
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+        run: node scripts/test-current-qa-browser-workflows.mjs
