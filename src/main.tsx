@@ -16838,7 +16838,8 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       active: form.active,
       updated_at: new Date().toISOString(),
     };
-    const result = editing
+    // "new" is the UI sentinel for insert mode, never a database UUID.
+    const result = editing && editing !== "new"
       ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
       : await supabase.from("condominium_insurance_policies").insert(payload);
     if (result.error) {
