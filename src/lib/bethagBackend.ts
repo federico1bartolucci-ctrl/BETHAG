@@ -62,14 +62,26 @@ export async function getWorkspacePlan(preferredWorkspaceId?: string | null): Pr
 export async function loadBackendState(workspaceId: string): Promise<BackendState> {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const condominiums = await supabase
-    .from("condominiums")
-    .select("*")
-    .eq("workspace_id", workspaceId);
+  // PostgREST applies a default maximum row count (commonly 1,000).
+  // Load every condominium explicitly: otherwise older workspaces with more
+  // than one page silently lose later records on navigation/refresh.
+  const condominiumRows: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("condominiums")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + 999);
+    if (error) throw error;
+    const batch = data ?? [];
+    condominiumRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+  const condominiums = { data: condominiumRows, error: null };
 
-  if (condominiums.error) throw condominiums.error;
-
-  const condominiumIds = (condominiums.data ?? []).map((row: any) => row.id);
+  const condominiumIds = condominiumRows.map((row: any) => row.id);
   const client = supabase;
   const loadByCondominiumIds = async (
     table: string,
@@ -80,15 +92,22 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     // Keep PostgREST URLs bounded for workspaces with hundreds or thousands
     // of condominiums. A single IN list can exceed the gateway URL limit and
     // make the entire backend hydration fail with HTTP 400.
+    const batches: string[][] = [];
     for (let offset = 0; offset < condominiumIds.length; offset += 100) {
-      const batch = condominiumIds.slice(offset, offset + 100);
-      const { data, error } = await client
-        .from(table)
-        .select(columns)
-        .in("condominium_id", batch)
-        .order(orderBy);
-      if (error) throw error;
-      rows.push(...(data ?? []));
+      batches.push(condominiumIds.slice(offset, offset + 100));
+    }
+    // Keep a bounded number of requests in flight. Sequentially loading 150+
+    // batches made a large workspace refresh exceed the UI navigation window.
+    for (let offset = 0; offset < batches.length; offset += 10) {
+      const results = await Promise.all(
+        batches.slice(offset, offset + 10).map((batch) =>
+          client.from(table).select(columns).in("condominium_id", batch).order(orderBy)
+        )
+      );
+      for (const result of results) {
+        if (result.error) throw result.error;
+        rows.push(...(result.data ?? []));
+      }
     }
     return { data: rows, error: null };
   };
@@ -411,12 +430,20 @@ async function syncBackendStateNow(
   const canSyncPortal = canSyncModule("portale");
 
   const condominiumRows = canSyncCondomini ? (state.condominiums ?? []) : [];
-  const { data: existingCondominiums, error: condominiumError } = await supabase
-    .from("condominiums")
-    .select("id, legacy_id, name, address, city, postal_code, province, archived_at, archived_by, archive_reason, data")
-    .eq("workspace_id", workspaceId);
-
-  if (condominiumError) throw condominiumError;
+  const existingCondominiumRows: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("condominiums")
+      .select("id, legacy_id, name, address, city, postal_code, province, archived_at, archived_by, archive_reason, data")
+      .eq("workspace_id", workspaceId)
+      .order("id", { ascending: true })
+      .range(offset, offset + 999);
+    if (error) throw error;
+    const batch = data ?? [];
+    existingCondominiumRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+  const existingCondominiums = existingCondominiumRows;
 
   // Postgres bigint legacy IDs may arrive as JSON numbers or strings.
   // Normalize keys so every UI legacy ID resolves to the database UUID.
