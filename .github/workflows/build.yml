@@ -72,7 +72,7 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
-      - name: Execute all 12 real canonical migrations through the guarded runner on isolated PostgreSQL
+      - name: Execute all 14 real canonical migrations through the guarded runner on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-runner.mjs
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
