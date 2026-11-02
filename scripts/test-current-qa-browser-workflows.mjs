@@ -170,6 +170,8 @@ try {
     buttonCount: await editSubmitButton.count(),
     ...editSubmitDebug,
   }));
+  assert.equal(editSubmitDebug.type, "submit", "Edit save control must submit the condominium form");
+  assert.equal(editSubmitDebug.closestForm, true, "Edit save control must belong to the condominium form");
   await editSubmitButton.click();
   await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const edited = await waitForDbRow(
