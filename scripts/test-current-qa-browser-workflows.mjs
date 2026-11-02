@@ -51,7 +51,7 @@ async function cleanupFixtures() {
   const condos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
   if (condos.error) throw condos.error;
   for (const condo of condos.data || []) {
-    for (const table of ["condominium_members", "condominium_units"]) {
+    for (const table of ["portal_access", "condominium_members", "condominium_units"]) {
       const result = await cleanup.from(table).delete().eq("condominium_id", condo.id);
       if (result.error) throw result.error;
     }
@@ -102,7 +102,7 @@ try {
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
   await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
-  const created = await cleanup.from("condominiums").select("id").eq("name", condoName).single();
+  const created = await cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).single();
   assert.ifError(created.error);
   const units = await cleanup.from("condominium_units").select("id", { count: "exact", head: true }).eq("condominium_id", created.data.id);
   assert.ifError(units.error);
@@ -146,11 +146,48 @@ try {
   // coupled to this acceptance flow.
   results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared"] });
 
+  const users = await cleanup.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  assert.ifError(users.error);
+  const residentUser = users.data.users.find(user => user.email?.toLowerCase() === "bethag-condomino-qa@example.com");
+  assert.ok(residentUser?.id, "QA resident account was not found for the portal fixture");
+  const residentUnit = await cleanup.from("condominium_units")
+    .select("id,unit_code")
+    .eq("condominium_id", created.data.id)
+    .limit(1)
+    .single();
+  assert.ifError(residentUnit.error);
+  const member = await cleanup.from("condominium_members").insert({
+    condominium_id: created.data.id,
+    user_id: residentUser.id,
+    name: "BETHAG QA UI Resident",
+    email: residentUser.email,
+    role: "resident",
+    active: true,
+    permissions: {},
+    data: { source: "BETHAG_QA_UI" },
+    unit_id: residentUnit.data.id,
+  }).select("id").single();
+  assert.ifError(member.error);
+  const portalAccess = await cleanup.from("portal_access").insert({
+    workspace_id: created.data.workspace_id,
+    condominium_id: created.data.id,
+    name: "BETHAG QA UI Resident",
+    email: residentUser.email,
+    role: "resident",
+    apartment: residentUnit.data.unit_code,
+    permissions: [],
+    active: true,
+    user_id: residentUser.id,
+    member_id: member.data.id,
+    data: { source: "BETHAG_QA_UI" },
+  }).select("id").single();
+  assert.ifError(portalAccess.error);
+
   await adminPage.locator(".nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   await adminPage.getByRole("button", { name: "+ Nuova comunicazione" }).click();
   await adminPage.getByRole("heading", { name: "Nuova comunicazione al Portale" }).waitFor();
   await field(adminPage, "Titolo *").fill(communicationTitle);
-  await adminPage.locator(".modal .field").filter({ hasText: "Condominio" }).locator("select").first().selectOption({ label: "Condominio QA BETHAG" });
+  await adminPage.locator(".modal .field").filter({ hasText: "Condominio" }).locator("select").first().selectOption({ label: editedCondoName });
   await field(adminPage, "Contenuto *").fill("Messaggio sintetico di verifica UI BETHAG.");
   const portalCheckbox = adminPage.locator(".modal .checkbox-field input[type='checkbox']").first();
   if (!(await portalCheckbox.isChecked())) await portalCheckbox.check();
