@@ -381,7 +381,7 @@ async function syncBackendStateNow(
   const getCondominiumDbId = (legacyId: unknown) =>
     legacyId === null || legacyId === undefined || legacyId === ""
       ? undefined
-      : getCondominiumDbId(String(legacyId));
+      : condominiumDbIdByLegacyId.get(String(legacyId));
 
   if (condominiumRows.length) {
     const existingByLegacyId = new Map(
