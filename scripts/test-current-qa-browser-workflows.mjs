@@ -114,8 +114,15 @@ try {
   assert.equal(restored.data.archive_reason, null);
   assert.equal(restored.data.data.archivedAt, undefined);
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
-  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 15000 });
-  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared"] });
+  const activeCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName });
+  await activeCard.waitFor({ timeout: 15000 });
+  await activeCard.click();
+  await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Elimina" }).click();
+  await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 20000 });
+  const afterDelete = await cleanup.from("condominiums").select("id").eq("id", created.data.id);
+  assert.ifError(afterDelete.error);
+  assert.equal(afterDelete.data.length, 0, "Condominium delete RPC did not remove the synthetic fixture");
+  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared", "condominium deleted from UI through guarded RPC"] });
 
   await adminPage.locator(".nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   await adminPage.getByRole("button", { name: "+ Nuova comunicazione" }).click();
