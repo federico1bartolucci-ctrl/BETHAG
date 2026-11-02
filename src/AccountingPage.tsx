@@ -1929,7 +1929,7 @@ function AccountingPage({
         </label>
       </div>
 
-      {error && <div className="alert error" style={{margin:"15px 0",padding:"16px",border:"2px solid #b42318",borderRadius:12,background:"#fff1f2",color:"#b42318",fontSize:22,fontWeight:900,letterSpacing:".08em",textAlign:"center"}}>ERRORE</div>}
+      {error && <div className="alert error" role="alert" style={{margin:"15px 0",padding:"16px",border:"2px solid #b42318",borderRadius:12,background:"#fff1f2",color:"#b42318",textAlign:"left"}}><b style={{display:"block",fontSize:18,letterSpacing:".04em"}}>ERRORE</b><span style={{display:"block",marginTop:6,fontSize:14,fontWeight:500,letterSpacing:0}}>{error}</span></div>}
       {message && <div className="alert success">{message}</div>}
 
       <div className="quick-stats">
