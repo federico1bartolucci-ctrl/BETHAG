@@ -1,0 +1,26 @@
+name: BETHAG QA communication publication acceptance
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-app12.mjs"
+      - ".github/workflows/qa-app12.yml"
+  workflow_dispatch:
+jobs:
+  app12:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test communication publication with real QA roles
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: node scripts/test-current-qa-app12.mjs
