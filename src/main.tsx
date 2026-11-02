@@ -5892,7 +5892,7 @@ function App() {
             title: subject,
             body,
             published: false,
-            email_status: "In preparazione",
+            email_status: "In elaborazione",
             data: {
               id: persistedCommunicationId,
               title: subject,
@@ -5904,7 +5904,7 @@ function App() {
               status: "Bozza",
               publishedToPortal: false,
               deliveryMode: "email",
-              emailStatus: "In preparazione",
+              emailStatus: "In elaborazione",
             },
           });
 
