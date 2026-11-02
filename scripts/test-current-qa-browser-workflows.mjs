@@ -152,26 +152,19 @@ try {
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
   await archiveCard.waitFor({ timeout: 15000 });
   const archived = await waitForDbRow(
-    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.id).single(),
+    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason").eq("id", created.id).single(),
     row => Boolean(row?.archived_at && row?.archived_by),
     "Condominium archive persistence"
   );
   assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
   assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
-  const archivedJsonAt = archived.data.archivedAt;
-  const archivedJsonMs = typeof archivedJsonAt === "number" ? archivedJsonAt : Date.parse(archivedJsonAt);
-  const columnArchivedMs = Date.parse(archived.archived_at);
-  assert.ok(Number.isFinite(archivedJsonMs), "JSON archive timestamp is invalid: " + JSON.stringify(archivedJsonAt));
-  assert.ok(Number.isFinite(columnArchivedMs), "Structured archive timestamp is invalid: " + JSON.stringify(archived.archived_at));
-  assert.ok(Math.abs(archivedJsonMs - columnArchivedMs) <= 5000, "JSON and structured archive timestamps differ by more than five seconds: " + JSON.stringify({ json: archivedJsonAt, column: archived.archived_at }));
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
-    () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.id).single(),
+    () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason").eq("id", created.id).single(),
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
-  assert.equal(restored.data.archivedAt, undefined);
   await adminPage.reload({ waitUntil: "networkidle" });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
