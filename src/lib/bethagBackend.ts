@@ -677,7 +677,18 @@ async function syncBackendStateNow(
         active: item.active ?? true,
         user_id: item.userId ?? null,
         data: item,
-      })).filter((row: any) => row.condominium_id)
+      // Auth/portal records created by invitation or registration may
+      // intentionally have no legacy_id. They are authoritative server rows,
+      // not legacy-sync rows: attempting to upsert them with NULL legacy_id
+      // cannot match the (workspace_id, legacy_id) conflict target and can
+      // collide with the unique case-insensitive workspace/condominium/email
+      // constraint on every backend refresh.
+      })).filter((row: any) =>
+        row.condominium_id &&
+        row.legacy_id !== null &&
+        row.legacy_id !== undefined &&
+        String(row.legacy_id).trim() !== ""
+      )
     : [];
 
   if (portalRows.length) await upsertRows("portal_access", portalRows);
