@@ -20,7 +20,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Execute role-scoped RLS and Storage tests against approved QA only
         env:
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.BETHAG_QA_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
