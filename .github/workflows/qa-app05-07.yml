@@ -25,3 +25,4 @@ jobs:
           BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app05-07.mjs
+# QA verification trigger refreshed 2026-11-02
