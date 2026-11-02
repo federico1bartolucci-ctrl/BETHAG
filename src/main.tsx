@@ -2236,7 +2236,7 @@ function App() {
     // KEYS.* viene letto tramite load(), che usa JSON.parse():
     // salviamo quindi anche la pagina come JSON per poterla ripristinare
     // correttamente dopo un refresh.
-    localStorage.setItem(KEYS.page, JSON.stringify(page));
+    persistLocalState(KEYS.page, page);
   }, [page]);
 
   const [sessionRole, setSessionRole] =
@@ -2435,7 +2435,7 @@ function App() {
   const selectCondominium = (item: Condominium | null) => {
     setSelectedCondominium(item);
     if (item) {
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(item.id));
+      persistLocalState(KEYS.selectedCondominium, item.id);
       try {
         const url = new URL(window.location.href);
         url.searchParams.set("page", "condomini");
@@ -2492,7 +2492,7 @@ function App() {
       if (selectedCondominium?.id !== restored.id) {
         setSelectedCondominium(restored);
       }
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(restored.id));
+      persistLocalState(KEYS.selectedCondominium, restored.id);
       return;
     }
 
@@ -2502,10 +2502,7 @@ function App() {
 
   useEffect(() => {
     if (!selectedCondominium) return;
-    localStorage.setItem(
-      KEYS.selectedCondominium,
-      JSON.stringify(selectedCondominium.id)
-    );
+    persistLocalState(KEYS.selectedCondominium, selectedCondominium.id);
   }, [selectedCondominium]);
 
 
@@ -2895,8 +2892,8 @@ function App() {
           vat: data.user.user_metadata?.vat || current.vat,
         }));
 
-        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
-        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+        persistLocalState(KEYS.session, access.role);
+        persistLocalState(KEYS.sessionEmail, normalizedEmail);
         setPage("homepage");
         return;
       } catch (authError) {
@@ -2946,8 +2943,8 @@ function App() {
 
     setSessionRole(role);
     setSessionEmail(normalizedEmail);
-    localStorage.setItem(KEYS.session, JSON.stringify(role));
-    localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+    persistLocalState(KEYS.session, role);
+    persistLocalState(KEYS.sessionEmail, normalizedEmail);
     setPage("homepage");
   };
 
@@ -3197,8 +3194,8 @@ function App() {
 
         setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
-        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
-        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+        persistLocalState(KEYS.session, access.role);
+        persistLocalState(KEYS.sessionEmail, normalizedEmail);
 
         setProfile((current) => ({
           ...current,
@@ -3339,7 +3336,7 @@ function App() {
           persistLocalState(storageKey, value);
         }
       });
-      if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
+      if (state.profile) persistLocalState(KEYS.profile, state.profile);
 
       // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
       // escluse le chiavi di sessione/autenticazione. Questo completa il
