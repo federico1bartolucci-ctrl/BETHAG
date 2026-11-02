@@ -30,3 +30,4 @@ try{
  if(communicationId){const recipients=await admin.from("communication_recipients").delete().eq("communication_id",communicationId);assert.ifError(recipients.error);const del=await admin.from("communications").delete().eq("id",communicationId).eq("workspace_id",w.data.id);assert.ifError(del.error);}
  await resident.auth.signOut();await admin.auth.signOut();
 }
+// QA verification rerun 2026-11-02
