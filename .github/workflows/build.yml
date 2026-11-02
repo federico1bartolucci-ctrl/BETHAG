@@ -7,7 +7,7 @@ on:
 
 # Serialize authenticated writes against the shared QA project with qa-navigation.yml.
 concurrency:
-  group: bethag-qa-authenticated-write-tests-${{ github.ref }}
+  group: bethag-qa-authenticated-write-tests-${{ github.head_ref || github.ref }}
   cancel-in-progress: false
 
 jobs:
