@@ -304,7 +304,20 @@ try {
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
+  // Wait for the post-reload Supabase hydration response that actually contains
+  // this restored record. DOMContentLoaded alone is too early: the React app
+  // hydrates its backend state asynchronously after restoring the Auth session.
+  const restoredCondominiumHydration = adminPage.waitForResponse(async (response) => {
+    const requestUrl = new URL(response.url());
+    if (!requestUrl.pathname.endsWith("/rest/v1/condominiums") || requestUrl.searchParams.get("select") !== "*") return false;
+    if (!response.ok()) return false;
+    const rows = await response.json().catch(() => []);
+    return Array.isArray(rows) && rows.some((row) =>
+      row.id === created.id && row.name === editedCondoName && row.archived_at === null
+    );
+  }, { timeout: 60000 });
   await adminPage.reload({ waitUntil: "domcontentloaded" });
+  await restoredCondominiumHydration;
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
