@@ -89,7 +89,7 @@ const portalExisting = check(portalQuery, "find resident portal access");
 const portalPayload = {
   workspace_id: workspaceId, condominium_id: condominiumId, name: "Condomino QA",
   email: required.resident[1], role: "resident", apartment: "A-01",
-  permissions: ["documenti", "verbali", "regolamento", "pagamenti_ordinari", "assemblee"],
+  permissions: ["documenti", "verbali", "regolamento", "pagamenti_ordinari", "assemblee", "comunicazioni"],
   active: true, user_id: users.resident.id, member_id: member.id,
   data: { bethag_qa_fixture: marker }
 };
