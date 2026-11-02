@@ -21,6 +21,8 @@ const communicationTitle = marker + "_COMM";
 const browser = await chromium.launch({ headless: true });
 const results = [];
 const pageErrors = [];
+const consoleErrors = [];
+const failedRequests = [];
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
@@ -112,6 +114,9 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
+  adminPage.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
+  adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
@@ -249,11 +254,26 @@ try {
   await adminPage.getByRole("button", { name: "Salva", exact: true }).click();
   const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
   await commCard.waitFor({ timeout: 20000 });
-  const persistedCommunication = await waitForDbRow(
-    () => cleanup.from("communications").select("id,published,condominium_id,legacy_id,title,data").eq("title", communicationTitle).maybeSingle(),
-    row => Boolean(row?.published === true && row?.condominium_id === created.id),
-    "Published communication backend persistence"
-  );
+  let persistedCommunication;
+  try {
+    persistedCommunication = await waitForDbRow(
+      () => cleanup.from("communications").select("id,published,condominium_id,legacy_id,title,data").eq("title", communicationTitle).maybeSingle(),
+      row => Boolean(row?.published === true && row?.condominium_id === created.id),
+      "Published communication backend persistence",
+      20000
+    );
+  } catch (syncError) {
+    const storedRows = await cleanup.from("communications").select("id,title,published,condominium_id,workspace_id,data").eq("workspace_id", created.workspace_id).like("title", marker + "%");
+    throw new Error("Communication sync failed: " + JSON.stringify({
+      cause: syncError.message,
+      rows: storedRows.data,
+      rowsError: storedRows.error?.message,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+      adminBody: (await adminPage.locator("body").innerText()).slice(0, 4000),
+    }));
+  }
   assert.equal(persistedCommunication.published, true);
   assert.equal(persistedCommunication.condominium_id, created.id);
   const persistedPortalAccess = await cleanup.from("portal_access")
@@ -275,6 +295,8 @@ try {
     console.log("APP12_RESIDENT_VISIBILITY_DEBUG", JSON.stringify({
       body: (await residentPage.locator("body").innerText()).slice(0, 4000),
       pageErrors,
+      consoleErrors,
+      failedRequests,
       communication: persistedCommunication,
       portalAccess: persistedPortalAccess.data,
     }));
@@ -297,6 +319,8 @@ try {
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuyhlzzydcgghrzeexn", results, pageErrors, cleanup: "service-role cleanup verified" }, null, 2));
 if (results.length !== 2 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
+if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
+if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
 
 // Re-run marker: strict-mode heading selector uses the unique h1 after save.
 
