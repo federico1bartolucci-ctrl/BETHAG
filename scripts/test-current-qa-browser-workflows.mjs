@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
+// Targeted authenticated regression run: trace the React save handler through its RPC.
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
