@@ -593,7 +593,6 @@ try {
   await ownerHydrationResponse;
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
-  await adminPage.getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
@@ -604,6 +603,7 @@ try {
     { timeout: 20000 }
   );
   await adminPage.locator("label").filter({ hasText: "Unità immobiliare" }).locator("select").selectOption(transferUnit.data.id);
+  await adminPage.locator("label").filter({ hasText: "Cedente" }).locator("select").getByRole("option", { name: marker + "_CEDENTE_UI", exact: true }).waitFor({ timeout: 15000 });
   const automaticPreviewResult = await automaticPreview;
   if (!automaticPreviewResult.ok()) {
     const responseBody = await automaticPreviewResult.text().catch(() => "");
