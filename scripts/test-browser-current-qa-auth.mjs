@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const baseURL = (process.env.BETHAG_QA_BASE_URL || "http://127.0.0.1:4173/BETHAG/").replace(/\/$/, "");
+const baseURL = process.env.BETHAG_QA_BASE_URL || "http://127.0.0.1:4173/BETHAG/";
 const accounts = [
   { role: "Amministratore", email: "bethag-admin-qa@example.com", password: process.env.BETHAG_QA_ADMIN_PASSWORD, expected: "Homepage" },
   { role: "Collaboratore", email: "bethag-collaboratore-qa@example.com", password: process.env.BETHAG_QA_COLLABORATOR_PASSWORD, expected: "Homepage" },
