@@ -7,6 +7,10 @@ on:
       - "scripts/test-current-qa-authenticated-rls.mjs"
       - ".github/workflows/qa-authenticated-rls.yml"
   workflow_dispatch:
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
 jobs:
   authenticated-rls:
     runs-on: ubuntu-latest
