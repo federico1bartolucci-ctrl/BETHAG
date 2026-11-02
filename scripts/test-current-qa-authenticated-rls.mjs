@@ -108,7 +108,7 @@ try {
   record("APP-04 cross-workspace isolation", true, "foreign workspace read empty; write rejected");
 
   const grantDocuments = await fixtureAdmin.from("workspace_members")
-    .update({ permissions: ["documenti"] })
+    .update({ permissions: ["condomini", "documenti"] })
     .eq("workspace_id", workspaceId)
     .eq("user_id", userIds.collaborator);
   assert.ifError(grantDocuments.error);
