@@ -19205,6 +19205,10 @@ class BethagAppErrorBoundary extends React.Component<
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     console.error("BETHAG application render error", error, info);
+    this.setState((current) => ({
+      ...current,
+      message: current.message + (info.componentStack ? "\\n\\nComponente:\\n" + info.componentStack : ""),
+    }));
   }
 
   render() {
