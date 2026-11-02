@@ -8,6 +8,7 @@ on:
       - "scripts/test-current-qa-browser-workflows.mjs"
       - "src/main.tsx"
       - "src/lib/bethagBackend.ts"
+      - "src/lib/bethagBackend.ts"
       - ".github/workflows/qa-navigation.yml"
   workflow_dispatch:
 jobs:
