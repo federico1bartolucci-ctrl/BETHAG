@@ -1121,6 +1121,17 @@ const BACKEND_COLLECTION_STORAGE_KEYS = new Set<string>([
   KEYS.collaborators,
 ]);
 
+function clearBackendCollectionCache() {
+  if (!supabaseConfigured) return;
+  for (const key of BACKEND_COLLECTION_STORAGE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn("BETHAG obsolete local collection cache could not be cleared", { key, error });
+    }
+  }
+}
+
 function persistLocalState(key: string, value: unknown) {
   if (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key)) return;
   try {
@@ -2196,6 +2207,10 @@ function SettingsPage({
 }
 
 function App() {
+  useEffect(() => {
+    clearBackendCollectionCache();
+  }, []);
+
   const [page, setPage] =
     useState<Page>(() => {
       try {
