@@ -1,15 +1,15 @@
 # BETHAG — Application smoke-test and cutover approval record
 
-**Status:** PREPARED — TEST EXECUTION AND APPROVAL PENDING  
+**Status:** DEPLOYED TO GITHUB PAGES — PUBLIC LAUNCH NO-GO PENDING EMAIL DELIVERY TEST AND FORMAL CUTOVER APPROVAL  
 **Scope:** Run against an isolated test environment only. Do not use Production for negative tests or test data mutations.
 
 ## 1. Environment and build evidence
 
-- [ ] Record the exact commit SHA and deployment/build artifact.
+- [x] Exact deployed commit: `aabc3cd7393b7d5fff7023e82d9bc702e79a7d74`; build run [41470120008](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41470120008) PASS; GitHub Pages deployment [41470120004](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41470120004) PASS.
 - [x] Restore gate disposition (decision recorded 2026-10-27): local Docker/PostgreSQL logical restore was completed and verified; per the user's explicit decision, treat the backup-restore prerequisite as SATISFIED for this cutover without paying for a new Supabase project. Provider-backed physical restore was not performed; its residual risk is accepted for this release and must not be misrepresented as a physical-restore test.
-- [ ] Confirm schema, RLS, function ACL, owner and default-privilege evidence is attached.
+- [x] Production schema/ACL/function postconditions and default-privilege evidence recorded in section 12; RLS/application acceptance remains subject to the per-test status table.
 - [x] Latest PR CI validation: [run 40633972708](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/40633972708), commit `5b3ca4710da084b2a96d46e7dc3f65cb1e5a71bd` — **PASS** (`build` and `postgres-bootstrap`). This is repository/isolated PostgreSQL validation, not production deployment or full APP-01–APP-15 browser acceptance.
-- [ ] Confirm Security Advisor findings are reviewed; Production's current authenticated SECURITY DEFINER RPC warning remains until the approved forward migration changes the RPC to SECURITY INVOKER.
+- [x] Production Security Advisor rechecked after migration 20261102151610: `lints: []`; the public transfer wrapper is SECURITY INVOKER.
 
 ## 2. Automated public-interface smoke test (partial coverage)
 
@@ -49,19 +49,19 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 | ID | Area | Test | Expected result | Status |
 |---|---|---|---|---|
-| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | NOT RUN |
-| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | NOT RUN |
-| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | NOT RUN |
-| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | NOT RUN |
-| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | NOT RUN |
-| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | NOT RUN |
-| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | NOT RUN |
-| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | NOT RUN |
-| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | NOT RUN |
-| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | NOT RUN |
-| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | NOT RUN |
-| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | NOT RUN |
-| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | NOT RUN |
+| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PASS — real-auth browser run 41459214926 |
+| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PASS — real-auth browser run 41459214926; role restrictions verified |
+| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PASS — real-auth browser run 41459214926; resident role/navigation restrictions verified |
+| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | PARTIAL — authenticated QA RLS workflow 41383673779 verified foreign-workspace denial for collaborator; full matrix not covered |
+| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PARTIAL — browser workflow 41459214926 verified create/edit/archive/restore; full hierarchical-unit matrix not separately evidenced |
+| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PASS — browser workflow 41459214926 verified expenses, 1,000-millesimi allocation and installments; collaborator restrictions included |
+| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PARTIAL — QA database guard and authenticated workflow 41384266665 passed; full browser guard scenario not evidenced |
+| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | PARTIAL — browser workflow 41459214926 verified preview/confirmation/closure and owner refresh; multi-incoming co-owner and portal-link matrix not separately evidenced |
+| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PARTIAL — authenticated QA transfer workflow 41384782912 rejected unpaid €90 installment without state change; full browser scenario not evidenced |
+| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PARTIAL — Production negative test returned AUTH_REQUIRED; QA resident denied; outside-workspace transfer case not yet evidenced in latest browser suite |
+| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PARTIAL — valid closure atomicity and blocked-closure state preservation verified; forced mid-transaction failure injection remains outstanding |
+| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publication/visibility workflow 41384610747 PASS; actual outbound email delivery not tested |
+| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — authenticated QA workflow 41383673779 verified real byte upload by collaborator and download by authorized resident; cleanup confirmed |
 | APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — Production forward migration 20261102151610 applied; live ACL/default-ACL/function postconditions and Security Advisor verified |
 | APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — authenticated QA browser run 41459214926 passed real sign-in/refresh for all three roles, 12 admin destinations, role restrictions and core UI workflows |
 
@@ -200,3 +200,14 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 **APP-14 Production alignment: PASS.** APP-15 remains PASS for the documented authenticated browser scope in run [41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926).
 
 **Release boundary:** this closes the live ACL/function discrepancy, not the entire launch. APP-12 outbound email provider delivery still requires a real, authorized test recipient; remaining release approval and application acceptance records must be completed before declaring BETHAG ready for public launch.
+
+
+## 13. Current release state and deployed build — 2026-11-02 16:18 UTC
+
+- Latest main commit `aabc3cd7393b7d5fff7023e82d9bc702e79a7d74`: **build PASS**, workflow [41470120008](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41470120008).
+- GitHub Pages deployment for that exact commit: **PASS**, workflow [41470120004](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41470120004). The deployment job completed its build, upload and Pages deployment steps successfully.
+- APP-14 is **PASS in Production** as detailed in section 12. APP-15 is **PASS for the authenticated browser scope documented in run [41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926)**.
+- The table above distinguishes full PASS from PARTIAL evidence. Partial rows must not be represented as full acceptance.
+- **Outbound email remains unverified:** no recent `bethag-send-email` invocation was found in the Production unified logs in the last 24 hours. Prior historical provider events do not prove current application delivery.
+- **Formal cutover approval remains incomplete:** approver, approved SHA, exact ordered migration list/hash, maintenance window, communications plan, rollback triggers and responsible operator have not been recorded.
+- **Decision: NO-GO for public launch** until the authorized live email-delivery test is recorded and the formal cutover approval fields are completed. The website deployment itself is successful; that is not equivalent to launch approval.
