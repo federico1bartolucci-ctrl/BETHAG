@@ -68,6 +68,26 @@ async function clickWithRetry(locator, afterLocator, attempts = 4) {
   throw lastError;
 }
 
+async function clickUntilVisible(page, locator, target, description, attempts = 4) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (await target.isVisible().catch(() => false)) return;
+    try {
+      await locator.click({ timeout: 5000 });
+    } catch (error) {
+      lastError = error;
+    }
+    try {
+      await target.waitFor({ state: "visible", timeout: 5000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+  }
+  throw new Error(description + " did not render; url=" + page.url() + "; body=" + (await page.locator("body").innerText()).slice(0, 3000) + "; last=" + String(lastError));
+}
+
 async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
@@ -180,8 +200,9 @@ try {
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
 
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
-  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
+  const condominiumsNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first();
+  const condominiumsHeading = adminPage.getByRole("heading", { name: "Condomìni", exact: true });
+  await clickUntilVisible(adminPage, condominiumsNav, condominiumsHeading, "Condomini page");
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
   await clickWithRetry(
     adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
