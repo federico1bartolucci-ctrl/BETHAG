@@ -253,3 +253,23 @@ A QA-only forward migration artifact, `supabase/rebuild/qa-only-migrations/20261
 - **Browser acceptance:** three-role navigation and refresh passed. The first APP-05/12 browser attempts exposed test-harness assumptions about a pre-seeded condominium; the test was made self-contained by creating a synthetic condominium and resident portal-access fixture, with service-role cleanup verification. The new run is pending; APP-05/12 UI must not be marked PASS until that run completes.
 - **Branch status remains unresolved:** Supabase still reports `MIGRATIONS_FAILED` for `bethag-launch-qa`, while its preview database reports `ACTIVE_HEALTHY` and the migration ledger is readable. The branch-creation logs show initial bootstrap failures while the migration history table and `public.portal_access` were not yet present, plus a stale catalog-query column reference. No branch reset was performed because it would risk the existing QA fixtures.
 - **Release decision remains NO-GO.** Production was not modified; PR #25 remains draft and unmerged.
+
+
+## 15. Live QA ACL verification — 2026-11-02 05:15 UTC
+
+Read-only catalog verification on QA project `jhuyhlzzydcgghrzeexn`:
+
+- Public relations: **47/47 base tables RLS enabled**, 0 with RLS disabled, 0 non-`postgres` owners.
+- SECURITY DEFINER routine ACL: **0 EXECUTE grants to PUBLIC or anon** across public/private security-definer functions.
+- Private schema: `USAGE` granted to `authenticated` and `service_role`; neither has `CREATE`; `anon` has no `USAGE`.
+- Private SECURITY DEFINER execution ACL: 33 routines for `authenticated`, 23 for `service_role`; the authenticated grants correspond to the explicit invoker-wrapper/RLS helper set and the QA-only forward repairs. No PUBLIC/anon execution was found for security-definer routines.
+- Application-owned default ACLs for owner `postgres` match the release policy: authenticated gets ordinary CRUD on new public tables; service_role gets CRUD plus REFERENCES/TRIGGER/TRUNCATE; service_role receives sequence access and function EXECUTE; anon receives no application-table defaults; no application role receives default MAINTAIN.
+- Existing `supabase_admin` default ACLs remain broad, including MAINTAIN, but are explicitly platform-managed and are not changed by application migrations.
+- Relation-level MAINTAIN: 0 for anon, authenticated and service_role after QA-only revocation from the read-only view `public.condominium_fund_availability`. Only postgres retains MAINTAIN on public relations.
+- Security Advisor: `lints: []`.
+
+**APP-14 ACL parity: PASS for application-owned objects and privileges**, with the above explicit Supabase-managed `supabase_admin` default-ACL exclusion. This is not evidence of Production live state; Production was not queried or modified in this pass.
+
+The latest QA-only migration `20261102110000_revoke_service_role_maintain_from_fund_availability_view` is recorded in the QA migration ledger and is not in the frozen Production inventory. The QA branch still reports `MIGRATIONS_FAILED` despite preview database `ACTIVE_HEALTHY`; this unresolved branch-status discrepancy remains a release blocker and must not be resolved by resetting/deleting the branch because its QA test data is required.
+
+The latest authenticated browser run `41392503198` has role navigation PASS; the condominium/communication UI workflow is still running at the time of this update. Earlier UI attempt confirmed create/edit/archive/restore path was corrected, but resident visibility of a newly published communication failed. The current rerun adds backend persistence and portal-access diagnostics; APP-12 UI visibility is not yet marked PASS. Email provider delivery remains untested.
