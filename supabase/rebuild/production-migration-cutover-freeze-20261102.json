@@ -2,7 +2,7 @@
   "artifact": "BETHAG Production migration cutover freeze — superseding 14-migration candidate",
   "captured_date": "2026-11-02",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
-  "reviewed_source_commit": "a38a24eb1ec04721d1e987ebc9e98e6812a24e29",
+  "reviewed_source_commit": "732b5cdb66b00d125b35028be466b408a13e6639",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "ops/qa-secret-validation-20261102",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
