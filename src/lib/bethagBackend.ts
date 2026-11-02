@@ -416,11 +416,18 @@ async function syncBackendStateNow(
 
       // Archive lifecycle is server-owned. Automatic state sync must never
       // resurrect stale JSON flags after the dedicated restore RPC clears them.
-      const persistedArchivedAt = existing?.archived_at ?? existing?.data?.archivedAt;
+      const hasStructuredArchiveState = existing && Object.prototype.hasOwnProperty.call(existing, "archived_at");
+      const persistedArchivedAt = hasStructuredArchiveState
+        ? existing.archived_at
+        : existing?.data?.archivedAt;
       if (persistedArchivedAt) {
         mergedData.archivedAt = persistedArchivedAt;
-        mergedData.archivedBy = existing?.archived_by ?? existing?.data?.archivedBy;
-        mergedData.archiveReason = existing?.archive_reason ?? existing?.data?.archiveReason;
+        mergedData.archivedBy = hasStructuredArchiveState
+          ? existing.archived_by
+          : existing?.data?.archivedBy;
+        mergedData.archiveReason = hasStructuredArchiveState
+          ? existing.archive_reason
+          : existing?.data?.archiveReason;
       } else {
         delete mergedData.archivedAt;
         delete mergedData.archivedBy;
