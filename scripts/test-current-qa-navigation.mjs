@@ -11,7 +11,7 @@ const browser=await chromium.launch({headless:true});
 const results=[];
 try{
  for(const a of accounts){
-  const context=await browser.newContext();const page=await context.newPage();const errors=[];
+  const context=await browser.newContext();const page=await context.newPage();const errors=[];const dialogs=[];page.on("dialog",async d=>{dialogs.push({type:d.type(),message:d.message()});await d.dismiss();});
   page.on("pageerror",e=>errors.push(e.message));
   try{
    await page.goto(baseURL,{waitUntil:"networkidle"});
@@ -31,9 +31,10 @@ try{
     for(const label of labels){
      const nav=page.locator(".nav-item").filter({hasText:label}).first();
      await nav.waitFor({state:"visible",timeout:10000});await nav.click();
-     const active=page.locator(".nav-item.active");
+     const active=page.locator(".sidebar .nav-item.active").first();
      await active.waitFor({state:"visible"});
-     assert.ok((await active.innerText()).includes(label),"Navigation did not activate "+label);
+     const activeText=(await active.innerText()).trim();
+     assert.ok(activeText.includes(label),"Navigation did not activate "+label+"; active="+activeText);
     }
     await page.reload({waitUntil:"networkidle"});
     await page.getByText("Homepage",{exact:true}).first().waitFor({timeout:20000});
@@ -49,7 +50,7 @@ try{
     results.push({role:a.role,status:"PASS",checks:["resident portal landing visible","staff navigation absent","accounting control absent","no uncaught browser errors"]});
    }
    assert.deepEqual(errors,[]);
-  }catch(e){results.push({role:a.role,status:"FAIL",error:String(e.message).slice(0,500),pageErrors:errors,visible:(await page.locator("body").innerText()).slice(0,1200)});}
+  }catch(e){results.push({role:a.role,status:"FAIL",error:String(e.message).slice(0,500),pageErrors:errors,dialogs,visible:(await page.locator("body").innerText()).slice(0,1200)});}
   finally{await context.close();}
  }
 }finally{await browser.close();}
