@@ -170,12 +170,25 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
   const created = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
     "Condominium creation persistence"
   );
+  try {
+    await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 30000 });
+  } catch (createUiError) {
+    console.log("APP05_CREATE_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      created,
+      dialogs,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+    }));
+    throw createUiError;
+  }
   const units = await waitForDbRow(
     () => cleanup.from("condominium_units").select("id").eq("condominium_id", created.id),
     rows => Array.isArray(rows) && rows.length === 5,
