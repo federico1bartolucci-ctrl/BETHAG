@@ -31,7 +31,7 @@ try{
  const verifyInst=await db.from("condominium_installments").select("amount").eq("id",installmentId).single();assert.ifError(verifyInst.error);assert.equal(Number(verifyInst.data.amount),125.5);
  pass("APP-06 accounting expense/allocation/installment persistence","real administrator session; €125.50 expense, 1,000 millesimi allocation and installment persisted");
 
- const paid=await db.from("condominium_installments").update({paid_amount:125.5,status:"Pagato"}).eq("id",installmentId);assert.ifError(paid.error);
+ const paid=await db.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:125.5,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ifError(paid.error);
  const close=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_source_fiscal_year_id:fiscalYearId});assert.ifError(close.error);
  const blocked=await db.from("condominium_ledger_entries").update({amount:126}).eq("id",ledgerId);
  assert.ok(blocked.error,"Closed fiscal period accepted ledger mutation");
