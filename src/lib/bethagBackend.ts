@@ -817,7 +817,34 @@ async function syncBackendStateNow(
     data: item,
   })).filter((row: any) => row.condominium_id);
 
-  if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+  // The local condominium-member snapshot does not always carry the linked
+  // Auth user (for example, an invited resident whose portal access was linked
+  // server-side). A background sync must not interpret an omitted userId as an
+  // instruction to unlink that account: the AFTER trigger would deactivate
+  // portal_access and workspace_members. Preserve the server identity unless
+  // the local model explicitly supplies a replacement.
+  if (memberRows.length) {
+    const memberCondominiumIds = Array.from(new Set(memberRows.map((row: any) => row.condominium_id)));
+    const { data: existingMemberLinks, error: existingMemberLinksError } = await supabase
+      .from("condominium_members")
+      .select("condominium_id,legacy_id,user_id")
+      .in("condominium_id", memberCondominiumIds);
+    if (existingMemberLinksError) throw existingMemberLinksError;
+    const existingUserByLegacyKey = new Map(
+      (existingMemberLinks ?? []).map((row: any) => [
+        String(row.condominium_id) + "::" + String(row.legacy_id),
+        row.user_id,
+      ])
+    );
+    for (const row of memberRows) {
+      if (row.user_id === null || row.user_id === undefined) {
+        row.user_id = existingUserByLegacyKey.get(
+          String(row.condominium_id) + "::" + String(row.legacy_id)
+        ) ?? null;
+      }
+    }
+    await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+  }
 
   const memberRowsByLegacyKey = new Map<string, any>();
   if (memberRows.length) {
