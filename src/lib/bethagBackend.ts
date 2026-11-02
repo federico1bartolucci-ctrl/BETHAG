@@ -373,9 +373,15 @@ async function syncBackendStateNow(
 
   if (condominiumError) throw condominiumError;
 
-  const condominiumDbIdByLegacyId = new Map(
-    (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row.id])
+  // Postgres bigint legacy IDs may arrive as JSON numbers or strings.
+  // Normalize keys so every UI legacy ID resolves to the database UUID.
+  const condominiumDbIdByLegacyId = new Map<string, string>(
+    (existingCondominiums ?? []).map((row: any) => [String(row.legacy_id), row.id])
   );
+  const getCondominiumDbId = (legacyId: unknown) =>
+    legacyId === null || legacyId === undefined || legacyId === ""
+      ? undefined
+      : getCondominiumDbId(String(legacyId));
 
   if (condominiumRows.length) {
     const existingByLegacyId = new Map(
@@ -429,7 +435,7 @@ async function syncBackendStateNow(
 
     if (error) throw error;
     (refreshedCondominiums ?? []).forEach((row: any) => {
-      condominiumDbIdByLegacyId.set(row.legacy_id, row.id);
+      condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
     });
   }
 
@@ -461,10 +467,10 @@ async function syncBackendStateNow(
         const workCondominiumIds = Array.from(new Set(
           (state.condominiumWorks ?? [])
             .filter((work: any) => Number(work.supplierId) === legacySupplierId)
-            .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
+            .map((work: any) => getCondominiumDbId(work.condominiumId))
             .filter(Boolean)
         ));
-        const condominiumDbId = condominiumDbIdByLegacyId.get(Number(supplier.condominiumId));
+        const condominiumDbId = getCondominiumDbId(Number(supplier.condominiumId));
         const candidateCondominiumIds = workCondominiumIds.length
           ? workCondominiumIds
           : (condominiumDbId ? [condominiumDbId] : Array.from(condominiumDbIdByLegacyId.values()));
@@ -518,35 +524,35 @@ async function syncBackendStateNow(
 
   const rowsByTable: Array<[string, any[]]> = [
     canSyncModule("documenti") ? ["documents", (state.documents ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.name, category: item.category, status: item.publication,
       file_path: item.storagePath ?? null,
       data: item,
     }))] : null,
     canSyncModule("scadenze") ? ["deadlines", (state.deadlines ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, due_date: item.dueDate || null, status: item.status, data: item,
     }))] : null,
     canSyncModule("assemblee") ? ["assemblies", (state.assemblies ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, assembly_date: item.date ? new Date(item.date).toISOString() : null, status: item.status, data: item,
     }))] : null,
     canSyncModule("fornitori") ? ["suppliers", (state.suppliers ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       name: item.name, category: item.service, data: item,
     }))] : null,
     canSyncModule("attivita") ? ["activities", (state.activities ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null, status: item.status, data: item,
     }))] : null,
     canSyncModule("comunicazioni") ? ["communications", (state.communications ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal, email_status: item.emailStatus, email_prepared_at: item.emailPreparedAt || null, data: item,
     }))] : null,
     canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).map((item: any) => ({
       id: item.id,
       workspace_id: workspaceId,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title,
       category: item.category ?? "Manutenzione",
       description: item.description ?? "",
@@ -561,7 +567,7 @@ async function syncBackendStateNow(
         ? cumulativeWorkActualAmountById.get(String(item.id))
         : Number(item.actualAmount || 0),
       progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
-      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(condominiumDbIdByLegacyId.get(item.condominiumId) ?? "")}`) ?? null) : null,
+      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(getCondominiumDbId(item.condominiumId) ?? "")}`) ?? null) : null,
       notes: item.notes ?? "",
       data: item,
     })).filter((row: any) => row.condominium_id && row.title)] : null,
@@ -591,7 +597,7 @@ async function syncBackendStateNow(
     ? (state.portalMembers ?? []).map((item: any) => ({
         workspace_id: workspaceId,
         legacy_id: item.id,
-        condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+        condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
         name: item.name,
         email: item.email,
         role: item.role === "council" ? "council" : "resident",
@@ -624,7 +630,7 @@ async function syncBackendStateNow(
   // rimaneva solo nello stato locale e spariva al successivo refresh.
   const desiredUnitMap = new Map<string, any>();
   for (const item of state.condominiumMembers ?? []) {
-    const condominiumId = condominiumDbIdByLegacyId.get(item.condominiumId);
+    const condominiumId = getCondominiumDbId(item.condominiumId);
     const unitCode = String(item.apartment ?? "").trim();
     if (!condominiumId || !unitCode) continue;
 
@@ -707,9 +713,9 @@ async function syncBackendStateNow(
 
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
 
-    condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+    condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
     unit_id: (() => {
-      const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId);
+      const condominiumDbId = getCondominiumDbId(item.condominiumId);
       const unit = condominiumDbId
         ? unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`)
         : null;
@@ -745,7 +751,7 @@ async function syncBackendStateNow(
   }
 
   const requestRows = (state.condominiumRequests ?? []).map((item: any) => {
-    const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId) ?? null;
+    const condominiumDbId = getCondominiumDbId(item.condominiumId) ?? null;
     const memberDb = condominiumDbId
       ? memberRowsByLegacyKey.get(String(condominiumDbId) + "::" + String(item.memberId ?? ""))
       : null;
