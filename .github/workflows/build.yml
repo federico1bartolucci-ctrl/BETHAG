@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     # Public client configuration for the isolated Supabase QA preview only.
     env:
+      VITE_SUPABASE_ENABLE: "true"
       VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
     steps:
