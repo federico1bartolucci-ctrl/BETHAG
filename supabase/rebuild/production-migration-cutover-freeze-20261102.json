@@ -295,18 +295,34 @@
     "Backup restore gate: user explicitly accepted the residual risk on 2026-10-27 after local Docker/PostgreSQL logical-restore verification; provider-backed physical restore was not performed and must not be claimed.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
     "Named cutover approver, approved exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
-    "End-to-end runner rehearsal passed; this does not authorize Production execution before the remaining release gates and written approval.",
-    "The new collaborator metadata and archive-state migrations have not yet been rehearsed in the fourteen-migration cutover runner."
+    "End-to-end runner rehearsal passed; this does not authorize Production execution before the remaining release gates and written approval."
   ],
   "safety": "Supersedes the 2026-10-27 twelve-migration candidate for review only. No Production DDL or ledger writes were performed; this is not authorization to execute.",
   "rehearsal_evidence": {
-    "status": "PENDING_REHEARSAL",
+    "status": "PASS_ISOLATED_POSTGRESQL_17_REHEARSAL",
     "date": "2026-11-02",
-    "target": "isolated local PostgreSQL 17",
-    "actual_canonical_sql_files_executed": 0,
+    "target": "isolated PostgreSQL 17 CI container",
+    "actual_canonical_sql_files_executed": 14,
     "historical_version_name_pairs_preserved": 244,
     "canonical_rows_expected": 14,
     "final_test_ledger_rows": 258,
-    "production_or_supabase_touched": false
+    "production_ddl_or_ledger_mutations": false,
+    "production_read_only_checks_performed": true,
+    "qa_browser_acceptance_run": "41398202194",
+    "cutover_rehearsal_run": "41398202209",
+    "cutover_rehearsal_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41398202209",
+    "cutover_rehearsal_pr": 28,
+    "cutover_rehearsal_head_commit": "15f99c615a0579847e52e5b49b3d53351df8f048",
+    "checks_passed": [
+      "fresh PostgreSQL 17 baseline bootstrap",
+      "all fourteen canonical forward migrations applied in order",
+      "incremental hardening catalog and ACL postconditions",
+      "collaborator module permission enforcement with RLS",
+      "DATABASE_URL and canonical ledger transaction",
+      "migration history reconciliation",
+      "Production function security and ACL parity read-only check",
+      "application build and public-login browser smoke"
+    ],
+    "production_execution_authorized": false
   }
 }
