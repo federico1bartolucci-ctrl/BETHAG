@@ -6549,8 +6549,13 @@ function App() {
     const handleBackendRefresh = () => { void refreshBackendState(); };
     window.addEventListener("bethag-backend-refresh", handleBackendRefresh);
 
-    // Navigation itself is a refresh boundary: always read the authoritative state.
-    void refreshBackendState();
+    // Full workspace hydration is needed when entering the condominium
+    // registry or archive. Re-running it on every unrelated navigation caused
+    // hundreds of REST requests for large workspaces and blocked the UI.
+    // Standalone modules can still request a refresh through the event above.
+    if (page === "condomini" || page === "archivio") {
+      void refreshBackendState();
+    }
 
     return () => {
       cancelled = true;
