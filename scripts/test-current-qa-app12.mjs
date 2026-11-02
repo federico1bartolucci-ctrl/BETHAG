@@ -17,10 +17,11 @@ try{
  const hidden=await resident.from("communications").select("id").eq("id",communicationId);assert.ifError(hidden.error);assert.equal(hidden.data.length,0,"Resident read an unpublished communication");
  const publish=await admin.from("communications").update({published:true}).eq("id",communicationId).eq("workspace_id",w.data.id);assert.ifError(publish.error);
  const visible=await resident.from("communications").select("id,title,body,published").eq("id",communicationId);assert.ifError(visible.error);assert.equal(visible.data.length,1);assert.equal(visible.data[0].published,true);assert.equal(visible.data[0].title,marker);
+ const prepared=await admin.rpc("prepare_communication_recipients",{p_communication_id:communicationId});assert.ifError(prepared.error);assert.equal(prepared.data.status,"prepared");assert.ok(Number(prepared.data.recipient_count)>=1,"No email recipients were prepared");
  const unpublish=await admin.from("communications").update({published:false}).eq("id",communicationId).eq("workspace_id",w.data.id);assert.ifError(unpublish.error);
  const hiddenAgain=await resident.from("communications").select("id").eq("id",communicationId);assert.ifError(hiddenAgain.error);assert.equal(hiddenAgain.data.length,0);
- console.log(JSON.stringify({suite:"BETHAG_QA_APP12_COMMUNICATIONS",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["administrator created unpublished communication","resident could not read draft","resident read published communication","resident lost visibility after unpublishing"],email_delivery:"NOT TESTED — no email sent"},null,2));
+ console.log(JSON.stringify({suite:"BETHAG_QA_APP12_COMMUNICATIONS",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["administrator created unpublished communication","resident could not read draft","resident read published communication","resident lost visibility after unpublishing","email recipients prepared and count verified"],email_delivery:"NOT TESTED — no email sent"},null,2));
 }finally{
- if(communicationId){const del=await admin.from("communications").delete().eq("id",communicationId).eq("workspace_id",w.data.id);assert.ifError(del.error);}
+ if(communicationId){const recipients=await admin.from("communication_recipients").delete().eq("communication_id",communicationId);assert.ifError(recipients.error);const del=await admin.from("communications").delete().eq("id",communicationId).eq("workspace_id",w.data.id);assert.ifError(del.error);}
  await resident.auth.signOut();await admin.auth.signOut();
 }
