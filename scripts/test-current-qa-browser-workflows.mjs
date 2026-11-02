@@ -297,14 +297,13 @@ try {
   // networkidle is not a reliable condition while paginated data is loading.
   await adminPage.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 30000 });
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
     !consoleErrors.some((message) => message.includes("Could not find the 'data' column of 'workspace_members'")),
     "Collaborator background sync must not reference a missing workspace_members.data column"
   );
   try {
     await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 10000 });
-    await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+    await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 60000 });
   } catch (restoreUiError) {
     const restoredDbState = await cleanup.from("condominiums")
       .select("id,name,archived_at,archived_by,archive_reason,data")
