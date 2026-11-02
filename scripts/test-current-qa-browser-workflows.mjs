@@ -149,6 +149,45 @@ try {
     row => Boolean(row?.id),
     "Condominium creation persistence"
   );
+  // Exercise the administrator-only insurance section, whose load/save/delete
+  // paths all call getActiveWorkspaceId() without an explicit user ID.
+  const insuranceSection = adminPage.locator(".condominium-section-card").filter({
+    has: adminPage.getByRole("heading", { name: "Polizze assicurative", exact: true }),
+  });
+  await insuranceSection.getByRole("heading", { name: "Polizze assicurative", exact: true }).waitFor({ timeout: 15000 });
+  await insuranceSection.getByRole("button", { name: "+ Nuova polizza" }).waitFor({ state: "visible" });
+  await adminPage.waitForTimeout(500);
+  assert.ok(
+    !consoleErrors.some(message => message.includes("BETHAG insurance load error")),
+    "Insurance policy list failed while resolving the active administrator workspace: " + JSON.stringify(consoleErrors)
+  );
+  const policyCompany = marker + "_ASSICURAZIONE";
+  const policyNumber = marker + "_POLICY";
+  await insuranceSection.getByRole("button", { name: "+ Nuova polizza" }).click();
+  await insuranceSection.locator("label").filter({ hasText: "Compagnia assicurativa" }).locator("input").fill(policyCompany);
+  await insuranceSection.locator("label").filter({ hasText: "Numero polizza" }).locator("input").fill(policyNumber);
+  await insuranceSection.getByRole("button", { name: "Salva polizza" }).click();
+  const policyCard = insuranceSection.locator(".request-card").filter({ hasText: policyNumber });
+  await policyCard.waitFor({ timeout: 15000 });
+  const storedPolicy = await waitForDbRow(
+    () => cleanup.from("condominium_insurance_policies").select("id,company_name,policy_number,condominium_id")
+      .eq("workspace_id", created.workspace_id).eq("condominium_id", created.id).eq("policy_number", policyNumber).maybeSingle(),
+    row => Boolean(row?.id),
+    "Administrator insurance policy persistence"
+  );
+  assert.equal(storedPolicy.company_name, policyCompany);
+  await policyCard.getByRole("button", { name: "×" }).click();
+  await policyCard.waitFor({ state: "detached", timeout: 15000 });
+  const deletedPolicy = await cleanup.from("condominium_insurance_policies").select("id")
+    .eq("id", storedPolicy.id).maybeSingle();
+  assert.ifError(deletedPolicy.error);
+  assert.equal(deletedPolicy.data, null, "Administrator insurance policy delete did not persist");
+  assert.ok(!pageErrors.length, "Unexpected browser exceptions during insurance policy CRUD: " + JSON.stringify(pageErrors));
+  assert.ok(
+    !failedRequests.some(request => request.url?.includes("/rest/v1/workspace_members") && request.status >= 400),
+    "Workspace membership lookup failed during administrator insurance policy CRUD: " + JSON.stringify(failedRequests)
+  );
+
   const units = await waitForDbRow(
     () => cleanup.from("condominium_units").select("id").eq("condominium_id", created.id),
     rows => Array.isArray(rows) && rows.length === 5,
