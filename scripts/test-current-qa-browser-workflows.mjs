@@ -72,6 +72,8 @@ try {
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
 
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
+  await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).click();
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(condoName);
