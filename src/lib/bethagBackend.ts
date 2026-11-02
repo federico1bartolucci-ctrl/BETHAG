@@ -287,7 +287,15 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     assemblies: (assemblies.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     suppliers: (suppliers.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     activities: (activities.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
-    communications: (communications.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    communications: (communications.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      // The relational foreign key is authoritative; legacy JSON can be stale.
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      publishedToPortal: row.published ?? row.data?.publishedToPortal ?? false,
+      title: row.title ?? row.data?.title ?? "",
+      body: row.body ?? row.data?.body ?? "",
+    })),
     condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.legacy_id,
@@ -382,6 +390,29 @@ async function syncBackendStateNow(
     legacyId === null || legacyId === undefined || legacyId === ""
       ? undefined
       : condominiumDbIdByLegacyId.get(String(legacyId));
+
+  // Resolve any communication condominium references that are not present
+  // in the initial workspace snapshot before constructing the upsert batch.
+  const communicationLegacyIds = Array.from(new Set(
+    (state.communications ?? [])
+      .map((item: any) => item.condominiumId)
+      .filter((id: any) => id !== null && id !== undefined && id !== "")
+      .map((id: any) => String(id))
+  ));
+  const missingCommunicationLegacyIds = communicationLegacyIds.filter(
+    (legacyId) => !condominiumDbIdByLegacyId.has(legacyId)
+  );
+  if (missingCommunicationLegacyIds.length) {
+    const { data: missingCondominiums, error: missingCondominiumsError } = await supabase
+      .from("condominiums")
+      .select("id, legacy_id")
+      .eq("workspace_id", workspaceId)
+      .in("legacy_id", missingCommunicationLegacyIds);
+    if (missingCondominiumsError) throw missingCondominiumsError;
+    (missingCondominiums ?? []).forEach((row: any) => {
+      condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
+    });
+  }
 
   if (condominiumRows.length) {
     const existingByLegacyId = new Map(
