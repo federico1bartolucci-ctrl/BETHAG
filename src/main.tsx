@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -4015,10 +4015,18 @@ function App() {
   const archiveCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
     if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
-    const archived = { ...item, archivedAt: new Date().toISOString() };
     try {
-      if (supabaseConfigured && supabase && profile.workspaceId) {
-        await saveCondominiumBackend(profile.workspaceId, archived);
+      let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
+      if (supabaseConfigured && supabase) {
+        const workspaceId = profile.workspaceId || await getActiveWorkspaceId();
+        if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
+        const persisted = await archiveCondominiumBackend(workspaceId, item.id);
+        archived = {
+          ...item,
+          archivedAt: persisted.archived_at,
+          archivedBy: persisted.archived_by,
+          archiveReason: persisted.archive_reason,
+        };
       }
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
@@ -4031,11 +4039,13 @@ function App() {
   const restoreCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
-    const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
     try {
-      if (supabaseConfigured && supabase && profile.workspaceId) {
-        await saveCondominiumBackend(profile.workspaceId, restored);
+      if (supabaseConfigured && supabase) {
+        const workspaceId = profile.workspaceId || await getActiveWorkspaceId();
+        if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
+        await restoreCondominiumBackend(workspaceId, item.id);
       }
+      const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
