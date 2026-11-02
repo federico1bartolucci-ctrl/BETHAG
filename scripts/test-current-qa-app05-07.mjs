@@ -38,7 +38,7 @@ try{
  const paid=await db.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:125.5,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ifError(paid.error);assert.equal(Number(paid.data),125.5);
  const paidState=await db.from("condominium_installments").select("paid_amount,status").eq("id",installmentId).single();assert.ifError(paidState.error);assert.equal(Number(paidState.data.paid_amount),125.5);assert.equal(paidState.data.status,"Pagato");
  const fixtureName="BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE";
- let fixture=await db.from("condominiums").select("id").eq("name",fixtureName).maybeSingle();assert.ifError(fixture.error);
+ let fixture=await db.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("name",fixtureName).order("created_at",{ascending:true}).limit(1).maybeSingle();assert.ifError(fixture.error);
  if(!fixture.data){
   const fc=await db.from("condominiums").insert({workspace_id:w.data.id,name:fixtureName,address:"Via QA esercizio chiuso",city:"Imola",data:{bethag_qa_fixture:"APP07 closed fiscal year guard"}}).select("id").single();assert.ifError(fc.error);
   const fu=await db.from("condominium_units").insert({workspace_id:w.data.id,condominium_id:fc.data.id,unit_code:"APP07-CLOSED-01",data:{unitType:"Abitazione",active:true}}).select("id").single();assert.ifError(fu.error);
