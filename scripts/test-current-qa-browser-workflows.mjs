@@ -95,12 +95,12 @@ try {
   assert.ifError(edited.error);
   assert.equal(edited.data.name, editedCondoName);
 
-  await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Elimina" }).click();
+  await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
   await adminPage.getByRole("heading", { name: "Condomini", exact: true }).waitFor({ timeout: 20000 });
-  const afterDelete = await cleanup.from("condominiums").select("id").eq("id", created.data.id);
-  assert.ifError(afterDelete.error);
-  assert.equal(afterDelete.data.length, 0);
-  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "condominium deleted from UI"] });
+  const archived = await cleanup.from("condominiums").select("id,archived_at").eq("id", created.data.id).single();
+  assert.ifError(archived.error);
+  assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted");
+  results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "condominium archived from UI"] });
 
   await adminPage.locator(".nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   await adminPage.getByRole("button", { name: "+ Nuova comunicazione" }).click();
