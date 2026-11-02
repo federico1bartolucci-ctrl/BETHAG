@@ -5112,7 +5112,7 @@ function App() {
   const saveCondominiumMember = async (event: React.FormEvent<HTMLFormElement>) => {
     if (!requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
-    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) {
+    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !String(condominiumMemberForm.apartment ?? "").trim()) {
       alert("Inserisci nome, cognome e interno/appartamento del condòmino.");
       return;
     }
@@ -5134,7 +5134,7 @@ function App() {
       ...memberFormData,
       firstName: condominiumMemberForm.firstName.trim(),
       lastName: condominiumMemberForm.lastName.trim(),
-      apartment: condominiumMemberForm.apartment.trim(),
+      apartment: String(condominiumMemberForm.apartment ?? "").trim(),
       email: condominiumMemberForm.email.trim(),
     };
 
@@ -5179,7 +5179,7 @@ function App() {
             : portalMember.email.trim().toLowerCase() === previousEmail &&
               portalMember.name.trim().toLowerCase() ===
                 `${previousMember.firstName} ${previousMember.lastName}`.trim().toLowerCase() &&
-              String(portalMember.apartment ?? "").trim().toLowerCase() === previousMember.apartment.trim().toLowerCase());
+              String(portalMember.apartment ?? "").trim().toLowerCase() === String(previousMember.apartment ?? "").trim().toLowerCase());
 
         if (!persistedData.active) {
           return current.filter((portalMember) => !matchesPortalMember(portalMember));
@@ -16224,7 +16224,7 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
     ...availableUnits.map((u: CondominiumUnit) => u.unitCode.trim()),
     ...sameCondominium.map((m: CondominiumMember) => String(m.apartment ?? "").trim()).filter(Boolean),
   ]));
-  const selectedApartment = value.apartment.trim();
+  const selectedApartment = String(value.apartment ?? "").trim();
   const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => String(m.apartment ?? "").trim().toLowerCase() === selectedApartment.toLowerCase());
   const unitSelection = existingApartments.includes(value.apartment)
     ? value.apartment
