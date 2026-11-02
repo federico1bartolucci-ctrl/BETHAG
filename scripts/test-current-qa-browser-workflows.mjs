@@ -135,3 +135,5 @@ try {
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuyhlzzydcgghrzeexn", results, pageErrors, cleanup: "service-role cleanup verified" }, null, 2));
 if (results.length !== 2 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
+
+// Re-run marker: strict-mode heading selector uses the unique h1 after save.
