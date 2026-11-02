@@ -68,7 +68,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const condominiumCountResult = await supabase
     .from("condominiums")
     .select("id", { count: "exact", head: true })
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", workspaceId)
+    // APP-07's persistent closed-year fixture is QA-only, not a managed condo.
+    .neq("name", "BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE");
   if (condominiumCountResult.error) throw condominiumCountResult.error;
 
   const condominiumPageSize = 1000;
@@ -77,7 +79,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     (_, index) => index * condominiumPageSize
   );
   const condominiumRows: any[] = [];
-  const condominiumPageConcurrency = 24;
+  const condominiumPageConcurrency = 6;
   for (let index = 0; index < condominiumPageOffsets.length; index += condominiumPageConcurrency) {
     const pageResults = await Promise.all(
       condominiumPageOffsets.slice(index, index + condominiumPageConcurrency).map(async (offset) => {
@@ -85,6 +87,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
           .from("condominiums")
           .select("*")
           .eq("workspace_id", workspaceId)
+          // Keep the dedicated accounting guard fixture out of the condominium registry.
+          .neq("name", "BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE")
           .order("created_at", { ascending: true })
           .order("id", { ascending: true })
           .range(offset, offset + condominiumPageSize - 1);
