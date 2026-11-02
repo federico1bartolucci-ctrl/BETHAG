@@ -42,7 +42,7 @@ jobs:
         run: node scripts/test-browser-public-smoke.mjs
 
       - name: Run authenticated QA edit/archive diagnostic
-        if: github.head_ref == 'qa/retest-archive-sync-v6-20261102'
+        if: contains(fromJSON('["qa/retest-archive-sync-v6-20261102","qa/retest-local-cache-20261102"]'), github.head_ref)
         env:
           BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
