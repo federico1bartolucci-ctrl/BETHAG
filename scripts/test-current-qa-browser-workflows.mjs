@@ -4,6 +4,15 @@ import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
+// This UI suite is owned by the dedicated QA navigation workflow. The build
+// workflow runs in parallel against the same QA workspace; running the same
+// authenticated browser mutations twice concurrently creates artificial races
+// between two administrators and invalidates archive/restore acceptance.
+if ((process.env.GITHUB_WORKFLOW || "").toLowerCase().includes("bethag build")) {
+  console.log("BETHAG_BROWSER_WORKFLOWS_DEFERRED_TO_QA_NAVIGATION_WORKFLOW");
+  process.exit(0);
+}
+
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = process.env.BETHAG_QA_SERVICE_ROLE_KEY;
