@@ -603,7 +603,7 @@ try {
     { timeout: 20000 }
   );
   await adminPage.locator("label").filter({ hasText: "Unità immobiliare" }).locator("select").selectOption(transferUnit.data.id);
-  await adminPage.locator("label").filter({ hasText: "Cedente" }).locator("select").getByRole("option", { name: marker + "_CEDENTE_UI", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator("label").filter({ hasText: "Proprietario/i uscente/i" }).getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   const automaticPreviewResult = await automaticPreview;
   if (!automaticPreviewResult.ok()) {
     const responseBody = await automaticPreviewResult.text().catch(() => "");
