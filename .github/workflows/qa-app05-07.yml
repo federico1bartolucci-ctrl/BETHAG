@@ -7,6 +7,9 @@ on:
       - "scripts/test-current-qa-app05-07.mjs"
       - ".github/workflows/qa-app05-07.yml"
   workflow_dispatch:
+concurrency:
+  group: bethag-qa-authenticated-write-tests-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   app05-07:
     runs-on: ubuntu-latest
