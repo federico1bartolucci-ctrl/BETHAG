@@ -39,7 +39,7 @@ async function cleanupFixtures() {
   const condos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
   if (condos.error) throw condos.error;
   for (const condo of condos.data || []) {
-    for (const table of ["condominium_member_transfers", "condominium_payment_movements", "condominium_installments", "condominium_expense_allocations", "condominium_ledger_entries", "condominium_fiscal_years", "condominium_members", "condominium_units"]) {
+    for (const table of ["condominium_members", "condominium_units"]) {
       const result = await cleanup.from(table).delete().eq("condominium_id", condo.id);
       if (result.error) throw result.error;
     }
