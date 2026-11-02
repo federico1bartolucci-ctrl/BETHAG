@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -9,7 +10,7 @@ const passwords = {
   collaborator: process.env.BETHAG_QA_COLLABORATOR_PASSWORD,
   resident: process.env.BETHAG_QA_RESIDENT_PASSWORD,
 };
-for (const [role, password] of Object.entries(passwords)) assert.ok(password, "Missing password secret: " + role);
+assert.ok(passwords.admin && passwords.resident, "Missing QA admin/resident password");
 assert.ok(key && serviceKey, "Missing QA publishable/service key");
 const fixtureAdmin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 const emails = {
@@ -18,7 +19,7 @@ const emails = {
   resident: "bethag-condomino-qa@example.com",
 };
 const clients = {}, userIds = {};
-for (const role of Object.keys(emails)) {
+for (const role of ["admin", "resident"]) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await client.auth.signInWithPassword({ email: emails[role], password: passwords[role] });
   assert.ifError(error);
@@ -26,7 +27,9 @@ for (const role of Object.keys(emails)) {
   clients[role] = client;
   userIds[role] = data.user.id;
 }
-const [admin, collaborator, resident] = [clients.admin, clients.collaborator, clients.resident];
+const admin = clients.admin, resident = clients.resident;
+let collaborator = null;
+let temporaryCollaboratorId = null;
 const marker = "BETHAG_QA_RLS_" + Date.now();
 const workspaceName = "BETHAG_QA_FIXTURE_20261102";
 const { data: workspace, error: wErr } = await admin.from("workspaces").select("id").eq("name", workspaceName).single();
@@ -38,6 +41,25 @@ const results = [];
 const record = (name, pass, detail) => results.push({ name, status: pass ? "PASS" : "FAIL", detail });
 
 try {
+  if (passwords.collaborator) {
+    collaborator = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const login = await collaborator.auth.signInWithPassword({ email: emails.collaborator, password: passwords.collaborator });
+    assert.ifError(login.error);
+    userIds.collaborator = login.data.user.id;
+  } else {
+    const temporaryEmail = "bethag-rls-collaborator-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
+    const temporaryPassword = randomBytes(24).toString("base64url");
+    const created = await fixtureAdmin.auth.admin.createUser({ email: temporaryEmail, password: temporaryPassword, email_confirm: true, user_metadata: { source: marker, role: "collaborator" } });
+    assert.ifError(created.error);
+    temporaryCollaboratorId = created.data.user.id;
+    const membership = await fixtureAdmin.from("workspace_members").insert({ workspace_id: workspaceId, user_id: temporaryCollaboratorId, role: "collaborator", active: true, permissions: ["condomini", "documenti"], legacy_id: Date.now(), data: { name: "BETHAG QA RLS Collaborator", email: temporaryEmail } });
+    assert.ifError(membership.error);
+    collaborator = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const login = await collaborator.auth.signInWithPassword({ email: temporaryEmail, password: temporaryPassword });
+    assert.ifError(login.error);
+    userIds.collaborator = login.data.user.id;
+  }
+
   const { data: adminCondos, error: aReadErr } = await admin.from("condominiums").select("id").eq("workspace_id", workspaceId);
   assert.ifError(aReadErr); assert.ok(adminCondos.some(x => x.id === condominiumId));
   record("APP-01 administrator reads own condominium", true, "real Auth session + RLS query");
@@ -98,6 +120,13 @@ try {
   process.exitCode = 1;
 } finally {
   for (const client of Object.values(clients)) await client.auth.signOut();
+  if (collaborator) await collaborator.auth.signOut();
+  if (temporaryCollaboratorId) {
+    const membership = await fixtureAdmin.from("workspace_members").delete().eq("user_id", temporaryCollaboratorId);
+    if (membership.error) throw membership.error;
+    const user = await fixtureAdmin.auth.admin.deleteUser(temporaryCollaboratorId);
+    if (user.error) throw user.error;
+  }
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_AUTHENTICATED_RLS", target: "jhuyhlzzydcgghrzeexn", results }, null, 2));
 if (results.some(x => x.status !== "PASS")) process.exitCode = 1;
