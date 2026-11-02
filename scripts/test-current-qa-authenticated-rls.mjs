@@ -39,6 +39,7 @@ assert.ifError(cErr);
 const workspaceId = workspace.id, condominiumId = condo.id;
 const results = [];
 const record = (name, pass, detail) => results.push({ name, status: pass ? "PASS" : "FAIL", detail });
+let originalCollaboratorPermissions = null;
 
 try {
   const { data: adminCondos, error: aReadErr } = await admin.from("condominiums").select("id").eq("workspace_id", workspaceId);
@@ -51,7 +52,7 @@ try {
     .eq("user_id", userIds.collaborator)
     .single();
   assert.ifError(collaboratorMembership.error);
-  const originalCollaboratorPermissions = collaboratorMembership.data.permissions ?? [];
+  originalCollaboratorPermissions = collaboratorMembership.data.permissions ?? [];
 
   // Verify all three permission states explicitly: true grants condominium
   // access, false denies it, and a missing key also denies it. Restore the
@@ -79,12 +80,6 @@ try {
   assert.ifError(denyAbsent.error);
   const { data: absentDenied, error: absentDeniedErr } = await collaborator.from("condominiums").select("id").eq("workspace_id", workspaceId);
   assert.ifError(absentDeniedErr); assert.equal(absentDenied.length, 0, "Missing condominium permission was not denied");
-
-  const restoreCollaboratorPermissions = await fixtureAdmin.from("workspace_members")
-    .update({ permissions: originalCollaboratorPermissions })
-    .eq("workspace_id", workspaceId)
-    .eq("user_id", userIds.collaborator);
-  assert.ifError(restoreCollaboratorPermissions.error);
 
   const { data: collLedger, error: collLedgerErr } = await collaborator.from("condominium_ledger_entries").select("id").eq("workspace_id", workspaceId);
   assert.ifError(collLedgerErr); assert.equal(collLedger.length, 0);
