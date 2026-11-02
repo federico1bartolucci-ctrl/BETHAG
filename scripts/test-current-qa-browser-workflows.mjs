@@ -750,6 +750,20 @@ try {
     .eq("id", portalAccess.data.id)
     .single();
   assert.ifError(persistedPortalAccess.error);
+  if (persistedPortalAccess.data.active !== true) {
+    const residentMemberState = await cleanup.from("condominium_members")
+      .select("id,legacy_id,active,user_id,email,data,unit_id,condominium_id")
+      .eq("id", member.data.id)
+      .maybeSingle();
+    console.log("APP12_PORTAL_ACCESS_DEBUG", JSON.stringify({
+      portalAccess: persistedPortalAccess.data,
+      residentMember: residentMemberState.data,
+      residentMemberError: residentMemberState.error?.message,
+      expectedUserId: temporaryResidentId,
+      consoleErrors,
+      failedRequests,
+    }));
+  }
   assert.equal(persistedPortalAccess.data.active, true);
   assert.equal(persistedPortalAccess.data.user_id, temporaryResidentId);
   assert.equal(persistedPortalAccess.data.condominium_id, created.id);
