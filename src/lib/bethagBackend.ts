@@ -70,6 +70,28 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   if (condominiums.error) throw condominiums.error;
 
   const condominiumIds = (condominiums.data ?? []).map((row: any) => row.id);
+  const client = supabase;
+  const loadByCondominiumIds = async (
+    table: string,
+    columns = "*",
+    orderBy = "created_at"
+  ) => {
+    const rows: any[] = [];
+    // Keep PostgREST URLs bounded for workspaces with hundreds or thousands
+    // of condominiums. A single IN list can exceed the gateway URL limit and
+    // make the entire backend hydration fail with HTTP 400.
+    for (let offset = 0; offset < condominiumIds.length; offset += 100) {
+      const batch = condominiumIds.slice(offset, offset + 100);
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .in("condominium_id", batch)
+        .order(orderBy);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+    }
+    return { data: rows, error: null };
+  };
 
   const [
     condominiumMembers,
@@ -92,12 +114,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     workspaceMembers,
     condominiumMemberTransfers,
   ] = await Promise.all([
-    condominiumIds.length
-      ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
-    condominiumIds.length
-      ? supabase.from("condominium_units").select("*").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
+    loadByCondominiumIds("condominium_members"),
+    loadByCondominiumIds("condominium_units"),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
@@ -114,9 +132,10 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
-    condominiumIds.length
-      ? supabase.from("condominium_member_transfers").select("id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
+    loadByCondominiumIds(
+      "condominium_member_transfers",
+      "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
+    ),
   ]);
 
   const firstError = [
