@@ -184,6 +184,7 @@ try {
   await adminPage.waitForTimeout(300);
   const submitEventObserved = await adminPage.evaluate(() => window.__qaEditSubmitObserved === true);
   console.log("APP05_SUBMIT_EVENT_OBSERVED", submitEventObserved);
+  assert.equal(submitEventObserved, true, "Edit form submit event was not observed");
   try {
     await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   } catch (editUiError) {
