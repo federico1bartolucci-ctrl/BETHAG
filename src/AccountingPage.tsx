@@ -873,7 +873,7 @@ function AccountingPage({
       return;
     }
     const ledgerYear = ledgerForm.fiscal_year_id ? scopedYears.find(y => y.id === ledgerForm.fiscal_year_id && y.condominium_id === dbCondominiumId) : null;
-    const isValidIsoDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+    const isValidIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
     if (ledgerForm.fiscal_year_id && !ledgerYear) { setError("L'esercizio del movimento deve appartenere al condominio selezionato."); return; }
     if (!isValidIsoDate(ledgerForm.entry_date) || (ledgerForm.due_date && !isValidIsoDate(ledgerForm.due_date))) { setError("Inserisci date valide per il movimento e la scadenza."); return; }
     if (!hasCentPrecision(Number(ledgerForm.amount))) { setError("L'importo del movimento deve essere espresso in centesimi."); return; }
