@@ -24,6 +24,7 @@ const pageErrors = [];
 const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
+const condominiumLookupRequests = [];
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
@@ -121,6 +122,12 @@ try {
   });
   adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
+  adminPage.on("request", request => {
+    const requestUrl = request.url();
+    if (requestUrl.includes("/rest/v1/condominiums?") && requestUrl.includes("select=id%2Clegacy_id")) {
+      condominiumLookupRequests.push(requestUrl);
+    }
+  });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   const backendCollectionCacheKeys = [
@@ -402,6 +409,9 @@ try {
   }
   assert.equal(persistedCommunication.published, true);
   assert.equal(persistedCommunication.condominium_id, created.id);
+  assert.ok(condominiumLookupRequests.length > 0, "Expected a targeted condominium ID lookup");
+  assert.ok(condominiumLookupRequests.every(url => !/[?&]offset=/.test(url)),
+    "Background sync must not paginate through the entire condominium workspace");
   const persistedPortalAccess = await cleanup.from("portal_access")
     .select("id,active,user_id,condominium_id,permissions")
     .eq("id", portalAccess.data.id)
