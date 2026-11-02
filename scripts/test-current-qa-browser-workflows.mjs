@@ -22,6 +22,7 @@ const browser = await chromium.launch({ headless: true });
 const results = [];
 const pageErrors = [];
 const consoleErrors = [];
+const consoleMessages = [];
 const failedRequests = [];
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
@@ -171,12 +172,18 @@ try {
       tag: element.tagName, type: element.getAttribute("type"), name: element.getAttribute("name"),
       value: element.value, validationMessage: element.validationMessage,
     })) : [];
-    form?.addEventListener("submit", () => console.log("APP05_NATIVE_SUBMIT_EVENT"), { once: true });
+    form?.addEventListener("submit", () => {
+      window.__qaEditSubmitObserved = true;
+      console.log("APP05_NATIVE_SUBMIT_EVENT");
+    }, { once: true });
     return { valid: form?.checkValidity() ?? false, invalid };
   });
   console.log("APP05_FORM_VALIDATION_DEBUG", JSON.stringify(formValidation));
   assert.equal(formValidation.valid, true, "Edit form must pass native browser validation before submission");
   await editSubmitButton.click();
+  await adminPage.waitForTimeout(300);
+  const submitEventObserved = await adminPage.evaluate(() => window.__qaEditSubmitObserved === true);
+  console.log("APP05_SUBMIT_EVENT_OBSERVED", submitEventObserved);
   try {
     await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   } catch (editUiError) {
@@ -187,6 +194,8 @@ try {
       url: adminPage.url(),
       pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
       formValidation,
+      submitEventObserved,
+      consoleMessages,
       editedDbState: editedDbState.data,
       editedDbError: editedDbState.error?.message,
       dialogs,
