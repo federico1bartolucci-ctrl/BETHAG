@@ -166,8 +166,27 @@ try {
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
+  await adminPage.getByRole("heading", { name: "Archivio", exact: true }).waitFor({ timeout: 10000 });
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
-  await archiveCard.waitFor({ timeout: 15000 });
+  try {
+    await archiveCard.waitFor({ timeout: 15000 });
+  } catch (archiveUiError) {
+    const archiveDbState = await cleanup.from("condominiums")
+      .select("id,name,archived_at,archived_by,archive_reason,data")
+      .eq("id", created.id).maybeSingle();
+    console.log("APP05_ARCHIVE_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      cardCount: await adminPage.locator(".card").count(),
+      cards: await adminPage.locator(".card").allInnerTexts(),
+      archiveDbState: archiveDbState.data,
+      archiveDbError: archiveDbState.error?.message,
+      dialogs,
+      consoleErrors,
+      failedRequests,
+    }));
+    throw archiveUiError;
+  }
   const archived = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason").eq("id", created.id).single(),
     row => Boolean(row?.archived_at && row?.archived_by),
