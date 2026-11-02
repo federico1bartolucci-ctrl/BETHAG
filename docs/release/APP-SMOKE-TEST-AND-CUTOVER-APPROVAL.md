@@ -62,8 +62,8 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 | APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | NOT RUN |
 | APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | NOT RUN |
 | APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | NOT RUN |
-| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | NOT RUN |
-| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | NOT RUN |
+| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — Production forward migration 20261102151610 applied; live ACL/default-ACL/function postconditions and Security Advisor verified |
+| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — authenticated QA browser run 41459214926 passed real sign-in/refresh for all three roles, 12 admin destinations, role restrictions and core UI workflows |
 
 ## 3. Evidence to attach
 
@@ -176,3 +176,27 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - **APP-11 partial — PASS:** the official closure RPC completed atomically for a valid transfer; the separate blocked-closure case preserved the transfer and outgoing-owner state. A forced mid-transaction failure/rollback injection was not performed.
 - **Fixture cleanup — PASS:** transfer, synthetic members, unit, and condominium fixtures were removed.
 - These are authenticated RPC/database tests, not full browser UI acceptance. APP-08–APP-11 remain partial; the complete APP-01–APP-15 formal checklist remains NOT RUN.
+
+
+## 12. Production ACL and member-transfer RPC alignment — 2026-11-02 15:16 UTC
+
+**Production project:** `tctcgptrsmvgajqjgnev`. A forward-only migration was applied after QA transaction simulation and a successful GitHub Actions build. No business rows or historical migration rows were rewritten.
+
+- Migration: `20261102151610_harden_live_production_acl_and_transfer_invoker`.
+- Source: `supabase/migrations/20261102151610_harden_live_production_acl_and_transfer_invoker.sql`.
+- PR [#37](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/37) merged by squash; merge commit `5a9c4f934905857087d1e8e598ecad018abc31fe`.
+- Pre-migration evidence showed 34 relation-level MAINTAIN grants to authenticated, 48 to service_role, broad public-schema default MAINTAIN, missing service_role private-schema USAGE/EXECUTE, and a SECURITY DEFINER public transfer wrapper.
+- Post-migration live catalog evidence:
+  - `anon`, `authenticated`, `service_role`: **0 MAINTAIN** on public relations.
+  - Application default ACL: **0 MAINTAIN** grants for those roles.
+  - `service_role` private-schema USAGE: **true**.
+  - Public transfer wrapper SECURITY DEFINER: **false** (SECURITY INVOKER).
+  - Private implementation EXECUTE: authenticated=true, service_role=true, anon=false.
+- Supabase Security Advisor: `lints: []`.
+- A transaction-scoped authenticated-role negative test invoked the public wrapper without a user identity and received the expected `AUTH_REQUIRED`; transaction rolled back without business-data changes.
+- The exact migration version returned by Supabase was recorded in the Git repository filename; Production ledger now contains 245 entries, with the new migration as the final entry. Existing 244 history rows were preserved.
+- The exact SQL sequence was also simulated on QA after temporarily recreating the observed Production grants; all postcondition assertions passed and the transaction was rolled back. QA state was rechecked unchanged.
+
+**APP-14 Production alignment: PASS.** APP-15 remains PASS for the documented authenticated browser scope in run [41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926).
+
+**Release boundary:** this closes the live ACL/function discrepancy, not the entire launch. APP-12 outbound email provider delivery still requires a real, authorized test recipient; remaining release approval and application acceptance records must be completed before declaring BETHAG ready for public launch.
