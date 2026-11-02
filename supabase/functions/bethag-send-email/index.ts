@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,19 +38,15 @@ Deno.serve(async (req: Request) => {
       .eq("id", payload.communicationId).maybeSingle();
     if (commError) throw commError;
     if (!communication) return json({ error: "Comunicazione non trovata." }, 404);
-    if (!communication.published) return json({ error: "La comunicazione deve essere pubblicata prima dell'invio e-mail." }, 409);
+    if (!isCommunicationPublished(communication.published)) return json({ error: "La comunicazione deve essere pubblicata prima dell'invio e-mail." }, 409);
     if (!communication.condominium_id) return json({ error: "La comunicazione non è associata a un condominio." }, 400);
 
     const { data: membership, error: membershipError } = await supabase.from("workspace_members")
       .select("role,active,permissions").eq("workspace_id", communication.workspace_id)
       .eq("user_id", user.id).eq("active", true).maybeSingle();
     if (membershipError) throw membershipError;
-    const rawPermissions = (membership as any)?.permissions;
-    const canManageCommunications = Array.isArray(rawPermissions)
-      ? rawPermissions.includes("comunicazioni")
-      : Boolean(rawPermissions && typeof rawPermissions === "object" && rawPermissions.comunicazioni === true);
-    const canSend = Boolean(membership) && (membership.role === "admin" ||
-      (membership.role === "collaborator" && canManageCommunications));
+    const canSend = Boolean(membership) &&
+      canSendCommunication(membership.role, (membership as any).permissions);
     if (!canSend) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
 
     const { data: condominium, error: condoError } = await supabase.from("condominiums")
