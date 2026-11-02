@@ -128,7 +128,9 @@ try {
   );
   assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
   assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
-  assert.equal(Date.parse(archived.data.archivedAt), Date.parse(archived.archived_at), "JSON and structured archive timestamps diverged");
+  const archivedJsonAt = archived.data.archivedAt;
+  const archivedJsonMs = typeof archivedJsonAt === "number" ? archivedJsonAt : Date.parse(archivedJsonAt);
+  assert.equal(archivedJsonMs, Date.parse(archived.archived_at), "JSON and structured archive timestamps diverged; JSON value=" + JSON.stringify(archivedJsonAt));
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
   const restored = await waitForDbRow(
