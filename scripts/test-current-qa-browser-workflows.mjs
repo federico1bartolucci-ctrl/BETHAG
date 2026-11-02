@@ -125,6 +125,19 @@ try {
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
 
+  const backendCollectionCacheKeys = [
+    "bethag-condominiums-v5", "bethag-deadlines-v5", "bethag-documents-v5",
+    "bethag-assemblies-v5", "bethag-suppliers-v5", "bethag-activities-v5",
+    "bethag-condominium-works-v1", "bethag-communications-v1",
+    "bethag-condominium-members-v1", "bethag-condominium-requests-v1",
+    "bethag-portal-members-v2", "bethag-collaborators-v1",
+  ];
+  const persistedBackendCollections = await adminPage.evaluate((keys) =>
+    keys.filter((key) => localStorage.getItem(key) !== null), backendCollectionCacheKeys);
+  assert.deepEqual(persistedBackendCollections, [],
+    "Supabase-backed collections must not be duplicated in localStorage");
+  console.log("QA_LOCAL_CACHE_POLICY_PASS", JSON.stringify({ checked: backendCollectionCacheKeys.length }));
+
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
