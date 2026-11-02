@@ -3623,8 +3623,18 @@ function App() {
     aiConfirmedUnitsOverride?: CondominiumCreationUnitDraft[],
   ) => {
     event.preventDefault();
+    console.info("BETHAG_SAVE_CONDOMINIUM_SUBMIT", {
+      stateName: editingCondominium?.name ?? null,
+      stateId: editingCondominium?.id ?? null,
+      role: sessionRole,
+      isAdministrator,
+      supabaseConfigured,
+    });
 
-    if (!requireModulePermission("condomini", "La modifica dei dati del condominio")) return;
+    if (!requireModulePermission("condomini", "La modifica dei dati del condominio")) {
+      console.info("BETHAG_SAVE_CONDOMINIUM_DENIED");
+      return;
+    }
 
     const isEditing =
       Boolean(editingCondominium && editingCondominium.id !== 0);
@@ -3686,6 +3696,14 @@ function App() {
           },
         ];
 
+    console.info("BETHAG_SAVE_CONDOMINIUM_DECISION", {
+      isEditing,
+      formName: data.name,
+      normalizedName: normalizedData.name,
+      stateName: editingCondominium?.name ?? null,
+      workspaceId: profile.workspaceId ?? null,
+    });
+
     const savedItem = isEditing
       ? nextCondominiums.find(
           (item) => item.id === editingCondominium!.id
@@ -3719,7 +3737,9 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
+        console.info("BETHAG_SAVE_CONDOMINIUM_RPC_START", { workspaceId, id: savedItem.id, name: savedItem.name });
         await saveCondominiumBackend(workspaceId, savedItem);
+        console.info("BETHAG_SAVE_CONDOMINIUM_RPC_DONE", { id: savedItem.id, name: savedItem.name });
 
         // Alla prima creazione, la struttura configurata dal wizard genera
         // le sole unità anagrafiche. Proprietari e millesimi restano vuoti:
