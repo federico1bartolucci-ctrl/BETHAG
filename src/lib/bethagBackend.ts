@@ -83,31 +83,39 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
 
   const condominiumIds = condominiumRows.map((row: any) => row.id);
   const client = supabase;
-  const loadByCondominiumIds = async (
+  const loadWorkspaceRows = async (
     table: string,
     columns = "*",
     orderBy = "created_at"
   ) => {
     const rows: any[] = [];
-    // Keep PostgREST URLs bounded for workspaces with hundreds or thousands
-    // of condominiums. A single IN list can exceed the gateway URL limit and
-    // make the entire backend hydration fail with HTTP 400.
-    const batches: string[][] = [];
-    for (let offset = 0; offset < condominiumIds.length; offset += 100) {
-      batches.push(condominiumIds.slice(offset, offset + 100));
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .eq("workspace_id", workspaceId)
+        .order(orderBy, { ascending: true })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      const batch = data ?? [];
+      rows.push(...batch);
+      if (batch.length < 1000) break;
     }
-    // Keep a bounded number of requests in flight. Sequentially loading 150+
-    // batches made a large workspace refresh exceed the UI navigation window.
-    for (let offset = 0; offset < batches.length; offset += 10) {
-      const results = await Promise.all(
-        batches.slice(offset, offset + 10).map((batch) =>
-          client.from(table).select(columns).in("condominium_id", batch).order(orderBy)
-        )
-      );
-      for (const result of results) {
-        if (result.error) throw result.error;
-        rows.push(...(result.data ?? []));
-      }
+    return { data: rows, error: null };
+  };
+  const loadWorkspaceCondominiumMembers = async () => {
+    const rows: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await client
+        .from("condominium_members")
+        .select("*, condominiums!inner(workspace_id)")
+        .eq("condominiums.workspace_id", workspaceId)
+        .order("created_at", { ascending: true })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      const batch = data ?? [];
+      rows.push(...batch);
+      if (batch.length < 1000) break;
     }
     return { data: rows, error: null };
   };
@@ -133,8 +141,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     workspaceMembers,
     condominiumMemberTransfers,
   ] = await Promise.all([
-    loadByCondominiumIds("condominium_members"),
-    loadByCondominiumIds("condominium_units"),
+    loadWorkspaceCondominiumMembers(),
+    loadWorkspaceRows("condominium_units"),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
@@ -151,7 +159,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
-    loadByCondominiumIds(
+    loadWorkspaceRows(
       "condominium_member_transfers",
       "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
     ),
