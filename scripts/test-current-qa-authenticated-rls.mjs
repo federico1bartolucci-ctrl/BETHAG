@@ -45,8 +45,47 @@ try {
   assert.ifError(aReadErr); assert.ok(adminCondos.some(x => x.id === condominiumId));
   record("APP-01 administrator reads own condominium", true, "real Auth session + RLS query");
 
+  const collaboratorMembership = await fixtureAdmin.from("workspace_members")
+    .select("permissions")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userIds.collaborator)
+    .single();
+  assert.ifError(collaboratorMembership.error);
+  const originalCollaboratorPermissions = collaboratorMembership.data.permissions ?? [];
+
+  // Verify all three permission states explicitly: true grants condominium
+  // access, false denies it, and a missing key also denies it. Restore the
+  // original QA account permissions before testing unrelated module guards.
+  const grantCondomini = await fixtureAdmin.from("workspace_members")
+    .update({ permissions: ["condomini"] })
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userIds.collaborator);
+  assert.ifError(grantCondomini.error);
   const { data: collCondos, error: collReadErr } = await collaborator.from("condominiums").select("id").eq("workspace_id", workspaceId);
   assert.ifError(collReadErr); assert.ok(collCondos.some(x => x.id === condominiumId));
+
+  const denyFalse = await fixtureAdmin.from("workspace_members")
+    .update({ permissions: { condomini: false } })
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userIds.collaborator);
+  assert.ifError(denyFalse.error);
+  const { data: falseDenied, error: falseDeniedErr } = await collaborator.from("condominiums").select("id").eq("workspace_id", workspaceId);
+  assert.ifError(falseDeniedErr); assert.equal(falseDenied.length, 0, "Explicit false condominium permission was not denied");
+
+  const denyAbsent = await fixtureAdmin.from("workspace_members")
+    .update({ permissions: [] })
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userIds.collaborator);
+  assert.ifError(denyAbsent.error);
+  const { data: absentDenied, error: absentDeniedErr } = await collaborator.from("condominiums").select("id").eq("workspace_id", workspaceId);
+  assert.ifError(absentDeniedErr); assert.equal(absentDenied.length, 0, "Missing condominium permission was not denied");
+
+  const restoreCollaboratorPermissions = await fixtureAdmin.from("workspace_members")
+    .update({ permissions: originalCollaboratorPermissions })
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userIds.collaborator);
+  assert.ifError(restoreCollaboratorPermissions.error);
+
   const { data: collLedger, error: collLedgerErr } = await collaborator.from("condominium_ledger_entries").select("id").eq("workspace_id", workspaceId);
   assert.ifError(collLedgerErr); assert.equal(collLedger.length, 0);
   const { error: collInsertErr } = await collaborator.from("condominium_ledger_entries").insert({
@@ -54,7 +93,7 @@ try {
     direction: "Uscita", category: "QA", description: marker, amount: 1, notes: marker
   });
   assert.ok(collInsertErr, "Collaborator unexpectedly inserted an accounting entry");
-  record("APP-02 collaborator module boundary", true, "permitted condominium read; accounting read empty and insert denied");
+  record("APP-02 collaborator module boundary", true, "condomini permission true allowed read; explicit false and missing permission denied read; accounting read/insert denied");
 
   const { data: residentAccess, error: raErr } = await resident.from("portal_access").select("id,condominium_id").eq("user_id", userIds.resident).eq("active", true);
   assert.ifError(raErr); assert.ok(residentAccess.some(x => x.condominium_id === condominiumId));
