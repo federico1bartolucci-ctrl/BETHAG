@@ -17,7 +17,7 @@ try {
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     try {
-      await page.goto(baseURL, { waitUntil: "networkidle" });
+      await page.goto(baseURL, { waitUntil: "domcontentloaded" });
       await page.getByRole("button", { name: "Accedi" }).first().click();
       await page.getByRole("heading", { name: "Accedi a BETHAG" }).waitFor();
       await page.getByRole("button", { name: account.role, exact: true }).click();
@@ -26,7 +26,7 @@ try {
       await page.getByRole("button", { name: "Accedi", exact: true }).last().click();
       await page.getByText(account.expected, { exact: true }).first().waitFor({ timeout: 25000 });
       assert.deepEqual(errors, [], "Browser errors: " + errors.join(" | "));
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText(account.expected, { exact: true }).first().waitFor({ timeout: 20000 });
       results.push({ role: account.role, status: "PASS", checks: ["Supabase Auth sign-in", "role-specific landing", "refresh/session persistence", "no uncaught page errors"] });
     } catch (e) {
