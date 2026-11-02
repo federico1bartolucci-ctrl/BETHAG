@@ -3556,7 +3556,7 @@ function App() {
       (member) =>
         member.condominiumId === unit.condominiumId &&
         (String(member.unitId ?? "") === String(unit.id) ||
-          member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase())
+          String(member.apartment ?? "").trim().toLowerCase() === unit.unitCode.trim().toLowerCase())
     );
 
     const linkedPertinences = condominiumUnits.filter(
@@ -5112,7 +5112,7 @@ function App() {
   const saveCondominiumMember = async (event: React.FormEvent<HTMLFormElement>) => {
     if (!requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini")) return;
     event.preventDefault();
-    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !condominiumMemberForm.apartment.trim()) {
+    if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !String(condominiumMemberForm.apartment ?? "").trim()) {
       alert("Inserisci nome, cognome e interno/appartamento del condòmino.");
       return;
     }
@@ -5134,7 +5134,7 @@ function App() {
       ...memberFormData,
       firstName: condominiumMemberForm.firstName.trim(),
       lastName: condominiumMemberForm.lastName.trim(),
-      apartment: condominiumMemberForm.apartment.trim(),
+      apartment: String(condominiumMemberForm.apartment ?? "").trim(),
       email: condominiumMemberForm.email.trim(),
     };
 
@@ -5179,7 +5179,7 @@ function App() {
             : portalMember.email.trim().toLowerCase() === previousEmail &&
               portalMember.name.trim().toLowerCase() ===
                 `${previousMember.firstName} ${previousMember.lastName}`.trim().toLowerCase() &&
-              portalMember.apartment.trim().toLowerCase() === previousMember.apartment.trim().toLowerCase());
+              String(portalMember.apartment ?? "").trim().toLowerCase() === String(previousMember.apartment ?? "").trim().toLowerCase());
 
         if (!persistedData.active) {
           return current.filter((portalMember) => !matchesPortalMember(portalMember));
@@ -5342,7 +5342,7 @@ function App() {
           : portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase() &&
             portalMember.name.trim().toLowerCase() ===
               `${member.firstName} ${member.lastName}`.trim().toLowerCase() &&
-            portalMember.apartment.trim().toLowerCase() === member.apartment.trim().toLowerCase())
+            String(portalMember.apartment ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase())
     );
 
     const confirmationMessage = linkedPortalAccess
@@ -5388,7 +5388,7 @@ function App() {
                 portalMember.email.trim().toLowerCase() === member.email.trim().toLowerCase() &&
                 portalMember.name.trim().toLowerCase() ===
                   `${member.firstName} ${member.lastName}`.trim().toLowerCase() &&
-                portalMember.apartment.trim().toLowerCase() === member.apartment.trim().toLowerCase();
+                String(portalMember.apartment ?? "").trim().toLowerCase() === String(member.apartment ?? "").trim().toLowerCase();
             return !samePerson;
           })
         );
@@ -5607,8 +5607,8 @@ function App() {
               : member.email.trim().toLowerCase() === portalMember.email.trim().toLowerCase() &&
                 member.firstName.trim().toLowerCase() ===
                   portalMember.name.trim().split(/\s+/)[0]?.toLowerCase() &&
-                member.apartment.trim().toLowerCase() ===
-                  portalMember.apartment.trim().toLowerCase())
+                String(member.apartment ?? "").trim().toLowerCase() ===
+                  String(portalMember.apartment ?? "").trim().toLowerCase())
         )
       : null;
     if (!isAdministrator && (!portalMember || !portalMember.condominiumId)) {
@@ -6137,7 +6137,7 @@ function App() {
         name: member.name.trim(),
         email: member.email.trim(),
         condominiumId: member.condominiumId,
-        apartment: member.apartment.trim(),
+        apartment: String(member.apartment ?? "").trim(),
       },
     ]);
   };
@@ -10199,7 +10199,7 @@ function CondominiumDetails(
                 const linkedMembers = visibleMembers.filter(
                   (member: CondominiumMember) =>
                     member.unitId === unit.id ||
-                    member.apartment.trim().toLowerCase() === unit.unitCode.trim().toLowerCase()
+                    String(member.apartment ?? "").trim().toLowerCase() === unit.unitCode.trim().toLowerCase()
                 );
                 const currentOwners = linkedMembers.filter((member: CondominiumMember) => isCurrentOwner(member));
                 const currentTenants = linkedMembers.filter((member: CondominiumMember) => member.role === "Inquilino" && member.active);
@@ -10384,7 +10384,7 @@ function CondominiumDetails(
         const detailUnit = condominiumUnits.find((u: CondominiumUnit) => u.id === selectedUnit);
         if (!detailUnit) return null;
         const detailPeople = visibleMembers.filter((m: CondominiumMember) =>
-          m.unitId === detailUnit.id || m.apartment.trim().toLowerCase() === detailUnit.unitCode.trim().toLowerCase()
+          m.unitId === detailUnit.id || String(m.apartment ?? "").trim().toLowerCase() === detailUnit.unitCode.trim().toLowerCase()
         );
         return (
           <Modal onClose={() => setSelectedUnit(null)}>
@@ -16222,10 +16222,10 @@ function CondominiumMemberForm({ value, setValue, condominiums, members, units =
   const availableUnits = units.filter((u: CondominiumUnit) => u.condominiumId === value.condominiumId && u.active);
   const existingApartments = Array.from(new Set([
     ...availableUnits.map((u: CondominiumUnit) => u.unitCode.trim()),
-    ...sameCondominium.map((m: CondominiumMember) => m.apartment.trim()).filter(Boolean),
+    ...sameCondominium.map((m: CondominiumMember) => String(m.apartment ?? "").trim()).filter(Boolean),
   ]));
-  const selectedApartment = value.apartment.trim();
-  const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => m.apartment.trim().toLowerCase() === selectedApartment.toLowerCase());
+  const selectedApartment = String(value.apartment ?? "").trim();
+  const apartmentAssociates = sameCondominium.filter((m: CondominiumMember) => String(m.apartment ?? "").trim().toLowerCase() === selectedApartment.toLowerCase());
   const unitSelection = existingApartments.includes(value.apartment)
     ? value.apartment
     : "";
