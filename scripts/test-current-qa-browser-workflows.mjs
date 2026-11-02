@@ -213,6 +213,13 @@ try {
   assert.equal(edited.name, editedCondoName);
 
   await adminPage.locator(".detail-page-actions").getByRole("button", { name: "Archivia" }).click();
+  const archived = await waitForDbRow(
+    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason").eq("id", created.id).single(),
+    row => Boolean(row?.archived_at && row?.archived_by),
+    "Condominium archive persistence before navigation"
+  );
+  assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
+  assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Archivio" }).first().click();
   await adminPage.getByRole("heading", { name: "Archivio", exact: true }).waitFor({ timeout: 10000 });
   // Target the actual archive article, not any generic .card wrapper that
