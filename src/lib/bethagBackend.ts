@@ -663,8 +663,19 @@ async function syncBackendStateNow(
         String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
       )
     );
+    let missingUnitsInsertError: any = null;
     if (missingUnits.length) {
-      await upsertRows("condominium_units", missingUnits, "condominium_id,unit_code");
+      // The database enforces uniqueness through expression indexes on
+      // lower(trim(unit_code)); PostgREST cannot infer those with the raw
+      // (condominium_id, unit_code) conflict target. Insert the missing rows
+      // directly and treat only a concurrent unique race as recoverable.
+      const inserted = await supabase
+        .from("condominium_units")
+        .insert(missingUnits);
+      missingUnitsInsertError = inserted.error;
+      if (missingUnitsInsertError && missingUnitsInsertError.code !== "23505") {
+        throw missingUnitsInsertError;
+      }
     }
 
     const persistedResult = await supabase
@@ -672,6 +683,19 @@ async function syncBackendStateNow(
       .select("id, condominium_id, unit_code")
       .in("condominium_id", unitCondominiums);
     if (persistedResult.error) throw persistedResult.error;
+
+    const persistedKeys = new Set(
+      (persistedResult.data ?? []).map((unit: any) =>
+        String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
+      )
+    );
+    const stillMissing = desiredUnits.filter((row: any) =>
+      !persistedKeys.has(
+        String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
+      )
+    );
+    if (stillMissing.length && missingUnitsInsertError) throw missingUnitsInsertError;
+    if (stillMissing.length) throw new Error("Impossibile sincronizzare tutte le unità condominiali richieste.");
 
     (persistedResult.data ?? []).forEach((unit: any) => {
       unitRowsByKey.set(
