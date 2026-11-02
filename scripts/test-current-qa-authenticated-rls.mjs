@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
-const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;\nconst serviceKey = process.env.BETHAG_QA_SERVICE_ROLE_KEY;
 const passwords = {
   admin: process.env.BETHAG_QA_ADMIN_PASSWORD,
   collaborator: process.env.BETHAG_QA_COLLABORATOR_PASSWORD,
   resident: process.env.BETHAG_QA_RESIDENT_PASSWORD,
 };
 for (const [role, password] of Object.entries(passwords)) assert.ok(password, "Missing password secret: " + role);
-assert.ok(key, "Missing QA publishable key");
+assert.ok(key && serviceKey, "Missing QA publishable/service key");\nconst fixtureAdmin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 const emails = {
   admin: "bethag-admin-qa@example.com",
   collaborator: "bethag-collaboratore-qa@example.com",
