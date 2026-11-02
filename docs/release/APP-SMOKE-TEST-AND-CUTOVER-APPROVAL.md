@@ -273,3 +273,10 @@ Read-only catalog verification on QA project `jhuyhlzzydcgghrzeexn`:
 The latest QA-only migration `20261102110000_revoke_service_role_maintain_from_fund_availability_view` is recorded in the QA migration ledger and is not in the frozen Production inventory. The QA branch still reports `MIGRATIONS_FAILED` despite preview database `ACTIVE_HEALTHY`; this unresolved branch-status discrepancy remains a release blocker and must not be resolved by resetting/deleting the branch because its QA test data is required.
 
 The latest authenticated browser run `41392503198` has role navigation PASS; the condominium/communication UI workflow is still running at the time of this update. Earlier UI attempt confirmed create/edit/archive/restore path was corrected, but resident visibility of a newly published communication failed. The current rerun adds backend persistence and portal-access diagnostics; APP-12 UI visibility is not yet marked PASS. Email provider delivery remains untested.
+
+
+## 16. QA migration source reconciliation — 2026-11-02 05:16 UTC
+
+- The live QA migration ledger records `20261102050437_backfill_condominium_archive_metadata`, but the corresponding SQL source is not present at the expected `supabase/migrations/`, `supabase/rebuild/`, or `supabase/rebuild/qa-only-migrations/` paths in the current branch. The original SQL body was not recoverable from prior conversation context.
+- Read-only QA data check: 1,029 condominium rows; 0 rows with structured `archived_at`; 0 rows with JSON-only `data.archivedAt`; 0 rows with structured archive timestamp but missing actor. The backfill therefore has no observed archived records to reconcile in the current QA dataset, but its original SQL must still be recovered or formally superseded before Production release.
+- Do not fabricate or silently replace the missing migration source. Keep this as an explicit migration provenance blocker in the release checklist.
