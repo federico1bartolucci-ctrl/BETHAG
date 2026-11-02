@@ -6168,10 +6168,13 @@ function App() {
       status: publishedToPortal ? "Pubblicata" : "Bozza",
     };
 
+    // Aggiorniamo subito lo stato locale: l'effetto di sincronizzazione
+    // differita deve accodare il nuovo valore, mai uno snapshot precedente
+    // che potrebbe ripubblicare la comunicazione dopo il ritiro esplicito.
+    backendMutationRevision.current += 1;
+    setCommunications((items) => items.map((item) => item.id === id ? next : item));
+
     try {
-      // La pubblicazione è un'operazione esplicita: persisterla direttamente
-      // prima di aggiornare la UI evita che il sync debounced perda il ritiro
-      // durante navigazione, refresh o altre scritture concorrenti.
       if (supabaseConfigured && supabase && profile.workspaceId) {
         await setCommunicationPublicationBackend(
           profile.workspaceId,
@@ -6180,8 +6183,10 @@ function App() {
           next
         );
       }
-      setCommunications((items) => items.map((item) => item.id === id ? next : item));
+      backendMutationRevision.current += 1;
     } catch (error) {
+      backendMutationRevision.current += 1;
+      setCommunications((items) => items.map((item) => item.id === id ? current : item));
       console.error("BETHAG communication publication update failed", error);
       alert(error instanceof Error
         ? "La pubblicazione non è stata aggiornata sul server.\\n\\n" + error.message
