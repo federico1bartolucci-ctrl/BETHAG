@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type Body = { communicationId: string };
+type Body = { communicationId: number | string; workspaceId: string };
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -30,11 +30,15 @@ Deno.serve(async (req: Request) => {
     if (userError || !user) return json({ error: "Sessione non valida." }, 401);
 
     const payload = (await req.json()) as Body;
-    if (!payload.communicationId) return json({ error: "communicationId obbligatorio." }, 400);
+    const legacyCommunicationId = Number(payload.communicationId);
+    if (!payload.workspaceId || !Number.isSafeInteger(legacyCommunicationId) || legacyCommunicationId <= 0) {
+      return json({ error: "workspaceId e communicationId validi sono obbligatori." }, 400);
+    }
 
     const { data: communication, error: commError } = await supabase.from("communications")
       .select("id,workspace_id,condominium_id,title,body,email_status,published")
-      .eq("id", payload.communicationId).maybeSingle();
+      .eq("legacy_id", legacyCommunicationId)
+      .eq("workspace_id", payload.workspaceId).maybeSingle();
     if (commError) throw commError;
     if (!communication) return json({ error: "Comunicazione non trovata." }, 404);
     if (!communication.condominium_id) return json({ error: "La comunicazione non è associata a un condominio." }, 400);
@@ -43,9 +47,12 @@ Deno.serve(async (req: Request) => {
       .select("role,active,permissions").eq("workspace_id", communication.workspace_id)
       .eq("user_id", user.id).eq("active", true).maybeSingle();
     if (membershipError) throw membershipError;
-    const permissions = Array.isArray((membership as any)?.permissions) ? (membership as any).permissions : [];
+    const rawPermissions = (membership as any)?.permissions;
+    const canManageCommunications = Array.isArray(rawPermissions)
+      ? rawPermissions.includes("comunicazioni")
+      : Boolean(rawPermissions && typeof rawPermissions === "object" && rawPermissions.comunicazioni === true);
     const canSend = Boolean(membership) && (membership.role === "admin" ||
-      (membership.role === "collaborator" && permissions.includes("comunicazioni")));
+      (membership.role === "collaborator" && canManageCommunications));
     if (!canSend) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
 
     const { data: condominium, error: condoError } = await supabase.from("condominiums")
