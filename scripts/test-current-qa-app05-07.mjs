@@ -31,19 +31,19 @@ try{
  const verifyInst=await db.from("condominium_installments").select("amount").eq("id",installmentId).single();assert.ifError(verifyInst.error);assert.equal(Number(verifyInst.data.amount),125.5);
  pass("APP-06 accounting expense/allocation/installment persistence","real administrator session; €125.50 expense, 1,000 millesimi allocation and installment persisted");
 
- const paid=await db.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:125.5,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ifError(paid.error);
+ const deniedPayment=await collaborator.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:1,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ok(deniedPayment.error && deniedPayment.error.message.includes("Autorizzazione gestione contabilità richiesta"),"Collaborator was not denied by the internal accounting permission guard");\n const paid=await db.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:125.5,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ifError(paid.error);assert.equal(Number(paid.data),125.5);\n const paidState=await db.from("condominium_installments").select("paid_amount,status").eq("id",installmentId).single();assert.ifError(paidState.error);assert.equal(Number(paidState.data.paid_amount),125.5);assert.equal(paidState.data.status,"Pagato");
  const close=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_source_fiscal_year_id:fiscalYearId});assert.ifError(close.error);
  const blocked=await db.from("condominium_ledger_entries").update({amount:126}).eq("id",ledgerId);
  assert.ok(blocked.error,"Closed fiscal period accepted ledger mutation");
  const unchanged=await db.from("condominium_ledger_entries").select("amount").eq("id",ledgerId).single();assert.ifError(unchanged.error);assert.equal(Number(unchanged.data.amount),125.5);
  pass("APP-07 closed accounting period guard","database rejected ledger change; original amount remained €125.50");
 } finally {
- if(installmentId) await cleanup.from("condominium_installments").delete().eq("id",installmentId);
+ if(installmentId) await cleanup.from("condominium_payment_movements").delete().eq("installment_id",installmentId);\n if(installmentId) await cleanup.from("condominium_installments").delete().eq("id",installmentId);
  if(allocationId) await cleanup.from("condominium_expense_allocations").delete().eq("id",allocationId);
  if(ledgerId) await cleanup.from("condominium_ledger_entries").delete().eq("id",ledgerId);
  if(fiscalYearId) await cleanup.from("condominium_fiscal_years").delete().eq("id",fiscalYearId);
  if(unitId) await cleanup.from("condominium_units").delete().eq("id",unitId);
  if(condominiumId) await cleanup.from("condominiums").delete().eq("id",condominiumId);
- await db.auth.signOut();
+ await collaborator.auth.signOut();\n await db.auth.signOut();
 }
 console.log(JSON.stringify({suite:"BETHAG_QA_APP05_07",target:"jhuyhlzzydcgghrzeexn",results:out,cleanup:"attempted for all marker rows"},null,2));
