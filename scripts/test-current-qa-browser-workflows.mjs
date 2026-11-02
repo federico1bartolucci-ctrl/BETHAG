@@ -32,7 +32,7 @@ async function signIn(page, role, email, password, landing) {
 }
 
 function field(page, label) {
-  return page.locator(".modal .field").filter({ hasText: label }).locator("input, textarea").first();
+  return page.locator(".modal .field > label").filter({ hasText: label }).first().locator("xpath=..").locator("input, textarea").first();
 }
 
 async function cleanupFixtures() {
