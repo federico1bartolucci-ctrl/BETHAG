@@ -6484,6 +6484,7 @@ function App() {
     backendHydrated.current = false;
 
     const hydrateFromBackend = async () => {
+      const revisionAtStart = backendMutationRevision.current;
       try {
         const {
           data: { session },
@@ -6525,7 +6526,7 @@ function App() {
         }
 
         const backend = await loadBackendState(workspaceId);
-        if (cancelled) return;
+        if (cancelled || revisionAtStart !== backendMutationRevision.current) return;
 
         setCondominiums(backend.condominiums);
 
