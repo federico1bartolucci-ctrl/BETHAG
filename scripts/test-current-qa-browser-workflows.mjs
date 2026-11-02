@@ -27,6 +27,10 @@ const failedRequests = [];
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
+let accountingFiscalYearId = null;
+let accountingLedgerId = null;
+let accountingAllocationId = null;
+let accountingInstallmentId = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
@@ -74,6 +78,25 @@ async function cleanupFixtures() {
 
   // Direct DELETE is intentionally avoided: the application protects
   // condominium deletion behind its authenticated, audited RPC.
+  if (accountingInstallmentId) {
+    const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", accountingInstallmentId);
+    if (movements.error) throw movements.error;
+    const installment = await cleanup.from("condominium_installments").delete().eq("id", accountingInstallmentId);
+    if (installment.error) throw installment.error;
+  }
+  if (accountingAllocationId) {
+    const allocation = await cleanup.from("condominium_expense_allocations").delete().eq("id", accountingAllocationId);
+    if (allocation.error) throw allocation.error;
+  }
+  if (accountingLedgerId) {
+    const ledger = await cleanup.from("condominium_ledger_entries").delete().eq("id", accountingLedgerId);
+    if (ledger.error) throw ledger.error;
+  }
+  if (accountingFiscalYearId) {
+    const fiscalYear = await cleanup.from("condominium_fiscal_years").delete().eq("id", accountingFiscalYearId);
+    if (fiscalYear.error) throw fiscalYear.error;
+  }
+
   const condos = await cleanup.from("condominiums")
     .select("id,workspace_id,legacy_id")
     .like("name", marker + "%");
@@ -145,7 +168,7 @@ try {
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
   await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
   const created = await waitForDbRow(
-    () => cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).maybeSingle(),
+    () => cleanup.from("condominiums").select("id,workspace_id,legacy_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
     "Condominium creation persistence"
   );
@@ -360,6 +383,81 @@ try {
   // APP-05 covers create/edit/archive/restore; destructive deletion is not
   // coupled to this acceptance flow.
   results.push({ id: "APP-05", status: "PASS", checks: ["condominium created from UI", "physical structure saved as 2 interiors + 3 autonomous appurtenances", "condominium edited from UI", "archive metadata persisted in structured columns", "condominium restored from UI and archive metadata cleared"] });
+
+  // APP-06 UI acceptance: seed only the fiscal-year container, then create the
+  // expense, allocation and installment through the actual administrator UI.
+  const accountingUnit = await cleanup.from("condominium_units").select("id,unit_code").eq("condominium_id", created.id).order("created_at", { ascending: true }).limit(1).single();
+  assert.ifError(accountingUnit.error);
+  const accountingYear = await adminApi.from("condominium_fiscal_years").insert({
+    workspace_id: created.workspace_id, condominium_id: created.id,
+    name: marker + "_ESERCIZIO", start_date: "2026-01-01", end_date: "2026-12-31",
+    status: "Aperto", opening_balance: 0, notes: marker
+  }).select("id").single();
+  assert.ifError(accountingYear.error);
+  accountingFiscalYearId = accountingYear.data.id;
+
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Contabilità" }).first().click();
+  await adminPage.getByRole("heading", { name: "Contabilità e rendiconto", exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.locator(".filter-bar label").filter({ hasText: "Condominio" }).locator("select").selectOption(String(created.legacy_id));
+  await adminPage.getByRole("button", { name: "Registro contabile", exact: true }).click();
+  await adminPage.getByRole("button", { name: "+ Nuovo movimento", exact: true }).click();
+  const ledgerModal = adminPage.locator(".modal-card").last();
+  await ledgerModal.locator("label").filter({ hasText: "Data" }).locator("input").fill("2026-11-02");
+  await ledgerModal.locator("label").filter({ hasText: "Categoria" }).locator("input").fill("Manutenzione QA");
+  await ledgerModal.locator("label").filter({ hasText: "Importo" }).locator("input").fill("125.50");
+  await ledgerModal.locator("label").filter({ hasText: "Descrizione" }).locator("input").fill(marker + "_SPESA_UI");
+  await ledgerModal.locator("label").filter({ hasText: "Esercizio" }).locator("select").selectOption(accountingFiscalYearId);
+  await ledgerModal.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
+  await ledgerModal.getByRole("button", { name: "Salva", exact: true }).click();
+  const accountingLedger = await waitForDbRow(
+    () => cleanup.from("condominium_ledger_entries").select("id,amount,direction,description,fiscal_year_id").eq("workspace_id", created.workspace_id).eq("condominium_id", created.id).eq("description", marker + "_SPESA_UI").maybeSingle(),
+    row => Boolean(row?.id),
+    "APP-06 UI ledger movement persistence"
+  );
+  accountingLedgerId = accountingLedger.id;
+  assert.equal(Number(accountingLedger.amount), 125.5);
+  assert.equal(accountingLedger.direction, "Uscita");
+  assert.equal(accountingLedger.fiscal_year_id, accountingFiscalYearId);
+
+  await adminPage.getByRole("button", { name: "Ripartizioni", exact: true }).click();
+  await adminPage.getByRole("button", { name: "+ Nuova ripartizione", exact: true }).click();
+  const allocationModal = adminPage.locator(".modal-card").last();
+  await allocationModal.locator("label").filter({ hasText: "Spesa" }).locator("select").selectOption(accountingLedgerId);
+  await allocationModal.locator("label").filter({ hasText: "Unità" }).locator("select").selectOption(accountingUnit.data.id);
+  await allocationModal.locator("label").filter({ hasText: "Millesimi" }).locator("input").fill("1000");
+  await allocationModal.locator("label").filter({ hasText: "Importo" }).locator("input").fill("125.50");
+  await allocationModal.locator("label").filter({ hasText: "Scadenza" }).locator("input").fill("2026-12-01");
+  await allocationModal.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
+  await allocationModal.getByRole("button", { name: "Salva", exact: true }).click();
+  const accountingAllocation = await waitForDbRow(
+    () => cleanup.from("condominium_expense_allocations").select("id,amount,millesimi,ledger_entry_id,unit_id").eq("ledger_entry_id", accountingLedgerId).maybeSingle(),
+    row => Boolean(row?.id),
+    "APP-06 UI expense allocation persistence"
+  );
+  accountingAllocationId = accountingAllocation.id;
+  assert.equal(Number(accountingAllocation.amount), 125.5);
+  assert.equal(Number(accountingAllocation.millesimi), 1000);
+  assert.equal(accountingAllocation.unit_id, accountingUnit.data.id);
+
+  await adminPage.getByRole("button", { name: "Rate e morosità", exact: true }).click();
+  await adminPage.getByRole("button", { name: "+ Nuova rata", exact: true }).click();
+  const installmentModal = adminPage.locator(".modal-card").last();
+  await installmentModal.locator("label").filter({ hasText: "Titolo" }).locator("input").fill(marker + "_RATA_UI");
+  await installmentModal.locator("label").filter({ hasText: "Unità" }).locator("select").selectOption(accountingUnit.data.id);
+  await installmentModal.locator("label").filter({ hasText: "Importo" }).locator("input").fill("125.50");
+  await installmentModal.locator("label").filter({ hasText: "Scadenza" }).locator("input").fill("2026-12-15");
+  await installmentModal.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
+  await installmentModal.getByRole("button", { name: "Salva", exact: true }).click();
+  const accountingInstallment = await waitForDbRow(
+    () => cleanup.from("condominium_installments").select("id,amount,status,unit_id").eq("condominium_id", created.id).eq("title", marker + "_RATA_UI").maybeSingle(),
+    row => Boolean(row?.id),
+    "APP-06 UI installment persistence"
+  );
+  accountingInstallmentId = accountingInstallment.id;
+  assert.equal(Number(accountingInstallment.amount), 125.5);
+  assert.equal(accountingInstallment.status, "Da pagare");
+  assert.equal(accountingInstallment.unit_id, accountingUnit.data.id);
+  results.push({ id: "APP-06", status: "PASS", checks: ["expense created from administrator UI and persisted at €125.50", "1,000-millesimi allocation saved from UI", "installment saved from UI with due date and unpaid state"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
