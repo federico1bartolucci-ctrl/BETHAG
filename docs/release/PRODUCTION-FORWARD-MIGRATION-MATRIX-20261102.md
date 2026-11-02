@@ -4,6 +4,15 @@
 
 **Prepared only. Not applied to Production.** These two forward migrations are required before deploying the matching frontend changes. They must be included in the reviewed cutover sequence and rehearsed on an isolated target first.
 
+## Superseding cutover artifacts
+
+- Manifest: `supabase/rebuild/production-migration-cutover-freeze-20261102.json`
+- Read-only preflight: `supabase/rebuild/production-cutover-preflight-20261102.sql`
+- Read-only postflight: `supabase/rebuild/production-cutover-postflight-20261102.sql`
+- Guarded runner: `scripts/apply-reviewed-production-migrations.mjs`
+
+The candidate contains fourteen forward migrations: the twelve previously frozen migrations plus the two below. The 2026-10-27 twelve-migration freeze remains historical and is not the current candidate.
+
 ## New canonical migrations
 
 | Version | File | Purpose | Expected effect |
