@@ -224,6 +224,10 @@ try {
   try {
     await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 10000 });
     await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+    assert.ok(
+      !failedRequests.some((request) => request.url.includes("/workspace_members") && request.status === 400),
+      "Collaborator background sync must not send unsupported workspace_members columns"
+    );
   } catch (restoreUiError) {
     const restoredDbState = await cleanup.from("condominiums")
       .select("id,name,archived_at,archived_by,archive_reason,data")
