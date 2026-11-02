@@ -514,8 +514,9 @@ try {
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
+  await adminPage.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
   const previewResponse = adminPage.waitForResponse(response =>
-    response.url().includes("/rest/v1/rpc/get_member_transfer_accounting_preview") && response.ok(),
+    response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer") && response.ok(),
     { timeout: 20000 }
   );
   await adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true }).click();
