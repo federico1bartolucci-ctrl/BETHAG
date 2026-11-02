@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, setCommunicationPublication as setCommunicationPublicationBackend, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -6146,37 +6146,47 @@ function App() {
     }
   };
 
-  const toggleCommunicationPublication = (
+  const toggleCommunicationPublication = async (
     id: number
   ) => {
     if (!isAdministrator) {
       alert("La pubblicazione delle comunicazioni è riservata all'Amministratore.");
       return;
     }
-    if (
-      !requirePlan(
-        "portal",
-        "La pubblicazione delle comunicazioni",
-        "portale"
-      )
-    )
-      return;
+    if (!requirePlan("portal", "La pubblicazione delle comunicazioni", "portale")) return;
 
-    setCommunications((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              publishedToPortal:
-                !item.publishedToPortal,
-              status:
-                item.publishedToPortal
-                  ? "Bozza"
-                  : "Pubblicata",
-            }
-          : item
-      )
-    );
+    const current = communications.find((item) => item.id === id);
+    if (!current) {
+      alert("Comunicazione non trovata. Aggiorna la pagina e riprova.");
+      return;
+    }
+
+    const publishedToPortal = !current.publishedToPortal;
+    const next = {
+      ...current,
+      publishedToPortal,
+      status: publishedToPortal ? "Pubblicata" : "Bozza",
+    };
+
+    try {
+      // La pubblicazione è un'operazione esplicita: persisterla direttamente
+      // prima di aggiornare la UI evita che il sync debounced perda il ritiro
+      // durante navigazione, refresh o altre scritture concorrenti.
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await setCommunicationPublicationBackend(
+          profile.workspaceId,
+          id,
+          publishedToPortal,
+          next
+        );
+      }
+      setCommunications((items) => items.map((item) => item.id === id ? next : item));
+    } catch (error) {
+      console.error("BETHAG communication publication update failed", error);
+      alert(error instanceof Error
+        ? "La pubblicazione non è stata aggiornata sul server.\\n\\n" + error.message
+        : "La pubblicazione non è stata aggiornata sul server.");
+    }
   };
 
 
