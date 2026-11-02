@@ -28,7 +28,7 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
 const expectedHead = { version: "20261022202747", name: "harden_close_member_transfer_search_path" };
 const expectedLedgerCount = 244;
-const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261027.json");
+const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261102.json");
 const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261026.json");
 
 function gitBlobSha(content) {
@@ -103,7 +103,7 @@ async function main() {
   comparePairs(snapshot.migrations, snapshot.migrations, "Stored Production snapshot self-check");
 
   const expected = manifest.sequence;
-  assert.equal(expected.length, 12, "Expected exactly twelve reviewed incremental migrations.");
+  assert.equal(expected.length, 14, "Expected exactly fourteen reviewed incremental migrations.");
   const migrationBodies = [];
   for (const item of expected) {
     const filename = item.file;
@@ -165,7 +165,7 @@ async function main() {
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 256, "Final ledger must contain 244 historical + 12 canonical rows.");
+    assert.equal(finalLedger.length, 258, "Final ledger must contain 244 historical + 14 canonical rows.");
     comparePairs(finalLedger.slice(0, expectedLedgerCount), snapshot.migrations, "Final historical ledger preservation");
     comparePairs(finalLedger.slice(expectedLedgerCount), migrationBodies.map(({ version, name }) => ({ version, name })),
       "Final canonical incremental migration sequence");
