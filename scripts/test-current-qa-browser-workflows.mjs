@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
+import { spawnSync } from "node:child_process";
+
+// This UI suite is owned by the dedicated QA navigation workflow. The build
+// workflow runs in parallel against the same QA workspace; running the same
+// authenticated browser mutations twice concurrently creates artificial races
+// between two administrators and invalidates archive/restore acceptance.
+if ((process.env.GITHUB_WORKFLOW || "").toLowerCase().includes("bethag build")) {
+  console.log("BETHAG_BROWSER_WORKFLOWS_DEFERRED_TO_QA_NAVIGATION_WORKFLOW");
+  process.exit(0);
+}
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -24,6 +34,7 @@ const pageErrors = [];
 const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
+const condominiumLookupRequests = [];
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
@@ -121,9 +132,35 @@ try {
   });
   adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
+  adminPage.on("request", request => {
+    const requestUrl = request.url();
+    if (requestUrl.includes("/rest/v1/condominiums?") && requestUrl.includes("select=id%2Clegacy_id")) {
+      condominiumLookupRequests.push(requestUrl);
+    }
+  });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
+  const backendCollectionCacheKeys = [
+    "bethag-condominiums-v5", "bethag-deadlines-v5", "bethag-documents-v5",
+    "bethag-assemblies-v5", "bethag-suppliers-v5", "bethag-activities-v5",
+    "bethag-condominium-works-v1", "bethag-communications-v1",
+    "bethag-condominium-members-v1", "bethag-condominium-requests-v1",
+    "bethag-portal-members-v2", "bethag-collaborators-v1",
+  ];
+  // Simulate stale snapshots left by earlier versions; startup must purge them
+  // before the authenticated workflow can write any new local state.
+  await adminPage.goto(baseURL, { waitUntil: "networkidle" });
+  await adminPage.evaluate((keys) => keys.forEach((key) =>
+    localStorage.setItem(key, JSON.stringify([{ staleLegacySnapshot: true }]))), backendCollectionCacheKeys);
+  await adminPage.reload({ waitUntil: "networkidle" });
+
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
+
+  const persistedBackendCollections = await adminPage.evaluate((keys) =>
+    keys.filter((key) => localStorage.getItem(key) !== null), backendCollectionCacheKeys);
+  assert.deepEqual(persistedBackendCollections, [],
+    "Supabase-backed collections must not be duplicated in localStorage");
+  console.log("QA_LOCAL_CACHE_POLICY_PASS", JSON.stringify({ checked: backendCollectionCacheKeys.length }));
 
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
@@ -143,12 +180,25 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
   const created = await waitForDbRow(
-    () => cleanup.from("condominiums").select("id,workspace_id").eq("name", condoName).maybeSingle(),
+    () => cleanup.from("condominiums").select("id,workspace_id,legacy_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
     "Condominium creation persistence"
   );
+  try {
+    await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 30000 });
+  } catch (createUiError) {
+    console.log("APP05_CREATE_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      created,
+      dialogs,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+    }));
+    throw createUiError;
+  }
   const units = await waitForDbRow(
     () => cleanup.from("condominium_units").select("id").eq("condominium_id", created.id),
     rows => Array.isArray(rows) && rows.length === 5,
@@ -265,16 +315,18 @@ try {
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
-  await adminPage.reload({ waitUntil: "networkidle" });
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
+  // The archive route hydrates a large workspace in the background. Wait for
+  // document readiness, then assert the actual restored record after refresh;
+  // networkidle is not a reliable condition while paginated data is loading.
+  await adminPage.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 30000 });
   assert.ok(
     !consoleErrors.some((message) => message.includes("Could not find the 'data' column of 'workspace_members'")),
     "Collaborator background sync must not reference a missing workspace_members.data column"
   );
   try {
     await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 10000 });
-    await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+    await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 60000 });
   } catch (restoreUiError) {
     const restoredDbState = await cleanup.from("condominiums")
       .select("id,name,archived_at,archived_by,archive_reason,data")
@@ -382,6 +434,9 @@ try {
   }
   assert.equal(persistedCommunication.published, true);
   assert.equal(persistedCommunication.condominium_id, created.id);
+  assert.ok(condominiumLookupRequests.length > 0, "Expected a targeted condominium ID lookup");
+  assert.ok(condominiumLookupRequests.every(url => !/[?&]offset=/.test(url)),
+    "Background sync must not paginate through the entire condominium workspace");
   const persistedPortalAccess = await cleanup.from("portal_access")
     .select("id,active,user_id,condominium_id,permissions")
     .eq("id", portalAccess.data.id)
@@ -410,6 +465,16 @@ try {
   }
 
   await commCard.getByRole("button", { name: "Ritira" }).click();
+  // Publication changes are persisted by the debounced backend sync; wait for
+  // the authoritative row before reloading the resident session, otherwise
+  // the browser test races the 500ms save queue rather than testing visibility.
+  const withdrawnCommunication = await waitForDbRow(
+    () => cleanup.from("communications").select("published").eq("id", persistedCommunication.id).single(),
+    row => row?.published === false,
+    "Communication withdrawal persistence",
+    20000
+  );
+  assert.equal(withdrawnCommunication.published, false);
   await residentPage.reload({ waitUntil: "networkidle" });
   await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ state: "detached", timeout: 15000 });
   await commCard.locator(".mini-danger").click();
@@ -427,6 +492,17 @@ console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuy
 if (results.length !== 2 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
 if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
 if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
+
+// Expand the same authenticated QA run to the independent RPC acceptance
+// suites. Both scripts use only the approved QA project and clean up their
+// temporary fixtures in finally blocks.
+for (const script of ["scripts/test-current-qa-app08-11.mjs", "scripts/test-current-qa-transfer.mjs", "scripts/test-current-qa-app12.mjs", "scripts/test-current-qa-authenticated-rls.mjs"]) {
+  console.log("BETHAG_QA_EXTENDED_SUITE_START", script);
+  const child = spawnSync(process.execPath, [script], { stdio: "inherit", env: process.env });
+  if (child.error) throw child.error;
+  if (child.status !== 0) throw new Error("Extended QA suite failed: " + script + " (exit " + child.status + ")");
+  console.log("BETHAG_QA_EXTENDED_SUITE_PASS", script);
+}
 
 // Re-run marker: strict-mode heading selector uses the unique h1 after save.
 

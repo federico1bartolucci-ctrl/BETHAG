@@ -6,6 +6,12 @@ on:
     paths:
       - "scripts/test-current-qa-app05-07.mjs"
       - ".github/workflows/qa-app05-07.yml"
+  pull_request:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-app05-07.mjs"
+      - ".github/workflows/qa-app05-07.yml"
   workflow_dispatch:
 jobs:
   app05-07:

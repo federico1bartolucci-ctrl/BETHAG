@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, setCommunicationPublication as setCommunicationPublicationBackend, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -286,6 +286,7 @@ type CondominiumUnit = {
 type CondominiumMember = {
   id: number;
   userId?: string;
+  databaseId?: string;
   condominiumId: number;
   firstName: string;
   lastName: string;
@@ -419,6 +420,7 @@ type AdminProfile = {
 type PortalMember = {
   id: number;
   userId?: string;
+  memberId?: string;
   name: string;
   email: string;
   condominiumId: number;
@@ -1114,7 +1116,38 @@ const emptyProfile: AdminProfile = {
    HELPERS
    ========================================================= */
 
+const BACKEND_COLLECTION_STORAGE_KEYS = new Set<string>([
+  KEYS.condominiums, KEYS.deadlines, KEYS.documents, KEYS.assemblies,
+  KEYS.suppliers, KEYS.activities, KEYS.condominiumWorks, KEYS.communications,
+  KEYS.condominiumMembers, KEYS.condominiumRequests, KEYS.portalMembers,
+  KEYS.collaborators,
+]);
+
+function clearBackendCollectionCache() {
+  if (!supabaseConfigured) return;
+  for (const key of BACKEND_COLLECTION_STORAGE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn("BETHAG obsolete local collection cache could not be cleared", { key, error });
+    }
+  }
+}
+
+function persistLocalState(key: string, value: unknown) {
+  if (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key)) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // A storage quota failure must never interrupt a successful backend write.
+    console.warn("BETHAG local cache was not persisted", { key, error });
+  }
+}
+
 function load<T>(key: string, fallback: T): T {
+  // In backend mode, never hydrate server-owned collections from an old local
+  // snapshot: it can be incomplete, stale, or large enough to exhaust quota.
+  if (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key)) return fallback;
   try {
     const value = localStorage.getItem(key);
 
@@ -1683,7 +1716,9 @@ function ResidentPortalView({
           (registryMember) =>
             registryMember.active &&
             registryMember.condominiumId === item.condominiumId &&
-            registryMember.email.trim().toLowerCase() === email.trim().toLowerCase()
+            (item.memberId
+              ? registryMember.databaseId === item.memberId
+              : registryMember.email.trim().toLowerCase() === email.trim().toLowerCase())
         )
     ) || null;
 
@@ -2176,6 +2211,10 @@ function SettingsPage({
 }
 
 function App() {
+  useEffect(() => {
+    clearBackendCollectionCache();
+  }, []);
+
   const [page, setPage] =
     useState<Page>(() => {
       try {
@@ -2201,7 +2240,7 @@ function App() {
     // KEYS.* viene letto tramite load(), che usa JSON.parse():
     // salviamo quindi anche la pagina come JSON per poterla ripristinare
     // correttamente dopo un refresh.
-    localStorage.setItem(KEYS.page, JSON.stringify(page));
+    persistLocalState(KEYS.page, page);
   }, [page]);
 
   const [sessionRole, setSessionRole] =
@@ -2400,7 +2439,7 @@ function App() {
   const selectCondominium = (item: Condominium | null) => {
     setSelectedCondominium(item);
     if (item) {
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(item.id));
+      persistLocalState(KEYS.selectedCondominium, item.id);
       try {
         const url = new URL(window.location.href);
         url.searchParams.set("page", "condomini");
@@ -2457,7 +2496,7 @@ function App() {
       if (selectedCondominium?.id !== restored.id) {
         setSelectedCondominium(restored);
       }
-      localStorage.setItem(KEYS.selectedCondominium, JSON.stringify(restored.id));
+      persistLocalState(KEYS.selectedCondominium, restored.id);
       return;
     }
 
@@ -2467,10 +2506,7 @@ function App() {
 
   useEffect(() => {
     if (!selectedCondominium) return;
-    localStorage.setItem(
-      KEYS.selectedCondominium,
-      JSON.stringify(selectedCondominium.id)
-    );
+    persistLocalState(KEYS.selectedCondominium, selectedCondominium.id);
   }, [selectedCondominium]);
 
 
@@ -2860,8 +2896,8 @@ function App() {
           vat: data.user.user_metadata?.vat || current.vat,
         }));
 
-        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
-        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+        persistLocalState(KEYS.session, access.role);
+        persistLocalState(KEYS.sessionEmail, normalizedEmail);
         setPage("homepage");
         return;
       } catch (authError) {
@@ -2911,8 +2947,8 @@ function App() {
 
     setSessionRole(role);
     setSessionEmail(normalizedEmail);
-    localStorage.setItem(KEYS.session, JSON.stringify(role));
-    localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+    persistLocalState(KEYS.session, role);
+    persistLocalState(KEYS.sessionEmail, normalizedEmail);
     setPage("homepage");
   };
 
@@ -3162,8 +3198,8 @@ function App() {
 
         setSessionRole(access.role);
         setSessionEmail(normalizedEmail);
-        localStorage.setItem(KEYS.session, JSON.stringify(access.role));
-        localStorage.setItem(KEYS.sessionEmail, JSON.stringify(normalizedEmail));
+        persistLocalState(KEYS.session, access.role);
+        persistLocalState(KEYS.sessionEmail, normalizedEmail);
 
         setProfile((current) => ({
           ...current,
@@ -3299,11 +3335,12 @@ function App() {
 
       Object.entries(state).forEach(([key, value]) => {
         const storageKey = (KEYS as Record<string,string>)[key];
-        if (storageKey && value !== undefined && key !== "profile") {
-          localStorage.setItem(storageKey, JSON.stringify(value));
+        if (storageKey && value !== undefined && key !== "profile" &&
+            !(supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(storageKey))) {
+          persistLocalState(storageKey, value);
         }
       });
-      if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
+      if (state.profile) persistLocalState(KEYS.profile, state.profile);
 
       // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
       // escluse le chiavi di sessione/autenticazione. Questo completa il
@@ -3312,7 +3349,8 @@ function App() {
       if (backup.localStorageData && typeof backup.localStorageData === "object") {
         const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
         Object.entries(backup.localStorageData as Record<string, unknown>).forEach(([storageKey, value]) => {
-          if (excludedRestoreKeys.has(storageKey) || value === undefined) return;
+          if (excludedRestoreKeys.has(storageKey) || value === undefined ||
+              (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(storageKey))) return;
           try {
             localStorage.setItem(
               storageKey,
@@ -3414,7 +3452,7 @@ function App() {
     const localStorageData: Record<string, unknown> = {};
     const excludedKeys = new Set([KEYS.session, KEYS.sessionEmail]);
     Object.values(KEYS).forEach((key) => {
-      if (excludedKeys.has(key)) return;
+      if (excludedKeys.has(key) || (supabaseConfigured && BACKEND_COLLECTION_STORAGE_KEYS.has(key))) return;
       const raw = localStorage.getItem(key);
       if (raw === null) return;
       try { localStorageData[key] = JSON.parse(raw); } catch { localStorageData[key] = raw; }
@@ -4053,6 +4091,7 @@ function App() {
     if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
     if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
     try {
+      backendMutationRevision.current += 1;
       let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
       if (supabaseConfigured && supabase) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -4068,6 +4107,7 @@ function App() {
           archiveReason: persisted.archive_reason,
         };
       }
+      backendMutationRevision.current += 1;
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
     } catch (error) {
@@ -4080,6 +4120,7 @@ function App() {
     if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
     try {
+      backendMutationRevision.current += 1;
       if (supabaseConfigured && supabase) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError) throw userError;
@@ -4089,7 +4130,11 @@ function App() {
         await restoreCondominiumBackend(workspaceId, item.id);
       }
       const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
+      backendMutationRevision.current += 1;
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
+      // Return to the active registry after a successful restore so the
+      // restored condominium is immediately visible to the administrator.
+      navigate("condomini");
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
       alert(error instanceof Error ? "Il condominio non è stato ripristinato.\\n\\n" + error.message : "Il condominio non è stato ripristinato.");
@@ -6105,37 +6150,52 @@ function App() {
     }
   };
 
-  const toggleCommunicationPublication = (
+  const toggleCommunicationPublication = async (
     id: number
   ) => {
     if (!isAdministrator) {
       alert("La pubblicazione delle comunicazioni è riservata all'Amministratore.");
       return;
     }
-    if (
-      !requirePlan(
-        "portal",
-        "La pubblicazione delle comunicazioni",
-        "portale"
-      )
-    )
-      return;
+    if (!requirePlan("portal", "La pubblicazione delle comunicazioni", "portale")) return;
 
-    setCommunications((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              publishedToPortal:
-                !item.publishedToPortal,
-              status:
-                item.publishedToPortal
-                  ? "Bozza"
-                  : "Pubblicata",
-            }
-          : item
-      )
-    );
+    const current = communications.find((item) => item.id === id);
+    if (!current) {
+      alert("Comunicazione non trovata. Aggiorna la pagina e riprova.");
+      return;
+    }
+
+    const publishedToPortal = !current.publishedToPortal;
+    const next = {
+      ...current,
+      publishedToPortal,
+      status: publishedToPortal ? "Pubblicata" : "Bozza",
+    };
+
+    // Aggiorniamo subito lo stato locale: l'effetto di sincronizzazione
+    // differita deve accodare il nuovo valore, mai uno snapshot precedente
+    // che potrebbe ripubblicare la comunicazione dopo il ritiro esplicito.
+    backendMutationRevision.current += 1;
+    setCommunications((items) => items.map((item) => item.id === id ? next : item));
+
+    try {
+      if (supabaseConfigured && supabase && profile.workspaceId) {
+        await setCommunicationPublicationBackend(
+          profile.workspaceId,
+          id,
+          publishedToPortal,
+          next
+        );
+      }
+      backendMutationRevision.current += 1;
+    } catch (error) {
+      backendMutationRevision.current += 1;
+      setCommunications((items) => items.map((item) => item.id === id ? current : item));
+      console.error("BETHAG communication publication update failed", error);
+      alert(error instanceof Error
+        ? "La pubblicazione non è stata aggiornata sul server.\\n\\n" + error.message
+        : "La pubblicazione non è stata aggiornata sul server.");
+    }
   };
 
 
@@ -6436,6 +6496,8 @@ function App() {
 
 
   const backendHydrated = useRef(false);
+  // Prevent an older hydration request from overwriting a newer lifecycle mutation.
+  const backendMutationRevision = useRef(0);
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
@@ -6444,6 +6506,7 @@ function App() {
     backendHydrated.current = false;
 
     const hydrateFromBackend = async () => {
+      const revisionAtStart = backendMutationRevision.current;
       try {
         const {
           data: { session },
@@ -6485,7 +6548,7 @@ function App() {
         }
 
         const backend = await loadBackendState(workspaceId);
-        if (cancelled) return;
+        if (cancelled || revisionAtStart !== backendMutationRevision.current) return;
 
         setCondominiums(backend.condominiums);
 
@@ -6534,6 +6597,7 @@ function App() {
 
     let cancelled = false;
     const refreshBackendState = async () => {
+      const revisionAtStart = backendMutationRevision.current;
       try {
         const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
           .from("workspaces")
@@ -6547,7 +6611,7 @@ function App() {
         }
 
         const backend = await loadBackendState(profile.workspaceId);
-        if (cancelled) return;
+        if (cancelled || revisionAtStart !== backendMutationRevision.current) return;
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
@@ -6639,102 +6703,20 @@ function App() {
     collaborators,
   ]);
 
-  useEffect(() => {
-    // Supabase is authoritative in backend mode. Persisting the full workspace
-    // snapshot locally duplicates thousands of rows and exceeds browser quota.
-    if (supabaseConfigured) return;
-    try {
-      localStorage.setItem(
-        KEYS.condominiums,
-        JSON.stringify(condominiums)
-      );
-    } catch (error) {
-      // Local-only fallback must not crash the application when storage is full.
-      console.warn("BETHAG local condominium cache was not persisted", error);
-    }
-  }, [condominiums]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.deadlines,
-      JSON.stringify(deadlines)
-    );
-  }, [deadlines]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.documents,
-      JSON.stringify(documents)
-    );
-  }, [documents]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.assemblies,
-      JSON.stringify(assemblies)
-    );
-  }, [assemblies]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.suppliers,
-      JSON.stringify(suppliers)
-    );
-  }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.activities,
-      JSON.stringify(activities)
-    );
-  }, [activities]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
-  }, [condominiumWorks]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.communications,
-      JSON.stringify(communications)
-    );
-  }, [communications]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
-  }, [condominiumMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
-  }, [condominiumRequests]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.profile,
-      JSON.stringify(profile)
-    );
-  }, [profile]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.portalMembers,
-      JSON.stringify(portalMembers)
-    );
-  }, [portalMembers]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.subscription,
-      JSON.stringify(subscription)
-    );
-  }, [subscription]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      KEYS.collaborators,
-      JSON.stringify(collaborators)
-    );
-  }, [collaborators]);
+  useEffect(() => persistLocalState(KEYS.condominiums, condominiums), [condominiums]);
+  useEffect(() => persistLocalState(KEYS.deadlines, deadlines), [deadlines]);
+  useEffect(() => persistLocalState(KEYS.documents, documents), [documents]);
+  useEffect(() => persistLocalState(KEYS.assemblies, assemblies), [assemblies]);
+  useEffect(() => persistLocalState(KEYS.suppliers, suppliers), [suppliers]);
+  useEffect(() => persistLocalState(KEYS.activities, activities), [activities]);
+  useEffect(() => persistLocalState(KEYS.condominiumWorks, condominiumWorks), [condominiumWorks]);
+  useEffect(() => persistLocalState(KEYS.communications, communications), [communications]);
+  useEffect(() => persistLocalState(KEYS.condominiumMembers, condominiumMembers), [condominiumMembers]);
+  useEffect(() => persistLocalState(KEYS.condominiumRequests, condominiumRequests), [condominiumRequests]);
+  useEffect(() => persistLocalState(KEYS.profile, profile), [profile]);
+  useEffect(() => persistLocalState(KEYS.portalMembers, portalMembers), [portalMembers]);
+  useEffect(() => persistLocalState(KEYS.subscription, subscription), [subscription]);
+  useEffect(() => persistLocalState(KEYS.collaborators, collaborators), [collaborators]);
 
 
   /* =======================================================

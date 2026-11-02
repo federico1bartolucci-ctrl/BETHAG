@@ -9,7 +9,9 @@ const a=await admin.auth.signInWithPassword({email:"bethag-admin-qa@example.com"
 const r=await resident.auth.signInWithPassword({email:"bethag-condomino-qa@example.com",password:passwords.resident});assert.ifError(r.error);
 const marker="BETHAG_QA_APP12_"+Date.now();
 const w=await admin.from("workspaces").select("id").eq("name","BETHAG_QA_FIXTURE_20261102").single();assert.ifError(w.error);
-const c=await admin.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("name","Condominio QA BETHAG").single();assert.ifError(c.error);
+const residentUser=await resident.auth.getUser();assert.ifError(residentUser.error);
+const portalLink=await admin.from("portal_access").select("condominium_id").eq("workspace_id",w.data.id).eq("user_id",residentUser.data.user.id).eq("active",true).limit(1).maybeSingle();assert.ifError(portalLink.error);assert.ok(portalLink.data?.condominium_id,"QA resident has no active portal association");
+const c=await admin.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("id",portalLink.data.condominium_id).single();assert.ifError(c.error);
 let communicationId=null;
 try{
  const created=await admin.from("communications").insert({workspace_id:w.data.id,condominium_id:c.data.id,title:marker,body:"Comunicazione sintetica per collaudo QA",published:false,data:{bethag_qa_marker:marker}}).select("id").single();
