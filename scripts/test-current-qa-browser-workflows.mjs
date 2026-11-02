@@ -31,6 +31,9 @@ let accountingFiscalYearId = null;
 let accountingLedgerId = null;
 let accountingAllocationId = null;
 let accountingInstallmentId = null;
+let accountingTransferId = null;
+let accountingOutgoingMemberId = null;
+let accountingIncomingMemberId = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
@@ -78,6 +81,18 @@ async function cleanupFixtures() {
 
   // Direct DELETE is intentionally avoided: the application protects
   // condominium deletion behind its authenticated, audited RPC.
+  if (accountingTransferId) {
+    const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", accountingTransferId);
+    if (transfer.error) throw transfer.error;
+  }
+  if (accountingIncomingMemberId) {
+    const incomingMember = await cleanup.from("condominium_members").delete().eq("id", accountingIncomingMemberId);
+    if (incomingMember.error) throw incomingMember.error;
+  }
+  if (accountingOutgoingMemberId) {
+    const outgoingMember = await cleanup.from("condominium_members").delete().eq("id", accountingOutgoingMemberId);
+    if (outgoingMember.error) throw outgoingMember.error;
+  }
   if (accountingInstallmentId) {
     const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", accountingInstallmentId);
     if (movements.error) throw movements.error;
@@ -481,6 +496,55 @@ try {
   assert.equal(accountingInstallment.unit_id, accountingUnit.data.id);
   results.push({ id: "APP-06", status: "PASS", checks: ["expense created from administrator UI and persisted at €125.50", "1,000-millesimi allocation saved from UI", "installment saved from UI with due date and unpaid state"] });
 
+  // APP-08/11 UI acceptance: register and close a real whole-property transfer
+  // on a separate unit with no outstanding financial positions.
+  const transferUnit = await cleanup.from("condominium_units").select("id,unit_code").eq("condominium_id", created.id).order("created_at", { ascending: true }).range(1, 1).single();
+  assert.ifError(transferUnit.error);
+  const outgoingOwner = await cleanup.from("condominium_members").insert({
+    condominium_id: created.id, unit_id: transferUnit.data.id,
+    name: marker + "_CEDENTE_UI", email: null, role: "resident", active: true,
+    data: { role: "Proprietario", current_owner: true, position_status: "Attivo", ownership_share: 100, bethag_qa_marker: marker }
+  }).select("id").single();
+  assert.ifError(outgoingOwner.error);
+  accountingOutgoingMemberId = outgoingOwner.data.id;
+
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
+  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
+  await adminPage.locator("label").filter({ hasText: "Unità immobiliare" }).locator("select").selectOption(transferUnit.data.id);
+  await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
+  await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
+  await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
+  const previewResponse = adminPage.waitForResponse(response =>
+    response.url().includes("/rest/v1/rpc/get_member_transfer_accounting_preview") && response.ok(),
+    { timeout: 20000 }
+  );
+  await adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true }).click();
+  await previewResponse;
+  await adminPage.getByRole("button", { name: "Verifica e conferma dati", exact: true }).click();
+  await adminPage.getByRole("heading", { name: "Conferma i dati del subentro", exact: true }).waitFor({ timeout: 10000 });
+  await adminPage.getByRole("button", { name: "Conferma definitivamente il trasferimento", exact: true }).click();
+  const confirmedTransfer = await waitForDbRow(
+    () => cleanup.from("condominium_member_transfers").select("id,status,transfer_date,unit_id,outgoing_member_id,incoming_member_id,notes,data").eq("unit_id", transferUnit.data.id).eq("notes", marker).maybeSingle(),
+    row => Boolean(row?.id && row.status === "Confermato"),
+    "APP-08/11 UI transfer confirmation"
+  );
+  accountingTransferId = confirmedTransfer.id;
+  accountingIncomingMemberId = confirmedTransfer.incoming_member_id;
+  assert.equal(confirmedTransfer.outgoing_member_id, accountingOutgoingMemberId);
+  const transferCard = adminPage.locator(".row-card").filter({ hasText: marker + "_ACQUIRENTE_UI" });
+  await transferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).waitFor({ timeout: 15000 });
+  await transferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).click();
+  const closedTransfer = await waitForDbRow(
+    () => cleanup.from("condominium_member_transfers").select("id,status").eq("id", accountingTransferId).single(),
+    row => row?.status === "Chiuso",
+    "APP-08/11 UI transfer closure"
+  );
+  assert.equal(closedTransfer.status, "Chiuso");
+  const outgoingAfterClosure = await cleanup.from("condominium_members").select("active,data").eq("id", accountingOutgoingMemberId).single();
+  assert.ifError(outgoingAfterClosure.error);
+  assert.equal(outgoingAfterClosure.data.active, false);
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive"] });
+
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
   const temporaryResident = await cleanup.auth.admin.createUser({
@@ -608,7 +672,7 @@ try {
   await browser.close();
 }
 console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuyhlzzydcgghrzeexn", results, pageErrors, cleanup: "service-role cleanup verified" }, null, 2));
-if (results.length !== 3 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
+if (results.length !== 4 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
 if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
 if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
 
