@@ -624,6 +624,17 @@ async function syncBackendStateNow(
     })).filter((row: any) => row.condominium_id && row.title)] : null,
   ].filter((entry): entry is [string, any[]] => Boolean(entry));
 
+  const communicationRows = rowsByTable.find(([table]) => table === "communications")?.[1] ?? [];
+  const publishedWithoutCondominium = communicationRows.filter(
+    (row: any) => row.published === true && !row.condominium_id
+  );
+  if (publishedWithoutCondominium.length) {
+    throw new Error(
+      "Sincronizzazione comunicazioni interrotta: riferimenti condominiali non risolti per " +
+      publishedWithoutCondominium.map((row: any) => String(row.legacy_id)).join(", ")
+    );
+  }
+
   for (const [table, rows] of rowsByTable) {
     if (!rows.length) continue;
     await upsertRows(table, rows, table === "condominium_works" ? "id" : undefined);
