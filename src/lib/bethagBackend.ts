@@ -260,6 +260,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     return {
       ...memberData,
       id: row.legacy_id,
+      databaseId: String(row.id),
       name: resolvedName || storedName || "Condòmino",
       firstName: resolvedFirstName,
       lastName: resolvedLastName,
@@ -423,6 +424,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     portalMembers: (portalAccess.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.legacy_id,
+      memberId: row.member_id ? String(row.member_id) : undefined,
       name: row.name,
       email: row.email,
       condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
