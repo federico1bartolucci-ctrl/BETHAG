@@ -11,6 +11,8 @@ const residentPassword = process.env.BETHAG_QA_RESIDENT_PASSWORD;
 assert.ok(key && serviceKey && adminPassword && residentPassword, "Missing QA credentials");
 
 const cleanup = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+const adminEmail = "bethag-admin-qa@example.com";
+const adminApi = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const marker = "BETHAG_UI_ACCEPTANCE_" + Date.now();
 const condoName = marker + "_CONDO";
 const editedCondoName = marker + "_EDITED";
@@ -48,17 +50,13 @@ async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) 
 }
 
 async function cleanupFixtures() {
-  const condos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
-  if (condos.error) throw condos.error;
-  for (const condo of condos.data || []) {
-    for (const table of ["portal_access", "condominium_members", "condominium_units"]) {
-      const result = await cleanup.from(table).delete().eq("condominium_id", condo.id);
-      if (result.error) throw result.error;
-    }
-    const del = await cleanup.from("condominiums").delete().eq("id", condo.id);
-    if (del.error) throw del.error;
-  }
-  const comms = await cleanup.from("communications").select("id").eq("title", communicationTitle);
+  const { error: authError } = await adminApi.auth.signInWithPassword({
+    email: adminEmail,
+    password: adminPassword,
+  });
+  if (authError) throw authError;
+
+  const comms = await cleanup.from("communications").select("id").like("title", "BETHAG_UI_ACCEPTANCE_%");
   if (comms.error) throw comms.error;
   for (const comm of comms.data || []) {
     const recipients = await cleanup.from("communication_recipients").delete().eq("communication_id", comm.id);
@@ -67,13 +65,36 @@ async function cleanupFixtures() {
     if (del.error) throw del.error;
   }
 
-  const remainingCondos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
+  // Direct DELETE is intentionally avoided: the application protects
+  // condominium deletion behind its authenticated, audited RPC.
+  const condos = await cleanup.from("condominiums")
+    .select("id,workspace_id,legacy_id")
+    .like("name", "BETHAG_UI_ACCEPTANCE_%");
+  if (condos.error) throw condos.error;
+  for (const condo of condos.data || []) {
+    const { error } = await adminApi.rpc("delete_condominium", {
+      p_workspace_id: condo.workspace_id,
+      p_legacy_id: condo.legacy_id,
+      p_security_code: null,
+    });
+    if (error) throw error;
+  }
+
+  const remainingCondos = await cleanup.from("condominiums").select("id").like("name", "BETHAG_UI_ACCEPTANCE_%");
   if (remainingCondos.error) throw remainingCondos.error;
   if ((remainingCondos.data || []).length) throw new Error("QA cleanup left synthetic condominium fixtures behind.");
 
-  const remainingComms = await cleanup.from("communications").select("id").eq("title", communicationTitle);
+  const remainingComms = await cleanup.from("communications").select("id").like("title", "BETHAG_UI_ACCEPTANCE_%");
   if (remainingComms.error) throw remainingComms.error;
   if ((remainingComms.data || []).length) throw new Error("QA cleanup left synthetic communication fixtures behind.");
+
+  const remainingPortal = await cleanup.from("portal_access").select("id").eq("data->>source", "BETHAG_QA_UI");
+  if (remainingPortal.error) throw remainingPortal.error;
+  if ((remainingPortal.data || []).length) throw new Error("QA cleanup left synthetic portal access fixtures behind.");
+
+  const remainingMembers = await cleanup.from("condominium_members").select("id").eq("data->>source", "BETHAG_QA_UI");
+  if (remainingMembers.error) throw remainingMembers.error;
+  if ((remainingMembers.data || []).length) throw new Error("QA cleanup left synthetic condominium member fixtures behind.");
 }
 
 try {
