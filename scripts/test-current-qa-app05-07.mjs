@@ -15,7 +15,7 @@ const marker="BETHAG_QA_APP05_07_"+Date.now();
 const workspaceName="BETHAG_QA_FIXTURE_20261102";
 const out=[];
 const pass=(name,detail)=>out.push({name,status:"PASS",detail});
-let condominiumId,unitId,fiscalYearId,ledgerId,allocationId,installmentId;
+let condominiumId,unitId,fiscalYearId,ledgerId,allocationId,installmentId;\nlet fixtureCondominiumId,fixtureUnitId,fixtureFiscalYearId,fixtureLedgerId;
 try{
  const w=await db.from("workspaces").select("id").eq("name",workspaceName).single();assert.ifError(w.error);
  const condo=await db.from("condominiums").insert({workspace_id:w.data.id,name:marker,address:"Via QA 1",city:"Imola",postal_code:"40026",province:"BO",data:{bethag_qa_marker:marker}}).select("id").single();assert.ifError(condo.error);condominiumId=condo.data.id;
@@ -37,23 +37,25 @@ try{
  const deniedPayment=await collaborator.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:1,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ok(deniedPayment.error && deniedPayment.error.message.includes("Autorizzazione gestione contabilità richiesta"),"Collaborator was not denied by the internal accounting permission guard");
  const paid=await db.rpc("register_condominium_installment_payment",{p_workspace_id:w.data.id,p_condominium_id:condominiumId,p_installment_id:installmentId,p_payment_date:"2026-11-02",p_amount:125.5,p_method:"Bonifico",p_reference:marker,p_notes:marker});assert.ifError(paid.error);assert.equal(Number(paid.data),125.5);
  const paidState=await db.from("condominium_installments").select("paid_amount,status").eq("id",installmentId).single();assert.ifError(paidState.error);assert.equal(Number(paidState.data.paid_amount),125.5);assert.equal(paidState.data.status,"Pagato");
- const fixtureName="BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE";
- let fixture=await cleanup.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("name",fixtureName).limit(1).maybeSingle();assert.ifError(fixture.error);
- if(!fixture.data){
-  const fc=await db.from("condominiums").insert({workspace_id:w.data.id,name:fixtureName,address:"Via QA esercizio chiuso",city:"Imola",data:{bethag_qa_fixture:"APP07 closed fiscal year guard"}}).select("id").single();assert.ifError(fc.error);
-  const fu=await db.from("condominium_units").insert({workspace_id:w.data.id,condominium_id:fc.data.id,unit_code:"APP07-CLOSED-01",data:{unitType:"Abitazione",active:true}}).select("id").single();assert.ifError(fu.error);
-  const ff=await db.from("condominium_fiscal_years").insert({workspace_id:w.data.id,condominium_id:fc.data.id,name:"APP07 esercizio chiuso",start_date:"2026-01-01",end_date:"2026-12-31",status:"Aperto",opening_balance:0}).select("id").single();assert.ifError(ff.error);
-  const fe=await db.from("condominium_ledger_entries").insert({workspace_id:w.data.id,condominium_id:fc.data.id,fiscal_year_id:ff.data.id,entry_date:"2026-11-02",direction:"Uscita",category:"QA",description:"APP07 closed guard fixture",amount:50,payment_status:"Da pagare"}).select("id").single();assert.ifError(fe.error);
-  const fcClose=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:fc.data.id,p_source_fiscal_year_id:ff.data.id});assert.ifError(fcClose.error);
-  fixture={data:{id:fc.data.id}};
- }
- const closedYear=await db.from("condominium_fiscal_years").select("id").eq("condominium_id",fixture.data.id).eq("status","Chiuso").order("created_at",{ascending:false}).limit(1).single();assert.ifError(closedYear.error);
- const closedEntry=await db.from("condominium_ledger_entries").select("id,amount").eq("condominium_id",fixture.data.id).eq("fiscal_year_id",closedYear.data.id).limit(1).single();assert.ifError(closedEntry.error);
+ const fixtureName=marker+"_APP07_CLOSED_GUARD_FIXTURE";
+ const fc=await db.from("condominiums").insert({workspace_id:w.data.id,name:fixtureName,address:"Via QA esercizio chiuso",city:"Imola",data:{bethag_qa_marker:marker,bethag_qa_fixture:"APP07 closed fiscal year guard"}}).select("id").single();assert.ifError(fc.error);fixtureCondominiumId=fc.data.id;
+ const fu=await db.from("condominium_units").insert({workspace_id:w.data.id,condominium_id:fixtureCondominiumId,unit_code:"APP07-CLOSED-"+Date.now(),data:{unitType:"Abitazione",active:true,bethag_qa_marker:marker}}).select("id").single();assert.ifError(fu.error);fixtureUnitId=fu.data.id;
+ const ff=await db.from("condominium_fiscal_years").insert({workspace_id:w.data.id,condominium_id:fixtureCondominiumId,name:"APP07 esercizio chiuso",start_date:"2026-01-01",end_date:"2026-12-31",status:"Aperto",opening_balance:0,notes:marker}).select("id").single();assert.ifError(ff.error);fixtureFiscalYearId=ff.data.id;
+ const fe=await db.from("condominium_ledger_entries").insert({workspace_id:w.data.id,condominium_id:fixtureCondominiumId,fiscal_year_id:fixtureFiscalYearId,entry_date:"2026-11-02",direction:"Uscita",category:"QA",description:"APP07 closed guard fixture "+marker,amount:50,payment_status:"Da pagare",notes:marker}).select("id").single();assert.ifError(fe.error);fixtureLedgerId=fe.data.id;
+ const fcClose=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:fixtureCondominiumId,p_source_fiscal_year_id:fixtureFiscalYearId});assert.ifError(fcClose.error);
+ const closedYear=await db.from("condominium_fiscal_years").select("id,status").eq("id",fixtureFiscalYearId).single();assert.ifError(closedYear.error);assert.equal(closedYear.data.status,"Chiuso");
+ const closedEntry=await db.from("condominium_ledger_entries").select("id,amount").eq("id",fixtureLedgerId).single();assert.ifError(closedEntry.error);
  const blocked=await db.from("condominium_ledger_entries").update({amount:Number(closedEntry.data.amount)+0.5}).eq("id",closedEntry.data.id);
  assert.ok(blocked.error,"Closed fiscal period accepted ledger mutation");
  const unchanged=await db.from("condominium_ledger_entries").select("amount").eq("id",closedEntry.data.id).single();assert.ifError(unchanged.error);assert.equal(Number(unchanged.data.amount),Number(closedEntry.data.amount));
  pass("APP-07 closed accounting period guard","database rejected ledger change on persistent QA-only closed-year fixture; original amount remained unchanged");
 } finally {
+ if(fixtureCondominiumId) { const x=await cleanup.from("condominium_payment_movements").delete().eq("condominium_id",fixtureCondominiumId);assert.ifError(x.error); }
+ if(fixtureCondominiumId) { const x=await cleanup.from("condominium_expense_allocations").delete().eq("condominium_id",fixtureCondominiumId);assert.ifError(x.error); }
+ if(fixtureCondominiumId) { const x=await cleanup.from("condominium_ledger_entries").delete().eq("condominium_id",fixtureCondominiumId);assert.ifError(x.error); }
+ if(fixtureFiscalYearId) { const x=await cleanup.from("condominium_fiscal_years").delete().eq("id",fixtureFiscalYearId);assert.ifError(x.error); }
+ if(fixtureUnitId) { const x=await cleanup.from("condominium_units").delete().eq("id",fixtureUnitId);assert.ifError(x.error); }
+ if(fixtureCondominiumId) { const x=await cleanup.from("condominiums").delete().eq("id",fixtureCondominiumId);assert.ifError(x.error); }
  if(installmentId) { const x=await cleanup.from("condominium_payment_movements").delete().eq("installment_id",installmentId);assert.ifError(x.error); }
  if(installmentId) { const x=await cleanup.from("condominium_installments").delete().eq("id",installmentId);assert.ifError(x.error); }
  if(allocationId) { const x=await cleanup.from("condominium_expense_allocations").delete().eq("id",allocationId);assert.ifError(x.error); }
@@ -64,4 +66,4 @@ try{
  await collaborator.auth.signOut();
  await db.auth.signOut();
 }
-console.log(JSON.stringify({suite:"BETHAG_QA_APP05_07",target:"jhuyhlzzydcgghrzeexn",results:out,cleanup:"temporary APP-05/06 fixtures deleted; persistent APP-07 closed-year guard fixture retained"},null,2));
+console.log(JSON.stringify({suite:"BETHAG_QA_APP05_07",target:"jhuyhlzzydcgghrzeexn",results:out,cleanup:"temporary APP-05/06 fixtures deleted; temporary APP-07 closed-year guard fixture deleted"},null,2));
