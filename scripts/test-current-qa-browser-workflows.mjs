@@ -165,13 +165,36 @@ try {
     formMethod: button.closest("form")?.getAttribute("method") ?? null,
     formAction: button.closest("form")?.getAttribute("action") ?? null,
   }));
-  console.log("APP05_EDIT_SUBMIT_DEBUG", JSON.stringify({
-    inputValue: await editNameInput.inputValue(),
-    buttonCount: await editSubmitButton.count(),
-    ...editSubmitDebug,
-  }));
+  const formValidation = await editSubmitButton.evaluate((button) => {
+    const form = button.closest("form");
+    const invalid = form ? Array.from(form.elements).filter((element) => !element.checkValidity()).map((element) => ({
+      tag: element.tagName, type: element.getAttribute("type"), name: element.getAttribute("name"),
+      value: element.value, validationMessage: element.validationMessage,
+    })) : [];
+    form?.addEventListener("submit", () => console.log("APP05_NATIVE_SUBMIT_EVENT"), { once: true });
+    return { valid: form?.checkValidity() ?? false, invalid };
+  });
+  console.log("APP05_FORM_VALIDATION_DEBUG", JSON.stringify(formValidation));
   await editSubmitButton.click();
-  await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
+  try {
+    await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
+  } catch (editUiError) {
+    const editedDbState = await cleanup.from("condominiums")
+      .select("id,name,archived_at,archived_by,archive_reason,data")
+      .eq("id", created.id).maybeSingle();
+    console.log("APP05_EDIT_UI_DEBUG", JSON.stringify({
+      url: adminPage.url(),
+      pageText: (await adminPage.locator("body").innerText()).slice(0, 5000),
+      formValidation,
+      editedDbState: editedDbState.data,
+      editedDbError: editedDbState.error?.message,
+      dialogs,
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+    }));
+    throw editUiError;
+  }
   const edited = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,name").eq("id", created.id).maybeSingle(),
     row => row?.name === editedCondoName,
