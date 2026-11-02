@@ -653,7 +653,7 @@ try {
   await incomingOwnerRefresh;
   const refreshedCondominiumCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).first();
   await refreshedCondominiumCard.getByRole("button", { name: "Dettagli", exact: true }).click();
-  await adminPage.getByRole("heading", { name: editedCondoName, exact: true }).waitFor({ timeout: 10000 });
+  await adminPage.locator(".detail-page-header h1").filter({ hasText: editedCondoName }).waitFor({ timeout: 10000 });
   const refreshedUnitCard = adminPage.locator(".request-card").filter({ hasText: "Unità " + transferUnit.data.unit_code }).first();
   await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
   assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
