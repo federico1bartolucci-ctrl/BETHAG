@@ -557,11 +557,15 @@ try {
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
   await adminPage.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
   const previewResponse = adminPage.waitForResponse(response =>
-    response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer") && response.ok(),
+    response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer"),
     { timeout: 20000 }
   );
   await adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true }).click();
-  await previewResponse;
+  const previewResult = await previewResponse;
+  if (!previewResult.ok()) {
+    const responseBody = await previewResult.text().catch(() => "");
+    throw new Error(`APP-08/11 preview RPC failed: HTTP ${previewResult.status()} ${responseBody.slice(0, 2000)}`);
+  }
   await adminPage.getByRole("button", { name: "Verifica e conferma dati", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Conferma i dati del subentro", exact: true }).waitFor({ timeout: 10000 });
   await adminPage.getByRole("button", { name: "Conferma definitivamente il trasferimento", exact: true }).click();
