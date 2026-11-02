@@ -455,6 +455,16 @@ try {
   }
 
   await commCard.getByRole("button", { name: "Ritira" }).click();
+  // Publication changes are persisted by the debounced backend sync; wait for
+  // the authoritative row before reloading the resident session, otherwise
+  // the browser test races the 500ms save queue rather than testing visibility.
+  const withdrawnCommunication = await waitForDbRow(
+    () => cleanup.from("communications").select("published").eq("id", persistedCommunication.id).single(),
+    row => row?.published === false,
+    "Communication withdrawal persistence",
+    20000
+  );
+  assert.equal(withdrawnCommunication.published, false);
   await residentPage.reload({ waitUntil: "networkidle" });
   await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ state: "detached", timeout: 15000 });
   await commCard.locator(".mini-danger").click();
