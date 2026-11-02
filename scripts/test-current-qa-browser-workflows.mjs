@@ -113,6 +113,8 @@ try {
   assert.equal(restored.data.archived_by, null);
   assert.equal(restored.data.archive_reason, null);
   assert.equal(restored.data.data.archivedAt, undefined);
+  await adminPage.reload({ waitUntil: "networkidle" });
+  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
   const activeCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName });
   await activeCard.waitFor({ timeout: 15000 });
