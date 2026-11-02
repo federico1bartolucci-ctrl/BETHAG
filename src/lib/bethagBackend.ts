@@ -290,9 +290,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       city: row.city ?? row.data?.city ?? "",
       cap: row.postal_code ?? row.data?.cap ?? "",
       province: row.province ?? row.data?.province ?? "",
-      archivedAt: row.archived_at ?? row.data?.archivedAt ?? undefined,
-      archivedBy: row.archived_by ?? row.data?.archivedBy ?? undefined,
-      archiveReason: row.archive_reason ?? row.data?.archiveReason ?? "",
+      archivedAt: row.archived_at ?? undefined,
+      archivedBy: row.archived_by ?? undefined,
+      archiveReason: row.archive_reason ?? "",
     })),
     condominiumUnits: mappedCondominiumUnits,
     condominiumMembers: mappedCondominiumMembers,
@@ -463,25 +463,12 @@ async function syncBackendStateNow(
         province,
       };
 
-      // Archive lifecycle is server-owned. Automatic state sync must never
-      // resurrect stale JSON flags after the dedicated restore RPC clears them.
-      const hasStructuredArchiveState = existing && Object.prototype.hasOwnProperty.call(existing, "archived_at");
-      const persistedArchivedAt = hasStructuredArchiveState
-        ? existing.archived_at
-        : existing?.data?.archivedAt;
-      if (persistedArchivedAt) {
-        mergedData.archivedAt = persistedArchivedAt;
-        mergedData.archivedBy = hasStructuredArchiveState
-          ? existing.archived_by
-          : existing?.data?.archivedBy;
-        mergedData.archiveReason = hasStructuredArchiveState
-          ? existing.archive_reason
-          : existing?.data?.archiveReason;
-      } else {
-        delete mergedData.archivedAt;
-        delete mergedData.archivedBy;
-        delete mergedData.archiveReason;
-      }
+      // Archive lifecycle is server-owned and stored in structured columns.
+      // Background JSON sync must never write archive flags; only the dedicated
+      // archive/restore RPCs may change archived_at/by/reason.
+      delete mergedData.archivedAt;
+      delete mergedData.archivedBy;
+      delete mergedData.archiveReason;
 
       return {
         workspace_id: workspaceId,
