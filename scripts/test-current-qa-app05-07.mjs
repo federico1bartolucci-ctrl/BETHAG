@@ -15,7 +15,8 @@ const marker="BETHAG_QA_APP05_07_"+Date.now();
 const workspaceName="BETHAG_QA_FIXTURE_20261102";
 const out=[];
 const pass=(name,detail)=>out.push({name,status:"PASS",detail});
-let condominiumId,unitId,fiscalYearId,ledgerId,allocationId,installmentId;\nlet fixtureCondominiumId,fixtureUnitId,fixtureFiscalYearId,fixtureLedgerId;
+let condominiumId,unitId,fiscalYearId,ledgerId,allocationId,installmentId;
+let fixtureCondominiumId,fixtureUnitId,fixtureFiscalYearId,fixtureLedgerId;
 try{
  const w=await db.from("workspaces").select("id").eq("name",workspaceName).single();assert.ifError(w.error);
  const condo=await db.from("condominiums").insert({workspace_id:w.data.id,name:marker,address:"Via QA 1",city:"Imola",postal_code:"40026",province:"BO",data:{bethag_qa_marker:marker}}).select("id").single();assert.ifError(condo.error);condominiumId=condo.data.id;
