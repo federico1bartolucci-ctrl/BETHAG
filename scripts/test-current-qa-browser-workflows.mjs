@@ -210,7 +210,12 @@ try {
   assert.ifError(portalAccess.error);
 
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
-  await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 });
+  try { await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 }); }
+  catch (e) {
+    const body = (await adminPage.locator("body").innerText()).slice(0, 3500);
+    const sidebar = (await adminPage.locator(".sidebar").innerText().catch(() => "")).slice(0, 1200);
+    throw new Error("Comunicazioni navigation did not open. URL=" + adminPage.url() + " Sidebar=" + sidebar + " Body=" + body + " PageErrors=" + JSON.stringify(pageErrors) + " Cause=" + e.message);
+  }
   const newCommunicationButton = adminPage.locator(".page-header").getByRole("button", { name: "+ Nuova comunicazione" });
   try { await newCommunicationButton.waitFor({ state: "visible", timeout: 15000 }); }
   catch (e) { const visible = (await adminPage.locator("body").innerText()).slice(0, 2500); throw new Error("Administrator communication action is missing. Body=" + visible + " Cause=" + e.message); }
