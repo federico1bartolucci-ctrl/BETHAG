@@ -23,7 +23,11 @@ try{
    await page.getByRole("button",{name:"Accedi",exact:true}).last().click();
    await page.getByText(a.landing,{exact:true}).first().waitFor({timeout:25000});
    if(a.role==="admin"){
-    const planNav=page.locator(".nav-item").filter({hasText:"Piano e upgrade"}).first();await planNav.click();\n    await page.getByRole("button",{name:"Prova struttura"}).last().click();\n    await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});\n    await page.locator(".nav-item").filter({hasText:"Homepage"}).first().click();\n    const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
+    const planNav=page.locator(".nav-item").filter({hasText:"Piano e upgrade"}).first();await planNav.click();
+    await page.getByRole("button",{name:"Prova struttura"}).last().click();
+    await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});
+    await page.locator(".nav-item").filter({hasText:"Homepage"}).first().click();
+    const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
     for(const label of labels){
      const nav=page.locator(".nav-item").filter({hasText:label}).first();
      await nav.waitFor({state:"visible",timeout:10000});await nav.click();
@@ -35,7 +39,10 @@ try{
     await page.getByText("Homepage",{exact:true}).first().waitFor({timeout:20000});
     results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","refresh returned to stable Homepage","no uncaught browser errors"]});
    }else if(a.role==="collaborator"){
-    assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");\n    assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");\n    assert.ok(await page.locator(".nav-item.active").filter({hasText:"Homepage"}).count());\n    results.push({role:a.role,status:"PASS",checks:["administrator-only accounting navigation absent","collaborator administration absent","Homepage active","no uncaught browser errors"]});
+    assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");
+    assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");
+    assert.ok(await page.locator(".nav-item.active").filter({hasText:"Homepage"}).count());
+    results.push({role:a.role,status:"PASS",checks:["administrator-only accounting navigation absent","collaborator administration absent","Homepage active","no uncaught browser errors"]});
    }else{
     assert.equal(await page.locator(".nav-item").count(),0,"Resident unexpectedly sees staff navigation");
     assert.equal(await page.getByText("Contabilità",{exact:true}).count(),0,"Resident unexpectedly sees accounting");
