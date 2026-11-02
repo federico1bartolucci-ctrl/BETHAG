@@ -485,68 +485,8 @@ async function syncBackendStateNow(
     });
   }
 
-  if (condominiumRows.length) {
-    const existingByLegacyId = new Map(
-      (existingCondominiums ?? []).map((row: any) => [String(row.legacy_id), row])
-    );
-
-    const rowsToPersist = condominiumRows.map((item: any) => {
-      const existing = existingByLegacyId.get(String(item.id));
-
-      // La sincronizzazione automatica riceve anche stati locali parziali
-      // (ad esempio durante hydration/refresh). Un valore assente o vuoto
-      // nel payload di sincronizzazione non deve cancellare un dato già
-      // persistito. Le modifiche intenzionali effettuate dal form passano
-      // invece da save_condominium e continuano a poter impostare i campi.
-      const hasText = (value: unknown) =>
-        typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined;
-
-      const name = hasText(item.name) ? item.name : (existing?.name ?? existing?.data?.name ?? "");
-      const address = hasText(item.address) ? item.address : (existing?.address ?? existing?.data?.address ?? "");
-      const city = hasText(item.city) ? item.city : (existing?.city ?? existing?.data?.city ?? "");
-      const postalCode = hasText(item.cap) ? item.cap : (existing?.postal_code ?? existing?.data?.cap ?? "");
-      const province = hasText(item.province) ? item.province : (existing?.province ?? existing?.data?.province ?? "");
-      const mergedData: Record<string, any> = {
-        ...(existing?.data && typeof existing.data === "object" ? existing.data : {}),
-        ...item,
-        name,
-        address,
-        city,
-        cap: postalCode,
-        province,
-      };
-
-      // Archive lifecycle is server-owned and stored in structured columns.
-      // Background JSON sync must never write archive flags; only the dedicated
-      // archive/restore RPCs may change archived_at/by/reason.
-      delete mergedData.archivedAt;
-      delete mergedData.archivedBy;
-      delete mergedData.archiveReason;
-
-      return {
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        name,
-        address,
-        city,
-        postal_code: postalCode,
-        province,
-        data: mergedData,
-      };
-    });
-
-    await upsertRows("condominiums", rowsToPersist);
-
-    const { data: refreshedCondominiums, error } = await supabase
-      .from("condominiums")
-      .select("id, legacy_id")
-      .eq("workspace_id", workspaceId);
-
-    if (error) throw error;
-    (refreshedCondominiums ?? []).forEach((row: any) => {
-      condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
-    });
-  }
+  // Condominium writes are performed only by the explicit save/archive/restore/delete RPCs.
+  // Do not replay the whole workspace snapshot from background sync.
 
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
