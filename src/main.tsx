@@ -4050,7 +4050,11 @@ function App() {
 
 
   const archiveCondominium = async (item: Condominium) => {
-    if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
+    console.info("BETHAG_ARCHIVE_HANDLER_START", { id: item.id, name: item.name, role: sessionRole, workspaceId: profile.workspaceId ?? null });
+    if (!requireModulePermission("condomini", "L'archiviazione del condominio")) {
+      console.info("BETHAG_ARCHIVE_PERMISSION_DENIED", { id: item.id });
+      return;
+    }
     if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
     try {
       let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
@@ -4060,7 +4064,9 @@ function App() {
         if (!user) throw new Error("Sessione autenticata non disponibile.");
         const workspaceId = await getActiveWorkspaceId(user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
+        console.info("BETHAG_ARCHIVE_RPC_START", { workspaceId, legacyId: item.id, userId: user.id });
         const persisted = await archiveCondominiumBackend(workspaceId, item.id);
+        console.info("BETHAG_ARCHIVE_RPC_DONE", { legacyId: item.id, archivedAt: persisted.archived_at, archivedBy: persisted.archived_by });
         archived = {
           ...item,
           archivedAt: persisted.archived_at,
@@ -4072,6 +4078,7 @@ function App() {
       selectCondominium(null);
     } catch (error) {
       console.error("BETHAG condominium archive failed", error);
+      console.info("BETHAG_ARCHIVE_HANDLER_FAILED", { id: item.id, error: error instanceof Error ? error.message : String(error) });
       alert(error instanceof Error ? "Il condominio non è stato archiviato.\\n\\n" + error.message : "Il condominio non è stato archiviato.");
     }
   };
