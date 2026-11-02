@@ -30,7 +30,7 @@ let temporaryResidentPassword = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
-  await page.goto(baseURL, { waitUntil: "networkidle" });
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Accedi" }).first().click();
   await page.getByRole("heading", { name: "Accedi a BETHAG" }).waitFor();
   await page.getByRole("button", { name: role, exact: true }).click();
@@ -265,7 +265,7 @@ try {
     row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
     "Condominium restore persistence"
   );
-  await adminPage.reload({ waitUntil: "networkidle" });
+  await adminPage.reload({ waitUntil: "domcontentloaded" });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
@@ -410,7 +410,7 @@ try {
   }
 
   await commCard.getByRole("button", { name: "Ritira" }).click();
-  await residentPage.reload({ waitUntil: "networkidle" });
+  await residentPage.reload({ waitUntil: "domcontentloaded" });
   await residentPage.getByText(communicationTitle, { exact: true }).waitFor({ state: "detached", timeout: 15000 });
   await commCard.locator(".mini-danger").click();
   await commCard.waitFor({ state: "detached", timeout: 20000 });
