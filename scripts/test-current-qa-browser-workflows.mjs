@@ -90,7 +90,7 @@ try {
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(editedCondoName);
   await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
-  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
+  await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const edited = await cleanup.from("condominiums").select("id,name").eq("id", created.data.id).single();
   assert.ifError(edited.error);
   assert.equal(edited.data.name, editedCondoName);
