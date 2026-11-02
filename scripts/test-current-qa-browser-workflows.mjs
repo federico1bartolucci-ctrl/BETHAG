@@ -56,7 +56,7 @@ async function cleanupFixtures() {
   });
   if (authError) throw authError;
 
-  const comms = await cleanup.from("communications").select("id").like("title", "BETHAG_UI_ACCEPTANCE_%");
+  const comms = await cleanup.from("communications").select("id").like("title", marker + "%");
   if (comms.error) throw comms.error;
   for (const comm of comms.data || []) {
     const recipients = await cleanup.from("communication_recipients").delete().eq("communication_id", comm.id);
@@ -69,7 +69,7 @@ async function cleanupFixtures() {
   // condominium deletion behind its authenticated, audited RPC.
   const condos = await cleanup.from("condominiums")
     .select("id,workspace_id,legacy_id")
-    .like("name", "BETHAG_UI_ACCEPTANCE_%");
+    .like("name", marker + "%");
   if (condos.error) throw condos.error;
   for (const condo of condos.data || []) {
     const { error } = await adminApi.rpc("delete_condominium", {
@@ -80,19 +80,19 @@ async function cleanupFixtures() {
     if (error) throw error;
   }
 
-  const remainingCondos = await cleanup.from("condominiums").select("id").like("name", "BETHAG_UI_ACCEPTANCE_%");
+  const remainingCondos = await cleanup.from("condominiums").select("id").like("name", marker + "%");
   if (remainingCondos.error) throw remainingCondos.error;
   if ((remainingCondos.data || []).length) throw new Error("QA cleanup left synthetic condominium fixtures behind.");
 
-  const remainingComms = await cleanup.from("communications").select("id").like("title", "BETHAG_UI_ACCEPTANCE_%");
+  const remainingComms = await cleanup.from("communications").select("id").like("title", marker + "%");
   if (remainingComms.error) throw remainingComms.error;
   if ((remainingComms.data || []).length) throw new Error("QA cleanup left synthetic communication fixtures behind.");
 
-  const remainingPortal = await cleanup.from("portal_access").select("id").eq("data->>source", "BETHAG_QA_UI");
+  const remainingPortal = await cleanup.from("portal_access").select("id").eq("data->>source", marker);
   if (remainingPortal.error) throw remainingPortal.error;
   if ((remainingPortal.data || []).length) throw new Error("QA cleanup left synthetic portal access fixtures behind.");
 
-  const remainingMembers = await cleanup.from("condominium_members").select("id").eq("data->>source", "BETHAG_QA_UI");
+  const remainingMembers = await cleanup.from("condominium_members").select("id").eq("data->>source", marker);
   if (remainingMembers.error) throw remainingMembers.error;
   if ((remainingMembers.data || []).length) throw new Error("QA cleanup left synthetic condominium member fixtures behind.");
 }
@@ -190,7 +190,7 @@ try {
     role: "resident",
     active: true,
     permissions: {},
-    data: { source: "BETHAG_QA_UI" },
+    data: { source: marker },
     unit_id: residentUnit.data.id,
   }).select("id").single();
   assert.ifError(member.error);
@@ -205,7 +205,7 @@ try {
     active: true,
     user_id: residentUser.id,
     member_id: member.data.id,
-    data: { source: "BETHAG_QA_UI" },
+    data: { source: marker },
   }).select("id").single();
   assert.ifError(portalAccess.error);
 
