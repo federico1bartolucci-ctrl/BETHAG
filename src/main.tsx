@@ -7512,6 +7512,9 @@ function App() {
               onDelete={
                 deleteCondominium
               }
+              onArchive={
+                archiveCondominium
+              }
               deadlines={
                 deadlines
               }
