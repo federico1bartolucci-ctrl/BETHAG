@@ -674,9 +674,18 @@ async function syncBackendStateNow(
         active: item.active ?? true,
         user_id: item.userId ?? null,
         data: item,
-      })).filter((row: any) => row.condominium_id)
+      })).filter((row: any) =>
+        row.condominium_id &&
+        row.legacy_id !== null &&
+        row.legacy_id !== undefined &&
+        Number.isFinite(Number(row.legacy_id))
+      )
     : [];
 
+  // Gli accessi creati dai flussi di registrazione/invito possono non avere
+  // legacy_id. Non inserirli di nuovo con il conflitto workspace_id,legacy_id:
+  // NULL non individua la riga esistente e l'insert collide con l'indice
+  // univoco workspace/condominio/e-mail. Restano gestiti dai flussi dedicati.
   if (portalRows.length) await upsertRows("portal_access", portalRows);
   // L'accesso al Portale è persistente: uno stato locale parziale durante
   // hydration/refresh non deve mai cancellare autorizzazioni server.
