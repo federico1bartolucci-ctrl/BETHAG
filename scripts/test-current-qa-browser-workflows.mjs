@@ -79,7 +79,7 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.getByRole("heading", { name: condoName, exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
   const created = await cleanup.from("condominiums").select("id").eq("name", condoName).single();
   assert.ifError(created.error);
   const units = await cleanup.from("condominium_units").select("id", { count: "exact", head: true }).eq("condominium_id", created.data.id);
@@ -90,7 +90,7 @@ try {
   await adminPage.getByRole("heading", { name: "Modifica condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(editedCondoName);
   await adminPage.getByRole("button", { name: "Salva modifiche" }).click();
-  await adminPage.getByRole("heading", { name: editedCondoName, exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const edited = await cleanup.from("condominiums").select("id,name").eq("id", created.data.id).single();
   assert.ifError(edited.error);
   assert.equal(edited.data.name, editedCondoName);
