@@ -761,6 +761,14 @@ try {
   await residentContext.close();
   await adminContext.close();
   assert.deepEqual(pageErrors, []);
+  const portalAccessSyncErrors = consoleErrors.filter(message =>
+    message.includes("BETHAG backend sync failed")
+  );
+  assert.deepEqual(portalAccessSyncErrors, [], "Portal access synchronization must not fail during authenticated browser workflows");
+  const portalAccessConflicts = failedRequests.filter(request =>
+    request.url.includes("/rest/v1/portal_access") && request.status === 409
+  );
+  assert.deepEqual(portalAccessConflicts, [], "Portal access synchronization must not produce HTTP 409 duplicate conflicts");
 } finally {
   await cleanupFixtures();
   await browser.close();
