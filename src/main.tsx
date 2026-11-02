@@ -12093,6 +12093,7 @@ function CommunicationsPage({
   onEdit,
   onDelete,
   onPublication,
+  isAdministrator = false,
 }: any) {
   const filtered =
     communications.filter(
