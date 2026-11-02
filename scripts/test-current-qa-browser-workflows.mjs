@@ -122,6 +122,8 @@ try {
   assert.equal(restored.data.data.archivedAt, undefined);
   await adminPage.reload({ waitUntil: "networkidle" });
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
+  await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).waitFor({ timeout: 20000 });
   // The synthetic condominium is removed by cleanupFixtures() in finally.
   // APP-05 covers create/edit/archive/restore; destructive deletion is not
   // coupled to this acceptance flow.
