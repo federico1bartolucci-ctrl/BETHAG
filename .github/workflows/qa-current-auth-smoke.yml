@@ -1,0 +1,55 @@
+name: BETHAG current QA authenticated smoke
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "src/**"
+      - "public/**"
+      - "scripts/test-browser-current-qa-auth.mjs"
+      - "package.json"
+      - "vite.config.ts"
+      - ".github/workflows/qa-current-auth-smoke.yml"
+  workflow_dispatch:
+jobs:
+  authenticated-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate target is the approved QA project
+        env:
+          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test "$VITE_SUPABASE_ENABLE" = "true" || { echo "QA must be explicitly enabled"; exit 1; }
+          test "${VITE_SUPABASE_URL%/}" = "https://jhuyhlzzydcgghrzeexn.supabase.co" || { echo "Refusing any non-approved Supabase target"; exit 1; }
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key missing"; exit 1; }
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build against isolated QA
+        env:
+          VITE_SUPABASE_ENABLE: ${{ vars.VITE_SUPABASE_ENABLE }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local preview and run real authenticated role tests
+        env:
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/bethag-preview.log 2>&1 &
+          echo $! > /tmp/bethag-preview.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/BETHAG/ >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:4173/BETHAG/ >/dev/null
+          node scripts/test-browser-current-qa-auth.mjs
