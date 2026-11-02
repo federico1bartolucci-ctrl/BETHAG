@@ -99,7 +99,7 @@ try {
   await adminPage.locator("h1").filter({ hasText: editedCondoName }).first().waitFor({ timeout: 20000 });
   const archived = await cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
   assert.ifError(archived.error);
-  assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted");
+  assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted; row=" + JSON.stringify(archived.data));
   assert.ok(archived.data.archived_by, "Condominium archive actor was not persisted");
   assert.equal(Date.parse(archived.data.data.archivedAt), Date.parse(archived.data.archived_at), "JSON and structured archive timestamps diverged");
   await adminPage.locator(".nav-item").filter({ hasText: "Archivio" }).first().click();
