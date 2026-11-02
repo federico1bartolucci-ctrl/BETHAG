@@ -2,14 +2,24 @@ import { supabase } from "./supabase";
 
 export type BackendState = Record<string, any[]>;
 
-export async function getActiveWorkspaceId(userId: string, preferredWorkspaceId?: string | null) {
+export async function getActiveWorkspaceId(userId?: string | null, preferredWorkspaceId?: string | null) {
   if (!supabase) return null;
+
+  // Several page modules call this helper without an explicit user ID.
+  // Resolve the authenticated user before querying: passing undefined to
+  // PostgREST creates an invalid UUID filter and pollutes the DB logs.
+  let activeUserId = typeof userId === "string" ? userId.trim() : "";
+  if (!activeUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    activeUserId = user?.id ?? "";
+  }
+  if (!activeUserId) return null;
 
   if (preferredWorkspaceId) {
     const { data: preferred, error: preferredError } = await supabase
       .from("workspace_members")
       .select("workspace_id")
-      .eq("user_id", userId)
+      .eq("user_id", activeUserId)
       .eq("workspace_id", preferredWorkspaceId)
       .eq("active", true)
       .maybeSingle();
@@ -21,7 +31,7 @@ export async function getActiveWorkspaceId(userId: string, preferredWorkspaceId?
   const { data, error } = await supabase
     .from("workspace_members")
     .select("workspace_id")
-    .eq("user_id", userId)
+    .eq("user_id", activeUserId)
     .eq("active", true)
     .order("workspace_id")
     .limit(1)
