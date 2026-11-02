@@ -573,12 +573,16 @@ try {
   // Entering the condominium registry triggers the application's normal
   // authoritative workspace hydration. Return to the transfer module only
   // after that refresh has completed, then assert the owner in the actual UI.
+  // Rehydrate the workspace after the service-role fixture insert, then
+  // explicitly select the test condominium in AccountingPage. The transfer
+  // panel is scoped to one condominium and otherwise renders its empty prompt.
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Contabilità" }).first().click();
-  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).waitFor({ state: "visible", timeout: 15000 });
+  await adminPage.getByRole("heading", { name: "Contabilità e rendiconto", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator(".filter-bar label").filter({ hasText: "Condominio" }).locator("select").selectOption(String(created.legacy_id));
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
-  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
+  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
   await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
