@@ -266,7 +266,25 @@ try {
   await insuranceSection.locator("label").filter({ hasText: "Numero polizza" }).locator("input").fill(policyNumber);
   await insuranceSection.getByRole("button", { name: "Salva polizza" }).click();
   const policyCard = insuranceSection.locator(".request-card").filter({ hasText: policyNumber });
-  await policyCard.waitFor({ timeout: 15000 });
+  try {
+    await policyCard.waitFor({ timeout: 15000 });
+  } catch (policyUiError) {
+    const policyDebug = await cleanup.from("condominium_insurance_policies")
+      .select("id,workspace_id,condominium_id,company_name,policy_number,active")
+      .eq("workspace_id", created.workspace_id)
+      .eq("condominium_id", created.id)
+      .eq("policy_number", policyNumber)
+      .maybeSingle();
+    throw new Error("Insurance policy did not appear after save: " + JSON.stringify({
+      cause: policyUiError.message,
+      policyRow: policyDebug.data,
+      policyError: policyDebug.error?.message,
+      sectionText: (await insuranceSection.innerText().catch(() => "")).slice(0, 2500),
+      consoleErrors,
+      failedRequests,
+      dialogs,
+    }));
+  }
   const storedPolicy = await waitForDbRow(
     () => cleanup.from("condominium_insurance_policies").select("id,company_name,policy_number,condominium_id")
       .eq("workspace_id", created.workspace_id).eq("condominium_id", created.id).eq("policy_number", policyNumber).maybeSingle(),
