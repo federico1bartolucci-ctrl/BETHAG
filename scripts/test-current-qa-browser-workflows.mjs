@@ -197,7 +197,7 @@ try {
   }).select("id").single();
   assert.ifError(member.error);
   const portalAccess = await cleanup.from("portal_access").insert({
-    workspace_id: created.data.workspace_id,
+    workspace_id: created.workspace_id,
     condominium_id: created.id,
     name: "BETHAG QA UI Resident",
     email: residentUser.email,
