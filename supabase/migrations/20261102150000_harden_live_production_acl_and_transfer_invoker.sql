@@ -9,7 +9,6 @@
 -- auth.uid(), workspace membership, condominium-management permission and
 -- financial closure invariants before mutating transfer/member state.
 
-BEGIN;
 
 -- Remove current MAINTAIN privileges from all existing public relations,
 -- including tables, partitioned tables, views and materialized views.
@@ -87,11 +86,9 @@ BEGIN
      OR NOT has_function_privilege('service_role', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'APP-14: intended private transfer EXECUTE grants are missing';
   END IF;
-  IF has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE')
-     OR has_function_privilege('public', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'APP-14: private transfer implementation is executable by PUBLIC or anon';
+  IF has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'APP-14: private transfer implementation is executable by anon (including any inherited PUBLIC grant)';
   END IF;
 END;
 $verification$;
 
-COMMIT;
