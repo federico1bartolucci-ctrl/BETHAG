@@ -33,6 +33,9 @@ jobs:
         run: npm run test:communication-guards
 
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: npm run build
 
       - name: Install Chromium for browser smoke tests
@@ -46,9 +49,10 @@ jobs:
         env:
           BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
           PREVIEW_PID=$!
@@ -59,6 +63,8 @@ jobs:
           done
           curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-preview.log; exit 1; }
           node scripts/test-current-qa-browser-workflows.mjs
+          node scripts/test-current-qa-navigation.mjs
+          node scripts/test-browser-current-qa-auth.mjs
 
   postgres-bootstrap:
     runs-on: ubuntu-latest
