@@ -4087,6 +4087,7 @@ function App() {
     if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
     if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
     try {
+      backendMutationRevision.current += 1;
       let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
       if (supabaseConfigured && supabase) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -4102,6 +4103,7 @@ function App() {
           archiveReason: persisted.archive_reason,
         };
       }
+      backendMutationRevision.current += 1;
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
     } catch (error) {
@@ -4114,6 +4116,7 @@ function App() {
     if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
     try {
+      backendMutationRevision.current += 1;
       if (supabaseConfigured && supabase) {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError) throw userError;
@@ -4123,6 +4126,7 @@ function App() {
         await restoreCondominiumBackend(workspaceId, item.id);
       }
       const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
+      backendMutationRevision.current += 1;
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
@@ -6470,6 +6474,8 @@ function App() {
 
 
   const backendHydrated = useRef(false);
+  // Prevent an older hydration request from overwriting a newer lifecycle mutation.
+  const backendMutationRevision = useRef(0);
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
@@ -6568,6 +6574,7 @@ function App() {
 
     let cancelled = false;
     const refreshBackendState = async () => {
+      const revisionAtStart = backendMutationRevision.current;
       try {
         const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
           .from("workspaces")
@@ -6581,7 +6588,7 @@ function App() {
         }
 
         const backend = await loadBackendState(profile.workspaceId);
-        if (cancelled) return;
+        if (cancelled || revisionAtStart !== backendMutationRevision.current) return;
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
