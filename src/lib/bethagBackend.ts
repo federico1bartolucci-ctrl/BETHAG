@@ -1331,7 +1331,10 @@ export async function saveCondominium(
 ) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  return enqueueBackendSync(async () => {
+  // Explicit condominium saves must not wait behind a full-workspace background sync.
+  // The RPC is transactional and owns the condominium row; related module sync
+  // continues through the serialized queue independently.
+  {
     // Il workspace salvato nello stato React può essere obsoleto dopo un
     // refresh/login. Risolviamo sempre quello effettivamente associato alla
     // sessione autenticata prima di inviare la modifica al server.
@@ -1424,7 +1427,7 @@ export async function saveCondominium(
     }
 
     return data as string;
-  });
+  }
 }
 
 export async function archiveCondominium(workspaceId: string, legacyId: number, reason?: string | null) {
