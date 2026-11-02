@@ -4031,7 +4031,7 @@ function App() {
   const restoreCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
-    const restored = { ...item, archivedAt: undefined, archivedBy: undefined };
+    const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
     try {
       if (supabaseConfigured && supabase && profile.workspaceId) {
         await saveCondominiumBackend(profile.workspaceId, restored);
