@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
+import { spawnSync } from "node:child_process";
 
 const url = "https://jhuyhlzzydcgghrzeexn.supabase.co";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -482,6 +483,17 @@ console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuy
 if (results.length !== 2 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
 if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
 if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
+
+// Expand the same authenticated QA run to the independent RPC acceptance
+// suites. Both scripts use only the approved QA project and clean up their
+// temporary fixtures in finally blocks.
+for (const script of ["scripts/test-current-qa-app08-11.mjs", "scripts/test-current-qa-app12.mjs"]) {
+  console.log("BETHAG_QA_EXTENDED_SUITE_START", script);
+  const child = spawnSync(process.execPath, [script], { stdio: "inherit", env: process.env });
+  if (child.error) throw child.error;
+  if (child.status !== 0) throw new Error("Extended QA suite failed: " + script + " (exit " + child.status + ")");
+  console.log("BETHAG_QA_EXTENDED_SUITE_PASS", script);
+}
 
 // Re-run marker: strict-mode heading selector uses the unique h1 after save.
 
