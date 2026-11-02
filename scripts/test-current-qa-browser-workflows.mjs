@@ -554,7 +554,14 @@ try {
   // The UI shell hydrated its member list before this isolated test fixture
   // was inserted. Request the same authoritative refresh used by successful
   // transfer flows and wait until the newly inserted current owner is visible.
-  const ownerRefreshResponse = adminPage.waitForResponse(async (response) => {
+  // Reload after the service-role fixture insert so the authenticated browser
+  // hydrates the authoritative owner row during normal startup. The refresh
+  // event is reserved for testing app mutations, not out-of-band fixture writes.
+  await adminPage.reload({ waitUntil: "domcontentloaded" });
+  await adminPage.getByRole("heading", { name: "Homepage", exact: true }).waitFor({ timeout: 20000 });
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
+  await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
+  const ownerHydrationResponse = adminPage.waitForResponse(async (response) => {
     const requestUrl = new URL(response.url());
     if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
     const rows = await response.json().catch(() => []);
@@ -564,13 +571,7 @@ try {
       row.condominium_id === created.id
     );
   }, { timeout: 20000 });
-  await adminPage.evaluate(() => window.dispatchEvent(new Event("bethag-backend-refresh")));
-  const ownerRefreshResult = await ownerRefreshResponse;
-  console.log("APP08_OWNER_REFRESH_RESPONSE", JSON.stringify({
-    status: ownerRefreshResult.status(),
-    url: ownerRefreshResult.url(),
-    matchingOwnerReturned: true
-  }));
+  await ownerHydrationResponse;
   await adminPage.getByText(marker + "_CEDENTE_UI", { exact: true }).waitFor({ timeout: 15000 });
   await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
   await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
