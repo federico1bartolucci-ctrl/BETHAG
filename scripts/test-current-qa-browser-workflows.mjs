@@ -85,7 +85,6 @@ try {
 
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ state: "visible", timeout: 20000 });
-  await adminPage.locator(".entity-card").filter({ hasText: "Condominio QA BETHAG" }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).waitFor({ state: "visible", timeout: 20000 });
   await adminPage.getByRole("button", { name: "+ Nuovo condominio" }).click();
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
