@@ -35,6 +35,18 @@ function field(page, label) {
   return page.locator(".modal .field > label").filter({ hasText: label }).first().locator("xpath=..").locator("input, textarea").first();
 }
 
+async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    last = await loadRow();
+    if (last.error) throw last.error;
+    if (predicate(last.data)) return last.data;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null));
+}
+
 async function cleanupFixtures() {
   const condos = await cleanup.from("condominiums").select("id").in("name", [condoName, editedCondoName]);
   if (condos.error) throw condos.error;
@@ -110,19 +122,22 @@ try {
   await adminPage.locator(".nav-item").filter({ hasText: "Archivio" }).first().click();
   const archiveCard = adminPage.locator(".card").filter({ hasText: editedCondoName });
   await archiveCard.waitFor({ timeout: 15000 });
-  const archived = await cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
-  assert.ifError(archived.error);
-  assert.ok(archived.data.archived_at, "Condominium archive timestamp was not persisted; row=" + JSON.stringify(archived.data));
-  assert.ok(archived.data.archived_by, "Condominium archive actor was not persisted");
-  assert.equal(Date.parse(archived.data.data.archivedAt), Date.parse(archived.data.archived_at), "JSON and structured archive timestamps diverged");
+  const archived = await waitForDbRow(
+    () => cleanup.from("condominiums").select("id,archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single(),
+    row => Boolean(row?.archived_at && row?.archived_by),
+    "Condominium archive persistence"
+  );
+  assert.ok(archived.archived_at, "Condominium archive timestamp was not persisted");
+  assert.ok(archived.archived_by, "Condominium archive actor was not persisted");
+  assert.equal(Date.parse(archived.data.archivedAt), Date.parse(archived.archived_at), "JSON and structured archive timestamps diverged");
   await archiveCard.getByRole("button", { name: "Ripristina" }).click();
   await archiveCard.waitFor({ state: "detached", timeout: 15000 });
-  const restored = await cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single();
-  assert.ifError(restored.error);
-  assert.equal(restored.data.archived_at, null);
-  assert.equal(restored.data.archived_by, null);
-  assert.equal(restored.data.archive_reason, null);
-  assert.equal(restored.data.data.archivedAt, undefined);
+  const restored = await waitForDbRow(
+    () => cleanup.from("condominiums").select("archived_at,archived_by,archive_reason,data").eq("id", created.data.id).single(),
+    row => row?.archived_at === null && row?.archived_by === null && row?.archive_reason === null,
+    "Condominium restore persistence"
+  );
+  assert.equal(restored.data.archivedAt, undefined);
   await adminPage.reload({ waitUntil: "networkidle" });
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
