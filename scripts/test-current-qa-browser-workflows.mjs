@@ -59,7 +59,8 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
-  adminPage.on("dialog", d => d.accept());
+  const dialogs = [];
+  adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
 
   await adminPage.locator(".nav-item").filter({ hasText: "Condomini" }).first().click();
@@ -74,9 +75,13 @@ try {
   await field(adminPage, "Autorimesse / box").fill("1");
   await field(adminPage, "Cantine").fill("1");
   await field(adminPage, "Posti auto").fill("1");
+  assert.equal(await field(adminPage, "Nome del condominio *").inputValue(), condoName, "Condominium name field was not filled");
+  assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
+  assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
   const condoCard = adminPage.locator(".entity-card").filter({ hasText: condoName });
-  await condoCard.waitFor({ timeout: 20000 });
+  try { await condoCard.waitFor({ timeout: 20000 }); }
+  catch (e) { const visible = (await adminPage.locator("body").innerText()).slice(0, 3500); throw new Error("Condominium UI save did not render the card. Dialogs=" + JSON.stringify(dialogs) + " Visible=" + visible + " Cause=" + e.message); }
 
   const created = await cleanup.from("condominiums").select("id").eq("name", condoName).single();
   assert.ifError(created.error);
