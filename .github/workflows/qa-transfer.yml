@@ -7,6 +7,10 @@ on:
       - "scripts/test-current-qa-transfer.mjs"
       - ".github/workflows/qa-transfer.yml"
   workflow_dispatch:
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
 jobs:
   transfer:
     runs-on: ubuntu-latest
