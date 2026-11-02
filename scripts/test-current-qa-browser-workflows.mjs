@@ -637,7 +637,28 @@ try {
   const outgoingAfterClosure = await cleanup.from("condominium_members").select("active,data").eq("id", accountingOutgoingMemberId).single();
   assert.ifError(outgoingAfterClosure.error);
   assert.equal(outgoingAfterClosure.data.active, false);
-  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive"] });
+
+  // Verify the owner list is refreshed from the server when returning to the
+  // condominium registry after confirmation/closure, without a hard reload.
+  const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
+    const requestUrl = new URL(response.url());
+    if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
+    const rows = await response.json().catch(() => []);
+    return Array.isArray(rows) && rows.some(row =>
+      String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
+    );
+  }, { timeout: 20000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+  await incomingOwnerRefresh;
+  const refreshedCondominiumCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).first();
+  await refreshedCondominiumCard.getByRole("button", { name: "Dettagli", exact: true }).click();
+  await adminPage.getByRole("heading", { name: editedCondoName, exact: true }).waitFor({ timeout: 10000 });
+  const refreshedUnitCard = adminPage.locator(".request-card").filter({ hasText: "Unità " + transferUnit.data.unit_code }).first();
+  await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
+  assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
+
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
