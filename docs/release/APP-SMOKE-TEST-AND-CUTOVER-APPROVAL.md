@@ -166,3 +166,12 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - The QA resident fixture now includes the `comunicazioni` portal permission. This is test-fixture configuration only.
 - **Email provider delivery remains NOT TESTED:** no email was sent and no delivery provider was invoked. This evidence covers only in-portal publication visibility, not outbound email delivery or recipient delivery records.
 - Full APP-12 remains NOT RUN in the formal checklist until its complete acceptance criteria are met.
+
+## 11. Authenticated member-transfer QA acceptance — 2026-11-02
+
+- Workflow [run 41384782912](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41384782912), commit `bd2473f808101b9595e007209a0024801ed69a7f` — **PASS** on the approved QA project using real administrator and resident Auth sessions.
+- **APP-08 partial — PASS:** transfer preview and confirmation succeeded; the authorized administrator closed a transfer with no open accounting positions.
+- **APP-09 partial — PASS:** a €90 unpaid installment prevented transfer closure; transfer status remained `Confermato` and the outgoing member remained active with `In chiusura` status.
+- **APP-10/11 partial — PASS:** a resident's attempt to close the transfer was rejected; after authorized closure, the outgoing member became inactive/archived and the incoming owner remained active/current.
+- **Cleanup — PASS:** all temporary condominiums, units, members, transfers, and installments were deleted. A follow-up QA query returned zero rows for each test marker.
+- Cross-workspace and unauthenticated closure denial remain separate acceptance items; this run does not complete APP-08–APP-11 in the formal checklist. All APP-01–APP-15 checklist entries remain NOT RUN pending full UI acceptance.
