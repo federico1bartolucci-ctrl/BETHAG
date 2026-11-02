@@ -62,22 +62,37 @@ export async function getWorkspacePlan(preferredWorkspaceId?: string | null): Pr
 export async function loadBackendState(workspaceId: string): Promise<BackendState> {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  // PostgREST applies a default maximum row count (commonly 1,000).
-  // Load every condominium explicitly: otherwise older workspaces with more
-  // than one page silently lose later records on navigation/refresh.
+  // PostgREST caps each response (commonly 1,000 rows). Workspaces can
+  // legitimately exceed that size, so determine the page count and fetch in
+  // bounded parallel batches instead of serially blocking the entire app boot.
+  const condominiumCountResult = await supabase
+    .from("condominiums")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId);
+  if (condominiumCountResult.error) throw condominiumCountResult.error;
+
+  const condominiumPageSize = 1000;
+  const condominiumPageOffsets = Array.from(
+    { length: Math.ceil((condominiumCountResult.count ?? 0) / condominiumPageSize) },
+    (_, index) => index * condominiumPageSize
+  );
   const condominiumRows: any[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase
-      .from("condominiums")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + 999);
-    if (error) throw error;
-    const batch = data ?? [];
-    condominiumRows.push(...batch);
-    if (batch.length < 1000) break;
+  const condominiumPageConcurrency = 6;
+  for (let index = 0; index < condominiumPageOffsets.length; index += condominiumPageConcurrency) {
+    const pageResults = await Promise.all(
+      condominiumPageOffsets.slice(index, index + condominiumPageConcurrency).map(async (offset) => {
+        const { data, error } = await supabase
+          .from("condominiums")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + condominiumPageSize - 1);
+        if (error) throw error;
+        return data ?? [];
+      })
+    );
+    pageResults.forEach((rows) => condominiumRows.push(...rows));
   }
   const condominiums = { data: condominiumRows, error: null };
 
