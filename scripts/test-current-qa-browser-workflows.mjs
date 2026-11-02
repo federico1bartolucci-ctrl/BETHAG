@@ -179,6 +179,7 @@ try {
     return { valid: form?.checkValidity() ?? false, invalid };
   });
   console.log("APP05_FORM_VALIDATION_DEBUG", JSON.stringify(formValidation));
+  assert.equal(formValidation.valid, true, "Edit form must pass native browser validation before submission");
   await editSubmitButton.click();
   await adminPage.waitForTimeout(300);
   const submitEventObserved = await adminPage.evaluate(() => window.__qaEditSubmitObserved === true);
