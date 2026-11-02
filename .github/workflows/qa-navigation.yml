@@ -25,7 +25,13 @@ jobs:
       - name: Start Vite preview
         run: npm run preview -- --host 127.0.0.1 > /tmp/bethag-preview.log 2>&1 &
       - name: Wait for preview
-        run: npx wait-on http://127.0.0.1:4173/BETHAG/
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/BETHAG/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/bethag-preview.log
+          exit 1
       - name: Run role navigation acceptance against QA
         env:
           BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
