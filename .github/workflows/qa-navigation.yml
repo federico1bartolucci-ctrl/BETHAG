@@ -5,6 +5,7 @@ on:
       - ops/qa-secret-validation-20261102
     paths:
       - "scripts/test-current-qa-navigation.mjs"
+      - "scripts/test-current-qa-browser-workflows.mjs"
       - "src/main.tsx"
       - ".github/workflows/qa-navigation.yml"
   workflow_dispatch:
