@@ -5866,39 +5866,108 @@ function App() {
       "Inserisci qui il testo della comunicazione.";
 
     try {
+      // Le nuove comunicazioni devono esistere nel database prima che la
+      // Edge Function possa preparare i destinatari e registrare l'invio.
+      const persistedCommunicationId = communicationId ?? makeId();
+
+      if (!communicationId) {
+        const { data: condominiumRow, error: condominiumError } = await supabase
+          .from("condominiums")
+          .select("id")
+          .eq("workspace_id", profile.workspaceId)
+          .eq("legacy_id", condominiumId)
+          .maybeSingle();
+
+        if (condominiumError) throw condominiumError;
+        if (!condominiumRow?.id) {
+          throw new Error("Il condominio selezionato non è presente nel database. Aggiorna la pagina e riprova.");
+        }
+
+        const { error: insertError } = await supabase
+          .from("communications")
+          .insert({
+            workspace_id: profile.workspaceId,
+            condominium_id: condominiumRow.id,
+            legacy_id: persistedCommunicationId,
+            title: subject,
+            body,
+            published: false,
+            email_status: "In preparazione",
+            data: {
+              id: persistedCommunicationId,
+              title: subject,
+              body,
+              condominiumId,
+              audience,
+              recipientIds: memberIds ?? [],
+              date: localISODate(),
+              status: "Bozza",
+              publishedToPortal: false,
+              deliveryMode: "email",
+              emailStatus: "In preparazione",
+            },
+          });
+
+        if (insertError) throw insertError;
+
+        setCommunicationForm((current) => ({ ...current, id: persistedCommunicationId }));
+        setCommunications((current) => [
+          {
+            id: persistedCommunicationId,
+            title: subject,
+            body,
+            condominiumId,
+            audience,
+            recipientIds: memberIds ?? [],
+            date: localISODate(),
+            status: "Bozza",
+            publishedToPortal: false,
+            deliveryMode: "email",
+            emailStatus: "In preparazione",
+            emailPreparedAt: "",
+          },
+          ...current.filter((item) => item.id !== persistedCommunicationId),
+        ]);
+      }
+
       const { data, error } = await supabase.functions.invoke(
         "bethag-send-email",
         {
           body: {
             workspaceId: profile.workspaceId,
-            communicationId,
-            condominiumId,
-            recipients: uniqueRecipients,
-            subject,
-            body,
-            audience,
+            communicationId: persistedCommunicationId,
           },
         }
       );
 
-      if (error) throw error;
+      if (error) {
+        const context = (error as any)?.context;
+        let detail = "";
+        try {
+          if (context && typeof context.json === "function") {
+            const payload = await context.json();
+            detail = payload?.error ? String(payload.error) : "";
+          }
+        } catch {
+          // Il body può essere già stato consumato dal client Supabase.
+        }
+        throw new Error(detail || error.message || "Invio e-mail non riuscito.");
+      }
       if (!data?.success) {
         throw new Error(data?.error || "Invio e-mail non riuscito.");
       }
 
-      if (communicationId) {
-        setCommunications((current) =>
-          current.map((communication) =>
-            communication.id === communicationId
-              ? {
-                  ...communication,
-                  emailStatus: data.status || "Inviata",
-                  emailPreparedAt: new Date().toISOString(),
-                }
-              : communication
-          )
-        );
-      }
+      setCommunications((current) =>
+        current.map((communication) =>
+          communication.id === persistedCommunicationId
+            ? {
+                ...communication,
+                emailStatus: data.status || "Inviata",
+                emailPreparedAt: new Date().toISOString(),
+              }
+            : communication
+        )
+      );
 
       const sentCount = Number(data.sent ?? data.recipientCount ?? data.recipients ?? 0);
       const failedCount = Number(data.failed ?? 0);
