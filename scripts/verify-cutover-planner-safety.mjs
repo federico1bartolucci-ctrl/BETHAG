@@ -8,7 +8,7 @@ assert.doesNotMatch(
   /supabase migration repair --linked --status/,
   "Planner must not emit executable generic --linked migration repair commands.",
 );
-assert.match(planner, /BLOCKED: generic linked migration-repair commands are unsafe/);
+assert.match(planner, /BLOCKED: no generic migration-repair or production execution commands are emitted/);
 assert.match(planner, /--print-review-checklist/);
 assert.match(planner, /Verified isolated backup restore/);
 assert.match(planner, /PLAN_ONLY_NO_COMMANDS/);
@@ -17,7 +17,7 @@ const blocked = spawnSync(process.execPath, ["scripts/plan-migration-cutover.mjs
   encoding: "utf8",
 });
 assert.equal(blocked.status, 2, "--print-commands must exit blocked.");
-assert.match(blocked.stderr, /BLOCKED: generic linked migration-repair commands are unsafe/);
+assert.match(blocked.stderr, /BLOCKED: no generic migration-repair or production execution commands are emitted/);
 assert.doesNotMatch(blocked.stdout + blocked.stderr, /supabase migration repair --linked --status/);
 
 const checklist = spawnSync(process.execPath, ["scripts/plan-migration-cutover.mjs", "--print-review-checklist"], {
