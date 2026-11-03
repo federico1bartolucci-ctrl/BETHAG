@@ -12,6 +12,10 @@ const postflight = await readFile(join(root, "supabase/rebuild/production-cutove
 const bootstrapTest = await readFile(join(root, "scripts/test-postgres-bootstrap.mjs"), "utf8");
 const runnerTest = await readFile(join(root, "scripts/test-canonical-cutover-runner.mjs"), "utf8");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
+const sha = (text) => {
+  const bytes = Buffer.from(text, "utf8");
+  return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
+};
 assert.equal(manifest.sequence.length, 14, "Superseding cutover must contain exactly fourteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 247 OR ledger_head <> '20261103070901'/, "Preflight must verify the current 247-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
@@ -51,10 +55,6 @@ assert.doesNotMatch(runner, /DELETE\s+FROM\s+supabase_migrations\.schema_migrati
 assert.doesNotMatch(runner, /UPDATE\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner, /DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);
 
-const sha = (text) => {
-  const bytes = Buffer.from(text, "utf8");
-  return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
-};
 const versions = new Set();
 for (const item of manifest.sequence) {
   assert.equal(item.production_status, "PENDING_NOT_APPLIED");
