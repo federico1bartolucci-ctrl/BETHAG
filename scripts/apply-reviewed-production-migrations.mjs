@@ -26,10 +26,10 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
-const expectedHead = { version: "20261022202747", name: "harden_close_member_transfer_search_path" };
-const expectedLedgerCount = 244;
-const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261102.json");
-const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261026.json");
+const expectedHead = { version: "20261103070901", name: "grant_service_role_private_resend_event_rpc" };
+const expectedLedgerCount = 247;
+const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261103.json");
+const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261103.json");
 
 function gitBlobSha(content) {
   const bytes = Buffer.from(content, "utf8");
@@ -110,7 +110,7 @@ async function main() {
     assert.match(filename, /^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/);
     const version = filename.slice(0, 14);
     const name = filename.slice(15, -4);
-    assert.ok(version > expectedHead.version, `Migration ${filename} is not after the frozen Production head.`);
+    assert.ok(!snapshot.migrations.some((row) => row.version === version), `Migration ${filename} is already present in the frozen Production ledger.`);
     assert.equal(item.production_status, "PENDING_NOT_APPLIED");
     const sql = await readFile(join(root, "supabase/migrations", filename), "utf8");
     assert.equal(gitBlobSha(sql), item.git_blob_sha, `SQL content differs from reviewed SHA for ${filename}.`);
@@ -118,11 +118,11 @@ async function main() {
     migrationBodies.push({ filename, version, name, sql });
   }
 
-  console.log("Checking live Production migration ledger against the complete frozen 244-row snapshot...");
+  console.log("Checking live Production migration ledger against the complete frozen 247-row snapshot...");
   const initial = await liveLedger();
   comparePairs(initial, snapshot.migrations, "Live Production ledger vs frozen snapshot");
   assert.deepEqual(initial.at(-1), expectedHead, "Production ledger head is not the frozen expected head.");
-  console.log("PASS: exact 244-row preflight. No history rows will be rewritten or deleted.");
+  console.log("PASS: exact 247-row preflight. No history rows will be rewritten or deleted.");
 
   const tempDir = await mkdtemp(join(tmpdir(), "bethag-cutover-"));
   try {
@@ -132,11 +132,12 @@ async function main() {
       const expectedCount = expectedLedgerCount + index;
       assert.equal(current.length, expectedCount,
         `STOP before ${migration.filename}: expected ${expectedCount} rows, found ${current.length}.`);
-      const expectedPrior = index === 0
-        ? expectedHead
-        : { version: migrationBodies[index - 1].version, name: migrationBodies[index - 1].name };
-      assert.deepEqual(current.at(-1), expectedPrior,
-        `STOP before ${migration.filename}: migration ledger head changed unexpectedly.`);
+      const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
+      const currentHistorical = current.filter((row) => historicalVersions.has(row.version));
+      comparePairs(currentHistorical, snapshot.migrations, `Historical 247-row preservation before ${migration.filename}`);
+      const currentCanonical = current.filter((row) => !historicalVersions.has(row.version));
+      comparePairs(currentCanonical, migrationBodies.slice(0, index).map(({ version, name }) => ({ version, name })),
+        `Previously applied canonical rows before ${migration.filename}`);
       assert.ok(!current.some((row) => row.version === migration.version),
         `STOP: version ${migration.version} is already present; no automatic repair is attempted.`);
 
@@ -157,18 +158,23 @@ async function main() {
       await runPsql(["-f", tempPath]);
       const after = await liveLedger();
       assert.equal(after.length, expectedCount + 1, `Postcondition failed after ${migration.filename}: ledger count.`);
-      assert.deepEqual(after.at(-1), { version: migration.version, name: migration.name },
-        `Postcondition failed after ${migration.filename}: canonical ledger row.`);
-      comparePairs(after.slice(0, expectedLedgerCount), snapshot.migrations,
-        `Historical 244-row preservation after ${migration.filename}`);
+      const afterHistorical = after.filter((row) => historicalVersions.has(row.version));
+      comparePairs(afterHistorical, snapshot.migrations,
+        `Historical 247-row preservation after ${migration.filename}`);
+      const afterCanonical = after.filter((row) => !historicalVersions.has(row.version));
+      comparePairs(afterCanonical, migrationBodies.slice(0, index + 1).map(({ version, name }) => ({ version, name })),
+        `Canonical migration rows after ${migration.filename}`);
       console.log(`PASS: ${migration.version} recorded canonically; historical rows unchanged.`);
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 258, "Final ledger must contain 244 historical + 14 canonical rows.");
-    comparePairs(finalLedger.slice(0, expectedLedgerCount), snapshot.migrations, "Final historical ledger preservation");
-    comparePairs(finalLedger.slice(expectedLedgerCount), migrationBodies.map(({ version, name }) => ({ version, name })),
-      "Final canonical incremental migration sequence");
+    assert.equal(finalLedger.length, 261, "Final ledger must contain 247 historical + 14 canonical rows.");
+    const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
+    comparePairs(finalLedger.filter((row) => historicalVersions.has(row.version)), snapshot.migrations, "Final historical ledger preservation");
+    comparePairs(finalLedger.filter((row) => !historicalVersions.has(row.version)),
+      migrationBodies.map(({ version, name }) => ({ version, name })), "Final canonical incremental migration sequence");
+    const expectedFinal = [...snapshot.migrations, ...migrationBodies.map(({ version, name }) => ({ version, name }))].sort((a, b) => a.version.localeCompare(b.version));
+    comparePairs(finalLedger, expectedFinal, "Final complete ledger set");
     console.log(JSON.stringify({
       status: "CANONICAL_MIGRATION_LEDGER_PASS",
       target: rehearsal ? "isolated-local-postgresql-rehearsal" : "production",
