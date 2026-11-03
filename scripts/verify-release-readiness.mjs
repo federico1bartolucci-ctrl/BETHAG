@@ -27,7 +27,7 @@ if(!freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item=>ex
 if(freeze.live_catalog.supabase_admin_default_maintain_entries!==3) blockers.push("Provider-managed supabase_admin default ACL inventory changed; refresh and review.");
 if(qa.branch_status==="MIGRATIONS_FAILED") blockers.push("QA branch reports MIGRATIONS_FAILED; do not use it as a release/cutover target.");
 if(!freeze.rehearsal_evidence.new_ordered_rehearsal_run) blockers.push("Ordered PostgreSQL 17 rehearsal of baseline + existing head + three Production-forward migrations + fourteen pending increments has not passed.");
-if(process.env.BETHAG_APP_01_15_ACCEPTANCE==="YES"!==true) blockers.push("APP-01–APP-15 authenticated acceptance evidence is not recorded.");
+if(process.env.BETHAG_APP_01_15_ACCEPTANCE!=="YES") blockers.push("APP-01–APP-15 authenticated acceptance evidence is not recorded.");
 if(process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED!=="YES") blockers.push("Live object-by-object ACL/ownership/default-privilege parity has not been attested.");
 if(process.env.BETHAG_CUTOVER_PLAN_APPROVED!=="YES") blockers.push("The 247-row migration tracking cutover plan has not been explicitly approved.");
 if(process.env.BETHAG_QA_EQUIVALENCE_VERIFIED!=="YES") blockers.push("QA migration identities and SQL effects have not been fully reconciled.");
