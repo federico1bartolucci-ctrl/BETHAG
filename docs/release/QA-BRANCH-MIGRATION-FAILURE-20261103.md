@@ -81,3 +81,15 @@ Supabase current branching troubleshooting guidance directs operators to inspect
 4. Do not use `rebase_branch`, `reset_branch`, `delete_branch`, or a manual migration-ledger insert as a shortcut. Those actions could change schema, discard test data, or create a misleading migration history.
 
 **Release gate:** QA remains blocked until the provider status is cleared through a supported, non-destructive procedure and the authenticated APP acceptance suite is rerun against the resulting branch.
+
+## Follow-up authenticated application test — 2026-11-03
+
+GitHub Actions run [41702240346](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41702240346) passed the current QA authenticated browser diagnostic:
+- APP-05 condominium create/edit/archive/restore and physical structure;
+- APP-06 expense/allocation/installment;
+- APP-08/11 transfer preview/confirmation/closure and owner refresh;
+- APP-12 communication publish/withdraw visibility;
+- administrator/collaborator/resident role navigation;
+- real Supabase Auth sign-in and refresh/session persistence for all three roles.
+
+Cleanup was verified, and read-only table counts after the run exactly matched the pre-run snapshot. No fixture residue was detected. The provider branch status nevertheless remains `MIGRATIONS_FAILED`; successful application tests do not clear that provider status.
