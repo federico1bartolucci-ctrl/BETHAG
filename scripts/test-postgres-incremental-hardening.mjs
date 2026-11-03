@@ -5,7 +5,6 @@ import path from "node:path";
 
 const directory = "supabase/migrations";
 const incrementalMigrations = [
-  "20261022202747_harden_close_member_transfer_search_path.sql",
   "20261022210629_restrict_private_function_public_execute.sql",
   "20261022210630_harden_default_privileges_and_private_execute.sql",
   "20261022213544_restrict_close_member_transfer_execute.sql",
