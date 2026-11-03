@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "supabase/recovered-production-ledger/**"
+      - "supabase/replay-candidate/**"
       - "scripts/validate-production-ledger-archive.mjs"
       - ".github/workflows/validate-recovered-ledger.yml"
   push:
