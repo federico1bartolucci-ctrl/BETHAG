@@ -96,17 +96,16 @@ try{
  console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","duplicate incoming co-owner e-mail rejected by database trigger with full rollback","administrator confirmed two incoming co-owners with 60/40 shares","each co-owner retained individual e-mail, fiscal code and phone metadata without duplicated co-owner list in profile data","both incoming co-owners remained active after official closure","outgoing owner archived and transfer closed","€90 unpaid installment blocked closure","closed 2025 source fiscal year created through official closure RPC and reused as a QA-only fixture","€30 member carryover and €45 unit carryover blocked closure","transfer, owner, installment and both carryovers remained unchanged after rejected close"],financial_blocker_case:"PASS",multiple_coowner_case:"PASS"},null,2));
 }finally{
  if(ids.condo){
-  const cleanupResults=await Promise.all([
-   cleanup.from("condominium_member_transfers").delete().eq("condominium_id",ids.condo),
-   cleanup.from("portal_access").delete().eq("condominium_id",ids.condo),
-   cleanup.from("condominium_installments").delete().eq("condominium_id",ids.condo),
-   cleanup.from("condominium_fiscal_carryovers").delete().eq("condominium_id",ids.condo),
-   cleanup.from("condominium_members").delete().eq("condominium_id",ids.condo),
-   cleanup.from("condominium_units").delete().eq("condominium_id",ids.condo),
-   ids.sourceFiscalYear
+  const cleanupResults=[];
+  cleanupResults.push(await cleanup.from("condominium_member_transfers").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await cleanup.from("portal_access").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await cleanup.from("condominium_installments").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await cleanup.from("condominium_fiscal_carryovers").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await cleanup.from("condominium_members").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await cleanup.from("condominium_units").delete().eq("condominium_id",ids.condo));
+  cleanupResults.push(await (ids.sourceFiscalYear
     ? cleanup.from("condominium_fiscal_years").delete().eq("condominium_id",ids.condo).neq("id",ids.sourceFiscalYear)
-    : cleanup.from("condominium_fiscal_years").delete().eq("condominium_id",ids.condo)
-  ]);
+    : cleanup.from("condominium_fiscal_years").delete().eq("condominium_id",ids.condo)));
   const cleanupError=cleanupResults.find(result=>result.error);
   if(cleanupError) throw cleanupError.error;
   const [units,members,transfers,portal,installments,carryovers,years]=await Promise.all([
