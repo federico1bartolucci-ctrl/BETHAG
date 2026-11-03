@@ -1,0 +1,1 @@
+alter table public.condominium_work_progress add column if not exists ledger_entry_id uuid references public.condominium_ledger_entries(id) on delete set null; create index if not exists condominium_work_progress_ledger_idx on public.condominium_work_progress(ledger_entry_id);

@@ -1,5 +1,3 @@
--- Require the outgoing record to represent the current owner before confirming a transfer.
--- The confirmation RPC runs in a privileged context, so validate the business role explicitly.
 do $migration$
 declare
   v_definition text;
@@ -15,12 +13,13 @@ begin
   v_definition := pg_get_functiondef('private.confirm_condominium_member_transfer(uuid,uuid,text,text,uuid,date,text,text,jsonb)'::regprocedure);
   if position(v_old in v_definition)=0 then
     if position('OUTGOING_MEMBER_NOT_ACTIVE_OWNER_ON_UNIT' in v_definition)>0 then
+      raise notice 'Owner validation already present';
       return;
     end if;
-    raise exception 'Expected outgoing-member validation fragment not found';
+    raise exception 'Expected outgoing-member validation fragment not found; no change applied';
   end if;
   if length(v_definition)-length(replace(v_definition,v_old,'')) <> length(v_old) then
-    raise exception 'Expected validation fragment is not unique';
+    raise exception 'Expected validation fragment is not unique; no change applied';
   end if;
   execute replace(v_definition,v_old,v_new);
 end
