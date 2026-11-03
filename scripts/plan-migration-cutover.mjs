@@ -1,109 +1,127 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
-const migrationsDirectory = "supabase/migrations";
-const migrationFiles = (await readdir(migrationsDirectory))
+const root = "supabase/rebuild";
+const [production, qa, reconciliation, freeze] = await Promise.all([
+  readFile(root + "/production-ledger-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/qa-ledger-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/migration-history-reconciliation-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/production-migration-cutover-freeze-20261103.json", "utf8").then(JSON.parse),
+]);
+
+const migrationFiles = (await readdir("supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
-  .sort();
-const expectedBaselineFiles = [
+  .sort()
+  .map((file) => ({ file, version: file.slice(0, 14), name: file.slice(15, -4) }));
+
+const baselineFiles = [
   "20261017000001_bethag_baseline_schema.sql",
   "20261017000002_bethag_baseline_indexes_views.sql",
   "20261017000003_bethag_baseline_functions.sql",
   "20261017000004_bethag_baseline_security.sql",
   "20261017000005_bethag_baseline_grants.sql",
 ];
-const baselineFiles = migrationFiles.filter((name) => expectedBaselineFiles.includes(name));
-assert.deepEqual(baselineFiles, expectedBaselineFiles, "Expected the five ordered baseline migrations.");
-const parseVersion = (name) => {
-  const match = /^(\d{14})_[a-z0-9][a-z0-9_-]*\.sql$/.exec(name);
-  assert.ok(match, `Invalid migration filename: ${name}`);
-  return match[1];
-};
-const allVersions = migrationFiles.map(parseVersion);
-assert.equal(new Set(allVersions).size, allVersions.length, "Duplicate migration version.");
-const baselineVersions = baselineFiles.map(parseVersion);
-const incrementalFiles = migrationFiles.filter((name) => !expectedBaselineFiles.includes(name));
-assert.ok(incrementalFiles.every((name) => parseVersion(name) > baselineVersions.at(-1)), "Incremental migrations must follow the baseline.");
+const existingCanonicalHead = { version: "20261022202747", name: "harden_close_member_transfer_search_path" };
+const expectedForward = [
+  { version: "20261102151610", name: "harden_live_production_acl_and_transfer_invoker" },
+  { version: "20261102200855", name: "restore_secure_communication_recipient_rpc_execute" },
+  { version: "20261103070901", name: "grant_service_role_private_resend_event_rpc" },
+];
+const exact = (ledger, item) => ledger.migrations.some((row) => row.version === item.version && row.name === item.name);
+const productionPairs = new Set(production.migrations.map((row) => row.version + "|" + row.name));
 
-const [production, qa, reconciliation] = await Promise.all([
-  readFile("supabase/rebuild/production-ledger-20261026.json", "utf8").then(JSON.parse),
-  readFile("supabase/rebuild/qa-ledger-20261026.json", "utf8").then(JSON.parse),
-  readFile("supabase/rebuild/migration-history-reconciliation-20261026.json", "utf8").then(JSON.parse),
-]);
-assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev", "Production project reference mismatch.");
-assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg", "QA project reference mismatch.");
-assert.equal(production.count, production.migrations.length);
-assert.equal(production.count, 244, "Refresh the Production ledger before planning cutover.");
-assert.equal(production.migrations.at(-1).version, "20261022202747", "Refresh the Production head before planning cutover.");
-assert.equal(qa.count, qa.migrations.length);
-assert.equal(reconciliation.production.ledger_count, production.count);
-assert.equal(reconciliation.qa.ledger_count, qa.count);
-assert.equal(reconciliation.clean_baseline_branch.migration_files, 15, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
-assert.equal(incrementalFiles.at(-1), "20261102100200_preserve_server_owned_condominium_archive_state.sql", "Latest incremental migration must preserve condominium archive lifecycle metadata.");
+assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
+assert.equal(production.count, 247);
+assert.equal(production.migrations.length, 247);
+assert.deepEqual(production.latest, { version: "20261103070901", name: "grant_service_role_private_resend_event_rpc" });
+assert.equal(qa.project_ref, "jhuyhlzzydcgghrzeexn");
+assert.equal(qa.count, 47);
+assert.equal(qa.branch_status, "MIGRATIONS_FAILED");
+assert.equal(reconciliation.production.ledger_count, 247);
+assert.equal(reconciliation.qa.ledger_count, 47);
+assert.equal(freeze.live_ledger.rows, 247);
+assert.equal(freeze.live_ledger.head_version, "20261103070901");
+assert.equal(freeze.sequence.length, 14);
+assert.equal(migrationFiles.length, 20);
+assert.deepEqual(migrationFiles.slice(0, 5).map((row) => row.file), baselineFiles);
+assert.ok(exact(production, existingCanonicalHead), "The prior canonical head must already be present in Production.");
+assert.ok(expectedForward.every((row) => exact(production, row)), "All three later Production-forward migrations must be preserved exactly.");
+assert.deepEqual(production.migrations.slice(-3), expectedForward, "Production's last three forward migrations differ from the captured approved evidence.");
 
-const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
-const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
-const productionVersionOnly = canonical.filter((file) => production.migrations.some((m) => m.version === file.version));
-const qaExact = canonical.filter((file) => qa.migrations.some((m) => m.version === file.version && m.name === file.name));
-const qaOnly = qa.migrations.filter((m) => !canonical.some((file) => file.version === m.version && file.name === m.name));
-const canonicalNotQa = canonical.filter((file) => !qa.migrations.some((m) => m.version === file.version && m.name === file.name));
+const pending = freeze.sequence.map((item) => ({ version: item.file.slice(0, 14), name: item.file.slice(15, -4), file: item.file }));
+assert.equal(pending.length, 14);
+assert.ok(pending.every((row) => !productionPairs.has(row.version + "|" + row.name)), "A pending canonical migration already exists in Production; reconcile before cutover.");
+assert.ok(pending.every((row) => migrationFiles.some((file) => file.file === row.file)), "A frozen canonical migration file is missing.");
+assert.ok(baselineFiles.every((file) => !production.migrations.some((row) => row.version === file.slice(0, 14))), "Baseline versions must not be inserted into an existing Production ledger.");
+assert.equal(freeze.expected_postflight.ledger_rows, 261);
+assert.equal(freeze.expected_postflight.original_247_rows_unchanged, true);
 
 const report = {
   scope: "READ-ONLY PLAN — no migration tracking or database changes",
-  production_project_ref: production.project_ref,
-  production_ledger_records: production.count,
-  production_latest: production.migrations.at(-1),
-  qa_project_ref: qa.project_ref,
-  qa_ledger_records: qa.count,
-  qa_latest: qa.migrations.at(-1),
-  canonical_baseline_files: baselineFiles,
-  canonical_incremental_files: incrementalFiles,
-  canonical_migration_file_count: canonical.length,
-  clean_branch_exact_version_and_name_matches_production: productionExact.map((file) => file.file),
-  clean_branch_versions_already_registered_in_production: productionVersionOnly.map((file) => file.file),
-  clean_branch_exact_version_and_name_matches_qa: qaExact.map((file) => file.file),
-  qa_ledger_entries_without_exact_canonical_file: qaOnly,
-  canonical_files_not_registered_in_qa: canonicalNotQa.map((file) => file.file),
-  production: "DO NOT MODIFY. The historical ledger is not equivalent to the clean baseline.",
-  canonical_target_ledger: canonical.map((file) => ({ version: file.version, name: file.name })),
-  migration_ledger_alignment_plan: {
-    production: {
-      current_records: production.count,
-      preserve_exact_canonical_head: production.migrations.at(-1),
-      historical_rows_to_preserve_without_rewrite_or_deletion: production.count,
-      baseline_tracking_rows_to_insert_into_existing_production: [],
-      then_apply_only_reviewed_pending_incremental_migrations_in_order: canonical.filter((file) => file.version > production.migrations.at(-1).version).map((file) => ({ version: file.version, name: file.name })),
-      expected_record_count_if_all_pending_increments_are_approved_and_applied: production.count + canonical.filter((file) => file.version > production.migrations.at(-1).version).length,
-      schema_or_data_recreated: false,
-    },
-    qa: {
-      current_records: qa.count,
-      preserve_all_environment_specific_tracking_rows: true,
-      identity_aliases_requiring_source_and_effect_review: [
-        { observed: "20261022230901_revoke_authenticated_maintain", canonical_candidate: "20261023000001_revoke_authenticated_maintain" },
-        { observed: "20261022230908_revoke_default_maintain", canonical_candidate: "20261023000002_revoke_default_maintain" },
-        { observed: "20261023011431_revoke_service_role_maintain_qa_test", canonical_candidate: "20261023000003_revoke_service_role_maintain" },
-        { observed: "20261023011435_define_application_default_table_privileges_qa", canonical_candidate: "20261023000004_application_default_table_privileges" }
-      ],
-      qa_only_records_to_preserve_until_individually_reconciled: [
-        "20261023010544_qa_test_revoke_authenticated_maintain_20261023",
-        "20261023010548_qa_test_revoke_default_maintain_20261023"
-      ],
-      do_not_rewrite_or_delete_migration_ledger_rows: true,
-    },
-    rule: "Never re-run baseline migrations on existing Production, never delete/rewrite historical migration rows, and never mark an unverified effect applied. Reconcile QA identity aliases by source/effect evidence while preserving QA history; then apply only reviewed pending incremental migrations to Production after the approved cutover.",
+  production: {
+    project_ref: production.project_ref,
+    historical_ledger_rows_to_preserve: production.count,
+    current_sorted_head: production.latest,
+    existing_canonical_head: existingCanonicalHead,
+    later_forward_migrations_already_applied: expectedForward,
+    canonical_baseline_files_not_to_insert: baselineFiles,
+    pending_canonical_incrementals: pending,
+    pending_count: pending.length,
+    expected_ledger_rows_after_approved_tracking: 261,
+    historical_rows_to_rewrite_or_delete: 0,
   },
-  next_gate: "Verified isolated backup restore OR explicit named written acceptance of the documented physical-restore risk, fresh live ledger recapture, baseline/catalog parity, QA variant SQL proof, application smoke tests, and approved cutover are prerequisites before any remote ledger/schema change.",
-  ledger_safety: "Preserve all 244 Production ledger rows. Never insert the five clean-bootstrap baseline rows into existing Production, never delete/rewrite historical Production or QA rows, and never mark unverified effects applied.",
+  qa: {
+    project_ref: qa.project_ref,
+    ledger_rows: qa.count,
+    latest: qa.latest,
+    branch_status: qa.branch_status,
+    action: "Do not use this branch as a cutover target until MIGRATIONS_FAILED is explained and its schema/data/ledger reconciled.",
+  },
+  forensic_history: {
+    recovered_production_payloads: 247,
+    archive_integrity: "247/247 payloads match database-derived MD5 and character-count manifest",
+    clean_replay: "BLOCKED — first recorded migration requiring public.portal_access fails because no preceding ledger payload creates that live table",
+    untracked_schema_evidence: "13 live public tables have no matching CREATE TABLE statement in the 247-row ledger; archived_at exists in Production but no ADD COLUMN is recorded",
+    decision: "Do not replay the recovered 247 historical SQL files or rewrite Production history. Retain them as immutable evidence.",
+  },
+  live_security_posture: {
+    authenticated_maintain_relations: 0,
+    service_role_maintain_relations: 0,
+    postgres_default_maintain_entries: 0,
+    supabase_admin_default_maintain_entries: 3,
+    public_execute_targets: freeze.live_catalog.public_execute_targets,
+    transfer_wrapper_security_definer: false,
+    service_role_private_schema_usage: true,
+    service_role_private_transfer_execute: true,
+    workspace_members_data_column_present: false,
+    save_condominium_archive_state_preserved: false,
+  },
+  execution_plan: [
+    "Refresh and compare all 247 Production version/name pairs immediately before any approved operation.",
+    "Do not replay the 247 historical payloads and do not insert the five clean-baseline versions into existing Production.",
+    "Preserve the three Production-forward migrations already applied after the prior freeze.",
+    "Review the exact interaction of those three forward SQL payloads with the fourteen pending canonical increments; the ordered PostgreSQL 17 rehearsal must pass.",
+    "Apply only the fourteen pending canonical increments through the guarded transactional runner, preserving all 247 original rows; versions may be older than the current sorted ledger head.",
+    "Verify all postconditions and confirm the ledger contains 261 rows with the 247 historical pairs unchanged and the fourteen canonical pairs present.",
+    "Resolve the three Supabase-managed supabase_admin default MAINTAIN entries with provider guidance or a named security-owner exception.",
+    "Complete APP-01–APP-15 evidence and obtain written approval for the exact commit, migration hashes, maintenance window and rollback criteria.",
+  ],
+  gates: {
+    production_backup_restore: "Provider-backed physical restore not performed; preserve the recorded local logical-restore evidence and explicit residual-risk disposition without claiming a provider restore.",
+    supabase_admin_default_acl: "BLOCKED — three provider-managed default MAINTAIN entries remain.",
+    qa_branch: "BLOCKED — current QA branch reports MIGRATIONS_FAILED.",
+    app_acceptance: "APP-01–APP-15 not fully evidenced.",
+    written_cutover_approval: "NOT RECORDED.",
+  },
   action: "PLAN_ONLY_NO_COMMANDS",
 };
+
 console.log(JSON.stringify(report, null, 2));
 
 if (process.argv.includes("--print-commands")) {
   console.error(
-    "BLOCKED: generic linked migration-repair commands are unsafe. " +
-    "The planner intentionally emits no executable repair commands. Verify the exact target, capture its live ledger, " +
-    "complete the restore drill, and obtain independent review before any ledger change.",
+    "BLOCKED: no generic migration-repair or production execution commands are emitted. " +
+    "The recovered history is incomplete; use only the reviewed canonical runner after all release gates and written approval.",
   );
   process.exitCode = 2;
 }
@@ -112,13 +130,14 @@ if (process.argv.includes("--print-review-checklist")) {
   console.log([
     "",
     "REVIEW CHECKLIST — NO COMMANDS EXECUTED",
-    "1. Confirm the exact target project reference in Supabase.",
-    "2. Never run a repair while the CLI may be linked to Production unless the approved cutover explicitly requires it.",
-    "3. Capture the target's live migration ledger immediately before any proposed repair.",
-    "4. Compare every proposed version and SQL body with the canonical source and identify QA-only tests.",
-    "5. Verify a recoverable Production backup by restoring it into an isolated target, or record explicit named written acceptance of the documented physical-restore risk; never claim an unperformed restore.",
-    "6. Obtain independent review of the exact project-specific migration-tracking plan.",
-    "7. After any approved repair, re-read the ledger and prove exact local/remote alignment.",
-    "8. Stop if any target, source mapping, restore evidence, or catalog/ACL parity is uncertain.",
+    "1. Confirm the exact Production project reference and recapture all 247 ledger pairs.",
+    "2. Confirm the three later Production-forward migration rows and their SQL hashes.",
+    "3. Confirm all fourteen canonical versions are absent and all five baseline versions remain excluded.",
+    "4. Complete the ordered PostgreSQL 17 rehearsal against baseline + existing head + three Production forwards + fourteen canonical increments.",
+    "5. Verify the 261-row final ledger set and unchanged 247 historical pairs.",
+    "6. Obtain provider guidance or named security-owner disposition for supabase_admin default ACL MAINTAIN.",
+    "7. Complete APP-01–APP-15 and confirm the QA MIGRATIONS_FAILED condition is resolved.",
+    "8. Obtain written approval naming the exact commit, SQL hashes, maintenance window and rollback criteria.",
+    "9. Stop if any live ledger, catalog, ACL, backup or source mapping differs from the frozen evidence.",
   ].join("\n"));
 }
