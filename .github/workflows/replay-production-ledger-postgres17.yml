@@ -1,0 +1,75 @@
+name: Replay Production ledger candidate on Supabase PostgreSQL 17
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "supabase/replay-candidate/**"
+      - ".github/workflows/replay-production-ledger-postgres17.yml"
+  push:
+    branches: ["recovery/production-ledger-archive-20261103"]
+    paths:
+      - "supabase/replay-candidate/**"
+      - ".github/workflows/replay-production-ledger-postgres17.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-ledger-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay-postgres17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_TELEMETRY_DISABLED: "true"
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Create disposable local Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/bethag-production-ledger-replay
+          cd /tmp/bethag-production-ledger-replay
+          supabase init
+          test -f supabase/config.toml
+          grep -q '^major_version = ' supabase/config.toml
+          sed -i '/^\[db\]/,/^\[/{s/^major_version = .*/major_version = 17/;}' supabase/config.toml
+          grep -A8 '^\[db\]' supabase/config.toml
+
+      - name: Stage exact recovered migration payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=/tmp/bethag-production-ledger-replay/supabase/migrations
+          mkdir -p "$target"
+          cp supabase/replay-candidate/*.sql "$target/"
+          count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
+          test "$count" -eq 247
+          echo "Staged $count ordered Production-ledger SQL payloads."
+
+      - name: Start disposable Supabase stack
+        working-directory: /tmp/bethag-production-ledger-replay
+        run: supabase start
+
+      - name: Replay all 247 migrations on PostgreSQL 17
+        working-directory: /tmp/bethag-production-ledger-replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --local --debug
+
+      - name: Stop disposable Supabase stack
+        if: always()
+        working-directory: /tmp/bethag-production-ledger-replay
+        run: supabase stop --no-backup || true
