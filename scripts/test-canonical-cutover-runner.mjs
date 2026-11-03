@@ -7,6 +7,7 @@
  * the exact 261-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
@@ -33,6 +34,53 @@ function psql(args, input) {
   });
 }
 function q(v) { return "'" + String(v).replaceAll("'", "''") + "'"; }
+
+function gitBlobSha(content) {
+  const bytes = Buffer.from(content, "utf8");
+  return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\0"), bytes])).digest("hex");
+}
+
+const baselineFiles = [
+  "20261017000001_bethag_baseline_schema.sql",
+  "20261017000002_bethag_baseline_indexes_views.sql",
+  "20261017000003_bethag_baseline_functions.sql",
+  "20261017000004_bethag_baseline_security.sql",
+  "20261017000005_bethag_baseline_grants.sql",
+];
+const baselineGrantSql = await readFile("supabase/migrations/" + baselineFiles[4], "utf8");
+const roles = new Set(["anon", "authenticated", "service_role", "authenticator", "supabase_admin"]);
+for (const pattern of [
+  /\bTO\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
+  /\bFOR\s+ROLE\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
+]) {
+  for (const match of baselineGrantSql.matchAll(pattern)) {
+    const role = (match[1] ?? match[2]).replace(/""/g, '"');
+    if (!["PUBLIC", "public", "postgres"].includes(role)) roles.add(role);
+  }
+}
+const bootstrapSql = [
+  "CREATE SCHEMA IF NOT EXISTS auth;",
+  "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);",
+  "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $;",
+  "CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $ SELECT NULL::text $;",
+  "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $ SELECT '{}'::jsonb $;",
+  ...[...roles].sort().filter((role) => role !== "postgres").map((role) => {
+    const identifier = role.replace(/"/g, '""');
+    const literal = role.replace(/'/g, "''");
+    return "DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = " + q(literal) + ") THEN CREATE ROLE \"" + identifier + "\" NOLOGIN; END IF; END $role$;";
+  }),
+].join("\n");
+
+const existingPublicTables = Number(await psql(["-At", "-c",
+  "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';"]));
+if (existingPublicTables === 0) {
+  console.log("Preparing the separate runner database from the five clean baseline migrations...");
+  await psql([], bootstrapSql);
+  for (const filename of baselineFiles) {
+    console.log("Applying baseline " + filename + " to runner-only PostgreSQL database...");
+    await psql(["-f", "supabase/migrations/" + filename]);
+  }
+}
 
 const snapshot = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261103.json", "utf8"));
 assert.equal(snapshot.count, 247);
@@ -63,6 +111,15 @@ const seed = [
 ].join("\n");
 await psql([], seed);
 console.log("Seeded disposable local ledger with the frozen 247 version/name pairs.");
+
+const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
+for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze) {
+  const filename = item.file;
+  const sql = await readFile("supabase/rebuild/production-forward-migrations/" + filename, "utf8");
+  assert.equal(gitBlobSha(sql), item.git_blob_sha, "Production-forward SQL differs from frozen Git blob SHA: " + filename);
+  console.log("Applying exact Production-forward SQL (ledger row already exists in frozen 247-pair snapshot): " + filename);
+  await psql(["-f", "supabase/rebuild/production-forward-migrations/" + filename]);
+}
 
 const runner = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
   env: {...process.env, BETHAG_CUTOVER_REHEARSAL:"YES"},
