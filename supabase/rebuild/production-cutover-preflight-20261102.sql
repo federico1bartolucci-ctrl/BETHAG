@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE PREFLIGHT for the superseding fourteen-migration candidate. Run only immediately before a separately approved window.
+-- READ-ONLY RELEASE PREFLIGHT against the refreshed 2026-11-03 Production snapshot. No schema/data/ledger writes.
 -- This script is intentionally fail-closed. It performs no schema/data/ledger writes.
 DO $preflight$
 DECLARE
@@ -31,6 +31,7 @@ DECLARE
   public_routines text[];
   public_routine_count integer;
   postgres_default_maintain integer;
+  supabase_admin_default_maintain integer;
   wrapper_definer boolean;
   workspace_member_data_exists boolean;
   save_condominium_definition text;
@@ -45,8 +46,8 @@ BEGIN
   SELECT count(*)::integer, max(version) FILTER (WHERE version IS NOT NULL)
     INTO ledger_count, ledger_head
   FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 244 OR ledger_head <> '20261022202747' THEN
-    RAISE EXCEPTION 'STOP: Production migration ledger changed: count %, max version %', ledger_count, ledger_head;
+  IF ledger_count <> 247 OR ledger_head <> '20261103070901' THEN
+    RAISE EXCEPTION 'STOP: Production migration ledger changed: expected 247 rows/head 20261103070901; found count %, max version %', ledger_count, ledger_head;
   END IF;
   IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = ANY(pending_versions)) THEN
     RAISE EXCEPTION 'STOP: one or more proposed canonical versions already exist in Production ledger; reconcile identity/effects before continuing';
@@ -69,11 +70,11 @@ BEGIN
   SELECT count(*)::integer INTO role_maintain FROM pg_class c
   JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'MAINTAIN');
-  IF role_maintain <> 33 THEN RAISE EXCEPTION 'STOP: authenticated MAINTAIN baseline changed: %', role_maintain; END IF;
+  IF role_maintain <> 0 THEN RAISE EXCEPTION 'STOP: authenticated MAINTAIN must already be zero: %', role_maintain; END IF;
   SELECT count(*)::integer INTO role_maintain FROM pg_class c
   JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'MAINTAIN');
-  IF role_maintain <> 47 THEN RAISE EXCEPTION 'STOP: service_role MAINTAIN baseline changed: %', role_maintain; END IF;
+  IF role_maintain <> 0 THEN RAISE EXCEPTION 'STOP: service_role MAINTAIN must already be zero: %', role_maintain; END IF;
 
   IF EXISTS (
     SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -89,7 +90,15 @@ BEGIN
   WHERE r.rolname='postgres' AND (n.nspname='public' OR d.defaclnamespace IS NULL)
     AND d.defaclobjtype='r' AND a.privilege_type='MAINTAIN'
     AND (a.grantee=0 OR pg_get_userbyid(a.grantee) IN ('anon','authenticated','service_role'));
-  IF postgres_default_maintain <> 3 THEN RAISE EXCEPTION 'STOP: expected three postgres-owned public/global MAINTAIN default entries; found %', postgres_default_maintain; END IF;
+  IF postgres_default_maintain <> 0 THEN RAISE EXCEPTION 'STOP: postgres-owned MAINTAIN defaults must already be zero; found %', postgres_default_maintain; END IF;
+
+  SELECT count(*)::integer INTO supabase_admin_default_maintain
+  FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole
+  LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace
+  CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+  WHERE r.rolname='supabase_admin' AND (n.nspname='public' OR d.defaclnamespace IS NULL)
+    AND d.defaclobjtype='r' AND a.privilege_type='MAINTAIN';
+  IF supabase_admin_default_maintain <> 3 THEN RAISE EXCEPTION 'STOP: provider-managed supabase_admin MAINTAIN default ACL inventory changed: %', supabase_admin_default_maintain; END IF;
 
   SELECT array_agg(n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')' ORDER BY n.nspname,p.proname)
     INTO public_routines
@@ -105,15 +114,19 @@ BEGIN
   ) THEN RAISE EXCEPTION 'STOP: PUBLIC EXECUTE routine allowlist changed: %', public_routines; END IF;
 
   SELECT prosecdef INTO wrapper_definer FROM pg_proc WHERE oid='public.close_condominium_member_transfer(uuid)'::regprocedure;
-  IF wrapper_definer IS DISTINCT FROM true THEN RAISE EXCEPTION 'STOP: close-transfer wrapper security state differs from captured Production baseline'; END IF;
+  IF wrapper_definer IS DISTINCT FROM false THEN RAISE EXCEPTION 'STOP: close-transfer wrapper must already be SECURITY INVOKER'; END IF;
   IF has_function_privilege('anon','public.close_condominium_member_transfer(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'STOP: anon can execute the close-transfer wrapper';
   END IF;
-  IF has_schema_privilege('service_role','private','USAGE')
-     OR has_function_privilege('service_role','private.close_condominium_member_transfer(uuid)','EXECUTE') THEN
-    RAISE EXCEPTION 'STOP: service_role private invocation path differs from captured baseline; refresh and review before applying the correction';
+  IF NOT has_schema_privilege('authenticated','private','USAGE')
+     OR NOT has_schema_privilege('service_role','private','USAGE')
+     OR NOT has_function_privilege('authenticated','private.close_condominium_member_transfer(uuid)','EXECUTE')
+     OR NOT has_function_privilege('service_role','private.close_condominium_member_transfer(uuid)','EXECUTE')
+     OR has_schema_privilege('anon','private','USAGE')
+     OR has_function_privilege('anon','private.close_condominium_member_transfer(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'STOP: private transfer invocation ACL differs from refreshed Production baseline';
   END IF;
 
-  RAISE NOTICE 'PREFLIGHT PASS: exact 47-relation inventory, Production ledger 244/head 20261022202747, pending collaborator/archive schema and function changes, ACL/function baseline matches capture. This is not release approval.';
+  RAISE NOTICE 'PREFLIGHT PASS: exact 47-relation inventory, Production ledger 247/head 20261103070901, fourteen pending canonical migrations absent, current MAINTAIN/wrapper/private-invocation ACLs match refreshed capture, provider-managed supabase_admin defaults preserved. This is not release approval.';
 END
 $preflight$;
