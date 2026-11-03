@@ -107,6 +107,9 @@ async function cleanupFixtures() {
   });
   if (authError) throw authError;
 
+  const portalFixtures = await cleanup.from("portal_access").delete().eq("data->>source", marker);
+  if (portalFixtures.error) throw portalFixtures.error;
+
   const comms = await cleanup.from("communications").select("id").like("title", marker + "%");
   if (comms.error) throw comms.error;
   for (const comm of comms.data || []) {
@@ -605,6 +608,21 @@ try {
   assert.ifError(outgoingOwner.error);
   accountingOutgoingMemberId = outgoingOwner.data.id;
 
+  // APP-08 portal-link invariant: an outgoing owner's active resident portal
+  // link must be revoked automatically when the member is archived at closure.
+  const outgoingPortalLink = await cleanup.from("portal_access").insert({
+    workspace_id: created.workspace_id,
+    condominium_id: created.id,
+    name: marker + "_CEDENTE_UI",
+    email: "bethag-ui-outgoing-" + Date.now() + "@example.com",
+    role: "resident",
+    permissions: ["comunicazioni"],
+    active: true,
+    member_id: accountingOutgoingMemberId,
+    data: { source: marker, test_case: "APP-08-outgoing-portal-link" },
+  }).select("id").single();
+  assert.ifError(outgoingPortalLink.error);
+
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 10000 });
   // Entering the condominium registry triggers the application's normal
@@ -674,6 +692,19 @@ try {
   const outgoingAfterClosure = await cleanup.from("condominium_members").select("active,data").eq("id", accountingOutgoingMemberId).single();
   assert.ifError(outgoingAfterClosure.error);
   assert.equal(outgoingAfterClosure.data.active, false);
+  const outgoingPortalAfterClosure = await cleanup.from("portal_access")
+    .select("id,active,member_id")
+    .eq("id", outgoingPortalLink.data.id)
+    .single();
+  assert.ifError(outgoingPortalAfterClosure.error);
+  assert.equal(outgoingPortalAfterClosure.data.active, false, "Outgoing owner's portal link must be deactivated when the transfer closes.");
+  assert.equal(outgoingPortalAfterClosure.data.member_id, accountingOutgoingMemberId);
+  const activeOutgoingLinks = await cleanup.from("portal_access")
+    .select("id")
+    .eq("member_id", accountingOutgoingMemberId)
+    .eq("active", true);
+  assert.ifError(activeOutgoingLinks.error);
+  assert.equal(activeOutgoingLinks.data.length, 0, "Outgoing owner must have no active portal link after closure.");
 
   // Verify the owner list is refreshed from the server when returning to the
   // condominium registry after confirmation/closure, without a hard reload.
@@ -695,7 +726,7 @@ try {
   await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
   assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
 
-  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "outgoing owner portal link automatically deactivated", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
