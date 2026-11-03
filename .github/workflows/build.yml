@@ -102,10 +102,15 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
+      - name: Create a separate empty database for guarded migration-runner rehearsal
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_runner_test
+        env:
+          PGPASSWORD: postgres
+
       - name: Execute all 14 real canonical migrations through the guarded runner on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-runner.mjs
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_runner_test
 
       - name: Verify incremental hardening catalog and ACL postconditions
         run: node scripts/test-postgres-incremental-hardening.mjs
