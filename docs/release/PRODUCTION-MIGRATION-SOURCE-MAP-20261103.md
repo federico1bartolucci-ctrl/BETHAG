@@ -285,3 +285,37 @@ These collisions must be reconciled before running the normal Supabase migration
 - `no-direct-source` and `ambiguous-name` require recovery from the frozen baseline/rebuild artifacts, historical commits, or the original applied SQL evidence.
 - Do not rewrite historical migration rows or blindly rename files to make counts match.
 - This inventory is a forensic map, not approval to deploy. The release remains NO-GO until each Production ledger entry is mapped to authoritative source and the migration directory has unique ordered versions.
+
+
+## 2026-11-03 follow-up: recoverability and live environment checks
+
+A direct read-only query of Production `supabase_migrations.schema_migrations` confirmed:
+
+- 247 total ledger rows.
+- 247 rows have a non-empty `statements` array.
+- 0 rows lack recorded SQL statements.
+- The ledger spans `20260928021707` through `20261103070901`.
+- No rollback payload is stored in the ledger (`rollback` is NULL for all 247 rows).
+
+This establishes that the exact applied SQL statement payloads are recoverable from the live Production migration ledger. It does **not** yet establish that every payload has been exported into Git or that every current source file is byte-for-byte identical. The next safe operation is to export the recorded statement arrays into a separate historical archive outside `supabase/migrations/`, preserving each ledger version and name. That archive must not be treated as deployable migration input.
+
+### Live Production and QA snapshots
+
+Read-only checks performed 2026-11-03:
+
+| Check | Production | QA branch `bethag-launch-qa` |
+|---|---:|---:|
+| Supabase project ref | `tctcgptrsmvgajqjgnev` | `jhuyhlzzydcgghrzeexn` |
+| Migration ledger rows | 247 | 47 |
+| Public columns | 626 | 627 |
+| Public RLS policies | 103 | 103 |
+| Public triggers | 274 | 274 |
+| Security Advisor lints | 0 | 0 |
+
+The sole previously identified public-column difference remains QA-only `workspace_members.data`; it was not removed because its purpose and dependencies have not been established.
+
+Supabase branch metadata reports `bethag-launch-qa` as `MIGRATIONS_FAILED`, despite the branch database accepting read-only SQL and returning its 47-row ledger and current schema inventory. This status must be diagnosed before treating the branch as a valid clean migration target. Do not reset, rebase, or merge it as a shortcut.
+
+Production Performance Advisor currently reports informational unused-index findings and 21 multiple-permissive-policy findings. These are performance review items, not security lints; no index or RLS policy was changed as part of this inspection.
+
+**Safety boundary:** no Production or QA schema/data was modified during these checks. No migration was applied, replayed, renamed, or deleted.
