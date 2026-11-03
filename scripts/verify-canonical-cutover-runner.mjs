@@ -17,7 +17,7 @@ assert.match(preflight, /ledger_count <> 247 OR ledger_head <> '20261103070901'/
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
 assert.match(postflight, /ledger_count <> 261 OR ledger_head <> '20261103070901'/, "Postflight must expect all fourteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
-assert.match(postflight, /\) <> 14 THEN/, "Postflight must verify all fourteen canonical migration records.");
+assert.match(postflight, /canonical_count <> 14 THEN/, "Postflight must verify all fourteen canonical migration records.");
 assert.match(postflight, /ledger_count <> 261 OR ledger_head <> '20261103070901'/, "Postflight must retain the latest Production forward version while adding older canonical versions.");
 assert.equal(manifest.live_ledger.rows, 247);
 assert.equal(manifest.expected_postflight.ledger_rows, 261);
