@@ -185,10 +185,29 @@ assert.deepEqual(baselineAcl.public_function_execute_targets, [
 ], "Five-file baseline PUBLIC EXECUTE ACL differs from the approved four-function exception set.");
 console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAcl }, null, 2));
 
-// Only after the baseline passes independently, apply the reviewed incremental
-// hardening migrations and verify that they preserve the structural inventory.
-for (const filename of incrementalMigrations) {
-  console.log(`Applying incremental migration ${filename} to isolated PostgreSQL...`);
+// Reproduce the current Production chronology around the clean baseline:
+// the historical canonical head is already in Production, three exact forward
+// migrations were applied after the previous freeze, and fourteen canonical
+// increments remain to be tracked/applied. The versions are not all greater
+// than the current live ledger head, so order is explicitly evidence-driven.
+const alreadyAppliedCanonicalHead = incrementalMigrations[0];
+const pendingCanonicalMigrations = incrementalMigrations.slice(1);
+const productionForwardMigrations = [
+  "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
+  "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
+  "20261103070901_grant_service_role_private_resend_event_rpc.sql",
+];
+
+console.log("Applying the existing canonical Production head " + alreadyAppliedCanonicalHead + "...");
+psql(["-f", path.join(directory, alreadyAppliedCanonicalHead)]);
+
+for (const filename of productionForwardMigrations) {
+  console.log("Applying exact Production-forward migration " + filename + " to isolated PostgreSQL...");
+  psql(["-f", path.join("supabase/rebuild/production-forward-migrations", filename)]);
+}
+
+for (const filename of pendingCanonicalMigrations) {
+  console.log("Applying pending canonical migration " + filename + " after the three live Production-forward migrations...");
   psql(["-f", path.join(directory, filename)]);
 }
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
@@ -197,7 +216,7 @@ assert.deepEqual(
   { ...expected, columns: expected.columns + 1 },
   "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
 );
-console.log(JSON.stringify({ incremental_hardening: "PASS", applied_migrations: incrementalMigrations, inventory: finalInventory }, null, 2));
+console.log(JSON.stringify({ incremental_hardening: "PASS", existing_production_head: alreadyAppliedCanonicalHead, production_forward_migrations: productionForwardMigrations, pending_canonical_migrations: pendingCanonicalMigrations, inventory: finalInventory }, null, 2));
 
 const aclChecksSql = `
 WITH target_tables(table_name) AS (
