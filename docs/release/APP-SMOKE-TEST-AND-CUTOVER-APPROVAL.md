@@ -387,7 +387,7 @@ The branch's 47-row migration ledger is not the same as Production's 247-row led
 
 The database's current schema/ledger do **not** clear the provider's `MIGRATIONS_FAILED` branch status. The connected tools do not expose the provider branch deployment action log or a safe retry action. Per Supabase's branching troubleshooting guidance, inspect **Manage Branches → branch → View logs**. Do not reset, delete, recreate, or rebase this QA branch while its fixtures are needed. Do not insert a migration-ledger row manually. Full forensic record: `docs/release/QA-BRANCH-MIGRATION-FAILURE-20261103.md`.
 
-**Disposition remains BLOCKED:** the provider status must be cleared through a supported non-destructive procedure, then authenticated APP acceptance must be rerun. No QA or Production schema or migration-ledger mutation was performed in this investigation. The subsequent authenticated QA run temporarily created synthetic fixtures and removed them; post-run counts matched the pre-run snapshot (section 21).
+**Disposition remains BLOCKED:** the authenticated APP subset has since been rerun and passed as documented in sections 21–22. The provider status must still be cleared through a supported non-destructive procedure before QA can be accepted as a cutover target. No QA or Production schema or migration-ledger mutation was performed in this investigation. The subsequent authenticated QA runs temporarily created synthetic fixtures and removed them; post-run counts/cleanup checks passed.
 
 
 ## 21. Fresh authenticated QA browser acceptance — 2026-11-03
