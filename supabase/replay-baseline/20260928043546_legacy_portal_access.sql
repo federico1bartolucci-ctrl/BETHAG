@@ -37,3 +37,35 @@ using (
   lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
   or user_id = auth.uid()
 );
+
+
+-- The recovered ledger's 20260928043823 payload revokes/grants EXECUTE on
+-- private.can_access_resident_condominium(uuid), although the first recorded
+-- definition appears only in 20260930185324. The function was therefore already
+-- present in the live database before 20260928043823 (likely created outside the
+-- recorded ledger). Seed the earliest recoverable implementation here; the
+-- later historical migration replaces it with its exact recorded definition.
+create or replace function private.can_access_resident_condominium(target_condominium uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $function$
+  select exists (
+    select 1
+    from public.portal_access pa
+    join public.condominium_members cm
+      on cm.condominium_id = pa.condominium_id
+     and cm.active = true
+     and (
+       (pa.user_id is not null and cm.user_id = pa.user_id)
+       or lower(cm.email) = lower(pa.email)
+     )
+    where pa.condominium_id = target_condominium
+      and pa.active = true
+      and pa.role in ('resident','council')
+      and (
+        pa.user_id = (select auth.uid())
+        or lower(pa.email) = lower(coalesce((select auth.jwt() ->> 'email'), ''))
+      )
+  );
+$function$;
