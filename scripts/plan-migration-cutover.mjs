@@ -107,7 +107,7 @@ const report = {
     "Refresh and compare all 247 Production version/name pairs immediately before any approved operation.",
     "Do not replay the 247 historical payloads and do not insert the five clean-baseline versions into existing Production.",
     "Preserve the three Production-forward migrations already applied after the prior freeze.",
-    "The ordered PostgreSQL 17 rehearsal has passed on isolated CI; retain its run evidence and rerun if any migration or hash changes."",
+    "The ordered PostgreSQL 17 rehearsal has passed on isolated CI; retain its run evidence and rerun if any migration or hash changes.",
     "Apply only the fourteen pending canonical increments through the guarded transactional runner, preserving all 247 original rows; versions may be older than the current sorted ledger head.",
     "Verify all postconditions and confirm the ledger contains 261 rows with the 247 historical pairs unchanged and the fourteen canonical pairs present.",
     "Resolve the three Supabase-managed supabase_admin default MAINTAIN entries with provider guidance or a named security-owner exception.",
