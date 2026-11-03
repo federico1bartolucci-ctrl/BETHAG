@@ -1,0 +1,1 @@
+drop trigger if exists trg_validate_unit_relationship on public.condominium_units;
