@@ -233,3 +233,30 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - The tests exercised `private.can_access_workspace_module` and `private.can_manage_workspace_module` together with the actual `condominiums` RLS policy, not only isolated helper return values.
 - **Rollback and preservation — PASS:** after all tests, QA counts remained unchanged: 1 workspace, 63 condominiums, 60 units, 3 workspace memberships, 0 transfers, 14 fiscal years, 14 ledger entries, and 13 installments. No fixture rows or permission edits were retained.
 - **Acceptance boundary:** these results strengthen APP-04 and the collaborator permission regression evidence, but do not replace browser-based acceptance or cover every resident/out-of-workspace mutation path. APP-04 remains PARTIAL until the complete role/action matrix is exercised. APP-05, APP-07–APP-12 remain partial as recorded in the table.
+
+
+## 16. Production/QA schema and security parity review — 2026-11-03
+
+**Targets:** Production `tctcgptrsmvgajqjgnev`; isolated QA `jhuyhlzzydcgghrzeexn`. All comparisons were read-only except the explicitly recorded QA-only function setting correction below. No Production data or schema was changed.
+
+- Public column inventory before the QA correction: Production 626 columns, QA 627. All Production columns existed in QA with identical data types and nullability. The sole QA-only column was `workspace_members.data`; no Production-only public column was found.
+- Public RLS policy inventory: 103 in each environment; definitions, roles, commands, USING and WITH CHECK expressions matched exactly.
+- Public trigger inventory: 274 in each environment; definitions matched exactly.
+- Public constraints: 305 in each environment. The only textual difference was formatting/parentheses in `condominium_work_progress_financial_consistency_chk`; the logical check expression is equivalent.
+- Function inventory: 171 in each environment. The sole difference was `public.close_condominium_member_transfer(uuid)`: Production had `SECURITY INVOKER` with an empty `search_path`, while QA had the same invoker wrapper with `search_path=public`.
+- **QA correction applied:** `ALTER FUNCTION public.close_condominium_member_transfer(uuid) SET search_path = '';` via QA-only migration version `20261103072843` (`qa_align_transfer_wrapper_empty_search_path`). Post-check confirmed the QA wrapper is still SECURITY INVOKER and now has an empty search_path, matching Production. The exact SQL is stored outside the canonical Production migration directory at `supabase/rebuild/qa-only-migrations/20261103072843_qa_align_transfer_wrapper_empty_search_path.sql`.
+- The QA-only `workspace_members.data` column is not removed: its purpose and data dependencies must be established before any schema change. It is currently the only public column-level difference found.
+
+## 17. Migration inventory reconciliation — RELEASE BLOCKER — 2026-11-03
+
+A read-only comparison of Supabase migration ledgers and the current repository inventory found that migration history is not yet safe for a normal CLI cutover:
+
+- Production migration ledger: 247 entries.
+- QA migration ledger: 47 entries (includes its five-file rebuilt baseline and QA-only follow-up corrections).
+- Repository `supabase/migrations`: 206 SQL files.
+- Nine timestamp prefixes are duplicated across multiple migration files. A normal migration runner requires unique ordered versions; these collisions must be resolved against the actual Production ledger and canonical SQL history before any deploy.
+- The migration named `restore_secure_communication_recipient_rpc_execute` is recorded as version `20261102200855` in Production and `20261102200820` in QA, while the repository filename is `20261102210000_restore_secure_communication_recipient_rpc_execute.sql`. Do not apply this file as a new migration until its already-applied SQL and version history have been reconciled explicitly.
+- Production-only `20261103070901_grant_service_role_private_resend_event_rpc` is versioned in the repository and applied in Production; it is a provider-webhook service-role grant and is not required by the QA application's normal authenticated path.
+- The current repository build workflow runs only `npm run build`; it does not bootstrap PostgreSQL, apply the canonical migrations, run the RLS pgTAP file, or validate migration-ledger parity. Prior historical CI runs are evidence for their exact commits, not a substitute for a repeatable current-main migration gate.
+
+**Required before cutover:** reconstruct one authoritative ordered manifest from the Production ledger, map every ledger entry to its exact source SQL or frozen baseline artifact, remove timestamp collisions without rewriting applied history, record intentionally QA-only artifacts separately, and add a clean PostgreSQL 17 bootstrap/migration/ACL/RLS workflow that runs on every PR. No migration was replayed, renamed, deleted, or applied to Production during this review.
