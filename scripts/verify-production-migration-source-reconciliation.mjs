@@ -45,10 +45,10 @@ const ledgerRows = manifestLines.map((line) => {
 const names = new Map();
 const versions = new Set();
 for (const row of ledgerRows) {
-  if (!/^\d{14}$/.test(row.version)) throw new Error(\`Invalid ledger version: \${row.version}\`);
-  if (versions.has(row.version)) throw new Error(\`Duplicate Production ledger version: \${row.version}\`);
+  if (!/^\d{14}$/.test(row.version)) throw new Error(`Invalid ledger version: \${row.version}`);
+  if (versions.has(row.version)) throw new Error(`Duplicate Production ledger version: \${row.version}`);
   versions.add(row.version);
-  if (names.has(row.name)) throw new Error(\`Ambiguous duplicate Production ledger name: \${row.name}\`);
+  if (names.has(row.name)) throw new Error(`Ambiguous duplicate Production ledger name: \${row.name}`);
   names.set(row.name, row);
 }
 
@@ -56,7 +56,7 @@ const sourceFiles = (await readdir(migrationsDir)).filter((file) => file.endsWit
 const prefixGroups = new Map();
 for (const file of sourceFiles) {
   const prefix = file.slice(0, 14);
-  if (!/^\d{14}$/.test(prefix)) throw new Error(\`Invalid migration filename prefix: \${file}\`);
+  if (!/^\d{14}$/.test(prefix)) throw new Error(`Invalid migration filename prefix: \${file}`);
   prefixGroups.set(prefix, [...(prefixGroups.get(prefix) ?? []), file]);
 }
 const collisions = [...prefixGroups.entries()].filter(([, files]) => files.length > 1);
@@ -82,21 +82,21 @@ const archiveSqlFiles = (await readdir(archiveDir)).filter((file) => file.endsWi
 const collisionFileCount = collisions.reduce((sum, [, files]) => sum + files.length, 0);
 
 const failures = [];
-if (ledgerRows.length !== 247) failures.push(\`expected 247 ledger archive rows, found \${ledgerRows.length}\`);
-if (archiveSqlFiles.length !== ledgerRows.length) failures.push(\`archive has \${archiveSqlFiles.length} SQL files for \${ledgerRows.length} manifest rows\`);
-if (sourceFiles.length !== 206) failures.push(\`expected 206 current migration files, found \${sourceFiles.length}\`);
-if (collisions.length !== 9 || collisionFileCount !== 18) failures.push(\`expected nine duplicate timestamp groups containing 18 files; found \${collisions.length} groups / \${collisionFileCount} files\`);
-if (candidates.length !== 110) failures.push(\`expected 110 same-name source candidates, found \${candidates.length}\`);
-if (matched.length !== 70 || mismatch.length !== 40) failures.push(\`expected 70 normalized SQL matches and 40 mismatches; found \${matched.length} / \${mismatch.length}\`);
-if (unmatched.length !== 96) failures.push(\`expected 96 current files without a direct ledger-name candidate, found \${unmatched.length}\`);
+if (ledgerRows.length !== 247) failures.push(`expected 247 ledger archive rows, found \${ledgerRows.length}`);
+if (archiveSqlFiles.length !== ledgerRows.length) failures.push(`archive has \${archiveSqlFiles.length} SQL files for \${ledgerRows.length} manifest rows`);
+if (sourceFiles.length !== 206) failures.push(`expected 206 current migration files, found \${sourceFiles.length}`);
+if (collisions.length !== 9 || collisionFileCount !== 18) failures.push(`expected nine duplicate timestamp groups containing 18 files; found \${collisions.length} groups / \${collisionFileCount} files`);
+if (candidates.length !== 110) failures.push(`expected 110 same-name source candidates, found \${candidates.length}`);
+if (matched.length !== 70 || mismatch.length !== 40) failures.push(`expected 70 normalized SQL matches and 40 mismatches; found \${matched.length} / \${mismatch.length}`);
+if (unmatched.length !== 96) failures.push(`expected 96 current files without a direct ledger-name candidate, found \${unmatched.length}`);
 
-console.log(\`Production ledger/source reconciliation: \${ledgerRows.length} archived ledger versions; \${sourceFiles.length} current migration files.\`);
-console.log(\`Duplicate timestamps: \${collisions.length} groups / \${collisionFileCount} files.\`);
-console.log(\`Same-name source candidates: \${candidates.length}; normalized SQL matches: \${matched.length}; content mismatches: \${mismatch.length}; no direct name candidate: \${unmatched.length}.\`);
+console.log(`Production ledger/source reconciliation: \${ledgerRows.length} archived ledger versions; \${sourceFiles.length} current migration files.`);
+console.log(`Duplicate timestamps: \${collisions.length} groups / \${collisionFileCount} files.`);
+console.log(`Same-name source candidates: \${candidates.length}; normalized SQL matches: \${matched.length}; content mismatches: \${mismatch.length}; no direct name candidate: \${unmatched.length}.`);
 console.log("The recovered ledger archive is authoritative historical evidence; current source files are not replay inputs merely because their names match.");
 
 if (failures.length) {
   console.error("Migration source reconciliation FAILED:");
-  for (const failure of failures) console.error(\`- \${failure}\`);
+  for (const failure of failures) console.error(`- \${failure}`);
   process.exitCode = 1;
 } else console.log("Migration source reconciliation PASS: the documented inventory and all nine timestamp-collision groups are reproducible.");
