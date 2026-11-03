@@ -5,6 +5,7 @@ import path from "node:path";
 const root = process.cwd();
 const archiveDir = path.join(root, "supabase", "recovered-production-ledger");
 const manifestPath = path.join(archiveDir, "MANIFEST.csv");
+const candidateDir = path.join(root, "supabase", "replay-candidate");
 
 function parseCsvLine(line) {
   const fields = [];
@@ -46,6 +47,7 @@ const seenVersions = new Set();
 const seenFiles = new Set();
 const failures = [];
 let verified = 0;
+let previousVersion = "";
 
 for (const [index, line] of lines.slice(1).entries()) {
   const [version, name, file, statementCountText, sqlCharsText, expectedMd5] = parseCsvLine(line);
@@ -56,6 +58,8 @@ for (const [index, line] of lines.slice(1).entries()) {
   }
   if (seenVersions.has(version)) failures.push(`row ${row}: duplicate version ${version}`);
   seenVersions.add(version);
+  if (previousVersion && version <= previousVersion) failures.push(`row ${row}: versions are not strictly increasing (${previousVersion} then ${version})`);
+  previousVersion = version;
   if (seenFiles.has(file)) failures.push(`row ${row}: duplicate archive file ${file}`);
   seenFiles.add(file);
   if (path.basename(file) !== file || !file.startsWith(`${version}_`) || !file.endsWith(".sql")) {
@@ -71,6 +75,9 @@ for (const [index, line] of lines.slice(1).entries()) {
     const sql = await readFile(path.join(archiveDir, file), "utf8");
     const actualMd5 = createHash("md5").update(sql, "utf8").digest("hex");
     const actualChars = [...sql].length;
+    const candidateSql = await readFile(path.join(candidateDir, file), "utf8");
+    const candidateMd5 = createHash("md5").update(candidateSql, "utf8").digest("hex");
+    if (candidateMd5 !== expectedMd5) failures.push(`row ${row}: replay candidate differs from recovered archive for ${file}`);
     if (actualMd5 !== expectedMd5) failures.push(`row ${row}: MD5 mismatch for ${file}`);
     if (actualChars !== Number(sqlCharsText)) failures.push(`row ${row}: SQL character count mismatch for ${file}`);
     if (!sql.trim()) failures.push(`row ${row}: empty SQL payload for ${file}`);
@@ -81,9 +88,11 @@ for (const [index, line] of lines.slice(1).entries()) {
 }
 
 const archiveSqlFiles = (await readdir(archiveDir)).filter((file) => file.endsWith(".sql"));
+const candidateSqlFiles = (await readdir(candidateDir)).filter((file) => file.endsWith(".sql"));
 if (archiveSqlFiles.length !== lines.length - 1) {
   failures.push(`archive contains ${archiveSqlFiles.length} SQL files but manifest contains ${lines.length - 1} rows`);
 }
+if (candidateSqlFiles.length !== lines.length - 1) failures.push(`replay candidate contains ${candidateSqlFiles.length} SQL files but manifest contains ${lines.length - 1} rows`);
 if (lines.length - 1 !== 247) failures.push(`expected 247 manifest rows, found ${lines.length - 1}`);
 
 if (failures.length) {
@@ -91,5 +100,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`Recovered Production migration archive validation PASS: ${verified}/247 SQL payloads match their Production-ledger MD5 and character counts.`);
+  console.log(`Recovered Production migration archive validation PASS: ${verified}/247 archive payloads and replay-candidate copies match Production-ledger MD5 and character counts; versions are unique and ordered.`);
 }
