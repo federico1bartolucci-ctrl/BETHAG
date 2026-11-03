@@ -2,7 +2,7 @@
 
 ## Disposition
 
-**QA branch status remains `MIGRATIONS_FAILED`. Do not reset, delete, recreate, rebase, or merge this branch as a workaround.** The branch contains synthetic acceptance data that must be preserved. No schema, data, migration-ledger, or branch mutation was performed during this investigation.
+**QA branch status remains `MIGRATIONS_FAILED`. Do not reset, delete, recreate, rebase, or merge this branch as a workaround.** The branch contains synthetic acceptance data that must be preserved. No schema, migration-ledger, or branch mutation was performed. A later authenticated browser run temporarily created synthetic fixtures and removed them; post-run counts matched the pre-run snapshot.
 
 - Supabase branch: `bethag-launch-qa`
 - Branch ID: `bb7388ab-3007-4de0-9ff6-437a9c53690e`
