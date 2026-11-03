@@ -210,7 +210,7 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - The table above distinguishes full PASS from PARTIAL evidence. Partial rows must not be represented as full acceptance.
 - **Outbound email — VERIFIED for one controlled recipient (2026-11-03):** BETHAG UI → bethag-send-email → Resend delivered the test message; provider event email.delivered was replayed to bethag-resend-webhook and persisted in Production. Recipient status is delivered; parent communication status is Consegnata. The test recipient was the authorized account only. The temporary test member was removed; delivery audit and communication record were retained. This does not prove bulk delivery, multi-recipient behavior, bounce/complaint handling, or the complete resident notification matrix.
 - **Formal cutover approval remains incomplete:** approver, approved SHA, exact ordered migration list/hash, maintenance window, communications plan, rollback triggers and responsible operator have not been recorded.
-- **Decision: NO-GO for public launch** until the authorized live email-delivery test is recorded and the formal cutover approval fields are completed. The website deployment itself is successful; that is not equivalent to launch approval.
+- **Decision: NO-GO for public launch** until the remaining application acceptance evidence and formal cutover approval fields are completed. The controlled single-recipient email-delivery test is now recorded in section 14. The website deployment itself is successful; that is not equivalent to launch approval.
 
 
 ## 14. Production email delivery and webhook synchronization — 2026-11-03
@@ -222,3 +222,14 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - PR #45 merged after CI run 41594862260 passed. Merge commit: b0796223f1cb0b33017cc9623a0726135beeea00. The merge versions the already-deployed webhook source and already-applied grant migration; no new Production deployment or migration was run by the merge.
 - Live catalog check: the private RPC signature matches the migration; service_role EXECUTE is true, while authenticated and anon EXECUTE are false.
 - Acceptance boundary: one controlled email proves the single-recipient send/delivery/status-sync path. It does not complete multi-recipient, bounce/complaint, portal visibility matrix, or all APP-12 acceptance criteria.
+
+
+## 15. QA workspace isolation and collaborator permission regression — 2026-11-03
+
+**Target:** isolated Supabase QA project `jhuyhlzzydcgghrzeexn`. All fixtures and permission changes were enclosed in explicit transactions and rolled back. Production was not queried or modified.
+
+- **APP-04 additional subset — PASS:** created one synthetic condominium in the authenticated user's own workspace and one in a second synthetic workspace. Under the real PostgreSQL `authenticated` role and administrator JWT claim, own-workspace visibility was 1 and foreign-workspace visibility was 0. Repeated with the collaborator JWT and the legacy array permission `['condomini']`: own visibility was 1 and foreign visibility was 0.
+- **Collaborator boolean permission matrix — PASS:** under the authenticated collaborator role, `{"condomini": false}` returned `can_read=false`, `can_write=false`, and zero visible rows; `{"condomini": true}` returned `can_read=true`, `can_write=true`, and one visible row; an absent key (`{}`) returned false/false and zero visible rows. Legacy array-shaped `['condomini']` returned true/true and one visible row.
+- The tests exercised `private.can_access_workspace_module` and `private.can_manage_workspace_module` together with the actual `condominiums` RLS policy, not only isolated helper return values.
+- **Rollback and preservation — PASS:** after all tests, QA counts remained unchanged: 1 workspace, 63 condominiums, 60 units, 3 workspace memberships, 0 transfers, 14 fiscal years, 14 ledger entries, and 13 installments. No fixture rows or permission edits were retained.
+- **Acceptance boundary:** these results strengthen APP-04 and the collaborator permission regression evidence, but do not replace browser-based acceptance or cover every resident/out-of-workspace mutation path. APP-04 remains PARTIAL until the complete role/action matrix is exercised. APP-05, APP-07–APP-12 remain partial as recorded in the table.
