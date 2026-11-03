@@ -373,3 +373,18 @@ The authenticated QA edit/archive diagnostic was skipped in this migration-focus
 ### Current disposition
 
 The **migration recovery, canonical plan and isolated PostgreSQL 17 rehearsal are technically complete**. Production execution remains **NO-GO** until the three provider-managed default-ACL entries receive Supabase guidance or a named security-owner exception, QA's `MIGRATIONS_FAILED` state is resolved, the remaining APP-01–APP-15 evidence is recorded, the backup/restore risk is formally dispositioned, and the exact cutover receives written approval. No Production SQL, migration-ledger write, merge, deployment or remote replay was performed.
+
+
+## 20. QA branch migration failure — root cause verified (2026-11-03)
+
+The Supabase branch `bethag-launch-qa` (`jhuyhlzzydcgghrzeexn`) still reports `MIGRATIONS_FAILED`. Read-only PostgreSQL logs identify the initial migration-order failure at `2026-11-02T01:48:44.787Z`, SQLSTATE `42P01`: the recovered historical migration `20260928043547_restrict_data_api_table_grants.sql` attempted to revoke privileges from `public.portal_access` before that relation existed in the historical replay order.
+
+The later five-file clean baseline creates `public.portal_access`, which explains why the isolated baseline reconstruction passes. This does not mean the current QA table is missing.
+
+Current read-only checks confirm 47 public tables, 47 migration ledger rows (head `20261103072843`), `workspace_members.data`, `condominiums.archived_at`, the case-insensitive portal identity index, a SECURITY INVOKER transfer wrapper, the service-role private transfer path, and zero effective `MAINTAIN` on public tables for `authenticated` and `service_role`. The QA fixtures remain present (including 63 condominiums, 60 units, 14 ledger entries and 2 portal accesses).
+
+The branch's 47-row migration ledger is not the same as Production's 247-row ledger: it contains the first 16 historical migrations, five baseline migrations, twelve canonical hardening increments and fourteen QA-specific repair/forward entries.
+
+The database's current schema/ledger do **not** clear the provider's `MIGRATIONS_FAILED` branch status. The connected tools do not expose the provider branch deployment action log or a safe retry action. Per Supabase's branching troubleshooting guidance, inspect **Manage Branches → branch → View logs**. Do not reset, delete, recreate, or rebase this QA branch while its fixtures are needed. Do not insert a migration-ledger row manually. Full forensic record: `docs/release/QA-BRANCH-MIGRATION-FAILURE-20261103.md`.
+
+**Disposition remains BLOCKED:** the provider status must be cleared through a supported non-destructive procedure, then authenticated APP acceptance must be rerun. No QA or Production schema/data/ledger mutation was performed in this investigation.
