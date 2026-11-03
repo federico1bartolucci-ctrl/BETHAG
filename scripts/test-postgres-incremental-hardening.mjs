@@ -30,10 +30,7 @@ function psql(args) {
   });
 }
 
-for (const filename of incrementalMigrations) {
-  console.log("Applying " + filename + " to isolated PostgreSQL 17...");
-  psql(["-f", path.join(directory, filename)]);
-}
+console.log("Verifying postconditions after the clean-bootstrap migration replay; this script does not reapply migrations.");
 
 const query = `
 SELECT json_build_object(
@@ -142,7 +139,7 @@ assert.ok(result.closure_helpers.every((fn)=>fn.public_execute===false && fn.aut
 console.log(JSON.stringify({
  incremental_hardening:"PASS",
  postgres:"17",
- applied_incremental_migrations:incrementalMigrations,
+ verified_incremental_migrations:incrementalMigrations,
  assertions:{
   authenticated_crud_preserved:true,
   authenticated_and_service_role_maintain_removed:true,
