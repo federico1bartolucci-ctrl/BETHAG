@@ -10,6 +10,8 @@ const runner = await readFile(join(root, "scripts/apply-reviewed-production-migr
 const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261103.sql"), "utf8");
 const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261103.sql"), "utf8");
 const bootstrapTest = await readFile(join(root, "scripts/test-postgres-bootstrap.mjs"), "utf8");
+const runnerTest = await readFile(join(root, "scripts/test-canonical-cutover-runner.mjs"), "utf8");
+const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
 assert.equal(manifest.sequence.length, 14, "Superseding cutover must contain exactly fourteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 247 OR ledger_head <> '20261103070901'/, "Preflight must verify the current 247-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
@@ -27,7 +29,13 @@ assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.len
 assert.match(bootstrapTest, /20261102151610_harden_live_production_acl_and_transfer_invoker\.sql/);
 assert.match(bootstrapTest, /20261102200855_restore_secure_communication_recipient_rpc_execute\.sql/);
 assert.match(bootstrapTest, /20261103070901_grant_service_role_private_resend_event_rpc\.sql/);
+assert.match(bootstrapTest, /Applying the existing canonical Production head/);
 assert.match(bootstrapTest, /pendingCanonicalMigrations/);
+assert.match(runnerTest, /Applying existing canonical Production head/);
+assert.match(runnerTest, /Applying exact Production-forward SQL/);
+assert.match(runnerTest, /gitBlobSha\(sql\), item\.git_blob_sha/);
+assert.match(workflow, /bethag_runner_test/);
+
 for (const item of manifest.live_ledger.forward_migrations_after_2026_11_02_freeze) {
   const sql = await readFile(join(root, "supabase/rebuild/production-forward-migrations", item.file), "utf8");
   assert.equal(sha(sql), item.git_blob_sha, "Production-forward SQL blob differs from the captured live ledger payload: " + item.file);
