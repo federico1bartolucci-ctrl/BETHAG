@@ -93,3 +93,18 @@ GitHub Actions run [41702240346](https://github.com/federico1bartolucci-ctrl/BET
 - real Supabase Auth sign-in and refresh/session persistence for all three roles.
 
 Cleanup was verified, and read-only table counts after the run exactly matched the pre-run snapshot. No fixture residue was detected. The provider branch status nevertheless remains `MIGRATIONS_FAILED`; successful application tests do not clear that provider status.
+
+
+## Latest RLS and Storage acceptance — 2026-11-03
+
+GitHub Actions [run 41703022476](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703022476) passed:
+- APP-01 administrator Auth session and own-condominium RLS read;
+- APP-02 collaborator permission matrix: explicit true allowed, false/missing denied, accounting read/insert denied;
+- APP-03 resident own portal/condominium scope, accounting empty, document creation denied;
+- APP-04 foreign-workspace read empty and write rejected;
+- APP-13 collaborator upload and resident shared-document byte download;
+- QA fixture cleanup, including temporary storage metadata/object removal.
+
+The same source commit completed [full CI run 41703036489](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703036489) successfully, including the authenticated QA edit/archive browser diagnostic and the PostgreSQL 17 canonical migration rehearsal.
+
+These runs prove the current QA database is operational for the tested flows. They do **not** change the provider branch status, which remains `MIGRATIONS_FAILED`. No QA schema or migration-ledger changes were made; tests used temporary synthetic rows/objects and cleanup was verified.
