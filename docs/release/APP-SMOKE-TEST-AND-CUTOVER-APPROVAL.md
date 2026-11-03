@@ -1,6 +1,6 @@
 # BETHAG — Application smoke-test and cutover approval record
 
-**Status:** DEPLOYED TO GITHUB PAGES — PUBLIC LAUNCH NO-GO PENDING EMAIL DELIVERY TEST AND FORMAL CUTOVER APPROVAL  
+**Status:** DEPLOYED TO GITHUB PAGES — PUBLIC LAUNCH NO-GO PENDING REMAINING ACCEPTANCE EVIDENCE AND FORMAL CUTOVER APPROVAL  
 **Scope:** Run against an isolated test environment only. Do not use Production for negative tests or test data mutations.
 
 ## 1. Environment and build evidence
@@ -60,7 +60,7 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 | APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PARTIAL — authenticated QA transfer workflow 41384782912 rejected unpaid €90 installment without state change; full browser scenario not evidenced |
 | APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PARTIAL — Production negative test returned AUTH_REQUIRED; QA resident denied; outside-workspace transfer case not yet evidenced in latest browser suite |
 | APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PARTIAL — valid closure atomicity and blocked-closure state preservation verified; forced mid-transaction failure injection remains outstanding |
-| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publication/visibility workflow 41384610747 PASS; actual outbound email delivery not tested |
+| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publication/visibility workflow 41384610747 PASS; controlled Production email test delivered to the authorized test recipient and Resend webhook synchronized email.delivered to recipient delivered and communication Consegnata (2026-11-03); full recipient/visibility matrix and end-to-end browser acceptance remain outstanding |
 | APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — authenticated QA workflow 41383673779 verified real byte upload by collaborator and download by authorized resident; cleanup confirmed |
 | APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — Production forward migration 20261102151610 applied; live ACL/default-ACL/function postconditions and Security Advisor verified |
 | APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — authenticated QA browser run 41459214926 passed real sign-in/refresh for all three roles, 12 admin destinations, role restrictions and core UI workflows |
@@ -199,7 +199,7 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 
 **APP-14 Production alignment: PASS.** APP-15 remains PASS for the documented authenticated browser scope in run [41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926).
 
-**Release boundary:** this closes the live ACL/function discrepancy, not the entire launch. APP-12 outbound email provider delivery still requires a real, authorized test recipient; remaining release approval and application acceptance records must be completed before declaring BETHAG ready for public launch.
+**Release boundary:** this closes the live ACL/function discrepancy, not the entire launch. APP-12 outbound email provider delivery is now verified for one controlled Production recipient; full recipient/visibility matrix and remaining application acceptance records must still be completed before declaring BETHAG ready for public launch.
 
 
 ## 13. Current release state and deployed build — 2026-11-02 16:18 UTC
@@ -208,6 +208,17 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - GitHub Pages deployment for that exact commit: **PASS**, workflow [41470120004](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41470120004). The deployment job completed its build, upload and Pages deployment steps successfully.
 - APP-14 is **PASS in Production** as detailed in section 12. APP-15 is **PASS for the authenticated browser scope documented in run [41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926)**.
 - The table above distinguishes full PASS from PARTIAL evidence. Partial rows must not be represented as full acceptance.
-- **Outbound email remains unverified:** no recent `bethag-send-email` invocation was found in the Production unified logs in the last 24 hours. Prior historical provider events do not prove current application delivery.
+- **Outbound email — VERIFIED for one controlled recipient (2026-11-03):** BETHAG UI → bethag-send-email → Resend delivered the test message; provider event email.delivered was replayed to bethag-resend-webhook and persisted in Production. Recipient status is delivered; parent communication status is Consegnata. The test recipient was the authorized account only. The temporary test member was removed; delivery audit and communication record were retained. This does not prove bulk delivery, multi-recipient behavior, bounce/complaint handling, or the complete resident notification matrix.
 - **Formal cutover approval remains incomplete:** approver, approved SHA, exact ordered migration list/hash, maintenance window, communications plan, rollback triggers and responsible operator have not been recorded.
 - **Decision: NO-GO for public launch** until the authorized live email-delivery test is recorded and the formal cutover approval fields are completed. The website deployment itself is successful; that is not equivalent to launch approval.
+
+
+## 14. Production email delivery and webhook synchronization — 2026-11-03
+
+- Controlled test performed through the BETHAG Production UI; one authorized test recipient only. The application reported successful delivery and the message was received.
+- Resend provider event confirmed email.delivered; the Production webhook is enabled for email.sent, email.delivered, email.bounced, and email.complained.
+- The signed webhook event was replayed and processed successfully. Production database evidence confirms recipient status delivered, event type email.delivered, provider event ID retained, and parent communication status Consegnata.
+- Temporary test member removed with dependency checks; no unrelated business data changed. Communication and delivery audit retained for traceability.
+- PR #45 merged after CI run 41594862260 passed. Merge commit: b0796223f1cb0b33017cc9623a0726135beeea00. The merge versions the already-deployed webhook source and already-applied grant migration; no new Production deployment or migration was run by the merge.
+- Live catalog check: the private RPC signature matches the migration; service_role EXECUTE is true, while authenticated and anon EXECUTE are false.
+- Acceptance boundary: one controlled email proves the single-recipient send/delivery/status-sync path. It does not complete multi-recipient, bounce/complaint, portal visibility matrix, or all APP-12 acceptance criteria.
