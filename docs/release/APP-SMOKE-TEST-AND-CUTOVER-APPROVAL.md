@@ -388,3 +388,20 @@ The branch's 47-row migration ledger is not the same as Production's 247-row led
 The database's current schema/ledger do **not** clear the provider's `MIGRATIONS_FAILED` branch status. The connected tools do not expose the provider branch deployment action log or a safe retry action. Per Supabase's branching troubleshooting guidance, inspect **Manage Branches → branch → View logs**. Do not reset, delete, recreate, or rebase this QA branch while its fixtures are needed. Do not insert a migration-ledger row manually. Full forensic record: `docs/release/QA-BRANCH-MIGRATION-FAILURE-20261103.md`.
 
 **Disposition remains BLOCKED:** the provider status must be cleared through a supported non-destructive procedure, then authenticated APP acceptance must be rerun. No QA or Production schema/data/ledger mutation was performed in this investigation.
+
+
+## 21. Fresh authenticated QA browser acceptance — 2026-11-03
+
+GitHub Actions [run 41702240346](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41702240346) completed **SUCCESS** against the existing QA project `jhuyhlzzydcgghrzeexn` after the latest QA schema/ledger snapshot.
+
+- APP-05: condominium creation, physical structure (2 interiors + 3 autonomous appurtenances), edit, archive and restore passed.
+- APP-06: €125.50 expense, 1,000-millesimi allocation and unpaid installment passed.
+- APP-08/11: transfer preview, administrator confirmation, zero-balance closure, outgoing-owner archival and incoming-owner refresh without hard reload passed.
+- APP-12: communication publication, resident visibility, withdrawal and visibility revocation passed.
+- Role navigation passed for administrator (12 destinations), collaborator and resident.
+- Real Supabase Auth sign-in, role-specific landing and refresh/session persistence passed for all three roles.
+- Public-login smoke, build, migration/static/security checks and PostgreSQL 17 canonical rehearsal passed.
+- Browser page errors: zero. Test cleanup was verified. A single `net::ERR_ABORTED` occurred on a request during page teardown and was not an HTTP failure.
+- Post-test fixture counts exactly matched the pre-test snapshot: 1 workspace, 3 workspace members, 63 condominiums, 13 members, 60 units, 14 fiscal years, 14 ledger entries, 13 installments, 4 documents, 4 communications, 2 portal accesses, 0 transfer rows. No test fixtures remained.
+
+This provides fresh functional acceptance evidence for the listed APP cases, but **does not clear the provider-reported `MIGRATIONS_FAILED` status**. That status remains a separate release blocker and still requires the non-destructive provider-side resolution documented in section 20.
