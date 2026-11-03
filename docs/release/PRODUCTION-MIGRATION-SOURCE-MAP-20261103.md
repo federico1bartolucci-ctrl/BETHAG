@@ -338,3 +338,16 @@ A direct comparison of all 21 such candidate files against their corresponding P
 Therefore, the earlier 21/247 figure is a filename/version-prefix match count only. It is **not** a count of verified source matches. Until the original SQL payloads are exported and compared, none of these 12 mismatched files can be assumed to represent the exact migration applied in Production. Do not run them again as migrations or use them as authoritative historical source.
 
 This finding strengthens the reason to archive the actual ledger statement arrays separately from the deployable migration directory.
+
+
+## Recovery execution completed — 2026-11-03
+
+- Exported **all 247/247** Production migration SQL payloads into `supabase/recovered-production-ledger/`.
+- Each archive filename is prefixed with the actual applied Production version and includes a sanitized ledger name.
+- Added `MANIFEST.csv` with all 247 versions, names, archive filenames, statement counts, SQL character counts, and database-computed MD5 values.
+- Verified archived file content lengths against the Production ledger for the first migration, the materially drifted `20260928153242` migration, and the latest Production migration `20261103070901`; all three matched exactly.
+- Verified the manifest contains 247 data rows.
+- The archive is kept outside `supabase/migrations/`; it is not an executable deployment sequence and no archived SQL has been replayed.
+- Work is isolated on branch `recovery/production-ledger-archive-20261103`; Production and QA were not modified.
+
+**Remaining migration work:** perform a complete 247-row source comparison, classify every current `supabase/migrations/` file against the recovered ledger payloads, reconcile the nine duplicate filename timestamps, and construct/test one unique ordered deployable migration directory on a disposable PostgreSQL 17 database. The recovered archive now provides the authoritative SQL evidence needed to do that safely.
