@@ -8,7 +8,7 @@ const resident=createClient(url,key,{auth:{persistSession:false,autoRefreshToken
 const cleanup=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const a=await admin.auth.signInWithPassword({email:"bethag-admin-qa@example.com",password:adminPass});assert.ifError(a.error);
 const r=await resident.auth.signInWithPassword({email:"bethag-condomino-qa@example.com",password:residentPass});assert.ifError(r.error);
-const marker="BETHAG_QA_APP08_11_"+Date.now(), ids={condo:null,unit:null,old:null,transfer:null,openTransfer:null,openMember:null,openInstallment:null,unit2:null,owner2:null,fiscalYear:null,blockedTransfer:null,blockedInstallment:null,memberCarryover:null,unitCarryover:null};
+const marker="BETHAG_QA_APP08_11_"+Date.now(), ids={condo:null,unit:null,old:null,transfer:null,incoming:[],openTransfer:null,openMember:null,openInstallment:null,unit2:null,owner2:null,fiscalYear:null,blockedTransfer:null,blockedInstallment:null,memberCarryover:null,unitCarryover:null};
 const w=await admin.from("workspaces").select("id").eq("name","BETHAG_QA_FIXTURE_20261102").single();assert.ifError(w.error);
 const must= (x,label)=>{assert.ifError(x.error);return x.data};
 try{
@@ -20,8 +20,27 @@ try{
  assert.equal(preview.outgoing_member_id,ids.old);
  const forbidden=await resident.rpc("confirm_condominium_member_transfer",{p_unit_id:ids.unit,p_outgoing_member_id:ids.old,p_incoming_name:"Non autorizzato",p_incoming_email:null,p_incoming_user_id:null,p_transfer_date:"2026-11-03",p_transfer_type:"Vendita",p_notes:marker,p_data:{transfer_scope:"whole_property",incoming_members:[{name:"Non autorizzato",ownership_share:100}]}});
  assert.ok(forbidden.error,"Resident unexpectedly confirmed a transfer");
- const created=must(await admin.rpc("confirm_condominium_member_transfer",{p_unit_id:ids.unit,p_outgoing_member_id:ids.old,p_incoming_name:"Acquirente QA",p_incoming_email:null,p_incoming_user_id:null,p_transfer_date:date1,p_transfer_type:"Vendita",p_notes:marker,p_data:{bethag_qa_marker:marker,transfer_scope:"whole_property",outgoing_member_ids:[ids.old],incoming_members:[{name:"Acquirente QA",ownership_share:100}]}}),"confirm transfer");
+ const emailA="bethag-coowner-a-"+Date.now()+"@example.com";
+ const emailB="bethag-coowner-b-"+Date.now()+"@example.com";
+ const duplicate=await admin.rpc("confirm_condominium_member_transfer",{p_unit_id:ids.unit,p_outgoing_member_id:ids.old,p_incoming_name:"Acquirente QA A",p_incoming_email:emailA,p_incoming_user_id:null,p_transfer_date:date1,p_transfer_type:"Vendita",p_notes:marker,p_data:{bethag_qa_marker:marker,transfer_scope:"whole_property",outgoing_member_ids:[ids.old],incoming_members:[{name:"Acquirente QA A",email:emailA,ownership_share:50},{name:"Acquirente QA B",email:emailA,ownership_share:50}]}});
+ assert.ok(duplicate.error && duplicate.error.message.includes("INCOMING_COOWNER_EMAIL_DUPLICATE"),"Server did not reject duplicate co-owner e-mails.");
+ const ownerAfterDuplicate=must(await admin.from("condominium_members").select("active,data").eq("id",ids.old).single(),"owner after duplicate rejection");
+ assert.equal(ownerAfterDuplicate.active,true);assert.equal(ownerAfterDuplicate.data.position_status,"Attivo");assert.equal(ownerAfterDuplicate.data.current_owner,true);
+ const created=must(await admin.rpc("confirm_condominium_member_transfer",{p_unit_id:ids.unit,p_outgoing_member_id:ids.old,p_incoming_name:"Acquirente QA A",p_incoming_email:emailA,p_incoming_user_id:null,p_transfer_date:date1,p_transfer_type:"Vendita",p_notes:marker,p_data:{bethag_qa_marker:marker,transfer_scope:"whole_property",outgoing_member_ids:[ids.old],incoming_members:[{name:"Acquirente QA A",email:emailA,ownership_share:60,firstName:"Acquirente",lastName:"QA A",fiscalCode:"RSSMRA80A01H501U",phone:"3330000001"},{name:"Acquirente QA B",email:emailB,ownership_share:40,firstName:"Acquirente",lastName:"QA B",fiscalCode:"BNCLGU81A02H501V",phone:"3330000002"}]}}),"confirm transfer");
  ids.transfer=created;
+ const transferData=must(await admin.from("condominium_member_transfers").select("data").eq("id",ids.transfer).single(),"transfer incoming IDs");
+ ids.incoming=Array.isArray(transferData.data.incoming_member_ids)?transferData.data.incoming_member_ids.map(String):[];
+ assert.equal(ids.incoming.length,2,"Two incoming member IDs must be stored on the transfer.");
+ const incomingRows=must(await admin.from("condominium_members").select("id,name,email,active,data").in("id",ids.incoming).eq("unit_id",ids.unit),"incoming co-owners");
+ assert.equal(incomingRows.length,2);
+ const byEmail=new Map(incomingRows.map(row=>[row.email,row]));
+ const incomingA=byEmail.get(emailA),incomingB=byEmail.get(emailB);
+ assert.ok(incomingA&&incomingB,"Both incoming co-owners must be linked to their distinct e-mails.");
+ assert.equal(Number(incomingA.data.ownership_share),60);assert.equal(Number(incomingB.data.ownership_share),40);
+ assert.equal(incomingA.data.firstName,"Acquirente");assert.equal(incomingA.data.lastName,"QA A");assert.equal(incomingA.data.fiscalCode,"RSSMRA80A01H501U");assert.equal(incomingA.data.phone,"3330000001");
+ assert.equal(incomingB.data.firstName,"Acquirente");assert.equal(incomingB.data.lastName,"QA B");assert.equal(incomingB.data.fiscalCode,"BNCLGU81A02H501V");assert.equal(incomingB.data.phone,"3330000002");
+ assert.equal(Object.hasOwn(incomingA.data,"incoming_members"),false);assert.equal(Object.hasOwn(incomingB.data,"incoming_members"),false);
+ assert.equal(incomingRows.every(row=>row.active&&row.data.current_owner===true),true);
  const oldState=must(await admin.from("condominium_members").select("active,data").eq("id",ids.old).single(),"old state");
  assert.equal(oldState.active,true);assert.equal(oldState.data.position_status,"In chiusura");assert.equal(oldState.data.current_owner,false);
  const snapshot=must(await admin.rpc("get_member_transfer_accounting_snapshot",{p_transfer_id:ids.transfer}),"accounting snapshot");
@@ -32,6 +51,8 @@ try{
  assert.equal(closed,true);
  const after=must(await admin.from("condominium_members").select("active,data").eq("id",ids.old).single(),"closed outgoing");
  assert.equal(after.active,false);assert.equal(after.data.position_status,"Archiviato");
+ const incomingAfter=must(await admin.from("condominium_members").select("id,active,data").in("id",ids.incoming),"closed incoming co-owners");
+ assert.equal(incomingAfter.length,2);assert.equal(incomingAfter.every(row=>row.active&&row.data.current_owner===true),true);
  const transferAfter=must(await admin.from("condominium_member_transfers").select("status,closed_by").eq("id",ids.transfer).single(),"closed transfer state");
  assert.equal(transferAfter.status,"Chiuso");
 
@@ -61,7 +82,7 @@ try{
  assert.equal(Number(memberCarryoverState.balance),30);assert.equal(memberCarryoverState.kind,"Debito");assert.equal(memberCarryoverState.status,"Da riportare");
  const unitCarryoverState=must(await cleanup.from("condominium_fiscal_carryovers").select("balance,kind,status").eq("id",ids.unitCarryover).single(),"unit carryover state");
  assert.equal(Number(unitCarryoverState.balance),-45);assert.equal(unitCarryoverState.kind,"Credito");assert.equal(unitCarryoverState.status,"Da riportare");
- console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","administrator confirmed transfer using real RPC","outgoing owner remained active but In chiusura before closure","accounting snapshot readable","closure check returned zero open balance","official close RPC archived outgoing owner and closed transfer","€90 unpaid installment blocked closure","€30 member carryover and €45 unit carryover blocked closure","transfer, owner, installment and both carryovers remained unchanged after rejected close"],financial_blocker_case:"PASS"},null,2));
+ console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","duplicate incoming co-owner e-mail rejected by database trigger with full rollback","administrator confirmed two incoming co-owners with 60/40 shares","each co-owner retained individual e-mail, fiscal code and phone metadata without duplicated co-owner list in profile data","both incoming co-owners remained active after official closure","outgoing owner archived and transfer closed","€90 unpaid installment blocked closure","€30 member carryover and €45 unit carryover blocked closure","transfer, owner, installment and both carryovers remained unchanged after rejected close"],financial_blocker_case:"PASS",multiple_coowner_case:"PASS"},null,2));
 }finally{
  if(ids.blockedTransfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.blockedTransfer);
  if(ids.blockedInstallment) await cleanup.from("condominium_installments").delete().eq("id",ids.blockedInstallment);
@@ -74,6 +95,7 @@ try{
  if(ids.openTransfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.openTransfer);
  if(ids.openInstallment) await cleanup.from("condominium_installments").delete().eq("id",ids.openInstallment);
  if(ids.openMember) await cleanup.from("condominium_members").delete().eq("id",ids.openMember);
+ for(const incomingId of ids.incoming) await cleanup.from("condominium_members").delete().eq("id",incomingId);
  if(ids.old) await cleanup.from("condominium_members").delete().eq("id",ids.old);
  if(ids.unit) await cleanup.from("condominium_units").delete().eq("id",ids.unit);
  if(ids.condo) await cleanup.from("condominiums").delete().eq("id",ids.condo);

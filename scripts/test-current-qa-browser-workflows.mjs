@@ -638,10 +638,20 @@ try {
   await adminPage.locator(".filter-bar label").filter({ hasText: "Condominio" }).locator("select").selectOption(String(created.legacy_id));
   await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Nuovo subentro", exact: true }).waitFor({ timeout: 15000 });
-  await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-02");
-  await adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input").fill(marker + "_ACQUIRENTE_UI");
-  await adminPage.locator("label").filter({ hasText: "Email" }).locator("input").fill("bethag-ui-transfer-" + Date.now() + "@example.com");
+  await adminPage.locator("label").filter({ hasText: "Data rogito / trasferimento" }).locator("input").fill("2026-11-03");
+  const incomingNameA = marker + "_ACQUIRENTE_A_UI";
+  const incomingNameB = marker + "_ACQUIRENTE_B_UI";
+  const incomingEmailA = "bethag-ui-transfer-a-" + Date.now() + "@example.com";
+  const incomingEmailB = "bethag-ui-transfer-b-" + Date.now() + "@example.com";
+  const incomingNames = adminPage.locator("label").filter({ hasText: "Nome e cognome" }).locator("input");
+  const incomingEmails = adminPage.locator("label").filter({ hasText: "Email" }).locator("input");
+  await incomingNames.nth(0).fill(incomingNameA);
+  await incomingEmails.nth(0).fill(incomingEmailA);
+  await adminPage.getByRole("button", { name: "+ Aggiungi comproprietario", exact: true }).click();
+  await incomingNames.nth(1).fill(incomingNameB);
+  await incomingEmails.nth(1).fill(incomingEmailB);
   await adminPage.locator("label").filter({ hasText: "Note" }).locator("textarea").fill(marker);
+  await adminPage.getByText("Totale quote inserite:", { exact: false }).waitFor({ timeout: 5000 });
   const previewButton = adminPage.getByRole("button", { name: "Aggiorna anteprima contabile", exact: true });
   const automaticPreview = adminPage.waitForResponse(response =>
     response.url().includes("/rest/v1/rpc/preview_condominium_member_transfer"),
@@ -669,6 +679,10 @@ try {
     const responseBody = await previewResult.text().catch(() => "");
     throw new Error(`APP-08/11 preview RPC failed: HTTP ${previewResult.status()} ${responseBody.slice(0, 2000)}`);
   }
+  await incomingEmails.nth(1).fill(incomingEmailA);
+  await adminPage.getByRole("button", { name: "Verifica e conferma dati", exact: true }).click();
+  await adminPage.getByRole("alert").filter({ hasText: "Ogni comproprietario deve avere un indirizzo e-mail diverso." }).waitFor({ timeout: 5000 });
+  await incomingEmails.nth(1).fill(incomingEmailB);
   await adminPage.getByRole("button", { name: "Verifica e conferma dati", exact: true }).click();
   await adminPage.getByRole("heading", { name: "Conferma i dati del subentro", exact: true }).waitFor({ timeout: 10000 });
   await adminPage.getByRole("button", { name: "Conferma definitivamente il trasferimento", exact: true }).click();
@@ -678,9 +692,21 @@ try {
     "APP-08/11 UI transfer confirmation"
   );
   accountingTransferId = confirmedTransfer.id;
-  accountingIncomingMemberId = confirmedTransfer.incoming_member_id;
   assert.equal(confirmedTransfer.outgoing_member_id, accountingOutgoingMemberId);
-  const transferCard = adminPage.locator(".row-card").filter({ hasText: marker + "_ACQUIRENTE_UI" });
+  const incomingMemberIds = Array.isArray(confirmedTransfer.data?.incoming_member_ids) ? confirmedTransfer.data.incoming_member_ids.map(String) : [];
+  assert.equal(incomingMemberIds.length, 2, "The transfer must persist both incoming co-owner IDs.");
+  accountingIncomingMemberId = incomingMemberIds[0];
+  const incomingRows = await cleanup.from("condominium_members").select("id,legacy_id,name,email,active,data").in("id", incomingMemberIds).eq("unit_id", transferUnit.data.id);
+  assert.ifError(incomingRows.error);
+  assert.equal(incomingRows.data.length, 2, "Both incoming co-owners must be created.");
+  for (const incomingRow of incomingRows.data) {
+    assert.equal(incomingRow.active, true);
+    assert.equal(incomingRow.data.current_owner, true);
+    assert.equal(Number(incomingRow.data.ownership_share), 50);
+    assert.equal(Object.hasOwn(incomingRow.data, "incoming_members"), false, "Co-owner PII list must not be duplicated into each member profile.");
+  }
+  assert.deepEqual(incomingRows.data.map(row => Number(row.data.ownership_share)).sort((a,b)=>a-b), [50, 50]);
+  const transferCard = adminPage.locator(".row-card").filter({ hasText: incomingNameA });
   await transferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).waitFor({ timeout: 15000 });
   await transferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).click();
   const closedTransfer = await waitForDbRow(
@@ -712,8 +738,8 @@ try {
     const requestUrl = new URL(response.url());
     if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
     const rows = await response.json().catch(() => []);
-    return Array.isArray(rows) && rows.some(row =>
-      String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
+    return Array.isArray(rows) && incomingMemberIds.every(id =>
+      rows.some(row => String(row.id) === id && row.active === true)
     );
   }, { timeout: 20000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
@@ -723,10 +749,11 @@ try {
   await refreshedCondominiumCard.getByRole("button", { name: "Dettagli", exact: true }).click();
   await adminPage.locator(".detail-page-header h1").filter({ hasText: editedCondoName }).waitFor({ timeout: 10000 });
   const refreshedUnitCard = adminPage.locator(".request-card").filter({ hasText: "Unità " + transferUnit.data.unit_code }).first();
-  await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
+  await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + incomingNameA, exact: true }).waitFor({ timeout: 15000 });
+  await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + incomingNameB, exact: true }).waitFor({ timeout: 15000 });
   assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
 
-  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "outgoing owner portal link automatically deactivated", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "duplicate co-owner email rejected", "administrator confirmed two incoming co-owners at 50/50 from UI", "both incoming member IDs and ownership shares persisted", "co-owner payload stripped from each individual member profile", "zero-balance position closed from UI", "outgoing owner archived and inactive", "outgoing owner portal link automatically deactivated", "both incoming co-owners refreshed and visible in current property list after navigation without hard reload"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
