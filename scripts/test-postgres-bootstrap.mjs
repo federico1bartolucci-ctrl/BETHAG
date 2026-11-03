@@ -198,9 +198,6 @@ const productionForwardMigrations = [
   "20261103070901_grant_service_role_private_resend_event_rpc.sql",
 ];
 
-console.log("Applying the existing canonical Production head " + alreadyAppliedCanonicalHead + "...");
-psql(["-f", path.join(directory, alreadyAppliedCanonicalHead)]);
-
 for (const filename of productionForwardMigrations) {
   console.log("Applying exact Production-forward migration " + filename + " to isolated PostgreSQL...");
   psql(["-f", path.join("supabase/rebuild/production-forward-migrations", filename)]);
