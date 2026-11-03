@@ -49,21 +49,21 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 | ID | Area | Test | Expected result | Status |
 |---|---|---|---|---|
-| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PARTIAL — real Auth, RLS landing and refresh passed; complete module workflow pending |
-| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PARTIAL — real Auth, module/RLS boundary and navigation passed; full UI actions pending |
-| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PARTIAL — portal scope and role landing passed; complete portal workflow pending |
+| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PASS — real Auth session, own-condominium RLS read, role landing and refresh/session persistence passed (runs 41703022476 and 41702240346) |
+| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PASS for tested permission matrix — true allowed read; explicit false/missing denied; accounting read/insert denied; staff navigation restricted (run 41703022476) |
+| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PASS — own portal/condominium visible, accounting empty, document creation denied, staff navigation absent (runs 41703022476 and 41702240346) |
 | APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | PASS — authenticated QA read returned no rows and foreign-workspace write was rejected |
-| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PARTIAL — authenticated API persistence passed; browser form and hierarchy UI pending |
-| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PARTIAL — expense, allocation, installment and payment API checks passed; accounting UI pending |
-| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PARTIAL — live QA database guard passed; persistent synthetic closed-year fixture retained |
+| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PASS — browser create/edit, 2 interiors + 3 autonomous appurtenances, archive and restore (run 41702240346) |
+| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PASS — browser expense €125.50, 1,000-millesimi allocation and unpaid installment; collaborator/resident accounting denial verified (runs 41702240346 and 41703022476) |
+| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PASS — closed-year ledger mutation rejected and amount unchanged; persistent QA-only regression fixture retained (run 41459976993) |
 | APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | PARTIAL — authenticated preview/confirm/close RPC passed; browser UI and portal-link workflow pending |
 | APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PARTIAL — unpaid installment blocked closure and preserved owner/transfer/accounting state; additional carryover cases pending |
-| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PASS — anonymous and cross-workspace callers denied; transfer and owner state unchanged |
+| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PASS — anonymous and cross-workspace callers denied; foreign-workspace RLS read/write denied; no side effects (runs 41459164444 and 41703022476) |
 | APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PARTIAL — rejected closure left transfer, both owner states and unpaid installment unchanged; full UI rollback pending |
 | APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publication, recipient prep and queue authorization passed; provider delivery not tested |
-| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — authenticated collaborator upload and resident shared-file download passed; foreign/private access denied |
-| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — QA live catalog and isolated PostgreSQL 17 rehearsal; Production pre-cutover drift is explicitly recorded in §18 and remains a cutover blocker |
-| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — authenticated browser run 41459214926: all three roles sign in and retain session on refresh; 12 admin destinations and collaborator/resident restrictions pass; core UI workflows also pass |
+| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — collaborator upload + metadata, resident shared-file byte download, temporary object/metadata removed (run 41703022476) |
+| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PARTIAL — QA live catalog and isolated PostgreSQL 17 rehearsal pass; Production retains three provider-managed default MAINTAIN entries and four PUBLIC EXECUTE routines, and provider QA branch status remains MIGRATIONS_FAILED |
+| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PARTIAL — 12 administrator destinations, collaborator/resident restrictions and real-auth refresh/session persistence pass (runs 41702240346); explicit sign-out/sign-in cycle and exhaustive core-module regression remain untested |
 
 ## 3. Evidence to attach
 
@@ -405,3 +405,18 @@ GitHub Actions [run 41702240346](https://github.com/federico1bartolucci-ctrl/BET
 - Post-test fixture counts exactly matched the pre-test snapshot: 1 workspace, 3 workspace members, 63 condominiums, 13 members, 60 units, 14 fiscal years, 14 ledger entries, 13 installments, 4 documents, 4 communications, 2 portal accesses, 0 transfer rows. No test fixtures remained.
 
 This provides fresh functional acceptance evidence for the listed APP cases, but **does not clear the provider-reported `MIGRATIONS_FAILED` status**. That status remains a separate release blocker and still requires the non-destructive provider-side resolution documented in section 20.
+
+
+## 22. Fresh authenticated RLS and Storage acceptance — 2026-11-03
+
+GitHub Actions [run 41703022476](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703022476) completed **SUCCESS** against QA project `jhuyhlzzydcgghrzeexn`:
+- APP-01: real administrator Auth session reads its own condominium through RLS.
+- APP-02: collaborator with `condomini=true` reads the permitted module; explicit `false` and missing permission deny reads; accounting read/insert denied.
+- APP-03: resident sees own portal/condominium, accounting remains empty and document creation is denied.
+- APP-04: foreign-workspace read returns no rows and write is rejected.
+- APP-13: collaborator uploads a shared document and resident downloads the actual bytes; temporary metadata and object are removed.
+- QA fixture cleanup passed; no marker ledger rows or test objects remain.
+
+The same commit `89b2e654f969fcb994503a1ccf2e89c1c7607089` also completed full CI [run 41703036489](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703036489): build, public-login smoke, authenticated QA edit/archive workflows, PostgreSQL 17 baseline and 14-migration candidate rehearsal all passed.
+
+The APP table above is now updated with the latest evidence. Remaining partial items are explicit: APP-08 portal-link verification, APP-09 carryover edge cases, APP-11 UI rollback proof, APP-12 provider email delivery, APP-14 live Production/provider ACL disposition, and APP-15 explicit sign-out/sign-in plus exhaustive core-module regression. The provider QA branch status remains `MIGRATIONS_FAILED`; successful RLS/browser runs do not clear that status.
