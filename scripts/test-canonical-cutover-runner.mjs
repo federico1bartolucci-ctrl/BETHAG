@@ -112,6 +112,8 @@ const seed = [
 await psql([], seed);
 console.log("Seeded disposable local ledger with the frozen 247 version/name pairs.");
 
+console.log("Applying existing canonical Production head (already included in frozen 247-row ledger) to clean local schema...");
+await psql(["-f", "supabase/migrations/20261022202747_harden_close_member_transfer_search_path.sql"]);
 const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
 for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze) {
   const filename = item.file;
