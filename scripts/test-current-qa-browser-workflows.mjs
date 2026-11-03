@@ -892,7 +892,7 @@ try {
   // tearing down the authenticated browser contexts. A request aborted only
   // because the test closes its page is teardown noise, not a server failure.
   await adminPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
-  await adminPage.waitForTimeout(1000);
+  await adminPage.waitForTimeout(3000);
   await residentContext.close();
   await adminContext.close();
   assert.deepEqual(pageErrors, []);
@@ -901,7 +901,8 @@ try {
   );
   const abortedMemberSyncs = failedRequests.filter(request =>
     request.error === "net::ERR_ABORTED" &&
-    request.url.includes("/rest/v1/condominium_members") &&
+    (request.url.includes("/rest/v1/condominium_members") ||
+      request.url.includes("/rest/v1/workspace_members")) &&
     request.url.includes("on_conflict=")
   );
   assert.equal(
