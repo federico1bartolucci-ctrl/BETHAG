@@ -20,27 +20,12 @@ create table if not exists public.condominium_creation_intakes (
   constraint condominium_creation_intakes_validation_array check (jsonb_typeof(validation_errors) = 'array'),
   constraint condominium_creation_intakes_warnings_array check (jsonb_typeof(warnings) = 'array')
 );
-
-create index if not exists idx_condominium_creation_intakes_workspace
-  on public.condominium_creation_intakes(workspace_id, created_at desc);
-
-create index if not exists idx_condominium_creation_intakes_status
-  on public.condominium_creation_intakes(workspace_id, status);
-
+create index if not exists idx_condominium_creation_intakes_workspace on public.condominium_creation_intakes(workspace_id, created_at desc);
+create index if not exists idx_condominium_creation_intakes_status on public.condominium_creation_intakes(workspace_id, status);
 alter table public.condominium_creation_intakes enable row level security;
-
 drop policy if exists "authorized users read condominium creation intakes" on public.condominium_creation_intakes;
-create policy "authorized users read condominium creation intakes"
-  on public.condominium_creation_intakes
-  for select to authenticated
-  using (private.can_access_workspace_module(workspace_id, 'condomini'));
-
+create policy "authorized users read condominium creation intakes" on public.condominium_creation_intakes for select to authenticated using (private.can_access_workspace_module(workspace_id, 'condomini'));
 drop policy if exists "managers manage condominium creation intakes" on public.condominium_creation_intakes;
-create policy "managers manage condominium creation intakes"
-  on public.condominium_creation_intakes
-  for all to authenticated
-  using (private.can_manage_workspace_module(workspace_id, 'condomini'))
-  with check (private.can_manage_workspace_module(workspace_id, 'condomini'));
-
+create policy "managers manage condominium creation intakes" on public.condominium_creation_intakes for all to authenticated using (private.can_manage_workspace_module(workspace_id, 'condomini')) with check (private.can_manage_workspace_module(workspace_id, 'condomini'));
 revoke all on public.condominium_creation_intakes from anon;
 grant select, insert, update, delete on public.condominium_creation_intakes to authenticated;

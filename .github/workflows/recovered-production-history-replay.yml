@@ -1,0 +1,46 @@
+name: Recovered Production history PostgreSQL 17 replay
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/recovered-production-ledger/**"
+      - "supabase/config.toml"
+      - "scripts/verify-recovered-production-migrations.mjs"
+      - ".github/workflows/recovered-production-history-replay.yml"
+  push:
+    branches: ["rebuild/canonical-ledger-247-20261103"]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/recovered-production-ledger/**"
+      - "supabase/config.toml"
+      - "scripts/verify-recovered-production-migrations.mjs"
+      - ".github/workflows/recovered-production-history-replay.yml"
+
+jobs:
+  historical-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify the exact 247-file recovered migration directory
+        run: node scripts/verify-recovered-production-migrations.mjs
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start isolated local Supabase PostgreSQL 17 stack
+        run: supabase start -x studio,mailpit,edge-runtime,logflare,vector
+      - name: Replay all 247 recovered Production migrations on a fresh local database
+        run: supabase db reset --local --debug
+      - name: Verify migration ledger count and final database version
+        run: |
+          supabase db query --local --output json "select count(*) as migration_count, min(version) as first_version, max(version) as last_version from supabase_migrations.schema_migrations;"
+      - name: Stop isolated Supabase stack
+        if: always()
+        run: supabase stop --no-backup

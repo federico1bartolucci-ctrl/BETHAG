@@ -1,5 +1,3 @@
--- Keep the login workspace-access RPC invoker-based so authenticated callers are
--- protected by the existing workspace_members RLS policy.
 create or replace function public.get_my_workspace_access()
 returns table(
   workspace_id uuid,

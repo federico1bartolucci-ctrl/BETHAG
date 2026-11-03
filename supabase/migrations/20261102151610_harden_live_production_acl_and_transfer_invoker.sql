@@ -9,7 +9,6 @@
 -- auth.uid(), workspace membership, condominium-management permission and
 -- financial closure invariants before mutating transfer/member state.
 
-
 -- Remove current MAINTAIN privileges from all existing public relations,
 -- including tables, partitioned tables, views and materialized views.
 REVOKE MAINTAIN ON ALL TABLES IN SCHEMA public
@@ -31,7 +30,7 @@ GRANT EXECUTE ON FUNCTION private.close_condominium_member_transfer(uuid)
 REVOKE EXECUTE ON FUNCTION private.close_condominium_member_transfer(uuid)
   FROM PUBLIC, anon;
 
--- Fail the migration transaction if any intended postcondition is not met.
+-- Fail the migration if any intended postcondition is not met.
 DO $verification$
 DECLARE
   v_maintain_count integer;
@@ -91,4 +90,3 @@ BEGIN
   END IF;
 END;
 $verification$;
-
