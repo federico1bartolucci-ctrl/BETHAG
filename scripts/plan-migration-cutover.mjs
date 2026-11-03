@@ -120,7 +120,7 @@ console.log(JSON.stringify(report, null, 2));
 
 if (process.argv.includes("--print-commands")) {
   console.error(
-    "BLOCKED: generic linked migration-repair commands are unsafe. No production execution commands are emitted. " +
+    "BLOCKED: no generic migration-repair or production execution commands are emitted. " +
     "The recovered history is incomplete; use only the reviewed canonical runner after all release gates and written approval.",
   );
   process.exitCode = 2;
