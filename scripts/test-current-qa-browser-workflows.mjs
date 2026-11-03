@@ -223,10 +223,29 @@ try {
     }));
     throw error;
   }
-  await clickWithRetry(
-    adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
-    adminPage.getByRole("heading", { name: "Nuovo condominio" })
-  );
+  try {
+    await clickWithRetry(
+      adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
+      adminPage.getByRole("heading", { name: "Nuovo condominio" })
+    );
+  } catch (error) {
+    const diagnostics = await adminPage.evaluate(() => ({
+      sessionRole: localStorage.getItem("bethag-session-v1"),
+      sessionEmail: localStorage.getItem("bethag-session-email-v1"),
+      profile: localStorage.getItem("bethag-profile-v5"),
+      page: localStorage.getItem("bethag-current-page-v1"),
+      pageText: document.body.innerText.slice(0, 5000),
+      pageHeaderButtons: [...document.querySelectorAll(".page-header button")].map(button => button.innerText),
+      navButtons: [...document.querySelectorAll(".sidebar .nav-item")].map(button => button.innerText),
+    }));
+    console.error("BETHAG_ADMIN_CONDOMINIUM_CREATE_BUTTON_DIAGNOSTIC", JSON.stringify({
+      diagnostics,
+      pageErrors,
+      consoleErrors,
+      failedRequests: failedRequests.slice(-30),
+    }));
+    throw error;
+  }
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(condoName);
   await field(adminPage, "Indirizzo *").fill("Via QA UI 1");
