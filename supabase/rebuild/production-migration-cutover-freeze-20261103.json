@@ -2,7 +2,7 @@
   "artifact": "BETHAG Production migration cutover freeze — 247-row live history and fourteen pending canonical increments",
   "captured_date": "2026-11-03",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
-  "reviewed_source_commit": "befef38d47225454b1617910d92183ef95a16eb6",
+  "reviewed_source_commit": "a97153aa6e0aba091877de15fa15b5088efe029c",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "release/reconcile-production-247-20261103",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
@@ -353,6 +353,13 @@
     "production_execution_authorized": false,
     "workflow_run_id": 41700744892,
     "workflow_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41700744892",
-    "tested_commit": "befef38d47225454b1617910d92183ef95a16eb6"
+    "tested_commit": "befef38d47225454b1617910d92183ef95a16eb6",
+    "github_actions_run_id": 41701385094,
+    "github_actions_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41701385094",
+    "github_actions_overall_conclusion": "success",
+    "build_job": "success",
+    "postgres_bootstrap_job": "success",
+    "public_login_smoke": "success",
+    "authenticated_qa_edit_archive_diagnostic": "skipped_not_in_scope_for_this_migration_rehearsal"
   }
 }
