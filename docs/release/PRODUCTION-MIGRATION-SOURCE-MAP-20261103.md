@@ -319,3 +319,22 @@ Supabase branch metadata reports `bethag-launch-qa` as `MIGRATIONS_FAILED`, desp
 Production Performance Advisor currently reports informational unused-index findings and 21 multiple-permissive-policy findings. These are performance review items, not security lints; no index or RLS policy was changed as part of this inspection.
 
 **Safety boundary:** no Production or QA schema/data was modified during these checks. No migration was applied, replayed, renamed, or deleted.
+
+
+## Source-content verification of the 21 version-prefix matches — 2026-11-03
+
+The label `exact-version` in the initial inventory means only that the Production ledger version equals the SQL filename's 14-digit prefix. It must **not** be interpreted as proof that the file content matches the SQL recorded as applied.
+
+A direct comparison of all 21 such candidate files against their corresponding Production `statements` payloads found:
+
+- **9/21** are equal after line-ending and whitespace normalization.
+- **12/21** differ even after whitespace normalization.
+- Several differences are material in size, not just formatting. Examples:
+  - `20260928153242_add_condomino_registration_workflow.sql`: repository file 3,223 characters; Production ledger SQL 10,468 characters.
+  - `20260929230529_harden_accounting_delete_and_allocation_scope.sql`: repository file 2,532 characters; Production ledger SQL 4,580 characters.
+  - `20261007072310_harden_trigger_function_security_for_launch.sql`: repository file 556 characters; Production ledger SQL 269 characters.
+  - `20261103070901_grant_service_role_private_resend_event_rpc.sql`: repository file 446 characters; Production ledger SQL 298 characters.
+
+Therefore, the earlier 21/247 figure is a filename/version-prefix match count only. It is **not** a count of verified source matches. Until the original SQL payloads are exported and compared, none of these 12 mismatched files can be assumed to represent the exact migration applied in Production. Do not run them again as migrations or use them as authoritative historical source.
+
+This finding strengthens the reason to archive the actual ledger statement arrays separately from the deployable migration directory.
