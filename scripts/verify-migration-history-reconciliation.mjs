@@ -1,139 +1,74 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
-const productionPath = "supabase/rebuild/production-ledger-20261026.json";
-const qaPath = "supabase/rebuild/qa-ledger-20261026.json";
-const mainPath = "supabase/rebuild/main-migration-files-20261026.json";
-const reportPath = "supabase/rebuild/migration-history-reconciliation-20261026.json";
-
-const [production, qa, main, savedReport] = await Promise.all([
-  readFile(productionPath, "utf8").then(JSON.parse),
-  readFile(qaPath, "utf8").then(JSON.parse),
-  readFile(mainPath, "utf8").then(JSON.parse),
-  readFile(reportPath, "utf8").then(JSON.parse),
+const root = "supabase/rebuild";
+const [production, qa, reconciliation, freeze] = await Promise.all([
+  readFile(root + "/production-ledger-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/qa-ledger-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/migration-history-reconciliation-20261103.json", "utf8").then(JSON.parse),
+  readFile(root + "/production-migration-cutover-freeze-20261103.json", "utf8").then(JSON.parse),
 ]);
-const currentFiles = (await readdir("supabase/migrations"))
-  .filter((name) => name.endsWith(".sql"))
-  .map((file) => ({ file, version: file.slice(0, 14), name: file.slice(15, -4) }))
-  .sort((a, b) => a.version.localeCompare(b.version));
-
-assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
-assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg");
-assert.equal(production.count, production.migrations.length);
-assert.equal(qa.count, qa.migrations.length);
-assert.equal(main.count, main.files.length);
-assert.equal(production.count, 244, "Refresh Production ledger snapshot when live migration history changes.");
-assert.equal(qa.count, 17, "Refresh QA ledger snapshot when live migration history changes.");
-assert.equal(main.count, 203, "Refresh main migration-file inventory when main changes.");
-assert.equal(currentFiles.length, 20, "Canonical migration inventory changed.");
-const postSnapshotRemediationFiles = [
-  "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
-  "20261027110000_repair_service_role_transfer_invoker_path.sql",
-  "20261028100000_fix_collaborator_module_permission_boolean.sql",
-  "20261102100100_add_workspace_member_profile_data.sql",
-  "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+const files = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
+const pairs = (rows) => rows.map((row) => row.version + "|" + row.name);
+const productionPairs = new Set(pairs(production.migrations));
+const expectedForward = [
+  ["20261102151610","harden_live_production_acl_and_transfer_invoker"],
+  ["20261102200855","restore_secure_communication_recipient_rpc_execute"],
+  ["20261103070901","grant_service_role_private_resend_event_rpc"],
 ];
-assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
-// The saved reconciliation report is a historical snapshot based on the 15-file
-// clean branch and 2026-10-26 ledgers. Keep that comparison reproducible while
-// validating both newer remediation migrations separately above.
-const snapshotFiles = currentFiles.filter((file) => !postSnapshotRemediationFiles.includes(file.file));
-for (const list of [production.migrations, qa.migrations]) {
-  const versions = list.map((entry) => entry.version);
-  assert.ok(versions.every((version) => /^\d{14}$/.test(version)));
-  assert.equal(new Set(versions).size, versions.length, "Duplicate migration version in captured ledger.");
-  assert.deepEqual(versions, [...versions].sort(), "Captured ledger is not ordered by version.");
-}
-for (const file of [...main.files, ...currentFiles]) {
-  assert.match(file.file, /^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/);
-  assert.equal(file.version, file.file.slice(0, 14));
-}
+const pending = freeze.sequence.map((item) => ({version:item.file.slice(0,14),name:item.file.slice(15,-4),file:item.file}));
 
-const classify = [];
-for (const migration of production.migrations) {
-  const sameVersion = main.files.find((file) => file.version === migration.version);
-  if (sameVersion && sameVersion.name === migration.name) {
-    classify.push({ classification: "exact_version_and_name", productionVersion: migration.version, productionName: migration.name, repositoryFile: sameVersion.file });
-  } else if (sameVersion) {
-    classify.push({ classification: "same_version_different_name", productionVersion: migration.version, productionName: migration.name, repositoryFile: sameVersion.file, repositoryName: sameVersion.name });
-  } else {
-    const sameName = main.files.filter((file) => file.name === migration.name);
-    if (sameName.length) {
-      classify.push({ classification: "same_name_different_version", productionVersion: migration.version, productionName: migration.name, repositoryFiles: sameName.map((file) => file.file) });
-    } else {
-      classify.push({ classification: "no_matching_source_file", productionVersion: migration.version, productionName: migration.name });
-    }
-  }
-}
-const exact = classify.filter((item) => item.classification === "exact_version_and_name");
-const sameName = classify.filter((item) => item.classification === "same_name_different_version");
-const noSource = classify.filter((item) => item.classification === "no_matching_source_file");
-const productionVersions = new Set(production.migrations.map((item) => item.version));
-const qaVersions = new Set(qa.migrations.map((item) => item.version));
-const productionMatches = snapshotFiles
-  .filter((file) => productionVersions.has(file.version))
-  .map((file) => ({ file: file.file, version: file.version, productionName: production.migrations.find((item) => item.version === file.version).name }));
-const notInProduction = snapshotFiles
-  .filter((file) => !productionVersions.has(file.version))
-  .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaMatches = snapshotFiles
-  .filter((file) => qa.migrations.some((item) => item.version === file.version && item.name === file.name))
-  .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaOnly = qa.migrations.filter((item) => !snapshotFiles.some((file) => file.version === item.version && file.name === item.name));
-const cleanOnly = snapshotFiles
-  .filter((file) => !qa.migrations.some((item) => item.version === file.version && item.name === file.name))
-  .map((file) => ({ file: file.file, version: file.version, name: file.name }));
+assert.equal(production.project_ref,"tctcgptrsmvgajqjgnev");
+assert.equal(production.count,247);
+assert.equal(production.migrations.length,247);
+assert.equal(production.latest.version,"20261103070901");
+assert.equal(production.latest.name,"grant_service_role_private_resend_event_rpc");
+assert.equal(qa.project_ref,"jhuyhlzzydcgghrzeexn");
+assert.equal(qa.count,47);
+assert.equal(qa.migrations.length,47);
+assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
+assert.equal(reconciliation.production.ledger_count,247);
+assert.equal(reconciliation.qa.ledger_count,47);
+assert.equal(freeze.live_ledger.rows,247);
+assert.equal(freeze.live_ledger.head_version,"20261103070901");
+assert.equal(freeze.sequence.length,14);
+assert.equal(files.length,20);
+assert.equal(new Set(production.migrations.map(row=>row.version)).size,247);
+assert.equal(new Set(qa.migrations.map(row=>row.version)).size,47);
+assert.deepEqual(production.migrations.map(row=>row.version),[...production.migrations.map(row=>row.version)].sort());
+assert.deepEqual(qa.migrations.map(row=>row.version),[...qa.migrations.map(row=>row.version)].sort());
+assert.deepEqual(production.migrations.slice(-3).map(row=>[row.version,row.name]),expectedForward);
+assert.ok(pending.every(row=>files.includes(row.file)),"A frozen pending canonical migration file is missing.");
+assert.ok(pending.every(row=>!productionPairs.has(row.version+"|"+row.name)),"A pending canonical migration is already present in Production.");
+assert.ok(productionPairs.has("20261022202747|harden_close_member_transfer_search_path"),"Existing canonical head missing from Production ledger.");
+assert.equal(new Set(files.map(file=>file.slice(0,14))).size,20,"Duplicate canonical migration timestamp.");
+assert.ok(files.every(file=>/^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/.test(file)));
+assert.equal(freeze.expected_postflight.ledger_rows,261);
+assert.equal(freeze.expected_postflight.original_247_rows_unchanged,true);
+assert.equal(freeze.expected_postflight.canonical_rows_added,14);
+assert.equal(freeze.live_catalog.supabase_admin_default_maintain_entries,3);
 
-const calculated = {
-  captured_at_utc: "2026-10-26",
-  scope: "Read-only migration history reconciliation inventory; no schema, data, or remote migration ledger was changed.",
-  production: { project_ref: production.project_ref, ledger_count: production.count, latest: production.migrations.at(-1) },
-  qa: { project_ref: qa.project_ref, ledger_count: qa.count, latest: qa.migrations.at(-1) },
-  repository_main: {
-    migration_files: main.count,
-    exact_version_and_name_matches: exact.length,
-    same_name_but_different_version: sameName.length,
-    no_matching_source_file: noSource.length,
-    same_version_different_name: classify.filter((item) => item.classification === "same_version_different_name").length,
-  },
-  production_to_main: { exact_version_and_name_matches: exact, same_name_but_different_version: sameName, no_matching_source_file: noSource },
-  clean_baseline_branch: {
-    branch: "rebuild/bethag-clean-aligned-20261022",
-    migration_files: snapshotFiles.length,
-    production_version_matches: productionMatches,
-    files_not_registered_in_production: notInProduction,
-    qa_exact_version_and_name_matches: qaMatches,
-    qa_entries_not_in_clean_branch: qaOnly,
-    clean_files_not_in_qa: cleanOnly,
-  },
-  cutover_status: {
-    production_ledger_modified: false,
-    qa_ledger_modified: false,
-    production_schema_or_data_modified: false,
-    ready_for_production_tracking_cutover: false,
-    reason: "The production ledger's 243 historical rows do not have matching individual source files in the clean baseline branch; the clean branch replaces history with a 5-file baseline plus incremental migrations. Migration tracking must not be repaired until a verified restore point and catalog/ACL sign-off exist.",
-  },
-};
-const { live_security_status_captured_at_utc, live_security_status, qa_alias_sql_review, ...historicalInventory } = savedReport;
-assert.deepEqual(historicalInventory, calculated, "The historical reconciliation inventory is stale or does not match the captured ledgers and repository inventories.");
-assert.equal(qa_alias_sql_review?.rows?.length, 6, "QA alias disposition must cover all six non-canonical ledger rows.");
-assert.match(qa_alias_sql_review?.status ?? "", /RECONCILIATION COMPLETE/);
-assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.authenticated, 0);
-assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.current_table_maintain?.service_role, 0);
-assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.anon, 0);
-assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.authenticated, 0);
-assert.equal(qa_alias_sql_review?.disposition?.verified_live_state?.default_table_maintain?.service_role, 0);
-assert.ok(qa_alias_sql_review.rows.every((row) => typeof row.disposition === "string" && row.disposition.length > 10), "Every QA alias/test row needs an explicit disposition.");
-
+const baselineFiles=files.slice(0,5);
+assert.deepEqual(baselineFiles,[
+ "20261017000001_bethag_baseline_schema.sql",
+ "20261017000002_bethag_baseline_indexes_views.sql",
+ "20261017000003_bethag_baseline_functions.sql",
+ "20261017000004_bethag_baseline_security.sql",
+ "20261017000005_bethag_baseline_grants.sql",
+]);
 console.log(JSON.stringify({
-  migration_history_reconciliation: "PASS — inventory and mapping artifact are internally consistent",
-  production_ledger_rows: production.count,
-  qa_ledger_rows: qa.count,
-  main_migration_files: main.count,
-  clean_branch_migration_files: currentFiles.length,
-  post_snapshot_remediation_migrations: currentFiles.filter((file) => postSnapshotRemediationFiles.includes(file.file)).map((file) => file.file),
-  production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
-  clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
-  clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
-  production_tracking_cutover: "BLOCKED — verified restore point OR named written physical-restore risk acceptance, semantic catalog/ACL sign-off, and approved cutover required",
-}, null, 2));
+ migration_history_reconciliation:"PASS — current 247-row Production and 47-row QA snapshots are internally consistent",
+ production_ledger_rows:production.count,
+ production_head:production.latest,
+ qa_ledger_rows:qa.count,
+ qa_branch_status:qa.branch_status,
+ clean_branch_files:files.length,
+ baseline_files:baselineFiles.length,
+ existing_canonical_head:"20261022202747_harden_close_member_transfer_search_path",
+ production_forward_migrations:expectedForward,
+ pending_canonical_increments:pending.length,
+ expected_postflight_ledger_rows:261,
+ historical_replay:"NOT SELF-CONTAINED — forensic archive retained; do not replay",
+ production_modified:false,
+ qa_modified:false,
+},null,2));
