@@ -1,3 +1,4 @@
+# 2026-11-03: rerun transfer acceptance with member/unit carryover closure-guard fixtures.
 name: BETHAG QA member transfer acceptance
 on:
   push:
