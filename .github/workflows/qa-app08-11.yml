@@ -1,17 +1,12 @@
-# 2026-11-03: rerun transfer acceptance with member/unit carryover closure-guard fixtures.
 name: BETHAG QA member transfer acceptance
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-app08-11.mjs"
-      - ".github/workflows/qa-app08-11.yml"
   workflow_dispatch:
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
 
+# Normal QA execution is serialized inside build.yml after browser tests.
+# Keep manual dispatch as a deliberate isolated rerun only.
 jobs:
   transfer:
     runs-on: ubuntu-latest
@@ -30,4 +25,3 @@ jobs:
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app08-11.mjs
-# QA verification trigger refreshed 2026-11-02
