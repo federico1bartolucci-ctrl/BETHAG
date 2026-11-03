@@ -8,7 +8,7 @@ const resident=createClient(url,key,{auth:{persistSession:false,autoRefreshToken
 const cleanup=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const a=await admin.auth.signInWithPassword({email:"bethag-admin-qa@example.com",password:adminPass});assert.ifError(a.error);
 const r=await resident.auth.signInWithPassword({email:"bethag-condomino-qa@example.com",password:residentPass});assert.ifError(r.error);
-const marker="BETHAG_QA_APP08_11_"+Date.now(), ids={condo:null,unit:null,old:null,transfer:null,openTransfer:null,openMember:null,openInstallment:null,unit2:null,owner2:null,fiscalYear:null,blockedTransfer:null,blockedInstallment:null};
+const marker="BETHAG_QA_APP08_11_"+Date.now(), ids={condo:null,unit:null,old:null,transfer:null,openTransfer:null,openMember:null,openInstallment:null,unit2:null,owner2:null,fiscalYear:null,blockedTransfer:null,blockedInstallment:null,memberCarryover:null,unitCarryover:null};
 const w=await admin.from("workspaces").select("id").eq("name","BETHAG_QA_FIXTURE_20261102").single();assert.ifError(w.error);
 const must= (x,label)=>{assert.ifError(x.error);return x.data};
 try{
@@ -41,7 +41,14 @@ try{
  const owner2=must(await admin.from("condominium_members").insert({condominium_id:ids.condo,unit_id:ids.unit2,name:"Cedente QA insoluto",role:"resident",active:true,data:{role:"Proprietario",position_status:"Attivo",current_owner:true,ownership_share:100,bethag_qa_marker:marker}}).select("id").single(),"financial blocker owner");ids.owner2=owner2.id;
  const fiscalYear=must(await admin.from("condominium_fiscal_years").insert({workspace_id:w.data.id,condominium_id:ids.condo,name:"Esercizio insoluto QA "+marker,start_date:"2026-01-01",end_date:"2026-12-31",status:"Aperto",opening_balance:0,notes:marker}).select("id").single(),"financial blocker fiscal year");ids.fiscalYear=fiscalYear.id;
  const installment=must(await admin.from("condominium_installments").insert({workspace_id:w.data.id,condominium_id:ids.condo,fiscal_year_id:ids.fiscalYear,member_id:ids.owner2,unit_id:ids.unit2,title:"Rata insoluta QA",due_date:"2026-11-15",amount:90,paid_amount:0,status:"Da pagare",notes:marker}).select("id").single(),"financial blocker installment");ids.blockedInstallment=installment.id;
+ const memberCarryover=must(await admin.from("condominium_fiscal_carryovers").insert({workspace_id:w.data.id,condominium_id:ids.condo,source_fiscal_year_id:ids.fiscalYear,target_fiscal_year_id:ids.fiscalYear,unit_id:ids.unit2,member_id:ids.owner2,balance:30,kind:"Debito",status:"Da riportare",notes:marker}).select("id").single(),"member carryover");ids.memberCarryover=memberCarryover.id;
+ const unitCarryover=must(await admin.from("condominium_fiscal_carryovers").insert({workspace_id:w.data.id,condominium_id:ids.condo,source_fiscal_year_id:ids.fiscalYear,target_fiscal_year_id:ids.fiscalYear,unit_id:ids.unit2,member_id:null,balance:-45,kind:"Credito",status:"Da riportare",notes:marker}).select("id").single(),"unit carryover");ids.unitCarryover=unitCarryover.id;
  const blocked=must(await admin.rpc("confirm_condominium_member_transfer",{p_unit_id:ids.unit2,p_outgoing_member_id:ids.owner2,p_incoming_name:"Acquirente QA insoluto",p_incoming_email:null,p_incoming_user_id:null,p_transfer_date:date1,p_transfer_type:"Vendita",p_notes:marker,p_data:{bethag_qa_marker:marker,transfer_scope:"whole_property",outgoing_member_ids:[ids.owner2],incoming_members:[{name:"Acquirente QA insoluto",ownership_share:100}]}}),"confirm blocked transfer");ids.blockedTransfer=blocked;
+ const closureCheckBlocked=must(await admin.rpc("check_condominium_member_transfer_closure",{p_transfer_id:ids.blockedTransfer}),"blocked closure check");
+ assert.equal(Number(closureCheckBlocked.open_installments),90);
+ assert.equal(Number(closureCheckBlocked.open_member_carryovers),30);
+ assert.equal(Number(closureCheckBlocked.open_unit_carryovers),45);
+ assert.equal(Number(closureCheckBlocked.open_total),165);
  const rejectedClose=await admin.rpc("close_condominium_member_transfer",{p_transfer_id:ids.blockedTransfer});
  assert.ok(rejectedClose.error && rejectedClose.error.message.includes("TRANSFER_FINANCIAL_POSITIONS_OPEN"),"Unpaid installment did not block transfer closure");
  const blockedState=must(await admin.from("condominium_member_transfers").select("status").eq("id",ids.blockedTransfer).single(),"blocked transfer state");
@@ -50,10 +57,16 @@ try{
  assert.equal(blockedOwnerState.active,true);assert.equal(blockedOwnerState.data.position_status,"In chiusura");
  const installmentState=must(await admin.from("condominium_installments").select("amount,paid_amount,status").eq("id",ids.blockedInstallment).single(),"blocked installment state");
  assert.equal(Number(installmentState.amount),90);assert.equal(Number(installmentState.paid_amount),0);assert.equal(installmentState.status,"Da pagare");
- console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","administrator confirmed transfer using real RPC","outgoing owner remained active but In chiusura before closure","accounting snapshot readable","closure check returned zero open balance","official close RPC archived outgoing owner and closed transfer","€90 unpaid installment blocked closure without partial state changes"],financial_blocker_case:"PASS"},null,2));
+ const memberCarryoverState=must(await admin.from("condominium_fiscal_carryovers").select("balance,kind,status").eq("id",ids.memberCarryover).single(),"member carryover state");
+ assert.equal(Number(memberCarryoverState.balance),30);assert.equal(memberCarryoverState.kind,"Debito");assert.equal(memberCarryoverState.status,"Da riportare");
+ const unitCarryoverState=must(await admin.from("condominium_fiscal_carryovers").select("balance,kind,status").eq("id",ids.unitCarryover).single(),"unit carryover state");
+ assert.equal(Number(unitCarryoverState.balance),-45);assert.equal(unitCarryoverState.kind,"Credito");assert.equal(unitCarryoverState.status,"Da riportare");
+ console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","administrator confirmed transfer using real RPC","outgoing owner remained active but In chiusura before closure","accounting snapshot readable","closure check returned zero open balance","official close RPC archived outgoing owner and closed transfer","€90 unpaid installment blocked closure","€30 member carryover and €45 unit carryover blocked closure","transfer, owner, installment and both carryovers remained unchanged after rejected close"],financial_blocker_case:"PASS"},null,2));
 }finally{
  if(ids.blockedTransfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.blockedTransfer);
  if(ids.blockedInstallment) await cleanup.from("condominium_installments").delete().eq("id",ids.blockedInstallment);
+ if(ids.memberCarryover) await cleanup.from("condominium_fiscal_carryovers").delete().eq("id",ids.memberCarryover);
+ if(ids.unitCarryover) await cleanup.from("condominium_fiscal_carryovers").delete().eq("id",ids.unitCarryover);
  if(ids.fiscalYear) await cleanup.from("condominium_fiscal_years").delete().eq("id",ids.fiscalYear);
  if(ids.owner2) await cleanup.from("condominium_members").delete().eq("id",ids.owner2);
  if(ids.unit2) await cleanup.from("condominium_units").delete().eq("id",ids.unit2);
