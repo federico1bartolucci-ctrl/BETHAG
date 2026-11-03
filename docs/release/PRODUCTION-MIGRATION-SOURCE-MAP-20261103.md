@@ -368,3 +368,14 @@ The 137 rows initially labelled `no-direct-source` had no direct filename/name c
 This comparison confirms that filename/name matching alone was insufficient: **40 of the 110 candidate source files do not match the SQL actually recorded as applied**, even after whitespace normalization. Those files must not be substituted for the recovered historical payloads.
 
 The 70 normalized matches are evidence that the corresponding current source file represents the same SQL payload, subject to final checksum/semantic verification in the canonical reconstruction. They are not authorization to replay those files against an existing environment.
+
+
+## Ordered replay candidate staged — 2026-11-03
+
+- Created `supabase/replay-candidate/` with 247 SQL files reusing the exact Git blobs from the recovered Production ledger archive.
+- Candidate filenames use the actual 14-digit applied ledger versions; all 247 versions are unique and strictly increasing in filename/manifest order.
+- Extended the integrity validator to compare every replay-candidate copy with the Production-ledger MD5 and character count, check the 247-row manifest, and reject duplicate or out-of-order versions.
+- GitHub Actions integrity validation passed for head `2d6c187f7a882aa6761dae9aead1b034175699a8` (run 41727081617). BETHAG build also passed for the same head (run 41727081752).
+- The candidate remains outside `supabase/migrations/`; it is not deployed and has not been replayed.
+
+**Remaining gate:** a full replay against a disposable PostgreSQL 17 instance with the required Supabase platform bootstrap (including Auth roles/schema/functions) has not yet been run. Production and the existing QA branch are not acceptable replay targets. The candidate is therefore ordered and integrity-verified, but not yet proven executable end-to-end.
