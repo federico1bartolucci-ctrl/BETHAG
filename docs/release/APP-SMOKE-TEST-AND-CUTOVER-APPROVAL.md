@@ -331,3 +331,45 @@ A separate live, read-only SQL comparison on 2026-11-02 was run against Producti
 Production's 244-entry historical ledger is intentionally not rewritten. The canonical 14-migration candidate has passed isolated PostgreSQL 17 rehearsal, but its Production cutover has not been executed. The Production privilege differences above must be addressed by the approved forward migration sequence and rechecked after cutover; do not run ad-hoc SQL or mark Production aligned before that verification.
 
 **Disposition:** APP-14 is closed for the QA/live-candidate acceptance and isolated migration rehearsal. Production cutover remains **NO-GO** until the canonical migration plan is approved, applied in the authorized window, and live Production ACL postconditions are rechecked. APP-15 is closed for the tested authenticated browser scope. No Production SQL, merge, deployment, branch reset, or cutover was performed in this update.
+
+
+## 19. Superseding Production migration reconciliation — 2026-11-03
+
+This section supersedes the older 244-row ledger and pre-hardening Production ACL values recorded above. Those values remain as historical evidence only.
+
+### Current live Production snapshot (read-only)
+
+- Production project: `tctcgptrsmvgajqjgnev`.
+- Migration ledger: **247 rows**, sorted maximum `20261103070901_grant_service_role_private_resend_event_rpc`.
+- The three Production-forward migrations added after the prior freeze are:
+  - `20261102151610_harden_live_production_acl_and_transfer_invoker`
+  - `20261102200855_restore_secure_communication_recipient_rpc_execute`
+  - `20261103070901_grant_service_role_private_resend_event_rpc`
+- Current live catalog checks: 47 public relations; zero effective `MAINTAIN` on public relations for `authenticated` and `service_role`; `service_role` has `private.USAGE` and private transfer-function EXECUTE; public transfer wrapper is `SECURITY INVOKER`; `condominiums.archived_at` exists.
+- Remaining live differences: three Supabase-managed `supabase_admin` public table default-ACL entries still grant `MAINTAIN`; `workspace_members.data` is absent; the current `private.save_condominium` definition does not preserve all archive lifecycle metadata on conflict updates; the public EXECUTE allowlist still contains four routines rather than the intended two.
+- QA project `jhuyhlzzydcgghrzeexn`: 47 ledger rows; Supabase branch metadata reports `MIGRATIONS_FAILED`. Do not treat this branch as a verified cutover target.
+
+### Historical ledger recovery finding
+
+All 247 SQL payloads have been recovered and checked against a manifest containing database-derived MD5 and character counts. However, the 247 recorded SQL payloads are **not a self-contained clean bootstrap**. PostgreSQL 17 replay fails at `20260928043547_restrict_data_api_table_grants.sql` because `public.portal_access` is referenced before any recorded payload creates it. A read-only scan also found 13 live public tables without a corresponding `CREATE TABLE` in the recorded ledger; Production's `condominiums.archived_at` likewise has no recorded `ADD COLUMN` migration despite being referenced by historical SQL. The 247 files are immutable forensic evidence and must not be replayed or used to rewrite the live history.
+
+Full details: `docs/release/PRODUCTION-HISTORY-REPLAY-FINDINGS-20261103.md`.
+
+### Updated clean cutover rehearsal
+
+The guarded plan now preserves all **247** live Production version/name pairs, excludes all five baseline rows from an existing Production ledger, and adds only the **14** pending canonical incremental version/name pairs. The three exact Production-forward SQL payloads above are included in the ordered isolated rehearsal.
+
+GitHub Actions [run 41700744892](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41700744892) completed successfully:
+- clean five-file baseline on PostgreSQL 17;
+- existing canonical head migration;
+- three Production-forward migrations in their live order;
+- fourteen pending canonical migrations;
+- guarded ledger rehearsal from 247 to 261 rows, with all 247 historical pairs preserved;
+- ACL, transfer, RLS, collaborator boolean-permission, workspace profile-data and condominium archive-state postconditions;
+- build and public-login smoke test.
+
+The authenticated QA edit/archive diagnostic was skipped in this migration-focused run. This CI evidence does not modify remote QA or Production and does not constitute Production cutover approval.
+
+### Current disposition
+
+The **migration recovery, canonical plan and isolated PostgreSQL 17 rehearsal are technically complete**. Production execution remains **NO-GO** until the three provider-managed default-ACL entries receive Supabase guidance or a named security-owner exception, QA's `MIGRATIONS_FAILED` state is resolved, the remaining APP-01–APP-15 evidence is recorded, the backup/restore risk is formally dispositioned, and the exact cutover receives written approval. No Production SQL, migration-ledger write, merge, deployment or remote replay was performed.
