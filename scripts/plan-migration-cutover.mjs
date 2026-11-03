@@ -120,7 +120,7 @@ console.log(JSON.stringify(report, null, 2));
 
 if (process.argv.includes("--print-commands")) {
   console.error(
-    "BLOCKED: no generic migration-repair or production execution commands are emitted. " +
+    "BLOCKED: generic linked migration-repair commands are unsafe. No production execution commands are emitted. " +
     "The recovered history is incomplete; use only the reviewed canonical runner after all release gates and written approval.",
   );
   process.exitCode = 2;
@@ -136,6 +136,7 @@ if (process.argv.includes("--print-review-checklist")) {
     "4. Complete the ordered PostgreSQL 17 rehearsal against baseline + existing head + three Production forwards + fourteen canonical increments.",
     "5. Verify the 261-row final ledger set and unchanged 247 historical pairs.",
     "6. Obtain provider guidance or named security-owner disposition for supabase_admin default ACL MAINTAIN.",
+    "Verified isolated backup restore: require real provider-backed restore evidence or a documented named residual-risk acceptance; do not claim an unperformed physical restore.",
     "7. Complete APP-01–APP-15 and confirm the QA MIGRATIONS_FAILED condition is resolved.",
     "8. Obtain written approval naming the exact commit, SQL hashes, maintenance window and rollback criteria.",
     "9. Stop if any live ledger, catalog, ACL, backup or source mapping differs from the frozen evidence.",
