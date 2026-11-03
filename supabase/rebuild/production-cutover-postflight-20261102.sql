@@ -11,6 +11,7 @@ DECLARE
   service_structural integer;
   public_routines text[];
   default_maintain integer;
+  supabase_admin_default_maintain integer;
   anon_defaults integer;
   public_defaults integer;
   auth_defaults text[];
@@ -60,6 +61,16 @@ BEGIN
     AND d.defaclobjtype='r' AND a.privilege_type='MAINTAIN'
     AND (a.grantee=0 OR pg_get_userbyid(a.grantee) IN ('anon','authenticated','service_role'));
   IF default_maintain <> 0 THEN RAISE EXCEPTION 'FAIL: app-role/global/public MAINTAIN defaults remain: %', default_maintain; END IF;
+
+  SELECT count(*)::integer INTO supabase_admin_default_maintain
+  FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole
+  LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace
+  CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+  WHERE r.rolname='supabase_admin' AND (n.nspname='public' OR d.defaclnamespace IS NULL)
+    AND d.defaclobjtype='r' AND a.privilege_type='MAINTAIN';
+  IF supabase_admin_default_maintain <> 3 THEN
+    RAISE EXCEPTION 'FAIL: provider-managed supabase_admin MAINTAIN defaults changed; expected 3 preserved entries, found %', supabase_admin_default_maintain;
+  END IF;
 
   SELECT count(*)::integer INTO anon_defaults
   FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole
@@ -138,8 +149,8 @@ BEGIN
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 258 OR ledger_head <> '20261102100200' THEN
-    RAISE EXCEPTION 'FAIL: expected ledger count 258 and head 20261102100200, found count %, head %', ledger_count, ledger_head;
+  IF ledger_count <> 261 OR ledger_head <> '20261103070901' THEN
+    RAISE EXCEPTION 'FAIL: expected ledger count 261 and head 20261103070901, found count %, head %', ledger_count, ledger_head;
   END IF;
   IF (SELECT count(*) FROM supabase_migrations.schema_migrations
       WHERE (version,name) IN (
@@ -181,6 +192,6 @@ BEGIN
     RAISE EXCEPTION 'FAIL: save_condominium does not preserve all server-owned archive lifecycle fields';
   END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants, collaborator metadata column, archive lifecycle preservation and fourteen canonical migration records verified. Still compare the complete original ledger export and run application smoke tests before approval.';
+  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants, collaborator metadata column, archive lifecycle preservation and fourteen canonical migration records verified; provider-managed supabase_admin default ACLs preserved. Still compare the complete original ledger export and run application smoke tests before approval.';
 END
 $postflight$;
