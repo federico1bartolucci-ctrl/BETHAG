@@ -199,7 +199,10 @@ const productionForwardMigrations = [
 ];
 
 for (const filename of productionForwardMigrations) {
-  console.log("Applying exact Production-forward migration " + filename + " to isolated PostgreSQL...");
+  console.log("Applying the existing canonical Production head " + alreadyAppliedCanonicalHead + " to clean bootstrap...");
+psql(["-f", path.join(directory, alreadyAppliedCanonicalHead)]);
+
+console.log("Applying exact Production-forward migration " + filename + " to isolated PostgreSQL...");
   psql(["-f", path.join("supabase/rebuild/production-forward-migrations", filename)]);
 }
 
