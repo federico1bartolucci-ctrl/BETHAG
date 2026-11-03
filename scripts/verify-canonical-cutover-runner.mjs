@@ -5,17 +5,19 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261102.json"), "utf8"));
+const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261103.json"), "utf8"));
 const runner = await readFile(join(root, "scripts/apply-reviewed-production-migrations.mjs"), "utf8");
-const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261102.sql"), "utf8");
-const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261102.sql"), "utf8");
+const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261103.sql"), "utf8");
+const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261103.sql"), "utf8");
 assert.equal(manifest.sequence.length, 14, "Superseding cutover must contain exactly fourteen incremental migrations.");
-assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where the latest archive-state migration is already present.");
-assert.match(postflight, /ledger_count <> 258 OR ledger_head <> '20261102100200'/, "Postflight must expect all fourteen canonical migrations and the correct ledger head.");
+assert.match(preflight, /ledger_count <> 247 OR ledger_head <> '20261103070901'/, "Preflight must verify the current 247-row Production ledger.");
+assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
+assert.match(postflight, /ledger_count <> 261 OR ledger_head <> '20261103070901'/, "Postflight must expect all fourteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /\) <> 14 THEN/, "Postflight must verify all fourteen canonical migration records.");
-assert.equal(manifest.live_ledger.rows, 244);
-assert.equal(manifest.expected_postflight.ledger_rows, 258);
+assert.match(postflight, /ledger_count <> 261 OR ledger_head <> '20261103070901'/, "Postflight must retain the latest Production forward version while adding older canonical versions.");
+assert.equal(manifest.live_ledger.rows, 247);
+assert.equal(manifest.expected_postflight.ledger_rows, 261);
 assert.equal(manifest.expected_postflight.workspace_members_data_column_present, true);
 assert.equal(manifest.expected_postflight.save_condominium_archive_state_preserved, true);
 assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
@@ -24,7 +26,7 @@ assert.match(runner, /BETHAG_ALLOW_PRODUCTION_MIGRATIONS/);
 assert.match(runner, /BETHAG_PRODUCTION_PROJECT_REF/);
 assert.match(runner, /"--dbname",\s*process\.env\.DATABASE_URL/, "psql must receive DATABASE_URL as its database connection string.");
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
-assert.match(runner, /Historical 244-row preservation/);
+assert.match(runner, /Historical 247-row preservation/);
 assert.match(runner, /CANONICAL_MIGRATION_LEDGER_PASS/);
 assert.doesNotMatch(runner, /\bapply_migration\s*\(/i, "Runner must not invoke Supabase apply_migration().");
 assert.doesNotMatch(runner, /DELETE\s+FROM\s+supabase_migrations\.schema_migrations/i);
@@ -52,7 +54,7 @@ console.log(JSON.stringify({
   runner: "guarded canonical-version-preserving transactional runner",
   migration_count: manifest.sequence.length,
   pinned_sql_blobs_verified: true,
-  original_production_history_rows: 244,
+  original_production_history_rows: 247,
   deletes_or_rewrites_of_historical_rows: false,
   live_database_touched: false,
 }, null, 2));
