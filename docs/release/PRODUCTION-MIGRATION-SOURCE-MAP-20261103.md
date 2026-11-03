@@ -351,3 +351,20 @@ This finding strengthens the reason to archive the actual ledger statement array
 - Work is isolated on branch `recovery/production-ledger-archive-20261103`; Production and QA were not modified.
 
 **Remaining migration work:** perform a complete 247-row source comparison, classify every current `supabase/migrations/` file against the recovered ledger payloads, reconcile the nine duplicate filename timestamps, and construct/test one unique ordered deployable migration directory on a disposable PostgreSQL 17 database. The recovered archive now provides the authoritative SQL evidence needed to do that safely.
+
+
+## Full candidate-file SQL comparison — 2026-11-03
+
+Compared every source file candidate listed in the initial map against the corresponding SQL payload from the Production ledger, normalizing line endings and whitespace only:
+
+| Candidate class | Compared | Normalized SQL matches | Content mismatches |
+|---|---:|---:|---:|
+| Filename prefix equals applied version (`exact-version`) | 21 | 9 | 12 |
+| Same ledger name, different filename timestamp (`same-name-different-version`) | 89 | 61 | 28 |
+| **Total candidate source files** | **110** | **70** | **40** |
+
+The 137 rows initially labelled `no-direct-source` had no direct filename/name candidate in the repository inventory; their exact applied SQL is now present in the recovered archive.
+
+This comparison confirms that filename/name matching alone was insufficient: **40 of the 110 candidate source files do not match the SQL actually recorded as applied**, even after whitespace normalization. Those files must not be substituted for the recovered historical payloads.
+
+The 70 normalized matches are evidence that the corresponding current source file represents the same SQL payload, subject to final checksum/semantic verification in the canonical reconstruction. They are not authorization to replay those files against an existing environment.
