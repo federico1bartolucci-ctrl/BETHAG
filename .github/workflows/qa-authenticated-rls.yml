@@ -34,3 +34,4 @@ jobs:
           node scripts/test-current-qa-authenticated-rls.mjs
 # QA verification trigger refreshed 2026-11-02
 # QA verification trigger refreshed 2026-11-02 (round 2)
+# QA authenticated RLS/storage retest requested 2026-11-03 after QA workflow serialization.
