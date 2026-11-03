@@ -1,28 +1,37 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
-const report = JSON.parse(await readFile("supabase/rebuild/live-migration-ledger-reconciliation-20261027.json", "utf8"));
-const files = (await readdir("supabase/migrations")).filter((file) => file.endsWith(".sql")).sort();
-assert.equal(report.production_unchanged, true, "The captured live ledger report must not imply Production was modified.");
-assert.equal(report.canonical_branch_inventory.length, 16, "Expected five baseline files, Production head, and ten incremental migrations.");
-assert.equal(files.length, 20, "Expected the historical canonical inventory plus the two November collaborator/archive forward migrations.");
-assert.ok(files.includes("20261027110000_repair_service_role_transfer_invoker_path.sql"), "Missing service_role invoker-path correction.");
-assert.ok(files.includes("20261102100100_add_workspace_member_profile_data.sql"), "Missing collaborator metadata forward migration.");
-assert.ok(files.includes("20261102100200_preserve_server_owned_condominium_archive_state.sql"), "Missing archive lifecycle forward migration.");
-const env = Object.fromEntries(report.environments.map((entry) => [entry.name, entry]));
-assert.equal(env.production.ledger_count, 244);
-assert.equal(env.production.ledger_head.version, "20261022202747");
-assert.equal(env.develop.ledger_count, 16);
-assert.equal(env["continuity-qa"].ledger_count, 18);
-assert.equal(env["member-transfer-qa"].ledger_count, 16);
-assert.equal(env["migration-reconciliation-qa"].ledger_count, 18);
-for (const name of ["develop", "continuity-qa", "member-transfer-qa", "migration-reconciliation-qa"]) {
-  assert.ok(env[name].noncanonical_live_entries.length > 0, name + " has environment-specific migration identities requiring effect/source reconciliation.");
-}
-assert.equal(env.production.canonical_versions_missing.length, 10, "The captured 2026-10-27 ledger snapshot predates the additional invoker-path correction; its ten original pending migrations must remain recorded as captured.");
-assert.equal(env.production.noncanonical_live_entries.length, 243, "Production's historical ledger is intentionally not rewritten into the clean baseline.");
+const root="supabase/rebuild";
+const [production,qa,reconciliation,freeze]=await Promise.all([
+ readFile(root+"/production-ledger-20261103.json","utf8").then(JSON.parse),
+ readFile(root+"/qa-ledger-20261103.json","utf8").then(JSON.parse),
+ readFile(root+"/migration-history-reconciliation-20261103.json","utf8").then(JSON.parse),
+ readFile(root+"/production-migration-cutover-freeze-20261103.json","utf8").then(JSON.parse),
+]);
+const files=(await readdir("supabase/migrations")).filter(file=>file.endsWith(".sql")).sort();
+const exact=(ledger,item)=>ledger.migrations.some(row=>row.version===item.version&&row.name===item.name);
+const pending=freeze.sequence.map(item=>({version:item.file.slice(0,14),name:item.file.slice(15,-4),file:item.file}));
+assert.equal(production.count,247);
+assert.equal(production.migrations.length,247);
+assert.equal(production.latest.version,"20261103070901");
+assert.equal(qa.count,47);
+assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
+assert.equal(reconciliation.production.ledger_count,247);
+assert.equal(reconciliation.qa.ledger_count,47);
+assert.equal(files.length,20);
+assert.equal(pending.length,14);
+assert.ok(pending.every(item=>files.includes(item.file)&&!exact(production,item)));
+assert.ok(freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item=>exact(production,item)));
+assert.equal(freeze.expected_postflight.ledger_rows,261);
+assert.equal(freeze.expected_postflight.original_247_rows_unchanged,true);
+assert.equal(freeze.expected_postflight.canonical_rows_added,14);
 console.log(JSON.stringify({
-  status: "PASS — captured ledger evidence is internally consistent; this does not approve Production execution",
-  production: { count: env.production.ledger_count, head: env.production.ledger_head, pendingCanonicalIncrementsAtCapture: env.production.canonical_versions_missing.length, additionalForwardFix: "20261027110000_repair_service_role_transfer_invoker_path.sql" },
-  qa: Object.fromEntries(["develop", "continuity-qa", "member-transfer-qa", "migration-reconciliation-qa"].map((name) => [name, { count: env[name].ledger_count, head: env[name].ledger_head, environmentSpecificIdentities: env[name].noncanonical_live_entries.length }])),
-}, null, 2));
+ status:"PASS — live read-only 2026-11-03 migration ledger snapshots and canonical candidate reconcile",
+ production:{count:production.count,head:production.latest},
+ qa:{count:qa.count,head:qa.latest,status:qa.branch_status},
+ canonical_migrations:files.length,
+ pending_incrementals:pending.length,
+ production_forward_migrations:freeze.live_ledger.forward_migrations_after_2026_11_02_freeze,
+ expected_ledger_after_approved_tracking:261,
+ production_or_qa_modified:false,
+},null,2));
