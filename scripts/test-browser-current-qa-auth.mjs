@@ -37,7 +37,7 @@ try {
       } else {
         await page.locator(".sidebar .nav-item").filter({ hasText: "Impostazioni" }).first().click();
         await page.getByRole("heading", { name: "Impostazioni", exact: true }).waitFor({ timeout: 10000 });
-        await page.getByRole("button", { name: "Esci", exact: true }).click();
+        await page.getByRole("main").getByRole("button", { name: "Esci", exact: true }).click();
       }
 
       const loginButton = page.getByRole("button", { name: "Accedi" }).first();
