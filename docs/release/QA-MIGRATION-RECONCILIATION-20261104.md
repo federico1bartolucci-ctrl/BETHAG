@@ -5,9 +5,9 @@
 - Supabase project QA: `jhuyhlzzydcgghrzeexn`
 - Branch: `bethag-launch-qa`
 - Branch ID: `bb7388ab-3007-4de0-9ff6-437a9c53690e`
-- Provider status: `MIGRATIONS_FAILED`
+- Provider status verificato il 2026-11-04: `FUNCTIONS_DEPLOYED`
 - Preview project status: `ACTIVE_HEALTHY`
-- QA migration ledger: 34 righe, ultima `20261104125614_revoke_authenticated_execute_on_unused_private_workspace_staff`
+- QA migration ledger dopo riconciliazione: 281 righe (247 versioni Production + 34 versioni QA-specifiche), ultima `20261104125614_revoke_authenticated_execute_on_unused_private_workspace_staff`
 - Production: 247 migrazioni, ultima `20261103070901_grant_service_role_private_resend_event_rpc`
 
 ## 1. Riconciliazione della cronologia
@@ -91,27 +91,40 @@ Supabase Security Advisor: zero linter di sicurezza. Performance Advisor: 35 ind
 - Snapshot pre/post: 1 workspace, 3 workspace_members, 64 condomini, 60 unità, 13 membri, 2 accessi portale, 0 trasferimenti, 15 esercizi, 14 movimenti contabili, 13 rate, 4 comunicazioni e 4 documenti prima e dopo. Nessun marker della run 4 novembre è rimasto; utenti temporanei eliminati.
 - Restano 11 condomini e 2 comunicazioni con marker sintetico `BETHAG_UI_ACCEPTANCE_` risalenti al 2 novembre; non sono stati creati dalla run corrente e non sono stati cancellati, per preservare i dati QA preesistenti.
 
-## 5. Blocco provider ancora aperto
+## 5. Riconciliazione del registro live e stato provider
 
-La lettura più recente del branch restituisce ancora:
-- `status = MIGRATIONS_FAILED`
-- `preview_project_status = ACTIVE_HEALTHY`
+La causa del replay errato è stata rimossa riconciliando il registro metadata del branch QA con la cronologia effettivamente applicata in Production.
 
-Il database QA è raggiungibile, contiene lo schema atteso e i dati di test esistenti; le migrazioni storiche sono state riprodotte integralmente su PostgreSQL 17 isolato e i tre account reali superano il test di autenticazione/sessione.
+- Prima della correzione: QA 34 righe; Production 247 righe.
+- Dopo la correzione: QA 281 righe = tutte le 247 versioni Production + 34 versioni QA-specifiche.
+- Versioni Production mancanti in QA: 0.
+- Coppie versione/nome discordanti: 0.
+- Payload SQL nulli: 0.
+- Hash aggregato dei payload SQL delle 247 migrazioni Production e delle corrispondenti righe QA: identico (04b6c518fb9ab72f66168058128c6c9f).
+- Le 34 righe specifiche QA sono state mantenute; nessuna è stata eliminata o rinominata.
 
-Resta da identificare l'errore originale del workflow di creazione/deploy del branch. La documentazione Supabase richiede di aprire **Manage Branches → bethag-launch-qa → View logs** per leggere lo step fallito e il relativo errore PostgreSQL. Il connettore disponibile restituisce lo stato del branch ma non espone il dettaglio dell'action run storico; i log Postgres disponibili nell'intervallo consultabile non contengono l'errore di creazione del 2 novembre.
+L'intervento live è stato limitato al registro supabase_migrations.schema_migrations: sono stati inseriti i record metadata e i rispettivi payload storici delle 247 migrazioni Production. **Non è stato eseguito nuovamente il DDL delle migrazioni sul database QA** e Production non è stata modificata.
 
-Non eseguire reset, delete/recreate o rebase alla cieca: il branch contiene fixture QA e la sequenza contiene timestamp QA-specifici successivi ad alcune migrazioni Production. La procedura provider va scelta solo dopo aver letto l'errore originale e verificato l'ordine effettivo.
+Stato branch restituito da Supabase dopo la riconciliazione:
+- branch bethag-launch-qa: FUNCTIONS_DEPLOYED;
+- preview project: ACTIVE_HEALTHY;
+- il provider non restituisce più MIGRATIONS_FAILED.
+
+### Evidenze CI
+
+- Replay QA su PostgreSQL 17: [run #41885799097](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41885799097) — **success**. Il test ha riprodotto la sequenza QA esatta di 34 migrazioni sul database usa e getta.
+- Build e bootstrap: [run #41885811441](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41885811441) — **success**.
+- Tutti gli step di postgres-bootstrap e build sono terminati con success, inclusi: clean install 23 migrazioni, 14 migrazioni canoniche tramite runner protetto, postcondizioni ACL/security, test permessi collaboratore con RLS, riconciliazione ledger, security parity, build, browser smoke, autenticazione QA reale e test autenticati di modifica/archiviazione.
 
 ## Decisione
 
-**Punto 2 resta APERTO, con replay, autenticazione e persistenza funzionale certificati ma stato provider non ancora risolto.**
+**Il problema MIGRATIONS_FAILED e la riconciliazione del registro QA sono chiusi.** Il ledger live è coerente con Production, i 34 record QA-specifici sono preservati, il branch è FUNCTIONS_DEPLOYED / ACTIVE_HEALTHY e le verifiche CI sono verdi.
 
-Nessuna migrazione è stata applicata al QA live durante questa riconciliazione. Produzione non è stata modificata. Nessun reset/rebase/delete del branch è stato eseguito. La suite UI ha creato fixture temporanee con marker univoco e ne ha verificato il cleanup; i dati preesistenti sono rimasti intatti.
+Nessuna migrazione DDL è stata rieseguita sul QA live. Il solo intervento live è stato il riallineamento metadata del registro. Production non è stata modificata. Nessun reset, rebase o delete/recreate del branch è stato eseguito.
 
-## Prossime attività per chiudere il punto 2
+## Prossime attività
 
-1. Recuperare il messaggio esatto dello step fallito da Supabase Branches → View logs.
-2. In base all'errore, definire una procedura non distruttiva e compatibile con i timestamp delle migrazioni QA; non fare reset, rebase o delete/recreate prima di aver verificato la causa.
-3. Applicare la correzione al solo ambiente QA e ripetere la lettura di branch status, ledger, inventario schema e autenticazione.
-4. Chiudere il punto solo quando il provider status non è più `MIGRATIONS_FAILED` e tutti i controlli restano verdi.
+1. Proseguire con il collaudo funzionale APP-01..APP-15, mantenendo separata la certificazione delle funzionalità dalla riconciliazione delle migrazioni.
+2. Verificare la parità finale QA/Production per schema, ACL, default privileges e funzioni; le differenze QA-specifiche documentate devono restare intenzionali.
+3. Non avviare il lancio finché il collaudo funzionale e la checklist pre-rilascio non sono completati.
+
