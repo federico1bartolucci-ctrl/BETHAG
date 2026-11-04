@@ -263,3 +263,11 @@ REVOKE EXECUTE ON FUNCTION private.is_workspace_staff(uuid) FROM authenticated;
 REVOKE TRUNCATE, REFERENCES, TRIGGER
 ON TABLE public.condominium_fund_availability
 FROM authenticated;
+
+-- Closure helpers remain callable by authenticated/service_role, but not anon/PUBLIC.
+REVOKE EXECUTE ON FUNCTION private.check_condominium_member_transfer_closure(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.check_condominium_member_transfer_closure(uuid) FROM PUBLIC, anon;
+
+-- Remove Production's extra anon defaults for future public tables.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM anon;
