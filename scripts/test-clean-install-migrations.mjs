@@ -111,6 +111,7 @@ const query = [
 "  'public_tables', (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),",
 "  'application_maintain_relations', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND (has_table_privilege('anon',c.oid,'MAINTAIN') OR has_table_privilege('authenticated',c.oid,'MAINTAIN') OR has_table_privilege('service_role',c.oid,'MAINTAIN'))),",
 "  'postgres_default_maintain', (SELECT count(*)::int FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclobjtype='r' AND n.nspname='public' AND a.privilege_type='MAINTAIN' AND a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)),",
+"  'postgres_anon_default_table_privileges', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='anon'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
 "  'transfer_wrapper_invoker', (SELECT NOT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='close_condominium_member_transfer' AND pg_get_function_identity_arguments(p.oid)='p_transfer_id uuid'),",
 "  'private_schema_service_role_usage', has_schema_privilege('service_role','private','USAGE'),",
 "  'prepare_communication_authenticated', has_function_privilege('authenticated','private.prepare_communication_recipients(uuid)','EXECUTE'),",
@@ -124,7 +125,9 @@ const query = [
 "  'public_execute_count', (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a WHERE n.nspname IN ('public','private') AND a.grantee=0 AND a.privilege_type='EXECUTE'),",
 "  'coowner_trigger', EXISTS(SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname='condominium_members' AND t.tgname='trg_apply_incoming_transfer_member_metadata' AND NOT t.tgisinternal),",
 "  'coowner_trigger_invoker', (SELECT NOT prosecdef FROM pg_proc WHERE oid='private.apply_incoming_transfer_member_metadata()'::regprocedure),",
-"  'workspace_staff_authenticated', has_function_privilege('authenticated','private.is_workspace_staff(uuid)','EXECUTE')",
+"  'workspace_staff_authenticated', has_function_privilege('authenticated','private.is_workspace_staff(uuid)','EXECUTE'),
+  'closure_helper_anon', has_function_privilege('anon','private.check_condominium_member_transfer_closure(uuid)','EXECUTE') OR has_function_privilege('anon','public.check_condominium_member_transfer_closure(uuid)','EXECUTE'),
+  'closure_helper_authenticated', has_function_privilege('authenticated','private.check_condominium_member_transfer_closure(uuid)','EXECUTE') AND has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE'),
 ")::text;"
 ].join("\n");
 const state = JSON.parse(psql(["-A", "-t", "-c", query]).trim());
@@ -132,6 +135,7 @@ const state = JSON.parse(psql(["-A", "-t", "-c", query]).trim());
 assert.equal(state.public_tables, 47, "Unexpected public table inventory after clean install.");
 assert.equal(state.application_maintain_relations, 0, "Application roles retain MAINTAIN on public relations.");
 assert.equal(state.postgres_default_maintain, 0, "Postgres default privileges still grant MAINTAIN to application roles.");
+assert.equal(state.postgres_anon_default_table_privileges, 0, "Postgres default table privileges still grant anon CRUD rights.");
 assert.equal(state.transfer_wrapper_invoker, true, "Public transfer wrapper is not SECURITY INVOKER.");
 assert.equal(state.private_schema_service_role_usage, true, "service_role lacks private schema USAGE.");
 assert.equal(state.prepare_communication_authenticated, true, "Authenticated caller cannot prepare communication recipients.");
@@ -146,6 +150,8 @@ assert.equal(state.public_execute_count, 0, "Unexpected PUBLIC EXECUTE remains o
 assert.equal(state.coowner_trigger, true, "Incoming co-owner metadata trigger is missing.");
 assert.equal(state.coowner_trigger_invoker, true, "Co-owner metadata trigger must be SECURITY INVOKER.");
 assert.equal(state.workspace_staff_authenticated, false, "Private workspace staff helper is exposed to authenticated.");
+assert.equal(state.closure_helper_anon, false, "Transfer closure helpers remain executable by anon.");
+assert.equal(state.closure_helper_authenticated, true, "Authenticated transfer closure helper grants are missing.");
 
 console.log(JSON.stringify({
   status: "PASS",
