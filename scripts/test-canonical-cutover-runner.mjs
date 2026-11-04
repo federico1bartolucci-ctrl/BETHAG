@@ -4,7 +4,7 @@
  * a local PostgreSQL database initialized from the five-file clean baseline.
  * Seeds a disposable copy of the frozen 247-pair ledger, runs all 14 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 261-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 262-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
