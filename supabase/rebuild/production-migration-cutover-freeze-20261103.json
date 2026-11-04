@@ -1,5 +1,5 @@
 {
-  "artifact": "BETHAG Production migration cutover freeze — 247-row live history and fourteen pending canonical increments",
+  "artifact": "BETHAG Production migration cutover freeze — 247-row live history and fifteen pending canonical increments",
   "captured_date": "2026-11-03",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
   "reviewed_source_commit": "a97153aa6e0aba091877de15fa15b5088efe029c",
@@ -340,7 +340,7 @@
   },
   "no_go_gates": [
     "Provider-backed physical restore has not been performed; only local logical restore verification and the user's recorded acceptance of the residual physical-restore risk are available. Do not claim provider restore success.",
-    "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fourteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
+    "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fifteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
     "Supabase-managed supabase_admin has three public table default-ACL entries granting MAINTAIN; the postgres connection cannot change them. Obtain provider guidance or named security-owner exception.",
     "workspace_members.data is absent in Production and the collaborator boolean function body differs from the desired canonical fix; both remain pending.",
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
@@ -434,6 +434,6 @@
       "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
       "20261103070901_grant_service_role_private_resend_event_rpc.sql"
     ],
-    "ordering": "All 23 files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 14-increment runner."
+    "ordering": "All 24 files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 15-increment runner."
   }
 }
