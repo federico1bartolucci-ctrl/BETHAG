@@ -11,6 +11,15 @@ const preflight = await readFile(join(root, "supabase/rebuild/production-cutover
 const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261103.sql"), "utf8");
 const bootstrapTest = await readFile(join(root, "scripts/test-postgres-bootstrap.mjs"), "utf8");
 const runnerTest = await readFile(join(root, "scripts/test-canonical-cutover-runner.mjs"), "utf8");
+const cleanInstallFiles = (await readdir(join(root, "supabase/migrations"))).filter((name) => name.endsWith(".sql")).sort();
+const expectedCleanInstallFiles = [
+  ...manifest.clean_install.baseline_files,
+  manifest.clean_install.existing_canonical_head,
+  ...manifest.clean_install.pending_canonical_increments,
+  ...manifest.clean_install.exact_production_forward_files,
+].sort();
+assert.equal(cleanInstallFiles.length, 23, "Clean-install migration directory must contain exactly 23 reviewed SQL files.");
+assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen 23-file clean-install sequence.");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
 const sha = (text) => {
   const bytes = Buffer.from(text, "utf8");
@@ -42,6 +51,8 @@ assert.match(workflow, /bethag_runner_test/);
 
 for (const item of manifest.live_ledger.forward_migrations_after_2026_11_02_freeze) {
   const sql = await readFile(join(root, "supabase/rebuild/production-forward-migrations", item.file), "utf8");
+  const deployableSql = await readFile(join(root, "supabase/migrations", item.file), "utf8");
+  assert.equal(sha(deployableSql), item.git_blob_sha, "Deployable Production-forward SQL differs from exact ledger payload: " + item.file);
   assert.equal(sha(sql), item.git_blob_sha, "Production-forward SQL blob differs from the captured live ledger payload: " + item.file);
 }
 assert.match(runner, /BETHAG_ALLOW_PRODUCTION_MIGRATIONS/);

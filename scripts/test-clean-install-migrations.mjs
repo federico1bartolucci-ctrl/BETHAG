@@ -52,6 +52,10 @@ const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.en
 
 assert.equal(freeze.clean_install?.migration_file_count, 23,
   "Frozen manifest must describe the 23-file clean-install sequence.");
+assert.deepEqual(freeze.clean_install.baseline_files, baselineFiles);
+assert.equal(freeze.clean_install.existing_canonical_head, existingHead);
+assert.deepEqual(freeze.clean_install.pending_canonical_increments, pendingFiles);
+assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFiles);
 assert.deepEqual(actualFiles, expectedFiles,
   "Deployable migration directory differs from the frozen 23-file chronological clean-install sequence.");
 assert.equal(actualFiles.length, 23);

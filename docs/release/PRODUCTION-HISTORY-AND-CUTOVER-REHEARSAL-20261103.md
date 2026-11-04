@@ -76,3 +76,8 @@ Sono quindi due prove distinte e obbligatorie:
 2. **Cutover Production:** simulazione della situazione live (247 record, incluse le tre migrazioni Production-forward già applicate) e applicazione dei soli 14 incrementi mancanti tramite runner transazionale, per arrivare a 261 record senza modificare i 247 storici.
 
 La prova del cutover non sostituisce quella della clean install e viceversa. Il precedente inventario da 20 file è superato.
+
+
+### Evidenza CI consolidata — 4 novembre 2026
+
+La GitHub Actions [run 41819086300](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300), sul commit PR `6c0af4a77124cdc8eee7e709856065271598e8bd` (merge-checkout `42765a1183eb1c6490b6a16c68aebf8036e302c9`), è terminata **SUCCESS** per entrambi i job (`build` e `postgres-bootstrap`). Sono passati: `verify:baseline`, verifica security/ACL, build, smoke browser pubblico, baseline PostgreSQL 17, replay cronologico completo dei 23 SQL, rehearsal del runner per i 14 incrementi, verifica hardening incrementale, test RLS dei permessi collaboratore e rehearsal transazionale del ledger. Il clean install ha prodotto 47 tabelle pubbliche, zero privilegi MAINTAIN per i ruoli applicativi e le RPC di comunicazione/Resend con i permessi attesi. Il cutover simulato ha preservato tutte le 247 coppie storiche e aggiunto 14 record, per 261 totali. Nessuna operazione remota su Supabase o Production è stata eseguita.
