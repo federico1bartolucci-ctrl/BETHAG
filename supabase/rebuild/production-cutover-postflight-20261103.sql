@@ -190,6 +190,6 @@ BEGIN
        OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature),'EXECUTE')
   ) <> 0 THEN RAISE EXCEPTION 'FAIL: one or more authenticated private RPC grants are missing'; END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: 261-row ledger with 247 historical rows preserved by runner; fourteen canonical identities; ACL/RLS/transfer/collaborator/archive postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
+  RAISE NOTICE 'POSTFLIGHT PASS: 262-row ledger with 247 historical rows preserved by runner; fifteen canonical identities; ACL/RLS/transfer/collaborator/archive postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
 END
 $postflight$;
