@@ -54,3 +54,9 @@ Production contains `public.condominium_installments`, but the recovered 247-ent
 
 The replay-only baseline `20260929065621_legacy_condominium_installments.sql` reconstructs the 15 columns, primary key, and core foreign keys from the read-only Production catalog. The fiscal-years prerequisite is deliberately ordered immediately before it because `fiscal_year_id` references `condominium_fiscal_years`; unit/member/ledger references are also present at that point in the replay chronology. Secondary indexes, validation checks, RLS policies, and triggers are left to later historical payloads. This is a documented reconstruction assumption, not an original SQL payload, and must never be deployed to QA or Production.
 
+## Payment movements relation
+
+Production contains `public.condominium_payment_movements`, but the recovered 247-entry ledger has no `CREATE TABLE` payload for it. The first recorded closed-accounting migration creates a trigger on this relation, and subsequent payment RPCs read and write it; it therefore predates those recorded operations.
+
+The replay-only baseline `20260929070814_legacy_condominium_payment_movements.sql` reconstructs its 10 columns, primary key, workspace/condominium/installment foreign keys, and positive-amount check from the read-only Production catalog. The prerequisite is ordered after installments and immediately before the first migration that attaches its accounting trigger. Secondary indexes, RLS policies, and triggers are left to later historical payloads. This is a test-only reconstruction, not recovered historical SQL, and must never be deployed to QA or Production.
+
