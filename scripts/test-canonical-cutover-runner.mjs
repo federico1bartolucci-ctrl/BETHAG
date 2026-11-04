@@ -41,8 +41,8 @@ SELECT json_build_object(
  'tables',(SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')),
  'functions',(SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private') AND p.prokind IN ('f','p'))
 )::text;`]));
-assert.deepEqual(inventory, {tables:47, functions:171},
-  "Refusing rehearsal unless the local database has the expected five-file BETHAG baseline.");
+assert.deepEqual(inventory, {tables:47, functions:172},
+  "Refusing rehearsal unless the isolated database has the reviewed 15-migration structural inventory.");
 
 const seed = [
   "DROP SCHEMA IF EXISTS supabase_migrations CASCADE;",
