@@ -95,3 +95,10 @@ A full catalog inventory on 2026-11-04 identified five more relations referenced
 The same inventory confirmed `condominiums.archived_at` exists in Production but is not added by any of the 247 recovered SQL payloads. The replay-only bridge adds that column immediately before its first recorded use in `20261001083704`.
 
 These additions raise the disposable replay prerequisite count from 7 to 13. The workflow must stage 13 baseline files plus the 247 byte-identical historical payloads (260 SQL files total). The synthetic prerequisites are not historical ledger entries, are not part of the 247-file archive, and must never be deployed to QA or Production.
+
+
+## Pre-ledger millesimal trigger helper seeds — 2026-11-04
+
+The chronological static audit found two more pre-ledger function dependencies: `public.ensure_unit_millesimal_values()` and `public.ensure_table_millesimal_values()`. The recovered ledger revokes EXECUTE on both at `20260929232302_harden_millesimal_trigger_function_execute.sql`, but first records their definitions at `20260930080309_ensure_millesimal_rows_for_units.sql`. The ACL operations prove the functions already existed before the revocation. A replay-only seed at `20260929232301` now installs the exact recoverable function bodies; the later historical migration replaces them and attaches its triggers as recorded. No historical payload was modified.
+
+The workflow now asserts 15 replay-only prerequisite files plus 247 historical payloads (262 staged SQL files total). These two helper seeds are test-only and must never be deployed to QA or Production.
