@@ -40,7 +40,7 @@ create table public.condominium_expense_allocations (
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   condominium_id uuid not null references public.condominiums(id) on delete cascade,
   ledger_entry_id uuid not null references public.condominium_ledger_entries(id) on delete cascade,
-  unit_id uuid references public.condominium_units(id) on delete set null,
+  unit_id uuid,
   member_id uuid references public.condominium_members(id) on delete set null,
   allocation_basis text not null default 'Millesimi',
   millesimi numeric,
