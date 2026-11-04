@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "supabase/replay-candidate/**"
+      - "supabase/replay-baseline/**"
       - ".github/workflows/replay-production-ledger-postgres17.yml"
   push:
     branches: ["recovery/production-ledger-archive-20261103"]
@@ -65,7 +66,10 @@ jobs:
 
       - name: Start disposable Supabase stack
         working-directory: /tmp/bethag-production-ledger-replay
-        run: supabase start
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start --debug 2>&1 | tee /tmp/bethag-production-ledger-replay/start.log
 
       - name: Replay all 247 migrations on PostgreSQL 17
         working-directory: /tmp/bethag-production-ledger-replay
@@ -79,7 +83,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: postgres17-replay-diagnostics
-          path: /tmp/bethag-production-ledger-replay/replay.log
+          path: |
+            /tmp/bethag-production-ledger-replay/start.log
+            /tmp/bethag-production-ledger-replay/replay.log
           if-no-files-found: warn
           retention-days: 7
 
