@@ -175,7 +175,7 @@
     },
     {
       "order": 15,
-      "file": "20261105120000_fix_portal_registration_upsert.sql",
+      "file": "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
       "git_blob_sha": "305232b105e84a0e43df2b96291cd41998955764",
       "purpose": "Repair resident portal registration and administrator approval upserts using explicit, deterministic portal-access matching.",
       "postcondition": "Verified resident registration creates/updates exactly one active portal_access row and one active resident workspace_members row; duplicate/conflicting portal links fail closed; registration and administrator approval use the same helper.",
@@ -256,8 +256,8 @@
         "name": "preserve_server_owned_condominium_archive_state"
       },
       {
-        "version": "20261105120000",
-        "name": "fix_portal_registration_upsert"
+        "version": "20261104235514",
+        "name": "fix_portal_registration_upsert_conflict_target"
       }
     ],
     "authenticated": {
