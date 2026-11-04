@@ -94,7 +94,7 @@ A full catalog inventory on 2026-11-04 identified five more relations referenced
 
 The same inventory confirmed `condominiums.archived_at` exists in Production but is not added by any of the 247 recovered SQL payloads. The replay-only bridge adds that column immediately before its first recorded use in `20261001083704`.
 
-These additions raise the disposable replay prerequisite count from 7 to 13. The workflow must stage 13 baseline files plus the 247 byte-identical historical payloads (260 SQL files total). The synthetic prerequisites are not historical ledger entries, are not part of the 247-file archive, and must never be deployed to QA or Production.
+These additions raise the disposable replay prerequisite count from 9 to 15. The workflow must stage 15 baseline files plus the 247 byte-identical historical payloads (262 SQL files total). The synthetic prerequisites are not historical ledger entries, are not part of the 247-file archive, and must never be deployed to QA or Production.
 
 
 ## Pre-ledger millesimal trigger helper seeds — 2026-11-04
