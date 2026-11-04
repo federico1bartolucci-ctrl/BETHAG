@@ -23,7 +23,7 @@ assert.equal(snapshot.branch_status,"MIGRATIONS_FAILED");
 const dirs = [
   ["supabase/migrations","canonical"],
   ["supabase/rebuild/qa-only-migrations","archived-qa"],
-  ["supabase/rebuild/qa-reconstructed-migrations","catalog-reconstructed"]
+  ["supabase/rebuild/qa-recovered-migrations","recovered-qa-ledger"]
 ];
 const candidates = [];
 for (const [directory,source] of dirs) {
@@ -43,7 +43,7 @@ assert.equal(selected.length,34);
 assert.deepEqual(selected.map(x=>x.version),[...selected.map(x=>x.version)].sort());
 assert.equal(new Set(selected.map(x=>x.version)).size,34);
 const sourceCounts=selected.reduce((acc,row)=>(acc[row.source]=(acc[row.source]??0)+1,acc),{});
-assert.deepEqual(sourceCounts,{"canonical":17,"archived-qa":12,"catalog-reconstructed":5});
+assert.deepEqual(sourceCounts,{"canonical":17,"archived-qa":12,"recovered-qa-ledger":5});
 
 const baselineGrantSql=await readFile("supabase/migrations/20261017000005_bethag_baseline_grants.sql","utf8");
 const roles=new Set(["anon","authenticated","service_role","authenticator","supabase_admin"]);
