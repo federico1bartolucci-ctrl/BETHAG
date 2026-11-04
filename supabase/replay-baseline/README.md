@@ -151,3 +151,10 @@ The replay workflow now asserts 20 replay-only prerequisite files plus 247 exact
 The recovered migration `20261003043706_expose_captured_transfer_snapshot.sql` patches `public.get_member_transfer_accounting_snapshot(uuid)` through `pg_get_functiondef`, but the first CREATE statement for that RPC in the ledger appears later at `20261005132420`. The current Production definition was retrieved read-only and seeded at `20261003043705`. It already includes the captured snapshot property, so the historical patch's explicit idempotency guard exits without modifying it. This is a replay-only compatibility seed, not recovered original SQL; never deploy it to QA or Production.
 
 The workflow now asserts 21 replay-only prerequisite files plus 247 exact historical payloads (268 staged SQL files total).
+
+
+## Pre-ledger transfer preview RPC — 2026-11-04
+
+The historical migration `20261003045727` patches `public.preview_condominium_member_transfer(uuid,uuid,date)` by inspecting its current function definition, but the recovered ledger does not create the RPC until later. Its live Production definition, result type, security mode, search path and ACL were inspected read-only. The function is seeded immediately before the patch at `20261003045726`, preserving the historical migration's own chronological modification. This is a test-only reconstruction and must never be deployed to QA or Production.
+
+The workflow now asserts 22 replay-only prerequisite SQL files plus 247 exact historical payloads (269 staged SQL files total).
