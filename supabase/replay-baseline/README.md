@@ -137,3 +137,10 @@ A full column inventory compared the 612 columns on Production base tables with 
 The same inventory found `condominium_creation_intakes.created_condominium_id` and `documents.file_size_bytes` missing at that point in the replay, but both are added by the recorded historical migration `20261005132340_reconcile_remaining_core_columns_v2.sql`; no baseline copy was added for them.
 
 The replay workflow now asserts 19 replay-only prerequisite files plus 247 exact historical payloads (266 staged SQL files total).
+
+
+## Pre-ledger audit-log read policy — 2026-11-04
+
+A static audit of every `ALTER POLICY` in the recovered sequence found one policy altered without an earlier CREATE: `public.condominium_audit_log_read_manager`, first altered by `20261003030800`. The preceding table migration creates a separate all-operations manager policy, but not this named SELECT policy. The missing policy is seeded at `20260929075202` with the prior workspace-manager predicate; the later historical migration tightens it to `private.is_workspace_admin(workspace_id)`. This replay-only policy seed is not part of the recovered archive and must never be deployed to QA or Production.
+
+The replay workflow now asserts 20 replay-only prerequisite files plus 247 exact historical payloads (267 staged SQL files total).
