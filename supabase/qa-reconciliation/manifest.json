@@ -1,0 +1,305 @@
+{
+  "format_version": 1,
+  "qa_branch": "bethag-launch-qa",
+  "qa_project_ref": "jhuyhlzzydcgghrzeexn",
+  "production_parent_ref": "tctcgptrsmvgajqjgnev",
+  "registry_entries": 49,
+  "production_ledger_entries": 16,
+  "qa_specific_entries": 33,
+  "migrations": [
+    {
+      "version": "20260928021707",
+      "name": "initial_bethag_backend",
+      "source_path": "supabase/replay-candidate/20260928021707_initial_bethag_backend.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928021808",
+      "name": "tighten_portal_rls",
+      "source_path": "supabase/replay-candidate/20260928021808_tighten_portal_rls.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928021935",
+      "name": "sync_auth_profiles",
+      "source_path": "supabase/replay-candidate/20260928021935_sync_auth_profiles.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928021944",
+      "name": "privatize_rls_functions",
+      "source_path": "supabase/replay-candidate/20260928021944_privatize_rls_functions.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928022046",
+      "name": "add_legacy_ids_for_migration",
+      "source_path": "supabase/replay-candidate/20260928022046_add_legacy_ids_for_migration.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928022126",
+      "name": "tighten_condominium_member_visibility",
+      "source_path": "supabase/replay-candidate/20260928022126_tighten_condominium_member_visibility.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928022526",
+      "name": "add_condominium_member_legacy_unique_key",
+      "source_path": "supabase/replay-candidate/20260928022526_add_condominium_member_legacy_unique_key.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928022821",
+      "name": "add_workspace_legacy_unique_constraints",
+      "source_path": "supabase/replay-candidate/20260928022821_add_workspace_legacy_unique_constraints.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928024823",
+      "name": "bootstrap_first_workspace_admin",
+      "source_path": "supabase/replay-candidate/20260928024823_bootstrap_first_workspace_admin.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928024931",
+      "name": "harden_first_admin_rpc",
+      "source_path": "supabase/replay-candidate/20260928024931_harden_first_admin_rpc.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928040840",
+      "name": "allow_portal_residents_read_condominiums",
+      "source_path": "supabase/replay-candidate/20260928040840_allow_portal_residents_read_condominiums.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928041428",
+      "name": "persist_collaborator_legacy_ids",
+      "source_path": "supabase/replay-candidate/20260928041428_persist_collaborator_legacy_ids.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928042328",
+      "name": "enforce_collaborator_module_permissions",
+      "source_path": "supabase/replay-candidate/20260928042328_enforce_collaborator_module_permissions.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928042333",
+      "name": "refine_collaborator_permission_scope",
+      "source_path": "supabase/replay-candidate/20260928042333_refine_collaborator_permission_scope.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928043406",
+      "name": "harden_authenticated_request_policies",
+      "source_path": "supabase/replay-candidate/20260928043406_harden_authenticated_request_policies.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20260928043415",
+      "name": "finish_authenticated_rls_hardening",
+      "source_path": "supabase/replay-candidate/20260928043415_finish_authenticated_rls_hardening.sql",
+      "classification": "recovered-production-ledger"
+    },
+    {
+      "version": "20261017000001",
+      "name": "bethag_baseline_schema",
+      "source_path": "supabase/qa-reconciliation/migrations/20261017000001_bethag_baseline_schema.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261017000002",
+      "name": "bethag_baseline_indexes_views",
+      "source_path": "supabase/qa-reconciliation/migrations/20261017000002_bethag_baseline_indexes_views.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261017000003",
+      "name": "bethag_baseline_functions",
+      "source_path": "supabase/qa-reconciliation/migrations/20261017000003_bethag_baseline_functions.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261017000004",
+      "name": "bethag_baseline_security",
+      "source_path": "supabase/qa-reconciliation/migrations/20261017000004_bethag_baseline_security.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261017000005",
+      "name": "bethag_baseline_grants",
+      "source_path": "supabase/qa-reconciliation/migrations/20261017000005_bethag_baseline_grants.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261022210629",
+      "name": "restrict_private_function_public_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261022210629_restrict_private_function_public_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261022210630",
+      "name": "harden_default_privileges_and_private_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261022210630_harden_default_privileges_and_private_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261022213544",
+      "name": "restrict_close_member_transfer_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261022213544_restrict_close_member_transfer_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261022233440",
+      "name": "align_public_function_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261022233440_align_public_function_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261023000001",
+      "name": "revoke_authenticated_maintain",
+      "source_path": "supabase/qa-reconciliation/migrations/20261023000001_revoke_authenticated_maintain.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261023000002",
+      "name": "revoke_default_maintain",
+      "source_path": "supabase/qa-reconciliation/migrations/20261023000002_revoke_default_maintain.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261023000003",
+      "name": "revoke_service_role_maintain",
+      "source_path": "supabase/qa-reconciliation/migrations/20261023000003_revoke_service_role_maintain.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261023000004",
+      "name": "application_default_table_privileges",
+      "source_path": "supabase/qa-reconciliation/migrations/20261023000004_application_default_table_privileges.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261023000733",
+      "name": "use_invoker_for_close_transfer_rpc",
+      "source_path": "supabase/qa-reconciliation/migrations/20261023000733_use_invoker_for_close_transfer_rpc.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261027100000",
+      "name": "revoke_public_execute_from_transfer_closure_helpers",
+      "source_path": "supabase/qa-reconciliation/migrations/20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261027110000",
+      "name": "repair_service_role_transfer_invoker_path",
+      "source_path": "supabase/qa-reconciliation/migrations/20261027110000_repair_service_role_transfer_invoker_path.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261028100000",
+      "name": "fix_collaborator_module_permission_boolean",
+      "source_path": "supabase/qa-reconciliation/migrations/20261028100000_fix_collaborator_module_permission_boolean.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102041805",
+      "name": "repair_authenticated_communication_rpc_private_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102041805_repair_authenticated_communication_rpc_private_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102043152",
+      "name": "repair_authenticated_condominium_delete_rpc_private_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102043152_repair_authenticated_condominium_delete_rpc_private_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102043315",
+      "name": "persist_condominium_archive_columns",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102043315_persist_condominium_archive_columns.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102044002",
+      "name": "repair_condominium_archive_rpc_and_json",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102044002_repair_condominium_archive_rpc_and_json.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102044102",
+      "name": "repair_authenticated_condominium_archive_rpc_private_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102044102_repair_authenticated_condominium_archive_rpc_private_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102044224",
+      "name": "repair_authenticated_invoker_private_rpc_grants",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102044224_repair_authenticated_invoker_private_rpc_grants.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102044603",
+      "name": "revoke_public_execute_from_public_trigger_functions",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102044603_revoke_public_execute_from_public_trigger_functions.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102050437",
+      "name": "backfill_condominium_archive_metadata",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102050437_backfill_condominium_archive_metadata.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102050957",
+      "name": "revoke_service_role_maintain_from_fund_availability_view",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102050957_revoke_service_role_maintain_from_fund_availability_view.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102054253",
+      "name": "preserve_server_owned_condominium_archive_state",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102054253_preserve_server_owned_condominium_archive_state.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102054409",
+      "name": "add_workspace_member_profile_data",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102054409_add_workspace_member_profile_data.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102100000",
+      "name": "repair_authenticated_accounting_rpc_private_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102100000_repair_authenticated_accounting_rpc_private_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261102200820",
+      "name": "restore_secure_communication_recipient_rpc_execute",
+      "source_path": "supabase/qa-reconciliation/migrations/20261102200820_restore_secure_communication_recipient_rpc_execute.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261103072843",
+      "name": "qa_align_transfer_wrapper_empty_search_path",
+      "source_path": "supabase/qa-reconciliation/migrations/20261103072843_qa_align_transfer_wrapper_empty_search_path.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261103193927",
+      "name": "qa_store_incoming_coowner_profile_metadata",
+      "source_path": "supabase/qa-reconciliation/migrations/20261103193927_qa_store_incoming_coowner_profile_metadata.sql",
+      "classification": "qa-baseline-or-forward-only"
+    },
+    {
+      "version": "20261104122833",
+      "name": "grant_service_role_private_resend_event_rpc",
+      "source_path": "supabase/qa-reconciliation/migrations/20261104122833_grant_service_role_private_resend_event_rpc.sql",
+      "classification": "qa-baseline-or-forward-only"
+    }
+  ]
+}
