@@ -5,9 +5,9 @@ export type BackendState = Record<string, any[]>;
 export async function getActiveWorkspaceId(userId?: string | null, preferredWorkspaceId?: string | null) {
   if (!supabase) return null;
 
-  // Page-level modules may call this helper without passing the user ID.
-  // Resolve the authenticated identity before building a UUID filter; never
-  // send the string "undefined" to PostgREST.
+  // Several page modules call this helper without an explicit user ID.
+  // Resolve the authenticated user before querying: passing undefined to
+  // PostgREST creates an invalid UUID filter and pollutes the DB logs.
   let activeUserId = typeof userId === "string" ? userId.trim() : "";
   if (!activeUserId) {
     const { data, error } = await supabase.auth.getUser();
@@ -42,17 +42,83 @@ export async function getActiveWorkspaceId(userId?: string | null, preferredWork
   return data?.workspace_id ?? null;
 }
 
+export async function getWorkspacePlan(preferredWorkspaceId?: string | null): Promise<"free" | "plus" | "professional" | "portal" | null> {
+  if (!supabase) return null;
+  const workspaceId = await getActiveWorkspaceId(undefined, preferredWorkspaceId);
+  if (!workspaceId) return null;
+
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("plan")
+    .eq("id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw error;
+  const plan = data?.plan;
+  return plan === "free" || plan === "plus" || plan === "professional" || plan === "portal"
+    ? plan
+    : null;
+}
+
 export async function loadBackendState(workspaceId: string): Promise<BackendState> {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  const condominiums = await supabase
-    .from("condominiums")
-    .select("*")
-    .eq("workspace_id", workspaceId);
+  // PostgREST applies a default maximum row count (commonly 1,000).
+  // Load every condominium explicitly: otherwise older workspaces with more
+  // than one page silently lose later records on navigation/refresh.
+  const condominiumRows: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("condominiums")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + 999);
+    if (error) throw error;
+    const batch = data ?? [];
+    condominiumRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+  const condominiums = { data: condominiumRows, error: null };
 
-  if (condominiums.error) throw condominiums.error;
-
-  const condominiumIds = (condominiums.data ?? []).map((row: any) => row.id);
+  const client = supabase;
+  const loadWorkspaceRows = async (
+    table: string,
+    columns = "*",
+    orderBy = "created_at"
+  ) => {
+    const rows: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .eq("workspace_id", workspaceId)
+        .order(orderBy, { ascending: true })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      const batch = data ?? [];
+      rows.push(...batch);
+      if (batch.length < 1000) break;
+    }
+    return { data: rows, error: null };
+  };
+  const loadWorkspaceCondominiumMembers = async () => {
+    const rows: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await client
+        .from("condominium_members")
+        .select("*, condominiums!inner(workspace_id)")
+        .eq("condominiums.workspace_id", workspaceId)
+        .order("created_at", { ascending: true })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      const batch = data ?? [];
+      rows.push(...batch);
+      if (batch.length < 1000) break;
+    }
+    return { data: rows, error: null };
+  };
 
   const [
     condominiumMembers,
@@ -75,12 +141,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     workspaceMembers,
     condominiumMemberTransfers,
   ] = await Promise.all([
-    condominiumIds.length
-      ? supabase.from("condominium_members").select("*").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
-    condominiumIds.length
-      ? supabase.from("condominium_units").select("*").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
+    loadWorkspaceCondominiumMembers(),
+    loadWorkspaceRows("condominium_units"),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
@@ -97,9 +159,10 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
-    condominiumIds.length
-      ? supabase.from("condominium_member_transfers").select("id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at").in("condominium_id", condominiumIds).order("created_at")
-      : Promise.resolve({ data: [], error: null }),
+    loadWorkspaceRows(
+      "condominium_member_transfers",
+      "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
+    ),
   ]);
 
   const firstError = [
@@ -273,6 +336,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
       city: row.city ?? row.data?.city ?? "",
       cap: row.postal_code ?? row.data?.cap ?? "",
       province: row.province ?? row.data?.province ?? "",
+      archivedAt: row.archived_at ?? undefined,
+      archivedBy: row.archived_by ?? undefined,
+      archiveReason: row.archive_reason ?? "",
     })),
     condominiumUnits: mappedCondominiumUnits,
     condominiumMembers: mappedCondominiumMembers,
@@ -285,7 +351,15 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     assemblies: (assemblies.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     suppliers: (suppliers.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
     activities: (activities.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
-    communications: (communications.data ?? []).map((row: any) => ({ ...row.data, id: row.legacy_id })),
+    communications: (communications.data ?? []).map((row: any) => ({
+      ...row.data,
+      id: row.legacy_id,
+      // The relational foreign key is authoritative; legacy JSON can be stale.
+      condominiumId: condominiumLegacyByDbId.get(row.condominium_id) ?? row.data?.condominiumId ?? null,
+      publishedToPortal: row.published ?? row.data?.publishedToPortal ?? false,
+      title: row.title ?? row.data?.title ?? "",
+      body: row.body ?? row.data?.body ?? "",
+    })),
     condominiumRequests: (condominiumRequests.data ?? []).map((row: any) => ({
       ...row.data,
       id: row.legacy_id,
@@ -363,73 +437,59 @@ async function syncBackendStateNow(
   const canSyncCondomini = canSyncModule("condomini");
   const canSyncPortal = canSyncModule("portale");
 
-  const condominiumRows = canSyncCondomini ? (state.condominiums ?? []) : [];
-  const { data: existingCondominiums, error: condominiumError } = await supabase
-    .from("condominiums")
-    .select("id, legacy_id, name, address, city, postal_code, province, data")
-    .eq("workspace_id", workspaceId);
-
-  if (condominiumError) throw condominiumError;
-
-  const condominiumDbIdByLegacyId = new Map(
-    (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row.id])
-  );
-
-  if (condominiumRows.length) {
-    const existingByLegacyId = new Map(
-      (existingCondominiums ?? []).map((row: any) => [row.legacy_id, row])
-    );
-
-    const rowsToPersist = condominiumRows.map((item: any) => {
-      const existing = existingByLegacyId.get(item.id);
-
-      // La sincronizzazione automatica riceve anche stati locali parziali
-      // (ad esempio durante hydration/refresh). Un valore assente o vuoto
-      // nel payload di sincronizzazione non deve cancellare un dato già
-      // persistito. Le modifiche intenzionali effettuate dal form passano
-      // invece da save_condominium e continuano a poter impostare i campi.
-      const hasText = (value: unknown) =>
-        typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined;
-
-      const name = hasText(item.name) ? item.name : (existing?.name ?? existing?.data?.name ?? "");
-      const address = hasText(item.address) ? item.address : (existing?.address ?? existing?.data?.address ?? "");
-      const city = hasText(item.city) ? item.city : (existing?.city ?? existing?.data?.city ?? "");
-      const postalCode = hasText(item.cap) ? item.cap : (existing?.postal_code ?? existing?.data?.cap ?? "");
-      const province = hasText(item.province) ? item.province : (existing?.province ?? existing?.data?.province ?? "");
-      const mergedData = {
-        ...(existing?.data && typeof existing.data === "object" ? existing.data : {}),
-        ...item,
-        name,
-        address,
-        city,
-        cap: postalCode,
-        province,
-      };
-
-      return {
-        workspace_id: workspaceId,
-        legacy_id: item.id,
-        name,
-        address,
-        city,
-        postal_code: postalCode,
-        province,
-        data: mergedData,
-      };
-    });
-
-    await upsertRows("condominiums", rowsToPersist);
-
-    const { data: refreshedCondominiums, error } = await supabase
+  // Condominium writes are handled by the explicit save/archive/restore/delete RPCs.
+  // Re-upserting the entire workspace snapshot here on every unrelated state
+  // change caused thousands of writes, row-lock contention and stalled edits.
+  // Only read the compact legacy-id map needed by dependent tables.
+  const existingCondominiumRows: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
       .from("condominiums")
       .select("id, legacy_id")
-      .eq("workspace_id", workspaceId);
-
+      .eq("workspace_id", workspaceId)
+      .order("id", { ascending: true })
+      .range(offset, offset + 999);
     if (error) throw error;
-    (refreshedCondominiums ?? []).forEach((row: any) => {
-      condominiumDbIdByLegacyId.set(row.legacy_id, row.id);
+    const batch = data ?? [];
+    existingCondominiumRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+  const condominiumDbIdByLegacyId = new Map(
+    existingCondominiumRows
+      .filter((row: any) => row.legacy_id !== null && row.legacy_id !== undefined)
+      .map((row: any) => [String(row.legacy_id), row.id])
+  );
+
+  const getCondominiumDbId = (legacyId: unknown) =>
+    legacyId === null || legacyId === undefined || legacyId === ""
+      ? undefined
+      : condominiumDbIdByLegacyId.get(String(legacyId));
+
+  // Resolve any communication condominium references that are not present
+  // in the initial workspace snapshot before constructing the upsert batch.
+  const communicationLegacyIds = Array.from(new Set(
+    (state.communications ?? [])
+      .map((item: any) => item.condominiumId)
+      .filter((id: any) => id !== null && id !== undefined && id !== "")
+      .map((id: any) => String(id))
+  ));
+  const missingCommunicationLegacyIds = communicationLegacyIds.filter(
+    (legacyId) => !condominiumDbIdByLegacyId.has(legacyId)
+  );
+  if (missingCommunicationLegacyIds.length) {
+    const { data: missingCondominiums, error: missingCondominiumsError } = await supabase
+      .from("condominiums")
+      .select("id, legacy_id")
+      .eq("workspace_id", workspaceId)
+      .in("legacy_id", missingCommunicationLegacyIds);
+    if (missingCondominiumsError) throw missingCondominiumsError;
+    (missingCondominiums ?? []).forEach((row: any) => {
+      condominiumDbIdByLegacyId.set(String(row.legacy_id), row.id);
     });
   }
+
+  // Condominium writes are performed only by the explicit save/archive/restore/delete RPCs.
+  // Do not replay the whole workspace snapshot from background sync.
 
   // Le richieste dipendono dagli ID DB dei condòmini: vengono sincronizzate
   // dopo la persistenza dei membri, così la mappa degli ID DB è disponibile.
@@ -459,10 +519,10 @@ async function syncBackendStateNow(
         const workCondominiumIds = Array.from(new Set(
           (state.condominiumWorks ?? [])
             .filter((work: any) => Number(work.supplierId) === legacySupplierId)
-            .map((work: any) => condominiumDbIdByLegacyId.get(work.condominiumId))
+            .map((work: any) => getCondominiumDbId(work.condominiumId))
             .filter(Boolean)
         ));
-        const condominiumDbId = condominiumDbIdByLegacyId.get(Number(supplier.condominiumId));
+        const condominiumDbId = getCondominiumDbId(Number(supplier.condominiumId));
         const candidateCondominiumIds = workCondominiumIds.length
           ? workCondominiumIds
           : (condominiumDbId ? [condominiumDbId] : Array.from(condominiumDbIdByLegacyId.values()));
@@ -516,32 +576,32 @@ async function syncBackendStateNow(
 
   const rowsByTable: Array<[string, any[]]> = [
     canSyncModule("documenti") ? ["documents", (state.documents ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.name, category: item.category, status: item.publication,
       file_path: item.storagePath ?? null,
       data: item,
     }))] : null,
     canSyncModule("scadenze") ? ["deadlines", (state.deadlines ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, due_date: item.dueDate || null, status: item.status, data: item,
     }))] : null,
     canSyncModule("assemblee") ? ["assemblies", (state.assemblies ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, assembly_date: item.date ? new Date(item.date).toISOString() : null, status: item.status, data: item,
     }))] : null,
     canSyncModule("fornitori") ? ["suppliers", (state.suppliers ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       name: item.name, category: item.service, data: item,
     }))] : null,
     canSyncModule("attivita") ? ["activities", (state.activities ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, activity_date: item.dueDate ? new Date(item.dueDate).toISOString() : null, status: item.status, data: item,
     }))] : null,
     canSyncModule("comunicazioni") ? ["communications", (state.communications ?? []).map((item: any) => ({
-      workspace_id: workspaceId, legacy_id: item.id, condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      workspace_id: workspaceId, legacy_id: item.id, condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title, body: item.body, published: item.publishedToPortal,
-      // Keep UI labels in JSON data; store only canonical values accepted by
-      // communications_email_status_check in the relational column.
+      // Keep the UI labels in JSON data, but store only the canonical values
+      // accepted by communications_email_status_check in the relational column.
       email_status: item.emailStatus === "Predisposta" ? "prepared"
         : item.emailStatus === "Non inviata" ? null
         : ["prepared", "no_recipients", "In elaborazione", "Inviata", "Parzialmente inviata", "Errore", "Consegnata"].includes(item.emailStatus)
@@ -552,7 +612,7 @@ async function syncBackendStateNow(
     canSyncModule("attivita") ? ["condominium_works", (state.condominiumWorks ?? []).map((item: any) => ({
       id: item.id,
       workspace_id: workspaceId,
-      condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+      condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
       title: item.title,
       category: item.category ?? "Manutenzione",
       description: item.description ?? "",
@@ -567,11 +627,22 @@ async function syncBackendStateNow(
         ? cumulativeWorkActualAmountById.get(String(item.id))
         : Number(item.actualAmount || 0),
       progress_percent: Math.max(0, Math.min(100, Number(item.progressPercent || 0))),
-      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(condominiumDbIdByLegacyId.get(item.condominiumId) ?? "")}`) ?? null) : null,
+      supplier_id: item.supplierId ? (condominiumSupplierIdByLegacySupplierKey.get(`${Number(item.supplierId)}::${String(getCondominiumDbId(item.condominiumId) ?? "")}`) ?? null) : null,
       notes: item.notes ?? "",
       data: item,
     })).filter((row: any) => row.condominium_id && row.title)] : null,
   ].filter((entry): entry is [string, any[]] => Boolean(entry));
+
+  const communicationRows = rowsByTable.find(([table]) => table === "communications")?.[1] ?? [];
+  const publishedWithoutCondominium = communicationRows.filter(
+    (row: any) => row.published === true && !row.condominium_id
+  );
+  if (publishedWithoutCondominium.length) {
+    throw new Error(
+      "Sincronizzazione comunicazioni interrotta: riferimenti condominiali non risolti per " +
+      publishedWithoutCondominium.map((row: any) => String(row.legacy_id)).join(", ")
+    );
+  }
 
   for (const [table, rows] of rowsByTable) {
     if (!rows.length) continue;
@@ -597,7 +668,7 @@ async function syncBackendStateNow(
     ? (state.portalMembers ?? []).map((item: any) => ({
         workspace_id: workspaceId,
         legacy_id: item.id,
-        condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+        condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
         name: item.name,
         email: item.email,
         role: item.role === "council" ? "council" : "resident",
@@ -606,7 +677,18 @@ async function syncBackendStateNow(
         active: item.active ?? true,
         user_id: item.userId ?? null,
         data: item,
-      })).filter((row: any) => row.condominium_id)
+      // Auth/portal records created by invitation or registration may
+      // intentionally have no legacy_id. They are authoritative server rows,
+      // not legacy-sync rows: attempting to upsert them with NULL legacy_id
+      // cannot match the (workspace_id, legacy_id) conflict target and can
+      // collide with the unique case-insensitive workspace/condominium/email
+      // constraint on every backend refresh.
+      })).filter((row: any) =>
+        row.condominium_id &&
+        row.legacy_id !== null &&
+        row.legacy_id !== undefined &&
+        String(row.legacy_id).trim() !== ""
+      )
     : [];
 
   if (portalRows.length) await upsertRows("portal_access", portalRows);
@@ -630,7 +712,7 @@ async function syncBackendStateNow(
   // rimaneva solo nello stato locale e spariva al successivo refresh.
   const desiredUnitMap = new Map<string, any>();
   for (const item of state.condominiumMembers ?? []) {
-    const condominiumId = condominiumDbIdByLegacyId.get(item.condominiumId);
+    const condominiumId = getCondominiumDbId(item.condominiumId);
     const unitCode = String(item.apartment ?? "").trim();
     if (!condominiumId || !unitCode) continue;
 
@@ -669,8 +751,19 @@ async function syncBackendStateNow(
         String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
       )
     );
+    let missingUnitsInsertError: any = null;
     if (missingUnits.length) {
-      await upsertRows("condominium_units", missingUnits, "condominium_id,unit_code");
+      // The database enforces uniqueness through expression indexes on
+      // lower(trim(unit_code)); PostgREST cannot infer those with the raw
+      // (condominium_id, unit_code) conflict target. Insert the missing rows
+      // directly and treat only a concurrent unique race as recoverable.
+      const inserted = await supabase
+        .from("condominium_units")
+        .insert(missingUnits);
+      missingUnitsInsertError = inserted.error;
+      if (missingUnitsInsertError && missingUnitsInsertError.code !== "23505") {
+        throw missingUnitsInsertError;
+      }
     }
 
     const persistedResult = await supabase
@@ -678,6 +771,19 @@ async function syncBackendStateNow(
       .select("id, condominium_id, unit_code")
       .in("condominium_id", unitCondominiums);
     if (persistedResult.error) throw persistedResult.error;
+
+    const persistedKeys = new Set(
+      (persistedResult.data ?? []).map((unit: any) =>
+        String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
+      )
+    );
+    const stillMissing = desiredUnits.filter((row: any) =>
+      !persistedKeys.has(
+        String(row.condominium_id) + "::" + String(row.unit_code).trim().toLowerCase()
+      )
+    );
+    if (stillMissing.length && missingUnitsInsertError) throw missingUnitsInsertError;
+    if (stillMissing.length) throw new Error("Impossibile sincronizzare tutte le unità condominiali richieste.");
 
     (persistedResult.data ?? []).forEach((unit: any) => {
       unitRowsByKey.set(
@@ -689,9 +795,9 @@ async function syncBackendStateNow(
 
   const memberRows = (state.condominiumMembers ?? []).map((item: any) => ({
 
-    condominium_id: condominiumDbIdByLegacyId.get(item.condominiumId) ?? null,
+    condominium_id: getCondominiumDbId(item.condominiumId) ?? null,
     unit_id: (() => {
-      const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId);
+      const condominiumDbId = getCondominiumDbId(item.condominiumId);
       const unit = condominiumDbId
         ? unitRowsByKey.get(`${condominiumDbId}::${String(item.apartment ?? "").trim().toLowerCase()}`)
         : null;
@@ -711,7 +817,34 @@ async function syncBackendStateNow(
     data: item,
   })).filter((row: any) => row.condominium_id);
 
-  if (memberRows.length) await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+  // The local condominium-member snapshot does not always carry the linked
+  // Auth user (for example, an invited resident whose portal access was linked
+  // server-side). A background sync must not interpret an omitted userId as an
+  // instruction to unlink that account: the AFTER trigger would deactivate
+  // portal_access and workspace_members. Preserve the server identity unless
+  // the local model explicitly supplies a replacement.
+  if (memberRows.length) {
+    const memberCondominiumIds = Array.from(new Set(memberRows.map((row: any) => row.condominium_id)));
+    const { data: existingMemberLinks, error: existingMemberLinksError } = await supabase
+      .from("condominium_members")
+      .select("condominium_id,legacy_id,user_id")
+      .in("condominium_id", memberCondominiumIds);
+    if (existingMemberLinksError) throw existingMemberLinksError;
+    const existingUserByLegacyKey = new Map(
+      (existingMemberLinks ?? []).map((row: any) => [
+        String(row.condominium_id) + "::" + String(row.legacy_id),
+        row.user_id,
+      ])
+    );
+    for (const row of memberRows) {
+      if (row.user_id === null || row.user_id === undefined) {
+        row.user_id = existingUserByLegacyKey.get(
+          String(row.condominium_id) + "::" + String(row.legacy_id)
+        ) ?? null;
+      }
+    }
+    await upsertRows("condominium_members", memberRows, "condominium_id,legacy_id");
+  }
 
   const memberRowsByLegacyKey = new Map<string, any>();
   if (memberRows.length) {
@@ -727,7 +860,7 @@ async function syncBackendStateNow(
   }
 
   const requestRows = (state.condominiumRequests ?? []).map((item: any) => {
-    const condominiumDbId = condominiumDbIdByLegacyId.get(item.condominiumId) ?? null;
+    const condominiumDbId = getCondominiumDbId(item.condominiumId) ?? null;
     const memberDb = condominiumDbId
       ? memberRowsByLegacyKey.get(String(condominiumDbId) + "::" + String(item.memberId ?? ""))
       : null;
@@ -1185,7 +1318,10 @@ export async function saveCondominium(
 ) {
   if (!supabase) throw new Error("Supabase non configurato.");
 
-  return enqueueBackendSync(async () => {
+  // Explicit condominium saves must not wait behind a full-workspace background sync.
+  // The RPC is transactional and owns the condominium row; related module sync
+  // continues through the serialized queue independently.
+  {
     // Il workspace salvato nello stato React può essere obsoleto dopo un
     // refresh/login. Risolviamo sempre quello effettivamente associato alla
     // sessione autenticata prima di inviare la modifica al server.
@@ -1278,7 +1414,58 @@ export async function saveCondominium(
     }
 
     return data as string;
+  }
+}
+
+export async function archiveCondominium(workspaceId: string, legacyId: number, reason?: string | null) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  // Lifecycle writes use dedicated transactional RPCs. Background sync no
+  // longer upserts condominium rows, so these operations must not wait behind
+  // unrelated workspace synchronization.
+  const { data: condominium, error: lookupError } = await supabase
+    .from("condominiums")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("legacy_id", legacyId)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+
+  const { error: archiveError } = await supabase.rpc("archive_condominium", {
+    p_workspace_id: workspaceId,
+    p_condominium_id: condominium.id,
+    p_reason: reason ?? null,
   });
+  if (archiveError) throw archiveError;
+
+  const { data, error } = await supabase
+    .from("condominiums")
+    .select("archived_at, archived_by, archive_reason, data")
+    .eq("id", condominium.id)
+    .eq("workspace_id", workspaceId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function restoreCondominium(workspaceId: string, legacyId: number) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+
+  const { data: condominium, error: lookupError } = await supabase
+    .from("condominiums")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("legacy_id", legacyId)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
+
+  const { error: restoreError } = await supabase.rpc("restore_condominium", {
+    p_workspace_id: workspaceId,
+    p_condominium_id: condominium.id,
+  });
+  if (restoreError) throw restoreError;
 }
 
 export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {

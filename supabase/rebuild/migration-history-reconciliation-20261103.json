@@ -1,0 +1,26 @@
+{
+  "captured_at": "2026-11-03",
+  "production": {
+    "project_ref": "tctcgptrsmvgajqjgnev",
+    "ledger_count": 247,
+    "latest": {
+      "version": "20261103070901",
+      "name": "grant_service_role_private_resend_event_rpc"
+    }
+  },
+  "qa": {
+    "project_ref": "jhuyhlzzydcgghrzeexn",
+    "ledger_count": 47,
+    "latest": {
+      "version": "20261103072843",
+      "name": "qa_align_transfer_wrapper_empty_search_path"
+    },
+    "branch_status": "MIGRATIONS_FAILED"
+  },
+  "clean_baseline_branch": {
+    "migration_files": 20,
+    "baseline_files": 5,
+    "pending_incremental_files": 14
+  },
+  "historical_ledger_replay": "NOT_SELF_CONTAINED: 13 live public tables lack matching CREATE TABLE statements in the 247 recorded SQL payloads; replay stops at 20260928043547 because public.portal_access is absent."
+}

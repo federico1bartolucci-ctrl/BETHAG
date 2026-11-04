@@ -1,2 +1,0 @@
-grant execute on function private.confirm_condominium_member_transfer(uuid, uuid, text, text, uuid, date, text, text, jsonb) to authenticated;
-revoke execute on function private.confirm_condominium_member_transfer(uuid, uuid, text, text, uuid, date, text, text, jsonb) from anon;

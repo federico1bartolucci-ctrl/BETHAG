@@ -5,6 +5,11 @@ on:
     branches: ["main"]
   pull_request:
 
+# Serialize authenticated writes against the shared QA project with qa-navigation.yml.
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,5 +25,144 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Reject invalid or duplicate migration versions
+        run: node scripts/check-unique-migration-versions.mjs
+
+      - name: Verify migration history reconciliation and clean database baseline
+        run: npm run verify:baseline
+
+      - name: Verify Production function security and ACL parity
+        run: npm run verify:security-parity
+
+      - name: Test fresh PostgreSQL bootstrap
+        run: npm test
+
+      - name: Test communication send authorization and publication guards
+        run: npm run test:communication-guards
+
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: npm run build
+
+      - name: Install Chromium for browser smoke tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run isolated public-login browser smoke test
+        run: node scripts/test-browser-public-smoke.mjs
+
+      - name: Certify real QA authentication and session persistence
+        if: github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-qa-auth-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-qa-auth-preview.log; exit 1; }
+          node scripts/test-browser-current-qa-auth.mjs
+
+      - name: Run authenticated QA edit/archive diagnostic
+        if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102' || github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-preview.log; exit 1; }
+          node scripts/test-current-qa-browser-workflows.mjs
+          node scripts/test-current-qa-navigation.mjs
+          node scripts/test-browser-current-qa-auth.mjs
+
+  postgres-bootstrap:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Bootstrap baseline on real PostgreSQL 17
+        run: node scripts/test-postgres-bootstrap.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Create a separate database for chronological clean-install rehearsal
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_clean_install_test
+        env:
+          PGPASSWORD: postgres
+
+      - name: Rehearse all 24 clean-install migrations in chronological order
+        run: npm run test:clean-install
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
+
+      - name: Create a separate empty database for guarded migration-runner rehearsal
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_runner_test
+        env:
+          PGPASSWORD: postgres
+
+      - name: Execute all 15 real canonical migrations through the guarded runner on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-runner.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_runner_test
+
+      - name: Verify incremental hardening catalog and ACL postconditions
+        run: node scripts/test-postgres-incremental-hardening.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Test collaborator module permission enforcement with RLS
+        run: node scripts/test-collaborator-module-permissions.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_test
+
+      - name: Rehearse DATABASE_URL and canonical ledger transaction on isolated PostgreSQL
+        run: node scripts/test-canonical-cutover-ledger-rehearsal.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+

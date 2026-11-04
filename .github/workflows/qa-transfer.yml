@@ -1,0 +1,32 @@
+name: BETHAG QA member transfer acceptance
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-transfer.mjs"
+      - ".github/workflows/qa-transfer.yml"
+  workflow_dispatch:
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run authenticated transfer acceptance on QA only
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-transfer.mjs
+# QA verification trigger refreshed 2026-11-02 (round 3)
