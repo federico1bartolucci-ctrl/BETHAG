@@ -71,6 +71,7 @@ jobs:
           node scripts/test-current-qa-navigation.mjs
           node scripts/test-browser-current-qa-auth.mjs
           node scripts/test-current-qa-app08-11.mjs
+          node scripts/test-current-qa-app05-07.mjs
 
   postgres-bootstrap:
     runs-on: ubuntu-latest
