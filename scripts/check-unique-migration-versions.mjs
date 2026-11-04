@@ -8,9 +8,13 @@ const versions = new Map();
 const invalid = [];
 
 for (const filename of files) {
-  const match = filename.match(/^(\\d{14})_(.+)\\.sql$/);
-  if (!match) { invalid.push(filename); continue; }
-  const version = match[1];
+  const separator = filename.indexOf("_");
+  const version = separator === -1 ? "" : filename.slice(0, separator);
+  const suffix = separator === -1 ? "" : filename.slice(separator + 1);
+  if (!/^[0-9]{14}$/.test(version) || !suffix.endsWith(".sql") || suffix.length <= 4) {
+    invalid.push(filename);
+    continue;
+  }
   versions.set(version, [...(versions.get(version) ?? []), filename]);
 }
 
