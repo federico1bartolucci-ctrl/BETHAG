@@ -1,5 +1,19 @@
 # BETHAG — Production history and canonical cutover rehearsal (2026-11-03)
 
+## Superseding review — 2026-11-04 (replay pending)
+
+A live Production/QA catalog comparison after the earlier rehearsal found additional QA-proven behavior not covered by the prior 14-increment package:
+
+- 18 authenticated SECURITY INVOKER RPC paths were missing EXECUTE on their guarded private implementations in Production.
+- The archive/restore implementation bodies differed from QA.
+- The incoming co-owner metadata trigger existed in QA but not Production.
+- QA had revoked direct PUBLIC EXECUTE on two trigger functions and revoked authenticated access to the unused private workspace-staff helper.
+
+A new forward-only canonical migration was added:
+- `supabase/migrations/20261104130000_reconcile_qa_security_and_coowner_rpcs.sql`
+- Git blob SHA: `284651ea81523147aa1f46618102babc997630fa`
+
+The frozen package now contains **24 clean-install SQL files** and **15 pending canonical increments**. The expected Production ledger after an approved operation is 262 rows (247 preserved historical rows + 15 canonical increments). The earlier rehearsal run 41819086300 tested only the 23-file/14-increment package and is therefore historical evidence, not proof for this updated package. A fresh PostgreSQL 17 clean-install and guarded-runner replay is required. Production and live QA remain untouched by this migration-file change; no cutover is authorized.
 ## Historical Production ledger — forensic finding
 
 The live Production migration ledger contains 247 exact version/name pairs, latest version `20261103070901`. The 247 SQL payloads were recovered separately with database-derived MD5 and character-count evidence.
