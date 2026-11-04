@@ -8,11 +8,14 @@ A live Production/QA catalog comparison after the earlier rehearsal found additi
 - The archive/restore implementation bodies differed from QA.
 - The incoming co-owner metadata trigger existed in QA but not Production.
 - QA had revoked direct PUBLIC EXECUTE on two trigger functions and revoked authenticated access to the unused private workspace-staff helper.
-- The effective relation-ACL comparison found excess `TRUNCATE`, `REFERENCES` and `TRIGGER` for `authenticated` on `public.condominium_fund_availability`; the forward migration explicitly revokes these view privileges. The latest clean-install/cutover replay must be repeated after this amendment.
+- The effective relation-ACL comparison found excess `TRUNCATE`, `REFERENCES` and `TRIGGER` for `authenticated` on `public.condominium_fund_availability`; the forward migration explicitly revokes these view privileges.
+- Effective function ACL comparison found anon inherited EXECUTE on both transfer-closure helpers; the migration revokes PUBLIC/anon while preserving authenticated and service_role execution.
+- Production also retained postgres-owned anon CRUD defaults for future public tables; the migration revokes those schema-scoped defaults.
+- The latest clean-install/cutover replay must be repeated after these ACL/default-privilege amendments.
 
 A new forward-only canonical migration was added:
 - `supabase/migrations/20261104130000_reconcile_qa_security_and_coowner_rpcs.sql`
-- Git blob SHA: `9c1303943985f12c574cc821b67696478e1fffef`
+- Git blob SHA: `a445bc47d71e1d5e27e654e0802d292a8b653d8f`
 
 The frozen package now contains **24 clean-install SQL files** and **15 pending canonical increments**. The expected Production ledger after an approved operation is 262 rows (247 preserved historical rows + 15 canonical increments). The earlier rehearsal run 41819086300 tested only the 23-file/14-increment package and is therefore historical evidence, not proof for this updated package. A fresh PostgreSQL 17 clean-install and guarded-runner replay is required. Production and live QA remain untouched by this migration-file change; no cutover is authorized.
 ## Historical Production ledger — forensic finding
