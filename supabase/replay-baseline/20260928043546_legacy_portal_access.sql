@@ -1,3 +1,27 @@
+-- Synthetic pre-ledger baseline for the legacy condominium_expense_allocations relation.
+-- Production's first recorded reference is 20260929065325 (ALTER TABLE ... ADD allocation_table_id),
+-- while no CREATE TABLE payload exists in the 247-row ledger. The live catalog confirms this
+-- relation predates that migration. Reconstruct only its pre-reference columns and core foreign
+-- keys here; later recorded migrations add allocation_table_id, indexes, checks, policies and
+-- triggers. This is a replay-only reconstruction, not a recovered historical SQL payload.
+create table public.condominium_expense_allocations (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  condominium_id uuid not null references public.condominiums(id) on delete cascade,
+  ledger_entry_id uuid not null references public.condominium_ledger_entries(id) on delete cascade,
+  unit_id uuid references public.condominium_units(id) on delete set null,
+  member_id uuid references public.condominium_members(id) on delete set null,
+  allocation_basis text not null default 'Millesimi',
+  millesimi numeric,
+  amount numeric not null default 0,
+  paid_amount numeric not null default 0,
+  due_date date,
+  status text not null default 'Da pagare',
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Synthetic pre-ledger baseline for the legacy portal_access relation.
 -- This relation predates the first Production migration recorded in schema_migrations.
 -- It is kept outside the recovered 247 payloads and is used only by the disposable replay harness.
