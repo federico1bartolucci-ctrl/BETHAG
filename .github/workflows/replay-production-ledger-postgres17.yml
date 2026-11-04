@@ -60,9 +60,9 @@ jobs:
           baseline_count=$(find supabase/replay-baseline -maxdepth 1 -type f -name '*.sql' | wc -l)
           candidate_count=$(find supabase/replay-candidate -maxdepth 1 -type f -name '*.sql' | wc -l)
           staged_count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
-          test "$baseline_count" -eq 6
+          test "$baseline_count" -eq 7
           test "$candidate_count" -eq 247
-          test "$staged_count" -eq 253
+          test "$staged_count" -eq 254
           echo "Staged $baseline_count chronological replay prerequisites plus $candidate_count exact Production-ledger payloads ($staged_count total)."
 
       - name: Start disposable Supabase stack
