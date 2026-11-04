@@ -19,14 +19,14 @@ assert.equal(production.migrations.length,247);
 assert.equal(production.latest.version,"20261103070901");
 assert.equal(qa.count,47);
 assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
-assert.equal(files.length,23);
-assert.equal(new Set(versions).size,23);
-assert.equal(pending.length,14);
-if(!pending.every(item=>files.includes(item.file)&&!exact(production,item))) blockers.push("Canonical pending migration inventory differs from the frozen 14-file sequence.");
+assert.equal(files.length,24);
+assert.equal(new Set(versions).size,24);
+assert.equal(pending.length,15);
+if(!pending.every(item=>files.includes(item.file)&&!exact(production,item))) blockers.push("Canonical pending migration inventory differs from the frozen 15-file sequence.");
 if(!freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item=>exact(production,item))) blockers.push("One or more live Production-forward migrations are missing from the captured ledger.");
 if(freeze.live_catalog.supabase_admin_default_maintain_entries!==3) blockers.push("Provider-managed supabase_admin default ACL inventory changed; refresh and review.");
 if(qa.branch_status==="MIGRATIONS_FAILED") blockers.push("QA branch reports MIGRATIONS_FAILED; do not use it as a release/cutover target.");
-if(freeze.rehearsal_evidence.status!=="PASS"||!freeze.rehearsal_evidence.github_actions_run_id) blockers.push("Ordered PostgreSQL 17 rehearsal of baseline + existing head + three Production-forward migrations + fourteen pending increments has not passed.");
+if(freeze.rehearsal_evidence.status!=="PASS"||!freeze.rehearsal_evidence.github_actions_run_id) blockers.push("Ordered PostgreSQL 17 rehearsal of baseline + existing head + three Production-forward migrations + fifteen pending increments has not passed.");
 if(process.env.BETHAG_APP_01_15_ACCEPTANCE!=="YES") blockers.push("APP-01–APP-15 authenticated acceptance evidence is not recorded.");
 if(process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED!=="YES") blockers.push("Live object-by-object ACL/ownership/default-privilege parity has not been attested.");
 if(process.env.BETHAG_CUTOVER_PLAN_APPROVED!=="YES") blockers.push("The 247-row migration tracking cutover plan has not been explicitly approved.");
@@ -47,7 +47,7 @@ const report={
  production_ledger_head:production.latest,
  preserved_historical_rows:247,
  pending_canonical_increments:pending.length,
- expected_ledger_rows_after_approved_tracking:261,
+ expected_ledger_rows_after_approved_tracking:262,
  production_forward_migrations:freeze.live_ledger.forward_migrations_after_2026_11_02_freeze,
  qa:{project_ref:qa.project_ref,ledger_rows:qa.count,branch_status:qa.branch_status},
  recovered_247_history_replayable_from_empty_database:false,
