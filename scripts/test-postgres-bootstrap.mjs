@@ -28,11 +28,13 @@ const incrementalMigrations = [
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
   "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+];
+const productionForwardMigrations = [
   "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
   "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
   "20261103070901_grant_service_role_private_resend_event_rpc.sql",
 ];
-const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
+const expectedFiles = [...migrationFiles, ...incrementalMigrations, ...productionForwardMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
 const migrationsToApply = migrationFiles;
@@ -196,12 +198,6 @@ console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAc
 // than the current live ledger head, so order is explicitly evidence-driven.
 const alreadyAppliedCanonicalHead = incrementalMigrations[0];
 const pendingCanonicalMigrations = incrementalMigrations.slice(1);
-const productionForwardMigrations = [
-  "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
-  "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
-  "20261103070901_grant_service_role_private_resend_event_rpc.sql",
-];
-
 console.log("Applying the existing canonical Production head " + alreadyAppliedCanonicalHead + " to clean bootstrap...");
 psql(["-f", path.join(directory, alreadyAppliedCanonicalHead)]);
 
@@ -217,7 +213,7 @@ for (const filename of pendingCanonicalMigrations) {
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
 assert.deepEqual(
   finalInventory,
-  { ...expected, columns: expected.columns + 1, functions: expected.functions + 1, triggers: expected.triggers + 1 },
+  { ...expected, columns: expected.columns + 1, functions: expected.functions + 1, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 1 } },
   "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
 );
 console.log(JSON.stringify({ incremental_hardening: "PASS", existing_production_head: alreadyAppliedCanonicalHead, production_forward_migrations: productionForwardMigrations, pending_canonical_migrations: pendingCanonicalMigrations, inventory: finalInventory }, null, 2));
