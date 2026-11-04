@@ -257,3 +257,9 @@ REVOKE EXECUTE ON FUNCTION public.preserve_closing_condominium_member_history() 
 
 -- This private staff helper is not a client RPC.
 REVOKE EXECUTE ON FUNCTION private.is_workspace_staff(uuid) FROM authenticated;
+
+-- PostgreSQL's ALL TABLES grant/revoke does not cover this view's legacy ACL.
+-- Match QA's least-privilege effective grants explicitly.
+REVOKE TRUNCATE, REFERENCES, TRIGGER
+ON TABLE public.condominium_fund_availability
+FROM authenticated;
