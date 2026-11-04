@@ -41,19 +41,19 @@ assert.equal(reconciliation.production.ledger_count, 247);
 assert.equal(reconciliation.qa.ledger_count, 47);
 assert.equal(freeze.live_ledger.rows, 247);
 assert.equal(freeze.live_ledger.head_version, "20261103070901");
-assert.equal(freeze.sequence.length, 14);
-assert.equal(migrationFiles.length, 23);
+assert.equal(freeze.sequence.length, 15);
+assert.equal(migrationFiles.length, 24);
 assert.deepEqual(migrationFiles.slice(0, 5).map((row) => row.file), baselineFiles);
 assert.ok(exact(production, existingCanonicalHead), "The prior canonical head must already be present in Production.");
 assert.ok(expectedForward.every((row) => exact(production, row)), "All three later Production-forward migrations must be preserved exactly.");
 assert.deepEqual(production.migrations.slice(-3), expectedForward, "Production's last three forward migrations differ from the captured approved evidence.");
 
 const pending = freeze.sequence.map((item) => ({ version: item.file.slice(0, 14), name: item.file.slice(15, -4), file: item.file }));
-assert.equal(pending.length, 14);
+assert.equal(pending.length, 15);
 assert.ok(pending.every((row) => !productionPairs.has(row.version + "|" + row.name)), "A pending canonical migration already exists in Production; reconcile before cutover.");
 assert.ok(pending.every((row) => migrationFiles.some((file) => file.file === row.file)), "A frozen canonical migration file is missing.");
 assert.ok(baselineFiles.every((file) => !production.migrations.some((row) => row.version === file.slice(0, 14))), "Baseline versions must not be inserted into an existing Production ledger.");
-assert.equal(freeze.expected_postflight.ledger_rows, 261);
+assert.equal(freeze.expected_postflight.ledger_rows, 262);
 assert.equal(freeze.expected_postflight.original_247_rows_unchanged, true);
 
 const report = {
@@ -67,7 +67,7 @@ const report = {
     canonical_baseline_files_not_to_insert: baselineFiles,
     pending_canonical_incrementals: pending,
     pending_count: pending.length,
-    expected_ledger_rows_after_approved_tracking: 261,
+    expected_ledger_rows_after_approved_tracking: 262,
     historical_rows_to_rewrite_or_delete: 0,
   },
   qa: {
@@ -109,7 +109,7 @@ const report = {
     "Preserve the three Production-forward migrations already applied after the prior freeze.",
     "The ordered PostgreSQL 17 rehearsal has passed on isolated CI; retain its run evidence and rerun if any migration or hash changes.",
     "Apply only the fourteen pending canonical increments through the guarded transactional runner, preserving all 247 original rows; versions may be older than the current sorted ledger head.",
-    "Verify all postconditions and confirm the ledger contains 261 rows with the 247 historical pairs unchanged and the fourteen canonical pairs present.",
+    "Verify all postconditions and confirm the ledger contains 261 rows with the 247 historical pairs unchanged and the fifteen canonical pairs present.",
     "Resolve the three Supabase-managed supabase_admin default MAINTAIN entries with provider guidance or a named security-owner exception.",
     "Complete APP-01–APP-15 evidence and obtain written approval for the exact commit, migration hashes, maintenance window and rollback criteria.",
   ],
@@ -141,7 +141,7 @@ if (process.argv.includes("--print-review-checklist")) {
     "2. Confirm the three later Production-forward migration rows and their SQL hashes.",
     "3. Confirm all fourteen canonical versions are absent and all five baseline versions remain excluded.",
     "4. Complete the ordered PostgreSQL 17 rehearsal against baseline + existing head + three Production forwards + fourteen canonical increments.",
-    "5. Verify the 261-row final ledger set and unchanged 247 historical pairs.",
+    "5. Verify the 262-row final ledger set and unchanged 247 historical pairs.",
     "6. Obtain provider guidance or named security-owner disposition for supabase_admin default ACL MAINTAIN.",
     "Verified isolated backup restore: require real provider-backed restore evidence or a documented named residual-risk acceptance; do not claim an unperformed physical restore.",
     "7. Complete APP-01–APP-15 and confirm the QA MIGRATIONS_FAILED condition is resolved.",
