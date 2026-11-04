@@ -32,6 +32,6 @@ console.log(JSON.stringify({
  canonical_migrations:files.length,
  pending_incrementals:pending.length,
  production_forward_migrations:freeze.live_ledger.forward_migrations_after_2026_11_02_freeze,
- expected_ledger_after_approved_tracking:261,
+ expected_ledger_after_approved_tracking:262,
  production_or_qa_modified:false,
 },null,2));
