@@ -2,9 +2,9 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 247-pair ledger, runs all 14 real SQL
+ * Seeds a disposable copy of the frozen 247-pair ledger, runs all 15 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 261-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 262-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -141,7 +141,7 @@ console.log(out);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,261);
+assert.equal(finalLedger.length,262);
 const historicalVersions = new Set(snapshot.migrations.map(row=>row.version));
 assert.deepEqual(finalLedger.filter(row=>historicalVersions.has(row.version)),snapshot.migrations,"Historical ledger pairs changed.");
 const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json","utf8"));
@@ -152,7 +152,7 @@ console.log(JSON.stringify({
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
  frozen_historical_pairs_preserved:247,
- canonical_rows_added:14,
- final_ledger_rows:261,
+ canonical_rows_added:15,
+ final_ledger_rows:262,
  production_or_supabase_touched:false
 },null,2));

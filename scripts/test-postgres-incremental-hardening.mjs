@@ -19,6 +19,7 @@ const incrementalMigrations = [
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
 ];
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.ok(actualFiles.includes(incrementalMigrations.at(-1)), "Missing the latest condominium archive-state migration.");
@@ -131,10 +132,7 @@ assert.deepEqual(result.public_relation_owners,{postgres:48},"All application re
 assert.equal(result.anon_direct_table_privileges,0,"anon must have no direct data or truncate privileges on public tables.");
 assert.deepEqual(result.private_schema_usage,{authenticated:true,service_role:true,anon:false});
 assert.deepEqual(result.close_rpc,{security_definer:false,public_execute:false,anon_execute:false,authenticated_execute:true,service_role_execute:true});
-assert.deepEqual(result.public_execute_targets,[
- "public.normalize_zero_ownership_owner()",
- "public.preserve_closing_condominium_member_history()",
-]);
+assert.deepEqual(result.public_execute_targets,[],"No routine should remain PUBLIC-executable after the final least-privilege increment.");
 assert.ok(result.closure_helpers.every((fn)=>fn.public_execute===false && fn.authenticated_execute===true && fn.service_role_execute===true && fn.anon_execute===false));
 console.log(JSON.stringify({
  incremental_hardening:"PASS",
@@ -147,7 +145,7 @@ console.log(JSON.stringify({
   postgres_default_maintain_removed:true,
   close_rpc_security_invoker_and_authenticated_only:true,
   closure_helpers_not_public_executable:true,
-  only_two_intentional_public_trigger_exceptions_remain:true
+  no_public_execute_grants_remain:true
  },
  result
 },null,2));

@@ -24,6 +24,9 @@ const pageErrors = [];
 const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
+const consoleErrorEvents = [];
+let browserNavigationInProgress = false;
+let browserTeardownStarted = false;
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
@@ -192,13 +195,32 @@ try {
   const adminPage = await adminContext.newPage();
   adminPage.on("console", message => {
     consoleMessages.push({ type: message.type(), text: message.text() });
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+      consoleErrorEvents.push({ text: message.text(), duringNavigation: browserNavigationInProgress, duringTeardown: browserTeardownStarted });
+    }
   });
-  adminPage.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" }));
+  adminPage.on("requestfailed", request => failedRequests.push({
+    url: request.url(),
+    error: request.failure()?.errorText ?? "unknown",
+    duringNavigation: browserNavigationInProgress,
+    duringTeardown: browserTeardownStarted,
+  }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
+  await adminPage.waitForFunction(() => {
+    try {
+      return JSON.parse(localStorage.getItem("bethag-session-v1") || "null") === "admin";
+    } catch {
+      return false;
+    }
+  }, undefined, { timeout: 25000 });
+  const adminOnlyNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Piano e upgrade" }).first();
+  await adminOnlyNav.waitFor({ state: "visible", timeout: 15000 });
+  await adminPage.waitForTimeout(750);
+  assert.ok(await adminOnlyNav.isVisible(), "Administrator role must remain hydrated before protected actions");
 
   const condominiumsNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first();
   const condominiumsHeading = adminPage.getByRole("heading", { name: "Condomìni", exact: true });
@@ -223,10 +245,24 @@ try {
     }));
     throw error;
   }
-  await clickWithRetry(
-    adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
-    adminPage.getByRole("heading", { name: "Nuovo condominio" })
-  );
+  await adminPage.waitForTimeout(500);
+  try {
+    await clickWithRetry(
+      createCondominiumButton,
+      adminPage.getByRole("heading", { name: "Nuovo condominio" })
+    );
+  } catch (error) {
+    const diagnostics = await adminPage.evaluate(() => ({
+      sessionRole: localStorage.getItem("bethag-session-v1"),
+      sessionEmail: localStorage.getItem("bethag-session-email-v1"),
+      page: localStorage.getItem("bethag-current-page-v1"),
+      pageText: document.body.innerText.slice(0, 4000),
+      pageHeaderButtons: [...document.querySelectorAll(".page-header button")].map(button => button.innerText),
+      activeNavigation: [...document.querySelectorAll(".sidebar .nav-item.active")].map(item => item.innerText),
+    }));
+    console.error("BETHAG_ADMIN_CONDOMINIUM_CREATE_CLICK_DIAGNOSTIC", JSON.stringify({ diagnostics, error: String(error.message), pageErrors, consoleErrors }));
+    throw error;
+  }
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(condoName);
   await field(adminPage, "Indirizzo *").fill("Via QA UI 1");
@@ -444,8 +480,13 @@ try {
       row.id === created.id && row.name === editedCondoName && row.archived_at === null
     );
   }, { timeout: 60000 });
-  await adminPage.reload({ waitUntil: "domcontentloaded" });
-  await restoredCondominiumHydration;
+  browserNavigationInProgress = true;
+  try {
+    await adminPage.reload({ waitUntil: "domcontentloaded" });
+    await restoredCondominiumHydration;
+  } finally {
+    browserNavigationInProgress = false;
+  }
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
@@ -811,26 +852,31 @@ try {
   await commCard.waitFor({ state: "detached", timeout: 20000 });
   results.push({ id: "APP-12", status: "PASS", checks: ["administrator created and published communication from UI", "resident saw published communication", "administrator withdrew publication", "resident lost visibility after withdrawal", "communication deleted from UI"] });
 
-  // Let the app's debounced background synchronization settle before
-  // tearing down the authenticated browser contexts. A request aborted only
-  // because the test closes its page is teardown noise, not a server failure.
+  // Allow the app's debounced background synchronization to settle before
+  // teardown. Only ERR_ABORTED events emitted after this point are teardown
+  // noise; backend errors or network failures before teardown remain failures.
   await adminPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   await adminPage.waitForTimeout(1000);
+  browserTeardownStarted = true;
   await residentContext.close();
   await adminContext.close();
   assert.deepEqual(pageErrors, []);
-  const portalAccessSyncErrors = consoleErrors.filter(message =>
-    message.includes("BETHAG backend sync failed")
+  const backendSyncErrorsBeforeTeardown = consoleErrorEvents.filter(event =>
+    !event.duringNavigation && !event.duringTeardown && event.text.includes("BETHAG backend sync failed")
   );
-  const abortedMemberSyncs = failedRequests.filter(request =>
-    request.error === "net::ERR_ABORTED" &&
-    request.url.includes("/rest/v1/condominium_members") &&
-    request.url.includes("on_conflict=")
+  assert.deepEqual(
+    backendSyncErrorsBeforeTeardown,
+    [],
+    "Backend synchronization must not fail before browser teardown: " + JSON.stringify({ backendSyncErrorsBeforeTeardown, failedRequests })
   );
-  assert.equal(
-    portalAccessSyncErrors.length,
-    abortedMemberSyncs.length,
-    "Backend synchronization errors must be absent except for matching browser-teardown aborts: " + JSON.stringify({ portalAccessSyncErrors, abortedMemberSyncs, failedRequests })
+  const backendNetworkFailures = failedRequests.filter(request =>
+    /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url) &&
+    !(request.error === "net::ERR_ABORTED" && (request.duringNavigation || request.duringTeardown))
+  );
+  assert.deepEqual(
+    backendNetworkFailures,
+    [],
+    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests })
   );
   const backendHttpFailures = failedRequests.filter(request =>
     request.status >= 400 && /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url)

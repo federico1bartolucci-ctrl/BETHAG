@@ -1,0 +1,48 @@
+name: BETHAG reconstructed QA migration replay
+
+on:
+  push:
+    branches:
+      - recovery/qa-ledger-reconciliation-20261104
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/rebuild/qa-only-migrations/**"
+      - "supabase/rebuild/qa-recovered-migrations/**"
+      - "supabase/rebuild/qa-ledger-20261104.json"
+      - "scripts/test-qa-ledger-replay-reconstruction.mjs"
+      - ".github/workflows/qa-ledger-replay-reconstruction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-ledger-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_qa_replay
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_qa_replay"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install Node dependencies
+        run: npm install --no-audit --no-fund
+      - name: Replay exact QA ledger sequence on disposable PostgreSQL 17
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bethag_qa_replay
+        run: node scripts/test-qa-ledger-replay-reconstruction.mjs

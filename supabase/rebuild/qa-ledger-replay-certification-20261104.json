@@ -1,0 +1,39 @@
+{
+  "certification": "BETHAG QA migration ledger replay",
+  "certified_at": "2026-11-04T17:55:03Z",
+  "ledger_snapshot": "supabase/rebuild/qa-ledger-20261104.json",
+  "ledger_snapshot_captured_at": "2026-11-04T14:45:00+01:00",
+  "supabase_project_ref": "jhuyhlzzydcgghrzeexn",
+  "supabase_branch": "bethag-launch-qa",
+  "supabase_branch_status_at_capture": "MIGRATIONS_FAILED",
+  "expected_migrations": 34,
+  "replay_run_id": 41881723156,
+  "replay_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41881723156",
+  "replay_commit": "be7a907f9a75ca44f542977673a584837e767bb5",
+  "replay_result": "success",
+  "postgres_version": 17,
+  "target": "disposable local PostgreSQL database in GitHub Actions",
+  "source_distribution": {
+    "canonical_migrations": 17,
+    "archived_qa_migrations": 12,
+    "recovered_qa_ledger_migrations": 5
+  },
+  "verification_checks": [
+    "all 34 ledger versions resolve to exactly one SQL file by version and migration name",
+    "chronological ordering and unique versions",
+    "47 public base tables",
+    "RLS enabled on all 47 public base tables",
+    "zero MAINTAIN privileges for anon, authenticated and service_role on application relations",
+    "close_condominium_member_transfer is SECURITY INVOKER",
+    "service_role has USAGE on private schema",
+    "workspace member profile data and condominium archive columns exist",
+    "portal_access exists",
+    "incoming co-owner transfer trigger exists",
+    "communication RPC grants match expected roles",
+    "fund availability view has no service_role MAINTAIN privilege"
+  ],
+  "production_touched": false,
+  "live_qa_data_touched": false,
+  "live_branch_status_resolution": "not attempted; left unchanged pending Supabase provisioning-status diagnosis",
+  "point_2_status": "CLOSED — complete 34-migration replay and postconditions passed"
+}

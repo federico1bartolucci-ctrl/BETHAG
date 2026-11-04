@@ -27,11 +27,14 @@ const incrementalMigrations = [
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+];
+const productionForwardMigrations = [
   "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
   "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
   "20261103070901_grant_service_role_private_resend_event_rpc.sql",
 ];
-const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
+const expectedFiles = [...migrationFiles, ...incrementalMigrations, ...productionForwardMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
 const migrationsToApply = migrationFiles;
@@ -190,17 +193,11 @@ console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAc
 
 // Reproduce the current Production chronology around the clean baseline:
 // the historical canonical head is already in Production, three exact forward
-// migrations were applied after the previous freeze, and fourteen canonical
+// migrations were applied after the previous freeze, and fifteen canonical
 // increments remain to be tracked/applied. The versions are not all greater
 // than the current live ledger head, so order is explicitly evidence-driven.
 const alreadyAppliedCanonicalHead = incrementalMigrations[0];
 const pendingCanonicalMigrations = incrementalMigrations.slice(1);
-const productionForwardMigrations = [
-  "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
-  "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
-  "20261103070901_grant_service_role_private_resend_event_rpc.sql",
-];
-
 console.log("Applying the existing canonical Production head " + alreadyAppliedCanonicalHead + " to clean bootstrap...");
 psql(["-f", path.join(directory, alreadyAppliedCanonicalHead)]);
 
@@ -216,7 +213,7 @@ for (const filename of pendingCanonicalMigrations) {
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
 assert.deepEqual(
   finalInventory,
-  { ...expected, columns: expected.columns + 1 },
+  { ...expected, columns: expected.columns + 1, functions: expected.functions + 1, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 1 } },
   "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
 );
 console.log(JSON.stringify({ incremental_hardening: "PASS", existing_production_head: alreadyAppliedCanonicalHead, production_forward_migrations: productionForwardMigrations, pending_canonical_migrations: pendingCanonicalMigrations, inventory: finalInventory }, null, 2));
@@ -293,12 +290,50 @@ assert.equal(aclChecks.target_table_count, 34, "Expected the 34 reviewed tables 
 assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still has MAINTAIN on a remediated table.");
 assert.equal(aclChecks.service_role_maintain_grants, 0, "service_role still has MAINTAIN on a public relation.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
-assert.equal(aclChecks.public_function_execute_count, 2, "PUBLIC EXECUTE must be limited to the two explicitly approved trigger functions.");
-assert.deepEqual(aclChecks.public_function_execute_targets, [
-  "public.normalize_zero_ownership_owner()",
-  "public.preserve_closing_condominium_member_history()",
-], "PUBLIC EXECUTE is present on unexpected functions or missing from expected functions.");
+assert.equal(aclChecks.public_function_execute_count, 0, "PUBLIC EXECUTE must be limited to the two explicitly approved trigger functions.");
+assert.equal(aclChecks.public_function_execute_targets, null, "No PUBLIC EXECUTE grants should remain after the final canonical increment.");
 console.log(JSON.stringify({ acl_remediation: "PASS", checks: aclChecks }, null, 2));
+
+const finalSecuritySql = `
+SELECT json_build_object(
+  'authenticated_private_rpc_missing', (
+    SELECT count(*)::int
+    FROM unnest(ARRAY[
+      'private.admin_approve_portal_registration(uuid,uuid)',
+      'private.archive_condominium(uuid,uuid,text)',
+      'private.claim_first_workspace_admin(uuid)',
+      'private.close_condominium_fiscal_year(uuid,uuid)',
+      'private.close_fiscal_year_and_generate_carryovers(uuid,uuid,uuid)',
+      'private.compensate_fiscal_carryover(uuid,uuid,uuid,numeric,uuid,text)',
+      'private.complete_portal_registration(text,text,text)',
+      'private.confirm_condominium_creation_intake(uuid,uuid)',
+      'private.delete_condominium(uuid,bigint,text)',
+      'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)',
+      'private.generate_installments_from_allocations(uuid,uuid,uuid,text,date,uuid)',
+      'private.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean)',
+      'private.list_archived_condominiums(uuid)',
+      'private.register_condominium_installment_payment(uuid,uuid,uuid,date,numeric,text,text,text)',
+      'private.restore_condominium(uuid,uuid)',
+      'private.reverse_condominium_installment_payment(uuid,uuid,uuid,text)',
+      'private.set_personal_security_code(text,boolean)',
+      'private.verify_personal_security_code(text)'
+    ]::text[]) f(signature)
+    WHERE to_regprocedure(f.signature) IS NULL
+       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature)::oid,'EXECUTE')
+  ),
+  'coowner_trigger', EXISTS(
+    SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname='condominium_members'
+      AND t.tgname='trg_apply_incoming_transfer_member_metadata' AND NOT t.tgisinternal
+  ),
+  'coowner_trigger_invoker', (SELECT NOT prosecdef FROM pg_proc WHERE oid='private.apply_incoming_transfer_member_metadata()'::regprocedure),
+  'workspace_staff_authenticated', has_function_privilege('authenticated','private.is_workspace_staff(uuid)','EXECUTE')
+)::text;`;
+const finalSecurity = JSON.parse(psql(["-A","-t","-c",finalSecuritySql],undefined).trim());
+assert.deepEqual(finalSecurity,{authenticated_private_rpc_missing:0,coowner_trigger:true,coowner_trigger_invoker:true,workspace_staff_authenticated:false});
+console.log(JSON.stringify({ final_acl_coowner_postconditions:"PASS", checks:finalSecurity },null,2));
+
 
 const transferChecksSql = `
 SELECT json_build_object(

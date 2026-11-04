@@ -1,5 +1,5 @@
 {
-  "artifact": "BETHAG Production migration cutover freeze — 247-row live history and fourteen pending canonical increments",
+  "artifact": "BETHAG Production migration cutover freeze — 247-row live history and fifteen pending canonical increments",
   "captured_date": "2026-11-03",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
   "reviewed_source_commit": "a97153aa6e0aba091877de15fa15b5088efe029c",
@@ -88,7 +88,64 @@
     "postgres_default_anon_crud": true,
     "workspace_members_data_column_present": false,
     "condominiums_archived_at_column_present": true,
-    "save_condominium_archive_state_preserved": false
+    "save_condominium_archive_state_preserved": false,
+    "supabase_admin_default_acl_disposition": {
+      "provider_managed": true,
+      "provider_documentation": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
+      "immutable_from_postgres_role": true,
+      "public_default_acl_rows": 3,
+      "public_table_default_includes_maintain": true,
+      "public_objects_owned_by_supabase_admin": 0,
+      "installed_extensions_in_public": 0,
+      "production_and_qa_public_acl_match": true,
+      "qa_only_system_schema_default_acl": {
+        "schema": "supabase_functions",
+        "acl_rows": 3,
+        "schema_usage": {
+          "anon": true,
+          "authenticated": true,
+          "service_role": true
+        },
+        "relations": [
+          {
+            "name": "hooks",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          },
+          {
+            "name": "migrations",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          }
+        ],
+        "function": {
+          "name": "http_request",
+          "anon_execute": true,
+          "authenticated_execute": true,
+          "service_role_execute": true
+        },
+        "expected_upstream_bootstrap": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
+        "disposition": "PRESERVE_PROVIDER_SYSTEM_SCHEMA; VERIFY_NOT_EXPOSED_BEFORE_RELEASE",
+        "exposure_status": "NOT_VERIFIED",
+        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Confirm schema is not in the Data API exposed-schema list.",
+        "role_level_override": {
+          "pgrst_db_schemas_override_present": false,
+          "authenticator_role_config_checked": true,
+          "database_role_config_checked": true,
+          "effective_dashboard_data_api_config": "NOT_AVAILABLE_THROUGH_CURRENT_SUPABASE_CONNECTOR"
+        }
+      },
+      "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
+      "controls": [
+        "Do not attempt ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin.",
+        "Keep extensions installed outside public unless explicitly reviewed.",
+        "Continue auditing effective privileges on actual application relations and routines."
+      ]
+    }
   },
   "sequence": [
     {
@@ -202,22 +259,29 @@
       "purpose": "Preserve server-owned condominium archive lifecycle fields during ordinary state synchronization.",
       "postcondition": "private.save_condominium preserves archived_at, archived_by and archive_reason on conflict updates; authorization, SECURITY DEFINER and empty search_path remain intact.",
       "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 15,
+      "file": "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+      "git_blob_sha": "a445bc47d71e1d5e27e654e0802d292a8b653d8f",
+      "purpose": "Reconcile QA-proven archive RPC bodies, 18 authenticated private invoker grants, co-owner metadata trigger and least-privilege helper ACLs. Explicitly revokes authenticated TRUNCATE/REFERENCES/TRIGGER on public.condominium_fund_availability to close the only remaining effective relation-ACL difference. Revokes anon/PUBLIC execution on both transfer-closure helpers while preserving authenticated/service_role execution, and removes anon CRUD defaults for future public tables.",
+      "postcondition": "All 18 guarded private implementations are callable by authenticated through their SECURITY INVOKER wrappers; trigger helper direct EXECUTE is revoked; archive/restore bodies and incoming co-owner metadata trigger match QA; private is_workspace_staff is not client-executable. Effective authenticated TRUNCATE, REFERENCES and TRIGGER on public.condominium_fund_availability are false. Transfer-closure helpers are not executable by anon; authenticated retains explicit execution. postgres-owned public table defaults grant no CRUD to anon.",
+      "production_status": "PENDING_NOT_APPLIED"
     }
   ],
   "execution_order": [
     "Refresh live Production ledger and prove all 247 version/name pairs equal the dated snapshot.",
     "Capture current live catalog, role grants, routine ACLs, default ACLs and provider-managed supabase_admin defaults.",
     "Preserve all 247 historical ledger rows exactly; never replay the 247 archived SQL payloads or insert the five baseline rows into existing Production.",
-    "Apply only the fourteen reviewed canonical incremental SQL files, in the frozen sequence, using the guarded transactional runner; migration versions are older than the current live ledger head, so the runner must validate absence by exact version rather than assume the next inserted row is the sorted ledger head.",
-    "Verify each SQL postcondition immediately, then verify all 247 historical pairs remain unchanged and exactly fourteen canonical pairs have been added (261 total rows).",
+    "Apply only the fifteen reviewed canonical incremental SQL files, in the frozen sequence, using the guarded transactional runner; migration versions are older than the current live ledger head, so the runner must validate absence by exact version rather than assume the next inserted row is the sorted ledger head.",
+    "Verify each SQL postcondition immediately, then verify all 247 historical pairs remain unchanged and exactly fifteen canonical pairs have been added (262 total rows).",
     "Verify collaborator false/true/absent permission cases, workspace_members.data, archive-state preservation, transfer wrapper ACLs and Resend service_role RPC grants.",
-    "Resolve the supabase_admin default ACL MAINTAIN entries with Supabase provider guidance or an explicitly approved security-owner exception.",
+    "Record the immutable supabase_admin defaults as an accepted provider-managed baseline; verify no supabase_admin-owned application objects or extensions are installed in public, and do not attempt to revoke provider-owned defaults.",
     "Run APP-01–APP-15 authenticated application tests and record evidence.",
-    "Obtain written approval naming exact commit, all fourteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
+    "Obtain written approval naming exact commit, all fifteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
   "expected_postflight": {
-    "ledger_rows": 261,
-    "original_244_rows_unchanged": true,
+    "ledger_rows": 262,
     "new_canonical_rows": [
       {
         "version": "20261022210629",
@@ -274,6 +338,10 @@
       {
         "version": "20261102100200",
         "name": "preserve_server_owned_condominium_archive_state"
+      },
+      {
+        "version": "20261104130000",
+        "name": "reconcile_qa_security_and_coowner_rpcs"
       }
     ],
     "authenticated": {
@@ -297,10 +365,7 @@
       "trigger": 47
     },
     "anon_current_table_privileges": 0,
-    "public_execute_allowlist": [
-      "public.normalize_zero_ownership_owner()",
-      "public.preserve_closing_condominium_member_history()"
-    ],
+    "public_execute_allowlist": [],
     "public_close_wrapper_security_definer": false,
     "private_schema_usage": {
       "anon": false,
@@ -315,59 +380,70 @@
     "workspace_members_data_column_present": true,
     "save_condominium_archive_state_preserved": true,
     "original_247_rows_unchanged": true,
-    "canonical_rows_added": 14,
-    "latest_ledger_version_after_sort": "20261103070901",
+    "canonical_rows_added": 15,
+    "latest_ledger_version_after_sort": "20261104130000",
     "supabase_admin_default_acl_maintain_entries": 3,
-    "provider_default_acl_disposition_required": true
+    "provider_default_acl_disposition_required": false,
+    "archive_condominium_lifecycle_functions_match_qa": true,
+    "incoming_coowner_metadata_trigger_present": true,
+    "authenticated_private_invoker_grants": 18,
+    "private_is_workspace_staff_authenticated_execute": false,
+    "trigger_functions_not_public_executable": true,
+    "authenticated_structural_privilege_relations": 0,
+    "fund_availability_authenticated_structural_privileges": false,
+    "anon_default_table_privileges": 0,
+    "transfer_closure_helpers_anon_execute": false,
+    "transfer_closure_helpers_authenticated_execute": true,
+    "supabase_admin_default_acl_disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE"
   },
   "critical_execution_constraint": {
-    "observed": "The guarded local-only canonical runner must rehearse all fourteen pending migrations, including collaborator profile metadata and archive lifecycle preservation.",
+    "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including collaborator profile metadata, archive lifecycle preservation, authenticated private RPC grants and co-owner metadata.",
     "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete.",
-    "status": "UPDATED_FOR_REVIEW_REHEARSAL_REQUIRED_PRODUCTION_STILL_NOT_AUTHORIZED"
+    "status": "REHEARSAL_PASS_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
   "no_go_gates": [
-    "Provider-backed physical restore has not been performed; only local logical restore verification and the user's recorded acceptance of the residual physical-restore risk are available. Do not claim provider restore success.",
-    "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fourteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
-    "Supabase-managed supabase_admin has three public table default-ACL entries granting MAINTAIN; the postgres connection cannot change them. Obtain provider guidance or named security-owner exception.",
+    "Provider-backed physical restore has not been performed; local PostgreSQL 17 rehearsal is not provider restore evidence.",
+    "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fifteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
     "workspace_members.data is absent in Production and the collaborator boolean function body differs from the desired canonical fix; both remain pending.",
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
-    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded."
+    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
+    "QA-only supabase_functions schema has anon/authenticated USAGE and broad privileges on internal hooks/migrations tables with RLS disabled, matching Supabase's upstream webhook bootstrap. Verify it is absent from the Data API exposed-schema configuration before release; do not alter provider-owned grants."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
     "status": "PASS",
     "date": "2026-11-04",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
-    "sequence": "five-file clean baseline; existing canonical Production head 20261022202747; three exact Production-forward SQL payloads already represented in the frozen 247-row ledger; fourteen pending canonical increments",
+    "sequence": "five-file clean baseline; existing canonical Production head; three exact Production-forward SQL payloads; fifteen pending canonical increments including the new ACL/co-owner reconciliation migration",
     "production_history_rows_fixture": 247,
-    "canonical_rows_expected": 14,
-    "expected_final_ledger_rows": 261,
+    "canonical_rows_expected": 15,
+    "expected_final_ledger_rows": 262,
     "historical_pairs_preserved": 247,
-    "exact_canonical_pairs_added": 14,
-    "final_sorted_ledger_head": "20261103070901",
+    "exact_canonical_pairs_added": 15,
+    "final_sorted_ledger_head": "20261104130000",
     "runner_transactional_postconditions": "PASS",
     "postgres_bootstrap_and_acl_tests": "PASS",
     "collaborator_rls_tests": "PASS",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
-    "workflow_run_id": 41819086300,
-    "workflow_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300",
-    "tested_commit": "6c0af4a77124cdc8eee7e709856065271598e8bd",
-    "github_actions_run_id": 41819086300,
-    "github_actions_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300",
+    "workflow_run_id": 41902161953,
+    "workflow_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41902161953",
+    "tested_commit": "6d6f4a1fc91918fa4550ba2df4110dda04dc1bf5",
+    "github_actions_run_id": 41902161953,
+    "github_actions_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41902161953",
     "github_actions_overall_conclusion": "success",
     "build_job": "success",
     "postgres_bootstrap_job": "success",
     "public_login_smoke": "success",
-    "authenticated_qa_edit_archive_diagnostic": "skipped_not_in_scope_for_this_migration_rehearsal",
+    "authenticated_qa_edit_archive_diagnostic": "success",
     "tested_merge_commit": "42765a1183eb1c6490b6a16c68aebf8036e302c9",
     "clean_install_rehearsal": {
       "status": "PASS",
-      "migration_files_applied": 23,
+      "migration_files_applied": 24,
       "baseline_files": 5,
       "existing_canonical_head": 1,
-      "pending_canonical_increments": 14,
+      "pending_canonical_increments": 15,
       "exact_production_forward_files": 3,
       "public_tables": 47,
       "application_maintain_relations": 0,
@@ -376,18 +452,46 @@
       "communication_recipient_rpcs_authenticated": true,
       "private_resend_event_rpc_service_role_only": true,
       "workspace_members_data": true,
-      "archive_state_preserved": true
+      "archive_state_preserved": true,
+      "transfer_closure_helpers_anon_execute": false,
+      "transfer_closure_helpers_authenticated_execute": true
     },
     "cutover_runner_rehearsal": {
       "status": "PASS",
       "historical_pairs_preserved": 247,
-      "canonical_pairs_added": 14,
-      "final_ledger_rows": 261,
-      "remote_supabase_or_production_touched": false
+      "canonical_pairs_added": 15,
+      "final_ledger_rows": 262,
+      "remote_supabase_or_production_touched": false,
+      "canonical_rows_added": 15,
+      "final_sorted_ledger_head": "20261104130000"
+    },
+    "previous_23_file_rehearsal_invalidated": true,
+    "provider_acl_assessment": {
+      "status": "PASS_ACCEPTED_PROVIDER_MANAGED_BASELINE",
+      "production_public_default_acl_rows": 3,
+      "qa_public_default_acl_rows": 3,
+      "public_acl_equal": true,
+      "public_objects_owned_by_supabase_admin": 0,
+      "extensions_installed_in_public": 0,
+      "qa_only_supabase_functions_default_acl_rows": 3,
+      "source": "Supabase Knowledge Base: Can't change the default privileges of supabase_admin in the public schema",
+      "source_url": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
+      "remote_queries_read_only": true,
+      "production_or_qa_modified": false,
+      "qa_only_supabase_functions_security": {
+        "schema_usage_anon_authenticated": true,
+        "hooks_and_migrations_tables_present": true,
+        "rls_enabled_on_those_tables": false,
+        "anon_authenticated_effective_all_table_privileges": true,
+        "exposure_configuration_verified": false,
+        "upstream_bootstrap_source": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
+        "release_gate": "VERIFY_SCHEMA_NOT_EXPOSED",
+        "authenticator_role_db_schemas_override": false
+      }
     }
   },
   "clean_install": {
-    "migration_file_count": 23,
+    "migration_file_count": 24,
     "baseline_files": [
       "20261017000001_bethag_baseline_schema.sql",
       "20261017000002_bethag_baseline_indexes_views.sql",
@@ -410,13 +514,14 @@
       "20261027110000_repair_service_role_transfer_invoker_path.sql",
       "20261028100000_fix_collaborator_module_permission_boolean.sql",
       "20261102100100_add_workspace_member_profile_data.sql",
-      "20261102100200_preserve_server_owned_condominium_archive_state.sql"
+      "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+      "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql"
     ],
     "exact_production_forward_files": [
       "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
       "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
       "20261103070901_grant_service_role_private_resend_event_rpc.sql"
     ],
-    "ordering": "All 23 files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 14-increment runner."
+    "ordering": "All 24 files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 15-increment runner."
   }
 }

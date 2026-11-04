@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE POSTFLIGHT — expected after fourteen canonical increments.
+-- READ-ONLY RELEASE POSTFLIGHT — expected after fifteen canonical increments.
 -- No schema/data/ledger writes. Historical row preservation is separately checked by the guarded runner.
 DO $postflight$
 DECLARE
@@ -26,9 +26,9 @@ BEGIN
   IF relation_count <> 47 THEN RAISE EXCEPTION 'FAIL: expected 47 public relations, found %', relation_count; END IF;
 
   SELECT count(*)::integer INTO auth_maintain FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'MAINTAIN');
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND has_table_privilege('authenticated',c.oid,'MAINTAIN');
   SELECT count(*)::integer INTO service_maintain FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'MAINTAIN');
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND has_table_privilege('service_role',c.oid,'MAINTAIN');
   IF auth_maintain <> 0 OR service_maintain <> 0 THEN RAISE EXCEPTION 'FAIL: current MAINTAIN remains (authenticated %, service_role %)',auth_maintain,service_maintain; END IF;
 
   SELECT count(*)::integer INTO anon_privileged FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -39,9 +39,14 @@ BEGIN
   IF anon_privileged <> 0 THEN RAISE EXCEPTION 'FAIL: anon has direct public table privileges: %',anon_privileged; END IF;
 
   SELECT count(*)::integer INTO auth_structural FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p')
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m')
     AND (has_table_privilege('authenticated',c.oid,'TRUNCATE') OR has_table_privilege('authenticated',c.oid,'REFERENCES') OR has_table_privilege('authenticated',c.oid,'TRIGGER'));
   IF auth_structural <> 0 THEN RAISE EXCEPTION 'FAIL: authenticated retains structural privileges: %',auth_structural; END IF;
+  IF has_table_privilege('authenticated','public.condominium_fund_availability','TRUNCATE')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','REFERENCES')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','TRIGGER') THEN
+    RAISE EXCEPTION 'FAIL: authenticated retains structural privileges on condominium_fund_availability view';
+  END IF;
 
   SELECT count(*)::integer INTO default_maintain FROM pg_default_acl d
   CROSS JOIN LATERAL aclexplode(d.defaclacl) a
@@ -78,10 +83,13 @@ BEGIN
   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
   CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a
   WHERE n.nspname IN ('public','private') AND a.grantee=0 AND a.privilege_type='EXECUTE';
-  IF public_routines IS DISTINCT FROM ARRAY[
-    'public.normalize_zero_ownership_owner()',
-    'public.preserve_closing_condominium_member_history()'
-  ]::text[] THEN RAISE EXCEPTION 'FAIL: PUBLIC EXECUTE allowlist differs: %',public_routines; END IF;
+  IF public_routines IS NOT NULL THEN RAISE EXCEPTION 'FAIL: unexpected PUBLIC EXECUTE remains: %',public_routines; END IF;
+  IF has_function_privilege('anon','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR has_function_privilege('anon','public.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: transfer closure helper EXECUTE ACL differs from reviewed QA policy';
+  END IF;
 
   SELECT prosecdef INTO wrapper_definer FROM pg_proc WHERE oid='public.close_condominium_member_transfer(uuid)'::regprocedure;
   IF wrapper_definer IS DISTINCT FROM false THEN RAISE EXCEPTION 'FAIL: transfer wrapper is not SECURITY INVOKER'; END IF;
@@ -95,8 +103,8 @@ BEGIN
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 261 OR ledger_head <> '20261103070901' THEN
-    RAISE EXCEPTION 'FAIL: expected 261 rows with sorted max 20261103070901, found %, %',ledger_count,ledger_head;
+  IF ledger_count <> 262 OR ledger_head <> '20261104130000' THEN
+    RAISE EXCEPTION 'FAIL: expected 262 rows with sorted max 20261104130000, found %, %',ledger_count,ledger_head;
   END IF;
   SELECT count(*)::integer INTO canonical_count FROM supabase_migrations.schema_migrations
   WHERE (version,name) IN (
@@ -113,9 +121,10 @@ BEGIN
     ('20261027110000','repair_service_role_transfer_invoker_path'),
     ('20261028100000','fix_collaborator_module_permission_boolean'),
     ('20261102100100','add_workspace_member_profile_data'),
-    ('20261102100200','preserve_server_owned_condominium_archive_state')
+    ('20261102100200','preserve_server_owned_condominium_archive_state'),
+    ('20261104130000','reconcile_qa_security_and_coowner_rpcs')
   );
-  IF canonical_count <> 14 THEN RAISE EXCEPTION 'FAIL: expected fourteen exact canonical version/name pairs, found %',canonical_count; END IF;
+  IF canonical_count <> 15 THEN RAISE EXCEPTION 'FAIL: expected fifteen exact canonical version/name pairs, found %',canonical_count; END IF;
 
   SELECT EXISTS (SELECT 1 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='workspace_members' AND column_name='data' AND data_type='jsonb'),
@@ -143,6 +152,55 @@ BEGIN
     RAISE EXCEPTION 'FAIL: provider-managed supabase_admin default ACL changed unexpectedly: %',supabase_admin_maintain;
   END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: 261-row ledger with 247 historical rows preserved by runner; fourteen canonical identities; ACL/RLS/transfer/collaborator/archive postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname='condominium_members'
+      AND t.tgname='trg_apply_incoming_transfer_member_metadata' AND NOT t.tgisinternal
+  ) THEN RAISE EXCEPTION 'FAIL: incoming co-owner metadata trigger missing'; END IF;
+
+  IF (SELECT prosecdef FROM pg_proc WHERE oid='private.apply_incoming_transfer_member_metadata()'::regprocedure)
+     IS DISTINCT FROM false THEN RAISE EXCEPTION 'FAIL: co-owner trigger function must be SECURITY INVOKER'; END IF;
+  IF has_function_privilege('authenticated','private.apply_incoming_transfer_member_metadata()','EXECUTE')
+     OR has_function_privilege('service_role','private.apply_incoming_transfer_member_metadata()','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: co-owner trigger function is directly executable by application roles';
+  END IF;
+
+  IF has_function_privilege('authenticated','private.is_workspace_staff(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: private workspace staff helper remains callable by authenticated';
+  END IF;
+
+  IF position('can_manage_workspace_module' IN pg_get_functiondef('private.archive_condominium(uuid,uuid,text)'::regprocedure))=0
+     OR position('can_manage_workspace_module' IN pg_get_functiondef('private.restore_condominium(uuid,uuid)'::regprocedure))=0 THEN
+    RAISE EXCEPTION 'FAIL: archive/restore functions lack their workspace authorization guard';
+  END IF;
+
+  IF (
+    SELECT count(*) FROM unnest(ARRAY[
+      'private.admin_approve_portal_registration(uuid,uuid)',
+      'private.archive_condominium(uuid,uuid,text)',
+      'private.claim_first_workspace_admin(uuid)',
+      'private.close_condominium_fiscal_year(uuid,uuid)',
+      'private.close_fiscal_year_and_generate_carryovers(uuid,uuid,uuid)',
+      'private.compensate_fiscal_carryover(uuid,uuid,uuid,numeric,uuid,text)',
+      'private.complete_portal_registration(text,text,text)',
+      'private.confirm_condominium_creation_intake(uuid,uuid)',
+      'private.delete_condominium(uuid,bigint,text)',
+      'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)',
+      'private.generate_installments_from_allocations(uuid,uuid,uuid,text,date,uuid)',
+      'private.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean)',
+      'private.list_archived_condominiums(uuid)',
+      'private.register_condominium_installment_payment(uuid,uuid,uuid,date,numeric,text,text,text)',
+      'private.restore_condominium(uuid,uuid)',
+      'private.reverse_condominium_installment_payment(uuid,uuid,uuid,text)',
+      'private.set_personal_security_code(text,boolean)',
+      'private.verify_personal_security_code(text)'
+    ]::text[]) f(signature)
+    WHERE to_regprocedure(f.signature) IS NULL
+       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature)::oid,'EXECUTE')
+  ) <> 0 THEN RAISE EXCEPTION 'FAIL: one or more authenticated private RPC grants are missing'; END IF;
+
+  RAISE NOTICE 'POSTFLIGHT PASS: 262-row ledger with 247 historical rows preserved by runner; fifteen canonical identities; ACL/RLS/transfer/collaborator/archive postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
 END
 $postflight$;
