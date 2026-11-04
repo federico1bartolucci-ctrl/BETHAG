@@ -101,7 +101,37 @@
       "qa_only_system_schema_default_acl": {
         "schema": "supabase_functions",
         "acl_rows": 3,
-        "classification": "provider-managed schema; preserve and do not normalize with application migrations"
+        "schema_usage": {
+          "anon": true,
+          "authenticated": true,
+          "service_role": true
+        },
+        "relations": [
+          {
+            "name": "hooks",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          },
+          {
+            "name": "migrations",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          }
+        ],
+        "function": {
+          "name": "http_request",
+          "anon_execute": true,
+          "authenticated_execute": true,
+          "service_role_execute": true
+        },
+        "expected_upstream_bootstrap": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
+        "disposition": "PRESERVE_PROVIDER_SYSTEM_SCHEMA; VERIFY_NOT_EXPOSED_BEFORE_RELEASE",
+        "exposure_status": "NOT_VERIFIED",
+        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Confirm schema is not in the Data API exposed-schema list."
       },
       "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
       "controls": [
@@ -372,7 +402,7 @@
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
     "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
-    "The QA-only supabase_admin default ACL rows in provider-managed schema supabase_functions are preserved as provider-owned system-schema state; they are not normalized by application migrations. Confirm exposed-schema configuration during release attestation."
+    "QA-only supabase_functions schema has anon/authenticated USAGE and broad privileges on internal hooks/migrations tables with RLS disabled, matching Supabase's upstream webhook bootstrap. Verify it is absent from the Data API exposed-schema configuration before release; do not alter provider-owned grants."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
@@ -441,7 +471,16 @@
       "source": "Supabase Knowledge Base: Can't change the default privileges of supabase_admin in the public schema",
       "source_url": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
       "remote_queries_read_only": true,
-      "production_or_qa_modified": false
+      "production_or_qa_modified": false,
+      "qa_only_supabase_functions_security": {
+        "schema_usage_anon_authenticated": true,
+        "hooks_and_migrations_tables_present": true,
+        "rls_enabled_on_those_tables": false,
+        "anon_authenticated_effective_all_table_privileges": true,
+        "exposure_configuration_verified": false,
+        "upstream_bootstrap_source": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
+        "release_gate": "VERIFY_SCHEMA_NOT_EXPOSED"
+      }
     }
   },
   "clean_install": {
