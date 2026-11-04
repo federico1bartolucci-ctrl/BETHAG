@@ -62,7 +62,7 @@ jobs:
           find "$target" -maxdepth 1 -type f -name '*.sql' -delete
           baseline_count=$(find supabase/replay-baseline -maxdepth 1 -type f -name '*.sql' | wc -l)
           candidate_count=$(find supabase/replay-candidate -maxdepth 1 -type f -name '*.sql' | wc -l)
-          test "$baseline_count" -eq 20
+          test "$baseline_count" -eq 21
           test "$candidate_count" -eq 247
           cp supabase/replay-baseline/*.sql "$target/"
           cp supabase/replay-candidate/*.sql "$target/"
