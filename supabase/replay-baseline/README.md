@@ -121,3 +121,10 @@ The workflow now asserts 16 replay-only prerequisite files plus 247 exact histor
 The replay next reached `20260930114808_revoke_trigger_security_definer_execute.sql`, which revokes privileges from six trigger functions that have no CREATE statement in the 247 recovered payloads: `guard_consumption_reading_integrity`, `guard_expense_allocation_integrity`, `guard_fiscal_year_opening_balance`, `guard_fund_integrity`, `prevent_fiscal_year_delete`, and `validate_allocation_rule_scope`. The seventh function in that revoke list, `guard_unit_scope_changes`, is created by the immediately preceding recorded migration and needs no seed. The six missing functions were recovered read-only from Production using `pg_get_functiondef` and added at `20260930100944`, before the first recorded revoke. They are synthetic pre-ledger compatibility seeds; the historical payloads still perform their recorded ACL operations. Never deploy this file to QA or Production.
 
 The replay workflow now asserts 17 replay-only prerequisite files plus 247 historical payloads (264 staged SQL files total).
+
+
+## Additional pre-ledger accounting trigger functions — 2026-11-04
+
+The public ACL reconciliation at `20261005132430` grants EXECUTE to 12 more trigger functions for which no earlier CREATE appears in the 247 payloads. They were retrieved read-only from Production with `pg_get_functiondef` and seeded at `20260930190447`, before the earliest recorded use of `guard_installment_paid_amount_update` in `20260930190448`. The remaining 11 are required by the ACL reconciliation before later migrations redefine some of them. All 12 are PL/pgSQL trigger functions and are test-only compatibility seeds; no historical SQL payload is altered.
+
+The workflow now asserts 18 replay-only prerequisite files plus 247 historical payloads (265 staged SQL files total).
