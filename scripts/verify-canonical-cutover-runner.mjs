@@ -10,9 +10,9 @@ const runner = await readFile(join(root, "scripts/apply-reviewed-production-migr
 const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261102.sql"), "utf8");
 const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261102.sql"), "utf8");
 assert.equal(manifest.sequence.length, 15, "Superseding cutover must contain exactly fifteen incremental migrations.");
-assert.match(preflight, /'20261105120000'/, "Preflight must reject a ledger where the latest portal registration repair migration is already present.");
-assert.match(postflight, /ledger_count <> 259 OR ledger_head <> '20261105120000'/, "Postflight must expect all fifteen canonical migrations and the correct ledger head.");
-assert.match(postflight, /'20261105120000','fix_portal_registration_upsert'/, "Postflight must verify the portal registration repair migration identity.");
+assert.match(preflight, /'20261104235514'/, "Preflight must reject a ledger where the latest portal registration repair migration is already present.");
+assert.match(postflight, /ledger_count <> 259 OR ledger_head <> '20261104235514'/, "Postflight must expect all fifteen canonical migrations and the correct ledger head.");
+assert.match(postflight, /'20261104235514','fix_portal_registration_upsert_conflict_target'/, "Postflight must verify the portal registration repair migration identity.");
 assert.match(postflight, /\) <> 15 THEN/, "Postflight must verify all fifteen canonical migration records.");
 assert.equal(manifest.live_ledger.rows, 244);
 assert.equal(manifest.expected_postflight.ledger_rows, 259);
