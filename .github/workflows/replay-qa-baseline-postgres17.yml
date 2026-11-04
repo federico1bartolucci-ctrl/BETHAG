@@ -118,6 +118,13 @@ jobs:
             where n.nspname='public' and c.relkind in ('r','p') and a.attnum>0 and not a.attisdropped
             order by c.relname,a.attnum
           " > /tmp/bethag-qa-baseline-replay/schema-columns.txt
+          if diff -u "$GITHUB_WORKSPACE/supabase/qa-reconciliation/qa-live-column-inventory-20261104.txt" /tmp/bethag-qa-baseline-replay/schema-columns.txt > /tmp/bethag-qa-baseline-replay/schema-column-diff.txt; then
+            echo "QA column inventory matches the isolated replay."
+          else
+            echo "QA column inventory differs from the isolated replay:"
+            cat /tmp/bethag-qa-baseline-replay/schema-column-diff.txt
+            exit 1
+          fi
           expected_counts='47|613|257|103|305|147|172|0'
           actual_counts=$(cat /tmp/bethag-qa-baseline-replay/schema-counts.txt)
           test "$actual_counts" = "$expected_counts"
@@ -133,6 +140,7 @@ jobs:
             /tmp/bethag-qa-baseline-replay/replay.log
             /tmp/bethag-qa-baseline-replay/schema-counts.txt
             /tmp/bethag-qa-baseline-replay/schema-columns.txt
+            /tmp/bethag-qa-baseline-replay/schema-column-diff.txt
           if-no-files-found: warn
           retention-days: 7
 
