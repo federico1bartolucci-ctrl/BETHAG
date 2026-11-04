@@ -72,3 +72,39 @@ Do not reset, rebase, or repair the current QA migration registry by guessing. T
 The safe next step is a deterministic, read-only object/effect reconciliation for the 16 unmatched rows, followed by a disposable PostgreSQL 17 rehearsal of the exact proposed QA recovery procedure. Any eventual QA repair must be a separate, explicitly approved operation with a verified backup/restore path and a post-repair catalog + application acceptance check.
 
 Production remains untouched. Existing QA remains untouched.
+
+
+## Live QA-versus-Production catalog comparison — 2026-11-04
+
+A read-only catalog comparison was run directly against QA (`jhuyhlzzydcgghrzeexn`) and Production (`tctcgptrsmvgajqjgnev`). This compares schema/catalog metadata only; it does not compare or copy resident/accounting data.
+
+| Object category | QA | Production | Result |
+|---|---:|---:|---|
+| Public relations (tables/views/materialized views) | 48 | 48 | Same count |
+| Public columns | 627 | 626 | QA has one extra column |
+| Constraints | 305 | 305 | Same definitions and names |
+| Indexes | 257 | 257 | Same definitions and names |
+| RLS policies | 103 | 103 | Same definitions and names |
+| User triggers | 147 | 146 | QA has one extra trigger |
+| Public/private functions | 172 | 171 | QA has one extra function |
+| RLS-enabled public tables | 47 | 47 | Same count |
+| Public views | 1 | 1 | Definition identical |
+
+### Exact structural differences
+
+- QA-only column: `public.workspace_members.data jsonb NOT NULL DEFAULT '{}'::jsonb`.
+- QA-only trigger: `trg_apply_incoming_transfer_member_metadata` on `public.condominium_members`, invoking `private.apply_incoming_transfer_member_metadata()`.
+- QA-only function: `private.apply_incoming_transfer_member_metadata()` (trigger function).
+- Five function bodies differ despite matching signatures and security/search_path settings: `private.restore_condominium`, `private.archive_condominium`, `private.save_condominium`, `private.can_manage_workspace_module`, and `private.can_access_workspace_module`. These need semantic comparison; matching signatures do not prove equivalent behavior.
+
+### Effective privilege differences
+
+- Effective `MAINTAIN` on public relations: zero for `anon`, `authenticated`, and `service_role` in both environments.
+- Relation privileges: Production has three additional effective grants to `authenticated` on `public.condominium_fund_availability` (`REFERENCES`, `TRIGGER`, `TRUNCATE`); QA does not. All other relation privilege counts for these application roles match.
+- Function EXECUTE: 28 role/function effective privilege differences were detected. The main pattern is additional direct EXECUTE access for `authenticated` to private routines in QA, while Production retains EXECUTE exposure to `anon`/authenticated on a small set of public transfer/trigger routines. The exact per-function list was captured during the read-only comparison; do not bulk-revoke or bulk-grant without reviewing each wrapper/implementation pair.
+
+### Consequence
+
+QA is not schema-identical to Production, even though table/constraint/index/policy counts are very close. The additional workspace-member metadata column and incoming-co-owner trigger/function are consistent with QA-specific feature work; the five changed function bodies and 28 EXECUTE differences are material and must be classified as intended QA-only changes, canonical forward fixes, or unintended drift.
+
+The catalog comparison does **not** justify resetting QA or copying Production objects into it. Before recovery, reconcile the five function bodies and every EXECUTE difference against the canonical source, then rehearse the exact changes in a disposable PostgreSQL 17 environment. The data-bearing QA branch remains untouched.
