@@ -152,6 +152,20 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
+      - name: Create isolated database for Production ACL draft rehearsal
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_acl_draft_test
+        env:
+          PGPASSWORD: postgres
+
+      - name: Execute and assert Production ACL draft on isolated PostgreSQL 17
+        run: node scripts/test-production-acl-draft.mjs
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: bethag_acl_draft_test
+
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
