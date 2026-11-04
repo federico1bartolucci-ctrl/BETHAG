@@ -18,13 +18,13 @@ assert.equal(qa.count,47);
 assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
 assert.equal(reconciliation.production.ledger_count,247);
 assert.equal(reconciliation.qa.ledger_count,47);
-assert.equal(files.length,23);
-assert.equal(pending.length,14);
+assert.equal(files.length,24);
+assert.equal(pending.length,15);
 assert.ok(pending.every(item=>files.includes(item.file)&&!exact(production,item)));
 assert.ok(freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item=>exact(production,item)));
-assert.equal(freeze.expected_postflight.ledger_rows,261);
+assert.equal(freeze.expected_postflight.ledger_rows,262);
 assert.equal(freeze.expected_postflight.original_247_rows_unchanged,true);
-assert.equal(freeze.expected_postflight.canonical_rows_added,14);
+assert.equal(freeze.expected_postflight.canonical_rows_added,15);
 console.log(JSON.stringify({
  status:"PASS — live read-only 2026-11-03 migration ledger snapshots and canonical candidate reconcile",
  production:{count:production.count,head:production.latest},
