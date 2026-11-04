@@ -131,7 +131,13 @@
         "expected_upstream_bootstrap": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
         "disposition": "PRESERVE_PROVIDER_SYSTEM_SCHEMA; VERIFY_NOT_EXPOSED_BEFORE_RELEASE",
         "exposure_status": "NOT_VERIFIED",
-        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Confirm schema is not in the Data API exposed-schema list."
+        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Confirm schema is not in the Data API exposed-schema list.",
+        "role_level_override": {
+          "pgrst_db_schemas_override_present": false,
+          "authenticator_role_config_checked": true,
+          "database_role_config_checked": true,
+          "effective_dashboard_data_api_config": "NOT_AVAILABLE_THROUGH_CURRENT_SUPABASE_CONNECTOR"
+        }
       },
       "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
       "controls": [
@@ -479,7 +485,8 @@
         "anon_authenticated_effective_all_table_privileges": true,
         "exposure_configuration_verified": false,
         "upstream_bootstrap_source": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
-        "release_gate": "VERIFY_SCHEMA_NOT_EXPOSED"
+        "release_gate": "VERIFY_SCHEMA_NOT_EXPOSED",
+        "authenticator_role_db_schemas_override": false
       }
     }
   },
