@@ -9,7 +9,7 @@ assert.equal(files.length, 21, "Expected the historical canonical inventory plus
 assert.ok(files.includes("20261027110000_repair_service_role_transfer_invoker_path.sql"), "Missing service_role invoker-path correction.");
 assert.ok(files.includes("20261102100100_add_workspace_member_profile_data.sql"), "Missing collaborator metadata forward migration.");
 assert.ok(files.includes("20261102100200_preserve_server_owned_condominium_archive_state.sql"), "Missing archive lifecycle forward migration.");
-assert.ok(files.includes("20261105120000_fix_portal_registration_upsert.sql"), "Missing portal registration upsert repair migration.");
+assert.ok(files.includes("20261104235514_fix_portal_registration_upsert_conflict_target.sql"), "Missing portal registration upsert repair migration.");
 const env = Object.fromEntries(report.environments.map((entry) => [entry.name, entry]));
 assert.equal(env.production.ledger_count, 244);
 assert.equal(env.production.ledger_head.version, "20261022202747");
