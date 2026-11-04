@@ -1,0 +1,55 @@
+# QA branch reconciliation record
+
+Target branch: `bethag-launch-qa`
+Supabase branch ref: `jhuyhlzzydcgghrzeexn`
+Parent Production ref: `tctcgptrsmvgajqjgnev`
+
+This directory records QA-only repairs and audit findings. Files here are **not** part of the normal `supabase/migrations` stream and must not be automatically deployed to Production.
+
+## Current QA state — 2026-11-04
+
+- Supabase branch metadata still reports `MIGRATIONS_FAILED`; the preview database reports `ACTIVE_HEALTHY`.
+- PostgreSQL is 17.11 and accepts read-only SQL queries.
+- The QA migration registry contained 48 entries before the repair below; it now contains 49.
+- QA and Production each expose 47 public tables, and all 47 tables have RLS enabled.
+- QA has 613 public columns versus 612 in Production. The sole additional column is `public.workspace_members.data`, introduced by QA migration `20261102054409_add_workspace_member_profile_data`.
+- Both environments have 257 public indexes with identical names and definitions.
+- Both have 103 public RLS policies with identical definitions.
+- Both have 305 public constraints; the only textual difference found was harmless extra parentheses in `condominium_work_progress_financial_consistency_chk`.
+- QA has one additional trigger and function: `trg_apply_incoming_transfer_member_metadata` / `private.apply_incoming_transfer_member_metadata()`, created by QA migration `20261103193927_qa_store_incoming_coowner_profile_metadata`.
+- QA and Production have zero `MAINTAIN` privileges for `anon`, `authenticated`, and `service_role` on public relations.
+- Supabase Security Advisor returned no security lints for QA.
+
+The branch's provider status has not been cleared by these database checks. The available connector can inspect the database and branch status but does not expose the Supabase Branch deployment log needed to identify or clear the provider-side failure state. Do not delete/recreate or reset this branch: it contains QA test data.
+
+## QA-only repair: Resend webhook private implementation grant
+
+The deployed QA Edge Function `bethag-resend-webhook` invokes the public `apply_resend_communication_event` wrapper. The wrapper is `SECURITY INVOKER` and calls `private.apply_resend_communication_event(...)`. Before repair, `service_role` could execute the public wrapper but could not execute its private implementation, so the webhook call would fail.
+
+The equivalent Production migration is already present in the recovered historical ledger as `20261103070901_grant_service_role_private_resend_event_rpc.sql`. QA did not have that version in its own migration registry.
+
+On 2026-11-04, the following forward-only grants repair was applied to QA using the Supabase migration API and recorded as `20261104122833_grant_service_role_private_resend_event_rpc`:
+
+```sql
+GRANT USAGE ON SCHEMA private TO service_role;
+GRANT EXECUTE ON FUNCTION private.apply_resend_communication_event(text,text,text,text,timestamptz) TO service_role;
+REVOKE EXECUTE ON FUNCTION private.apply_resend_communication_event(text,text,text,text,timestamptz) FROM PUBLIC, anon, authenticated;
+```
+
+Post-repair verification confirms:
+- QA migration registry: 49 entries, latest `20261104122833`.
+- `service_role` can execute both the public wrapper and private implementation.
+- `authenticated` and `anon` cannot execute the private implementation.
+- Production was not modified.
+
+The exact QA-only SQL is archived beside this README. Do not copy it into the standard Production migration stream: Production already has the equivalent historical migration under version `20261103070901`.
+
+## Remaining QA certification blockers
+
+1. Supabase branch metadata still says `MIGRATIONS_FAILED`. The branch's database is queryable and has a populated migration registry, but the provider-side deployment log must be inspected before this status can be called stale or cleared. No branch reset/recreation is authorized because it would discard QA data.
+2. The QA migration history is not identical to Production's 247-entry historical ledger. QA has its own five baseline entries and QA-specific forward migrations. The exact baseline and incremental history must be reconciled with the repository before any rebase or reset is considered.
+3. Function ACL comparison still shows additional `authenticated` EXECUTE grants on private-schema functions in QA compared with Production. These need a signature-by-signature authorization review; do not revoke them wholesale because some invoker wrappers may rely on them.
+4. QA and Production have different private implementations for `archive_condominium`, `restore_condominium`, `save_condominium`, `can_access_workspace_module`, and `can_manage_workspace_module`. Confirm each difference against the intended QA feature set and the recovered migration source before attempting to align them.
+5. A historical QA log entry recorded SQLSTATE `42P10` for a direct `portal_access` upsert using conflict target `(workspace_id, condominium_id, email)`, while the current unique index is expression-based on `lower(email)`. The current repository Edge Function uses `(workspace_id, legacy_id)`; identify the older caller before changing the index or data path.
+
+No APP-01..APP-15 collaudo has been run as part of this read-only audit. QA data was preserved; no reset, rebase, branch deletion, or Production change was performed.
