@@ -39,7 +39,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(reconciliation.production.ledger_count, production.count);
 assert.equal(reconciliation.qa.ledger_count, qa.count);
 assert.equal(reconciliation.clean_baseline_branch.migration_files, 15, "The reconciliation artifact is a historical 15-file snapshot; newer reviewed remediation migrations are tracked separately.");
-assert.equal(incrementalFiles.at(-1), "20261102100200_preserve_server_owned_condominium_archive_state.sql", "Latest incremental migration must preserve condominium archive lifecycle metadata.");
+assert.equal(incrementalFiles.at(-1), "20261105120000_fix_portal_registration_upsert.sql", "Latest incremental migration must repair portal registration and administrator approval upserts.");
 
 const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
 const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
