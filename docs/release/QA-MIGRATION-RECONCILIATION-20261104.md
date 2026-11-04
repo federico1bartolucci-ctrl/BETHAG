@@ -19,7 +19,7 @@ The 2026-11-03 files `qa-ledger-20261103.json`, `migration-history-reconciliatio
 | Exact version/name pairs shared with canonical chain | 17 | Baseline and canonical hardening history |
 | QA-only ledger rows | 17 | QA-specific forward repairs; not part of the clean-install chain |
 | QA-only SQL files archived with exact version/name | 12 | Source recoverable from repository archive |
-| QA-only ledger rows without an exact archived source | 5 | Original payloads unavailable; catalog-based reconstruction candidates now staged separately |
+| QA-only ledger rows without an exact archived source | 5 | Exact original payloads recovered from the live migration ledger and staged separately |
 | Additional archived candidate files not matching a live QA row | 2 | Must remain unassigned until provenance is established |
 
 The exact QA-only rows without a matching archived file are:
@@ -43,15 +43,14 @@ The canonical file `20261102200855_restore_secure_communication_recipient_rpc_ex
 - `private.is_workspace_staff(uuid)` exists; `authenticated` does not have EXECUTE and `service_role` does. This is consistent with the 20261104125614 revoke intent, but does not recover the original SQL text.
 - JSONB `data` columns exist on `workspace_members`, `condominium_members`, and `condominium_units`. This alone does not establish the exact effect of the co-owner profile metadata migration.
 
-Catalog postconditions are not substitutes for original migration payloads. The five missing entries now have separately staged SQL candidates under `supabase/rebuild/qa-reconstructed-migrations/`. Every file is explicitly labelled `RECONSTRUCTED`; none is claimed to be the original historical payload. The candidates are derived from live catalog definitions, ACLs and trigger metadata and still require isolated PostgreSQL 17 replay plus independent SQL review.
+The five missing Git files have now been recovered byte-for-byte from the authoritative `statements` array in the live QA `supabase_migrations.schema_migrations` ledger. They are stored under `supabase/rebuild/qa-recovered-migrations/`; they are no longer reconstructed candidates. This also corrected a material error in the first co-owner candidate: the authoritative SQL specifies `SECURITY INVOKER` and revokes all direct EXECUTE privileges on the trigger function. The recovered payload preserves that security boundary.
 
 ## Required continuation before this point can close
 
-1. Independently review the five catalog-reconstructed SQL candidates; recover originals if an authoritative copy is later found.
-2. Determine the purpose and origin of the two orphan archived candidates.
-3. Run `scripts/test-qa-ledger-replay-reconstruction.mjs`, which enforces exact 34-row version/name coverage and replays the 17 canonical + 12 archived QA + 5 reconstructed SQL files on disposable PostgreSQL 17.
-4. Inspect and correct any replay or postcondition failure, then rerun the isolated test. Do not reset/rebase/delete the live QA branch.
-5. Resolve the provider's `MIGRATIONS_FAILED` status only through a supported non-destructive provider procedure. The database's current schema and ledger do not clear provider deployment status.
+1. Confirm the exact recovered-payload replay passes on disposable PostgreSQL 17 after the latest source correction.
+2. Complete the live QA real-authentication and session-persistence browser certification for admin, collaborator and resident accounts.
+3. Determine the provider's original failed branch action from its Supabase branch workflow log; the connector exposes branch status but not the branch action-run detail log.
+4. Only after the failure is identified, choose a supported non-destructive provider repair. Do not reset/rebase/delete the live QA branch until the exact failure and migration ordering implications are known.
 
 ## Safety decision
 
@@ -65,3 +64,17 @@ Catalog postconditions are not substitutes for original migration payloads. The 
 - The replay script requires an exact one-to-one match for all 34 live QA version/name pairs and expects source counts of 17 canonical, 12 archived QA, and 5 reconstructed.
 - The existing BETHAG build workflow run `41841810296` is in progress, but it exercises the canonical 23-file/14-increment rehearsal, not yet the new 34-row QA replay. The dedicated replay has therefore **not yet passed**.
 - No live QA or Production SQL was applied.
+
+
+## Canonical-to-QA chronology mapping
+
+The 34-row QA ledger is not simply a shorter or corrupt copy of the 23-file canonical chain. It is a branch-specific sequence with equivalent operations under different timestamps and additional QA repairs:
+
+- Canonical `20261022202747_harden_close_member_transfer_search_path` is represented by QA `20261103072843_qa_align_transfer_wrapper_empty_search_path`; the SQL operation is identical.
+- Canonical `20261102100100_add_workspace_member_profile_data` is represented by QA `20261102054409_add_workspace_member_profile_data`; both add the same JSONB column.
+- Canonical `20261102100200_preserve_server_owned_condominium_archive_state` is represented by QA `20261102054253_preserve_server_owned_condominium_archive_state`; the function definition is equivalent.
+- Canonical `20261102151610_harden_live_production_acl_and_transfer_invoker` consolidates hardening already present in the QA chain's earlier shared migrations: `20261023000001`–`20261023000004`, `20261023000733`, `20261027100000`, and `20261027110000`.
+- Canonical `20261102200855_restore_secure_communication_recipient_rpc_execute` is represented by QA `20261102041805` followed by `20261102200820`; the latter's exact SQL was recovered from the live ledger.
+- Canonical `20261103070901_grant_service_role_private_resend_event_rpc` is represented by QA `20261104122833`; its exact SQL was recovered from the live ledger.
+
+The two archived files with no exact live-ledger version remain unassigned. The alternate archive `20261102110000_revoke_service_role_maintain_from_fund_availability_view` contains the same operation as live QA row `20261102050957`, but has a different timestamp. The alternate archive `20261102120000_backfill_condominium_archive_metadata` has a corrected regex compared with the live archived row `20261102050437`; the current QA data has zero legacy JSON archive markers and zero missing structured archive timestamps, so no corrective DML is currently indicated. Do not replay either orphan file as an additional migration.
