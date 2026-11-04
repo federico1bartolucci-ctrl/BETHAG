@@ -66,3 +66,10 @@ Production contains `public.condominium_funds`, but no `CREATE TABLE` for it app
 
 The replay-only baseline `20260929072254_legacy_condominium_funds.sql` reconstructs the 12 columns, primary key, workspace/condominium foreign keys, and amount checks from a read-only Production catalog inspection on 2026-11-04. Secondary indexes, RLS policies, and triggers are intentionally left to the later historical payloads that reconcile them. This is a test-only reconstruction, not recovered historical SQL, and must never be deployed to QA or Production.
 
+
+
+## Additional pre-ledger relations reconstructed — 2026-11-04
+
+A read-only Production catalog inventory identified five more public relations present in Production but absent as CREATE TABLE payloads from the 247 recovered ledger statements. Timestamped replay-only prerequisites now place them immediately before their earliest recorded use: `20260929065323` condominium_accounting_settings; `20260929080143` condominium_millesimal_values; `20260930104149` condominium_fiscal_carryovers; `20261001063434` communication_recipients; `20261001081846` condominium_member_transfers. The Production-only `condominiums.archived_at` column is restored by a replay-only bridge at `20261001083703`, immediately before its first recorded reference at `20261001083704`.
+
+The original 247 payloads remain byte-for-byte unchanged. The replay workflow asserts 13 prerequisite SQL files plus 247 historical payloads (260 staged SQL files total). These files are synthetic test scaffolding reconstructed from the read-only Production catalog and chronological references, not recovered historical SQL. They must never be deployed to QA or Production. Full PostgreSQL 17 replay and final schema parity remain mandatory closure gates.
