@@ -216,7 +216,7 @@ try {
     } catch {
       return false;
     }
-  }, { timeout: 25000 });
+  }, undefined, { timeout: 25000 });
   const adminOnlyNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Piano e upgrade" }).first();
   await adminOnlyNav.waitFor({ state: "visible", timeout: 15000 });
   await adminPage.waitForTimeout(750);
