@@ -3,106 +3,9 @@
   "qa_branch": "bethag-launch-qa",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "production_parent_ref": "tctcgptrsmvgajqjgnev",
-  "registry_entries": 49,
-  "production_ledger_entries": 16,
-  "qa_specific_entries": 33,
+  "applied_registry_entries": 33,
+  "reverted_legacy_entries": 16,
   "migrations": [
-    {
-      "version": "20260928021707",
-      "name": "initial_bethag_backend",
-      "source_path": "supabase/replay-candidate/20260928021707_initial_bethag_backend.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928021808",
-      "name": "tighten_portal_rls",
-      "source_path": "supabase/replay-candidate/20260928021808_tighten_portal_rls.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928021935",
-      "name": "sync_auth_profiles",
-      "source_path": "supabase/replay-candidate/20260928021935_sync_auth_profiles.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928021944",
-      "name": "privatize_rls_functions",
-      "source_path": "supabase/replay-candidate/20260928021944_privatize_rls_functions.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928022046",
-      "name": "add_legacy_ids_for_migration",
-      "source_path": "supabase/replay-candidate/20260928022046_add_legacy_ids_for_migration.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928022126",
-      "name": "tighten_condominium_member_visibility",
-      "source_path": "supabase/replay-candidate/20260928022126_tighten_condominium_member_visibility.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928022526",
-      "name": "add_condominium_member_legacy_unique_key",
-      "source_path": "supabase/replay-candidate/20260928022526_add_condominium_member_legacy_unique_key.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928022821",
-      "name": "add_workspace_legacy_unique_constraints",
-      "source_path": "supabase/replay-candidate/20260928022821_add_workspace_legacy_unique_constraints.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928024823",
-      "name": "bootstrap_first_workspace_admin",
-      "source_path": "supabase/replay-candidate/20260928024823_bootstrap_first_workspace_admin.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928024931",
-      "name": "harden_first_admin_rpc",
-      "source_path": "supabase/replay-candidate/20260928024931_harden_first_admin_rpc.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928040840",
-      "name": "allow_portal_residents_read_condominiums",
-      "source_path": "supabase/replay-candidate/20260928040840_allow_portal_residents_read_condominiums.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928041428",
-      "name": "persist_collaborator_legacy_ids",
-      "source_path": "supabase/replay-candidate/20260928041428_persist_collaborator_legacy_ids.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928042328",
-      "name": "enforce_collaborator_module_permissions",
-      "source_path": "supabase/replay-candidate/20260928042328_enforce_collaborator_module_permissions.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928042333",
-      "name": "refine_collaborator_permission_scope",
-      "source_path": "supabase/replay-candidate/20260928042333_refine_collaborator_permission_scope.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928043406",
-      "name": "harden_authenticated_request_policies",
-      "source_path": "supabase/replay-candidate/20260928043406_harden_authenticated_request_policies.sql",
-      "classification": "recovered-production-ledger"
-    },
-    {
-      "version": "20260928043415",
-      "name": "finish_authenticated_rls_hardening",
-      "source_path": "supabase/replay-candidate/20260928043415_finish_authenticated_rls_hardening.sql",
-      "classification": "recovered-production-ledger"
-    },
     {
       "version": "20261017000001",
       "name": "bethag_baseline_schema",
@@ -299,7 +202,7 @@
       "version": "20261104122833",
       "name": "grant_service_role_private_resend_event_rpc",
       "source_path": "supabase/qa-reconciliation/migrations/20261104122833_grant_service_role_private_resend_event_rpc.sql",
-      "classification": "qa-baseline-or-forward-only"
+      "classification": "qa-only-repair"
     }
   ]
 }
