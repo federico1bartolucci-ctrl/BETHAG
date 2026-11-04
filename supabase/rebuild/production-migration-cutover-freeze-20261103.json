@@ -221,7 +221,7 @@
     "Verify collaborator false/true/absent permission cases, workspace_members.data, archive-state preservation, transfer wrapper ACLs and Resend service_role RPC grants.",
     "Resolve the supabase_admin default ACL MAINTAIN entries with Supabase provider guidance or an explicitly approved security-owner exception.",
     "Run APP-01–APP-15 authenticated application tests and record evidence.",
-    "Obtain written approval naming exact commit, all fourteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
+    "Obtain written approval naming exact commit, all fifteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
   "expected_postflight": {
     "ledger_rows": 262,
@@ -355,10 +355,10 @@
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "sequence": "five-file clean baseline; existing canonical Production head; three exact Production-forward SQL payloads; fifteen pending canonical increments including the new ACL/co-owner reconciliation migration",
     "production_history_rows_fixture": 247,
-    "canonical_rows_expected": 14,
+    "canonical_rows_expected": 15,
     "expected_final_ledger_rows": 262,
     "historical_pairs_preserved": 247,
-    "exact_canonical_pairs_added": 14,
+    "exact_canonical_pairs_added": 15,
     "final_sorted_ledger_head": "20261103070901",
     "runner_transactional_postconditions": "PASS",
     "postgres_bootstrap_and_acl_tests": "PASS",
@@ -381,7 +381,7 @@
       "migration_files_applied": 24,
       "baseline_files": 5,
       "existing_canonical_head": 1,
-      "pending_canonical_increments": 14,
+      "pending_canonical_increments": 15,
       "exact_production_forward_files": 3,
       "public_tables": 47,
       "application_maintain_relations": 0,
@@ -395,7 +395,7 @@
     "cutover_runner_rehearsal": {
       "status": "PENDING_REPLAY",
       "historical_pairs_preserved": 247,
-      "canonical_pairs_added": 14,
+      "canonical_pairs_added": 15,
       "final_ledger_rows": 262,
       "remote_supabase_or_production_touched": false,
       "canonical_rows_added": 15
