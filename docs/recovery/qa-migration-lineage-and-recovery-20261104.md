@@ -127,3 +127,39 @@ The live definitions were retrieved read-only from both databases. The differenc
 
 These changes show that the existing QA database contains forward fixes/features not yet present in Production. They must be retained and reconciled into the canonical release chain; they must not be overwritten by blindly restoring a Production snapshot. The permission fix also needs an explicit release decision because the live Production implementation still has the key-presence defect.
 
+
+
+## Production release blocker: authenticated invoker-to-private grants
+
+A separate read-only check identified a concrete Production defect. For **18** private implementations:
+
+- The corresponding public RPC wrapper is `SECURITY INVOKER` and executable by `authenticated`.
+- The private implementation is `SECURITY DEFINER` but is **not** executable by `authenticated` in Production.
+- The same private implementations are executable by `authenticated` in QA, where four QA forward migrations provide the grants.
+
+This means an authenticated browser call can pass the public wrapper's permission check but fail when the invoker wrapper attempts to call its private implementation. The affected names are:
+
+`admin_approve_portal_registration`, `archive_condominium`, `claim_first_workspace_admin`, `close_condominium_fiscal_year`, `close_fiscal_year_and_generate_carryovers`, `compensate_fiscal_carryover`, `complete_portal_registration`, `confirm_condominium_creation_intake`, `delete_condominium`, `generate_fiscal_year_carryovers`, `generate_installments_from_allocations`, `generate_installments_from_allocations_schedule`, `list_archived_condominiums`, `register_condominium_installment_payment`, `restore_condominium`, `reverse_condominium_installment_payment`, `set_personal_security_code`, and `verify_personal_security_code`.
+
+At least **11** of these public RPCs are called directly by the current frontend/backend source:
+- `complete_portal_registration`, `admin_approve_portal_registration`, `set_personal_security_code`, `verify_personal_security_code`, `claim_first_workspace_admin`, and `delete_condominium`;
+- AccountingPage calls `compensate_fiscal_carryover`, `close_fiscal_year_and_generate_carryovers`, `generate_fiscal_year_carryovers`, `generate_installments_from_allocations_schedule`, and `register_condominium_installment_payment`.
+
+The missing grants correspond to four QA migrations already present in the QA ledger:
+- `20261102043152_repair_authenticated_condominium_delete_rpc_private_execute` — delete implementation;
+- `20261102044102_repair_authenticated_condominium_archive_rpc_private_execute` — archive/restore implementations;
+- `20261102044224_repair_authenticated_invoker_private_rpc_grants` — eight registration/bootstrap/security-code implementations;
+- `20261102100000_repair_authenticated_accounting_rpc_private_execute` — seven accounting implementations.
+
+The private implementations were checked in QA: they are `SECURITY DEFINER` and contain authentication and/or workspace-module checks (some delegate to another checked implementation). The intended repair is to grant `EXECUTE` only to `authenticated`, preserving the existing revocation from `PUBLIC` and `anon`. This needs a dedicated forward-only Production migration and an isolated PostgreSQL 17 rehearsal before any cutover. **No grant was applied to Production in this assessment.**
+
+This is a separate release gate from the QA branch provider status. Do not mark BETHAG ready for launch until the missing Production grants have been added through the approved canonical migration/cutover path and verified.
+
+## Latest isolated verification
+
+- QA baseline replay run `41835855883`: SUCCESS on commit `7011289ca9a0543803912b3240369182c41bb794`.
+- BETHAG build run `41835854687`: SUCCESS on the same commit.
+- Production ledger candidate replay run `41835854702`: SUCCESS on the same commit.
+- Recovered Production archive integrity run `41835854910`: SUCCESS on the same commit.
+
+The latest QA replay includes the normalized source for migration `20261104125614`. It ran all 34 QA baseline/forward migrations on a disposable Supabase PostgreSQL 17 stack and passed the registry, schema-column inventory, RLS, and privilege assertions. It did not connect to or modify the live QA or Production databases.
