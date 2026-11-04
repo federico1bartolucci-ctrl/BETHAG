@@ -73,3 +73,13 @@ The real-account auth script currently emits the label “resident profile hydra
 - APP-15: exhaustive core-module regression remains outstanding; current role navigation/auth smoke is not a substitute.
 - Review the very broad PR #36 scope and its current non-mergeable state before any merge decision.
 - APP-01–04 and APP-13 evidence remains separate and must be verified against current code/environment before final acceptance.
+
+## APP-08 registration defect and candidate repair — 5 November 2026
+
+A QA transaction reproduced a runtime failure in the live `private.complete_portal_registration` routine: PostgreSQL rejected its unqualified `ON CONFLICT DO UPDATE` because a conflict target is mandatory for `DO UPDATE`. The same invalid pattern was present in `private.admin_approve_portal_registration`. The failing test transaction was rolled back; a follow-up query confirmed zero residual temporary condominiums.
+
+Candidate migration `20261105120000_fix_portal_registration_upsert.sql` was added to the repository and to the frozen, review-only cutover sequence as migration 15. It introduces a shared private helper that resolves a portal row through either the workspace legacy key or the case-insensitive condominium/email key, fails closed if those keys identify conflicting rows, and is used by both resident auto-registration and administrator approval. The cutover candidate now expects 15 forward migrations and a 259-row final ledger (244 historical rows preserved + 15 new rows); Production remains frozen and untouched.
+
+The candidate migration was applied inside a QA SQL transaction, then `public.complete_portal_registration` was invoked with a verified existing QA Auth identity and a temporary unique member. Assertions for the returned approved status, exact member ID, active `portal_access` link and active resident `workspace_members` link passed. The entire transaction was rolled back and a subsequent query confirmed no residual fixture. This proves the database registration path with an existing verified identity; it does **not** prove creation of a new Auth user, receipt/confirmation of an invitation, or real browser login by a newly registered owner.
+
+**Disposition: APP-08 remains OPEN.** The migration is not yet applied persistently to QA. The full 15-migration isolated CI rehearsal is queued behind the previous serialized QA workflow. After CI passes, apply the candidate to QA through the approved version-preserving migration path and complete the new-owner browser registration/login/portal hydration test. No Production operation, merge or deployment was performed.
