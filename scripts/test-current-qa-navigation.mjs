@@ -23,13 +23,16 @@ try{
    await page.getByRole("button",{name:"Accedi",exact:true}).last().click();
    await page.getByText(a.landing,{exact:true}).first().waitFor({timeout:25000});
    if(a.role==="admin"){
-    const planNav=page.locator(".nav-item").filter({hasText:"Piano e upgrade"}).first();await planNav.click();
+    const planNav=page.locator(".sidebar .nav-item").filter({hasText:"Piano e upgrade"}).first();
+    await planNav.waitFor({state:"visible",timeout:10000});
+    await planNav.click();
+    await page.getByRole("heading",{name:"Piano e upgrade",exact:true}).waitFor({timeout:10000});
     await page.getByRole("button",{name:"Prova struttura"}).last().click();
     await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});
-    await page.locator(".nav-item").filter({hasText:"Homepage"}).first().click();
+    await page.locator(".sidebar .nav-item").filter({hasText:"Homepage"}).first().click();
     const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
     for(const label of labels){
-     const nav=page.locator(".nav-item").filter({hasText:label}).first();
+     const nav=page.locator(".sidebar .nav-item").filter({hasText:label}).first();
      await nav.waitFor({state:"visible",timeout:10000});await nav.click();
      const active=page.locator(".sidebar .nav-item.active").first();
      await active.waitFor({state:"visible"});
