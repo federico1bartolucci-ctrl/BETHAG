@@ -4,33 +4,35 @@
 
 This is a read-only reconstruction of the Supabase branch `bethag-launch-qa` (project `jhuyhlzzydcgghrzeexn`) against the recovered Production ledger, the clean-install baseline branch, and the canonical release candidate.
 
-No SQL, migration, reset, rebase, deploy, or migration-history repair was executed against QA or Production. Do not run a generic `supabase migration repair --linked` command. The QA branch contains test data and must not be reset or rebuilt in place without an explicit approved recovery plan and verified restore.
+During this assessment, no SQL, migration, reset, rebase, deploy, or registry change was executed against QA or Production. A prior metadata-only registry cleanup is documented in `supabase/qa-reconciliation/legacy-history-repair.json`; it removed 16 pre-baseline rows without changing schema or application data. Do not run a generic `supabase migration repair --linked` command. The QA branch contains test data and must not be reset or rebuilt in place without an explicit approved recovery plan and verified restore.
 
 ## Current evidence
 
 - Supabase branch status: `MIGRATIONS_FAILED`; preview project status: `ACTIVE_HEALTHY`.
-- QA migration registry: 49 rows.
+- QA migration registry: 34 currently applied rows; 16 pre-baseline legacy rows were previously marked reverted/removed as a metadata-only cleanup.
 - Recovery archive: 247 byte-preserved Production ledger SQL payloads in `supabase/replay-candidate/`.
 - Clean-install canonical migration chain on `release/reconcile-production-247-20261103`: 23 SQL files.
 - Isolated PostgreSQL 17 replay and guarded 14-migration cutover rehearsal: CI run 41819086300 succeeded (commit `6c0af4a77124cdc8eee7e709856065271598e8bd`). These checks do not repair or certify the existing QA branch.
 
 ## Reconstructed QA ledger composition — corrected live count
 
-A fresh direct query of `supabase_migrations.schema_migrations` and a fresh Supabase migration-list call both return **34 rows**, not 49. The earlier 49-row figure in a preliminary inventory was stale/incorrect and is superseded by this direct database evidence.
+A fresh direct query of `supabase_migrations.schema_migrations` and a fresh Supabase migration-list call both return **34 currently applied rows**. The earlier 49-row count was the valid pre-cleanup state: 16 pre-baseline historical rows plus 33 baseline/forward rows. The documented metadata-only cleanup removed those 16 legacy rows; the subsequent migration `20261104125614` brought the applied count to 34. Therefore 49 was not a stale count; it described the earlier registry state.
 
-The 34 rows divide into:
+The 34 applied rows divide into:
 
-1. **17 exact version matches** with the current 23-file canonical clean-install chain: five 20261017 baseline migrations, nine 20261022–20261023 hardening migrations, and three 20261027–20261028 fixes.
-2. **17 QA-only / differently-versioned rows** listed below. Their actual SQL text is retained in `supabase_migrations.schema_migrations.statements` (one statement per row); their names alone are not sufficient evidence of equivalence.
+1. **17 exact version and SQL-content matches** with files in the current canonical clean-install chain.
+2. **17 QA-specific or differently-versioned rows** whose original SQL was recovered from the live QA registry. Their SQL payloads are archived under `supabase/qa-recovery-evidence/` with MD5 and character-count manifests.
+
+The 16 older historical entries are separate: they are no longer applied in the QA registry, are recorded as reverted in `legacy-history-repair.json`, and remain preserved in `supabase/replay-candidate/`.
 
 ### Recovered baseline files
 
-The five original SQL files were recovered from PR #20 head `rebuild/bethag-clean-aligned-20261022`. Their exact Git blob SHAs are:
+The five baseline files in `release/reconcile-production-247-20261103` were compared with the five SQL statements stored in the QA registry. All five match exactly by MD5 and character count. The current canonical security baseline includes the full guarded Storage bucket/policy block; an older PR #20 branch snapshot was shorter and must not be used as the release source. Current canonical Git blob SHAs are:
 
 - `20261017000001_bethag_baseline_schema.sql` — `74fa7a583e9cc4025676b79d183b466b1b923e8e`
 - `20261017000002_bethag_baseline_indexes_views.sql` — `d0863d0ab0adc2ccaa011fc9e332abd5d34099dd`
 - `20261017000003_bethag_baseline_functions.sql` — `84233dbed77af90eaeea2c221c76de27734cd9eb`
-- `20261017000004_bethag_baseline_security.sql` — `0988cd5cbddaa2a41bbffc69aa148f25c2e44600`
+- `20261017000004_bethag_baseline_security.sql` — `805bb974d5ced678f14a7751885a9bf37949501c`
 - `20261017000005_bethag_baseline_grants.sql` — `4707784459260e557c576b8a7a08c130dc54fb43`
 
 ### All 17 rows without an exact version match
@@ -55,7 +57,7 @@ The five original SQL files were recovered from PR #20 head `rebuild/bethag-clea
 | 20261104122833 | grant_service_role_private_resend_event_rpc | Grants service_role EXECUTE to the private Resend event handler. Canonical Production-forward migration 20261103070901 carries this grant under the Production ledger version; compare SQL before deduplicating. |
 | 20261104125614 | revoke_authenticated_execute_on_unused_private_workspace_staff | Revokes authenticated EXECUTE on `private.is_workspace_staff(uuid)`. New QA-only least-privilege cleanup; verify no browser/RPC call depends on it before promoting. |
 
-The above SQL classifications are based on the live QA migration statements, not merely migration names. Full SQL is not reproduced in this report; the original statements remain preserved in the QA migration registry. No statement was executed or altered during this inspection.
+The above classifications are based on the live QA migration statements, not merely migration names. All 17 QA-specific statements are preserved in `supabase/qa-recovery-evidence/qa-unmatched-ledger-statements.sql`; the manifest records their database MD5 and character count. The five baseline statements and 17 exact canonical matches were also hash-checked against the live registry. The 17 corresponding files under `supabase/qa-reconciliation/migrations/` match the registry payloads; for the QA-specific files, comparison normalizes the single terminal newline used by the repository. The last migration file `20261104125614` was normalized to the exact registry statement.
 
 ## Verified initialization failure
 
@@ -69,9 +71,9 @@ At that point `public.portal_access` did not exist. The canonical repository mig
 
 ## Recovery decision
 
-Do not reset, rebase, or repair the current QA migration registry by guessing. The QA registry is a mixed history: legacy historical rows, a clean baseline/incremental chain, and QA-specific or differently versioned patches. Replacing it with the 23-file clean-install chain would erase the historical record and would not prove that the current database objects match the intended chain.
+The 34 applied QA migrations have now been reconstructed and replayed on an isolated Supabase PostgreSQL 17 stack by workflow `replay-qa-baseline-postgres17.yml`. Run `41835521784` passed all steps on commit `3f98b1d127187558384f1b1a89401abd49b93a42`; a fresh run is in progress for the latest source-normalization commit. The replay verified 34/34 migration versions, the 47-table/613-column QA inventory, 257 indexes, 103 policies, 305 constraints, 147 triggers, 172 public/private functions, and RLS on all public tables.
 
-The safe next step is a deterministic, read-only object/effect reconciliation for the 16 unmatched rows, followed by a disposable PostgreSQL 17 rehearsal of the exact proposed QA recovery procedure. Any eventual QA repair must be a separate, explicitly approved operation with a verified backup/restore path and a post-repair catalog + application acceptance check.
+The remaining problem is not missing migration SQL or a schema replay failure: it is the Supabase provider-side branch metadata still reporting `MIGRATIONS_FAILED` while the preview database is `ACTIVE_HEALTHY`. The connected Supabase tools do not expose the branch deployment log needed to identify/clear that status. Do not reset, rebase, delete, or recreate the data-bearing QA branch to clear a status flag. Obtain the branch's **View logs** output from Supabase Dashboard → Manage Branches → `bethag-launch-qa`; only then can the provider-side failure be addressed safely.
 
 Production remains untouched. Existing QA remains untouched.
 
@@ -83,7 +85,8 @@ A read-only catalog comparison was run directly against QA (`jhuyhlzzydcgghrzeex
 | Object category | QA | Production | Result |
 |---|---:|---:|---|
 | Public relations (tables/views/materialized views) | 48 | 48 | Same count |
-| Public columns | 627 | 626 | QA has one extra column |
+| Public columns including view columns | 627 | 626 | QA has one extra column |
+| Physical public tables / table columns | 47 / 613 | 47 / 612 | QA has only `workspace_members.data` extra |
 | Constraints | 305 | 305 | Same definitions and names |
 | Indexes | 257 | 257 | Same definitions and names |
 | RLS policies | 103 | 103 | Same definitions and names |
@@ -103,13 +106,13 @@ A read-only catalog comparison was run directly against QA (`jhuyhlzzydcgghrzeex
 
 - Effective `MAINTAIN` on public relations: zero for `anon`, `authenticated`, and `service_role` in both environments.
 - Relation privileges: Production has three additional effective grants to `authenticated` on `public.condominium_fund_availability` (`REFERENCES`, `TRIGGER`, `TRUNCATE`); QA does not. All other relation privilege counts for these application roles match.
-- Function EXECUTE: 28 role/function effective privilege differences were detected. The main pattern is additional direct EXECUTE access for `authenticated` to private routines in QA, while Production retains EXECUTE exposure to `anon`/authenticated on a small set of public transfer/trigger routines. The exact per-function list was captured during the read-only comparison; do not bulk-revoke or bulk-grant without reviewing each wrapper/implementation pair.
+- Function EXECUTE: 27 role/function effective privilege differences remain. The additional authenticated grant on `private.is_workspace_staff(uuid)` was removed by QA migration `20261104125614`. The main pattern is additional direct EXECUTE access for `authenticated` to private routines in QA, while Production retains EXECUTE exposure to `anon`/authenticated on a small set of public transfer/trigger routines. The exact per-function list was captured during the read-only comparison; do not bulk-revoke or bulk-grant without reviewing each wrapper/implementation pair.
 
 ### Consequence
 
-QA is not schema-identical to Production, even though table/constraint/index/policy counts are very close. The additional workspace-member metadata column and incoming-co-owner trigger/function are consistent with QA-specific feature work; the five changed function bodies and 28 EXECUTE differences are material and must be classified as intended QA-only changes, canonical forward fixes, or unintended drift.
+QA is not schema-identical to Production. The additional workspace-member metadata column and incoming-co-owner trigger/function are QA-specific feature work; the five changed function bodies have been semantically reviewed. The remaining 27 EXECUTE differences are still a separate least-privilege reconciliation item and must not be bulk-revoked or bulk-granted.
 
-The catalog comparison does **not** justify resetting QA or copying Production objects into it. Before recovery, reconcile the five function bodies and every EXECUTE difference against the canonical source, then rehearse the exact changes in a disposable PostgreSQL 17 environment. The data-bearing QA branch remains untouched.
+The catalog comparison does **not** justify resetting QA or copying Production objects into it. The exact 34-migration QA sequence has already passed an isolated PostgreSQL 17 replay. The remaining branch-status issue requires provider logs; the 27 function EXECUTE differences and three Production-only relation grants remain explicitly tracked for security review. The data-bearing QA branch remains untouched.
 
 
 ### Semantic review of the five differing function bodies
