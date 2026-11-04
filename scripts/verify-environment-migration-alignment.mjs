@@ -57,6 +57,7 @@ const expectedPending = [
   ["20261028100000", "fix_collaborator_module_permission_boolean"],
   ["20261102100100", "add_workspace_member_profile_data"],
   ["20261102100200", "preserve_server_owned_condominium_archive_state"],
+  ["20261105120000", "fix_portal_registration_upsert"],
 ].map(([version, name]) => ({ version, name }));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
@@ -66,7 +67,7 @@ assert.equal(qa.count, qa.migrations.length);
 assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
 assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
 assert.equal(mainInventory.count, mainInventory.files.length);
-assert.equal(files.length, 20, "Canonical baseline + incremental migration inventory changed.");
+assert.equal(files.length, 21, "Canonical baseline + incremental migration inventory changed.");
 assert.equal(liveQaExecuteHardening.production_modified, false, "QA ACL hardening evidence must not claim Production was modified.");
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.projects_checked, 4);
 assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_public_execute, false);
