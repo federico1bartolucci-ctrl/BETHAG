@@ -167,3 +167,11 @@ The replay reached the immutable historical migration `20261005132458_reconcile_
 A replay-only normalization at `20261005132457` now inspects `pg_class.relkind` and removes the existing table/view/materialized view according to its actual kind. The untouched historical migration then creates the intended security-invoker view. No application rows are loaded in this disposable database, and no historical payload is edited.
 
 The workflow now asserts 23 replay-only prerequisite SQL files plus 247 exact historical payloads (270 staged SQL files total). This normalization is test-only and must never be deployed to QA or Production.
+
+## Final replay and migration registry gate — 2026-11-04
+
+The complete disposable PostgreSQL 17 replay has now applied all 270 staged SQL files successfully: 23 chronological replay-only prerequisites followed by the 247 byte-identical recovered Production-ledger payloads. The final historical migration is `20261103070901_grant_service_role_private_resend_event_rpc.sql`; Supabase CLI reported the database reset finished without SQL errors.
+
+The replay workflow now includes a separate registry-parity gate after reset. It reads the applied versions from `supabase_migrations.schema_migrations`, compares them against the version prefixes of all 270 staged SQL files, and fails on any missing, extra, duplicate, or mismatched version. This assertion runs only against the disposable local PostgreSQL 17 database. It does not connect to or modify QA or Production.
+
+The 23 synthetic prerequisites remain isolated from the recovered 247-file archive and must never be deployed to QA or Production.
