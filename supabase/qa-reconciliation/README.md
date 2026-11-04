@@ -58,6 +58,21 @@ All three expected outcomes passed. No membership or permission change persisted
 
 The Resend webhook privilege path was also exercised in a rollback-only transaction with `SET LOCAL ROLE service_role`. Calling the public invoker wrapper with a deliberately nonexistent provider message ID returned `{"status":"ignored","reason":"recipient_not_found"}`, confirming that the service role can traverse the wrapper to its private implementation. The probe did not update any recipient or communication row.
 
+## Rollback-only RLS visibility checks — 2026-11-04
+
+RLS was exercised under `SET LOCAL ROLE authenticated` with simulated JWT subject claims derived from the QA fixture memberships. Every test ran inside a transaction and ended with `ROLLBACK`:
+
+| Fixture role / permission | Visible condominiums | Visible condominium members | Visible portal access |
+| --- | ---: | ---: | ---: |
+| Admin | 64 | 13 | 2 |
+| Resident | 1 | 1 | 1 |
+| Collaborator, current permissions | 0 | 0 | 0 |
+| Collaborator, `condomini=false` | 0 | 0 | — |
+| Collaborator, `condomini=true` | 64 | 13 | — |
+| Collaborator, key absent | 0 | 0 | — |
+
+This confirms that the resident fixture is restricted to one condominium/member/portal record, while collaborator module access follows the JSON boolean correctly. The temporary collaborator permission changes were rolled back; QA fixture data remains unchanged.
+
 ## Remaining QA certification blockers
 
 1. Supabase branch metadata still says `MIGRATIONS_FAILED`. The branch's database is queryable and has a populated migration registry, but the provider-side deployment log must be inspected before this status can be called stale or cleared. No branch reset/recreation is authorized because it would discard QA data.
