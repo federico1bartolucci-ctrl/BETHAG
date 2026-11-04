@@ -1,3 +1,34 @@
+-- Synthetic pre-ledger baseline for the legacy condominium_ledger_entries relation.
+-- The recovered 247-entry Production ledger has no CREATE TABLE payload for this relation,
+-- although early recorded migrations create functions and triggers that depend on it.
+-- Columns are reconstructed from the read-only Production catalog; subsequent ledger
+-- payloads remain responsible for their own later indexes, policies and trigger definitions.
+create table public.condominium_ledger_entries (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null,
+  condominium_id uuid not null,
+  fiscal_year_id uuid,
+  entry_date date not null,
+  direction text not null,
+  category text not null,
+  description text not null,
+  amount numeric not null,
+  payment_status text not null default 'Registrato',
+  due_date date,
+  supplier_id uuid,
+  unit_id uuid,
+  member_id uuid,
+  document_id uuid,
+  notes text not null default '',
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  fund_id uuid,
+  expense_type text not null default 'Ordinaria',
+  deliberation_date date,
+  assembly_id uuid
+);
+
 -- Synthetic pre-ledger baseline for the legacy condominium_expense_allocations relation.
 -- Production's first recorded reference is 20260929065325 (ALTER TABLE ... ADD allocation_table_id),
 -- while no CREATE TABLE payload exists in the 247-row ledger. The live catalog confirms this
