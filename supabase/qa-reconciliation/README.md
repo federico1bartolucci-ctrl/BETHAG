@@ -44,6 +44,20 @@ Post-repair verification confirms:
 
 The exact QA-only SQL is archived beside this README. Do not copy it into the standard Production migration stream: Production already has the equivalent historical migration under version `20261103070901`.
 
+## Synthetic authorization probes — 2026-11-04
+
+The QA collaborator helper `private.can_manage_workspace_module(uuid,text)` was exercised in rollback-only transactions against the active collaborator membership. The permission JSON was temporarily set to each test value and rolled back after each call:
+
+| Permission payload | Result |
+| --- | --- |
+| `{"condomini":false}` | `false` |
+| `{"condomini":true}` | `true` |
+| `{}` (key absent) | `false` |
+
+All three expected outcomes passed. No membership or permission change persisted.
+
+The Resend webhook privilege path was also exercised in a rollback-only transaction with `SET LOCAL ROLE service_role`. Calling the public invoker wrapper with a deliberately nonexistent provider message ID returned `{"status":"ignored","reason":"recipient_not_found"}`, confirming that the service role can traverse the wrapper to its private implementation. The probe did not update any recipient or communication row.
+
 ## Remaining QA certification blockers
 
 1. Supabase branch metadata still says `MIGRATIONS_FAILED`. The branch's database is queryable and has a populated migration registry, but the provider-side deployment log must be inspected before this status can be called stale or cleared. No branch reset/recreation is authorized because it would discard QA data.
