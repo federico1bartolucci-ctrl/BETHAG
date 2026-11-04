@@ -202,22 +202,29 @@
       "purpose": "Preserve server-owned condominium archive lifecycle fields during ordinary state synchronization.",
       "postcondition": "private.save_condominium preserves archived_at, archived_by and archive_reason on conflict updates; authorization, SECURITY DEFINER and empty search_path remain intact.",
       "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 15,
+      "file": "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+      "git_blob_sha": "284651ea81523147aa1f46618102babc997630fa",
+      "purpose": "Reconcile QA-proven archive RPC bodies, 18 authenticated private invoker grants, co-owner metadata trigger and least-privilege helper ACLs.",
+      "postcondition": "All 18 guarded private implementations are callable by authenticated through their SECURITY INVOKER wrappers; trigger helper direct EXECUTE is revoked; archive/restore bodies and incoming co-owner metadata trigger match QA; private is_workspace_staff is not client-executable.",
+      "production_status": "PENDING_NOT_APPLIED"
     }
   ],
   "execution_order": [
     "Refresh live Production ledger and prove all 247 version/name pairs equal the dated snapshot.",
     "Capture current live catalog, role grants, routine ACLs, default ACLs and provider-managed supabase_admin defaults.",
     "Preserve all 247 historical ledger rows exactly; never replay the 247 archived SQL payloads or insert the five baseline rows into existing Production.",
-    "Apply only the fourteen reviewed canonical incremental SQL files, in the frozen sequence, using the guarded transactional runner; migration versions are older than the current live ledger head, so the runner must validate absence by exact version rather than assume the next inserted row is the sorted ledger head.",
-    "Verify each SQL postcondition immediately, then verify all 247 historical pairs remain unchanged and exactly fourteen canonical pairs have been added (261 total rows).",
+    "Apply only the fifteen reviewed canonical incremental SQL files, in the frozen sequence, using the guarded transactional runner; migration versions are older than the current live ledger head, so the runner must validate absence by exact version rather than assume the next inserted row is the sorted ledger head.",
+    "Verify each SQL postcondition immediately, then verify all 247 historical pairs remain unchanged and exactly fifteen canonical pairs have been added (262 total rows).",
     "Verify collaborator false/true/absent permission cases, workspace_members.data, archive-state preservation, transfer wrapper ACLs and Resend service_role RPC grants.",
     "Resolve the supabase_admin default ACL MAINTAIN entries with Supabase provider guidance or an explicitly approved security-owner exception.",
     "Run APP-01–APP-15 authenticated application tests and record evidence.",
     "Obtain written approval naming exact commit, all fourteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
   "expected_postflight": {
-    "ledger_rows": 261,
-    "original_244_rows_unchanged": true,
+    "ledger_rows": 262,
     "new_canonical_rows": [
       {
         "version": "20261022210629",
@@ -274,6 +281,10 @@
       {
         "version": "20261102100200",
         "name": "preserve_server_owned_condominium_archive_state"
+      },
+      {
+        "version": "20261104130000",
+        "name": "reconcile_qa_security_and_coowner_rpcs"
       }
     ],
     "authenticated": {
@@ -297,10 +308,7 @@
       "trigger": 47
     },
     "anon_current_table_privileges": 0,
-    "public_execute_allowlist": [
-      "public.normalize_zero_ownership_owner()",
-      "public.preserve_closing_condominium_member_history()"
-    ],
+    "public_execute_allowlist": [],
     "public_close_wrapper_security_definer": false,
     "private_schema_usage": {
       "anon": false,
@@ -315,13 +323,18 @@
     "workspace_members_data_column_present": true,
     "save_condominium_archive_state_preserved": true,
     "original_247_rows_unchanged": true,
-    "canonical_rows_added": 14,
-    "latest_ledger_version_after_sort": "20261103070901",
+    "canonical_rows_added": 15,
+    "latest_ledger_version_after_sort": "20261104130000",
     "supabase_admin_default_acl_maintain_entries": 3,
-    "provider_default_acl_disposition_required": true
+    "provider_default_acl_disposition_required": true,
+    "archive_condominium_lifecycle_functions_match_qa": true,
+    "incoming_coowner_metadata_trigger_present": true,
+    "authenticated_private_invoker_grants": 18,
+    "private_is_workspace_staff_authenticated_execute": false,
+    "trigger_functions_not_public_executable": true
   },
   "critical_execution_constraint": {
-    "observed": "The guarded local-only canonical runner must rehearse all fourteen pending migrations, including collaborator profile metadata and archive lifecycle preservation.",
+    "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including collaborator profile metadata, archive lifecycle preservation, authenticated private RPC grants and co-owner metadata.",
     "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete.",
     "status": "UPDATED_FOR_REVIEW_REHEARSAL_REQUIRED_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
@@ -332,17 +345,18 @@
     "workspace_members.data is absent in Production and the collaborator boolean function body differs from the desired canonical fix; both remain pending.",
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
-    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded."
+    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
+    "The new 15th canonical increment has not yet passed clean-install and guarded cutover replay; prior 23-file/14-increment rehearsal is invalidated."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
-    "status": "PASS",
+    "status": "PENDING_REPLAY_AFTER_NEW_MIGRATION",
     "date": "2026-11-04",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
-    "sequence": "five-file clean baseline; existing canonical Production head 20261022202747; three exact Production-forward SQL payloads already represented in the frozen 247-row ledger; fourteen pending canonical increments",
+    "sequence": "five-file clean baseline; existing canonical Production head; three exact Production-forward SQL payloads; fifteen pending canonical increments including the new ACL/co-owner reconciliation migration",
     "production_history_rows_fixture": 247,
     "canonical_rows_expected": 14,
-    "expected_final_ledger_rows": 261,
+    "expected_final_ledger_rows": 262,
     "historical_pairs_preserved": 247,
     "exact_canonical_pairs_added": 14,
     "final_sorted_ledger_head": "20261103070901",
@@ -363,8 +377,8 @@
     "authenticated_qa_edit_archive_diagnostic": "skipped_not_in_scope_for_this_migration_rehearsal",
     "tested_merge_commit": "42765a1183eb1c6490b6a16c68aebf8036e302c9",
     "clean_install_rehearsal": {
-      "status": "PASS",
-      "migration_files_applied": 23,
+      "status": "PENDING_REPLAY",
+      "migration_files_applied": 24,
       "baseline_files": 5,
       "existing_canonical_head": 1,
       "pending_canonical_increments": 14,
@@ -379,15 +393,17 @@
       "archive_state_preserved": true
     },
     "cutover_runner_rehearsal": {
-      "status": "PASS",
+      "status": "PENDING_REPLAY",
       "historical_pairs_preserved": 247,
       "canonical_pairs_added": 14,
-      "final_ledger_rows": 261,
-      "remote_supabase_or_production_touched": false
-    }
+      "final_ledger_rows": 262,
+      "remote_supabase_or_production_touched": false,
+      "canonical_rows_added": 15
+    },
+    "previous_23_file_rehearsal_invalidated": true
   },
   "clean_install": {
-    "migration_file_count": 23,
+    "migration_file_count": 24,
     "baseline_files": [
       "20261017000001_bethag_baseline_schema.sql",
       "20261017000002_bethag_baseline_indexes_views.sql",
@@ -410,7 +426,8 @@
       "20261027110000_repair_service_role_transfer_invoker_path.sql",
       "20261028100000_fix_collaborator_module_permission_boolean.sql",
       "20261102100100_add_workspace_member_profile_data.sql",
-      "20261102100200_preserve_server_owned_condominium_archive_state.sql"
+      "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+      "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql"
     ],
     "exact_production_forward_files": [
       "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
