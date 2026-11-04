@@ -187,7 +187,7 @@ BEGIN
       'private.verify_personal_security_code(text)'
     ]::text[]) f(signature)
     WHERE to_regprocedure(f.signature) IS NULL
-       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature),'EXECUTE')
+       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature)::oid,'EXECUTE')
   ) <> 0 THEN RAISE EXCEPTION 'FAIL: one or more authenticated private RPC grants are missing'; END IF;
 
   RAISE NOTICE 'POSTFLIGHT PASS: 262-row ledger with 247 historical rows preserved by runner; fifteen canonical identities; ACL/RLS/transfer/collaborator/archive postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
