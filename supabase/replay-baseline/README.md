@@ -144,3 +144,10 @@ The replay workflow now asserts 19 replay-only prerequisite files plus 247 exact
 A static audit of every `ALTER POLICY` in the recovered sequence found one policy altered without an earlier CREATE: `public.condominium_audit_log_read_manager`, first altered by `20261003030800`. The preceding table migration creates a separate all-operations manager policy, but not this named SELECT policy. The missing policy is seeded at `20260929075202` with the prior workspace-manager predicate; the later historical migration tightens it to `private.is_workspace_admin(workspace_id)`. This replay-only policy seed is not part of the recovered archive and must never be deployed to QA or Production.
 
 The replay workflow now asserts 20 replay-only prerequisite files plus 247 exact historical payloads (267 staged SQL files total).
+
+
+## Pre-ledger transfer accounting snapshot RPC — 2026-11-04
+
+The recovered migration `20261003043706_expose_captured_transfer_snapshot.sql` patches `public.get_member_transfer_accounting_snapshot(uuid)` through `pg_get_functiondef`, but the first CREATE statement for that RPC in the ledger appears later at `20261005132420`. The current Production definition was retrieved read-only and seeded at `20261003043705`. It already includes the captured snapshot property, so the historical patch's explicit idempotency guard exits without modifying it. This is a replay-only compatibility seed, not recovered original SQL; never deploy it to QA or Production.
+
+The workflow now asserts 21 replay-only prerequisite files plus 247 exact historical payloads (268 staged SQL files total).
