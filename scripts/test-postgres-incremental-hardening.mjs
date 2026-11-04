@@ -20,9 +20,10 @@ const incrementalMigrations = [
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261105120000_fix_portal_registration_upsert.sql",
 ];
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
-assert.ok(actualFiles.includes(incrementalMigrations.at(-1)), "Missing the latest condominium archive-state migration.");
+assert.ok(actualFiles.includes(incrementalMigrations.at(-1)), "Missing the latest portal registration upsert migration.");
 
 function psql(args) {
   return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", ...args], {
@@ -35,6 +36,21 @@ for (const filename of incrementalMigrations) {
   console.log("Applying " + filename + " to isolated PostgreSQL 17...");
   psql(["-f", path.join(directory, filename)]);
 }
+
+const portalRoutineCheck = JSON.parse(psql(["-At","-c",`
+SELECT json_build_object(
+  'helper_exists', EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='private' AND p.proname='upsert_portal_access_for_member'),
+  'helper_security_definer', (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='private' AND p.proname='upsert_portal_access_for_member'),
+  'registration_uses_helper', position('upsert_portal_access_for_member' in pg_get_functiondef('private.complete_portal_registration(text,text,text)'::regprocedure)) > 0,
+  'approval_uses_helper', position('upsert_portal_access_for_member' in pg_get_functiondef('private.admin_approve_portal_registration(uuid,uuid)'::regprocedure)) > 0
+)::text;
+`]));
+assert.deepEqual(portalRoutineCheck, {
+  helper_exists: true,
+  helper_security_definer: true,
+  registration_uses_helper: true,
+  approval_uses_helper: true
+}, "Portal registration upsert helper and both call sites must be installed.");
 
 const query = `
 SELECT json_build_object(
