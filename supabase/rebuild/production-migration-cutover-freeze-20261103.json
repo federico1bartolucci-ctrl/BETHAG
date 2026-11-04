@@ -206,9 +206,9 @@
     {
       "order": 15,
       "file": "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
-      "git_blob_sha": "284651ea81523147aa1f46618102babc997630fa",
-      "purpose": "Reconcile QA-proven archive RPC bodies, 18 authenticated private invoker grants, co-owner metadata trigger and least-privilege helper ACLs.",
-      "postcondition": "All 18 guarded private implementations are callable by authenticated through their SECURITY INVOKER wrappers; trigger helper direct EXECUTE is revoked; archive/restore bodies and incoming co-owner metadata trigger match QA; private is_workspace_staff is not client-executable.",
+      "git_blob_sha": "9c1303943985f12c574cc821b67696478e1fffef",
+      "purpose": "Reconcile QA-proven archive RPC bodies, 18 authenticated private invoker grants, co-owner metadata trigger and least-privilege helper ACLs. Explicitly revokes authenticated TRUNCATE/REFERENCES/TRIGGER on public.condominium_fund_availability to close the only remaining effective relation-ACL difference.",
+      "postcondition": "All 18 guarded private implementations are callable by authenticated through their SECURITY INVOKER wrappers; trigger helper direct EXECUTE is revoked; archive/restore bodies and incoming co-owner metadata trigger match QA; private is_workspace_staff is not client-executable. Effective authenticated TRUNCATE, REFERENCES and TRIGGER on public.condominium_fund_availability are false.",
       "production_status": "PENDING_NOT_APPLIED"
     }
   ],
@@ -331,7 +331,9 @@
     "incoming_coowner_metadata_trigger_present": true,
     "authenticated_private_invoker_grants": 18,
     "private_is_workspace_staff_authenticated_execute": false,
-    "trigger_functions_not_public_executable": true
+    "trigger_functions_not_public_executable": true,
+    "authenticated_structural_privilege_relations": 0,
+    "fund_availability_authenticated_structural_privileges": false
   },
   "critical_execution_constraint": {
     "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including collaborator profile metadata, archive lifecycle preservation, authenticated private RPC grants and co-owner metadata.",
@@ -346,11 +348,12 @@
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
     "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
-    "The new 15th canonical increment has not yet passed clean-install and guarded cutover replay; prior 23-file/14-increment rehearsal is invalidated."
+    "The new 15th canonical increment has not yet passed clean-install and guarded cutover replay; prior 23-file/14-increment rehearsal is invalidated.",
+    "The latest effective ACL comparison found authenticated TRUNCATE/REFERENCES/TRIGGER on public.condominium_fund_availability in Production but not QA; the migration was amended and requires fresh PostgreSQL 17 replay."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
-    "status": "PENDING_REPLAY_AFTER_NEW_MIGRATION",
+    "status": "PENDING_REPLAY_AFTER_VIEW_ACL_CORRECTION",
     "date": "2026-11-04",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "sequence": "five-file clean baseline; existing canonical Production head; three exact Production-forward SQL payloads; fifteen pending canonical increments including the new ACL/co-owner reconciliation migration",
