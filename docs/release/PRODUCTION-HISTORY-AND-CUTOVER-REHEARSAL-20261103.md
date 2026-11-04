@@ -99,3 +99,19 @@ La prova del cutover non sostituisce quella della clean install e viceversa. Il 
 ### Evidenza CI consolidata — 4 novembre 2026
 
 La GitHub Actions [run 41819086300](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300), sul commit PR `6c0af4a77124cdc8eee7e709856065271598e8bd` (merge-checkout `42765a1183eb1c6490b6a16c68aebf8036e302c9`), è terminata **SUCCESS** per entrambi i job (`build` e `postgres-bootstrap`). Sono passati: `verify:baseline`, verifica security/ACL, build, smoke browser pubblico, baseline PostgreSQL 17, replay cronologico completo dei 23 SQL, rehearsal del runner per i 14 incrementi, verifica hardening incrementale, test RLS dei permessi collaboratore e rehearsal transazionale del ledger. Il clean install ha prodotto 47 tabelle pubbliche, zero privilegi MAINTAIN per i ruoli applicativi e le RPC di comunicazione/Resend con i permessi attesi. Il cutover simulato ha preservato tutte le 247 coppie storiche e aggiunto 14 record, per 261 totali. Nessuna operazione remota su Supabase o Production è stata eseguita.
+
+
+## Superseding final rehearsal evidence — 2026-11-04 (24 files / 15 increments)
+
+The earlier sections describing the 23-file / 14-increment package and its replay as pending are historical and superseded by this section. The final reviewed package was tested on commit `6d6f4a1fc91918fa4550ba2df4110dda04dc1bf5`.
+
+[Final GitHub Actions run 41902161953](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41902161953) completed with overall **SUCCESS**. Both jobs passed:
+
+- `postgres-bootstrap`: PostgreSQL 17 baseline, all 24 clean-install SQL files in chronological order, all 15 canonical increments through the guarded transactional runner, ACL/security postconditions, collaborator RLS tests and ledger transaction rehearsal.
+- `build`: migration/baseline/security verification, communication authorization guards, production build, public-login browser smoke, real QA authentication/session persistence and authenticated QA edit/archive diagnostic.
+
+The isolated cutover rehearsal preserved all 247 historical version/name pairs and added exactly 15 canonical pairs, producing 262 ledger rows. The final sorted ledger head is `20261104130000`. The clean-install sequence contains 24 files: five baselines, one existing canonical head, fifteen pending canonical increments and three exact Production-forward payloads.
+
+The final ACL assertions passed, including authenticated structural privileges on `public.condominium_fund_availability` denied, anon execution of transfer-closure helpers denied, authenticated execution retained, and anon default CRUD on future public tables removed. Collaborator permission false/true behavior and the archive/co-owner lifecycle checks also passed.
+
+**Scope limitation:** this is a successful isolated PostgreSQL 17 rehearsal and QA browser diagnostic, not a provider-backed physical restore and not a Production cutover. No remote Supabase DDL/ledger writes, merge or deployment were performed. Production remains NO-GO pending provider-managed default-ACL disposition, APP-01–APP-15 acceptance, backup/restore gate and written cutover approval naming the exact commit/hashes, window and rollback criteria.
