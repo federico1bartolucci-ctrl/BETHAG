@@ -210,6 +210,17 @@ try {
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
   await signIn(adminPage, "Amministratore", "bethag-admin-qa@example.com", adminPassword, "Homepage");
+  await adminPage.waitForFunction(() => {
+    try {
+      return JSON.parse(localStorage.getItem("bethag-session-v1") || "null") === "admin";
+    } catch {
+      return false;
+    }
+  }, { timeout: 25000 });
+  const adminOnlyNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Piano e upgrade" }).first();
+  await adminOnlyNav.waitFor({ state: "visible", timeout: 15000 });
+  await adminPage.waitForTimeout(750);
+  assert.ok(await adminOnlyNav.isVisible(), "Administrator role must remain hydrated before protected actions");
 
   const condominiumsNav = adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first();
   const condominiumsHeading = adminPage.getByRole("heading", { name: "Condomìni", exact: true });
@@ -234,10 +245,24 @@ try {
     }));
     throw error;
   }
-  await clickWithRetry(
-    adminPage.getByRole("button", { name: "+ Nuovo condominio" }),
-    adminPage.getByRole("heading", { name: "Nuovo condominio" })
-  );
+  await adminPage.waitForTimeout(500);
+  try {
+    await clickWithRetry(
+      createCondominiumButton,
+      adminPage.getByRole("heading", { name: "Nuovo condominio" })
+    );
+  } catch (error) {
+    const diagnostics = await adminPage.evaluate(() => ({
+      sessionRole: localStorage.getItem("bethag-session-v1"),
+      sessionEmail: localStorage.getItem("bethag-session-email-v1"),
+      page: localStorage.getItem("bethag-current-page-v1"),
+      pageText: document.body.innerText.slice(0, 4000),
+      pageHeaderButtons: [...document.querySelectorAll(".page-header button")].map(button => button.innerText),
+      activeNavigation: [...document.querySelectorAll(".sidebar .nav-item.active")].map(item => item.innerText),
+    }));
+    console.error("BETHAG_ADMIN_CONDOMINIUM_CREATE_CLICK_DIAGNOSTIC", JSON.stringify({ diagnostics, error: String(error.message), pageErrors, consoleErrors }));
+    throw error;
+  }
   await adminPage.getByRole("heading", { name: "Nuovo condominio" }).waitFor();
   await field(adminPage, "Nome del condominio *").fill(condoName);
   await field(adminPage, "Indirizzo *").fill("Via QA UI 1");
