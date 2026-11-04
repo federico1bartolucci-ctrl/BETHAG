@@ -94,7 +94,7 @@ jobs:
           target=/tmp/bethag-production-ledger-replay/supabase/migrations
           expected=/tmp/bethag-production-ledger-replay/expected-versions.txt
           applied=/tmp/bethag-production-ledger-replay/applied-versions.txt
-          find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\\n' | sed 's/_.*//' | sort > "$expected"
+          find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sed 's/_.*//' | sort > "$expected"
           test "$(wc -l < "$expected")" -eq 270
           db_container=$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)
           test -n "$db_container"
