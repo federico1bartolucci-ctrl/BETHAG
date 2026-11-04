@@ -73,7 +73,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_default_acl d
-    JOIN pg_namespace n ON n.oid = d.defaclnamespace
+    LEFT JOIN pg_namespace n ON n.oid = d.defaclnamespace
     CROSS JOIN LATERAL aclexplode(d.defaclacl) a
     WHERE d.defaclrole = 'postgres'::regrole
       AND d.defaclobjtype = 'r'
