@@ -78,15 +78,18 @@ Verifiche ACL live:
 
 Supabase Security Advisor: zero linter di sicurezza. Performance Advisor: 35 indici non utilizzati e 21 gruppi di policy permissive multiple; sono avvisi di performance da trattare in un punto successivo, non errori di migrazione.
 
-## 4. Accesso reale e persistenza sessione
+## 4. Accesso, navigazione e persistenza QA live
 
 <badge>PASS</badge>
 
-- Workflow BETHAG build #2740: [run 41843109445](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41843109445)
-- Build, controlli baseline, security parity, PostgreSQL bootstrap, guardie comunicazioni e browser smoke pubblico: PASS.
-- Step `Certify real QA authentication and session persistence`: PASS.
-- Account verificati: amministratore, collaboratore, condomino.
-- Per ciascun ruolo: login Supabase Auth, landing page coerente col ruolo, refresh e persistenza sessione, nessun errore browser non gestito.
+- Workflow BETHAG build #2750: [run 41843611296](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41843611296)
+- Build, baseline, security parity, PostgreSQL bootstrap, guardie comunicazioni e browser smoke pubblico: PASS.
+- Login Supabase Auth reale e refresh/sessione per amministratore, collaboratore e condomino: PASS.
+- Navigazione admin su 12 sezioni; limitazioni di navigazione collaboratore e condomino: PASS.
+- Scrittura e persistenza da UI: APP-05 creazione/modifica/archiviazione/ripristino condominio e struttura 2 interni + 3 pertinenze; APP-06 spesa, ripartizione 1.000 millesimi e rata; APP-08/11 anteprima/conferma/chiusura subentro e aggiornamento proprietario senza hard reload; APP-12 pubblicazione/ritiro comunicazione con verifica lato condomino: tutti PASS.
+- Cleanup service-role: PASS; nessun errore browser non gestito. Un [0m`net::ERR_ABORTED`[0m isolato su una richiesta durante teardown è stato riconosciuto dal test come abort di chiusura browser, non come errore backend.
+- Snapshot pre/post: 1 workspace, 3 workspace_members, 64 condomini, 60 unità, 13 membri, 2 accessi portale, 0 trasferimenti, 15 esercizi, 14 movimenti contabili, 13 rate, 4 comunicazioni e 4 documenti prima e dopo. Nessun marker della run 4 novembre è rimasto; utenti temporanei eliminati.
+- Restano 11 condomini e 2 comunicazioni con marker sintetico `BETHAG_UI_ACCEPTANCE_` risalenti al 2 novembre; non sono stati creati dalla run corrente e non sono stati cancellati, per preservare i dati QA preesistenti.
 
 ## 5. Blocco provider ancora aperto
 
@@ -102,14 +105,13 @@ Non eseguire reset, delete/recreate o rebase alla cieca: il branch contiene fixt
 
 ## Decisione
 
-**Punto 2 resta APERTO, con replay e autenticazione certificati ma stato provider non ancora risolto.**
+**Punto 2 resta APERTO, con replay, autenticazione e persistenza funzionale certificati ma stato provider non ancora risolto.**
 
-Nessuna migrazione è stata applicata al QA live durante questa riconciliazione. Produzione non è stata modificata. I dati QA non sono stati cancellati o resettati.
+Nessuna migrazione è stata applicata al QA live durante questa riconciliazione. Produzione non è stata modificata. Nessun reset/rebase/delete del branch è stato eseguito. La suite UI ha creato fixture temporanee con marker univoco e ne ha verificato il cleanup; i dati preesistenti sono rimasti intatti.
 
 ## Prossime attività per chiudere il punto 2
 
-1. Eseguire il collaudo UI di scrittura/persistenza APP-01..APP-12 sul QA live con fixture temporanee a marker univoco e cleanup service-role verificato.
-2. Recuperare il messaggio esatto dello step fallito da Supabase Branches → View logs.
-3. Applicare esclusivamente la procedura non distruttiva indicata dall'errore, mantenendo i dati QA.
-4. Rileggere branch status, ledger, inventario schema e autenticazione dopo la riparazione.
-5. Chiudere il punto solo quando provider status e controlli funzionali sono tutti verdi.
+1. Recuperare il messaggio esatto dello step fallito da Supabase Branches → View logs.
+2. In base all'errore, definire una procedura non distruttiva e compatibile con i timestamp delle migrazioni QA; non fare reset, rebase o delete/recreate prima di aver verificato la causa.
+3. Applicare la correzione al solo ambiente QA e ripetere la lettura di branch status, ledger, inventario schema e autenticazione.
+4. Chiudere il punto solo quando il provider status non è più `MIGRATIONS_FAILED` e tutti i controlli restano verdi.
