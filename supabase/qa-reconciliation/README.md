@@ -33,6 +33,20 @@ The QA database registry now has 49 applied entries. Every entry has a repositor
 
 This is a source-recovery archive only. It does not alter the QA registry, run migrations, or make the QA-only SQL part of the standard Production deployment path. No branch reset, rebase, or recreation was performed.
 
+## Isolated QA baseline replay — 2026-11-04
+
+The five QA baseline snapshots plus 28 QA forward-only migrations (33 files total) were replayed successfully on a disposable Supabase PostgreSQL 17 stack. Workflow: `.github/workflows/replay-qa-baseline-postgres17.yml`.
+
+The final verification passed:
+- 33/33 migration versions match the staged SQL files exactly, with no duplicates.
+- Schema counts: 47 public tables, 613 table columns, 257 indexes, 103 RLS policies, 305 constraints, 147 triggers, 172 public/private functions.
+- RLS is enabled on every public table.
+- The complete ordered table-column inventory matches the live QA snapshot byte-for-byte.
+
+An earlier diagnostic counted 627 columns because it included view columns. The corrected inventory counts only physical public table columns; it matches the live QA total of 613. There is no 14-column table-schema drift.
+
+The isolated replay intentionally starts from the five full baseline snapshots and then applies the 28 QA forward-only migrations. The 16 earlier Production-ledger entries remain preserved in the historical archive but are not replayed on top of the baseline. The live QA registry still contains all 49 entries; its metadata reconciliation is a separate remaining task. No live QA or Production schema was reset or replayed by this workflow.
+
 ## QA-only repair: Resend webhook private implementation grant
 
 The deployed QA Edge Function `bethag-resend-webhook` invokes the public `apply_resend_communication_event` wrapper. The wrapper is `SECURITY INVOKER` and calls `private.apply_resend_communication_event(...)`. Before repair, `service_role` could execute the public wrapper but could not execute its private implementation, so the webhook call would fail.
@@ -87,7 +101,7 @@ This confirms that the resident fixture is restricted to one condominium/member/
 ## Remaining QA certification blockers
 
 1. Supabase branch metadata still says `MIGRATIONS_FAILED`. The branch's database is queryable and has a populated migration registry, but the provider-side deployment log must be inspected before this status can be called stale or cleared. No branch reset/recreation is authorized because it would discard QA data.
-2. The QA migration history is not identical to Production's 247-entry historical ledger. QA has its own five baseline entries and QA-specific forward migrations. The exact baseline and incremental history must be reconciled with the repository before any rebase or reset is considered.
+2. The QA source history is now archived and its 5-baseline + 28-forward replay is reproducible. The live QA registry still records 16 earlier Production-ledger versions alongside those 33 entries (49 total). Determine, from the Supabase branch deployment log and the supported migration-repair procedure, whether those 16 superseded versions should be marked reverted. Do not delete registry rows manually or rebase/reset the live branch before that decision.
 3. Function ACL comparison still shows additional `authenticated` EXECUTE grants on private-schema functions in QA compared with Production. These need a signature-by-signature authorization review; do not revoke them wholesale because some invoker wrappers may rely on them.
 4. QA and Production have different private implementations for `archive_condominium`, `restore_condominium`, `save_condominium`, `can_access_workspace_module`, and `can_manage_workspace_module`. Confirm each difference against the intended QA feature set and the recovered migration source before attempting to align them.
 5. A historical QA log entry recorded SQLSTATE `42P10` for a direct `portal_access` upsert using conflict target `(workspace_id, condominium_id, email)`, while the current unique index is expression-based on `lower(email)`. The current repository Edge Function uses `(workspace_id, legacy_id)`; identify the older caller before changing the index or data path.
