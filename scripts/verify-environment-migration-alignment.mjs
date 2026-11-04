@@ -57,7 +57,7 @@ const expectedPending = [
   ["20261028100000", "fix_collaborator_module_permission_boolean"],
   ["20261102100100", "add_workspace_member_profile_data"],
   ["20261102100200", "preserve_server_owned_condominium_archive_state"],
-  ["20261105120000", "fix_portal_registration_upsert"],
+  ["20261104235514", "fix_portal_registration_upsert_conflict_target"],
 ].map(([version, name]) => ({ version, name }));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
