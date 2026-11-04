@@ -32,7 +32,7 @@ const postSnapshotRemediationFiles = [
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
-  "20261105120000_fix_portal_registration_upsert.sql",
+  "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
 ];
 assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
 // The saved reconciliation report is a historical snapshot based on the 15-file
