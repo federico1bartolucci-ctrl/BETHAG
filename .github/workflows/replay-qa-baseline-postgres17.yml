@@ -109,6 +109,15 @@ jobs:
               (select count(*) from pg_tables t join pg_class c on c.relname=t.tablename and c.relnamespace='public'::regnamespace where not c.relrowsecurity)
           " > /tmp/bethag-qa-baseline-replay/schema-counts.txt
           cat /tmp/bethag-qa-baseline-replay/schema-counts.txt
+          docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -At -F '|' -c "
+            select c.relname,a.attname,format_type(a.atttypid,a.atttypmod),a.attnotnull,coalesce(pg_get_expr(d.adbin,d.adrelid),'')
+            from pg_attribute a
+            join pg_class c on c.oid=a.attrelid
+            join pg_namespace n on n.oid=c.relnamespace
+            left join pg_attrdef d on d.adrelid=c.oid and d.adnum=a.attnum
+            where n.nspname='public' and c.relkind in ('r','p') and a.attnum>0 and not a.attisdropped
+            order by c.relname,a.attnum
+          " > /tmp/bethag-qa-baseline-replay/schema-columns.txt
           expected_counts='47|613|257|103|305|147|172|0'
           actual_counts=$(cat /tmp/bethag-qa-baseline-replay/schema-counts.txt)
           test "$actual_counts" = "$expected_counts"
@@ -123,6 +132,7 @@ jobs:
             /tmp/bethag-qa-baseline-replay/start.log
             /tmp/bethag-qa-baseline-replay/replay.log
             /tmp/bethag-qa-baseline-replay/schema-counts.txt
+            /tmp/bethag-qa-baseline-replay/schema-columns.txt
           if-no-files-found: warn
           retention-days: 7
 
