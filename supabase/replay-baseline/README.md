@@ -41,3 +41,10 @@ The baseline therefore creates `unit_id` as a UUID column without that foreign k
 Production's first recorded reference to `public.condominium_millesimal_tables` is migration `20260929065325_add_allocation_table_reference`, which immediately adds a foreign key from expense allocations to this relation. The recovered 247-row ledger contains later function, trigger, and allocation-rule references, but no `CREATE TABLE public.condominium_millesimal_tables` statement. The live Production catalog confirms that the relation already exists. It is therefore a further pre-ledger dependency required before replay reaches version `20260929065325`.
 
 The replay baseline `20260929065324_legacy_condominium_millesimal_tables.sql` reconstructs its 14 columns, primary key, two foreign keys, and three check constraints from the read-only Production catalog. It intentionally does not pre-create its policies, secondary indexes, or triggers: the later recorded migrations reconcile those objects in chronological order. This remains a test-only reconstruction, not an original historical payload, and must never be deployed to QA or Production.
+
+## Fiscal years relation
+
+Production contains `public.condominium_fiscal_years`, but the recovered 247-entry ledger has no `CREATE TABLE` payload for it. Migration `20260929070002_add_condominium_budget` immediately creates a foreign key to this relation, so it must exist before that historical entry is replayed.
+
+The replay-only baseline `20260929070001_legacy_condominium_fiscal_years.sql` reconstructs the 11 columns, primary key, workspace/condominium foreign keys, and core date/balance checks from the read-only Production catalog. It intentionally does not pre-create secondary indexes, RLS policies, or triggers; later historical payloads remain responsible for reconciling those objects. The exclusion constraint/index for overlapping fiscal periods is likewise not synthesized here: replay must establish it only through its recorded chronological migration, if present. This file is a test-only prerequisite and must never be deployed to QA or Production.
+
