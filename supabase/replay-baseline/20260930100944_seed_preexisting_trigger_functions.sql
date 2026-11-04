@@ -3,7 +3,7 @@
 -- no CREATE statements for these six functions. Their current Production definitions were
 -- captured read-only from pg_get_functiondef and are seeded before the first recorded ACL
 -- operation. Later historical payloads remain responsible for triggers/ACL reconciliation.
--- Synthetic test scaffolding only; never deploy to QA or Production.
+-- Synthetic test scaffolding only; never deploy to QA or Production.;
 
 CREATE OR REPLACE FUNCTION public.guard_consumption_reading_integrity()
  RETURNS trigger
@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION public.guard_consumption_reading_integrity()
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_catalog'
 AS $function$ begin if exists(select 1 from public.condominium_expense_allocations a join public.condominium_ledger_entries l on l.id=a.ledger_entry_id where a.workspace_id=old.workspace_id and a.condominium_id=old.condominium_id and l.fiscal_year_id=old.fiscal_year_id and a.allocation_basis='Consumo - '||trim(old.service_type) and a.unit_id=old.unit_id) then raise exception 'La lettura di consumo è già utilizzata in un riparto e non può essere modificata o cancellata'; end if; return case when tg_op='DELETE' then old else new end; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_expense_allocation_integrity()
  RETURNS trigger
@@ -73,7 +73,7 @@ begin
   return new;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_fiscal_year_opening_balance()
  RETURNS trigger
@@ -81,7 +81,7 @@ CREATE OR REPLACE FUNCTION public.guard_fiscal_year_opening_balance()
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_catalog'
 AS $function$ begin if new.opening_balance is distinct from old.opening_balance and exists(select 1 from public.condominium_fiscal_carryovers c where c.workspace_id=old.workspace_id and c.condominium_id=old.condominium_id and c.target_fiscal_year_id=old.id) then raise exception 'Il saldo iniziale è vincolato ai riporti dell''esercizio precedente e non può essere modificato manualmente'; end if; return new; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_fund_integrity()
  RETURNS trigger
@@ -109,7 +109,7 @@ begin
   return new;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.prevent_fiscal_year_delete()
  RETURNS trigger
@@ -132,12 +132,11 @@ begin
  if old.status='Chiuso' then raise exception 'Un esercizio chiuso non può essere cancellato'; end if;
  return old;
 end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.validate_allocation_rule_scope()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_catalog'
-AS $function$ begin if new.allocation_table_id is null then raise exception 'Una regola di riparto deve indicare una tabella millesimale'; end if; if not exists(select 1 from public.condominium_millesimal_tables t where t.id=new.allocation_table_id and t.workspace_id=new.workspace_id and t.condominium_id=new.condominium_id) then raise exception 'La tabella della regola di riparto non appartiene al condominio selezionato'; end if; if new.priority is null or new.priority<0 then raise exception 'La priorità della regola di riparto non può essere negativa'; end if; if coalesce(trim(new.name),'')='' then raise exception 'Il nome della regola di riparto è obbligatorio'; end if; if coalesce(trim(new.expense_type),'')='' and coalesce(trim(new.category),'')='' then raise exception 'La regola deve indicare almeno il tipo di spesa o la categoria'; end if; return new; end; $function$
-
+AS $function$ begin if new.allocation_table_id is null then raise exception 'Una regola di riparto deve indicare una tabella millesimale'; end if; if not exists(select 1 from public.condominium_millesimal_tables t where t.id=new.allocation_table_id and t.workspace_id=new.workspace_id and t.condominium_id=new.condominium_id) then raise exception 'La tabella della regola di riparto non appartiene al condominio selezionato'; end if; if new.priority is null or new.priority<0 then raise exception 'La priorità della regola di riparto non può essere negativa'; end if; if coalesce(trim(new.name),'')='' then raise exception 'Il nome della regola di riparto è obbligatorio'; end if; if coalesce(trim(new.expense_type),'')='' and coalesce(trim(new.category),'')='' then raise exception 'La regola deve indicare almeno il tipo di spesa o la categoria'; end if; return new; end; $function$;
