@@ -14,15 +14,16 @@ No SQL, migration, reset, rebase, deploy, or migration-history repair was execut
 - Clean-install canonical migration chain on `release/reconcile-production-247-20261103`: 23 SQL files.
 - Isolated PostgreSQL 17 replay and guarded 14-migration cutover rehearsal: CI run 41819086300 succeeded (commit `6c0af4a77124cdc8eee7e709856065271598e8bd`). These checks do not repair or certify the existing QA branch.
 
-## Reconstructed QA ledger composition
+## Reconstructed QA ledger composition — corrected live count
 
-The 49 QA rows divide into three groups:
+A fresh direct query of `supabase_migrations.schema_migrations` and a fresh Supabase migration-list call both return **34 rows**, not 49. The earlier 49-row figure in a preliminary inventory was stale/incorrect and is superseded by this direct database evidence.
 
-1. **16 original historical entries** (versions 20260928021707 through 20260928043415): exact version matches exist in the recovered Production payload archive. They are historical records, not files in the current clean-install chain.
-2. **17 exact canonical matches**: five baseline files (20261017000001–20261017000005), nine incremental files from 20261022210629 through 20261023000733, and three later canonical fixes (20261027100000, 20261027110000, 20261028100000). Their version prefixes exist in the 23-file canonical release chain.
-3. **16 non-exact rows**: these require individual source/effect reconciliation. Four have clear later canonical counterparts by purpose/name; two are explicitly QA-only; the remainder must not be declared equivalent without comparing SQL effects.
+The 34 rows divide into:
 
-### Five recovered baseline files
+1. **17 exact version matches** with the current 23-file canonical clean-install chain: five 20261017 baseline migrations, nine 20261022–20261023 hardening migrations, and three 20261027–20261028 fixes.
+2. **17 QA-only / differently-versioned rows** listed below. Their actual SQL text is retained in `supabase_migrations.schema_migrations.statements` (one statement per row); their names alone are not sufficient evidence of equivalence.
+
+### Recovered baseline files
 
 The five original SQL files were recovered from PR #20 head `rebuild/bethag-clean-aligned-20261022`. Their exact Git blob SHAs are:
 
@@ -32,28 +33,29 @@ The five original SQL files were recovered from PR #20 head `rebuild/bethag-clea
 - `20261017000004_bethag_baseline_security.sql` — `0988cd5cbddaa2a41bbffc69aa148f25c2e44600`
 - `20261017000005_bethag_baseline_grants.sql` — `4707784459260e557c576b8a7a08c130dc54fb43`
 
-These files describe schema, indexes/views, functions, RLS policies/triggers, and grants/default privileges. They were recovered as source evidence only; this does not authorize replaying them against the existing QA database.
+### All 17 rows without an exact version match
 
-### The 16 QA rows without an exact version/file match
-
-| QA version | QA ledger name | Reconciliation note |
+| QA version | QA ledger name | SQL effect / disposition |
 |---|---|---|
-| 20261102041805 | repair_authenticated_communication_rpc_private_execute | Related to communication-recipient RPC grant work; compare with canonical 20261102200855 before treating as superseded. |
-| 20261102043152 | repair_authenticated_condominium_delete_rpc_private_execute | No exact canonical source identified yet. |
-| 20261102043315 | persist_condominium_archive_columns | Archive schema work; no direct equivalence asserted. |
-| 20261102044002 | repair_condominium_archive_rpc_and_json | Archive RPC work; no direct equivalence asserted. |
-| 20261102044102 | repair_authenticated_condominium_archive_rpc_private_execute | No exact canonical source identified yet. |
-| 20261102044224 | repair_authenticated_invoker_private_rpc_grants | No exact canonical source identified yet. |
-| 20261102044603 | revoke_public_execute_from_public_trigger_functions | No exact canonical source identified yet. |
-| 20261102050437 | backfill_condominium_archive_metadata | Data backfill; must be reconciled separately from DDL/function replacements. |
-| 20261102050957 | revoke_service_role_maintain_from_fund_availability_view | Related to MAINTAIN privilege hardening; compare object scope with canonical 20261102151610. |
-| 20261102054253 | preserve_server_owned_condominium_archive_state | Later canonical counterpart by purpose: 20261102100200; verify exact SQL effects before declaring equivalent. |
-| 20261102054409 | add_workspace_member_profile_data | Later canonical counterpart by purpose: 20261102100100; verify exact SQL effects before declaring equivalent. |
-| 20261102100000 | repair_authenticated_accounting_rpc_private_execute | No exact canonical source identified yet. |
-| 20261102200820 | restore_secure_communication_recipient_rpc_execute | Later canonical counterpart: 20261102200855; version differs and must remain visible in the reconciliation record. |
-| 20261103072843 | qa_align_transfer_wrapper_empty_search_path | QA-only alignment; PR #48 documents that the correction is stored outside the deployable migrations directory. |
-| 20261103193927 | qa_store_incoming_coowner_profile_metadata | QA-only candidate; source/effect still needs explicit verification. |
-| 20261104122833 | grant_service_role_private_resend_event_rpc | Canonical Production-forward source: 20261103070901; version differs. |
+| 20261102041805 | repair_authenticated_communication_rpc_private_execute | Replaces `private.reset_stale_communication_recipients`; its initial SQL does not scope the queued-recipient UPDATE to `p_communication_id`. Later canonical fix 20261102200855 adds the specific communication filter and grant. Treat this first implementation as superseded, not replayable as-is. |
+| 20261102043152 | repair_authenticated_condominium_delete_rpc_private_execute | Grants authenticated EXECUTE on private delete implementation after revoking PUBLIC/anon. No exact canonical counterpart yet; review wrapper path and authorization checks before deciding whether to carry forward. |
+| 20261102043315 | persist_condominium_archive_columns | Replaces private `save_condominium` with archive-aware behavior. The later canonical archive-preservation migration 20261102100200 carries the server-owned archive state behavior. |
+| 20261102044002 | repair_condominium_archive_rpc_and_json | Replaces private `archive_condominium`; writes archive metadata to dedicated columns and JSON data. Canonical archive functions require semantic comparison; do not discard JSON synchronization without confirming frontend dependency. |
+| 20261102044102 | repair_authenticated_condominium_archive_rpc_private_execute | Grants authenticated EXECUTE to private archive/restore implementations. Needed only with the public SECURITY INVOKER wrapper call path; reconcile with the exact canonical wrapper/grant model. |
+| 20261102044224 | repair_authenticated_invoker_private_rpc_grants | Grants authenticated EXECUTE to multiple private registration, archive and payment implementations. Review function-by-function; broad migration is not to be copied blindly. |
+| 20261102044603 | revoke_public_execute_from_public_trigger_functions | Revokes direct EXECUTE on two public trigger functions from PUBLIC/anon/authenticated. Security hardening; compare against the 23-file chain's trigger-function ACL policy. |
+| 20261102050437 | backfill_condominium_archive_metadata | Data backfill from legacy JSON `archivedAt/archivedBy/archiveReason` fields into structured columns. Data migration; must be rehearsed on a disposable copy with row counts and before/after checksums. |
+| 20261102050957 | revoke_service_role_maintain_from_fund_availability_view | Revokes MAINTAIN from service_role on the fund-availability view. Superseded by the broader canonical MAINTAIN revocation, provided the clean-install chain's postconditions are confirmed. |
+| 20261102054253 | preserve_server_owned_condominium_archive_state | Later canonical counterpart by purpose: 20261102100200. Compare exact SQL and keep only the canonical forward implementation in clean installs. |
+| 20261102054409 | add_workspace_member_profile_data | Later canonical counterpart by purpose: 20261102100100. QA has the `workspace_members.data` column; retain this capability in the canonical clean-install chain. |
+| 20261102100000 | repair_authenticated_accounting_rpc_private_execute | Grants authenticated EXECUTE to seven private accounting implementations. Not present in the 23-file chain; must be reconciled against public wrapper calls and least-privilege requirements. |
+| 20261102200820 | restore_secure_communication_recipient_rpc_execute | Grants authenticated recipient RPC access and replaces stale-recipient recovery. Later canonical counterpart 20261102200855 is the corrected implementation; use only the latter in new installs. |
+| 20261103072843 | qa_align_transfer_wrapper_empty_search_path | QA-only `ALTER FUNCTION public.close_condominium_member_transfer(uuid) SET search_path = ''`. PR #48 documents it as a QA-only alignment; verify canonical baseline/cutover already enforces the same setting. |
+| 20261103193927 | qa_store_incoming_coowner_profile_metadata | Adds `private.apply_incoming_transfer_member_metadata()` and its trigger on condominium_members. QA-only feature migration; must be promoted into the canonical chain if the application depends on the metadata persistence path. |
+| 20261104122833 | grant_service_role_private_resend_event_rpc | Grants service_role EXECUTE to the private Resend event handler. Canonical Production-forward migration 20261103070901 carries this grant under the Production ledger version; compare SQL before deduplicating. |
+| 20261104125614 | revoke_authenticated_execute_on_unused_private_workspace_staff | Revokes authenticated EXECUTE on `private.is_workspace_staff(uuid)`. New QA-only least-privilege cleanup; verify no browser/RPC call depends on it before promoting. |
+
+The above SQL classifications are based on the live QA migration statements, not merely migration names. Full SQL is not reproduced in this report; the original statements remain preserved in the QA migration registry. No statement was executed or altered during this inspection.
 
 ## Verified initialization failure
 
