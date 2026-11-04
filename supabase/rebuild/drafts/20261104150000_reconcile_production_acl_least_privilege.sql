@@ -1,7 +1,8 @@
--- Forward-only ACL reconciliation for the Production cutover package.
+-- FORWARD-ONLY ACL RECONCILIATION — APPLIED ON PRODUCTION.
+-- Supabase Production ledger version: 20261104222229.
+-- Retained here as the reviewed SQL record; do not replay manually.
 -- Scope is limited to verified application-role grants and postgres-owned defaults.
--- Supabase-managed roles/defaults (including supabase_admin) are intentionally untouched.
--- Apply only after reviewing the live ACL inventory and obtaining cutover approval.
+-- Supabase-managed roles/defaults (including supabase_admin) were intentionally untouched.
 
 -- The live object is a view. It is read-only for application users:
 -- remove every direct privilege from authenticated, then restore SELECT only.
@@ -25,8 +26,7 @@ END;
 $view_acl$;
 
 -- Remove direct client execution of the transfer-closure helper.
--- The public wrapper remains available only to explicitly authorized callers
--- according to its separately managed RPC grant.
+-- The public wrapper remains available to explicitly authorized callers.
 REVOKE EXECUTE
   ON FUNCTION private.check_condominium_member_transfer_closure(uuid)
   FROM PUBLIC, anon;
@@ -34,8 +34,8 @@ REVOKE EXECUTE
   ON FUNCTION public.check_condominium_member_transfer_closure(uuid)
   FROM PUBLIC, anon;
 
--- PostgreSQL default ACLs are additive: reconcile both global and public-schema
--- defaults for objects created by postgres. Do not change platform-owned defaults.
+-- Reconcile global and public-schema defaults for objects created by postgres.
+-- Platform-owned defaults are intentionally not changed.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres
   REVOKE ALL ON TABLES FROM anon;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
@@ -65,19 +65,11 @@ BEGIN
     RAISE EXCEPTION 'ACL reconciliation failed: authenticated must retain SELECT only on condominium_fund_availability';
   END IF;
 
-  IF has_function_privilege(
-    'anon',
-    'private.check_condominium_member_transfer_closure(uuid)',
-    'EXECUTE'
-  ) THEN
+  IF has_function_privilege('anon','private.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'ACL reconciliation failed: anon can execute private transfer-closure helper';
   END IF;
 
-  IF has_function_privilege(
-    'anon',
-    'public.check_condominium_member_transfer_closure(uuid)',
-    'EXECUTE'
-  ) THEN
+  IF has_function_privilege('anon','public.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'ACL reconciliation failed: anon can execute public transfer-closure helper';
   END IF;
 
