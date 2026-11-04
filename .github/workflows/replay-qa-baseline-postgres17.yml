@@ -100,7 +100,7 @@ jobs:
           docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -At -F '|' -c "
             select
               (select count(*) from pg_tables where schemaname='public'),
-              (select count(*) from information_schema.columns where table_schema='public'),
+              (select count(*) from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') and a.attnum>0 and not a.attisdropped),
               (select count(*) from pg_indexes where schemaname='public'),
               (select count(*) from pg_policies where schemaname='public'),
               (select count(*) from pg_constraint c join pg_class r on r.oid=c.conrelid join pg_namespace n on n.oid=r.relnamespace where n.nspname='public'),
