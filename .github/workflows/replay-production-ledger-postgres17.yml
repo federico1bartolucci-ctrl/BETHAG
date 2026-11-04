@@ -18,9 +18,11 @@ on:
 permissions:
   contents: read
 
+# Push and pull_request events for the same commit must not run two independent
+# PostgreSQL stacks at once. Queue rather than cancel a replay already in progress.
 concurrency:
-  group: production-ledger-replay-${{ github.ref }}
-  cancel-in-progress: true
+  group: bethag-production-ledger-replay-postgres17
+  cancel-in-progress: false
 
 jobs:
   replay-postgres17:
@@ -55,15 +57,20 @@ jobs:
           set -euo pipefail
           target=/tmp/bethag-production-ledger-replay/supabase/migrations
           mkdir -p "$target"
-          cp supabase/replay-baseline/*.sql "$target/"
-          cp supabase/replay-candidate/*.sql "$target/"
+          # supabase init may scaffold SQL in the migrations directory.
+          # Remove only scaffolded SQL before copying the exact replay inputs.
+          find "$target" -maxdepth 1 -type f -name '*.sql' -delete
           baseline_count=$(find supabase/replay-baseline -maxdepth 1 -type f -name '*.sql' | wc -l)
           candidate_count=$(find supabase/replay-candidate -maxdepth 1 -type f -name '*.sql' | wc -l)
-          staged_count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
           test "$baseline_count" -eq 19
           test "$candidate_count" -eq 247
-          test "$staged_count" -eq 266
+          cp supabase/replay-baseline/*.sql "$target/"
+          cp supabase/replay-candidate/*.sql "$target/"
+          staged_count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
+          expected_count=$((baseline_count + candidate_count))
+          test "$staged_count" -eq "$expected_count"
           echo "Staged $baseline_count chronological replay prerequisites plus $candidate_count exact Production-ledger payloads ($staged_count total)."
+          diff -u <(find supabase/replay-baseline supabase/replay-candidate -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort) <(find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
 
       - name: Start disposable Supabase stack
         working-directory: /tmp/bethag-production-ledger-replay
