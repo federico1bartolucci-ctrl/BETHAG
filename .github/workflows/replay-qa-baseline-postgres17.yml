@@ -57,13 +57,13 @@ jobs:
           find "$target" -maxdepth 1 -type f -name '*.sql' -delete
           total_count=$(find "$source_dir" -maxdepth 1 -type f -name '*.sql' | wc -l)
           baseline_count=$(find "$source_dir" -maxdepth 1 -type f -name '2026101700000*.sql' | wc -l)
-          test "$total_count" -eq 33
+          test "$total_count" -eq 34
           test "$baseline_count" -eq 5
           forward_count=$((total_count - baseline_count))
-          test "$forward_count" -eq 28
+          test "$forward_count" -eq 29
           cp "$source_dir"/*.sql "$target/"
           staged_count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
-          test "$staged_count" -eq 33
+          test "$staged_count" -eq 34
           echo "Staged $baseline_count QA baseline snapshots and $forward_count QA forward-only migrations ($staged_count total)."
           diff -u <(find "$source_dir" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort) <(find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
 
@@ -90,11 +90,11 @@ jobs:
           expected=/tmp/bethag-qa-baseline-replay/expected-versions.txt
           applied=/tmp/bethag-qa-baseline-replay/applied-versions.txt
           find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sed 's/_.*//' | sort > "$expected"
-          test "$(wc -l < "$expected")" -eq 33
+          test "$(wc -l < "$expected")" -eq 34
           db_container=$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)
           test -n "$db_container"
           docker exec "$db_container" psql -U postgres -d postgres -At -c "select version from supabase_migrations.schema_migrations order by version" > "$applied"
-          test "$(wc -l < "$applied")" -eq 33
+          test "$(wc -l < "$applied")" -eq 34
           diff -u "$expected" "$applied"
           test -z "$(uniq -d "$applied")"
           docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -At -F '|' -c "
@@ -128,7 +128,9 @@ jobs:
           expected_counts='47|613|257|103|305|147|172|0'
           actual_counts=$(cat /tmp/bethag-qa-baseline-replay/schema-counts.txt)
           test "$actual_counts" = "$expected_counts"
-          echo "QA baseline verified: 33/33 versions; 47 tables, 613 columns, 257 indexes, 103 policies, 305 constraints, 147 triggers, 172 functions; RLS enabled on every public table."
+          docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -At -F '|' -c "select has_function_privilege('authenticated','private.is_workspace_staff(uuid)','EXECUTE'),has_function_privilege('service_role','private.is_workspace_staff(uuid)','EXECUTE')" > /tmp/bethag-qa-baseline-replay/helper-acl.txt
+          test "$(cat /tmp/bethag-qa-baseline-replay/helper-acl.txt)" = "f|t"
+          echo "QA baseline verified: 34/34 versions; 47 tables, 613 columns, 257 indexes, 103 policies, 305 constraints, 147 triggers, 172 functions; RLS enabled on every public table."
 
       - name: Upload QA replay diagnostics
         if: always()
@@ -141,6 +143,7 @@ jobs:
             /tmp/bethag-qa-baseline-replay/schema-counts.txt
             /tmp/bethag-qa-baseline-replay/schema-columns.txt
             /tmp/bethag-qa-baseline-replay/schema-column-diff.txt
+            /tmp/bethag-qa-baseline-replay/helper-acl.txt
           if-no-files-found: warn
           retention-days: 7
 
