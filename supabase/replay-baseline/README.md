@@ -80,3 +80,18 @@ The original 247 payloads remain byte-for-byte unchanged. The replay workflow as
 The first chronological replay after the table reconstruction passed the earlier accounting, millesimal, fiscal carryover, communication recipient and member-transfer prerequisites, then reached `20260929093700_align_condominium_manager_authorization.sql`. That payload creates a policy which calls `private.can_manage_workspace_module(uuid,text)`, while the first definition preserved in the recovered ledger is later, at `20260930185301_optimize_workspace_manager_rls_auth_check.sql`. The early call proves the helper already existed before its first recorded definition. A replay-only seed at `20260929093659` now installs the earliest recoverable implementation; the later historical payload still replaces it in chronological order. This is an explicit reconstruction assumption, not an assertion that the seeded SQL is the original pre-ledger text.
 
 The replay workflow now asserts 14 prerequisite SQL files plus 247 exact historical payloads (261 staged SQL files total). The helper seed is not part of the recovered archive and must never be deployed to QA or Production.
+
+
+## Additional pre-ledger accounting and communication relations
+
+A full catalog inventory on 2026-11-04 identified five more relations referenced by the 247 recorded payloads but never created by any of them. Their table definitions were reconstructed from the read-only Production catalog and added as replay-only prerequisites:
+
+- `condominium_accounting_settings` (before first recorded accounting setup references);
+- `condominium_millesimal_values` (immediately before the first FK/index migration at `20260929080144`);
+- `condominium_fiscal_carryovers` (immediately before the first recorded carryover generator at `20260930104150`);
+- `communication_recipients` (immediately before its first recorded indexes at `20261001063435`);
+- `condominium_member_transfers` (immediately before its first recorded RPC/lifecycle migration at `20261001081847`).
+
+The same inventory confirmed `condominiums.archived_at` exists in Production but is not added by any of the 247 recovered SQL payloads. The replay-only bridge adds that column immediately before its first recorded use in `20261001083704`.
+
+These additions raise the disposable replay prerequisite count from 7 to 13. The workflow must stage 13 baseline files plus the 247 byte-identical historical payloads (260 SQL files total). The synthetic prerequisites are not historical ledger entries, are not part of the 247-file archive, and must never be deployed to QA or Production.
