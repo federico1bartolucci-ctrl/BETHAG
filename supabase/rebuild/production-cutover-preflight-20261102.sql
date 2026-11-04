@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE PREFLIGHT for the superseding fourteen-migration candidate. Run only immediately before a separately approved window.
+-- READ-ONLY RELEASE PREFLIGHT for the superseding fifteen-migration candidate. Run only immediately before a separately approved window.
 -- This script is intentionally fail-closed. It performs no schema/data/ledger writes.
 DO $preflight$
 DECLARE
@@ -24,7 +24,7 @@ DECLARE
     '20261022210629','20261022210630','20261022213544','20261022233440',
     '20261023000001','20261023000002','20261023000003','20261023000004',
     '20261023000733','20261027100000','20261027110000','20261028100000',
-    '20261102100100','20261102100200'
+    '20261102100100','20261102100200','20261105120000'
   ];
   role_name text;
   role_maintain integer;
