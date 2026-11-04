@@ -20,7 +20,7 @@ const incrementalMigrations = [
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
-  "20261105120000_fix_portal_registration_upsert.sql",
+  "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
 ];
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 assert.ok(actualFiles.includes(incrementalMigrations.at(-1)), "Missing the latest portal registration upsert migration.");
