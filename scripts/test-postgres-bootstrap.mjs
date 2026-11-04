@@ -195,7 +195,12 @@ for (const filename of incrementalMigrations) {
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
 assert.deepEqual(
   finalInventory,
-  { ...expected, columns: expected.columns + 1 },
+  {
+    ...expected,
+    columns: expected.columns + 1,
+    functions: expected.functions + 1,
+    function_owners: { postgres: expected.function_owners.postgres + 1 },
+  },
   "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
 );
 console.log(JSON.stringify({ incremental_hardening: "PASS", applied_migrations: incrementalMigrations, inventory: finalInventory }, null, 2));
