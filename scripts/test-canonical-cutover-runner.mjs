@@ -2,7 +2,7 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 247-pair ledger, runs all 14 real SQL
+ * Seeds a disposable copy of the frozen 247-pair ledger, runs all 15 real SQL
  * migrations through the production runner's local-only mode, then verifies
  * the exact 262-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
