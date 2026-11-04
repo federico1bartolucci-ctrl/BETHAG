@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE POSTFLIGHT. Run after all fourteen approved migrations.
+-- READ-ONLY RELEASE POSTFLIGHT. Run after all fifteen approved migrations.
 -- This script performs no schema/data/ledger writes. Compare the full ledger export
 -- with the saved preflight export to prove all original 244 rows remain unchanged.
 DO $postflight$
@@ -138,8 +138,8 @@ BEGIN
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 258 OR ledger_head <> '20261102100200' THEN
-    RAISE EXCEPTION 'FAIL: expected ledger count 258 and head 20261102100200, found count %, head %', ledger_count, ledger_head;
+  IF ledger_count <> 259 OR ledger_head <> '20261105120000' THEN
+    RAISE EXCEPTION 'FAIL: expected ledger count 259 and head 20261105120000, found count %, head %', ledger_count, ledger_head;
   END IF;
   IF (SELECT count(*) FROM supabase_migrations.schema_migrations
       WHERE (version,name) IN (
@@ -156,8 +156,9 @@ BEGIN
         ('20261027110000','repair_service_role_transfer_invoker_path'),
         ('20261028100000','fix_collaborator_module_permission_boolean'),
         ('20261102100100','add_workspace_member_profile_data'),
-        ('20261102100200','preserve_server_owned_condominium_archive_state')
-      )) <> 14 THEN
+        ('20261102100200','preserve_server_owned_condominium_archive_state'),
+        ('20261105120000','fix_portal_registration_upsert')
+      )) <> 15 THEN
     RAISE EXCEPTION 'FAIL: the fourteen canonical forward migrations are not all recorded under exact version/name pairs';
   END IF;
 
@@ -181,6 +182,6 @@ BEGIN
     RAISE EXCEPTION 'FAIL: save_condominium does not preserve all server-owned archive lifecycle fields';
   END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants, collaborator metadata column, archive lifecycle preservation and fourteen canonical migration records verified. Still compare the complete original ledger export and run application smoke tests before approval.';
+  RAISE NOTICE 'POSTFLIGHT PASS: ACL/default-ACL/function invariants, collaborator metadata column, archive lifecycle preservation and fifteen canonical migration records verified. Still compare the complete original ledger export and run application smoke tests before approval.';
 END
 $postflight$;
