@@ -136,7 +136,10 @@ assert.ok(qa_alias_sql_review.rows.every((row) => typeof row.disposition === "st
 console.log(JSON.stringify({
   migration_history_reconciliation: "PASS — inventory and mapping artifact are internally consistent",
   production_ledger_rows: production.count,
-  qa_ledger_rows: historicalQa.count,
+  historical_qa_snapshot_rows: historicalQa.count,
+  active_qa_project_ref: activeQa.project_ref,
+  active_qa_ledger_rows: activeQa.count,
+  active_qa_ledger_head: activeQa.migrations.at(-1),
   main_migration_files: main.count,
   clean_branch_migration_files: currentFiles.length,
   post_snapshot_remediation_migrations: currentFiles.filter((file) => postSnapshotRemediationFiles.includes(file.file)).map((file) => file.file),
