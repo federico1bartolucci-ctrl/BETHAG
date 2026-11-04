@@ -1,0 +1,29 @@
+name: Production migration source reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "supabase/recovered-production-ledger/**"
+      - "supabase/migrations/**"
+      - "scripts/verify-production-migration-source-reconciliation.mjs"
+      - ".github/workflows/production-migration-source-reconciliation.yml"
+  push:
+    branches: ["recovery/ledger-source-reconciliation-20261103"]
+    paths:
+      - "supabase/recovered-production-ledger/**"
+      - "supabase/migrations/**"
+      - "scripts/verify-production-migration-source-reconciliation.mjs"
+      - ".github/workflows/production-migration-source-reconciliation.yml"
+
+jobs:
+  source-reconciliation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify source inventory, SQL candidates and timestamp collisions
+        run: node scripts/verify-production-migration-source-reconciliation.mjs
