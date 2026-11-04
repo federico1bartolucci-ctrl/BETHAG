@@ -1,5 +1,5 @@
 {
-  "artifact": "BETHAG Production migration cutover freeze — superseding 14-migration candidate",
+  "artifact": "BETHAG Production migration cutover freeze — superseding 15-migration candidate",
   "captured_date": "2026-11-02",
   "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
   "reviewed_source_commit": "732b5cdb66b00d125b35028be466b408a13e6639",
@@ -172,6 +172,14 @@
       "purpose": "Preserve server-owned condominium archive lifecycle fields during ordinary state synchronization.",
       "postcondition": "private.save_condominium preserves archived_at, archived_by and archive_reason on conflict updates; authorization, SECURITY DEFINER and empty search_path remain intact.",
       "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 15,
+      "file": "20261105120000_fix_portal_registration_upsert.sql",
+      "git_blob_sha": "305232b105e84a0e43df2b96291cd41998955764",
+      "purpose": "Repair resident portal registration and administrator approval upserts using explicit, deterministic portal-access matching.",
+      "postcondition": "Verified resident registration creates/updates exactly one active portal_access row and one active resident workspace_members row; duplicate/conflicting portal links fail closed; registration and administrator approval use the same helper.",
+      "production_status": "PENDING_NOT_APPLIED"
     }
   ],
   "execution_order": [
@@ -184,10 +192,11 @@
     "Apply migration 14; verify save_condominium preserves archive lifecycle columns across a conflicting state upsert.",
     "Run the read-only postflight; prove original 244 rows unchanged and total ledger 258 with fourteen canonical version/name pairs.",
     "Run APP-01–APP-15 authenticated application tests and save evidence.",
-    "Obtain written approval naming commit, all fourteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
+    "Obtain written approval naming commit, all fourteen migration hashes, maintenance window, rollback criteria and backup-risk disposition.",
+    "Apply migration 15; rehearse verified resident registration and administrator approval portal-access upserts, including duplicate-conflict rejection."
   ],
   "expected_postflight": {
-    "ledger_rows": 258,
+    "ledger_rows": 259,
     "original_244_rows_unchanged": true,
     "new_canonical_rows": [
       {
@@ -245,6 +254,10 @@
       {
         "version": "20261102100200",
         "name": "preserve_server_owned_condominium_archive_state"
+      },
+      {
+        "version": "20261105120000",
+        "name": "fix_portal_registration_upsert"
       }
     ],
     "authenticated": {
@@ -287,7 +300,7 @@
     "save_condominium_archive_state_preserved": true
   },
   "critical_execution_constraint": {
-    "observed": "The guarded local-only canonical runner must rehearse all fourteen pending migrations, including collaborator profile metadata and archive lifecycle preservation.",
+    "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including portal registration upsert repair.",
     "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete.",
     "status": "UPDATED_FOR_REVIEW_REHEARSAL_REQUIRED_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
