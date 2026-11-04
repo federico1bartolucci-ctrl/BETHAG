@@ -60,3 +60,9 @@ Production contains `public.condominium_payment_movements`, but the recovered 24
 
 The replay-only baseline `20260929070814_legacy_condominium_payment_movements.sql` reconstructs its 10 columns, primary key, workspace/condominium/installment foreign keys, and positive-amount check from the read-only Production catalog. The prerequisite is ordered after installments and immediately before the first migration that attaches its accounting trigger. Secondary indexes, RLS policies, and triggers are left to later historical payloads. This is a test-only reconstruction, not recovered historical SQL, and must never be deployed to QA or Production.
 
+## Special funds relation
+
+Production contains `public.condominium_funds`, but no `CREATE TABLE` for it appears in the recovered 247-entry ledger. The first recorded dependency is `20260929072255_link_works_special_funds`, which adds a foreign key from condominium works to this relation. It must therefore predate that migration.
+
+The replay-only baseline `20260929072254_legacy_condominium_funds.sql` reconstructs the 12 columns, primary key, workspace/condominium foreign keys, and amount checks from a read-only Production catalog inspection on 2026-11-04. Secondary indexes, RLS policies, and triggers are intentionally left to the later historical payloads that reconcile them. This is a test-only reconstruction, not recovered historical SQL, and must never be deployed to QA or Production.
+
