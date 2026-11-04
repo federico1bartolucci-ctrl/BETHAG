@@ -83,3 +83,20 @@ Candidate migration `20261105120000_fix_portal_registration_upsert.sql` was adde
 The candidate migration was applied inside a QA SQL transaction, then `public.complete_portal_registration` was invoked with a verified existing QA Auth identity and a temporary unique member. Assertions for the returned approved status, exact member ID, active `portal_access` link and active resident `workspace_members` link passed. The entire transaction was rolled back and a subsequent query confirmed no residual fixture. This proves the database registration path with an existing verified identity; it does **not** prove creation of a new Auth user, receipt/confirmation of an invitation, or real browser login by a newly registered owner.
 
 **Disposition: APP-08 remains OPEN.** The migration is not yet applied persistently to QA. The full 15-migration isolated CI rehearsal is queued behind the previous serialized QA workflow. After CI passes, apply the candidate to QA through the approved version-preserving migration path and complete the new-owner browser registration/login/portal hydration test. No Production operation, merge or deployment was performed.
+
+
+## Follow-up CI correction — 5 November 2026
+
+**Commit tested:** `3854d310d9c9c73965ba8d2e5e240a74c33978b4`  
+**Full CI:** [run 41935793241](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41935793241) — both jobs **SUCCESS**.
+
+- Build, migration-history reconciliation, Production function security/ACL parity check, communication authorization/publication guards and authenticated QA edit/archive diagnostic: **PASS**.
+- Isolated PostgreSQL 17 fresh baseline bootstrap: **PASS**.
+- All 15 canonical migrations executed through the guarded runner on isolated PostgreSQL: **PASS**.
+- Incremental hardening catalog and ACL postconditions: **PASS**.
+- Collaborator module permission enforcement with RLS: **PASS**.
+- Canonical migration-ledger transaction rehearsal against the 15-migration structural inventory: **PASS**.
+
+This CI result supersedes the preceding failed rehearsal caused by a stale expected function count (171 instead of 172); the expectation was corrected and the full workflow then passed. It proves the isolated migration path, not that migration 15 has been persistently applied to the live QA Supabase project.
+
+**APP-08 remains OPEN.** The live QA migration ledger was last checked and did not yet contain `20261105120000_fix_portal_registration_upsert`. The candidate must still be applied to QA using the approved version-preserving migration path, followed by a true new-owner Auth registration/email-verification/browser-login and portal-access hydration test. No Production operation, merge or deployment was performed. Overall release remains **NO-GO**.
