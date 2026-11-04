@@ -19,7 +19,7 @@ The 2026-11-03 files `qa-ledger-20261103.json`, `migration-history-reconciliatio
 | Exact version/name pairs shared with canonical chain | 17 | Baseline and canonical hardening history |
 | QA-only ledger rows | 17 | QA-specific forward repairs; not part of the clean-install chain |
 | QA-only SQL files archived with exact version/name | 12 | Source recoverable from repository archive |
-| QA-only ledger rows without an exact archived source | 5 | Need provenance recovery or catalog-based semantic reconstruction |
+| QA-only ledger rows without an exact archived source | 5 | Original payloads unavailable; catalog-based reconstruction candidates now staged separately |
 | Additional archived candidate files not matching a live QA row | 2 | Must remain unassigned until provenance is established |
 
 The exact QA-only rows without a matching archived file are:
@@ -43,16 +43,25 @@ The canonical file `20261102200855_restore_secure_communication_recipient_rpc_ex
 - `private.is_workspace_staff(uuid)` exists; `authenticated` does not have EXECUTE and `service_role` does. This is consistent with the 20261104125614 revoke intent, but does not recover the original SQL text.
 - JSONB `data` columns exist on `workspace_members`, `condominium_members`, and `condominium_units`. This alone does not establish the exact effect of the co-owner profile metadata migration.
 
-Catalog postconditions are not substitutes for original migration payloads. Any semantically reconstructed SQL must be labelled as reconstructed, reviewed independently, and tested on an isolated PostgreSQL 17 database; it must never be represented as the original payload.
+Catalog postconditions are not substitutes for original migration payloads. The five missing entries now have separately staged SQL candidates under `supabase/rebuild/qa-reconstructed-migrations/`. Every file is explicitly labelled `RECONSTRUCTED`; none is claimed to be the original historical payload. The candidates are derived from live catalog definitions, ACLs and trigger metadata and still require isolated PostgreSQL 17 replay plus independent SQL review.
 
 ## Required continuation before this point can close
 
-1. Recover or reconstruct, with explicit provenance labels, the five unarchived QA migration payloads.
+1. Independently review the five catalog-reconstructed SQL candidates; recover originals if an authoritative copy is later found.
 2. Determine the purpose and origin of the two orphan archived candidates.
-3. Build a deterministic QA replay/reconciliation manifest that distinguishes shared canonical history, QA-only forward history, and files that are merely semantic equivalents.
-4. Rehearse the resulting sequence on a disposable PostgreSQL 17 database; do not reset/rebase/delete the live QA branch.
+3. Run `scripts/test-qa-ledger-replay-reconstruction.mjs`, which enforces exact 34-row version/name coverage and replays the 17 canonical + 12 archived QA + 5 reconstructed SQL files on disposable PostgreSQL 17.
+4. Inspect and correct any replay or postcondition failure, then rerun the isolated test. Do not reset/rebase/delete the live QA branch.
 5. Resolve the provider's `MIGRATIONS_FAILED` status only through a supported non-destructive provider procedure. The database's current schema and ledger do not clear provider deployment status.
 
 ## Safety decision
 
 **Punto 2 remains OPEN.** No live replay, reset, rebase, merge, deploy, or cutover is authorized by this inventory. Production remains untouched. Existing QA fixtures and migration history must be preserved.
+
+
+## Reconstruction work staged — 2026-11-04
+
+- Added five catalog-derived SQL candidates under `supabase/rebuild/qa-reconstructed-migrations/`, each explicitly marked as reconstructed and not original.
+- Added `scripts/test-qa-ledger-replay-reconstruction.mjs` and `.github/workflows/qa-ledger-replay-reconstruction.yml` for a disposable PostgreSQL 17 replay.
+- The replay script requires an exact one-to-one match for all 34 live QA version/name pairs and expects source counts of 17 canonical, 12 archived QA, and 5 reconstructed.
+- The existing BETHAG build workflow run `41841810296` is in progress, but it exercises the canonical 23-file/14-increment rehearsal, not yet the new 34-row QA replay. The dedicated replay has therefore **not yet passed**.
+- No live QA or Production SQL was applied.
