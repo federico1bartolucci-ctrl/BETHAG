@@ -25,13 +25,14 @@ assert.equal(main.count, main.files.length);
 assert.equal(production.count, 244, "Refresh Production ledger snapshot when live migration history changes.");
 assert.equal(qa.count, 17, "Refresh QA ledger snapshot when live migration history changes.");
 assert.equal(main.count, 203, "Refresh main migration-file inventory when main changes.");
-assert.equal(currentFiles.length, 20, "Canonical migration inventory changed.");
+assert.equal(currentFiles.length, 21, "Canonical migration inventory changed.");
 const postSnapshotRemediationFiles = [
   "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
   "20261027110000_repair_service_role_transfer_invoker_path.sql",
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261105120000_fix_portal_registration_upsert.sql",
 ];
 assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
 // The saved reconciliation report is a historical snapshot based on the 15-file
