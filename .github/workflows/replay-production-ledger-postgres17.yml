@@ -86,6 +86,24 @@ jobs:
           set -euo pipefail
           supabase db reset --local --debug 2>&1 | tee /tmp/bethag-production-ledger-replay/replay.log
 
+      - name: Verify exact migration registry parity
+        working-directory: /tmp/bethag-production-ledger-replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=/tmp/bethag-production-ledger-replay/supabase/migrations
+          expected=/tmp/bethag-production-ledger-replay/expected-versions.txt
+          applied=/tmp/bethag-production-ledger-replay/applied-versions.txt
+          find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\\n' | sed 's/_.*//' | sort > "$expected"
+          test "$(wc -l < "$expected")" -eq 270
+          db_container=$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)
+          test -n "$db_container"
+          docker exec "$db_container" psql -U postgres -d postgres -At -c "select version from supabase_migrations.schema_migrations order by version" > "$applied"
+          test "$(wc -l < "$applied")" -eq 270
+          diff -u "$expected" "$applied"
+          test -z "$(uniq -d "$applied")"
+          echo "Migration registry verified: 270/270 versions match staged SQL files exactly; no missing or duplicate versions."
+
       - name: Upload replay diagnostics
         if: always()
         uses: actions/upload-artifact@v4
