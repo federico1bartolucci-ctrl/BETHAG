@@ -28,7 +28,7 @@ const dirs = [
 const candidates = [];
 for (const [directory,source] of dirs) {
   for (const filename of (await readdir(directory)).filter(name=>name.endsWith(".sql"))) {
-    const match = filename.match(/^(\\d{14})_(.+)\\.sql$/);
+    const match = filename.match(/^(\d{14})_(.+)\.sql$/);
     if (!match) continue;
     candidates.push({version:match[1],name:match[2],file:path.join(directory,filename),source});
   }
