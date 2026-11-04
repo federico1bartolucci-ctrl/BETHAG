@@ -87,7 +87,7 @@ Supabase Security Advisor: zero linter di sicurezza. Performance Advisor: 35 ind
 - Login Supabase Auth reale e refresh/sessione per amministratore, collaboratore e condomino: PASS.
 - Navigazione admin su 12 sezioni; limitazioni di navigazione collaboratore e condomino: PASS.
 - Scrittura e persistenza da UI: APP-05 creazione/modifica/archiviazione/ripristino condominio e struttura 2 interni + 3 pertinenze; APP-06 spesa, ripartizione 1.000 millesimi e rata; APP-08/11 anteprima/conferma/chiusura subentro e aggiornamento proprietario senza hard reload; APP-12 pubblicazione/ritiro comunicazione con verifica lato condomino: tutti PASS.
-- Cleanup service-role: PASS; nessun errore browser non gestito. Un [0m`net::ERR_ABORTED`[0m isolato su una richiesta durante teardown è stato riconosciuto dal test come abort di chiusura browser, non come errore backend.
+- Cleanup service-role: PASS; nessun errore browser non gestito. Un `net::ERR_ABORTED` isolato su una richiesta durante teardown è stato riconosciuto dal test come abort di chiusura browser, non come errore backend.
 - Snapshot pre/post: 1 workspace, 3 workspace_members, 64 condomini, 60 unità, 13 membri, 2 accessi portale, 0 trasferimenti, 15 esercizi, 14 movimenti contabili, 13 rate, 4 comunicazioni e 4 documenti prima e dopo. Nessun marker della run 4 novembre è rimasto; utenti temporanei eliminati.
 - Restano 11 condomini e 2 comunicazioni con marker sintetico `BETHAG_UI_ACCEPTANCE_` risalenti al 2 novembre; non sono stati creati dalla run corrente e non sono stati cancellati, per preservare i dati QA preesistenti.
 
