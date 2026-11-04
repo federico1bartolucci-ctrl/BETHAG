@@ -2,9 +2,9 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 244-pair ledger, runs all 12 real SQL
+ * Seeds a disposable copy of the frozen 244-pair ledger, runs all 15 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 258-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 259-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -80,7 +80,7 @@ console.log(out);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,258);
+assert.equal(finalLedger.length,259);
 assert.deepEqual(finalLedger.slice(0,244),snapshot.migrations,"Historical ledger pairs changed.");
 const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261102.json","utf8"));
 assert.deepEqual(finalLedger.slice(244),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4)})));
@@ -90,7 +90,7 @@ console.log(JSON.stringify({
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
  frozen_historical_pairs_preserved:244,
- canonical_rows_added:14,
- final_ledger_rows:258,
+ canonical_rows_added:15,
+ final_ledger_rows:259,
  production_or_supabase_touched:false
 },null,2));
