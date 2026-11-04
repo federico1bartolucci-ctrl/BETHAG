@@ -26,9 +26,9 @@ BEGIN
   IF relation_count <> 47 THEN RAISE EXCEPTION 'FAIL: expected 47 public relations, found %', relation_count; END IF;
 
   SELECT count(*)::integer INTO auth_maintain FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('authenticated',c.oid,'MAINTAIN');
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND has_table_privilege('authenticated',c.oid,'MAINTAIN');
   SELECT count(*)::integer INTO service_maintain FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p') AND has_table_privilege('service_role',c.oid,'MAINTAIN');
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND has_table_privilege('service_role',c.oid,'MAINTAIN');
   IF auth_maintain <> 0 OR service_maintain <> 0 THEN RAISE EXCEPTION 'FAIL: current MAINTAIN remains (authenticated %, service_role %)',auth_maintain,service_maintain; END IF;
 
   SELECT count(*)::integer INTO anon_privileged FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -39,9 +39,14 @@ BEGIN
   IF anon_privileged <> 0 THEN RAISE EXCEPTION 'FAIL: anon has direct public table privileges: %',anon_privileged; END IF;
 
   SELECT count(*)::integer INTO auth_structural FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-  WHERE n.nspname='public' AND c.relkind IN ('r','p')
+  WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m')
     AND (has_table_privilege('authenticated',c.oid,'TRUNCATE') OR has_table_privilege('authenticated',c.oid,'REFERENCES') OR has_table_privilege('authenticated',c.oid,'TRIGGER'));
   IF auth_structural <> 0 THEN RAISE EXCEPTION 'FAIL: authenticated retains structural privileges: %',auth_structural; END IF;
+  IF has_table_privilege('authenticated','public.condominium_fund_availability','TRUNCATE')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','REFERENCES')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','TRIGGER') THEN
+    RAISE EXCEPTION 'FAIL: authenticated retains structural privileges on condominium_fund_availability view';
+  END IF;
 
   SELECT count(*)::integer INTO default_maintain FROM pg_default_acl d
   CROSS JOIN LATERAL aclexplode(d.defaclacl) a
