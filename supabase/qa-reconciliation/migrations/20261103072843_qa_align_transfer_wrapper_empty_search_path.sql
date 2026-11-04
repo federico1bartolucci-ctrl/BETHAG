@@ -1,0 +1,1 @@
+ALTER FUNCTION public.close_condominium_member_transfer(uuid) SET search_path = '';
