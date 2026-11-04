@@ -341,23 +341,20 @@
   "critical_execution_constraint": {
     "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including collaborator profile metadata, archive lifecycle preservation, authenticated private RPC grants and co-owner metadata.",
     "rule": "Use the reviewed repository-based runner, never Supabase apply_migration, for canonical-version-preserving cutover. Production execution remains prohibited until APP-01–APP-15 evidence and named written approval are complete.",
-    "status": "UPDATED_FOR_REVIEW_REHEARSAL_REQUIRED_PRODUCTION_STILL_NOT_AUTHORIZED"
+    "status": "REHEARSAL_PASS_PRODUCTION_STILL_NOT_AUTHORIZED"
   },
   "no_go_gates": [
-    "Provider-backed physical restore has not been performed; only local logical restore verification and the user's recorded acceptance of the residual physical-restore risk are available. Do not claim provider restore success.",
+    "Provider-backed physical restore has not been performed; local PostgreSQL 17 rehearsal is not provider restore evidence.",
     "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fifteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
     "Supabase-managed supabase_admin has three public table default-ACL entries granting MAINTAIN; the postgres connection cannot change them. Obtain provider guidance or named security-owner exception.",
     "workspace_members.data is absent in Production and the collaborator boolean function body differs from the desired canonical fix; both remain pending.",
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
-    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
-    "The new 15th canonical increment has not yet passed clean-install and guarded cutover replay; prior 23-file/14-increment rehearsal is invalidated.",
-    "The latest effective ACL comparison found authenticated TRUNCATE/REFERENCES/TRIGGER on public.condominium_fund_availability in Production but not QA; the migration was amended and requires fresh PostgreSQL 17 replay.",
-    "Effective function ACL comparison found anon inherited EXECUTE on two transfer-closure helpers and Production-only anon CRUD defaults for future public tables; forward migration amended and fresh replay required."
+    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
-    "status": "PENDING_REPLAY_AFTER_FINAL_ACL_DEFAULT_PRIVILEGE_CORRECTION",
+    "status": "PASS",
     "date": "2026-11-04",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "sequence": "five-file clean baseline; existing canonical Production head; three exact Production-forward SQL payloads; fifteen pending canonical increments including the new ACL/co-owner reconciliation migration",
@@ -366,25 +363,25 @@
     "expected_final_ledger_rows": 262,
     "historical_pairs_preserved": 247,
     "exact_canonical_pairs_added": 15,
-    "final_sorted_ledger_head": "20261103070901",
+    "final_sorted_ledger_head": "20261104130000",
     "runner_transactional_postconditions": "PASS",
     "postgres_bootstrap_and_acl_tests": "PASS",
     "collaborator_rls_tests": "PASS",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
-    "workflow_run_id": 41819086300,
-    "workflow_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300",
-    "tested_commit": "6c0af4a77124cdc8eee7e709856065271598e8bd",
-    "github_actions_run_id": 41819086300,
-    "github_actions_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41819086300",
+    "workflow_run_id": 41902161953,
+    "workflow_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41902161953",
+    "tested_commit": "6d6f4a1fc91918fa4550ba2df4110dda04dc1bf5",
+    "github_actions_run_id": 41902161953,
+    "github_actions_run_url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41902161953",
     "github_actions_overall_conclusion": "success",
     "build_job": "success",
     "postgres_bootstrap_job": "success",
     "public_login_smoke": "success",
-    "authenticated_qa_edit_archive_diagnostic": "skipped_not_in_scope_for_this_migration_rehearsal",
+    "authenticated_qa_edit_archive_diagnostic": "success",
     "tested_merge_commit": "42765a1183eb1c6490b6a16c68aebf8036e302c9",
     "clean_install_rehearsal": {
-      "status": "PENDING_REPLAY",
+      "status": "PASS",
       "migration_files_applied": 24,
       "baseline_files": 5,
       "existing_canonical_head": 1,
@@ -397,15 +394,18 @@
       "communication_recipient_rpcs_authenticated": true,
       "private_resend_event_rpc_service_role_only": true,
       "workspace_members_data": true,
-      "archive_state_preserved": true
+      "archive_state_preserved": true,
+      "transfer_closure_helpers_anon_execute": false,
+      "transfer_closure_helpers_authenticated_execute": true
     },
     "cutover_runner_rehearsal": {
-      "status": "PENDING_REPLAY",
+      "status": "PASS",
       "historical_pairs_preserved": 247,
       "canonical_pairs_added": 15,
       "final_ledger_rows": 262,
       "remote_supabase_or_production_touched": false,
-      "canonical_rows_added": 15
+      "canonical_rows_added": 15,
+      "final_sorted_ledger_head": "20261104130000"
     },
     "previous_23_file_rehearsal_invalidated": true
   },
