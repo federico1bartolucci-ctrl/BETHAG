@@ -291,7 +291,7 @@ assert.equal(aclChecks.authenticated_maintain_grants, 0, "authenticated still ha
 assert.equal(aclChecks.service_role_maintain_grants, 0, "service_role still has MAINTAIN on a public relation.");
 assert.equal(aclChecks.default_maintain_grants, 0, "MAINTAIN remains in postgres-owned default ACLs for anon/authenticated.");
 assert.equal(aclChecks.public_function_execute_count, 0, "PUBLIC EXECUTE must be limited to the two explicitly approved trigger functions.");
-assert.deepEqual(aclChecks.public_function_execute_targets, [], "No PUBLIC EXECUTE grants should remain after the final canonical increment.");
+assert.equal(aclChecks.public_function_execute_targets, null, "No PUBLIC EXECUTE grants should remain after the final canonical increment.");
 console.log(JSON.stringify({ acl_remediation: "PASS", checks: aclChecks }, null, 2));
 
 const finalSecuritySql = `
