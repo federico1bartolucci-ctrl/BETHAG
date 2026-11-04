@@ -22,7 +22,7 @@ assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
 assert.equal(reconciliation.production.ledger_count,247);
 assert.equal(reconciliation.qa.ledger_count,47);
 assert.equal(freeze.live_ledger.rows,247);
-assert.equal(freeze.expected_postflight.ledger_rows,261);
+assert.equal(freeze.expected_postflight.ledger_rows,262);
 assert.equal(files.length,23);
 assert.equal(pending.length,14);
 assert.ok(pending.every(item=>files.includes(item.file)));
@@ -46,7 +46,7 @@ const blockers=[
  "Written cutover approval, exact commit/hash list, maintenance window and rollback criteria are not recorded.",
 ];
 console.log(JSON.stringify({
- environment_migration_alignment:"PASS — latest read-only Production/QA ledgers and frozen 14-migration sequence are consistent",
+ environment_migration_alignment:"PASS — latest read-only Production/QA ledgers and frozen 15-migration sequence are consistent",
  environments:[
   {name:"production",project_ref:production.project_ref,ledger_count:production.count,ledger_head:production.latest},
   {name:"qa",project_ref:qa.project_ref,ledger_count:qa.count,ledger_head:qa.latest,branch_status:qa.branch_status},
@@ -54,7 +54,7 @@ console.log(JSON.stringify({
  production_forward_migrations_preserved:freeze.live_ledger.forward_migrations_after_2026_11_02_freeze,
  clean_branch_migration_files:files.length,
  pending_canonical_migrations:pending.length,
- expected_postflight_ledger_rows:261,
+ expected_postflight_ledger_rows:262,
  historical_ledger_rows_to_rewrite:0,
  backup_restore_gate:"BLOCKED — provider physical restore not evidenced",
  cutover_blockers:blockers,
