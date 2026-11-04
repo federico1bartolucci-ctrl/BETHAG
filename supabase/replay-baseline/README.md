@@ -158,3 +158,12 @@ The workflow now asserts 21 replay-only prerequisite files plus 247 exact histor
 The historical migration `20261003045727` patches `public.preview_condominium_member_transfer(uuid,uuid,date)` by inspecting its current function definition, but the recovered ledger does not create the RPC until later. Its live Production definition, result type, security mode, search path and ACL were inspected read-only. The function is seeded immediately before the patch at `20261003045726`, preserving the historical migration's own chronological modification. This is a test-only reconstruction and must never be deployed to QA or Production.
 
 The workflow now asserts 22 replay-only prerequisite SQL files plus 247 exact historical payloads (269 staged SQL files total).
+
+
+## Fund availability relation-kind normalization — 2026-11-04
+
+The replay reached the immutable historical migration `20261005132458_reconcile_fund_availability_view_v2.sql`. That payload begins with `DROP VIEW IF EXISTS public.condominium_fund_availability`, but PostgreSQL raises SQLSTATE 42809 when the existing object is a table; `IF EXISTS` does not suppress a wrong-object-type error. The disposable replay had the legacy relation as a table, while Production's final catalog exposes a security-invoker view.
+
+A replay-only normalization at `20261005132457` now inspects `pg_class.relkind` and removes the existing table/view/materialized view according to its actual kind. The untouched historical migration then creates the intended security-invoker view. No application rows are loaded in this disposable database, and no historical payload is edited.
+
+The workflow now asserts 23 replay-only prerequisite SQL files plus 247 exact historical payloads (270 staged SQL files total). This normalization is test-only and must never be deployed to QA or Production.
