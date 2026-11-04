@@ -78,11 +78,11 @@ The real-account auth script currently emits the label “resident profile hydra
 
 A QA transaction reproduced a runtime failure in the live `private.complete_portal_registration` routine: PostgreSQL rejected its unqualified `ON CONFLICT DO UPDATE` because a conflict target is mandatory for `DO UPDATE`. The same invalid pattern was present in `private.admin_approve_portal_registration`. The failing test transaction was rolled back; a follow-up query confirmed zero residual temporary condominiums.
 
-Candidate migration `20261105120000_fix_portal_registration_upsert.sql` was added to the repository and to the frozen, review-only cutover sequence as migration 15. It introduces a shared private helper that resolves a portal row through either the workspace legacy key or the case-insensitive condominium/email key, fails closed if those keys identify conflicting rows, and is used by both resident auto-registration and administrator approval. The cutover candidate now expects 15 forward migrations and a 259-row final ledger (244 historical rows preserved + 15 new rows); Production remains frozen and untouched.
+Candidate migration `20261104235514_fix_portal_registration_upsert_conflict_target.sql` was added to the repository and to the frozen, review-only cutover sequence as migration 15. It introduces a shared private helper that resolves a portal row through either the workspace legacy key or the case-insensitive condominium/email key, fails closed if those keys identify conflicting rows, and is used by both resident auto-registration and administrator approval. The cutover candidate now expects 15 forward migrations and a 259-row final ledger (244 historical rows preserved + 15 new rows); Production remains frozen and untouched.
 
 The candidate migration was applied inside a QA SQL transaction, then `public.complete_portal_registration` was invoked with a verified existing QA Auth identity and a temporary unique member. Assertions for the returned approved status, exact member ID, active `portal_access` link and active resident `workspace_members` link passed. The entire transaction was rolled back and a subsequent query confirmed no residual fixture. This proves the database registration path with an existing verified identity; it does **not** prove creation of a new Auth user, receipt/confirmation of an invitation, or real browser login by a newly registered owner.
 
-**Disposition: APP-08 remains OPEN.** The migration is not yet applied persistently to QA. The full 15-migration isolated CI rehearsal is queued behind the previous serialized QA workflow. After CI passes, apply the candidate to QA through the approved version-preserving migration path and complete the new-owner browser registration/login/portal hydration test. No Production operation, merge or deployment was performed.
+**Disposition: APP-08 remains OPEN.** At the time of this initial evidence entry, the migration had not yet been applied persistently to QA; the subsequent QA application and ledger reconciliation are recorded below. No Production operation, merge or deployment was performed.
 
 
 ## Follow-up CI correction — 5 November 2026
@@ -100,3 +100,21 @@ The candidate migration was applied inside a QA SQL transaction, then `public.co
 This CI result supersedes the preceding failed rehearsal caused by a stale expected function count (171 instead of 172); the expectation was corrected and the full workflow then passed. It proves the isolated migration path, not that migration 15 has been persistently applied to the live QA Supabase project.
 
 **APP-08 remains OPEN.** The live QA migration ledger was last checked and did not yet contain `20261105120000_fix_portal_registration_upsert`. The candidate must still be applied to QA using the approved version-preserving migration path, followed by a true new-owner Auth registration/email-verification/browser-login and portal-access hydration test. No Production operation, merge or deployment was performed. Overall release remains **NO-GO**.
+
+
+## Single-QA migration application and ledger alignment — 5 November 2026
+
+To preserve one QA environment and avoid requiring a direct PostgreSQL connection string, the reviewed SQL was applied through Supabase's migration interface to the existing QA project only:
+
+- Active QA project: `jhuyhlzzydcgghrzeexn`.
+- Supabase-assigned migration version: `20261104235514`.
+- Recorded migration name: `fix_portal_registration_upsert_conflict_target`.
+- QA ledger: **282 rows**; latest row is the migration above.
+- Read-only catalog verification: `private.upsert_portal_access_for_member(uuid,uuid,text,jsonb)` exists, and both `private.complete_portal_registration` and `private.admin_approve_portal_registration` call it.
+- No second QA project or preview database was created. Historical snapshots referring to retired QA projects remain archival only and are no longer used as active QA targets.
+- Repository migration filename, canonical cutover manifest, preflight/postflight SQL and migration verification scripts were aligned to the exact version/name recorded by the existing QA project. The SQL body is unchanged.
+- Production remains untouched. No Production migration, merge, deployment or cutover was performed.
+
+The earlier isolated PostgreSQL 17 CI rehearsal passed all 15 canonical migrations. Because the repository identity has now been aligned to the actual QA-generated version, a fresh CI run is required to revalidate the renamed migration inventory and cutover scripts.
+
+**APP-08 remains OPEN.** The persistent database repair and catalog checks are complete, but end-to-end proof for a newly registered incoming owner — Auth account creation, email verification, first browser login and portal hydration after refresh — is still outstanding. The prior transaction tests with existing verified QA identities are not a substitute for that end-to-end proof. Overall release remains **NO-GO**.
