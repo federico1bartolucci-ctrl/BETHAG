@@ -3,7 +3,7 @@
 -- recorded ACL/patch operations. The earliest dependency is guard_installment_paid_amount_update,
 -- patched by 20260930190448; the others are granted at 20261005132430 before some are
 -- redefined by 20261005132509. Definitions were captured read-only from Production.
--- Never deploy this compatibility seed to QA or Production.
+-- Never deploy this compatibility seed to QA or Production.;
 
 CREATE OR REPLACE FUNCTION public.guard_installment_paid_amount_update()
  RETURNS trigger
@@ -19,7 +19,7 @@ begin
  end if;
  return new;
 end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_installment_parent_delete()
  RETURNS trigger
@@ -27,7 +27,7 @@ CREATE OR REPLACE FUNCTION public.guard_installment_parent_delete()
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_catalog'
 AS $function$ begin if old.ledger_entry_id is not null then raise exception 'La rata è collegata a un riparto contabile e non può essere cancellata singolarmente'; end if; if exists(select 1 from public.condominium_payment_movements where installment_id=old.id) then raise exception 'La rata ha movimenti di pagamento collegati e non può essere cancellata'; end if; return old; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_ledger_entry_integrity()
  RETURNS trigger
@@ -79,14 +79,14 @@ begin
  return new;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_ledger_parent_delete()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
 AS $function$ begin if exists(select 1 from public.condominium_expense_allocations where ledger_entry_id=old.id) then raise exception 'La voce contabile ha ripartizioni collegate e non può essere cancellata'; end if; return old; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_millesimal_table_integrity()
  RETURNS trigger
@@ -100,14 +100,14 @@ begin
  if tg_op='UPDATE' and v_allocations>0 and (new.basis_type is distinct from old.basis_type or new.scope_mode is distinct from old.scope_mode or new.scope_unit_ids is distinct from old.scope_unit_ids or new.scope_building_codes is distinct from old.scope_building_codes or new.total_millesimi is distinct from old.total_millesimi or new.condominium_id is distinct from old.condominium_id or new.workspace_id is distinct from old.workspace_id) then raise exception 'La tabella millesimale è già utilizzata da ripartizioni esistenti e la base di calcolo non può essere modificata'; end if;
  return coalesce(new,old);
 end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_millesimal_table_parent_delete()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
 AS $function$ begin if exists(select 1 from public.condominium_expense_allocations where allocation_table_id=old.id) then raise exception 'La tabella millesimale ha ripartizioni collegate e non può essere cancellata'; end if; if exists(select 1 from public.condominium_millesimal_values where table_id=old.id) then raise exception 'La tabella millesimale ha quote collegate e non può essere cancellata'; end if; return old; end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.guard_millesimal_value_integrity()
  RETURNS trigger
@@ -121,7 +121,7 @@ begin
  if tg_op='UPDATE' and v_allocations>0 and (new.value is distinct from old.value or new.excluded is distinct from old.excluded or new.table_id is distinct from old.table_id or new.unit_id is distinct from old.unit_id or new.condominium_id is distinct from old.condominium_id or new.workspace_id is distinct from old.workspace_id) then raise exception 'La quota millesimale è già utilizzata da ripartizioni esistenti e non può essere modificata'; end if;
  return coalesce(new,old);
 end; $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.prevent_financial_unit_delete()
  RETURNS trigger
@@ -140,7 +140,7 @@ begin
   return old;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.prevent_paid_allocation_delete()
  RETURNS trigger
@@ -154,7 +154,7 @@ begin
   return old;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.prevent_paid_installment_delete()
  RETURNS trigger
@@ -168,7 +168,7 @@ begin
   return old;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.sync_condominium_fund_usage()
  RETURNS trigger
@@ -229,7 +229,7 @@ begin
   return case when tg_op = 'DELETE' then old else new end;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.validate_condominium_ledger_fund_scope()
  RETURNS trigger
@@ -244,5 +244,4 @@ begin
  if v_ws is null then raise exception 'Fondo non trovato'; end if;
  if v_ws<>new.workspace_id or v_cond<>new.condominium_id then raise exception 'Fondo e movimento contabile devono appartenere allo stesso workspace e condominio'; end if;
  return new;
-end $function$
-
+end $function$;
