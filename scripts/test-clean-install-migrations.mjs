@@ -51,7 +51,7 @@ const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwa
 const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
 
 assert.equal(freeze.clean_install?.migration_file_count, 24,
-  "Frozen manifest must describe the 23-file clean-install sequence.");
+  "Frozen manifest must describe the 24-file clean-install sequence.");
 assert.deepEqual(freeze.clean_install.baseline_files, baselineFiles);
 assert.equal(freeze.clean_install.existing_canonical_head, existingHead);
 assert.deepEqual(freeze.clean_install.pending_canonical_increments, pendingFiles);
@@ -59,7 +59,7 @@ assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFil
 assert.deepEqual(actualFiles, expectedFiles,
   "Deployable migration directory differs from the frozen 24-file chronological clean-install sequence.");
 assert.equal(actualFiles.length, 24);
-assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 23,
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 24,
   "Clean-install migration versions must be unique.");
 
 for (const item of freeze.sequence) {
