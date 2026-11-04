@@ -3,7 +3,7 @@
 -- the 247 recovered SQL payloads contains their original CREATE statements. Current
 -- Production definitions are used as the earliest recoverable implementations; later
 -- ledger migrations replace/reconcile them. This is synthetic test scaffolding only.
--- Never deploy to QA or Production.
+-- Never deploy to QA or Production.;
 
 CREATE OR REPLACE FUNCTION public.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text DEFAULT NULL::text)
  RETURNS void
@@ -59,7 +59,7 @@ begin
     );
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid)
  RETURNS uuid
@@ -140,7 +140,7 @@ begin
   return v_year.id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid)
  RETURNS integer
@@ -198,7 +198,7 @@ begin
   return v_count;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid)
  RETURNS uuid
@@ -246,7 +246,7 @@ begin
  return p_condominium_id;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.list_archived_condominiums(p_workspace_id uuid)
  RETURNS SETOF condominiums
@@ -271,7 +271,7 @@ begin
   order by c.archived_at desc, c.name asc;
 end;
 $function$
-
+;
 
 CREATE OR REPLACE FUNCTION public.restore_condominium(p_workspace_id uuid, p_condominium_id uuid)
  RETURNS void
@@ -321,5 +321,4 @@ begin
       )
     );
 end;
-$function$
-
+$function$;
