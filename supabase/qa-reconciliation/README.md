@@ -22,6 +22,17 @@ This directory records QA-only repairs and audit findings. Files here are **not*
 
 The branch's provider status has not been cleared by these database checks. The available connector can inspect the database and branch status but does not expose the Supabase Branch deployment log needed to identify or clear the provider-side failure state. Do not delete/recreate or reset this branch: it contains QA test data.
 
+## Recovered QA migration sources — 2026-11-04
+
+The QA database registry now has 49 applied entries. Every entry has a repository source recorded in `manifest.json`:
+
+- 16 original Production-ledger migrations point to the unchanged files in `supabase/replay-candidate/`.
+- 33 QA baseline / forward-only entries are archived under `supabase/qa-reconciliation/migrations/`.
+- All 33 archived SQL files were compared byte-for-byte with the ordered `statements` array stored in the QA migration registry.
+- The manifest maps every applied QA version and name to its exact source path.
+
+This is a source-recovery archive only. It does not alter the QA registry, run migrations, or make the QA-only SQL part of the standard Production deployment path. No branch reset, rebase, or recreation was performed.
+
 ## QA-only repair: Resend webhook private implementation grant
 
 The deployed QA Edge Function `bethag-resend-webhook` invokes the public `apply_resend_communication_event` wrapper. The wrapper is `SECURITY INVOKER` and calls `private.apply_resend_communication_event(...)`. Before repair, `service_role` could execute the public wrapper but could not execute its private implementation, so the webhook call would fail.
@@ -42,7 +53,7 @@ Post-repair verification confirms:
 - `authenticated` and `anon` cannot execute the private implementation.
 - Production was not modified.
 
-The exact QA-only SQL is archived beside this README. Do not copy it into the standard Production migration stream: Production already has the equivalent historical migration under version `20261103070901`.
+The exact QA-only SQL is archived under `migrations/` and mapped in `manifest.json`. Do not copy it into the standard Production migration stream: Production already has the equivalent historical migration under version `20261103070901`.
 
 ## Synthetic authorization probes — 2026-11-04
 
