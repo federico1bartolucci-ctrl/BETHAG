@@ -1,0 +1,1142 @@
+{
+  "captured_at_utc": "2026-10-17",
+  "project_ref": "tctcgptrsmvgajqjgnev",
+  "source_files": "function-catalog-10.json through function-catalog-18.json",
+  "count": 81,
+  "functions": [
+    {
+      "oid": "24123",
+      "schema_name": "public",
+      "name": "prepare_communication_recipients",
+      "identity_arguments": "p_communication_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.prepare_communication_recipients(p_communication_id uuid)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$ select private.prepare_communication_recipients(p_communication_id); $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 91
+    },
+    {
+      "oid": "25335",
+      "schema_name": "public",
+      "name": "preserve_closing_condominium_member_history",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nbegin\n  if lower(trim(coalesce(new.data->>'position_status', ''))) = 'in chiusura' then\n    new.active := true;\n    new.data := coalesce(new.data, '{}'::jsonb)\n      || jsonb_build_object('current_owner', false);\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=pg_catalog, public"
+      ],
+      "owner": "postgres",
+      "acl": "{=X/postgres,postgres=X/postgres,service_role=X/postgres}",
+      "rn": 92
+    },
+    {
+      "oid": "23764",
+      "schema_name": "public",
+      "name": "prevent_archived_condominium_mutation",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_archived_condominium_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_condominium_id uuid;\nbegin\n  if tg_op='DELETE' then return old; end if;\n  v_condominium_id:=new.condominium_id;\n  if v_condominium_id is not null and exists(select 1 from public.condominiums c where c.id=v_condominium_id and c.archived_at is not null) then\n    raise exception 'Il condominio è archiviato: modifica non consentita';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 93
+    },
+    {
+      "oid": "21906",
+      "schema_name": "public",
+      "name": "prevent_closed_condominium_accounting",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_condominium_accounting()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_old_year_id uuid;\n  v_new_year_id uuid;\n  v_status text;\n  v_old_parent_id uuid;\n  v_new_parent_id uuid;\nbegin\n  if tg_table_name in ('condominium_ledger_entries','condominium_budgets','condominium_installments') then\n    if tg_op <> 'INSERT' then v_old_year_id := old.fiscal_year_id; end if;\n    if tg_op <> 'DELETE' then v_new_year_id := new.fiscal_year_id; end if;\n  elsif tg_table_name = 'condominium_expense_allocations' then\n    if tg_op <> 'INSERT' then\n      v_old_parent_id := old.ledger_entry_id;\n      select le.fiscal_year_id into v_old_year_id\n      from public.condominium_ledger_entries le where le.id = v_old_parent_id;\n    end if;\n    if tg_op <> 'DELETE' then\n      v_new_parent_id := new.ledger_entry_id;\n      select le.fiscal_year_id into v_new_year_id\n      from public.condominium_ledger_entries le where le.id = v_new_parent_id;\n    end if;\n  elsif tg_table_name = 'condominium_payment_movements' then\n    if tg_op <> 'INSERT' then\n      v_old_parent_id := old.installment_id;\n      select i.fiscal_year_id into v_old_year_id\n      from public.condominium_installments i where i.id = v_old_parent_id;\n    end if;\n    if tg_op <> 'DELETE' then\n      v_new_parent_id := new.installment_id;\n      select i.fiscal_year_id into v_new_year_id\n      from public.condominium_installments i where i.id = v_new_parent_id;\n    end if;\n  end if;\n\n  if v_old_year_id is not null then\n    select fy.status into v_status\n    from public.condominium_fiscal_years fy where fy.id = v_old_year_id;\n    if v_status = 'Chiuso' then\n      raise exception 'L''esercizio contabile di origine è chiuso: modifica non consentita.';\n    end if;\n  end if;\n\n  if v_new_year_id is not null and v_new_year_id is distinct from v_old_year_id then\n    select fy.status into v_status\n    from public.condominium_fiscal_years fy where fy.id = v_new_year_id;\n    if v_status = 'Chiuso' then\n      raise exception 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.';\n    end if;\n  end if;\n\n  if tg_op = 'DELETE' then return old; end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 94
+    },
+    {
+      "oid": "23058",
+      "schema_name": "public",
+      "name": "prevent_closed_fiscal_year_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_fiscal_year_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if old.status='Chiuso' then\n    raise exception 'Un esercizio chiuso non può essere eliminato';\n  end if;\n  if exists (select 1 from public.condominium_ledger_entries where fiscal_year_id=old.id)\n     or exists (select 1 from public.condominium_installments where fiscal_year_id=old.id)\n     or exists (select 1 from public.condominium_budgets where fiscal_year_id=old.id) then\n    raise exception 'L''esercizio ha dati contabili collegati e non può essere eliminato';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 95
+    },
+    {
+      "oid": "23056",
+      "schema_name": "public",
+      "name": "prevent_closed_fiscal_year_payment_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_fiscal_year_payment_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_year_id uuid;\n  v_status text;\nbegin\n  select i.fiscal_year_id into v_year_id\n  from public.condominium_installments i\n  where i.id=old.installment_id;\n\n  if v_year_id is not null then\n    select status into v_status from public.condominium_fiscal_years where id=v_year_id;\n    if v_status='Chiuso' then\n      raise exception 'L''esercizio contabile è chiuso e i pagamenti non possono essere modificati';\n    end if;\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 96
+    },
+    {
+      "oid": "22301",
+      "schema_name": "public",
+      "name": "prevent_closed_fiscal_year_record_mutation",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_fiscal_year_record_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if tg_op = 'UPDATE' then\n    if old.status = 'Chiuso' then\n      raise exception 'L''esercizio contabile è chiuso e non può essere modificato';\n    end if;\n  elsif tg_op = 'DELETE' then\n    if old.status = 'Chiuso' then\n      raise exception 'L''esercizio contabile è chiuso e non può essere eliminato';\n    end if;\n  end if;\n  return case when tg_op = 'DELETE' then old else new end;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 97
+    },
+    {
+      "oid": "23106",
+      "schema_name": "public",
+      "name": "prevent_closed_fiscal_year_reopen",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_fiscal_year_reopen()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if tg_op='INSERT' then\n    if new.status='Chiuso'\n       and coalesce(current_setting('bethag.allow_fiscal_year_status_update',true),'off')<>'on' then\n      raise exception 'Un nuovo esercizio non può essere creato direttamente come chiuso: utilizzare la procedura di chiusura contabile';\n    end if;\n    return new;\n  end if;\n\n  if old.status='Chiuso' and new.status<>'Chiuso' then\n    raise exception 'L''esercizio contabile è chiuso e non può essere riaperto.';\n  end if;\n\n  if new.status='Chiuso' and old.status is distinct from 'Chiuso'\n     and coalesce(current_setting('bethag.allow_fiscal_year_status_update',true),'off')<>'on' then\n    raise exception 'La chiusura dell''esercizio deve essere effettuata tramite la procedura di chiusura contabile.';\n  end if;\n\n  if new.start_date>new.end_date then\n    raise exception 'La data di inizio esercizio non può essere successiva alla data di fine.';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 98
+    },
+    {
+      "oid": "23057",
+      "schema_name": "public",
+      "name": "prevent_closed_fiscal_year_update",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_closed_fiscal_year_update()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if old.status='Chiuso' then\n    raise exception 'Un esercizio chiuso non può essere modificato o riaperto';\n  end if;\n  if new.status='Chiuso' then\n    return new;\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 99
+    },
+    {
+      "oid": "23104",
+      "schema_name": "public",
+      "name": "prevent_condominium_unit_delete_with_financial_data",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_condominium_unit_delete_with_financial_data()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if exists (\n    select 1 from public.condominium_expense_allocations\n    where unit_id = old.id\n  ) then\n    raise exception 'UNIT_HAS_ALLOCATIONS: impossibile eliminare l''unità % perché contiene ripartizioni contabili. Eliminare o trasferire prima le ripartizioni collegate.', old.unit_code\n      using errcode = '23503';\n  end if;\n  if exists (\n    select 1 from public.condominium_installments\n    where unit_id = old.id\n  ) then\n    raise exception 'UNIT_HAS_INSTALLMENTS: impossibile eliminare l''unità % perché contiene rate. Eliminare o trasferire prima le rate collegate.', old.unit_code\n      using errcode = '23503';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 100
+    },
+    {
+      "oid": "23102",
+      "schema_name": "public",
+      "name": "prevent_condominium_unit_delete_with_members",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_condominium_unit_delete_with_members()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if exists (select 1 from public.condominium_members where unit_id = old.id) then\n    raise exception 'UNIT_HAS_MEMBERS: impossibile eliminare l''unità % perché contiene uno o più condòmini. Spostare prima i condòmini ad altra unità oppure eliminarli esplicitamente.', old.unit_code\n      using errcode = '23503';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 101
+    },
+    {
+      "oid": "23054",
+      "schema_name": "public",
+      "name": "prevent_financial_unit_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_financial_unit_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_alloc integer; v_inst integer;\nbegin\n  select count(*) into v_alloc from public.condominium_expense_allocations\n  where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  select count(*) into v_inst from public.condominium_installments\n  where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  if v_alloc>0 or v_inst>0 then\n    raise exception 'L''unità ha movimenti contabili o rate collegate e non può essere eliminata';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 102
+    },
+    {
+      "oid": "23488",
+      "schema_name": "public",
+      "name": "prevent_fiscal_year_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_fiscal_year_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare v_count bigint;\nbegin\n select count(*) into v_count from public.condominium_ledger_entries where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene movimenti contabili'; end if;\n select count(*) into v_count from public.condominium_installments where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene rate'; end if;\n select count(*) into v_count from public.condominium_budgets where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene voci di preventivo'; end if;\n select count(*) into v_count from public.condominium_consumption_readings where fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: contiene dati di consumo'; end if;\n select count(*) into v_count from public.condominium_fiscal_carryovers where source_fiscal_year_id=old.id or target_fiscal_year_id=old.id;\n if v_count>0 then raise exception 'L''esercizio non può essere cancellato: esistono partite riportate collegate'; end if;\n if old.status='Chiuso' then raise exception 'Un esercizio chiuso non può essere cancellato'; end if;\n return old;\nend; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 103
+    },
+    {
+      "oid": "24224",
+      "schema_name": "public",
+      "name": "prevent_member_delete_with_financial_history",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_member_delete_with_financial_history()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n     or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n     or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id)\n  then raise exception 'MEMBER_FINANCIAL_HISTORY_LOCK: non è possibile eliminare un membro con storico contabile; disattivare la posizione o creare una nuova posizione anagrafica'; end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 104
+    },
+    {
+      "oid": "24222",
+      "schema_name": "public",
+      "name": "prevent_member_unit_reassignment_with_financial_history",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_member_unit_reassignment_with_financial_history()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if new.unit_id is distinct from old.unit_id and (\n    exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n    or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n    or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id))\n  then raise exception 'MEMBER_UNIT_HISTORY_LOCK: non è possibile riassegnare l''unità di un membro con storico contabile; creare una nuova posizione anagrafica per il nuovo intestatario'; end if;\n  if new.condominium_id is distinct from old.condominium_id and (\n    exists(select 1 from public.condominium_installments i where i.member_id=old.id)\n    or exists(select 1 from public.condominium_expense_allocations a where a.member_id=old.id)\n    or exists(select 1 from public.condominium_fiscal_carryovers c where c.member_id=old.id))\n  then raise exception 'MEMBER_CONDOMINIUM_HISTORY_LOCK: non è possibile spostare un membro con storico contabile in un altro condominio'; end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 105
+    },
+    {
+      "oid": "23052",
+      "schema_name": "public",
+      "name": "prevent_paid_allocation_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_paid_allocation_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if coalesce(old.paid_amount,0)>0 then\n    raise exception 'Non è possibile cancellare una ripartizione con pagamenti registrati';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 106
+    },
+    {
+      "oid": "23050",
+      "schema_name": "public",
+      "name": "prevent_paid_installment_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_paid_installment_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if coalesce(old.paid_amount,0)>0 then\n    raise exception 'Non è possibile cancellare una rata con pagamenti registrati: utilizzare una procedura di rettifica del pagamento';\n  end if;\n  return old;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 107
+    },
+    {
+      "oid": "24219",
+      "schema_name": "public",
+      "name": "prevent_payment_core_mutation",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_payment_core_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  if new.amount is distinct from old.amount\n     or new.payment_date is distinct from old.payment_date\n     or new.installment_id is distinct from old.installment_id\n     or new.workspace_id is distinct from old.workspace_id\n     or new.condominium_id is distinct from old.condominium_id then\n    raise exception 'Importo, data e collegamento del pagamento sono immutabili: utilizzare lo storno con motivazione';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 108
+    },
+    {
+      "oid": "24198",
+      "schema_name": "public",
+      "name": "prevent_profile_privilege_self_change",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_profile_privilege_self_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$ begin if auth.uid() is not null and (new.role is distinct from old.role or new.active is distinct from old.active) then raise exception 'I campi role e active del profilo non sono modificabili dall utente'; end if; return new; end; $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 109
+    },
+    {
+      "oid": "23076",
+      "schema_name": "public",
+      "name": "prevent_unsafe_condominium_unit_delete",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.prevent_unsafe_condominium_unit_delete()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_members integer; v_children integer; v_alloc integer; v_inst integer;\nbegin\n  select count(*) into v_members from public.condominium_members where condominium_id=old.condominium_id and unit_id=old.id;\n  if v_members>0 then raise exception 'L''unità è associata a uno o più condòmini e non può essere eliminata. Rimuovi prima le associazioni.'; end if;\n  select count(*) into v_children from public.condominium_units where condominium_id=old.condominium_id and id<>old.id and nullif(trim(coalesce(data->>'incorporatedInUnitId','')), '')=old.id::text;\n  if v_children>0 then raise exception 'L''unità è collegata come unità principale di una o più pertinenze e non può essere eliminata. Rimuovi prima i collegamenti.'; end if;\n  select count(*) into v_alloc from public.condominium_expense_allocations where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  select count(*) into v_inst from public.condominium_installments where workspace_id=old.workspace_id and condominium_id=old.condominium_id and unit_id=old.id;\n  if v_alloc>0 or v_inst>0 then raise exception 'L''unità ha movimenti contabili o rate collegate e non può essere eliminata.'; end if;\n  return old;\nend; $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 110
+    },
+    {
+      "oid": "24290",
+      "schema_name": "public",
+      "name": "preview_condominium_member_transfer",
+      "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date",
+      "definition": "CREATE OR REPLACE FUNCTION public.preview_condominium_member_transfer(p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_workspace uuid; v_condominium uuid; v_result jsonb;\nbegin\n if p_transfer_date is null then raise exception 'TRANSFER_DATE_REQUIRED'; end if;\n select u.workspace_id,u.condominium_id into v_workspace,v_condominium from public.condominium_units u where u.id=p_unit_id;\n if v_workspace is null or not private.can_access_workspace_module(v_workspace,'condomini') then raise exception 'FORBIDDEN'; end if;\n if exists(select 1 from public.condominiums c where c.id=v_condominium and c.archived_at is not null) then raise exception 'ARCHIVED_CONDOMINIUM'; end if;\n if not exists(select 1 from public.condominium_members m where m.id=p_outgoing_member_id and m.condominium_id=v_condominium and m.unit_id=p_unit_id and m.active and trim(coalesce(m.data->>'role',''))='Proprietario' and coalesce(m.data->>'current_owner','true')='true' and coalesce(m.data->>'position_status','Attivo')<>'In chiusura') then raise exception 'OUTGOING_MEMBER_NOT_ACTIVE_OWNER_ON_UNIT'; end if;\n select jsonb_build_object(\n 'transfer_date',p_transfer_date,'unit_id',p_unit_id,'outgoing_member_id',p_outgoing_member_id,\n 'outstanding_before',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),0),\n 'paid_before',coalesce((select sum(i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),0),\n 'installments_before',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'assignment_scope',case when i.member_id is null then 'unit_unassigned' else 'member' end,'title',i.title,'amount',i.amount,'paid_amount',i.paid_amount,'residual',i.amount-i.paid_amount,'due_date',i.due_date,'status',i.status,'fiscal_year_id',i.fiscal_year_id) order by i.due_date,i.id) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date),'[]'::jsonb),\n 'installments_after',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'assignment_scope',case when i.member_id is null then 'unit_unassigned' else 'member' end,'title',i.title,'amount',i.amount,'paid_amount',i.paid_amount,'residual',i.amount-i.paid_amount,'due_date',i.due_date,'status',i.status,'fiscal_year_id',i.fiscal_year_id) order by i.due_date,i.id) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and (i.due_date is null or i.due_date>p_transfer_date)),'[]'::jsonb),\n 'outstanding_total',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.amount-i.paid_amount>0.005),0),\n 'outstanding_due_after',coalesce((select sum(i.amount-i.paid_amount) from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id) ) and (i.due_date is null or i.due_date>p_transfer_date) and i.amount-i.paid_amount>0.005),0),\n 'extraordinary_deliberated_before_due_after',coalesce((select jsonb_agg(jsonb_build_object('id',a.id,'amount',a.amount,'paid_amount',a.paid_amount,'due_date',a.due_date,'status',a.status,'ledger_entry_id',a.ledger_entry_id,'deliberation_date',l.deliberation_date,'description',l.description) order by l.deliberation_date,a.due_date,a.id) from public.condominium_expense_allocations a join public.condominium_ledger_entries l on l.id=a.ledger_entry_id where a.member_id=p_outgoing_member_id and l.expense_type='Straordinaria' and l.deliberation_date<=p_transfer_date and (a.due_date is null or a.due_date>p_transfer_date)),'[]'::jsonb),\n 'unit_unassigned_carryovers',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'balance',c.balance,'kind',c.kind,'status',c.status,'source_fiscal_year_id',c.source_fiscal_year_id,'target_fiscal_year_id',c.target_fiscal_year_id) order by c.created_at,c.id) from public.condominium_fiscal_carryovers c where c.unit_id=p_unit_id and c.member_id is null and abs(c.balance)>0.005),'[]'::jsonb),\n 'unit_expenses',coalesce((select jsonb_agg(jsonb_build_object('id',l.id,'description',l.description,'expense_type',l.expense_type,'entry_date',l.entry_date,'deliberation_date',l.deliberation_date,'amount',l.amount,'assembly_id',l.assembly_id) order by coalesce(l.deliberation_date,l.entry_date),l.id) from public.condominium_ledger_entries l where l.unit_id=p_unit_id and l.condominium_id=v_condominium and (l.entry_date<=p_transfer_date or (l.deliberation_date is not null and l.deliberation_date<=p_transfer_date))),'[]'::jsonb),\n 'review_flags',jsonb_build_object('unpaid_before_transfer',exists(select 1 from public.condominium_installments i where (i.member_id=p_outgoing_member_id or (i.member_id is null and i.unit_id=p_unit_id)) and i.due_date<=p_transfer_date and i.amount-i.paid_amount>0.005),'extraordinary_deliberated_before_due_after',exists(select 1 from public.condominium_expense_allocations a join public.condominium_ledger_entries l on l.id=a.ledger_entry_id where a.member_id=p_outgoing_member_id and l.expense_type='Straordinaria' and l.deliberation_date<=p_transfer_date and (a.due_date is null or a.due_date>p_transfer_date)),'unit_unassigned_carryovers',exists(select 1 from public.condominium_fiscal_carryovers c where c.unit_id=p_unit_id and c.member_id is null and abs(c.balance)>0.005),'legal_liability_review_required',true)\n ) into v_result;\n return v_result;\nend;$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 111
+    },
+    {
+      "oid": "24406",
+      "schema_name": "public",
+      "name": "preview_condominium_unit_transformation",
+      "identity_arguments": "p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[]",
+      "definition": "CREATE OR REPLACE FUNCTION public.preview_condominium_unit_transformation(p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[])\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\nwith requested as (\n  select coalesce(cardinality(p_source_unit_ids),0) as requested_count,\n         count(distinct x.unit_id) as distinct_count\n  from unnest(coalesce(p_source_unit_ids, array[]::uuid[])) as x(unit_id)\n),\neligible as (\n  select u.id,u.unit_code,u.building_code,u.data,u.lifecycle_status\n  from public.condominium_units u\n  where u.id=any(coalesce(p_source_unit_ids,array[]::uuid[]))\n    and u.condominium_id=p_condominium_id\n    and u.lifecycle_status='Attiva'\n),\ncounts as (\n  select count(*)::integer as eligible_count from eligible\n),\nissues as (\n  select coalesce(jsonb_agg(message order by priority),'[]'::jsonb) as errors\n  from (values\n    (1,case when p_condominium_id is null then 'Condominio non specificato.' end),\n    (2,case when p_transformation_type not in ('Fusione','Frazionamento') or p_transformation_type is null then 'Tipo di trasformazione non valido.' end),\n    (3,case when (select requested_count from requested)=0 then 'Selezionare almeno un’unità di origine.' end),\n    (4,case when (select requested_count from requested)<>(select distinct_count from requested) then 'La selezione contiene unità duplicate.' end),\n    (5,case when p_transformation_type='Fusione' and (select requested_count from requested)<2 then 'La fusione richiede almeno due unità di origine.' end),\n    (6,case when p_transformation_type='Frazionamento' and (select requested_count from requested)<>1 then 'Il frazionamento richiede una sola unità di origine.' end),\n    (7,case when (select eligible_count from counts)<>(select distinct_count from requested) then 'Una o più unità non esistono, non sono attive o non sono accessibili nel condominio selezionato.' end)\n  ) v(priority,message)\n  where message is not null\n)\nselect jsonb_build_object(\n  'condominium_id',p_condominium_id,\n  'transformation_type',p_transformation_type,\n  'requested_source_count',(select requested_count from requested),\n  'source_unit_count',(select eligible_count from counts),\n  'valid',jsonb_array_length((select errors from issues))=0,\n  'validation_errors',(select errors from issues),\n  'source_units',coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'unit_code',e.unit_code,'building_code',e.building_code,'data',e.data,'lifecycle_status',e.lifecycle_status) order by e.unit_code) from eligible e),'[]'::jsonb),\n  'active_members',coalesce((select jsonb_agg(jsonb_build_object('id',m.id,'unit_id',m.unit_id,'name',m.name,'email',m.email,'user_id',m.user_id,'role',m.role,'active',m.active,'data',m.data) order by m.unit_id,m.id) from public.condominium_members m where m.condominium_id=p_condominium_id and m.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[])) and m.active),'[]'::jsonb),\n  'ownership_summary',coalesce((select jsonb_agg(jsonb_build_object('owner_key',x.owner_key,'member_count',x.member_count,'unit_ids',x.unit_ids) order by x.owner_key) from (select case when m.user_id is not null then 'u:'||m.user_id::text when nullif(lower(trim(coalesce(m.email,''))),'') is not null then 'e:'||lower(trim(m.email)) else 'm:'||m.id::text end owner_key,count(*) member_count,jsonb_agg(distinct m.unit_id) unit_ids from public.condominium_members m where m.condominium_id=p_condominium_id and m.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[])) and m.active and trim(coalesce(m.data->>'role',m.role,''))='Proprietario' group by 1) x),'[]'::jsonb),\n  'open_installments',coalesce((select round(sum(greatest(i.amount-i.paid_amount,0)),2) from public.condominium_installments i where i.condominium_id=p_condominium_id and i.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[]))),0),\n  'open_allocations',coalesce((select round(sum(greatest(a.amount-a.paid_amount,0)),2) from public.condominium_expense_allocations a where a.condominium_id=p_condominium_id and a.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[]))),0),\n  'millesimal_tables',coalesce((select jsonb_agg(jsonb_build_object('table_id',mt.id,'name',mt.name,'total_millesimi',mt.total_millesimi,'basis_type',mt.basis_type,'affected_values',coalesce((select jsonb_agg(jsonb_build_object('unit_id',mv.unit_id,'value',mv.value,'excluded',mv.excluded)) from public.condominium_millesimal_values mv where mv.table_id=mt.id and mv.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[]))),'[]'::jsonb)) order by mt.name) from public.condominium_millesimal_tables mt where mt.condominium_id=p_condominium_id and mt.active),'[]'::jsonb),\n  'accounting_resolution_required',exists(select 1 from public.condominium_installments i where i.condominium_id=p_condominium_id and i.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[])) and i.amount-i.paid_amount>0.005) or exists(select 1 from public.condominium_expense_allocations a where a.condominium_id=p_condominium_id and a.unit_id=any(coalesce(p_source_unit_ids,array[]::uuid[])) and a.amount-a.paid_amount>0.005),\n  'millesimal_review_required',true,\n  'unit_count_delta',case when p_transformation_type='Fusione' then 1-(select requested_count from requested) when p_transformation_type='Frazionamento' then null else 0 end\n)\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 112
+    },
+    {
+      "oid": "24042",
+      "schema_name": "public",
+      "name": "register_condominium_installment_payment",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+      "definition": "CREATE OR REPLACE FUNCTION public.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text DEFAULT 'Bonifico'::text, p_reference text DEFAULT ''::text, p_notes text DEFAULT ''::text)\n RETURNS numeric\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.register_condominium_installment_payment($1,$2,$3,$4,$5,$6,$7,$8); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 113
+    },
+    {
+      "oid": "24426",
+      "schema_name": "public",
+      "name": "require_confirmed_genealogy_for_unit_lifecycle",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.require_confirmed_genealogy_for_unit_lifecycle()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if new.lifecycle_status is not distinct from old.lifecycle_status\n     and new.lifecycle_effective_date is not distinct from old.lifecycle_effective_date then\n    return new;\n  end if;\n\n  if current_user = 'postgres' then\n    return new;\n  end if;\n\n  if new.lifecycle_status = 'Attiva' then\n    raise exception 'UNIT_LIFECYCLE_REACTIVATION_REQUIRES_TRUSTED_RPC: la riattivazione deve essere gestita da una procedura autorizzata';\n  end if;\n\n  if old.lifecycle_status <> 'Attiva'\n     or new.lifecycle_status not in ('Storica','Soppressa') then\n    raise exception 'UNIT_LIFECYCLE_TRANSITION_INVALID: transizione dello stato catastale non consentita';\n  end if;\n\n  if new.lifecycle_effective_date is null or not exists (\n    select 1\n    from public.condominium_unit_transformation_items i\n    join public.condominium_unit_transformations t on t.id = i.transformation_id\n    where i.unit_id = old.id\n      and i.direction = 'Fonte'\n      and t.condominium_id = old.condominium_id\n      and t.workspace_id = old.workspace_id\n      and t.status = 'Confermata'\n      and t.effective_date = new.lifecycle_effective_date\n  ) then\n    raise exception 'UNIT_LIFECYCLE_REQUIRES_CONFIRMED_GENEALOGY: unità storicizzabile o sopprimibile solo tramite trasformazione catastale confermata con data coincidente';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres}",
+      "rn": 114
+    },
+    {
+      "oid": "24424",
+      "schema_name": "public",
+      "name": "require_trusted_unit_transformation_confirmation",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.require_trusted_unit_transformation_confirmation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin if new.status='Confermata' and (tg_op='INSERT' or old.status is distinct from 'Confermata') and current_user<>'postgres' then raise exception 'UNIT_TRANSFORMATION_CONFIRMATION_REQUIRES_TRUSTED_RPC: la conferma deve avvenire tramite una procedura transazionale autorizzata'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres}",
+      "rn": 115
+    },
+    {
+      "oid": "24131",
+      "schema_name": "public",
+      "name": "reset_stale_communication_recipients",
+      "identity_arguments": "p_communication_id uuid, p_age interval",
+      "definition": "CREATE OR REPLACE FUNCTION public.reset_stale_communication_recipients(p_communication_id uuid, p_age interval DEFAULT '00:15:00'::interval)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare v_ws uuid; v_count integer;\nbegin\n if auth.uid() is null then raise exception 'Autenticazione richiesta'; end if;\n if p_age < interval '5 minutes' then raise exception 'Intervallo di recupero troppo breve'; end if;\n select workspace_id into v_ws from public.communications where id=p_communication_id and condominium_id is not null;\n if v_ws is null then raise exception 'Comunicazione non trovata'; end if;\n if not private.can_manage_workspace_module(v_ws,'comunicazioni') then raise exception 'Permessi insufficienti'; end if;\n update public.communication_recipients\n set status='pending', queued_at=null, error_message=null, updated_at=now()\n where communication_id=p_communication_id and status='queued'\n   and queued_at is not null and queued_at < now()-p_age;\n get diagnostics v_count=row_count;\n return jsonb_build_object('reset',v_count);\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 116
+    },
+    {
+      "oid": "24043",
+      "schema_name": "public",
+      "name": "restore_condominium",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.restore_condominium(p_workspace_id uuid, p_condominium_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin perform private.restore_condominium($1,$2); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 117
+    },
+    {
+      "oid": "24218",
+      "schema_name": "public",
+      "name": "reverse_condominium_installment_payment",
+      "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+      "definition": "CREATE OR REPLACE FUNCTION public.reverse_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text)\n RETURNS boolean\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  select private.reverse_condominium_installment_payment($1,$2,$3,$4);\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 118
+    },
+    {
+      "oid": "24044",
+      "schema_name": "public",
+      "name": "save_condominium",
+      "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION public.save_condominium(p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb)\n RETURNS uuid\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.save_condominium($1,$2,$3,$4,$5,$6,$7,$8); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 119
+    },
+    {
+      "oid": "24045",
+      "schema_name": "public",
+      "name": "set_personal_security_code",
+      "identity_arguments": "p_code text, p_enabled boolean",
+      "definition": "CREATE OR REPLACE FUNCTION public.set_personal_security_code(p_code text, p_enabled boolean)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin perform private.set_personal_security_code($1,$2); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 120
+    },
+    {
+      "oid": "22314",
+      "schema_name": "public",
+      "name": "sync_condominium_expense_payment_status",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_expense_payment_status()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_ledger_id uuid;\n  v_total numeric;\n  v_paid numeric;\n  v_status text;\n  v_has_installments boolean;\nbegin\n  v_ledger_id := coalesce(new.ledger_entry_id, old.ledger_entry_id);\n\n  if v_ledger_id is null then\n    return coalesce(new, old);\n  end if;\n\n  select coalesce(sum(amount),0), coalesce(sum(paid_amount),0), count(*) > 0\n    into v_total, v_paid, v_has_installments\n  from public.condominium_installments\n  where ledger_entry_id=v_ledger_id;\n\n  if not v_has_installments then\n    v_status := 'Registrato';\n  elsif v_paid >= v_total - 0.005 and v_total > 0 then\n    v_status := 'Pagato';\n  elsif v_paid > 0 then\n    v_status := 'Parzialmente pagato';\n  elsif exists (\n    select 1 from public.condominium_installments\n    where ledger_entry_id=v_ledger_id\n      and due_date < current_date\n      and paid_amount < amount\n  ) then\n    v_status := 'Scaduto';\n  else\n    v_status := 'Da pagare';\n  end if;\n\n  update public.condominium_ledger_entries\n  set payment_status=v_status\n  where id=v_ledger_id;\n\n  return coalesce(new, old);\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 121
+    },
+    {
+      "oid": "23180",
+      "schema_name": "public",
+      "name": "sync_condominium_fund_usage",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_fund_usage()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare\n  v_old_fund uuid;\n  v_new_fund uuid;\n  v_fund uuid;\n  v_used numeric;\nbegin\n  v_old_fund := case when tg_op in ('UPDATE','DELETE') then old.fund_id else null end;\n  v_new_fund := case when tg_op in ('INSERT','UPDATE') then new.fund_id else null end;\n\n  if v_old_fund is not null and v_new_fund is not null and v_old_fund <> v_new_fund then\n    if v_old_fund < v_new_fund then\n      perform 1 from public.condominium_funds where id = v_old_fund for update;\n      perform 1 from public.condominium_funds where id = v_new_fund for update;\n    else\n      perform 1 from public.condominium_funds where id = v_new_fund for update;\n      perform 1 from public.condominium_funds where id = v_old_fund for update;\n    end if;\n  else\n    v_fund := coalesce(v_new_fund, v_old_fund);\n    if v_fund is not null then\n      perform 1 from public.condominium_funds where id = v_fund for update;\n    end if;\n  end if;\n\n  if v_old_fund is not null then\n    select coalesce(sum(case when direction = 'Uscita' then amount else 0 end),0)\n      into v_used\n    from public.condominium_ledger_entries\n    where fund_id = v_old_fund;\n\n    perform set_config('bethag.allow_fund_used_update','on',true);\n    update public.condominium_funds\n       set used_amount = greatest(v_used,0),\n           updated_at = now()\n     where id = v_old_fund;\n  end if;\n\n  if v_new_fund is not null and v_new_fund is distinct from v_old_fund then\n    select coalesce(sum(case when direction = 'Uscita' then amount else 0 end),0)\n      into v_used\n    from public.condominium_ledger_entries\n    where fund_id = v_new_fund;\n\n    perform set_config('bethag.allow_fund_used_update','on',true);\n    update public.condominium_funds\n       set used_amount = greatest(v_used,0),\n           updated_at = now()\n     where id = v_new_fund;\n  end if;\n\n  return case when tg_op = 'DELETE' then old else new end;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 122
+    },
+    {
+      "oid": "22313",
+      "schema_name": "public",
+      "name": "sync_condominium_installment_from_payments",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_installment_id uuid;\n  v_workspace_id uuid;\n  v_condominium_id uuid;\n  v_amount numeric;\n  v_paid numeric;\n  v_status text;\n  v_due_date date;\n  v_unit_id uuid;\n  v_member_id uuid;\n  v_owner_user_id uuid;\n  v_owner_email text;\n  v_remaining numeric;\n  v_allocation public.condominium_expense_allocations%rowtype;\n  v_target numeric;\nbegin\n  v_installment_id := coalesce(new.installment_id, old.installment_id);\n  v_workspace_id := coalesce(new.workspace_id, old.workspace_id);\n  v_condominium_id := coalesce(new.condominium_id, old.condominium_id);\n\n  select amount, due_date, unit_id, member_id\n    into v_amount, v_due_date, v_unit_id, v_member_id\n  from public.condominium_installments\n  where id=v_installment_id\n    and workspace_id=v_workspace_id\n    and condominium_id=v_condominium_id\n  for update;\n\n  if not found then\n    return coalesce(new, old);\n  end if;\n\n  select round(coalesce(sum(amount),0)::numeric,2)\n    into v_paid\n  from public.condominium_payment_movements\n  where installment_id=v_installment_id\n    and workspace_id=v_workspace_id\n    and condominium_id=v_condominium_id;\n\n  if v_paid > v_amount + 0.005 then\n    raise exception 'I pagamenti della rata superano l''importo della rata.';\n  end if;\n\n  if v_paid >= v_amount - 0.005 then\n    v_paid := round(v_amount::numeric,2);\n    v_status := 'Pagato';\n  elsif v_paid > 0 then\n    v_status := 'Parzialmente pagato';\n  elsif v_due_date < current_date then\n    v_status := 'Scaduto';\n  else\n    v_status := 'Da pagare';\n  end if;\n\n  perform set_config('bethag.allow_installment_paid_update','on',true);\n\n  update public.condominium_installments\n  set paid_amount=v_paid,status=v_status\n  where id=v_installment_id\n    and workspace_id=v_workspace_id\n    and condominium_id=v_condominium_id;\n\n  /*\n    Dopo INSERT/UPDATE/DELETE di un movimento, riallinea anche le\n    ripartizioni interessate. Questo è indispensabile soprattutto per\n    lo storno: la rata può tornare parzialmente/non pagata e le\n    ripartizioni devono riflettere lo stesso saldo.\n  */\n  perform set_config('bethag.allow_allocation_paid_update','on',true);\n\n  if v_unit_id is null and v_member_id is not null then\n    select cm.user_id, nullif(lower(trim(cm.email)),'')\n      into v_owner_user_id, v_owner_email\n    from public.condominium_members cm\n    where cm.id=v_member_id\n      and cm.condominium_id=v_condominium_id\n      and cm.active\n      and trim(coalesce(cm.data->>'role',''))='Proprietario';\n\n    if found then\n      v_remaining := v_paid;\n\n      for v_allocation in\n        select a.*\n        from public.condominium_expense_allocations a\n        where a.workspace_id=v_workspace_id\n          and a.condominium_id=v_condominium_id\n          and a.ledger_entry_id=(\n            select i.ledger_entry_id\n            from public.condominium_installments i\n            where i.id=v_installment_id\n          )\n          and exists (\n            select 1\n            from public.condominium_members cm\n            where cm.condominium_id=v_condominium_id\n              and cm.unit_id=a.unit_id\n              and cm.active\n              and trim(coalesce(cm.data->>'role',''))='Proprietario'\n              and (\n                (v_owner_user_id is not null and cm.user_id=v_owner_user_id)\n                or\n                (v_owner_user_id is null\n                 and nullif(lower(trim(cm.email)),'') is not null\n                 and nullif(lower(trim(cm.email)),'')=v_owner_email)\n              )\n          )\n        order by a.id\n        for update\n      loop\n        v_target := least(\n          round(coalesce(v_allocation.amount,0),2),\n          greatest(round(v_remaining,2),0)\n        );\n\n        update public.condominium_expense_allocations\n        set paid_amount=v_target,\n            status=case\n              when v_target>=amount-0.005 then 'Pagato'\n              when v_target>0 then 'Parzialmente pagato'\n              else 'Da pagare'\n            end\n        where id=v_allocation.id;\n\n        v_remaining := round(v_remaining-v_target,2);\n        exit when v_remaining<=0.005;\n      end loop;\n    end if;\n  else\n    update public.condominium_expense_allocations a\n    set paid_amount=v_paid,\n        status=case\n          when v_paid>=a.amount-0.005 then 'Pagato'\n          when v_paid>0 then 'Parzialmente pagato'\n          else 'Da pagare'\n        end\n    where a.workspace_id=v_workspace_id\n      and a.condominium_id=v_condominium_id\n      and a.unit_id=v_unit_id\n      and (\n        (v_member_id is not null and a.member_id=v_member_id)\n        or\n        (v_member_id is null and a.member_id is null)\n      )\n      and a.ledger_entry_id=(\n        select i.ledger_entry_id\n        from public.condominium_installments i\n        where i.id=v_installment_id\n      );\n  end if;\n\n  return coalesce(new, old);\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 123
+    },
+    {
+      "oid": "22998",
+      "schema_name": "public",
+      "name": "sync_condominium_member_unit_legacy_fields",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_member_unit_legacy_fields()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_code text;\nbegin\n  if new.unit_id is not null then\n    select unit_code into v_code from public.condominium_units where id=new.unit_id;\n    new.data:=jsonb_set(jsonb_set(coalesce(new.data,'{}'::jsonb),'{unitId}',to_jsonb(new.unit_id::text),true),'{apartment}',to_jsonb(v_code),true);\n  else new.data:=new.data-'unitId'-'apartment';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 124
+    },
+    {
+      "oid": "23697",
+      "schema_name": "public",
+      "name": "sync_condominium_work_financial_summary",
+      "identity_arguments": "p_work_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_work_financial_summary(p_work_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$ declare a numeric:=0;p numeric:=0;q numeric:=0;s text:='Nessun importo';begin if p_work_id is null then return;end if;perform 1 from public.condominium_works where id=p_work_id for update;if not found then return;end if;select coalesce(sum(amount),0),coalesce(sum(paid_amount),0),coalesce((select percentage from public.condominium_work_progress where work_id=p_work_id order by progress_date desc,progress_no desc,created_at desc limit 1),0) into a,p,q from public.condominium_work_progress where work_id=p_work_id;p:=least(greatest(round(p,2),0),round(a,2));if a<=0 then s:='Nessun importo';elsif p>=a-0.005 then s:='Pagato';elsif p>0 then s:='Parzialmente pagato';else s:='Da pagare';end if;update public.condominium_works set actual_amount=round(a,2),paid_amount=p,remaining_amount=greatest(round(a-p,2),0),progress_percent=least(greatest(q,0),100),payment_status=s,updated_at=now() where id=p_work_id;end $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 125
+    },
+    {
+      "oid": "23698",
+      "schema_name": "public",
+      "name": "sync_condominium_work_financial_summary_trigger",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.sync_condominium_work_financial_summary_trigger()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$ begin if tg_op='DELETE' then perform public.sync_condominium_work_financial_summary(old.work_id);return old;end if;perform public.sync_condominium_work_financial_summary(new.work_id);if tg_op='UPDATE' and old.work_id is distinct from new.work_id then perform public.sync_condominium_work_financial_summary(old.work_id);end if;return new;end $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 126
+    },
+    {
+      "oid": "24181",
+      "schema_name": "public",
+      "name": "touch_documents_updated_at",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.touch_documents_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  new.updated_at := now();\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 127
+    },
+    {
+      "oid": "23507",
+      "schema_name": "public",
+      "name": "validate_allocation_rule_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_allocation_rule_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$ begin if new.allocation_table_id is null then raise exception 'Una regola di riparto deve indicare una tabella millesimale'; end if; if not exists(select 1 from public.condominium_millesimal_tables t where t.id=new.allocation_table_id and t.workspace_id=new.workspace_id and t.condominium_id=new.condominium_id) then raise exception 'La tabella della regola di riparto non appartiene al condominio selezionato'; end if; if new.priority is null or new.priority<0 then raise exception 'La priorità della regola di riparto non può essere negativa'; end if; if coalesce(trim(new.name),'')='' then raise exception 'Il nome della regola di riparto è obbligatorio'; end if; if coalesce(trim(new.expense_type),'')='' and coalesce(trim(new.category),'')='' then raise exception 'La regola deve indicare almeno il tipo di spesa o la categoria'; end if; return new; end; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 128
+    },
+    {
+      "oid": "24186",
+      "schema_name": "public",
+      "name": "validate_audit_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_audit_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_workspace uuid;\nbegin\n  if new.workspace_id is null then\n    raise exception 'workspace_id audit obbligatorio';\n  end if;\n\n  if new.condominium_id is not null then\n    select workspace_id into v_workspace\n    from public.condominiums\n    where id=new.condominium_id;\n\n    if v_workspace is null then\n      raise exception 'Condominio audit non trovato';\n    end if;\n    if v_workspace<>new.workspace_id then\n      raise exception 'Workspace audit e condominio non coincidono';\n    end if;\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 129
+    },
+    {
+      "oid": "24153",
+      "schema_name": "public",
+      "name": "validate_communication_recipient_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_communication_recipient_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare v_ws uuid; v_cond uuid; v_member_cond uuid; v_member_user uuid; v_active boolean;\nbegin\n select workspace_id,condominium_id into v_ws,v_cond from public.communications where id=new.communication_id;\n if v_ws is null then raise exception 'La comunicazione del destinatario non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Destinatario e comunicazione devono appartenere allo stesso workspace'; end if;\n if new.condominium_id is distinct from v_cond then raise exception 'Destinatario e comunicazione devono appartenere allo stesso condominio'; end if;\n if new.member_id is not null then\n   select condominium_id,user_id,active into v_member_cond,v_member_user,v_active from public.condominium_members where id=new.member_id;\n   if v_member_cond is null or v_member_cond<>new.condominium_id then raise exception 'Il membro del destinatario non appartiene al condominio'; end if;\n   if not coalesce(v_active,false) then raise exception 'Il membro del destinatario non è attivo'; end if;\n   if new.user_id is not null and v_member_user is not null and new.user_id<>v_member_user then raise exception 'Utente e membro del destinatario non corrispondono'; end if;\n end if;\n return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 130
+    },
+    {
+      "oid": "23017",
+      "schema_name": "public",
+      "name": "validate_communication_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_communication_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare v_ws uuid; v_archived timestamptz;\nbegin\n if new.condominium_id is null then\n   if new.published then raise exception 'Una comunicazione senza condominio non può essere pubblicata'; end if;\n   return new;\n end if;\n select workspace_id,archived_at into v_ws,v_archived from public.condominiums where id=new.condominium_id;\n if v_ws is null then raise exception 'Il condominio della comunicazione non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Comunicazione e condominio devono appartenere allo stesso workspace'; end if;\n if new.published and v_archived is not null then raise exception 'Una comunicazione non può essere pubblicata su un condominio archiviato'; end if;\n return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 131
+    },
+    {
+      "oid": "24172",
+      "schema_name": "public",
+      "name": "validate_condominium_allocation_intake_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_allocation_intake_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare\n  v_ws uuid;\n  v_cond uuid;\nbegin\n  if new.document_id is not null then\n    select workspace_id, condominium_id\n    into v_ws, v_cond\n    from public.documents\n    where id=new.document_id;\n\n    if v_ws is null then\n      raise exception 'Il documento collegato all''acquisizione non esiste';\n    end if;\n\n    if v_ws <> new.workspace_id then\n      raise exception 'Il documento collegato appartiene a un workspace diverso';\n    end if;\n\n    if v_cond is not null and v_cond <> new.condominium_id then\n      raise exception 'Il documento collegato appartiene a un condominio diverso';\n    end if;\n  end if;\n\n  if new.ledger_entry_id is not null and not exists (\n    select 1\n    from public.condominium_ledger_entries le\n    where le.id=new.ledger_entry_id\n      and le.workspace_id=new.workspace_id\n      and le.condominium_id=new.condominium_id\n  ) then\n    raise exception 'La spesa contabile collegata non appartiene al condominio/workspace dell''acquisizione';\n  end if;\n\n  if new.allocation_table_id is not null and not exists (\n    select 1\n    from public.condominium_millesimal_tables mt\n    where mt.id=new.allocation_table_id\n      and mt.workspace_id=new.workspace_id\n      and mt.condominium_id=new.condominium_id\n  ) then\n    raise exception 'La tabella millesimale collegata non appartiene al condominio/workspace dell''acquisizione';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 132
+    },
+    {
+      "oid": "23006",
+      "schema_name": "public",
+      "name": "validate_condominium_budget_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_budget_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_ws uuid; v_fy_ws uuid; v_fy_cond uuid;\nbegin\n select workspace_id into v_ws from public.condominiums where id=new.condominium_id;\n if v_ws is null then raise exception 'Il condominio indicato non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Budget e condominio devono appartenere allo stesso workspace'; end if;\n if new.fiscal_year_id is not null then\n   select workspace_id,condominium_id into v_fy_ws,v_fy_cond from public.condominium_fiscal_years where id=new.fiscal_year_id;\n   if v_fy_ws is null then raise exception 'L''esercizio contabile indicato non esiste'; end if;\n   if v_fy_ws<>new.workspace_id or v_fy_cond<>new.condominium_id then raise exception 'Budget ed esercizio contabile devono appartenere allo stesso workspace e condominio'; end if;\n end if;\n return new;\nend $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 133
+    },
+    {
+      "oid": "24054",
+      "schema_name": "public",
+      "name": "validate_condominium_consumption_reading_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_consumption_reading_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  v_ws uuid;\n  v_archived timestamptz;\nbegin\n  select c.workspace_id,c.archived_at\n    into v_ws,v_archived\n  from public.condominiums c\n  where c.id=new.condominium_id;\n\n  if v_ws is null then\n    raise exception 'Condominio della lettura non trovato';\n  end if;\n\n  if new.workspace_id<>v_ws then\n    raise exception 'Workspace della lettura non coerente con il condominio';\n  end if;\n\n  if v_archived is not null then\n    raise exception 'Non è possibile modificare consumi di un condominio archiviato';\n  end if;\n\n  if not exists (\n    select 1 from public.condominium_units u\n    where u.id=new.unit_id\n      and u.workspace_id=new.workspace_id\n      and u.condominium_id=new.condominium_id\n  ) then\n    raise exception 'Unità non coerente con workspace e condominio della lettura';\n  end if;\n\n  if new.fiscal_year_id is not null and not exists (\n    select 1 from public.condominium_fiscal_years fy\n    where fy.id=new.fiscal_year_id\n      and fy.workspace_id=new.workspace_id\n      and fy.condominium_id=new.condominium_id\n  ) then\n    raise exception 'Esercizio contabile non coerente con workspace e condominio della lettura';\n  end if;\n\n  if trim(coalesce(new.service_type,''))='' then\n    raise exception 'Tipo di servizio obbligatorio';\n  end if;\n\n  if trim(coalesce(new.meter_code,''))='' then\n    raise exception 'Codice contatore obbligatorio';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 134
+    },
+    {
+      "oid": "24174",
+      "schema_name": "public",
+      "name": "validate_condominium_creation_intake_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_creation_intake_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_item jsonb;\n  v_doc uuid;\n  v_doc_workspace uuid;\n  v_doc_condominium uuid;\n  v_size bigint;\nbegin\n  if jsonb_typeof(new.source_documents) <> 'array' then\n    raise exception 'source_documents deve essere un array';\n  end if;\n\n  for v_item in select value from jsonb_array_elements(new.source_documents)\n  loop\n    v_doc := nullif(v_item->>'document_id','')::uuid;\n    if v_doc is not null then\n      select d.workspace_id,d.condominium_id,d.file_size_bytes\n      into v_doc_workspace,v_doc_condominium,v_size\n      from public.documents d where d.id=v_doc;\n\n      if v_doc_workspace is null then\n        raise exception 'Documento sorgente non trovato';\n      end if;\n      if v_doc_workspace <> new.workspace_id then\n        raise exception 'Documento sorgente appartenente a workspace diverso';\n      end if;\n      if v_doc_condominium is not null then\n        raise exception 'Il documento sorgente è già associato a un condominio';\n      end if;\n      if coalesce(v_size,0) > 104857600 then\n        raise exception 'Documento sorgente oltre il limite massimo di 100 MB';\n      end if;\n    end if;\n  end loop;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 135
+    },
+    {
+      "oid": "22322",
+      "schema_name": "public",
+      "name": "validate_condominium_expense_allocation_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_expense_allocation_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_ledger record;\n  v_unit record;\n  v_table record;\n  v_member record;\nbegin\n  select workspace_id, condominium_id, direction\n    into v_ledger\n  from public.condominium_ledger_entries\n  where id = new.ledger_entry_id;\n\n  if not found then\n    raise exception 'La spesa collegata alla ripartizione non esiste';\n  end if;\n\n  if v_ledger.workspace_id <> new.workspace_id or v_ledger.condominium_id <> new.condominium_id then\n    raise exception 'Ripartizione e spesa devono appartenere allo stesso condominio e workspace';\n  end if;\n\n  if v_ledger.direction <> 'Uscita' then\n    raise exception 'Una ripartizione può essere collegata solo a una spesa di uscita';\n  end if;\n\n  select workspace_id, condominium_id\n    into v_unit\n  from public.condominium_units\n  where id = new.unit_id;\n\n  if not found or v_unit.workspace_id <> new.workspace_id or v_unit.condominium_id <> new.condominium_id then\n    raise exception 'L''unità della ripartizione deve appartenere allo stesso condominio e workspace';\n  end if;\n\n  if new.allocation_table_id is not null then\n    select workspace_id, condominium_id\n      into v_table\n    from public.condominium_millesimal_tables\n    where id = new.allocation_table_id;\n\n    if not found or v_table.workspace_id <> new.workspace_id or v_table.condominium_id <> new.condominium_id then\n      raise exception 'La tabella millesimale della ripartizione deve appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n\n  if new.member_id is not null then\n    select c.workspace_id, m.condominium_id\n      into v_member\n    from public.condominium_members m\n    join public.condominiums c on c.id = m.condominium_id\n    where m.id = new.member_id;\n\n    if not found or v_member.workspace_id <> new.workspace_id or v_member.condominium_id <> new.condominium_id then\n      raise exception 'Il condomino della ripartizione deve appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 136
+    },
+    {
+      "oid": "22326",
+      "schema_name": "public",
+      "name": "validate_condominium_expense_payment_status",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_expense_payment_status()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_total numeric;\n  v_paid numeric;\n  v_status text;\n  v_has_installments boolean;\nbegin\n  if new.direction <> 'Uscita' then\n    return new;\n  end if;\n\n  select coalesce(sum(amount),0),\n         coalesce(sum(paid_amount),0),\n         count(*) > 0\n    into v_total,v_paid,v_has_installments\n  from public.condominium_installments\n  where ledger_entry_id=new.id\n    and workspace_id=new.workspace_id\n    and condominium_id=new.condominium_id;\n\n  if not v_has_installments then\n    return new;\n  end if;\n\n  if v_paid >= v_total - 0.005 and v_total > 0 then\n    v_status := 'Pagato';\n  elsif v_paid > 0 then\n    v_status := 'Parzialmente pagato';\n  elsif exists (\n    select 1 from public.condominium_installments\n    where ledger_entry_id=new.id\n      and workspace_id=new.workspace_id\n      and condominium_id=new.condominium_id\n      and due_date < current_date\n      and paid_amount < amount\n  ) then\n    v_status := 'Scaduto';\n  else\n    v_status := 'Da pagare';\n  end if;\n\n  new.payment_status := v_status;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 137
+    },
+    {
+      "oid": "23004",
+      "schema_name": "public",
+      "name": "validate_condominium_fiscal_year_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_fiscal_year_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_workspace uuid;\nbegin\n  select c.workspace_id into v_workspace\n  from public.condominiums c\n  where c.id=new.condominium_id;\n\n  if v_workspace is null then\n    raise exception 'Il condominio indicato non esiste';\n  end if;\n\n  if new.workspace_id<>v_workspace then\n    raise exception 'L''esercizio contabile e il condominio devono appartenere allo stesso workspace';\n  end if;\n\n  if new.start_date>new.end_date then\n    raise exception 'La data iniziale dell''esercizio non può essere successiva alla data finale';\n  end if;\n\n  if nullif(btrim(new.name),'') is null then\n    raise exception 'Il nome dell''esercizio contabile è obbligatorio';\n  end if;\n\n  if new.status not in ('Aperto','Provvisorio','Chiuso') then\n    raise exception 'Stato dell''esercizio contabile non valido';\n  end if;\n\n  if exists (\n    select 1\n    from public.condominium_fiscal_years fy\n    where fy.condominium_id=new.condominium_id\n      and fy.id<>coalesce(new.id,'00000000-0000-0000-0000-000000000000'::uuid)\n      and new.start_date<=fy.end_date\n      and fy.start_date<=new.end_date\n  ) then\n    raise exception 'Le date dell''esercizio contabile si sovrappongono a un altro esercizio dello stesso condominio';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 138
+    },
+    {
+      "oid": "23007",
+      "schema_name": "public",
+      "name": "validate_condominium_fund_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_fund_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_ws uuid;\nbegin\n select workspace_id into v_ws from public.condominiums where id=new.condominium_id;\n if v_ws is null then raise exception 'Il condominio indicato non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Fondo e condominio devono appartenere allo stesso workspace'; end if;\n return new;\nend $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 139
+    },
+    {
+      "oid": "22312",
+      "schema_name": "public",
+      "name": "validate_condominium_installment_paid_amount",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_installment_paid_amount()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_payment_total numeric;\nbegin\n  select coalesce(sum(amount),0)\n    into v_payment_total\n  from public.condominium_payment_movements\n  where installment_id = new.id\n    and workspace_id = new.workspace_id\n    and condominium_id = new.condominium_id;\n\n  v_payment_total := round(v_payment_total::numeric,2);\n\n  if abs(coalesce(new.paid_amount,0) - v_payment_total) > 0.005 then\n    raise exception 'Il pagato della rata deve corrispondere ai movimenti di pagamento registrati';\n  end if;\n\n  if new.amount is null or new.amount <= 0 then\n    raise exception 'Importo della rata non valido';\n  end if;\n\n  if v_payment_total >= new.amount - 0.005 then\n    new.paid_amount := round(new.amount::numeric,2);\n    new.status := 'Pagato';\n  elsif v_payment_total > 0 then\n    new.paid_amount := v_payment_total;\n    new.status := 'Parzialmente pagato';\n  elsif new.due_date is not null and new.due_date < current_date then\n    new.paid_amount := 0;\n    new.status := 'Scaduto';\n  else\n    new.paid_amount := 0;\n    new.status := 'Da pagare';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 140
+    },
+    {
+      "oid": "22324",
+      "schema_name": "public",
+      "name": "validate_condominium_installment_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_installment_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_ledger record;\n  v_unit record;\n  v_year record;\n  v_member record;\nbegin\n  if new.ledger_entry_id is not null then\n    select workspace_id, condominium_id, direction\n      into v_ledger\n    from public.condominium_ledger_entries\n    where id = new.ledger_entry_id;\n\n    if not found or v_ledger.workspace_id <> new.workspace_id or v_ledger.condominium_id <> new.condominium_id then\n      raise exception 'La rata e il movimento contabile devono appartenere allo stesso condominio e workspace';\n    end if;\n\n    if v_ledger.direction <> 'Uscita' then\n      raise exception 'Una rata contabile può essere collegata solo a una spesa di uscita';\n    end if;\n  end if;\n\n  if new.unit_id is not null then\n    select workspace_id, condominium_id\n      into v_unit\n    from public.condominium_units\n    where id = new.unit_id;\n\n    if not found or v_unit.workspace_id <> new.workspace_id or v_unit.condominium_id <> new.condominium_id then\n      raise exception 'L''unità della rata deve appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n\n  if new.fiscal_year_id is not null then\n    select workspace_id, condominium_id\n      into v_year\n    from public.condominium_fiscal_years\n    where id = new.fiscal_year_id;\n\n    if not found or v_year.workspace_id <> new.workspace_id or v_year.condominium_id <> new.condominium_id then\n      raise exception 'L''esercizio della rata deve appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n\n  if new.member_id is not null then\n    select c.workspace_id, m.condominium_id\n      into v_member\n    from public.condominium_members m\n    join public.condominiums c on c.id = m.condominium_id\n    where m.id = new.member_id;\n\n    if not found or v_member.workspace_id <> new.workspace_id or v_member.condominium_id <> new.condominium_id then\n      raise exception 'Il condomino della rata deve appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 141
+    },
+    {
+      "oid": "23728",
+      "schema_name": "public",
+      "name": "validate_condominium_installment_total",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_installment_total()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_ledger_amount numeric;\n  v_total numeric;\nbegin\n  if new.ledger_entry_id is null then\n    return new;\n  end if;\n\n  select le.amount\n    into v_ledger_amount\n  from public.condominium_ledger_entries le\n  where le.id=new.ledger_entry_id\n    and le.workspace_id=new.workspace_id\n    and le.condominium_id=new.condominium_id\n    and le.direction='Uscita'\n  for update;\n\n  if not found or v_ledger_amount is null or v_ledger_amount<=0 then\n    raise exception 'Movimento contabile della rata non valido';\n  end if;\n\n  select coalesce(sum(i.amount),0)\n    into v_total\n  from public.condominium_installments i\n  where i.ledger_entry_id=new.ledger_entry_id\n    and i.workspace_id=new.workspace_id\n    and i.condominium_id=new.condominium_id\n    and i.id is distinct from new.id;\n\n  if round(v_total + new.amount,2) > round(v_ledger_amount,2) + 0.005 then\n    raise exception 'Il totale delle rate supera l''importo della spesa';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 142
+    },
+    {
+      "oid": "23178",
+      "schema_name": "public",
+      "name": "validate_condominium_ledger_fund_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_ledger_fund_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_ws uuid; v_cond uuid;\nbegin\n if new.fund_id is null then return new; end if;\n if new.direction<>'Uscita' then raise exception 'Un fondo può essere collegato solo a un movimento di uscita'; end if;\n select workspace_id,condominium_id into v_ws,v_cond from public.condominium_funds where id=new.fund_id;\n if v_ws is null then raise exception 'Fondo non trovato'; end if;\n if v_ws<>new.workspace_id or v_cond<>new.condominium_id then raise exception 'Fondo e movimento contabile devono appartenere allo stesso workspace e condominio'; end if;\n return new;\nend $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 143
+    },
+    {
+      "oid": "22330",
+      "schema_name": "public",
+      "name": "validate_condominium_ledger_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_ledger_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_ws uuid;\n  v_cond uuid;\n  v_ref_ws uuid;\n  v_ref_cond uuid;\nbegin\n  if new.fiscal_year_id is not null then\n    select workspace_id, condominium_id into v_ws, v_cond\n    from public.condominium_fiscal_years where id=new.fiscal_year_id;\n    if not found then\n      raise exception 'L''esercizio contabile indicato non esiste';\n    end if;\n    if v_ws <> new.workspace_id or v_cond <> new.condominium_id then\n      raise exception 'Il movimento e l''esercizio contabile devono appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n\n  if new.unit_id is not null then\n    select workspace_id, condominium_id into v_ref_ws, v_ref_cond\n    from public.condominium_units where id=new.unit_id;\n    if not found or v_ref_ws <> new.workspace_id or v_ref_cond <> new.condominium_id then\n      raise exception 'L''unità collegata al movimento deve appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n\n  if new.member_id is not null then\n    select c.workspace_id, m.condominium_id into v_ref_ws, v_ref_cond\n    from public.condominium_members m\n    join public.condominiums c on c.id=m.condominium_id\n    where m.id=new.member_id;\n    if not found or v_ref_ws <> new.workspace_id or v_ref_cond <> new.condominium_id then\n      raise exception 'Il condòmino collegato al movimento deve appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n\n  if new.supplier_id is not null then\n    select workspace_id, condominium_id into v_ref_ws, v_ref_cond\n    from public.suppliers where id=new.supplier_id;\n    if not found or v_ref_ws <> new.workspace_id or v_ref_cond is distinct from new.condominium_id then\n      raise exception 'Il fornitore collegato al movimento deve appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n\n  if new.document_id is not null then\n    select workspace_id, condominium_id into v_ref_ws, v_ref_cond\n    from public.documents where id=new.document_id;\n    if not found or v_ref_ws <> new.workspace_id or v_ref_cond is distinct from new.condominium_id then\n      raise exception 'Il documento collegato al movimento deve appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n\n  return new;\nend\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 144
+    },
+    {
+      "oid": "23009",
+      "schema_name": "public",
+      "name": "validate_condominium_legal_case_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_legal_case_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$ declare w uuid; begin select workspace_id into w from public.condominiums where id=new.condominium_id; if w is null then raise exception 'Il condominio indicato non esiste'; end if; if new.workspace_id<>w then raise exception 'Contenzioso e condominio devono appartenere allo stesso workspace'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 145
+    },
+    {
+      "oid": "22992",
+      "schema_name": "public",
+      "name": "validate_condominium_member_unit_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_member_unit_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_cond_workspace uuid; v_unit_cond uuid; v_unit_workspace uuid;\nbegin\n  select workspace_id into v_cond_workspace from public.condominiums where id=new.condominium_id;\n  if v_cond_workspace is null then raise exception 'Il condominio indicato non esiste'; end if;\n  if new.unit_id is not null then\n    select condominium_id,workspace_id into v_unit_cond,v_unit_workspace from public.condominium_units where id=new.unit_id;\n    if v_unit_cond is null then raise exception 'L''unità immobiliare indicata non esiste'; end if;\n    if v_unit_cond<>new.condominium_id or v_unit_workspace<>v_cond_workspace then\n      raise exception 'Condomino e unità immobiliare devono appartenere allo stesso condominio e workspace';\n    end if;\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 146
+    },
+    {
+      "oid": "22320",
+      "schema_name": "public",
+      "name": "validate_condominium_millesimal_table_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_millesimal_table_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_workspace_id uuid;\nbegin\n  select workspace_id\n    into v_workspace_id\n  from public.condominiums\n  where id=new.condominium_id;\n\n  if not found then\n    raise exception 'Condominio non trovato';\n  end if;\n\n  if new.workspace_id <> v_workspace_id then\n    raise exception 'La tabella millesimale deve appartenere allo stesso workspace del condominio';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 147
+    },
+    {
+      "oid": "22318",
+      "schema_name": "public",
+      "name": "validate_condominium_millesimal_value_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_millesimal_value_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_table_condo uuid;\n  v_table_workspace uuid;\n  v_unit_condo uuid;\n  v_unit_workspace uuid;\nbegin\n  select condominium_id, workspace_id\n    into v_table_condo, v_table_workspace\n  from public.condominium_millesimal_tables\n  where id=new.table_id;\n\n  if not found then\n    raise exception 'Tabella millesimale non trovata';\n  end if;\n\n  select condominium_id, workspace_id\n    into v_unit_condo, v_unit_workspace\n  from public.condominium_units\n  where id=new.unit_id;\n\n  if not found then\n    raise exception 'Unità immobiliare non trovata';\n  end if;\n\n  if new.condominium_id <> v_table_condo\n     or new.condominium_id <> v_unit_condo\n     or new.workspace_id <> v_table_workspace\n     or new.workspace_id <> v_unit_workspace then\n    raise exception 'Tabella millesimale e unità devono appartenere allo stesso condominio e workspace';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 148
+    },
+    {
+      "oid": "22328",
+      "schema_name": "public",
+      "name": "validate_condominium_payment_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_payment_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_ws uuid; v_cond uuid;\nbegin\n  select workspace_id, condominium_id into v_ws, v_cond\n  from public.condominium_installments where id=new.installment_id;\n  if not found then raise exception 'La rata associata al pagamento non esiste'; end if;\n  if v_ws <> new.workspace_id or v_cond <> new.condominium_id then\n    raise exception 'Il pagamento e la rata devono appartenere allo stesso workspace e condominio';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 149
+    },
+    {
+      "oid": "23016",
+      "schema_name": "public",
+      "name": "validate_condominium_request_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_request_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare\n v_ws uuid;\n v_member_cond uuid;\n v_member_user uuid;\n v_member_active boolean;\nbegin\n select workspace_id into v_ws from public.condominiums where id=new.condominium_id;\n if v_ws is null then raise exception 'Il condominio della richiesta non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Richiesta e condominio devono appartenere allo stesso workspace'; end if;\n\n if new.member_id is not null then\n   select condominium_id,user_id,active\n   into v_member_cond,v_member_user,v_member_active\n   from public.condominium_members\n   where id=new.member_id;\n\n   if v_member_cond is null then raise exception 'Il condòmino della richiesta non esiste'; end if;\n   if v_member_cond<>new.condominium_id then raise exception 'Il condòmino e la richiesta devono appartenere allo stesso condominio'; end if;\n   if not coalesce(v_member_active,false) then raise exception 'Il condòmino indicato non è attivo'; end if;\n\n   if new.requester_user_id is not null and v_member_user is not null and new.requester_user_id<>v_member_user then\n     raise exception 'L''utente richiedente non corrisponde al condòmino indicato';\n   end if;\n end if;\n\n return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 150
+    },
+    {
+      "oid": "24164",
+      "schema_name": "public",
+      "name": "validate_condominium_request_status",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_request_status()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\nbegin\n  if tg_op <> 'UPDATE' or new.status = old.status then\n    return new;\n  end if;\n\n  if old.status in ('Chiusa','Annullata') then\n    raise exception 'Una richiesta chiusa o annullata non può essere riaperta';\n  end if;\n\n  if not (\n    (old.status='Nuova' and new.status in ('In lavorazione','Annullata'))\n    or\n    (old.status='In lavorazione' and new.status in ('In attesa','Risolta','Annullata'))\n    or\n    (old.status='In attesa' and new.status in ('In lavorazione','Risolta','Annullata'))\n    or\n    (old.status='Risolta' and new.status in ('In lavorazione','Chiusa'))\n  ) then\n    raise exception 'Transizione stato richiesta non consentita: % -> %', old.status, new.status;\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 151
+    },
+    {
+      "oid": "23008",
+      "schema_name": "public",
+      "name": "validate_condominium_tax_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_tax_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$ declare w uuid; begin select workspace_id into w from public.condominiums where id=new.condominium_id; if w is null then raise exception 'Il condominio indicato non esiste'; end if; if new.workspace_id<>w then raise exception 'Obbligo fiscale e condominio devono appartenere allo stesso workspace'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 152
+    },
+    {
+      "oid": "23030",
+      "schema_name": "public",
+      "name": "validate_condominium_unit_relationship",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_unit_relationship()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare v_parent_id uuid; v_parent_condominium uuid; v_current uuid; v_depth integer:=0;\nbegin\n  if nullif(trim(coalesce(new.data->>'incorporatedInUnitId','')), '') is null then return new; end if;\n  begin v_parent_id := (new.data->>'incorporatedInUnitId')::uuid;\n  exception when invalid_text_representation then raise exception 'L''unità di riferimento della pertinenza non è valida.'; end;\n  if v_parent_id=new.id then raise exception 'Un''unità non può essere la propria pertinenza.'; end if;\n  select condominium_id into v_parent_condominium from public.condominium_units where id=v_parent_id;\n  if v_parent_condominium is null then raise exception 'L''unità principale indicata per la pertinenza non esiste.'; end if;\n  if v_parent_condominium<>new.condominium_id then raise exception 'La pertinenza deve appartenere allo stesso condominio dell''unità principale.'; end if;\n  v_current:=v_parent_id;\n  while v_current is not null and v_depth<100 loop\n    v_depth:=v_depth+1;\n    if v_current=new.id then raise exception 'Collegamento circolare tra unità immobiliari non consentito.'; end if;\n    select nullif(trim(coalesce(data->>'incorporatedInUnitId','')), '')::uuid into v_current from public.condominium_units where id=v_current;\n  end loop;\n  if v_depth>=100 then raise exception 'Catena di pertinenze non valida.'; end if;\n  return new;\nend; $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 153
+    },
+    {
+      "oid": "23641",
+      "schema_name": "public",
+      "name": "validate_condominium_unit_workspace_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_unit_workspace_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_workspace uuid;\nbegin\n  select c.workspace_id\n    into v_workspace\n  from public.condominiums c\n  where c.id = new.condominium_id;\n\n  if v_workspace is null then\n    raise exception 'Il condominio indicato non esiste';\n  end if;\n\n  if new.workspace_id <> v_workspace then\n    raise exception 'Unità e condominio devono appartenere allo stesso workspace';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 154
+    },
+    {
+      "oid": "23686",
+      "schema_name": "public",
+      "name": "validate_condominium_work_child_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_work_child_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  v_workspace uuid; v_condominium uuid; v_archived timestamptz;\n  v_doc_ws uuid; v_doc_cond uuid;\nbegin\n  select w.workspace_id,w.condominium_id,c.archived_at\n    into v_workspace,v_condominium,v_archived\n  from public.condominium_works w\n  join public.condominiums c on c.id=w.condominium_id\n  where w.id=new.work_id;\n  if v_workspace is null then raise exception 'Lavoro non trovato'; end if;\n  if new.workspace_id<>v_workspace or new.condominium_id<>v_condominium then\n    raise exception 'Workspace/condominio non coerenti con il lavoro';\n  end if;\n  if v_archived is not null then raise exception 'Non è possibile modificare dati di un lavoro archiviato'; end if;\n  if new.document_id is not null then\n    select d.workspace_id,d.condominium_id into v_doc_ws,v_doc_cond\n    from public.documents d\n    where d.legacy_id=new.document_id;\n    if not found or v_doc_ws<>new.workspace_id or v_doc_cond is distinct from new.condominium_id then\n      raise exception 'Il documento collegato al lavoro deve appartenere allo stesso workspace e condominio';\n    end if;\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 155
+    },
+    {
+      "oid": "23691",
+      "schema_name": "public",
+      "name": "validate_condominium_work_financial_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_work_financial_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ declare w uuid;c uuid;begin select workspace_id,condominium_id into w,c from public.condominium_works where id=new.work_id; if new.ledger_entry_id is not null and not exists(select 1 from public.condominium_ledger_entries where id=new.ledger_entry_id and workspace_id=w and condominium_id=c) then raise exception 'Movimento contabile non coerente con il lavoro'; end if; if new.payment_entry_id is not null and not exists(select 1 from public.condominium_ledger_entries where id=new.payment_entry_id and workspace_id=w and condominium_id=c) then raise exception 'Movimento di pagamento non coerente con il lavoro'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 156
+    },
+    {
+      "oid": "23710",
+      "schema_name": "public",
+      "name": "validate_condominium_work_progress_accounting_links",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_work_progress_accounting_links()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$ declare w record;l record;p record;begin select workspace_id,condominium_id,supplier_id into w from public.condominium_works where id=new.work_id; if not found then raise exception 'Lavoro collegato al SAL non trovato'; end if; if new.ledger_entry_id is not null then select workspace_id,condominium_id,direction,supplier_id into l from public.condominium_ledger_entries where id=new.ledger_entry_id; if not found or l.workspace_id<>w.workspace_id or l.condominium_id<>w.condominium_id then raise exception 'Movimento contabile non coerente con il lavoro'; end if; if l.direction<>'Uscita' then raise exception 'Il movimento contabile della spesa deve essere un''Uscita'; end if; if w.supplier_id is not null and l.supplier_id is not null and w.supplier_id<>l.supplier_id then raise exception 'Il fornitore del movimento contabile non coincide con quello del lavoro'; end if; end if; if new.payment_entry_id is not null then if new.ledger_entry_id is not null and new.payment_entry_id=new.ledger_entry_id then raise exception 'Il movimento di pagamento deve essere distinto dal movimento della spesa'; end if; select workspace_id,condominium_id,direction,supplier_id,amount into p from public.condominium_ledger_entries where id=new.payment_entry_id; if not found or p.workspace_id<>w.workspace_id or p.condominium_id<>w.condominium_id then raise exception 'Movimento di pagamento non coerente con il lavoro'; end if; if p.direction<>'Uscita' then raise exception 'Il movimento di pagamento deve essere un''Uscita'; end if; if w.supplier_id is not null and p.supplier_id is not null and w.supplier_id<>p.supplier_id then raise exception 'Il fornitore del pagamento non coincide con quello del lavoro'; end if; if coalesce(new.paid_amount,0)>coalesce(p.amount,0)+0.005 then raise exception 'Il pagato del SAL supera l''importo del movimento di pagamento collegato'; end if; end if; return new; end $function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 157
+    },
+    {
+      "oid": "23693",
+      "schema_name": "public",
+      "name": "validate_condominium_work_reference_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_work_reference_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin if new.fund_id is not null and not exists(select 1 from public.condominium_funds f where f.id=new.fund_id and f.workspace_id=new.workspace_id and f.condominium_id=new.condominium_id) then raise exception 'Fondo non coerente con il lavoro'; end if; if new.supplier_id is not null and not exists(select 1 from public.condominium_suppliers s where s.id=new.supplier_id and s.workspace_id=new.workspace_id and s.condominium_id=new.condominium_id) then raise exception 'Fornitore non coerente con il lavoro'; end if; if new.register_item_id is not null and not exists(select 1 from public.condominium_register_items r where r.id=new.register_item_id and r.workspace_id=new.workspace_id and r.condominium_id=new.condominium_id) then raise exception 'Voce registro non coerente con il lavoro'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 158
+    },
+    {
+      "oid": "23685",
+      "schema_name": "public",
+      "name": "validate_condominium_work_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_condominium_work_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ declare w uuid; a timestamptz; begin select workspace_id,archived_at into w,a from public.condominiums where id=new.condominium_id; if w is null then raise exception 'Condominio non trovato'; end if; if new.workspace_id<>w then raise exception 'Workspace del lavoro non coerente con il condominio'; end if; if a is not null then raise exception 'Non è possibile modificare lavori di un condominio archiviato'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 159
+    },
+    {
+      "oid": "24428",
+      "schema_name": "public",
+      "name": "validate_confirmed_unit_transformation_genealogy",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_confirmed_unit_transformation_genealogy()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ declare s int; d int; v int; u int; a int; b int; begin if new.status<>'Confermata' then return new; end if; select count(*) filter(where i.direction='Fonte')::int,count(*) filter(where i.direction='Destinazione')::int,count(*) filter(where x.id is not null and x.workspace_id=new.workspace_id and x.condominium_id=new.condominium_id)::int,count(distinct i.unit_id)::int,count(*) filter(where i.direction='Fonte' and x.lifecycle_status='Attiva' and x.workspace_id=new.workspace_id and x.condominium_id=new.condominium_id)::int,count(*) filter(where i.direction='Destinazione' and x.lifecycle_status='Attiva' and x.workspace_id=new.workspace_id and x.condominium_id=new.condominium_id)::int into s,d,v,u,a,b from public.condominium_unit_transformation_items i left join public.condominium_units x on x.id=i.unit_id where i.transformation_id=new.id; if s<>new.source_unit_count or d<>new.destination_unit_count or v<>s+d or u<>s+d then raise exception 'UNIT_TRANSFORMATION_GENEALOGY_MISMATCH'; end if; if a<>s or b<>d then raise exception 'UNIT_TRANSFORMATION_UNITS_NOT_ACTIVE'; end if; if new.transformation_type='Fusione' and (s<2 or d<>1) then raise exception 'UNIT_TRANSFORMATION_FUSION_GENEALOGY_INVALID'; end if; if new.transformation_type='Frazionamento' and (s<>1 or d<2) then raise exception 'UNIT_TRANSFORMATION_SPLIT_GENEALOGY_INVALID'; end if; return new; end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres}",
+      "rn": 160
+    },
+    {
+      "oid": "24179",
+      "schema_name": "public",
+      "name": "validate_document_ai_transition",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_document_ai_transition()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  old_ai text := nullif(btrim(coalesce(old.data->>'aiStatus','Non elaborato')),'');\n  new_ai text := nullif(btrim(coalesce(new.data->>'aiStatus','Non elaborato')),'');\nbegin\n  if old_ai is null then old_ai := 'Non elaborato'; end if;\n  if new_ai is null then new_ai := 'Non elaborato'; end if;\n\n  if old_ai <> new_ai and not (\n    (old_ai='Non elaborato' and new_ai='In elaborazione') or\n    (old_ai='Errore' and new_ai='In elaborazione') or\n    (old_ai='In elaborazione' and new_ai in ('Elaborato','Errore')) or\n    (old_ai='Elaborato' and new_ai in ('Confermato','In elaborazione','Errore')) or\n    (old_ai='Confermato' and new_ai='In elaborazione')\n  ) then\n    raise exception 'Transizione AI documento non consentita: % -> %', old_ai, new_ai;\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 161
+    },
+    {
+      "oid": "24177",
+      "schema_name": "public",
+      "name": "validate_document_metadata",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_document_metadata()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  v_publication text;\n  v_ai_status text;\nbegin\n  if new.status is not null and new.status not in ('Privato','Condiviso') then\n    raise exception 'Stato documento non valido: %', new.status;\n  end if;\n\n  v_publication := nullif(btrim(new.data->>'publication'),'');\n  if v_publication is not null and new.status is not null and v_publication <> new.status then\n    raise exception 'Publication e status del documento devono coincidere';\n  end if;\n\n  v_ai_status := nullif(btrim(new.data->>'aiStatus'),'');\n  if v_ai_status is not null and v_ai_status not in ('Non elaborato','In elaborazione','Elaborato','Confermato','Errore') then\n    raise exception 'Stato AI del documento non valido: %', v_ai_status;\n  end if;\n\n  if coalesce(new.file_size_bytes,0) > 104857600\n     and coalesce(v_ai_status,'Non elaborato') <> 'Errore' then\n    raise exception 'Il documento supera il limite massimo di 100 MB e non può essere elaborato';\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 162
+    },
+    {
+      "oid": "24169",
+      "schema_name": "public",
+      "name": "validate_document_upload_size",
+      "identity_arguments": "p_size_bytes bigint, p_warning_bytes bigint, p_max_bytes bigint",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_document_upload_size(p_size_bytes bigint, p_warning_bytes bigint DEFAULT 52428800, p_max_bytes bigint DEFAULT 104857600)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\nbegin\n  if p_size_bytes is null or p_size_bytes < 0 then\n    raise exception 'Dimensione file non valida';\n  end if;\n  if p_warning_bytes is null or p_warning_bytes <= 0 then\n    raise exception 'Soglia di avviso non valida';\n  end if;\n  if p_max_bytes is null or p_max_bytes <= p_warning_bytes then\n    raise exception 'Soglia massima non valida';\n  end if;\n\n  if p_size_bytes > p_max_bytes then\n    return jsonb_build_object(\n      'status','rejected',\n      'size_bytes',p_size_bytes,\n      'warning_bytes',p_warning_bytes,\n      'max_bytes',p_max_bytes,\n      'warning',true,\n      'message','Il file supera la dimensione massima consentita.'\n    );\n  elsif p_size_bytes > p_warning_bytes then\n    return jsonb_build_object(\n      'status','warning',\n      'size_bytes',p_size_bytes,\n      'warning_bytes',p_warning_bytes,\n      'max_bytes',p_max_bytes,\n      'warning',true,\n      'message','Il file è molto grande e potrebbe richiedere più tempo e risorse per archiviazione o elaborazione AI.'\n    );\n  end if;\n\n  return jsonb_build_object(\n    'status','ok',\n    'size_bytes',p_size_bytes,\n    'warning_bytes',p_warning_bytes,\n    'max_bytes',p_max_bytes,\n    'warning',false,\n    'message','Dimensione file compatibile.'\n  );\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 163
+    },
+    {
+      "oid": "23749",
+      "schema_name": "public",
+      "name": "validate_fiscal_carryover_compensation_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_fiscal_carryover_compensation_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n v_c public.condominium_fiscal_carryovers%rowtype;\n v_i public.condominium_installments%rowtype;\nbegin\n select * into v_c from public.condominium_fiscal_carryovers where id=new.carryover_id for share;\n if not found then raise exception 'Riporto da compensare non trovato'; end if;\n if v_c.workspace_id<>new.workspace_id then raise exception 'La compensazione non appartiene al workspace del riporto'; end if;\n if v_c.condominium_id<>new.condominium_id then raise exception 'La compensazione non appartiene al condominio del riporto'; end if;\n\n if new.target_installment_id is not null then\n   select * into v_i from public.condominium_installments where id=new.target_installment_id for share;\n   if not found then raise exception 'Rata destinataria della compensazione non trovata'; end if;\n   if v_i.workspace_id<>v_c.workspace_id or v_i.condominium_id<>v_c.condominium_id or v_i.fiscal_year_id<>v_c.target_fiscal_year_id then\n     raise exception 'La rata destinataria non è coerente con il riporto';\n   end if;\n   if v_c.kind<>'Credito' then raise exception 'Solo un credito può essere compensato su una rata dell''esercizio successivo'; end if;\n   if v_c.unit_id is null then\n     if v_i.unit_id is not null or v_i.member_id is distinct from v_c.member_id then\n       raise exception 'La rata destinataria non è coerente con il proprietario del riporto';\n     end if;\n   else\n     if v_i.unit_id is distinct from v_c.unit_id then\n       raise exception 'La rata destinataria non è coerente con l''unità del riporto';\n     end if;\n     if v_i.member_id is distinct from v_c.member_id then\n       raise exception 'La rata destinataria deve appartenere allo stesso proprietario della partita riportata';\n     end if;\n   end if;\n end if;\n\n if v_c.status='Compensato' then raise exception 'Il riporto è già completamente compensato'; end if;\n if new.amount<=0 then raise exception 'L''importo della compensazione deve essere positivo'; end if;\n return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 164
+    },
+    {
+      "oid": "23748",
+      "schema_name": "public",
+      "name": "validate_fiscal_carryover_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_fiscal_carryover_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_source public.condominium_fiscal_years%rowtype; v_target public.condominium_fiscal_years%rowtype; v_unit public.condominium_units%rowtype; v_member public.condominium_members%rowtype;\nbegin\n select * into v_source from public.condominium_fiscal_years where id=new.source_fiscal_year_id for share;\n if not found then raise exception 'Esercizio di origine del riporto non trovato'; end if;\n select * into v_target from public.condominium_fiscal_years where id=new.target_fiscal_year_id for share;\n if not found then raise exception 'Esercizio di destinazione del riporto non trovato'; end if;\n if v_source.workspace_id<>new.workspace_id or v_target.workspace_id<>new.workspace_id or v_source.condominium_id<>new.condominium_id or v_target.condominium_id<>new.condominium_id then\n   raise exception 'Il riporto deve appartenere allo stesso workspace e condominio dei due esercizi';\n end if;\n if v_source.status<>'Chiuso' then raise exception 'Il riporto può provenire solo da un esercizio chiuso'; end if;\n if v_target.id=v_source.id or v_target.start_date<=v_source.end_date then raise exception 'L''esercizio di destinazione del riporto non è successivo all''origine'; end if;\n\n if new.unit_id is not null then\n   select * into v_unit from public.condominium_units where id=new.unit_id for share;\n   if not found then raise exception 'Unità del riporto non trovata'; end if;\n   if v_unit.workspace_id<>new.workspace_id or v_unit.condominium_id<>new.condominium_id then\n     raise exception 'L''unità del riporto non appartiene al condominio indicato';\n   end if;\n elsif new.member_id is null then\n   raise exception 'Un riporto senza unità deve identificare il proprietario';\n end if;\n\n if new.member_id is not null then\n   select * into v_member from public.condominium_members where id=new.member_id for share;\n   if not found then raise exception 'Proprietario del riporto non trovato'; end if;\n   if v_member.condominium_id<>new.condominium_id then raise exception 'Il proprietario del riporto non appartiene al condominio indicato'; end if;\n   if new.unit_id is not null and v_member.unit_id is not null and v_member.unit_id<>new.unit_id then\n     raise exception 'Il proprietario del riporto non è associato all''unità indicata';\n   end if;\n end if;\n return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 165
+    },
+    {
+      "oid": "24233",
+      "schema_name": "public",
+      "name": "validate_ledger_entry_deliberation_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_ledger_entry_deliberation_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare\n  v_workspace uuid;\n  v_condominium uuid;\nbegin\n  if new.assembly_id is null then\n    return new;\n  end if;\n\n  select a.workspace_id, a.condominium_id\n    into v_workspace, v_condominium\n  from public.assemblies a\n  where a.id=new.assembly_id;\n\n  if v_workspace is null or v_condominium is null then\n    raise exception 'LEDGER_ASSEMBLY_SCOPE: l''assemblea collegata deve appartenere a un condominio valido';\n  end if;\n\n  if v_workspace <> new.workspace_id or v_condominium <> new.condominium_id then\n    raise exception 'LEDGER_ASSEMBLY_SCOPE: l''assemblea collegata non appartiene allo stesso workspace/condominio della spesa';\n  end if;\n\n  if new.deliberation_date is null then\n    new.deliberation_date := (select a.assembly_date::date from public.assemblies a where a.id=new.assembly_id);\n  end if;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 166
+    },
+    {
+      "oid": "23014",
+      "schema_name": "public",
+      "name": "validate_portal_access_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_portal_access_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_workspace uuid; v_member_condominium uuid;\nbegin\n  select workspace_id into v_workspace from public.condominiums where id=new.condominium_id;\n  if v_workspace is null then raise exception 'Condominio portale non trovato'; end if;\n  if v_workspace<>new.workspace_id then raise exception 'Workspace e condominio del portale non coincidono'; end if;\n  if new.member_id is not null then\n    select condominium_id into v_member_condominium from public.condominium_members where id=new.member_id;\n    if v_member_condominium is null then raise exception 'Membro portale non trovato'; end if;\n    if v_member_condominium<>new.condominium_id then raise exception 'Il membro portale appartiene a un altro condominio'; end if;\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 167
+    },
+    {
+      "oid": "24191",
+      "schema_name": "public",
+      "name": "validate_portal_registration_request_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_portal_registration_request_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_member_workspace uuid;\nbegin\n  if new.matched_member_id is not null then\n    select c.workspace_id into v_member_workspace\n    from public.condominium_members m join public.condominiums c on c.id=m.condominium_id\n    where m.id=new.matched_member_id;\n    if v_member_workspace is null then raise exception 'Membro associato alla richiesta portale non trovato'; end if;\n    if new.workspace_id is null then new.workspace_id:=v_member_workspace;\n    elsif new.workspace_id<>v_member_workspace then raise exception 'Workspace della richiesta portale non coerente con il membro'; end if;\n  end if;\n  if new.status='approved' and (new.workspace_id is null or new.matched_member_id is null or new.requested_user_id is null) then\n    raise exception 'Una richiesta portale approvata deve avere workspace, membro e utente associati';\n  end if;\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 168
+    },
+    {
+      "oid": "23514",
+      "schema_name": "public",
+      "name": "validate_unit_owner_member_refs",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_unit_owner_member_refs()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_catalog'\nAS $function$\ndeclare\n  v_owner text;\n  v_member_count integer;\nbegin\n  if jsonb_typeof(coalesce(new.data->'ownerMemberIds','[]'::jsonb)) <> 'array' then\n    raise exception 'OWNER_REFS_INVALID: ownerMemberIds deve essere un array';\n  end if;\n\n  for v_owner in\n    select value\n    from jsonb_array_elements_text(coalesce(new.data->'ownerMemberIds','[]'::jsonb))\n  loop\n    select count(*)\n    into v_member_count\n    from public.condominium_members m\n    where m.condominium_id=new.condominium_id\n      and m.unit_id=new.id\n      and m.legacy_id::text=v_owner\n      and coalesce(m.data->>'role','')='Proprietario';\n\n    if v_member_count<>1 then\n      raise exception\n        'OWNER_REF_INVALID: il proprietario % non appartiene all''unità, al condominio o non è qualificato come Proprietario',\n        v_owner;\n    end if;\n  end loop;\n\n  return new;\nend;\n$function$\n",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 169
+    },
+    {
+      "oid": "23020",
+      "schema_name": "public",
+      "name": "validate_workspace_condominium_scope",
+      "identity_arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.validate_workspace_condominium_scope()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\ndeclare v_ws uuid;\nbegin\n if new.condominium_id is null then return new; end if;\n select workspace_id into v_ws from public.condominiums where id=new.condominium_id;\n if v_ws is null then raise exception 'Il condominio indicato non esiste'; end if;\n if new.workspace_id<>v_ws then raise exception 'Record e condominio devono appartenere allo stesso workspace'; end if;\n return new;\nend $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "rn": 170
+    },
+    {
+      "oid": "24046",
+      "schema_name": "public",
+      "name": "verify_personal_security_code",
+      "identity_arguments": "p_code text",
+      "definition": "CREATE OR REPLACE FUNCTION public.verify_personal_security_code(p_code text)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$ begin return private.verify_personal_security_code($1); end $function$\n",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "owner": "postgres",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "rn": 171
+    }
+  ]
+}

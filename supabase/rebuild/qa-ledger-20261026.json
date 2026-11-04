@@ -1,0 +1,76 @@
+{
+  "captured_at_utc": "2026-10-26",
+  "project_ref": "mxhciszzpqzvsaqcnwhg",
+  "source": "Supabase live list_migrations; read-only capture",
+  "count": 17,
+  "migrations": [
+    {
+      "version": "20261017000001",
+      "name": "bethag_baseline_schema"
+    },
+    {
+      "version": "20261017000002",
+      "name": "bethag_baseline_indexes_views"
+    },
+    {
+      "version": "20261017000003",
+      "name": "bethag_baseline_functions"
+    },
+    {
+      "version": "20261017000004",
+      "name": "bethag_baseline_security"
+    },
+    {
+      "version": "20261017000005",
+      "name": "bethag_baseline_grants"
+    },
+    {
+      "version": "20261022202747",
+      "name": "harden_close_member_transfer_search_path"
+    },
+    {
+      "version": "20261022210629",
+      "name": "restrict_private_function_public_execute"
+    },
+    {
+      "version": "20261022210630",
+      "name": "harden_default_privileges_and_private_execute"
+    },
+    {
+      "version": "20261022213544",
+      "name": "restrict_close_member_transfer_execute"
+    },
+    {
+      "version": "20261022230901",
+      "name": "revoke_authenticated_maintain"
+    },
+    {
+      "version": "20261022230908",
+      "name": "revoke_default_maintain"
+    },
+    {
+      "version": "20261022233440",
+      "name": "align_public_function_execute"
+    },
+    {
+      "version": "20261023000733",
+      "name": "use_invoker_for_close_transfer_rpc"
+    },
+    {
+      "version": "20261023010544",
+      "name": "qa_test_revoke_authenticated_maintain_20261023"
+    },
+    {
+      "version": "20261023010548",
+      "name": "qa_test_revoke_default_maintain_20261023"
+    },
+    {
+      "version": "20261023011431",
+      "name": "revoke_service_role_maintain_qa_test"
+    },
+    {
+      "version": "20261023011435",
+      "name": "define_application_default_table_privileges_qa"
+    }
+  ]
+}

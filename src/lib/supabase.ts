@@ -1,42 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
-  "https://tctcgptrsmvgajqjgnev.supabase.co";
-const supabasePublishableKey =
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  "sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ";
-
 const configuredFlag = import.meta.env.VITE_SUPABASE_ENABLE as string | undefined;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabasePublishableKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
+// Fail closed: never silently connect a QA or misconfigured build to Production.
 export const supabaseConfigured =
-  (configuredFlag === undefined || configuredFlag === "true") &&
-  Boolean(supabaseUrl && supabasePublishableKey);
+  configuredFlag !== "false" && Boolean(supabaseUrl && supabasePublishableKey);
+
+const clientOptions = {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
+};
 
 export const supabase = supabaseConfigured
-  ? createClient(supabaseUrl!, supabasePublishableKey!, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-      },
-    })
+  ? createClient(supabaseUrl!, supabasePublishableKey!, clientOptions)
   : null;
 
-// Dedicated client for public registration. It does not share the main
-// session/storage lock, so a first-time signup cannot be blocked by the
-// application's session hydration.
-// Isolated browser client dedicated to password-recovery callbacks.
-// The normal application client never consumes the recovery URL, avoiding a
-// race between URL handling and BETHAG's normal login/authorization routing.
+// Dedicated client for public registration; it never shares the main session.
 export const supabaseRecoveryAuth = supabaseConfigured
   ? createClient(supabaseUrl!, supabasePublishableKey!, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-        flowType: "pkce",
-      },
+      ...clientOptions,
+      auth: { ...clientOptions.auth, flowType: "pkce" },
     })
   : null;
 

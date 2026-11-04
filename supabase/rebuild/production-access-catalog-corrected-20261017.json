@@ -1,0 +1,3221 @@
+{
+  "captured_at_utc": "2026-10-17",
+  "project_ref": "tctcgptrsmvgajqjgnev",
+  "objects": {
+    "sequences": [],
+    "functionGrants": [
+      {
+        "schema": "private",
+        "function": "admin_approve_portal_registration",
+        "identity_arguments": "p_request_id uuid, p_member_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "apply_portal_member_permissions",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "apply_resend_communication_event",
+        "identity_arguments": "p_provider_message_id text, p_event_id text, p_event_type text, p_email text, p_event_at timestamp with time zone",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "archive_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "archive_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_condominium",
+        "identity_arguments": "target_condominium uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_condominium",
+        "identity_arguments": "target_condominium uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_condominium",
+        "identity_arguments": "target_condominium uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_resident_condominium",
+        "identity_arguments": "target_condominium uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_resident_condominium",
+        "identity_arguments": "target_condominium uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_resident_condominium_module",
+        "identity_arguments": "target_condominium uuid, required_permission text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_resident_condominium_module",
+        "identity_arguments": "target_condominium uuid, required_permission text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_workspace_module",
+        "identity_arguments": "target_workspace uuid, required_permission text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_access_workspace_module",
+        "identity_arguments": "target_workspace uuid, required_permission text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_manage_workspace_module",
+        "identity_arguments": "target_workspace uuid, required_permission text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "can_manage_workspace_module",
+        "identity_arguments": "target_workspace uuid, required_permission text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "PUBLIC",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "claim_first_workspace_admin",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "close_condominium_fiscal_year",
+        "identity_arguments": "p_workspace_id uuid, p_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "close_condominium_fiscal_year",
+        "identity_arguments": "p_workspace_id uuid, p_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "close_condominium_member_transfer",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "close_fiscal_year_and_generate_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "close_fiscal_year_and_generate_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "compensate_fiscal_carryover",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "compensate_fiscal_carryover",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "complete_portal_registration",
+        "identity_arguments": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "complete_portal_registration",
+        "identity_arguments": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "confirm_condominium_creation_intake",
+        "identity_arguments": "p_intake_id uuid, p_condominium_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "confirm_condominium_creation_intake",
+        "identity_arguments": "p_intake_id uuid, p_condominium_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "confirm_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "confirm_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "delete_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "delete_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_fiscal_year_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_fiscal_year_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_installments_from_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_installments_from_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_installments_from_allocations_schedule",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "generate_installments_from_allocations_schedule",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "get_my_workspace_access",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "get_my_workspace_access",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "guard_confirmed_intake_immutability",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "handle_new_user",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "handle_new_user",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_admin",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_admin",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_admin",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_manager",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_member",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_member",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_member",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_staff",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "is_workspace_staff",
+        "identity_arguments": "target_workspace uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "list_archived_condominiums",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "list_archived_condominiums",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "prepare_communication_recipients",
+        "identity_arguments": "p_communication_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "prevent_new_installment_for_closing_member",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "register_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "register_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "reset_stale_communication_recipients",
+        "identity_arguments": "p_communication_id uuid, p_age interval",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "restore_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "restore_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "reverse_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "set_personal_security_code",
+        "identity_arguments": "p_code text, p_enabled boolean",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "set_personal_security_code",
+        "identity_arguments": "p_code text, p_enabled boolean",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "sync_portal_after_member_change",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "touch_condominium_request_updated_at",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "verify_personal_security_code",
+        "identity_arguments": "p_code text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "function": "verify_personal_security_code",
+        "identity_arguments": "p_code text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "admin_approve_portal_registration",
+        "identity_arguments": "p_request_id uuid, p_member_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "admin_approve_portal_registration",
+        "identity_arguments": "p_request_id uuid, p_member_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "apply_resend_communication_event",
+        "identity_arguments": "p_provider_message_id text, p_event_id text, p_event_type text, p_email text, p_event_at timestamp with time zone",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "apply_resend_communication_event",
+        "identity_arguments": "p_provider_message_id text, p_event_id text, p_event_type text, p_email text, p_event_at timestamp with time zone",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "archive_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "archive_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "archive_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_reason text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "assign_condominium_member_legacy_id",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_condominium_work_change",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_condominium_work_change",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_condominium_work_progress_change",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_condominium_work_progress_change",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_document_ai_change",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "audit_document_ai_change",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "PUBLIC",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "check_condominium_member_transfer_closure",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "claim_first_workspace_admin",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "claim_first_workspace_admin",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "claim_first_workspace_admin",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "clean_deleted_member_owner_references",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "clear_condominium_member_unit_legacy_fields",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "clear_condominium_member_unit_legacy_fields",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_fiscal_year",
+        "identity_arguments": "p_workspace_id uuid, p_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_fiscal_year",
+        "identity_arguments": "p_workspace_id uuid, p_fiscal_year_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_fiscal_year",
+        "identity_arguments": "p_workspace_id uuid, p_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_member_transfer",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_member_transfer",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_condominium_member_transfer",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_fiscal_year_and_generate_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_fiscal_year_and_generate_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "close_fiscal_year_and_generate_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "compensate_fiscal_carryover",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "compensate_fiscal_carryover",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "compensate_fiscal_carryover",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "complete_portal_registration",
+        "identity_arguments": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "complete_portal_registration",
+        "identity_arguments": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "complete_portal_registration",
+        "identity_arguments": "p_full_name text, p_fiscal_code text, p_condominium_name text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_allocation_intake",
+        "identity_arguments": "p_workspace_id uuid, p_intake_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_allocation_intake",
+        "identity_arguments": "p_workspace_id uuid, p_intake_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_allocation_intake",
+        "identity_arguments": "p_workspace_id uuid, p_intake_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_creation_intake",
+        "identity_arguments": "p_intake_id uuid, p_condominium_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_creation_intake",
+        "identity_arguments": "p_intake_id uuid, p_condominium_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_creation_intake",
+        "identity_arguments": "p_intake_id uuid, p_condominium_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "confirm_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "delete_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "delete_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "delete_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_security_code text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "ensure_table_millesimal_values",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "ensure_table_millesimal_values",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "ensure_unit_millesimal_values",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "ensure_unit_millesimal_values",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_condominium_expense_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_condominium_expense_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_condominium_expense_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_table_id uuid, p_due_date date",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_consumption_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_consumption_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_consumption_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_fiscal_year_id uuid, p_service_type text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_fiscal_year_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_fiscal_year_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_fiscal_year_carryovers",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations_schedule",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations_schedule",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "generate_installments_from_allocations_schedule",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_member_transfer_accounting_snapshot",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_member_transfer_accounting_snapshot",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_member_transfer_accounting_snapshot",
+        "identity_arguments": "p_transfer_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_my_workspace_access",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_my_workspace_access",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "get_my_workspace_access",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_condominium_expense_allocation_total",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_condominium_expense_allocation_total",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_confirmed_unit_transformation_immutable",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_confirmed_unit_transformation_immutable",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_confirmed_unit_transformation_items_immutable",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_confirmed_unit_transformation_items_immutable",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_consumption_reading_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_consumption_reading_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_expense_allocation_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_expense_allocation_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fiscal_carryover_compensation_total",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fiscal_carryover_compensation_total",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fiscal_year_opening_balance",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fiscal_year_opening_balance",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fund_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_fund_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_installment_paid_amount_update",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_installment_paid_amount_update",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_installment_paid_amount_update",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_installment_parent_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_installment_parent_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_entry_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_entry_integrity",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_entry_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_parent_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_parent_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_ledger_parent_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_integrity",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_parent_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_parent_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_table_parent_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_value_integrity",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_value_integrity",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_millesimal_value_integrity",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_unit_scope_changes",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "guard_unit_scope_changes",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "list_archived_condominiums",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "list_archived_condominiums",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "list_archived_condominiums",
+        "identity_arguments": "p_workspace_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_condominium_member_contact",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_condominium_member_contact",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_condominium_member_names",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_condominium_member_names",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_zero_ownership_owner",
+        "identity_arguments": "",
+        "grantee": "PUBLIC",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_zero_ownership_owner",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "normalize_zero_ownership_owner",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prepare_communication_recipients",
+        "identity_arguments": "p_communication_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prepare_communication_recipients",
+        "identity_arguments": "p_communication_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prepare_communication_recipients",
+        "identity_arguments": "p_communication_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preserve_closing_condominium_member_history",
+        "identity_arguments": "",
+        "grantee": "PUBLIC",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preserve_closing_condominium_member_history",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preserve_closing_condominium_member_history",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_archived_condominium_mutation",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_archived_condominium_mutation",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_condominium_accounting",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_condominium_accounting",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_payment_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_payment_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_payment_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_record_mutation",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_record_mutation",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_record_mutation",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_reopen",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_reopen",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_update",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_update",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_closed_fiscal_year_update",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_financial_data",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_financial_data",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_financial_data",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_members",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_members",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_condominium_unit_delete_with_members",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_financial_unit_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_financial_unit_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_financial_unit_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_fiscal_year_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_fiscal_year_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_delete_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_delete_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_delete_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_unit_reassignment_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_unit_reassignment_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_member_unit_reassignment_with_financial_history",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_allocation_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_allocation_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_allocation_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_installment_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_installment_delete",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_paid_installment_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_payment_core_mutation",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_payment_core_mutation",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_payment_core_mutation",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_profile_privilege_self_change",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_profile_privilege_self_change",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_profile_privilege_self_change",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_unsafe_condominium_unit_delete",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "prevent_unsafe_condominium_unit_delete",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_member_transfer",
+        "identity_arguments": "p_unit_id uuid, p_outgoing_member_id uuid, p_transfer_date date",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_unit_transformation",
+        "identity_arguments": "p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[]",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_unit_transformation",
+        "identity_arguments": "p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[]",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "preview_condominium_unit_transformation",
+        "identity_arguments": "p_condominium_id uuid, p_transformation_type text, p_source_unit_ids uuid[]",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "register_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "register_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "register_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "require_confirmed_genealogy_for_unit_lifecycle",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "require_trusted_unit_transformation_confirmation",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reset_stale_communication_recipients",
+        "identity_arguments": "p_communication_id uuid, p_age interval",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reset_stale_communication_recipients",
+        "identity_arguments": "p_communication_id uuid, p_age interval",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reset_stale_communication_recipients",
+        "identity_arguments": "p_communication_id uuid, p_age interval",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "restore_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "restore_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "restore_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reverse_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reverse_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "reverse_condominium_installment_payment",
+        "identity_arguments": "p_workspace_id uuid, p_condominium_id uuid, p_payment_id uuid, p_reason text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "save_condominium",
+        "identity_arguments": "p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "set_personal_security_code",
+        "identity_arguments": "p_code text, p_enabled boolean",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "set_personal_security_code",
+        "identity_arguments": "p_code text, p_enabled boolean",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "set_personal_security_code",
+        "identity_arguments": "p_code text, p_enabled boolean",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_expense_payment_status",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_expense_payment_status",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_fund_usage",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_fund_usage",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_installment_from_payments",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_installment_from_payments",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_member_unit_legacy_fields",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_member_unit_legacy_fields",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_work_financial_summary",
+        "identity_arguments": "p_work_id uuid",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_work_financial_summary",
+        "identity_arguments": "p_work_id uuid",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_work_financial_summary_trigger",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "sync_condominium_work_financial_summary_trigger",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "touch_documents_updated_at",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "touch_documents_updated_at",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_allocation_rule_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_allocation_rule_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_audit_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_audit_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_communication_recipient_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_communication_recipient_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_communication_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_communication_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_allocation_intake_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_allocation_intake_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_budget_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_budget_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_consumption_reading_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_consumption_reading_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_creation_intake_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_creation_intake_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_expense_allocation_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_expense_allocation_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_expense_payment_status",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_expense_payment_status",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_fiscal_year_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_fiscal_year_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_fund_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_fund_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_paid_amount",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_paid_amount",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_total",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_installment_total",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_ledger_fund_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_ledger_fund_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_ledger_fund_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_ledger_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_ledger_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_legal_case_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_legal_case_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_member_unit_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_member_unit_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_table_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_table_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_table_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_value_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_value_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_millesimal_value_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_payment_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_payment_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_request_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_request_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_request_status",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_request_status",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_tax_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_tax_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_unit_relationship",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_unit_relationship",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_unit_workspace_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_unit_workspace_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_unit_workspace_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_child_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_child_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_financial_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_financial_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_financial_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_progress_accounting_links",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_progress_accounting_links",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_reference_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_reference_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_reference_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_condominium_work_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_confirmed_unit_transformation_genealogy",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_ai_transition",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_ai_transition",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_metadata",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_metadata",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_upload_size",
+        "identity_arguments": "p_size_bytes bigint, p_warning_bytes bigint, p_max_bytes bigint",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_upload_size",
+        "identity_arguments": "p_size_bytes bigint, p_warning_bytes bigint, p_max_bytes bigint",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_document_upload_size",
+        "identity_arguments": "p_size_bytes bigint, p_warning_bytes bigint, p_max_bytes bigint",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_fiscal_carryover_compensation_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_fiscal_carryover_compensation_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_fiscal_carryover_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_fiscal_carryover_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_ledger_entry_deliberation_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_ledger_entry_deliberation_scope",
+        "identity_arguments": "",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_ledger_entry_deliberation_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_portal_access_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_portal_access_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_portal_registration_request_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_portal_registration_request_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_unit_owner_member_refs",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_unit_owner_member_refs",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_workspace_condominium_scope",
+        "identity_arguments": "",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "validate_workspace_condominium_scope",
+        "identity_arguments": "",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "verify_personal_security_code",
+        "identity_arguments": "p_code text",
+        "grantee": "postgres",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "verify_personal_security_code",
+        "identity_arguments": "p_code text",
+        "grantee": "authenticated",
+        "privilege": "EXECUTE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "function": "verify_personal_security_code",
+        "identity_arguments": "p_code text",
+        "grantee": "service_role",
+        "privilege": "EXECUTE",
+        "grantable": false
+      }
+    ],
+    "schemaGrants": [
+      {
+        "schema": "private",
+        "grantee": "postgres",
+        "privilege": "CREATE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "grantee": "postgres",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "private",
+        "grantee": "authenticated",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "PUBLIC",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "pg_database_owner",
+        "privilege": "CREATE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "pg_database_owner",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "postgres",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "anon",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "authenticated",
+        "privilege": "USAGE",
+        "grantable": false
+      },
+      {
+        "schema": "public",
+        "grantee": "service_role",
+        "privilege": "USAGE",
+        "grantable": false
+      }
+    ],
+    "defaults": [
+      {
+        "schema": "public",
+        "owner": "supabase_admin",
+        "object_type": "S",
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+      },
+      {
+        "schema": "public",
+        "owner": "supabase_admin",
+        "object_type": "f",
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+      },
+      {
+        "schema": "public",
+        "owner": "supabase_admin",
+        "object_type": "r",
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+      },
+      {
+        "schema": "public",
+        "owner": "postgres",
+        "object_type": "S",
+        "acl": "{postgres=rwU/postgres,service_role=rwU/postgres}"
+      },
+      {
+        "schema": "public",
+        "owner": "postgres",
+        "object_type": "f",
+        "acl": "{postgres=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "schema": "public",
+        "owner": "postgres",
+        "object_type": "r",
+        "acl": "{postgres=arwdDxtm/postgres,anon=arwdm/postgres,authenticated=arwdm/postgres,service_role=arwdDxtm/postgres}"
+      }
+    ]
+  }
+}
