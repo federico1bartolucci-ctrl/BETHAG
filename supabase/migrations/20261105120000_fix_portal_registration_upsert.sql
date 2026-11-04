@@ -161,10 +161,6 @@ BEGIN
     IF lower(trim(coalesce(v_member.email,''))) = v_email THEN
       UPDATE public.condominium_members
       SET user_id = v_user_id, updated_at = now()
-      WHERE id = v_member.id;
-
-      UPDATE public.condominium_members
-      SET user_id = v_user_id, updated_at = now()
       WHERE id = v_member.id
       RETURNING * INTO v_member;
 
