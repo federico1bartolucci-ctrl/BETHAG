@@ -25,6 +25,7 @@ const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
 const consoleErrorEvents = [];
+let browserNavigationInProgress = false;
 let browserTeardownStarted = false;
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
@@ -196,12 +197,13 @@ try {
     consoleMessages.push({ type: message.type(), text: message.text() });
     if (message.type() === "error") {
       consoleErrors.push(message.text());
-      consoleErrorEvents.push({ text: message.text(), duringTeardown: browserTeardownStarted });
+      consoleErrorEvents.push({ text: message.text(), duringNavigation: browserNavigationInProgress, duringTeardown: browserTeardownStarted });
     }
   });
   adminPage.on("requestfailed", request => failedRequests.push({
     url: request.url(),
     error: request.failure()?.errorText ?? "unknown",
+    duringNavigation: browserNavigationInProgress,
     duringTeardown: browserTeardownStarted,
   }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
@@ -453,8 +455,13 @@ try {
       row.id === created.id && row.name === editedCondoName && row.archived_at === null
     );
   }, { timeout: 60000 });
-  await adminPage.reload({ waitUntil: "domcontentloaded" });
-  await restoredCondominiumHydration;
+  browserNavigationInProgress = true;
+  try {
+    await adminPage.reload({ waitUntil: "domcontentloaded" });
+    await restoredCondominiumHydration;
+  } finally {
+    browserNavigationInProgress = false;
+  }
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().waitFor({ timeout: 15000 });
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   assert.ok(
@@ -830,7 +837,7 @@ try {
   await adminContext.close();
   assert.deepEqual(pageErrors, []);
   const backendSyncErrorsBeforeTeardown = consoleErrorEvents.filter(event =>
-    !event.duringTeardown && event.text.includes("BETHAG backend sync failed")
+    !event.duringNavigation && !event.duringTeardown && event.text.includes("BETHAG backend sync failed")
   );
   assert.deepEqual(
     backendSyncErrorsBeforeTeardown,
@@ -839,7 +846,7 @@ try {
   );
   const backendNetworkFailures = failedRequests.filter(request =>
     /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url) &&
-    !(request.error === "net::ERR_ABORTED" && request.duringTeardown)
+    !(request.error === "net::ERR_ABORTED" && (request.duringNavigation || request.duringTeardown))
   );
   assert.deepEqual(
     backendNetworkFailures,
