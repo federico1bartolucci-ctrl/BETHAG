@@ -88,7 +88,28 @@
     "postgres_default_anon_crud": true,
     "workspace_members_data_column_present": false,
     "condominiums_archived_at_column_present": true,
-    "save_condominium_archive_state_preserved": false
+    "save_condominium_archive_state_preserved": false,
+    "supabase_admin_default_acl_disposition": {
+      "provider_managed": true,
+      "provider_documentation": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
+      "immutable_from_postgres_role": true,
+      "public_default_acl_rows": 3,
+      "public_table_default_includes_maintain": true,
+      "public_objects_owned_by_supabase_admin": 0,
+      "installed_extensions_in_public": 0,
+      "production_and_qa_public_acl_match": true,
+      "qa_only_system_schema_default_acl": {
+        "schema": "supabase_functions",
+        "acl_rows": 3,
+        "classification": "provider-managed schema; preserve and do not normalize with application migrations"
+      },
+      "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
+      "controls": [
+        "Do not attempt ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin.",
+        "Keep extensions installed outside public unless explicitly reviewed.",
+        "Continue auditing effective privileges on actual application relations and routines."
+      ]
+    }
   },
   "sequence": [
     {
@@ -219,7 +240,7 @@
     "Apply only the fifteen reviewed canonical incremental SQL files, in the frozen sequence, using the guarded transactional runner; migration versions are older than the current live ledger head, so the runner must validate absence by exact version rather than assume the next inserted row is the sorted ledger head.",
     "Verify each SQL postcondition immediately, then verify all 247 historical pairs remain unchanged and exactly fifteen canonical pairs have been added (262 total rows).",
     "Verify collaborator false/true/absent permission cases, workspace_members.data, archive-state preservation, transfer wrapper ACLs and Resend service_role RPC grants.",
-    "Resolve the supabase_admin default ACL MAINTAIN entries with Supabase provider guidance or an explicitly approved security-owner exception.",
+    "Record the immutable supabase_admin defaults as an accepted provider-managed baseline; verify no supabase_admin-owned application objects or extensions are installed in public, and do not attempt to revoke provider-owned defaults.",
     "Run APP-01–APP-15 authenticated application tests and record evidence.",
     "Obtain written approval naming exact commit, all fifteen migration hashes, maintenance window, rollback criteria and backup-risk disposition."
   ],
@@ -326,7 +347,7 @@
     "canonical_rows_added": 15,
     "latest_ledger_version_after_sort": "20261104130000",
     "supabase_admin_default_acl_maintain_entries": 3,
-    "provider_default_acl_disposition_required": true,
+    "provider_default_acl_disposition_required": false,
     "archive_condominium_lifecycle_functions_match_qa": true,
     "incoming_coowner_metadata_trigger_present": true,
     "authenticated_private_invoker_grants": 18,
@@ -336,7 +357,8 @@
     "fund_availability_authenticated_structural_privileges": false,
     "anon_default_table_privileges": 0,
     "transfer_closure_helpers_anon_execute": false,
-    "transfer_closure_helpers_authenticated_execute": true
+    "transfer_closure_helpers_authenticated_execute": true,
+    "supabase_admin_default_acl_disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE"
   },
   "critical_execution_constraint": {
     "observed": "The guarded local-only canonical runner must rehearse all fifteen pending migrations, including collaborator profile metadata, archive lifecycle preservation, authenticated private RPC grants and co-owner metadata.",
@@ -346,11 +368,11 @@
   "no_go_gates": [
     "Provider-backed physical restore has not been performed; local PostgreSQL 17 rehearsal is not provider restore evidence.",
     "Production's three post-freeze migrations (20261102151610, 20261102200855, 20261103070901) must remain preserved and their interaction with the fifteen canonical increments must pass the new PostgreSQL 17 ordered rehearsal.",
-    "Supabase-managed supabase_admin has three public table default-ACL entries granting MAINTAIN; the postgres connection cannot change them. Obtain provider guidance or named security-owner exception.",
     "workspace_members.data is absent in Production and the collaborator boolean function body differs from the desired canonical fix; both remain pending.",
     "save_condominium does not yet preserve archived_at, archived_by and archive_reason across conflict updates; the canonical archive-state migration remains pending.",
     "APP-01–APP-15 authenticated application end-to-end evidence not recorded.",
-    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded."
+    "Named cutover approver, exact commit/migration hashes, maintenance window and rollback criteria are not recorded.",
+    "The QA-only supabase_admin default ACL rows in provider-managed schema supabase_functions are preserved as provider-owned system-schema state; they are not normalized by application migrations. Confirm exposed-schema configuration during release attestation."
   ],
   "safety": "Preserve all 247 live Production ledger rows exactly. No baseline rows, no history rewrite, no deletes. Do not replay the recovered 247 SQL files. The ordered PostgreSQL 17 rehearsal is CI-only and does not modify remote QA or Production. No Production DDL or ledger writes have been performed; this is not authorization to execute.",
   "rehearsal_evidence": {
@@ -407,7 +429,20 @@
       "canonical_rows_added": 15,
       "final_sorted_ledger_head": "20261104130000"
     },
-    "previous_23_file_rehearsal_invalidated": true
+    "previous_23_file_rehearsal_invalidated": true,
+    "provider_acl_assessment": {
+      "status": "PASS_ACCEPTED_PROVIDER_MANAGED_BASELINE",
+      "production_public_default_acl_rows": 3,
+      "qa_public_default_acl_rows": 3,
+      "public_acl_equal": true,
+      "public_objects_owned_by_supabase_admin": 0,
+      "extensions_installed_in_public": 0,
+      "qa_only_supabase_functions_default_acl_rows": 3,
+      "source": "Supabase Knowledge Base: Can't change the default privileges of supabase_admin in the public schema",
+      "source_url": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
+      "remote_queries_read_only": true,
+      "production_or_qa_modified": false
+    }
   },
   "clean_install": {
     "migration_file_count": 24,
