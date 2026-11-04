@@ -3,7 +3,8 @@
 -- Supabase-managed roles/defaults (including supabase_admin) are intentionally untouched.
 -- Apply only after reviewing the live ACL inventory and obtaining cutover approval.
 
--- Existing view ACL: authenticated requires ordinary read access only.
+-- The live object is a view. It is read-only for application users:
+-- remove every direct privilege from authenticated, then restore SELECT only.
 DO $view_acl$
 DECLARE
   target_kind "char";
@@ -14,12 +15,11 @@ BEGIN
   WHERE n.nspname = 'public'
     AND c.relname = 'condominium_fund_availability';
 
-  IF target_kind IN ('r', 'p') THEN
-    EXECUTE 'REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLE public.condominium_fund_availability FROM authenticated';
-  ELSIF target_kind IN ('v', 'm') THEN
-    EXECUTE 'REVOKE REFERENCES, TRIGGER ON TABLE public.condominium_fund_availability FROM authenticated';
+  IF target_kind = 'v' THEN
+    EXECUTE 'REVOKE ALL PRIVILEGES ON TABLE public.condominium_fund_availability FROM authenticated';
+    EXECUTE 'GRANT SELECT ON TABLE public.condominium_fund_availability TO authenticated';
   ELSE
-    RAISE EXCEPTION 'Expected public.condominium_fund_availability to be a table, partitioned table, view or materialized view';
+    RAISE EXCEPTION 'Expected public.condominium_fund_availability to remain a view; found relkind %', target_kind;
   END IF;
 END;
 $view_acl$;
@@ -54,21 +54,15 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
 -- Fail closed if any targeted effective privilege remains.
 DO $verify$
 BEGIN
-  IF has_table_privilege(
-    'authenticated',
-    'public.condominium_fund_availability',
-    'REFERENCES'
-  ) OR has_table_privilege(
-    'authenticated',
-    'public.condominium_fund_availability',
-    'TRIGGER'
-  ) OR (
-    (SELECT c.relkind IN ('r', 'p') FROM pg_class c
-     JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname='public' AND c.relname='condominium_fund_availability')
-    AND has_table_privilege('authenticated','public.condominium_fund_availability','TRUNCATE')
-  ) THEN
-    RAISE EXCEPTION 'ACL reconciliation failed: authenticated retains structural privileges on condominium_fund_availability';
+  IF NOT has_table_privilege('authenticated','public.condominium_fund_availability','SELECT')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','INSERT')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','UPDATE')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','DELETE')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','TRUNCATE')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','REFERENCES')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','TRIGGER')
+     OR has_table_privilege('authenticated','public.condominium_fund_availability','MAINTAIN') THEN
+    RAISE EXCEPTION 'ACL reconciliation failed: authenticated must retain SELECT only on condominium_fund_availability';
   END IF;
 
   IF has_function_privilege(
