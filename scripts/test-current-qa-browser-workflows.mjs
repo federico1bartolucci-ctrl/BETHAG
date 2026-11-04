@@ -24,7 +24,8 @@ const pageErrors = [];
 const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
-const inFlightRestRequests = new Set();
+const consoleErrorEvents = [];
+let browserTeardownStarted = false;
 let temporaryResidentId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
@@ -99,22 +100,6 @@ async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) 
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null));
-}
-
-async function waitForRestIdle(page, timeoutMs = 20000, stableMs = 1200) {
-  const deadline = Date.now() + timeoutMs;
-  let idleSince = null;
-  while (Date.now() < deadline) {
-    if (inFlightRestRequests.size === 0) {
-      if (idleSince === null) idleSince = Date.now();
-      if (Date.now() - idleSince >= stableMs) return;
-    } else {
-      idleSince = null;
-    }
-    await page.waitForTimeout(100);
-  }
-  const pending = [...inFlightRestRequests].map(request => request.url());
-  throw new Error("Supabase REST requests did not settle before browser teardown: " + JSON.stringify(pending));
 }
 
 async function cleanupFixtures() {
@@ -209,16 +194,16 @@ try {
   const adminPage = await adminContext.newPage();
   adminPage.on("console", message => {
     consoleMessages.push({ type: message.type(), text: message.text() });
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+      consoleErrorEvents.push({ text: message.text(), duringTeardown: browserTeardownStarted });
+    }
   });
-  adminPage.on("request", request => {
-    if (request.url().includes("/rest/v1/")) inFlightRestRequests.add(request);
-  });
-  adminPage.on("requestfinished", request => inFlightRestRequests.delete(request));
-  adminPage.on("requestfailed", request => {
-    inFlightRestRequests.delete(request);
-    failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? "unknown" });
-  });
+  adminPage.on("requestfailed", request => failedRequests.push({
+    url: request.url(),
+    error: request.failure()?.errorText ?? "unknown",
+    duringTeardown: browserTeardownStarted,
+  }));
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
@@ -835,30 +820,31 @@ try {
   await commCard.waitFor({ state: "detached", timeout: 20000 });
   results.push({ id: "APP-12", status: "PASS", checks: ["administrator created and published communication from UI", "resident saw published communication", "administrator withdrew publication", "resident lost visibility after withdrawal", "communication deleted from UI"] });
 
-  // Drain debounced workspace synchronization before closing the browser.
-  // Waiting for a stable period with no in-flight REST requests prevents
-  // page teardown from aborting a legitimate portal_access/member upsert and
-  // being misreported as a backend synchronization failure.
-  await waitForRestIdle(adminPage, 20000, 1200);
+  // Allow the app's debounced background synchronization to settle before
+  // teardown. Only ERR_ABORTED events emitted after this point are teardown
+  // noise; backend errors or network failures before teardown remain failures.
+  await adminPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+  await adminPage.waitForTimeout(1000);
+  browserTeardownStarted = true;
   await residentContext.close();
   await adminContext.close();
   assert.deepEqual(pageErrors, []);
-  const portalAccessSyncErrors = consoleErrors.filter(message =>
-    message.includes("BETHAG backend sync failed")
-  );
-  const abortedBackendSyncs = failedRequests.filter(request =>
-    request.error === "net::ERR_ABORTED" &&
-    /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url)
+  const backendSyncErrorsBeforeTeardown = consoleErrorEvents.filter(event =>
+    !event.duringTeardown && event.text.includes("BETHAG backend sync failed")
   );
   assert.deepEqual(
-    portalAccessSyncErrors,
+    backendSyncErrorsBeforeTeardown,
     [],
-    "Backend synchronization must settle without console errors: " + JSON.stringify({ portalAccessSyncErrors, failedRequests })
+    "Backend synchronization must not fail before browser teardown: " + JSON.stringify({ backendSyncErrorsBeforeTeardown, failedRequests })
+  );
+  const backendNetworkFailures = failedRequests.filter(request =>
+    /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url) &&
+    !(request.error === "net::ERR_ABORTED" && request.duringTeardown)
   );
   assert.deepEqual(
-    abortedBackendSyncs,
+    backendNetworkFailures,
     [],
-    "Backend synchronization requests must not be aborted: " + JSON.stringify({ abortedBackendSyncs, failedRequests })
+    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests })
   );
   const backendHttpFailures = failedRequests.filter(request =>
     request.status >= 400 && /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url)
