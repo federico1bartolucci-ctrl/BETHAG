@@ -24,7 +24,7 @@ as $function$
         wm.role = 'admin'
         or (
           wm.role = 'collaborator'
-          and coalesce(wm.permissions, '{}'::jsonb) ? required_permission
+          and coalesce(wm.permissions, '[]'::jsonb) ? required_permission
         )
       )
   );
