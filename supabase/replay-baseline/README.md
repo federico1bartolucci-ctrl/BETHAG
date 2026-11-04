@@ -29,3 +29,9 @@ The baseline reconstructs only the core pre-reference columns and foreign keys f
 ## Accounting ledger entries relation
 
 The recovered Production ledger also contains no `CREATE TABLE` payload for `public.condominium_ledger_entries`, although the early recorded allocation RPCs and accounting trigger migrations reference it. The relation is therefore another pre-ledger object required for a chronological replay. Its columns were reconstructed from the read-only Production catalog. The baseline creates only the table and primary key; later ledger payloads remain responsible for the indexes, RLS policies, constraints and trigger definitions they introduce or reconcile. This is a test-only reconstruction and not an original historical DDL payload.
+
+## Chronological unit foreign key bridge
+
+The pre-ledger `condominium_expense_allocations` relation has a `unit_id` foreign key in the live Production catalog, but the referenced `public.condominium_units` table is created later by recovered migration `20260928154553_add_condominium_units_and_member_unit_link_v2`. The first replay attempt exposed this ordering dependency: defining the foreign key in the initial pre-ledger baseline fails because the units relation does not exist yet.
+
+The baseline therefore creates `unit_id` as a UUID column without that foreign key. A second replay-only prerequisite, timestamped `20260928154554`, restores the exact foreign key immediately after the historical migration creates `condominium_units`. The replay workflow stages both prerequisites and the 247 untouched historical payloads together; Supabase CLI applies them in filename/version order. This preserves chronology and avoids inventing a pre-ledger unit table or modifying historical SQL.
