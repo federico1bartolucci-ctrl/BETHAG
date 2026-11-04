@@ -128,3 +128,12 @@ The replay workflow now asserts 17 replay-only prerequisite files plus 247 histo
 The public ACL reconciliation at `20261005132430` grants EXECUTE to 12 more trigger functions for which no earlier CREATE appears in the 247 payloads. They were retrieved read-only from Production with `pg_get_functiondef` and seeded at `20260930190447`, before the earliest recorded use of `guard_installment_paid_amount_update` in `20260930190448`. The remaining 11 are required by the ACL reconciliation before later migrations redefine some of them. All 12 are PL/pgSQL trigger functions and are test-only compatibility seeds; no historical SQL payload is altered.
 
 The workflow now asserts 18 replay-only prerequisite files plus 247 historical payloads (265 staged SQL files total).
+
+
+## Additional pre-ledger condominium metadata columns — 2026-11-04
+
+A full column inventory compared the 612 columns on Production base tables with all recovered CREATE TABLE and ALTER TABLE ADD COLUMN statements. It identified three further columns absent from the 247-payload history and not added by any later historical migration: `condominium_units.building_code`, `condominiums.archived_by`, and `condominiums.archive_reason`. `building_code` is restored immediately after `condominium_units` is created at `20260928154555`, before its first SQL-function reference. The three condominium archive metadata columns (`archived_at`, `archived_by`, `archive_reason`) are restored together at `20261001083703`; this is before the later archive-by index and RPC reconciliation. The `archived_by` FK to `public.profiles(id)` and all types/nullability/defaults match the read-only Production catalog.
+
+The same inventory found `condominium_creation_intakes.created_condominium_id` and `documents.file_size_bytes` missing at that point in the replay, but both are added by the recorded historical migration `20261005132340_reconcile_remaining_core_columns_v2.sql`; no baseline copy was added for them.
+
+The replay workflow now asserts 19 replay-only prerequisite files plus 247 exact historical payloads (266 staged SQL files total).
