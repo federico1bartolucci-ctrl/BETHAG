@@ -11,6 +11,7 @@ on:
     branches: ["recovery/production-ledger-archive-20261103"]
     paths:
       - "supabase/replay-candidate/**"
+      - "supabase/replay-baseline/**"
       - ".github/workflows/replay-production-ledger-postgres17.yml"
   workflow_dispatch:
 
