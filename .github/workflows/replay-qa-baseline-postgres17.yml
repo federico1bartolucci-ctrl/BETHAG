@@ -1,0 +1,132 @@
+name: Replay QA baseline and forward migrations on Supabase PostgreSQL 17
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "supabase/qa-reconciliation/**"
+      - ".github/workflows/replay-qa-baseline-postgres17.yml"
+  push:
+    branches: ["recovery/production-ledger-archive-20261103"]
+    paths:
+      - "supabase/qa-reconciliation/**"
+      - ".github/workflows/replay-qa-baseline-postgres17.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bethag-qa-baseline-replay-postgres17
+  cancel-in-progress: false
+
+jobs:
+  replay-qa-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_TELEMETRY_DISABLED: "true"
+    steps:
+      - name: Checkout QA migration archive
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Create disposable PostgreSQL 17 Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/bethag-qa-baseline-replay
+          cd /tmp/bethag-qa-baseline-replay
+          supabase init
+          test -f supabase/config.toml
+          grep -q '^major_version = ' supabase/config.toml
+          sed -i '/^\[db\]/,/^\[/{s/^major_version = .*/major_version = 17/;}' supabase/config.toml
+          grep -A8 '^\[db\]' supabase/config.toml
+
+      - name: Stage exact QA baseline and forward-only migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir=supabase/qa-reconciliation/migrations
+          target=/tmp/bethag-qa-baseline-replay/supabase/migrations
+          mkdir -p "$target"
+          find "$target" -maxdepth 1 -type f -name '*.sql' -delete
+          total_count=$(find "$source_dir" -maxdepth 1 -type f -name '*.sql' | wc -l)
+          baseline_count=$(find "$source_dir" -maxdepth 1 -type f -name '2026101700000*.sql' | wc -l)
+          test "$total_count" -eq 33
+          test "$baseline_count" -eq 5
+          forward_count=$((total_count - baseline_count))
+          test "$forward_count" -eq 28
+          cp "$source_dir"/*.sql "$target/"
+          staged_count=$(find "$target" -maxdepth 1 -type f -name '*.sql' | wc -l)
+          test "$staged_count" -eq 33
+          echo "Staged $baseline_count QA baseline snapshots and $forward_count QA forward-only migrations ($staged_count total)."
+          diff -u <(find "$source_dir" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort) <(find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
+
+      - name: Start disposable Supabase stack
+        working-directory: /tmp/bethag-qa-baseline-replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start --debug 2>&1 | tee /tmp/bethag-qa-baseline-replay/start.log
+
+      - name: Replay QA baseline and forward migrations
+        working-directory: /tmp/bethag-qa-baseline-replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --local --debug 2>&1 | tee /tmp/bethag-qa-baseline-replay/replay.log
+
+      - name: Verify migration registry and schema invariants
+        working-directory: /tmp/bethag-qa-baseline-replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=/tmp/bethag-qa-baseline-replay/supabase/migrations
+          expected=/tmp/bethag-qa-baseline-replay/expected-versions.txt
+          applied=/tmp/bethag-qa-baseline-replay/applied-versions.txt
+          find "$target" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sed 's/_.*//' | sort > "$expected"
+          test "$(wc -l < "$expected")" -eq 33
+          db_container=$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n 1)
+          test -n "$db_container"
+          docker exec "$db_container" psql -U postgres -d postgres -At -c "select version from supabase_migrations.schema_migrations order by version" > "$applied"
+          test "$(wc -l < "$applied")" -eq 33
+          diff -u "$expected" "$applied"
+          test -z "$(uniq -d "$applied")"
+          docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -At -F '|' -c "
+            select
+              (select count(*) from pg_tables where schemaname='public'),
+              (select count(*) from information_schema.columns where table_schema='public'),
+              (select count(*) from pg_indexes where schemaname='public'),
+              (select count(*) from pg_policies where schemaname='public'),
+              (select count(*) from pg_constraint c join pg_class r on r.oid=c.conrelid join pg_namespace n on n.oid=r.relnamespace where n.nspname='public'),
+              (select count(*) from pg_trigger t join pg_class r on r.oid=t.tgrelid join pg_namespace n on n.oid=r.relnamespace where n.nspname='public' and not t.tgisinternal),
+              (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private')),
+              (select count(*) from pg_tables t join pg_class c on c.relname=t.tablename and c.relnamespace='public'::regnamespace where not c.relrowsecurity)
+          " > /tmp/bethag-qa-baseline-replay/schema-counts.txt
+          cat /tmp/bethag-qa-baseline-replay/schema-counts.txt
+          expected_counts='47|613|257|103|305|147|172|0'
+          actual_counts=$(cat /tmp/bethag-qa-baseline-replay/schema-counts.txt)
+          test "$actual_counts" = "$expected_counts"
+          echo "QA baseline verified: 33/33 versions; 47 tables, 613 columns, 257 indexes, 103 policies, 305 constraints, 147 triggers, 172 functions; RLS enabled on every public table."
+
+      - name: Upload QA replay diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-baseline-postgres17-diagnostics
+          path: |
+            /tmp/bethag-qa-baseline-replay/start.log
+            /tmp/bethag-qa-baseline-replay/replay.log
+            /tmp/bethag-qa-baseline-replay/schema-counts.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop disposable Supabase stack
+        if: always()
+        working-directory: /tmp/bethag-qa-baseline-replay
+        run: supabase stop --no-backup || true
