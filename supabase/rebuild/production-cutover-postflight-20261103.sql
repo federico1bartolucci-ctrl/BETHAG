@@ -93,7 +93,7 @@ BEGIN
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
   IF ledger_count <> 262 OR ledger_head <> '20261104130000' THEN
-    RAISE EXCEPTION 'FAIL: expected 261 rows with sorted max 20261103070901, found %, %',ledger_count,ledger_head;
+    RAISE EXCEPTION 'FAIL: expected 262 rows with sorted max 20261104130000, found %, %',ledger_count,ledger_head;
   END IF;
   SELECT count(*)::integer INTO canonical_count FROM supabase_migrations.schema_migrations
   WHERE (version,name) IN (
