@@ -107,3 +107,10 @@ The workflow now asserts 15 replay-only prerequisite files plus 247 historical p
 ## Pre-ledger private transfer-close implementation — 2026-11-04
 
 The first recorded operation on `private.close_condominium_member_transfer(uuid)` is `ALTER FUNCTION` in `20261001081847`, but none of the 247 recovered payloads creates this private function. A read-only `pg_get_functiondef` from Production confirms the live implementation. The implementation is therefore included after the `condominium_member_transfers` table in the same replay-only prerequisite file at `20261001081846`. It includes the current financial closure checks and the unit-carryover guard. The later historical migration `20261003050722` explicitly exits when that guard is already present, so it remains compatible and idempotent. This is a replay reconstruction from current Production state, not recovered original pre-ledger SQL; it must never be deployed to QA or Production.
+
+
+## Pre-ledger public RPC implementations — 2026-11-04
+
+Static inspection of `20260930235538_harden_public_rpc_security_definer_boundaries.sql` found six `ALTER FUNCTION public.* SET SCHEMA private` operations for which no earlier CREATE exists in the recovered 247 payloads: `archive_condominium`, `close_condominium_fiscal_year`, `close_fiscal_year_and_generate_carryovers`, `confirm_condominium_creation_intake`, `list_archived_condominiums`, and `restore_condominium`. The `ALTER` statements prove that these public functions existed before that migration. Their current Production definitions were retrieved read-only with `pg_get_functiondef` and seeded under the public schema at `20260930235537`; the following historical migration then moves them into `private`, and later ledger payloads reconcile their implementations and wrappers. This is a replay reconstruction from current Production definitions, not recovered original SQL. The file is synthetic test scaffolding and must never be deployed to QA or Production.
+
+The workflow now asserts 16 replay-only prerequisite files plus 247 exact historical payloads (263 staged SQL files total).
