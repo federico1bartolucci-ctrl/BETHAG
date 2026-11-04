@@ -1,0 +1,45 @@
+# BETHAG — QA acceptance evidence, 4 November 2026
+
+**Target:** isolated Supabase QA branch `jhuyhlzzydcgghrzeexn`  
+**Repository branch:** `ops/qa-secret-validation-20261102`  
+**Commit tested:** `76c7777f36e0670cc711638c11250d7e2e92040f`  
+**GitHub Actions:** [run 41930800999](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41930800999)  
+**Disposition:** automated QA run PASS; overall release remains **NO-GO**.
+
+## Evidence from the completed run
+
+Both jobs completed successfully.
+
+- Build, public-login browser smoke and authenticated QA browser workflow job: **PASS**.
+- Isolated PostgreSQL 17 bootstrap and baseline checks: **PASS**.
+- All 14 canonical migrations executed by the guarded runner on the isolated PostgreSQL instance: **PASS**.
+- Incremental hardening catalog/ACL checks, collaborator permission enforcement with RLS, and canonical ledger rehearsal: **PASS**.
+- Real Supabase Auth sign-in, role-specific landing, refresh/session persistence, explicit logout and fresh sign-in: administrator, collaborator and resident **3/3 PASS**.
+- Role navigation: administrator, collaborator and resident **3/3 PASS**.
+- APP-05: **PASS** — condominium/unit creation and editing persisted; archive/restore and structured archive metadata verified.
+- APP-06: **PASS** — €125.50 expense, 1,000-millesimi allocation and installment persisted.
+- APP-07: **PASS** — database rejected a ledger mutation against the persistent QA-only closed-year fixture; original amount remained unchanged.
+- APP-08/11 transfer subset: **PASS** — preview, authorization boundary, multi-co-owner 60/40 transfer, incoming owner persistence, outgoing owner closure, and automatic deactivation of the outgoing owner's portal access were observed.
+- APP-09 transfer financial-blocker subset: **PASS** — €90 unpaid installment, €30 member carryover and €45 unit carryover prevented closure; transfer, owner, installment and carryover state remained unchanged after rejection.
+- APP-12 publication subset: **PASS** — administrator publish/withdraw visibility was reflected for the resident.
+- Temporary APP-05/06 fixtures were deleted and verified absent. The APP-07 closed-year fixture was retained intentionally. APP-08/11 temporary test rows were cleaned by the test script.
+
+## Scope limits and outstanding acceptance
+
+A green CI run does not close every APP acceptance criterion.
+
+- APP-08 remains partial: outgoing portal access revocation was checked, but a full incoming-owner portal registration/login and access verification was not performed.
+- APP-11 remains partial: database-level rejection/rollback invariants passed; complete UI rollback proof is still required.
+- APP-12 remains partial: publication visibility passed; multi-recipient delivery, real inbox receipt, bounce and complaint processing were not tested.
+- APP-14 remains open: the run performed a read-only Production security/ACL parity check, but it does not resolve the provider migration status or all Production/default-privilege approval gates.
+- APP-15 remains partial: three-role sign-out/sign-in and navigation smoke passed; exhaustive core-module regression is not established by this run.
+- APP-01–04 and APP-13 were not rerun in this particular workflow run; their earlier independent evidence must be tracked separately and must not be inferred from this run.
+
+The browser log also records one aborted background synchronization request (`net::ERR_ABORTED`) without uncaught page errors or a failed test assertion. It is non-fatal in this run but remains a diagnostic observation for the final collaudo.
+
+## Safety and release decision
+
+- No Production schema, data, migration, deployment or cutover operation was performed by this run.
+- The PostgreSQL migration rehearsal was isolated and disposable.
+- The PR remains draft and is not authorized for merge.
+- Production release remains **NO-GO** until the outstanding APP acceptance items, QA/provider migration disposition, Production ACL/default-privilege parity, review of the PR change scope, and explicit cutover approval are complete.
