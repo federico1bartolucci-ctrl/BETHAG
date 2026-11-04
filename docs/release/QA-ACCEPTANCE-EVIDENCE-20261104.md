@@ -1,9 +1,9 @@
 # BETHAG — QA acceptance evidence, 4 November 2026
 
-**Target:** isolated Supabase QA branch `jhuyhlzzydcgghrzeexn`  
-**Repository branch:** `ops/qa-secret-validation-20261102`  
-**Commit tested:** `76c7777f36e0670cc711638c11250d7e2e92040f`  
-**GitHub Actions:** [run 41930800999](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41930800999)  
+**Target:** isolated Supabase QA branch `jhuyhlzzydcgghrzeexn`  \
+**Repository branch:** `ops/qa-secret-validation-20261102`  \
+**Commit tested:** `76c7777f36e0670cc711638c11250d7e2e92040f`  \
+**GitHub Actions:** [run 41930800999](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41930800999)  \
 **Disposition:** automated QA run PASS; overall release remains **NO-GO**.
 
 ## Evidence from the completed run
@@ -43,3 +43,33 @@ The browser log also records one aborted background synchronization request (`ne
 - The PostgreSQL migration rehearsal was isolated and disposable.
 - The PR remains draft and is not authorized for merge.
 - Production release remains **NO-GO** until the outstanding APP acceptance items, QA/provider migration disposition, Production ACL/default-privilege parity, review of the PR change scope, and explicit cutover approval are complete.
+
+## Follow-up evidence — 5 November 2026
+
+**Commit tested:** `724533ec7e09a195496f425f5461342e80a6acf5`  
+**Full CI:** [run 41932062809](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41932062809) — both jobs **SUCCESS**.  
+**Dedicated real-account authentication:** [run 41932055131](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41932055131) — administrator, collaborator and resident **3/3 PASS**.
+
+- Build, public-login browser smoke, authenticated QA edit/archive diagnostic: **PASS**.
+- PostgreSQL 17 fresh bootstrap, baseline, all 14 canonical migrations, incremental catalog/ACL postconditions, collaborator permission/RLS regression and isolated canonical-ledger transaction rehearsal: **PASS**.
+- APP-05: **PASS** — condominium and hierarchical unit created and reread through a real administrator session.
+- APP-06: **PASS** — €125.50 expense, 1,000-millesimi allocation and unpaid installment persisted through the UI.
+- APP-07: **PASS** — database rejected a ledger mutation against the closed-year QA fixture; original amount remained unchanged.
+- APP-08/11 transfer subset: **PASS** — preview, authorization boundary, duplicate co-owner email rejection with rollback, two incoming co-owners at 50/50 through UI, persisted ownership shares and individual metadata, zero-balance closure, outgoing owner archival and portal-access deactivation; incoming co-owners visible after navigation without hard reload.
+- APP-09 blocker subset: **PASS** — unpaid €90 installment and €30 member / €45 unit carryovers blocked closure without changing transfer, owner, installment or carryover state.
+- APP-12 publication subset: **PASS** — publication and withdrawal visibility confirmed for resident.
+- Role navigation: administrator, collaborator and resident **3/3 PASS**. Real Auth sign-in, role landing, session refresh, logout and fresh sign-in: **3/3 PASS**.
+- Cleanup reported successful for temporary fixtures; the designated closed-year QA fixture remains intentionally present.
+- One background synchronization request ended with `net::ERR_ABORTED`; no uncaught page errors and no failed test assertion were reported. Keep this as a non-fatal diagnostic observation.
+
+The real-account auth script currently emits the label “resident profile hydration” in its checks list for all three roles although the hydration wait is executed only for the resident role. The PASS result is valid for the actual checks, but the diagnostic label is imprecise and should be corrected in a later script cleanup.
+
+## Remaining release gates (unchanged)
+
+- APP-08: incoming-owner registration, real login and portal access still need end-to-end proof.
+- APP-11: full UI rollback proof remains outstanding; database rollback/blocker invariants alone are insufficient.
+- APP-12: multi-recipient delivery, real inbox receipt, bounce and complaint processing remain untested.
+- APP-14: resolve provider migration status and complete Production ACL/default-privilege parity evidence and approval.
+- APP-15: exhaustive core-module regression remains outstanding; current role navigation/auth smoke is not a substitute.
+- Review the very broad PR #36 scope and its current non-mergeable state before any merge decision.
+- APP-01–04 and APP-13 evidence remains separate and must be verified against current code/environment before final acceptance.
