@@ -7,7 +7,7 @@ on:
     paths:
       - "supabase/migrations/**"
       - "supabase/rebuild/qa-only-migrations/**"
-      - "supabase/rebuild/qa-reconstructed-migrations/**"
+      - "supabase/rebuild/qa-recovered-migrations/**"
       - "supabase/rebuild/qa-ledger-20261104.json"
       - "scripts/test-qa-ledger-replay-reconstruction.mjs"
       - ".github/workflows/qa-ledger-replay-reconstruction.yml"
