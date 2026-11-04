@@ -52,7 +52,7 @@ Verified in that run:
 - 47 public relations.
 - Authenticated MAINTAIN: 0; service_role MAINTAIN: 0.
 - PostgreSQL-owned public/global default MAINTAIN entries: 0.
-- Supabase-managed `supabase_admin` default MAINTAIN entries: 3. These are provider-managed and were not changed. Obtain provider guidance or a named security-owner disposition before cutover.
+- Supabase-managed `supabase_admin` default ACL rows in `public`: 3 (tables, sequences, functions); the table default includes MAINTAIN. These are immutable provider-managed defaults, not application-owned grants. The final 2026-11-04 assessment below supersedes the earlier open disposition.
 - Public transfer wrapper is SECURITY INVOKER; authenticated/service_role private invocation path is present.
 - `workspace_members.data` is not yet present in live Production.
 - `save_condominium` does not yet preserve all server-owned archive lifecycle fields.
@@ -61,7 +61,7 @@ Verified in that run:
 
 The isolated technical rehearsal is PASS. **Production cutover remains NO-GO** until all of the following are resolved and approved:
 
-1. Obtain provider guidance or a named security-owner exception for the three Supabase-managed default MAINTAIN entries.
+1. Record the immutable Supabase-managed default ACLs as an accepted provider baseline; do not attempt to revoke them. The final 2026-11-04 assessment below closes this item.
 2. Complete APP-01–APP-15 authenticated acceptance evidence.
 3. Reconcile QA's `MIGRATIONS_FAILED` status and prove QA/Production equivalence; capture every environment ledger.
 4. Complete object-by-object live ACL/ownership/default-privilege parity attestation.
@@ -114,4 +114,22 @@ The isolated cutover rehearsal preserved all 247 historical version/name pairs a
 
 The final ACL assertions passed, including authenticated structural privileges on `public.condominium_fund_availability` denied, anon execution of transfer-closure helpers denied, authenticated execution retained, and anon default CRUD on future public tables removed. Collaborator permission false/true behavior and the archive/co-owner lifecycle checks also passed.
 
-**Scope limitation:** this is a successful isolated PostgreSQL 17 rehearsal and QA browser diagnostic, not a provider-backed physical restore and not a Production cutover. No remote Supabase DDL/ledger writes, merge or deployment were performed. Production remains NO-GO pending provider-managed default-ACL disposition, APP-01–APP-15 acceptance, backup/restore gate and written cutover approval naming the exact commit/hashes, window and rollback criteria.
+**Scope limitation:** this is a successful isolated PostgreSQL 17 rehearsal and QA browser diagnostic, not a provider-backed physical restore and not a Production cutover. No remote Supabase DDL/ledger writes, merge or deployment were performed. Production remains NO-GO pending APP-01–APP-15 acceptance, backup/restore gate and written cutover approval naming the exact commit/hashes, window and rollback criteria. The immutable `supabase_admin` defaults have been assessed and accepted as provider-managed baseline; they are no longer a standalone blocker.
+
+## Superseding provider-managed default ACL assessment — 2026-11-04
+
+The earlier requirement to obtain provider guidance or a security-owner exception for the three `supabase_admin` default ACL rows in `public` is superseded by the official Supabase Knowledge Base article, updated 2026-11-04: [Can't change the default privileges of supabase_admin in the public schema](https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9).
+
+Supabase documents that these defaults belong to its internal `supabase_admin` role and cannot be changed by `postgres`, because role membership is reserved to Supabase. They apply only to objects created by `supabase_admin`; they are not the defaults for application objects created by `postgres`. The supported controls are to manage `postgres`'s own defaults and keep extensions out of `public`.
+
+Read-only catalog checks on both live projects confirmed:
+
+- Production and QA each have exactly three `supabase_admin` default ACL rows in `public` (tables, sequences and functions); the table default includes MAINTAIN.
+- The three `public` default ACL rows match between Production and QA.
+- No current relation in `public` is owned by `supabase_admin`.
+- No installed extension is installed in `public`; the installed extensions are in `extensions`, `vault` or `pg_catalog`.
+- QA additionally has three `supabase_admin` default ACL rows in the provider-managed `supabase_functions` schema; Production does not. This is a provider/system-schema difference, not an application-schema grant. It is preserved and not normalized by BETHAG migrations.
+
+**Disposition: ACCEPTED_PROVIDER_MANAGED_BASELINE.** Do not attempt `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin`, do not alter provider-owned schemas, and keep extensions outside `public`. Continue auditing effective grants on actual BETHAG relations, views and functions. Confirm the exposed-schema configuration for `supabase_functions` as part of the final release attestation.
+
+This assessment was read-only: no Production or QA DDL, ACL, data or migration-ledger writes were performed.
