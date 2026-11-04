@@ -28,7 +28,7 @@ The complete QA source history covers 50 versions:
 
 - 16 original Production-ledger migrations are now marked reverted and point to unchanged files in `supabase/replay-candidate/`.
 - 34 QA baseline / forward-only entries remain applied and are archived under `supabase/qa-reconciliation/migrations/`.
-- All 34 applied QA SQL files were compared byte-for-byte with the ordered `statements` arrays stored in the QA migration registry.
+- All 34 applied QA SQL files were checked against the ordered `statements` arrays stored in the QA migration registry using PostgreSQL MD5 and character counts. The 17 canonical matches are exact; the 17 QA-specific files match after normalizing the single terminal newline used by repository files. The final `20261104125614` file was also normalized to the exact registry SQL statement.
 - `manifest.json` maps all 34 applied versions; `legacy-history-repair.json` records the 16 reverted historical versions.
 
 The registry repair changed migration metadata only; it did not alter application tables or user data. No branch reset, rebase, or recreation was performed.
