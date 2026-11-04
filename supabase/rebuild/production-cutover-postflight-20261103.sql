@@ -84,6 +84,12 @@ BEGIN
   CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a
   WHERE n.nspname IN ('public','private') AND a.grantee=0 AND a.privilege_type='EXECUTE';
   IF public_routines IS NOT NULL THEN RAISE EXCEPTION 'FAIL: unexpected PUBLIC EXECUTE remains: %',public_routines; END IF;
+  IF has_function_privilege('anon','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR has_function_privilege('anon','public.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: transfer closure helper EXECUTE ACL differs from reviewed QA policy';
+  END IF;
 
   SELECT prosecdef INTO wrapper_definer FROM pg_proc WHERE oid='public.close_condominium_member_transfer(uuid)'::regprocedure;
   IF wrapper_definer IS DISTINCT FROM false THEN RAISE EXCEPTION 'FAIL: transfer wrapper is not SECURITY INVOKER'; END IF;
