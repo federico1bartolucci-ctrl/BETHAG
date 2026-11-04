@@ -93,5 +93,11 @@
     }
   ],
   "expected_applied_registry_count": 33,
-  "reason": "The five full schema baseline snapshots supersede these 16 pre-baseline historical migrations. Their exact SQL remains preserved in the recovered Production-ledger archive. The isolated QA replay proved the five baseline plus 28 forward-only migrations reconstruct the live QA table-column inventory and schema counts."
+  "reason": "The five full schema baseline snapshots supersede these 16 pre-baseline historical migrations. Their exact SQL remains preserved in the recovered Production-ledger archive. The isolated QA replay proved the five baseline plus 28 forward-only migrations reconstruct the live QA table-column inventory and schema counts.",
+  "status": "completed",
+  "actual_reverted_at": "2026-11-04",
+  "actual_rows_deleted": 16,
+  "applied_registry_count_after_repair": 33,
+  "schema_or_application_data_changed": false,
+  "verification": "list_migrations returned exactly 33 applied entries, beginning at 20261017000001 and ending at 20261104122833; 47 public tables remain and RLS is enabled on all."
 }
