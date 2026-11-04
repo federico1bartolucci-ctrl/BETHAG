@@ -92,7 +92,7 @@ const gates = {
     process.env.BETHAG_BACKUP_RESTORE_VERIFIED === "YES" ||
     Boolean(
       (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim() &&
-      /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim()) &&
+      /^\d{4}-\d{2}-\d{2}T.*Z$/.test((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim()) &&
       (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim()
     ),
   live_production_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
