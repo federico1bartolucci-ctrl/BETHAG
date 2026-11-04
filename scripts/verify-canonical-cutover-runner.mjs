@@ -29,6 +29,7 @@ assert.equal(manifest.sequence.length, 15, "Superseding cutover must contain exa
 assert.match(preflight, /ledger_count <> 247 OR ledger_head <> '20261103070901'/, "Preflight must verify the current 247-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
 assert.match(postflight, /ledger_count <> 262 OR ledger_head <> '20261104130000'/, "Postflight must expect all fifteen canonical migrations and the correct ledger head.");
+assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /canonical_count <> 15 THEN/, "Postflight must verify all fourteen canonical migration records.");
 assert.match(postflight, /ledger_count <> 261 OR ledger_head <> '20261103070901'/, "Postflight must retain the latest Production forward version while adding older canonical versions.");
