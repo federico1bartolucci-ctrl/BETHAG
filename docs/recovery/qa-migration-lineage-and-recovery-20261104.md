@@ -108,3 +108,17 @@ A read-only catalog comparison was run directly against QA (`jhuyhlzzydcgghrzeex
 QA is not schema-identical to Production, even though table/constraint/index/policy counts are very close. The additional workspace-member metadata column and incoming-co-owner trigger/function are consistent with QA-specific feature work; the five changed function bodies and 28 EXECUTE differences are material and must be classified as intended QA-only changes, canonical forward fixes, or unintended drift.
 
 The catalog comparison does **not** justify resetting QA or copying Production objects into it. Before recovery, reconcile the five function bodies and every EXECUTE difference against the canonical source, then rehearse the exact changes in a disposable PostgreSQL 17 environment. The data-bearing QA branch remains untouched.
+
+
+### Semantic review of the five differing function bodies
+
+The live definitions were retrieved read-only from both databases. The differences are functional, not formatting-only:
+
+- `private.can_manage_workspace_module`: QA handles JSON permission arrays and objects and requires an object value to be the JSON boolean `true`. Production uses key-presence (`?`) for object permissions; a stored `false` value can therefore be treated as enabled. This is a confirmed authorization logic defect in the Production definition relative to the corrected QA implementation.
+- `private.can_access_workspace_module`: QA likewise handles both array/object formats and checks the object value is boolean `true`; Production uses array-key membership only. This is a compatibility/authorization semantic difference.
+- `private.save_condominium`: QA preserves archive metadata as server-owned state during conflict updates and explicitly handles archive metadata on inserts. Production's older body does not preserve the three archive columns in the same way. The QA definition aligns with the intent of canonical migration `20261102100200_preserve_server_owned_condominium_archive_state.sql`.
+- `private.archive_condominium`: QA also synchronizes archive metadata into the JSON `data` payload; Production updates the dedicated columns and audit log but not those JSON fields.
+- `private.restore_condominium`: QA removes `archivedAt`, `archivedBy`, and `archiveReason` from JSON `data` when restoring; Production clears only the dedicated columns.
+
+These changes show that the existing QA database contains forward fixes/features not yet present in Production. They must be retained and reconciled into the canonical release chain; they must not be overwritten by blindly restoring a Production snapshot. The permission fix also needs an explicit release decision because the live Production implementation still has the key-presence defect.
+
