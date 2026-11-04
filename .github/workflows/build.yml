@@ -166,3 +166,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
 
+      - name: Create a separate empty database for exact live QA ledger replay
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_qa_ledger_replay
+        env:
+          PGPASSWORD: postgres
+
+      - name: Replay all 34 migrations from the captured live QA ledger on isolated PostgreSQL 17
+        run: node scripts/test-qa-ledger-replay-reconstruction.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_qa_ledger_replay
+
