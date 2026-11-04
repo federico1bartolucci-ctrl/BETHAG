@@ -319,7 +319,7 @@ SELECT json_build_object(
       'private.verify_personal_security_code(text)'
     ]::text[]) f(signature)
     WHERE to_regprocedure(f.signature) IS NULL
-       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature),'EXECUTE')
+       OR NOT has_function_privilege('authenticated',to_regprocedure(f.signature)::oid,'EXECUTE')
   ),
   'coowner_trigger', EXISTS(
     SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
