@@ -49,6 +49,24 @@ jobs:
       - name: Run isolated public-login browser smoke test
         run: node scripts/test-browser-public-smoke.mjs
 
+      - name: Certify real QA authentication and session persistence
+        if: github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-qa-auth-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-qa-auth-preview.log; exit 1; }
+          node scripts/test-browser-current-qa-auth.mjs
+
       - name: Run authenticated QA edit/archive diagnostic
         if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102'
         env:
