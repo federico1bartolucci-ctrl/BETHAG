@@ -15,45 +15,41 @@ const signedIn = await admin.auth.signInWithPassword({
 });
 assert.ifError(signedIn.error);
 
-const marker = "BETHAG_QA_APP09_CARRYOVER_RUN_" + Date.now();
-const ids = { condominium: null, unit: null, owner: null, sourceYear: null, targetYear: null, transfer: null, memberCarryover: null, unitCarryover: null };
+const marker = "BETHAG_QA_APP09_CARRYOVER_" + Date.now();
+const ids = { unit: null, owner: null, targetYear: null, transfer: null, memberCarryover: null, unitCarryover: null };
+let condominiumId = null;
+let workspaceId = null;
+let sourceYearId = null;
 const must = (result, label) => { assert.ifError(result.error, label); return result.data; };
 
 try {
-  const workspace = must(await admin.from("workspaces").select("id").eq("name", "BETHAG_QA_FIXTURE_20261102").single(), "workspace");
-  const condominium = must(await admin.from("condominiums").select("id").eq("name", "BETHAG_QA_APP09_CARRYOVER_FIXTURE").single(), "persistent APP-09 condominium fixture");
-  ids.condominium = condominium.id;
+  // Reuse the existing persistent closed-year QA fixture. Do not create a new closed exercise:
+  // the application correctly prevents deletion/reopening of closed fiscal years.
+  const fixture = must(await admin.from("condominiums")
+    .select("id,workspace_id")
+    .eq("name", "BETHAG_QA_APP08_11_CARRYOVER_FIXTURE")
+    .single(), "existing closed-year fixture");
+  condominiumId = fixture.id;
+  workspaceId = fixture.workspace_id;
 
-  // Reuse the persistent QA fixture's existing closed 2025 source year and open
-  // 2026 target year. Closed fiscal years are intentionally non-deletable.
   const source = must(await admin.from("condominium_fiscal_years")
-    .select("id")
-    .eq("condominium_id", ids.condominium)
-    .eq("status", "Chiuso")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .single(), "closed source fiscal year");
-  ids.sourceYear = source.id;
-
-  const target = must(await admin.from("condominium_fiscal_years")
-    .select("id")
-    .eq("condominium_id", ids.condominium)
-    .eq("status", "Aperto")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .single(), "open target fiscal year");
-  ids.targetYear = target.id;
+    .select("id,status")
+    .eq("condominium_id", condominiumId)
+    .eq("name", "Esercizio chiuso QA APP08_11")
+    .single(), "existing closed source fiscal year");
+  sourceYearId = source.id;
+  assert.equal(source.status, "Chiuso", "source fiscal year must already be closed");
 
   const unit = must(await admin.from("condominium_units").insert({
-    workspace_id: workspace.id,
-    condominium_id: ids.condominium,
+    workspace_id: workspaceId,
+    condominium_id: condominiumId,
     unit_code: "T-09-CARRY-" + Date.now(),
     data: { unitType: "Abitazione", millesimi: "1000", active: true, ownerMode: "condominium_member", ownerMemberIds: [], bethag_qa_marker: marker },
-  }).select("id").single(), "temporary APP-09 unit");
+  }).select("id").single(), "unit");
   ids.unit = unit.id;
 
   const owner = must(await admin.from("condominium_members").insert({
-    condominium_id: ids.condominium,
+    condominium_id: condominiumId,
     unit_id: ids.unit,
     name: "Cedente carryover QA",
     email: "app09-carryover-" + Date.now() + "@example.com",
@@ -63,6 +59,18 @@ try {
     data: { role: "Proprietario", position_status: "Attivo", current_owner: true, ownership_share: 100, bethag_qa_marker: marker },
   }).select("id").single(), "outgoing owner");
   ids.owner = owner.id;
+
+  const target = must(await admin.from("condominium_fiscal_years").insert({
+    workspace_id: workspaceId,
+    condominium_id: condominiumId,
+    name: marker + " esercizio destinazione",
+    start_date: "2027-01-01",
+    end_date: "2027-12-31",
+    status: "Aperto",
+    opening_balance: 0,
+    notes: marker,
+  }).select("id").single(), "target fiscal year");
+  ids.targetYear = target.id;
 
   const incomingEmail = "incoming-app09-" + Date.now() + "@example.com";
   ids.transfer = must(await admin.rpc("confirm_condominium_member_transfer", {
@@ -84,9 +92,9 @@ try {
 
   // APP-09: a member-level debit carryover must block closure.
   const memberCarryover = must(await cleanup.from("condominium_fiscal_carryovers").insert({
-    workspace_id: workspace.id,
-    condominium_id: ids.condominium,
-    source_fiscal_year_id: ids.sourceYear,
+    workspace_id: workspaceId,
+    condominium_id: condominiumId,
+    source_fiscal_year_id: sourceYearId,
     target_fiscal_year_id: ids.targetYear,
     unit_id: ids.unit,
     member_id: ids.owner,
@@ -105,14 +113,14 @@ try {
   assert.equal(ownerAfterMemberDenied.active, true);
   assert.equal(ownerAfterMemberDenied.data.position_status, "In chiusura");
 
-  { const removed = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover); assert.ifError(removed.error); }
+  must(await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover), "remove member carryover");
   ids.memberCarryover = null;
 
   // APP-09: a unit-level credit carryover must also block closure.
   const unitCarryover = must(await cleanup.from("condominium_fiscal_carryovers").insert({
-    workspace_id: workspace.id,
-    condominium_id: ids.condominium,
-    source_fiscal_year_id: ids.sourceYear,
+    workspace_id: workspaceId,
+    condominium_id: condominiumId,
+    source_fiscal_year_id: sourceYearId,
     target_fiscal_year_id: ids.targetYear,
     unit_id: ids.unit,
     member_id: null,
@@ -134,24 +142,21 @@ try {
   console.log(JSON.stringify({
     suite: "BETHAG_QA_APP09_CARRYOVERS",
     target: "jhuyhlzzydcgghrzeexn",
-    fixture: "BETHAG_QA_APP09_CARRYOVER_FIXTURE",
     status: "PASS",
     checks: [
       "member-level debit carryover blocked transfer closure",
       "unit-level credit carryover blocked transfer closure",
       "transfer stayed Confermato after each rejection",
       "outgoing owner stayed active/In chiusura after each rejection",
+      "pre-existing closed fiscal year reused without modification",
     ],
   }, null, 2));
 } finally {
   if (ids.memberCarryover) { const x = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover); assert.ifError(x.error); }
   if (ids.unitCarryover) { const x = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.unitCarryover); assert.ifError(x.error); }
   if (ids.transfer) { const x = await cleanup.from("condominium_member_transfers").delete().eq("id", ids.transfer); assert.ifError(x.error); }
-  if (ids.unit) {
-    const members = await cleanup.from("condominium_members").delete().eq("unit_id", ids.unit);
-    assert.ifError(members.error);
-    const unit = await cleanup.from("condominium_units").delete().eq("id", ids.unit);
-    assert.ifError(unit.error);
-  }
+  if (ids.targetYear) { const x = await cleanup.from("condominium_fiscal_years").delete().eq("id", ids.targetYear); assert.ifError(x.error); }
+  if (ids.unit) { const x = await cleanup.from("condominium_members").delete().eq("unit_id", ids.unit); assert.ifError(x.error); }
+  if (ids.unit) { const x = await cleanup.from("condominium_units").delete().eq("id", ids.unit); assert.ifError(x.error); }
   await admin.auth.signOut();
 }
