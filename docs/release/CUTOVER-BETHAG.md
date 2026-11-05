@@ -227,3 +227,19 @@ Questo addendum supersede le note storiche non più attuali del documento e del 
 - Non è disponibile un'azione GitHub per scrivere secrets o lanciare un workflow dispatch; non inserire segreti nel repository per aggirare questo limite.
 
 **Decisione corrente: APP-14 PARTIAL / NO-GO.** La preparazione tecnica e la rehearsal sono completate; nessuna modifica Production è autorizzata finché i gate 1–3 non sono documentati e il preflight non passa.
+
+
+### Evidenza manuale Dashboard Data API — 2026-11-05
+
+Screenshot forniti dall'operatore durante la verifica Production (ore locali mostrate: 15:30–15:33):
+
+- Exposed schemas: 2 of 3. L'elenco mostra `graphql_public` selezionato, `private` non selezionato e `public` selezionato.
+- Di conseguenza `public` è esposto, `private` non è esposto e `graphql_public` è esposto.
+- `supabase_functions` non compare nell'elenco dei tre schemi mostrati; in questa schermata non risulta esposto.
+- Exposed tables: 0 of 48; exposed functions: 0 of 171.
+- Il toggle `Automatically expose new tables` è visibilmente ATTIVO (verde). Il requisito di release richiede OFF.
+- Nessuna impostazione è stata modificata durante la verifica.
+
+**Esito gate Dashboard:** PARTIAL / BLOCKED. Il requisito relativo a `public` e `supabase_functions` risulta conforme sulla base delle schermate; resta da disattivare `Automatically expose new tables` e salvare la modifica, quindi acquisire una nuova schermata che provi lo stato OFF. La presenza di `graphql_public` è registrata come esposizione aggiuntiva, non è di per sé uno dei criteri di blocco definiti nel gate corrente.
+
+La modifica del toggle è una configurazione di progetto nella Dashboard e non è disponibile tramite le azioni Supabase collegate. Deve essere eseguita dall'operatore autorizzato nella Dashboard Production. Fino alla nuova attestazione, APP-14 resta NO-GO; nessuna migrazione, DDL, modifica ACL, merge o deploy è autorizzato da questa evidenza.
