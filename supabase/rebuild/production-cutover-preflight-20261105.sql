@@ -24,7 +24,7 @@ DECLARE
     '20261022210629','20261022210630','20261022213544','20261022233440',
     '20261023000001','20261023000002','20261023000003','20261023000004',
     '20261023000733','20261027100000','20261027110000','20261028100000',
-    '20261102100100','20261102100200','20261104130000','20261105050000'
+    '20261102100100','20261102100200','20261104130000','20261105010000','20261105020000','20261105030000','20261105050000'
   ];
   count_value integer;
   public_routines text[];
@@ -122,6 +122,6 @@ BEGIN
     RAISE EXCEPTION 'STOP: archive-preserving save_condominium already present; reconcile before cutover';
   END IF;
 
-  RAISE NOTICE 'PREFLIGHT PASS: 47 relations, exact 248-row ledger, current forward ACL state and sixteen absent canonical version pairs verified. supabase_admin default MAINTAIN exception remains subject to provider/security-owner disposition. This is not release approval.';
+  RAISE NOTICE 'PREFLIGHT PASS: 47 relations, exact 248-row ledger, current forward ACL state and nineteen absent canonical version pairs verified. supabase_admin default MAINTAIN exception remains subject to provider/security-owner disposition. This is not release approval.';
 END
 $preflight$;
