@@ -197,3 +197,16 @@ Autorizzazione:
 - Il 2026-11-05 l'utente ha autorizzato esplicitamente tutte le operazioni necessarie al rilascio, incluse le modifiche Production quando tecnicamente richieste.
 - L'autorizzazione non elimina i gate tecnici. Il punto 7 resta IN CORSO finché APP-12 provider delivery non è verificato e APP-14 non è chiuso con il postflight Production.
 - Nessuna modifica Production, nessun merge, deploy o cutover. Il QA esistente e i fixture preesistenti sono preservati.
+
+
+## Aggiornamento collaudo finale QA n. 103 — 2026-11-05
+
+Evidenza aggiornata sul commit `502d6753f7a950efbfc1c4bd91506e2fbb34db68`:
+- Final QA workflow [run 42020941578](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42020941578), run number **103**: SUCCESS. Build [42020941543](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42020941543) e baseline safety [42020941519](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42020941519): SUCCESS.
+- APP-01–APP-11, APP-13 e APP-15 risultano PASS nel workflow; il passo browser APP-12 è PASS per il percorso UI e la preparazione destinatari.
+- APP-12 provider delivery **NON SUPERATO**: la prova esplicita del provider restituisce il blocker `The QA Edge Function lacks RESEND_API_KEY and/or BETHAG_FROM_EMAIL`. Il destinatario tecnico `delivered@resend.dev` non è stato messo in coda; nessuna chiamata provider e nessuna email sono avvenute. I webhook sintetici firmati restano PASS, ma non sostituiscono una consegna reale.
+- Il log conferma inoltre che la comunicazione è rimasta soltanto preparata e che il cleanup service-role è stato verificato. Il run non include un postflight Production: APP-14 resta PARTIAL.
+- Verifica account Resend in sola lettura: dominio `bethag.it` VERIFIED e sending enabled; esiste una sola webhook subscription attiva per gli eventi sent/delivered/bounced/complained e punta all'Edge Function Production. Non viene creato un secondo webhook account-wide né modificato quello Production.
+- Il progetto QA non dispone attualmente di almeno una delle due configurazioni Edge Function necessarie (`RESEND_API_KEY`, `BETHAG_FROM_EMAIL`). Il connettore Supabase disponibile non espone una funzione per impostare i secrets Edge Function; nessun nuovo API key è stato creato e nessun segreto è stato mostrato o copiato. Per completare APP-12 occorre configurare entrambi i secrets sul solo progetto QA, poi ripetere la prova provider con destinatario di test autorizzato e verificare l'evento delivered tramite il webhook esistente senza modificarne il routing.
+- PR [#57](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/57) resta aperta, non unita, base `main`, head `fix/qa-view-acl-parity-20261105`. La CI verde sul branch non autorizza il merge né il cutover. Production resta **NO-GO** per le divergenze del punto 6 e per la verifica Dashboard Data API ancora mancante.
+- Nessuna modifica remota a QA o Production, nessuna email inviata, nessun merge, deploy, migrazione, reset o cutover.
