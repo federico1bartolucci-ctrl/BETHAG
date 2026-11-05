@@ -18,7 +18,7 @@ on:
 
 concurrency:
   group: bethag-final-qa-collaudo
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   final-qa-collaudo:
@@ -45,7 +45,7 @@ jobs:
         run: npm run build
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Start QA preview
         env:
