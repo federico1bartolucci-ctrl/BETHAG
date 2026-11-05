@@ -2,18 +2,8 @@ name: BETHAG final QA collaudo APP-01..APP-15
 
 on:
   pull_request:
+    types: [opened]
     branches: ["main"]
-    paths:
-      - ".github/workflows/qa-final-collaudo.yml"
-      - "scripts/test-current-qa-authenticated-rls.mjs"
-      - "scripts/test-current-qa-app05-07.mjs"
-      - "scripts/test-current-qa-app08-11.mjs"
-      - "scripts/test-current-qa-app09-carryovers.mjs"
-      - "scripts/test-current-qa-app12.mjs"
-      - "scripts/test-current-qa-browser-workflows.mjs"
-      - "scripts/test-current-qa-navigation.mjs"
-      - "scripts/test-browser-current-qa-auth.mjs"
-      - "src/**"
   workflow_dispatch:
 
 concurrency:
