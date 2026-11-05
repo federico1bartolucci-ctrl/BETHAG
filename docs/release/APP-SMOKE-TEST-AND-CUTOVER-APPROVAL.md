@@ -499,3 +499,21 @@ Rehearsal migrazioni:
 - Nessuna migrazione applicata a QA o Production.
 
 Il punto 7 resta **IN CORSO** per APP-12 provider delivery e APP-14 Production postflight. Nessun merge, deploy o cutover eseguito.
+
+
+## 28. Collaudo finale QA APP-01..APP-15 e provider delivery reale — 2026-11-05
+
+GitHub Actions [final QA collaudo run 42035330794](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330794), commit `21f59b0845eac376064e0d612f27889f17c07e4b`: **SUCCESS**. Build [run 42035330772](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330772) e baseline safety [run 42035330822](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330822): **SUCCESS**.
+
+Matrice aggiornata sul solo progetto QA esistente `jhuyhlzzydcgghrzeexn`:
+- APP-01–APP-11: **PASS**.
+- APP-12: **PASS**, incluso provider delivery reale. La Edge Function distribuita `bethag-send-email` ha inviato esattamente un messaggio al destinatario sintetico Resend `delivered@resend.dev`; Resend ha accettato il messaggio; `provider_message_id` e `sent_at` sono stati persistiti. Il webhook QA dedicato ha verificato la firma del provider e persistito l'evento `email.delivered`; `provider_event_id`, `delivered_at`, stato destinatario `delivered` e aggregato comunicazione `Consegnata` sono stati verificati prima della pulizia della fixture.
+- APP-13: **PASS**.
+- APP-14: **PARTIAL / Production NO-GO**. La verifica di parità ha ancora blocker di schema, trigger, funzioni private, privilegi EXECUTE e autorizzazioni collaboratori in Production; il controllo manuale Dashboard Production per Data API resta da attestare. Nessuna modifica Production è autorizzata da questo collaudo.
+- APP-15: **PASS** per navigazione per ruolo e persistenza sessione.
+
+Il collaudo ha eseguito anche i flussi browser autenticati APP-05/06/08/11/12 con esito **SUCCESS**. Build e baseline safety sono verdi sul medesimo commit. La correzione del test APP-12 ha aggiunto la selezione dell'ID primario del destinatario, necessaria per correlare il callback asincrono alla riga corretta; nessuna modifica al codice applicativo è stata richiesta per tale correzione.
+
+La fixture provider era isolata sul QA e conteneva un solo destinatario sintetico. Il webhook QA dedicato non modifica il webhook account-wide Production. Le fixture temporanee del test sono state pulite; i dati di accettazione QA preesistenti sono stati preservati.
+
+**Decisione:** il collaudo applicativo QA è completato con APP-01–APP-13 e APP-15 PASS; APP-14 resta PARTIAL. Production resta **NO-GO**. PR #57 resta aperta e non mergeata; nessun merge, deploy, migrazione, modifica del ledger o cutover Production è stato eseguito. Il rilascio non è autorizzato.
