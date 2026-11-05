@@ -257,3 +257,19 @@ Seconda schermata Production fornita dall'operatore (ora locale mostrata: 15:37)
 **Esito:** la precedente difformità del toggle risulta corretta e attestata visivamente. Insieme alla schermata precedente, risultano `public` esposto e `supabase_functions` non presente tra gli schemi selezionati. La verifica Dashboard Data API è quindi **PASS sulla base delle schermate fornite**. `graphql_public` resta esposto ed è registrato come configurazione aggiuntiva.
 
 Questo PASS chiude esclusivamente il gate manuale Dashboard; non chiude APP-14 né autorizza operazioni Production. Restano la connessione PostgreSQL diretta fornita localmente dall'operatore, il pin del commit e del piano operativo, il preflight read-only, l'approvazione esplicita del cutover, l'esecuzione guarded e il postflight.
+
+
+## Addendum audit complessivo APP-14 — 2026-11-05
+
+Il report consolidato e aggiornato è `docs/release/APP14-COMPREHENSIVE-AUDIT-20261105.md`. Questo addendum supersede le note storiche che riportavano la verifica Data API Production come non eseguita.
+
+- **Data API Dashboard Production: PASS** sulla base delle schermate dell'operatore: `public` esposto, `private` non esposto, `graphql_public` esposto come schema aggiuntivo, `supabase_functions` non presente fra gli schemi selezionati; 0/48 tabelle e 0/171 funzioni esposte individualmente; `Automatically expose new tables` OFF.
+- **Ledger live Production: PASS** — 248 righe e 248/248 coppie versione/nome identiche allo snapshot `production-ledger-20261105.json`; head invariato `20261104222229`.
+- **Preflight read-only Production: PASS** — il file aggiornato `production-cutover-preflight-20261105.sql` è stato eseguito via query read-only senza eccezioni. Oltre agli assert precedenti controlla la logica collaboratore pre-cutover, i 18 grant RPC attesi come mancanti, il helper transfer-closure e l'USAGE dello schema private.
+- Stato live letto: 47 tabelle/partizioni + una view; MAINTAIN effettivo zero per authenticated e service_role; Security Advisor zero lint; `workspace_members.data` assente; trigger e funzione co-owner assenti; le due funzioni collaboratore mantengono il difetto booleano atteso prima della migrazione.
+- Il postflight è stato corretto: ora dichiara 19 incrementi (non 16) e verifica anche EXECUTE di `service_role` sul helper transfer-closure. La verifica statica del runner è stata ampliata per proteggere i nuovi assert.
+- Sequenza congelata invariata: 19 migrazioni forward-only e ledger finale atteso 267. Non è emersa la necessità di aggiungere una ventesima migrazione: le correzioni individuate sono già coperte dai 19 payload approvati.
+
+**Gate ancora aperti:** disponibilità locale di `DATABASE_URL` PostgreSQL diretto/Session Pooler con ruolo postgres; pin definitivo del commit dopo CI verde; piano operativo con responsabile, finestra manutenzione Europe/Rome, comunicazione utenti, criteri STOP, rollback e contatti. Il restore fisico provider-managed resta non testato ma il rischio residuo è già accettato nel freeze.
+
+**Decisione:** APP-14 resta **NO-GO**. La preparazione tecnica e il preflight read-only sono superati; non sono state eseguite scritture Production, migrazioni, merge, deploy o cutover. Il runner guarded potrà essere avviato soltanto dopo la chiusura documentata dei gate residui e l'approvazione operativa del cutover.
