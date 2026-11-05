@@ -89,7 +89,7 @@ const report = {
     },
     rule: "Keep exactly one active QA project. Preserve its complete migration history and data. Never re-run baseline migrations, delete/rewrite historical rows, or mark an unverified effect applied. Production remains frozen until the separately approved cutover.",
   },
-  next_gate: "Verified Production backup restore OR explicit named written acceptance of the documented physical-restore risk, fresh Production and active-QA ledger recapture, catalog/ACL parity, application acceptance, and approved cutover are prerequisites before any Production change.",
+  next_gate: "Verified isolated backup restore of Production OR explicit named written acceptance of the documented physical-restore risk, fresh Production and active-QA ledger recapture, catalog/ACL parity, application acceptance, and approved cutover are prerequisites before any Production change.",
   ledger_safety: "Preserve all 244 historical Production rows and all 282 active-QA rows. Do not create another QA project or branch. Never rewrite migration history or apply Production SQL without explicit cutover approval.",
   action: "PLAN_ONLY_NO_COMMANDS",
 };
