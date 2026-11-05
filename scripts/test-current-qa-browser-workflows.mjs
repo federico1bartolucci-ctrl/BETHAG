@@ -37,6 +37,10 @@ let accountingInstallmentId = null;
 let accountingTransferId = null;
 let accountingOutgoingMemberId = null;
 let accountingIncomingMemberId = null;
+let blockedUiUnitId = null;
+let blockedUiOwnerId = null;
+let blockedUiTransferId = null;
+let blockedUiInstallmentId = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
@@ -121,6 +125,24 @@ async function cleanupFixtures() {
 
   // Direct DELETE is intentionally avoided: the application protects
   // condominium deletion behind its authenticated, audited RPC.
+  if (blockedUiTransferId) {
+    const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", blockedUiTransferId);
+    if (transfer.error) throw transfer.error;
+  }
+  if (blockedUiInstallmentId) {
+    const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", blockedUiInstallmentId);
+    if (movements.error) throw movements.error;
+    const installment = await cleanup.from("condominium_installments").delete().eq("id", blockedUiInstallmentId);
+    if (installment.error) throw installment.error;
+  }
+  if (blockedUiOwnerId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", blockedUiOwnerId);
+    if (member.error) throw member.error;
+  }
+  if (blockedUiUnitId) {
+    const unit = await cleanup.from("condominium_units").delete().eq("id", blockedUiUnitId);
+    if (unit.error) throw unit.error;
+  }
   if (accountingTransferId) {
     const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", accountingTransferId);
     if (transfer.error) throw transfer.error;
@@ -697,6 +719,89 @@ try {
   assert.ifError(outgoingAfterClosure.error);
   assert.equal(outgoingAfterClosure.data.active, false);
 
+  // APP-11 UI error path: an unpaid installment must be reported in the UI
+  // and must leave the confirmed transfer and outgoing owner unchanged.
+  const blockedUnit = await cleanup.from("condominium_units").insert({
+    workspace_id: created.workspace_id,
+    condominium_id: created.id,
+    unit_code: marker + "_UNIT_BLOCKED",
+    building_code: "QA",
+    data: { bethag_qa_marker: marker },
+  }).select("id").single();
+  assert.ifError(blockedUnit.error);
+  blockedUiUnitId = blockedUnit.data.id;
+  const blockedOwner = await cleanup.from("condominium_members").insert({
+    condominium_id: created.id,
+    unit_id: blockedUiUnitId,
+    name: marker + "_CEDENTE_BLOCCO_UI",
+    role: "resident",
+    active: true,
+    data: { role: "Proprietario", current_owner: true, position_status: "Attivo", ownership_share: 100, bethag_qa_marker: marker },
+  }).select("id").single();
+  assert.ifError(blockedOwner.error);
+  blockedUiOwnerId = blockedOwner.data.id;
+  const blockedInstallment = await cleanup.from("condominium_installments").insert({
+    workspace_id: created.workspace_id,
+    condominium_id: created.id,
+    fiscal_year_id: accountingFiscalYearId,
+    member_id: blockedUiOwnerId,
+    unit_id: blockedUiUnitId,
+    title: marker + "_RATA_INSOLUTA_UI",
+    due_date: "2026-12-20",
+    amount: 90,
+    paid_amount: 0,
+    status: "Da pagare",
+    notes: marker,
+  }).select("id").single();
+  assert.ifError(blockedInstallment.error);
+  blockedUiInstallmentId = blockedInstallment.data.id;
+  const blockedIncomingEmail = "bethag-ui-blocked-" + Date.now() + "@example.com";
+  const blockedTransfer = await adminApi.rpc("confirm_condominium_member_transfer", {
+    p_unit_id: blockedUiUnitId,
+    p_outgoing_member_id: blockedUiOwnerId,
+    p_incoming_name: marker + "_ACQUIRENTE_BLOCCO_UI",
+    p_incoming_email: blockedIncomingEmail,
+    p_incoming_user_id: null,
+    p_transfer_date: "2026-11-03",
+    p_transfer_type: "Vendita",
+    p_notes: marker + "_BLOCKED_UI",
+    p_data: {
+      bethag_qa_marker: marker,
+      transfer_scope: "whole_property",
+      outgoing_member_ids: [blockedUiOwnerId],
+      incoming_members: [{ name: marker + "_ACQUIRENTE_BLOCCO_UI", email: blockedIncomingEmail, ownership_share: 100 }],
+    },
+  });
+  assert.ifError(blockedTransfer.error);
+  blockedUiTransferId = blockedTransfer.data;
+
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
+  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Contabilità" }).first().click();
+  await adminPage.getByRole("heading", { name: "Contabilità e rendiconto", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator(".filter-bar label").filter({ hasText: "Condominio" }).locator("select").selectOption(String(created.legacy_id));
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
+  const blockedTransferCard = adminPage.locator(".row-card").filter({ hasText: marker + "_ACQUIRENTE_BLOCCO_UI" });
+  await blockedTransferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).click();
+  const closureAlert = adminPage.getByRole("alert").filter({ hasText: "Chiusura non consentita" });
+  await closureAlert.waitFor({ state: "visible", timeout: 15000 });
+  assert.match(await closureAlert.innerText(), /rate 90\.00 €/);
+  const blockedTransferState = await cleanup.from("condominium_member_transfers")
+    .select("status").eq("id", blockedUiTransferId).single();
+  assert.ifError(blockedTransferState.error);
+  assert.equal(blockedTransferState.data.status, "Confermato");
+  const blockedOwnerState = await cleanup.from("condominium_members")
+    .select("active,data").eq("id", blockedUiOwnerId).single();
+  assert.ifError(blockedOwnerState.error);
+  assert.equal(blockedOwnerState.data.active, true);
+  assert.equal(blockedOwnerState.data.data.position_status, "In chiusura");
+  const blockedInstallmentState = await cleanup.from("condominium_installments")
+    .select("amount,paid_amount,status").eq("id", blockedUiInstallmentId).single();
+  assert.ifError(blockedInstallmentState.error);
+  assert.equal(Number(blockedInstallmentState.data.amount), 90);
+  assert.equal(Number(blockedInstallmentState.data.paid_amount), 0);
+  assert.equal(blockedInstallmentState.data.status, "Da pagare");
+
   // Verify the owner list is refreshed from the server when returning to the
   // condominium registry after confirmation/closure, without a hard reload.
   const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
@@ -717,7 +822,7 @@ try {
   await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
   assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
 
-  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload", "unpaid installment displayed a closure error in the UI", "failed UI closure left transfer confirmed and outgoing owner active/In chiusura"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
