@@ -111,7 +111,7 @@ $assert$;
 ROLLBACK;`;
 execFileSync("psql",[
   "-X","--no-psqlrc","--dbname",url,"-v","ON_ERROR_STOP=1",
-  "-c",setup+"\\n"+functionSql+"\\n"+verify
+  "-c",setup+"\n"+functionSql+"\n"+verify
 ],{stdio:"inherit"});
 console.log(JSON.stringify({
   status:"PASS",
