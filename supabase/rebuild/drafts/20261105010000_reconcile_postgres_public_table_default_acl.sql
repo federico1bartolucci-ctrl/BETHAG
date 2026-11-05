@@ -9,7 +9,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER, TRUNCATE
   ON TABLES TO service_role;
 DO $verify$
-DECLARE v_auth text[]; v_service text[]; v_anon integer; v_maintain integer;
+DECLARE v_auth text[]; v_service text[]; v_anon integer; v_maintain integer; v_global_count integer;
 BEGIN
  SELECT array_agg(a.privilege_type ORDER BY a.privilege_type) INTO v_auth
  FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
