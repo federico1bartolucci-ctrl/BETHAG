@@ -54,7 +54,12 @@ Le lettere ACL sono quelle native PostgreSQL. In particolare:
 - Production assegna EXECUTE sulle nuove funzioni a service_role; QA non lo assegna.
 - Per le sequenze, i default di service_role differiscono.
 
-Questa divergenza è sostanziale e non va pareggiata automaticamente. È inoltre da riconciliare con il payload QA `20261023000004_application_default_table_privileges`, che registra GRANT CRUD ad authenticated e service_role: il catalogo live QA attuale non mostra tali ACL nello schema public. Occorre determinare se un successivo intervento le abbia rimosse o se il ledger storico non descriva più lo stato effettivo.
+Questa divergenza è sostanziale e non va pareggiata automaticamente. La sequenza dei payload QA è stata ricostruita:
+- baseline 20261017000005 assegna CRUD per default ad anon/authenticated e privilegi ordinari/strutturali a service_role;
+- 20261022210630 revoca ALL sulle tabelle per anon e authenticated;
+- 20261023000004 dovrebbe ripristinare CRUD per authenticated e service_role e privilegi strutturali a service_role;
+- 20261102151610 revoca soltanto MAINTAIN per authenticated/service_role e non spiega la perdita di CRUD.
+La riga 20261023000004 esiste nel registro QA e conserva esattamente il payload del file canonico, ma gli effetti non risultano nel catalogo attuale. Non è stato trovato nei payload successivi interrogati un ulteriore ALTER DEFAULT PRIVILEGES che revochi quei CRUD. La causa più probabile è una divergenza tra registrazione della migrazione e applicazione effettiva, oppure una modifica manuale successiva non rappresentata nel ledger; i dati disponibili non consentono di distinguere definitivamente le due ipotesi. La sola presenza della riga nel ledger non prova lo stato attuale. Le differenze su sequenze e default EXECUTE di service_role hanno analoga natura: i payload storici mostrano GRANT, ma il catalogo live QA non li riflette. Non correggere finché non è definito il contratto ACL desiderato e non è stata verificata la causa.
 
 ## Verifiche di sicurezza
 - Supabase Security Advisor: `lints: []` sia in Production sia in QA.
@@ -75,3 +80,16 @@ Il punto 5 resta **APERTO**. Per chiuderlo occorre:
 4. Preparare eventuali migrazioni forward-only e provarle solo su PostgreSQL isolato; nessuna applicazione remota in questa fase.
 
 Production e QA sono rimasti invariati; il solo QA esistente e i suoi dati sono preservati.
+
+
+## Confronto payload con le sorgenti repository — completamento 2026-11-05
+- Le 17 migrazioni QA-only con file corrispondente in `supabase/migrations/` sono state confrontate direttamente: **17/17 payload identici** al contenuto dei file (normalizzazione limitata a CRLF/LF e newline finale).
+- Le restanti **19 migrazioni QA-only** non hanno un file autonomo nella cartella canonica attuale. Sono storia QA specifica o payload legacy; gli statement restano nel ledger live, ma non si può dichiarare una corrispondenza con un file canonico inesistente. Sono: `20261102041805_repair_authenticated_communication_rpc_private_execute`, `20261102043152_repair_authenticated_condominium_delete_rpc_private_execute`, `20261102043315_persist_condominium_archive_columns`, `20261102044002_repair_condominium_archive_rpc_and_json`, `20261102044102_repair_authenticated_condominium_archive_rpc_private_execute`, `20261102044224_repair_authenticated_invoker_private_rpc_grants`, `20261102044603_revoke_public_execute_from_public_trigger_functions`, `20261102050437_backfill_condominium_archive_metadata`, `20261102050957_revoke_service_role_maintain_from_fund_availability_view`, `20261102054253_preserve_server_owned_condominium_archive_state`, `20261102054409_add_workspace_member_profile_data`, `20261102100000_repair_authenticated_accounting_rpc_private_execute`, `20261102200820_restore_secure_communication_recipient_rpc_execute`, `20261103072843_qa_align_transfer_wrapper_empty_search_path`, `20261103193927_qa_store_incoming_coowner_profile_metadata`, `20261104122833_grant_service_role_private_resend_event_rpc`, `20261104125614_revoke_authenticated_execute_on_unused_private_workspace_staff`, `20261104235514_fix_portal_registration_upsert_conflict_target`, `20261105001928_align_qa_fund_availability_view_acl`.
+- Il payload Production-only `20261104222229_reconcile_production_acl_least_privilege` è semanticamente identico al draft repository `supabase/rebuild/drafts/20261104150000_reconcile_production_acl_least_privilege.sql` dopo la rimozione dei commenti SQL: 3.397 caratteri SQL normalizzati identici. Le differenze sono commenti descrittivi, non statement eseguibili.
+- Quindi: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only senza file canonico attuale, non attestabili contro una sorgente canonica; Production-only corrispondente al draft.
+
+## CI aggiornata
+Commit `047948b9917b38eddfb0953cecb2939980488d08`:
+- Baseline safety run `41946929650`: SUCCESS.
+- Build run `41946929620`: SUCCESS.
+- PostgreSQL bootstrap, 24 migrazioni clean-install, 15 migrazioni tramite guarded runner, prove ACL isolate, build, browser smoke e autenticazione reale QA per amministratore/collaboratore/condomino sono terminati con successo.
