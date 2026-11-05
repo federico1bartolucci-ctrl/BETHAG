@@ -21,7 +21,7 @@ const pending = freeze.sequence.map(item => ({
 }));
 const gitBlobSha = (content) => {
   const bytes = Buffer.from(content, "utf8");
-  return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\\0"), bytes])).digest("hex");
+  return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\0"), bytes])).digest("hex");
 };
 
 assert.equal(live.captured_at, "2026-11-05");
