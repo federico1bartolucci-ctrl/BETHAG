@@ -324,3 +324,51 @@ All fields below must be completed with actual evidence before the guarded runne
 - Written approval for the exact migration hashes and operational plan: **NOT RECEIVED**
 
 **Release rule:** the guarded runner remains disabled unless all required environment gates are explicitly supplied by the authorized operator. CI success, QA success, prior general development authorization, or this document alone does not authorize Production execution.
+
+
+---
+
+## Authoritative update — 2026-11-06, after QA acceptance and live parity refresh
+
+### QA acceptance — PASS
+
+The current QA acceptance evidence supersedes the pending status recorded in the prior 2026-11-06 addendum:
+
+- Commit: `8bac18745a2b455f9897da6572ff952964310063`.
+- Final QA workflow: run `42131808168`, conclusion **SUCCESS**; APP-01 through APP-13 and APP-15 passed. APP-14 remains a Production cutover/postflight gate, not a QA application test.
+- Build: run `42131808194`, **SUCCESS**.
+- Baseline safety: run `42131808165`, **SUCCESS**.
+- APP-15 passed for administrator, collaborator and resident, including role navigation and session persistence. The test was corrected to avoid assuming the shared administrator account always has the Free plan; entitlement denials are accepted only when the application explicitly returns the plan-gate confirmation.
+- APP-12 provider probe passed: Resend accepted a synthetic QA test message, the signed webhook was verified, and provider delivery metadata was persisted. This is a synthetic QA test, not a production-volume deliverability certification.
+- No Production change, merge or deployment was performed.
+
+The machine-readable evidence is `supabase/rebuild/qa-final-collaudo-20261105.json`.
+
+### Fresh live Production / QA catalog comparison — read-only
+
+Both linked Supabase projects were queried read-only on 2026-11-06. No SQL writes were issued.
+
+| Control | Production | QA | Interpretation |
+|---|---:|---:|---|
+| Migration ledger rows | 248 | 283 | Environment-specific histories; not required to be identical |
+| Ledger head | `20261104222229` | `20261105001928` | QA has subsequent QA-only entries |
+| Public tables/relations | 47 tables plus one view | 47 tables plus one view | Same object count |
+| Public table RLS | Enabled on all listed tables | Enabled on all listed tables | PASS for this check |
+| Public table columns | One known difference | One known difference | QA has `workspace_members.data jsonb NOT NULL DEFAULT '{}'`; Production does not |
+| Security Advisor | 0 security lints | 0 security lints | PASS for current Advisor checks |
+
+Additional live catalog findings:
+
+- QA has trigger `public.condominium_members.trg_apply_incoming_transfer_member_metadata` and function `apply_incoming_transfer_member_metadata`; Production does not. This is an intentional pre-cutover difference covered by the reviewed forward migration plan, not evidence that the environments are already identical.
+- The private implementations `private.save_condominium` and `private.archive_condominium` have different definition hashes between Production and QA. Their public invoker wrappers have matching hashes. These private implementation differences remain a catalog-parity item to reconcile through the frozen cutover sequence and postflight, not by ad hoc edits.
+- The public trigger functions `normalize_zero_ownership_owner` and `preserve_closing_condominium_member_history` and their checked trigger definitions matched between the two projects.
+- Migration history comparison found 36 QA-only versions and one Production-only version. Do not replay QA-only versions into Production or force the ledgers to match; each must remain classified by the frozen release inventory.
+- Security Advisor returned zero lints on both projects. This does not replace object-by-object ACL/default-ACL comparison.
+
+**Parity disposition: PARTIAL / NOT CERTIFIED.** The table-column and trigger differences are identified; private implementation differences are identified; object-by-object relation/routine ACL and default-ACL parity still needs a successful, separately reviewed read-only comparison. A blocked ACL query was not retried or bypassed. No ACL was changed.
+
+### Current release decision
+
+**Production remains NO-GO.** QA APP-01–APP-13 and APP-15 are accepted. APP-14 remains open until exact object-level ACL/default-ACL verification, the direct PostgreSQL connection and guarded runner environment, exact release SHA/hash pinning, and the approved operator/approver/maintenance/communications/STOP plan are evidenced. The physical provider restore remains an explicitly accepted residual risk, not a passed physical restore test.
+
+No Production DDL/DML, migration, ACL change, merge, deployment or cutover has been performed.
