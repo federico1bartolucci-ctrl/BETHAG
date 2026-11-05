@@ -162,18 +162,52 @@ try {
     assert.ok(after[0].provider_message_id, "Resend message ID was not persisted");
     assert.ok(after[0].sent_at, "Sent timestamp was not persisted");
 
+    // Keep the fixture alive until the asynchronous provider callback reaches QA.
+    const deliveryDeadline = Date.now() + 90000;
+    let delivered = null;
+    let lastDeliveryState = null;
+    while (Date.now() < deliveryDeadline) {
+      const state = must(await admin.from("communication_recipients")
+        .select("email,status,event_type,provider_event_id,delivered_at,provider_message_id")
+        .eq("communication_id", communicationId)
+        .eq("id", after[0].id)
+        .single(), "poll real QA delivery callback");
+      lastDeliveryState = state;
+      if (state.status === "delivered" &&
+          state.event_type === "email.delivered" &&
+          state.provider_event_id &&
+          state.delivered_at &&
+          state.provider_message_id === after[0].provider_message_id) {
+        delivered = state;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    assert.ok(delivered,
+      "Resend accepted the message but the signed provider callback did not update the QA recipient within 90 seconds: " +
+      JSON.stringify(lastDeliveryState));
+
+    const finalCommunication = must(await admin.from("communications")
+      .select("email_status").eq("id", communicationId).single(),
+      "verify delivered communication aggregate");
+    assert.equal(finalCommunication.email_status, "Consegnata");
+
     console.log(JSON.stringify({
       suite: "BETHAG_QA_APP12_PROVIDER",
       target: "jhuyhlzzydcgghrzeexn",
       status: "PASS",
       checks: [
-        "isolated QA condominium had exactly one active synthetic recipient",
-        "recipient address was delivered@resend.dev; no resident address was eligible",
+        "isolated QA condominium had exactly one synthetic Resend test recipient",
         "deployed bethag-send-email function returned success",
         "Resend accepted exactly one message and provider_message_id/sent_at persisted",
+        "dedicated QA webhook verified the provider signature and persisted email.delivered",
+        "recipient status, provider event ID, delivered_at and communication aggregate reached delivered/Consegnata before cleanup",
       ],
       recipient: "delivered@resend.dev",
-      delivery_event: "to be verified separately in Resend webhook event history",
+      provider_message_id_persisted: true,
+      provider_event_id_persisted: true,
+      delivered_at_persisted: true,
+      callback_target: "QA",
     }, null, 2));
   }
 } finally {
