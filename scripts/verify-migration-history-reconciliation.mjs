@@ -54,6 +54,7 @@ console.log(JSON.stringify({
   exact_common_pairs: live.comparison.common_exact_pairs,
   production_only: productionOnly,
   qa_only: qaOnly,
-  canonical_migration_files: canonicalFiles.length,\n  reviewed_forward_acl_candidates: expectedForwardAclCandidates.length,
+  canonical_migration_files: canonicalFiles.length,
+  reviewed_forward_acl_candidates: expectedForwardAclCandidates.length,
   remote_databases_modified: false
 }, null, 2));
