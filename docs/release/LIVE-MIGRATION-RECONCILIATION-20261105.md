@@ -7,10 +7,10 @@ This report was captured read-only from the live Supabase migration registries o
 - Existing QA branch `bethag-launch-qa`, project `jhuyhlzzydcgghrzeexn`: **283** rows; latest `20261105001928_align_qa_fund_availability_view_acl`.
 - Exact common version/name pairs: **247**.
 - Production-only: **1** — `20261104222229_reconcile_production_acl_least_privilege`.
-- QA-only: **35** — five baseline bookkeeping rows and thirty QA/canonical incremental rows. The full exact list is in the JSON snapshot.
+- QA-only: **36** — five baseline bookkeeping rows and thirty QA/canonical incremental rows. The full exact list is in the JSON snapshot.
 
 ## Interpretation
-The 35 QA-only rows must not be copied into Production as a block. They include the five clean-install baseline entries and QA-specific forward repairs. Likewise, the Production-only ACL migration must not be copied to QA merely to equalize counts. Registry parity by row count is not the goal: the goal is a documented, semantically correct deployment history and matching effective schema/security state.
+The 36 QA-only rows must not be copied into Production as a block. They include the five clean-install baseline entries and QA-specific forward repairs. Likewise, the Production-only ACL migration must not be copied to QA merely to equalize counts. Registry parity by row count is not the goal: the goal is a documented, semantically correct deployment history and matching effective schema/security state.
 
 The earlier artifacts dated 2026-11-03 are immutable historical snapshots (247 Production / 47 QA). Their counts are not current and must not be used as the current live ledger.
 
