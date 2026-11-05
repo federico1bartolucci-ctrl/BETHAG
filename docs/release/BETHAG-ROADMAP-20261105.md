@@ -17,7 +17,7 @@
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
 | 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | **CHIUSO — 2026-11-05**: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only non canonici classificati e payload esatti archiviati; Production-only confrontato semanticamente col draft; divergenze ACL e tre draft forward-only testati due volte su PostgreSQL 17 isolato; CI Build e Baseline SUCCESS sul commit 79311f06. Nessuna modifica remota. |
 | 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **CHIUSO — 2026-11-05, NO-GO Production**: 48 relazioni, 103 policy, 257 indici, 305 vincoli allineati; divergenze applicative e ACL documentate nel report QA-PRODUCTION-PARITY. Branch QA FUNCTIONS_DEPLOYED/ACTIVE_HEALTHY. Nessuna scrittura remota. |
-| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — APP-01–APP-11, APP-13 e APP-15 PASS; APP-12 provider delivery PARTIAL per secrets QA mancanti; APP-14 resta gate Production post-cutover. Run finale 42017349896 SUCCESS. |
+| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — ultimo run 42026909921 SUCCESS: APP-01–APP-11, APP-13 e APP-15 PASS; APP-12 invio provider e consegna Resend verificati, ma callback automatica resta instradata a Production (PARTIAL); APP-14 PARTIAL, gate Production non superato. |
 
 ## Chiusura del punto 4 — evidenze
 - Dashboard QA `bethag-launch-qa`: **Automatically expose new tables = OFF**, confermato dalla schermata aggiornata del 2026-11-05.
@@ -219,3 +219,18 @@ La precedente formulazione secondo cui non risultava alcun controllo email era i
 - Questo prova che il dominio mittente e il trasporto Resend hanno già effettuato una consegna reale con esito delivered. Non è corretto chiedere di ripetere un generico test di invio email.
 - La prova non dimostra però che l'Edge Function del progetto QA abbia i secrets configurati né che il flusso APP-12 dell'applicazione QA abbia generato e tracciato quella consegna: il collaudo provider dedicato sul run 42017349896 e sul run 42020941578 ha verificato che il destinatario tecnico è rimasto pending, senza provider_message_id/sent_at, perché manca almeno uno tra `RESEND_API_KEY` e `BETHAG_FROM_EMAIL` nel runtime QA.
 - Quindi la verifica generale Resend/email è **GIÀ SUPERATA**; resta soltanto la verifica d'integrazione specifica APP-12 dal progetto QA, non un nuovo test generico. Nessuna email è stata inviata in questa verifica documentale e nessuna configurazione remota è stata modificata.
+
+
+## Aggiornamento collaudo finale QA n. 106 — 2026-11-05
+
+Evidenza aggiornata:
+- Final QA workflow [run 42026909921](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42026909921), run number **106**, commit `1835c261cbb4482ebd0b10725958306c18c8dbb4`: **SUCCESS**. Tutti gli step del job `final-qa-collaudo` sono completati.
+- APP-01–APP-04, APP-05–APP-07, APP-08–APP-11, APP-13 e APP-15: PASS. In particolare APP-11 ora include il percorso UI di chiusura fallita per rata insoluta, messaggio di errore visibile e invarianti del trasferimento/cedente preservate.
+- APP-12: pubblicazione/ritiro e UI PASS; test webhook firmati sintetici per sent/delivered/bounced/complained PASS, firma non valida respinta HTTP 401 senza mutazioni. La funzione QA ha inviato un solo messaggio al destinatario tecnico `delivered@resend.dev`; risposta HTTP 200, provider_message_id e sent_at persistiti. La cronologia Resend ha confermato `email.delivered` per il messaggio. Tuttavia l'unico webhook globale Resend è ancora configurato sull'endpoint Production: l'evento è arrivato a Production e ha risposto `recipient_not_found / ignored`. Non è quindi provato il callback provider→QA e APP-12 resta **PARTIAL**, pur essendo superati invio e consegna provider.
+- APP-14: Security Advisor Production interrogato in sola lettura, risultato zero lint. Questo non risolve le divergenze applicative già documentate né sostituisce il controllo Dashboard Data API Production e il postflight successivo al cutover. APP-14 resta **PARTIAL** e Production **NO-GO**.
+- La branch QA esistente `bethag-launch-qa` risulta `FUNCTIONS_DEPLOYED` con preview `ACTIVE_HEALTHY`; nessun ambiente QA aggiuntivo creato.
+- PR [#57](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/57) resta aperta e non unita. Nessun merge, deploy, cutover, modifica schema/ACL o scrittura su Production.
+
+### Stato conclusivo del punto 7
+
+Il collaudo applicativo ha esito **PASS per APP-01–APP-11, APP-13 e APP-15**. APP-12 resta **PARTIAL** limitatamente alla prova del webhook provider instradato a QA; APP-14 resta **PARTIAL** perché i gate Production non sono superati. Il punto 7 non è chiuso integralmente e il rilascio non è autorizzabile tecnicamente. La prossima attività ammessa è predisporre un instradamento webhook QA isolato senza sostituire né disabilitare l'endpoint Production; in assenza di una configurazione sicura e verificabile, mantenere APP-12 aperto anziché alterare il webhook globale.
