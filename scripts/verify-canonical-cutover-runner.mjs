@@ -56,6 +56,8 @@ assert.match(bootstrapTest, /pendingCanonicalMigrations/);
 assert.match(runnerTest, /Applying existing canonical Production head/);
 assert.match(runnerTest, /Applying exact Production-forward SQL/);
 assert.match(runnerTest, /Replaying already-applied Production-only migration/);
+assert.match(runnerTest, /production-cutover-preflight-20261105\.sql/);
+assert.match(runnerTest, /production-cutover-postflight-20261105\.sql/);
 assert.match(runnerTest, /gitBlobSha\(sql\), item\.git_blob_sha/);
 assert.match(workflow, /bethag_runner_test/);
 
