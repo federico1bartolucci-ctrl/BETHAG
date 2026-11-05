@@ -62,6 +62,7 @@ try {
     name: marker + "_" + event.suffix,
     recipient_role: "resident",
     status: "queued",
+    queued_at: new Date().toISOString(),
     provider_message_id: marker + "_provider_" + event.suffix,
   }));
   const inserted = await db.from("communication_recipients").insert(recipients).select("id,provider_message_id,email");
