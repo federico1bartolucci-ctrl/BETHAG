@@ -210,3 +210,12 @@ Evidenza aggiornata sul commit `502d6753f7a950efbfc1c4bd91506e2fbb34db68`:
 - Il progetto QA non dispone attualmente di almeno una delle due configurazioni Edge Function necessarie (`RESEND_API_KEY`, `BETHAG_FROM_EMAIL`). Il connettore Supabase disponibile non espone una funzione per impostare i secrets Edge Function; nessun nuovo API key è stato creato e nessun segreto è stato mostrato o copiato. Per completare APP-12 occorre configurare entrambi i secrets sul solo progetto QA, poi ripetere la prova provider con destinatario di test autorizzato e verificare l'evento delivered tramite il webhook esistente senza modificarne il routing.
 - PR [#57](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/57) resta aperta, non unita, base `main`, head `fix/qa-view-acl-parity-20261105`. La CI verde sul branch non autorizza il merge né il cutover. Production resta **NO-GO** per le divergenze del punto 6 e per la verifica Dashboard Data API ancora mancante.
 - Nessuna modifica remota a QA o Production, nessuna email inviata, nessun merge, deploy, migrazione, reset o cutover.
+
+
+## Rettifica evidenza email preesistente — 2026-11-05
+
+La precedente formulazione secondo cui non risultava alcun controllo email era incompleta. La consultazione diretta dello storico Resend ha recuperato una prova reale precedente:
+- Email BETHAG inviata il 2026-11-03 alle 06:53:53 UTC da `noreply@bethag.it` a un indirizzo di test dell'amministratore, oggetto `Prova`, contenuto `Prova`, stato provider **delivered**. Il dettaglio Resend conserva l'ID `01a1a02f-8e48-79cf-bbca-771101e435a4` e il Message-ID SES.
+- Questo prova che il dominio mittente e il trasporto Resend hanno già effettuato una consegna reale con esito delivered. Non è corretto chiedere di ripetere un generico test di invio email.
+- La prova non dimostra però che l'Edge Function del progetto QA abbia i secrets configurati né che il flusso APP-12 dell'applicazione QA abbia generato e tracciato quella consegna: il collaudo provider dedicato sul run 42017349896 e sul run 42020941578 ha verificato che il destinatario tecnico è rimasto pending, senza provider_message_id/sent_at, perché manca almeno uno tra `RESEND_API_KEY` e `BETHAG_FROM_EMAIL` nel runtime QA.
+- Quindi la verifica generale Resend/email è **GIÀ SUPERATA**; resta soltanto la verifica d'integrazione specifica APP-12 dal progetto QA, non un nuovo test generico. Nessuna email è stata inviata in questa verifica documentale e nessuna configurazione remota è stata modificata.
