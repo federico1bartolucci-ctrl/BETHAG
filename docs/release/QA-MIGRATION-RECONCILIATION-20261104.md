@@ -128,3 +128,35 @@ Nessuna migrazione DDL è stata rieseguita sul QA live. Il solo intervento live 
 2. Verificare la parità finale QA/Production per schema, ACL, default privileges e funzioni; le differenze QA-specifiche documentate devono restare intenzionali.
 3. Non avviare il lancio finché il collaudo funzionale e la checklist pre-rilascio non sono completati.
 
+
+
+## Aggiornamento verificato — 2026-11-05 (stato live successivo)
+
+Questa sezione supersede i conteggi e le conclusioni temporali riportati sopra quando divergono dai registri live del 5 novembre.
+
+### Stato branch e registri
+- Supabase branch `bethag-launch-qa`: `FUNCTIONS_DEPLOYED`; preview `ACTIVE_HEALTHY`.
+- Registro Production: 248 versioni.
+- Registro QA prima dell'allineamento ACL: 282 versioni.
+- Production aveva una versione non presente nel ledger QA: `20261104222229_reconcile_production_acl_least_privilege`.
+- Tale versione è Production-only e corrisponde alla migrazione ACL conservata in `supabase/rebuild/drafts/`; non deve essere copiata automaticamente nel ledger QA.
+- QA mantiene le proprie migrazioni specifiche. Non è stato eseguito alcun reset, rebase, delete/recreate o replay storico.
+
+### Differenza ACL rilevata e corretta sul solo QA
+La comparazione live ha rilevato che `public.condominium_fund_availability` è una vista di proprietà `postgres` in entrambi gli ambienti, ma in QA `authenticated` aveva anche INSERT, UPDATE e DELETE, mentre Production concedeva soltanto SELECT.
+
+Il 5 novembre è stata applicata a QA la migrazione forward-only `20261105001928_align_qa_fund_availability_view_acl`. La migrazione:
+- verifica preventivamente che l'oggetto sia ancora una vista di proprietà postgres;
+- revoca i privilegi diretti ad authenticated sulla vista;
+- ripristina esclusivamente SELECT;
+- fallisce se rimane qualsiasi privilegio aggiuntivo.
+
+Verifica live successiva: ACL QA `authenticated=r/postgres`; SELECT=true e INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN=false. La vista, i dati e le righe applicative non sono stati modificati.
+
+Le ACL dei due helper di chiusura trasferimento rispetto ad anon erano già allineate (EXECUTE=false). I default privileges postgres, sia globali sia nello schema public, risultavano già allineati tra QA e Production; non sono stati modificati da questa correzione.
+
+### Stato della correzione
+- Applicazione migrazione QA: SUCCESS.
+- Nuovo ledger QA: 283 righe; ultima versione `20261105001928`.
+- Production non modificata durante questa correzione.
+- Rimane da registrare e verificare il commit della migrazione nella cronologia Git e la relativa CI prima di dichiarare chiusa la parità di release.
