@@ -429,3 +429,16 @@ GitHub Actions [run 41705150691](https://github.com/federico1bartolucci-ctrl/BET
 GitHub Actions [run 41704321311](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41704321311) passed explicit logout and fresh login for administrator, collaborator and resident, in addition to role landing, refresh/session persistence and zero uncaught page errors. APP-15 is therefore PASS for the documented core scope.
 
 The APP-08 portal-link criterion and APP-15 sign-out/sign-in criterion are closed. APP-09 carryover edge cases, APP-11 deliberately failed closure through the UI, APP-12 multi-recipient/bounce/complaint delivery, and APP-14 Production/provider ACL disposition remain partial.
+
+
+## 24. QA verification closure — 2026-11-05 (point 4)
+
+The current QA verification tranche for project roadmap point 4 is closed. Evidence is tied to the existing QA branch `bethag-launch-qa` (`jhuyhlzzydcgghrzeexn`) and repository commit `1612b46b727ebe018e545ab989df71d6df2957a6`.
+
+- GitHub Actions [build run 41943778380](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778380): **SUCCESS**. Both jobs completed successfully, including real QA authentication/session persistence and the authenticated edit/archive diagnostic; PostgreSQL 17 bootstrap, isolated migration rehearsals, ACL/RLS assertions, application build and public-login browser smoke also passed.
+- GitHub Actions [baseline safety run 41943778409](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778409): **SUCCESS**.
+- The QA Dashboard screenshot dated 2026-11-05 confirms `Automatically expose new tables` is OFF. The read-only Data API/ACL comparison and Security Advisor results are recorded in `DATA-API-ACL-VERIFICATION-20261105.md`.
+- QA fixtures were cleaned by the authenticated diagnostic; no QA reset, branch recreation or historical replay was performed.
+- Production was not modified.
+
+This closure applies to roadmap **point 4 only**. It does not mean APP-01–APP-15 as a complete acceptance matrix is finished: the remaining partial cases and Production/provider release gates recorded above remain open. It does not authorize merge, deployment or Production cutover. Production remains **NO-GO** pending the separately documented gates and explicit release approval.
