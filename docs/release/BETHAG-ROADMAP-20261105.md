@@ -15,7 +15,7 @@
 |---|---|---|
 | 1–3 | Fasi precedenti della scaletta concordata | CHIUSI secondo lo storico di progetto; non riaperti da questo aggiornamento. |
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
-| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | IN CORSO — snapshot e classificazione corretti; payload storici e ACL/default ACL ancora da verificare |
+| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | IN CORSO — SHA-256 delle 247 coppie comuni verificato; divergenze ACL/default ACL documentate, da riconciliare |
 | 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | DA PROGRAMMARE DOPO IL PUNTO 5 |
 | 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | DA ESEGUIRE PER ULTIMO |
 
@@ -51,3 +51,11 @@ Il punto 5 è **IN CORSO**, non chiuso. È stato acquisito in sola lettura lo sn
 - Analisi: `docs/release/LIVE-MIGRATION-RECONCILIATION-20261105.md`.
 
 I vecchi snapshot 247/47 del 3 novembre restano conservati come reperti storici, ma non sono più la fotografia live. Nessun tentativo di pareggiare i conteggi: le righe QA-only e Production-only richiedono classificazione semantica. La verifica hash/payload di tutti i 248/283 record e la revisione delle divergenze di schema restano aperte.
+
+
+## Verifica tecnica aggiuntiva — 2026-11-05
+- Payload SQL live: SHA-256 identico per tutte le 247 coppie comuni Production/QA; nessuna differenza rilevata.
+- Divergenze ACL confermate: EXECUTE PUBLIC su due funzioni trigger in Production ma non in QA; default ACL di tabelle, funzioni e sequenze non allineati.
+- La migrazione QA `20261023000004_application_default_table_privileges` registra GRANT CRUD ad authenticated e service_role, ma i default ACL live QA attuali non li mostrano: serve ricostruire la successiva causa/variazione prima di proporre correzioni.
+- Report: `docs/release/LIVE-PAYLOAD-ACL-VERIFICATION-20261105.md`.
+- CI sull'ultimo commit documentale `9ee9bb9023c64d02bb46021fa47e3216c474e047`: Baseline safety run `41946856398` SUCCESS; Build run `41946856406` in attesa/in esecuzione. Nessun esito complessivo dichiarato.
