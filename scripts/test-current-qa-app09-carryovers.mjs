@@ -76,11 +76,12 @@ try {
   }).select("id").single(), "target fiscal year");
   ids.targetYear = target.id;
 
+  const incomingEmail = "incoming-app09-" + Date.now() + "@example.com";
   ids.transfer = must(await admin.rpc("confirm_condominium_member_transfer", {
     p_unit_id: ids.unit,
     p_outgoing_member_id: ids.owner,
     p_incoming_name: "Acquirente carryover QA",
-    p_incoming_email: null,
+    p_incoming_email: incomingEmail,
     p_incoming_user_id: null,
     p_transfer_date: "2026-11-05",
     p_transfer_type: "Vendita",
@@ -89,7 +90,7 @@ try {
       bethag_qa_marker: marker,
       transfer_scope: "whole_property",
       outgoing_member_ids: [ids.owner],
-      incoming_members: [{ name: "Acquirente carryover QA", email: "incoming-app09-" + Date.now() + "@example.com", ownership_share: 100 }],
+      incoming_members: [{ name: "Acquirente carryover QA", email: incomingEmail, ownership_share: 100 }],
     },
   }), "confirm transfer");
 
