@@ -99,7 +99,7 @@ jobs:
       - name: APP-12 — deployed email provider acceptance with Resend test recipient
         env:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
-          BETHAG_QA_ADMIN_PASSWORD: [0m${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app12-provider.mjs
 
