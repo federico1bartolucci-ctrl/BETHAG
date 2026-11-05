@@ -33,7 +33,7 @@ const report = {
     payload_equivalence: "247/247 common payloads are byte-identical; 17 QA-only migrations with current canonical files are byte-identical; 19 QA-only payloads without a current canonical file are classified and preserved; the Production-only 20261104222229 ACL payload is semantically equivalent to its reviewed draft."
   },
   release_gates: [
-    "Complete the exact 248-row Production snapshot plus sixteen pending canonical migrations PostgreSQL 17 rehearsal, including replay of the already-applied Production-only ACL payload in isolation.",
+    "Complete the exact 248-row Production snapshot plus nineteen pending canonical migrations PostgreSQL 17 rehearsal, including replay of the already-applied Production-only ACL payload in isolation.",
     "Reconcile live catalog, explicit PUBLIC EXECUTE ACLs and global/schema default privileges.",
     "Verify Data API exposure settings separately in Production; QA screenshots do not prove Production configuration.",
     "Verified isolated backup restore: retain actual provider-backed restore evidence or document an explicit named residual-risk acceptance; do not claim an unperformed physical restore.",
@@ -43,7 +43,7 @@ const report = {
   execution_plan: [
     "Keep Production and the single existing QA environment unchanged during reconciliation.",
     "Do not replay historical migration payloads or copy environment-specific ledger rows.",
-    "Promote only the sixteen reviewed canonical forward migrations through the version-preserving guarded runner after the 248+16 rehearsal and all release gates; do not use Supabase apply_migration because it generates server timestamps and would cause version drift."
+    "Promote only the nineteen reviewed canonical forward migrations through the version-preserving guarded runner after the 248+16 rehearsal and all release gates; do not use Supabase apply_migration because it generates server timestamps and would cause version drift."
   ],
   action: "PLAN_ONLY_NO_COMMANDS"
 };
