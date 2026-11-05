@@ -243,3 +243,17 @@ Screenshot forniti dall'operatore durante la verifica Production (ore locali mos
 **Esito gate Dashboard:** PARTIAL / BLOCKED. Il requisito relativo a `public` e `supabase_functions` risulta conforme sulla base delle schermate; resta da disattivare `Automatically expose new tables` e salvare la modifica, quindi acquisire una nuova schermata che provi lo stato OFF. La presenza di `graphql_public` è registrata come esposizione aggiuntiva, non è di per sé uno dei criteri di blocco definiti nel gate corrente.
 
 La modifica del toggle è una configurazione di progetto nella Dashboard e non è disponibile tramite le azioni Supabase collegate. Deve essere eseguita dall'operatore autorizzato nella Dashboard Production. Fino alla nuova attestazione, APP-14 resta NO-GO; nessuna migrazione, DDL, modifica ACL, merge o deploy è autorizzato da questa evidenza.
+
+
+### Conferma toggle Data API OFF — 2026-11-05
+
+Seconda schermata Production fornita dall'operatore (ora locale mostrata: 15:37):
+
+- `Automatically expose new tables`: toggle grigio, posizione OFF.
+- Exposed tables: 0 of 48.
+- Exposed functions: 0 of 171.
+- Nessuna tabella o funzione risulta individualmente esposta in questa schermata.
+
+**Esito:** la precedente difformità del toggle risulta corretta e attestata visivamente. Insieme alla schermata precedente, risultano `public` esposto e `supabase_functions` non presente tra gli schemi selezionati. La verifica Dashboard Data API è quindi **PASS sulla base delle schermate fornite**. `graphql_public` resta esposto ed è registrato come configurazione aggiuntiva.
+
+Questo PASS chiude esclusivamente il gate manuale Dashboard; non chiude APP-14 né autorizza operazioni Production. Restano la connessione PostgreSQL diretta fornita localmente dall'operatore, il pin del commit e del piano operativo, il preflight read-only, l'approvazione esplicita del cutover, l'esecuzione guarded e il postflight.
