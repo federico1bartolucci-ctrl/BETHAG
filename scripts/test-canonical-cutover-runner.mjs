@@ -2,9 +2,9 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 248-pair ledger, runs all 16 real SQL
+ * Seeds a disposable copy of the frozen 248-pair ledger, runs all 19 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 264-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 267-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -150,12 +150,12 @@ const code = await new Promise((resolve,reject) => {
 if (code !== 0) throw new Error(`Canonical runner rehearsal failed (exit ${code}).\n${out}\n${err}`);
 console.log(out);
 
-console.log("Running read-only 264-row Production postflight against the reconstructed isolated schema...");
+console.log("Running read-only 267-row Production postflight against the reconstructed isolated schema...");
 await psql(["-f", "supabase/rebuild/production-cutover-postflight-20261105.sql"]);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,264);
+assert.equal(finalLedger.length,267);
 const historicalVersions = new Set(snapshot.migrations.map(row=>row.version));
 assert.deepEqual(finalLedger.filter(row=>historicalVersions.has(row.version)),snapshot.migrations,"Historical ledger pairs changed.");
 const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json","utf8"));
@@ -166,7 +166,7 @@ console.log(JSON.stringify({
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
  frozen_historical_pairs_preserved:248,
- canonical_rows_added:16,
- final_ledger_rows:264,
+ canonical_rows_added:19,
+ final_ledger_rows:267,
  production_or_supabase_touched:false
 },null,2));
