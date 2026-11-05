@@ -96,7 +96,7 @@ try {
   }), "confirm transfer");
 
   // APP-09: a member-level debit carryover must block closure.
-  const memberCarryover = must(await admin.from("condominium_fiscal_carryovers").insert({
+  const memberCarryover = must(await cleanup.from("condominium_fiscal_carryovers").insert({
     workspace_id: workspace.id,
     condominium_id: ids.condominium,
     source_fiscal_year_id: ids.sourceYear,
@@ -122,7 +122,7 @@ try {
   ids.memberCarryover = null;
 
   // APP-09: a unit-level credit carryover must also block closure.
-  const unitCarryover = must(await admin.from("condominium_fiscal_carryovers").insert({
+  const unitCarryover = must(await cleanup.from("condominium_fiscal_carryovers").insert({
     workspace_id: workspace.id,
     condominium_id: ids.condominium,
     source_fiscal_year_id: ids.sourceYear,
