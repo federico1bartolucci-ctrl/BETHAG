@@ -203,6 +203,19 @@ BEGIN
   ) <> 0 THEN RAISE EXCEPTION 'FAIL: one or more authenticated private RPC grants are missing'; END IF;
 
 
+  IF position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure))=0
+     OR position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure))=0 THEN
+    RAISE EXCEPTION 'FAIL: collaborator permission checks do not require an explicit true boolean';
+  END IF;
+  IF has_function_privilege('anon','public.normalize_zero_ownership_owner()','EXECUTE')
+     OR has_function_privilege('authenticated','public.normalize_zero_ownership_owner()','EXECUTE')
+     OR has_function_privilege('anon','public.preserve_closing_condominium_member_history()','EXECUTE')
+     OR has_function_privilege('authenticated','public.preserve_closing_condominium_member_history()','EXECUTE')
+     OR NOT has_function_privilege('service_role','public.normalize_zero_ownership_owner()','EXECUTE')
+     OR NOT has_function_privilege('service_role','public.preserve_closing_condominium_member_history()','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: public trigger function EXECUTE ACL is not least-privilege';
+  END IF;
+
   IF to_regprocedure('private.upsert_portal_access_for_member(uuid,uuid,text,jsonb)') IS NULL THEN
     RAISE EXCEPTION 'FAIL: centralized portal registration upsert helper is missing';
   END IF;
