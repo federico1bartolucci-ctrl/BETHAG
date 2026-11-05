@@ -26,6 +26,8 @@ try {
     name: marker,
     address: "Via QA carryover",
     city: "Imola",
+    postal_code: "40026",
+    province: "BO",
     data: { bethag_qa_marker: marker },
   }).select("id").single(), "condominium");
   ids.condominium = condominium.id;
@@ -33,9 +35,8 @@ try {
   const unit = must(await admin.from("condominium_units").insert({
     workspace_id: workspace.id,
     condominium_id: ids.condominium,
-    unit_code: "APP09-" + Date.now(),
-    building_code: "QA",
-    data: { bethag_qa_marker: marker },
+    unit_code: "T-09-CARRY-" + Date.now(),
+    data: { unitType: "Abitazione", millesimi: "1000", active: true, ownerMode: "condominium_member", ownerMemberIds: [], bethag_qa_marker: marker },
   }).select("id").single(), "unit");
   ids.unit = unit.id;
 
@@ -43,8 +44,10 @@ try {
     condominium_id: ids.condominium,
     unit_id: ids.unit,
     name: "Cedente carryover QA",
+    email: "app09-carryover-" + Date.now() + "@example.com",
     role: "resident",
     active: true,
+    legacy_id: Date.now(),
     data: { role: "Proprietario", position_status: "Attivo", current_owner: true, ownership_share: 100, bethag_qa_marker: marker },
   }).select("id").single(), "outgoing owner");
   ids.owner = owner.id;
@@ -86,7 +89,7 @@ try {
       bethag_qa_marker: marker,
       transfer_scope: "whole_property",
       outgoing_member_ids: [ids.owner],
-      incoming_members: [{ name: "Acquirente carryover QA", ownership_share: 100 }],
+      incoming_members: [{ name: "Acquirente carryover QA", email: "incoming-app09-" + Date.now() + "@example.com", ownership_share: 100 }],
     },
   }), "confirm transfer");
 
