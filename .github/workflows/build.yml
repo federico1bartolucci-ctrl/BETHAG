@@ -134,6 +134,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
 
+      - name: Rehearse portal registration upsert repair on isolated PostgreSQL 17
+        run: node scripts/test-postgres-portal-registration-upsert.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
+
       - name: Create a separate empty database for guarded migration-runner rehearsal
         run: createdb --host=localhost --port=5432 --username=postgres bethag_runner_test
         env:
