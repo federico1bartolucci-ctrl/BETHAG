@@ -26,10 +26,10 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
-const expectedHead = { version: "20261103070901", name: "grant_service_role_private_resend_event_rpc" };
-const expectedLedgerCount = 247;
-const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261103.json");
-const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261103.json");
+const expectedHead = { version: "20261104222229", name: "reconcile_production_acl_least_privilege" };
+const expectedLedgerCount = 248;
+const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-freeze-20261105.json");
+const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261105.json");
 
 function gitBlobSha(content) {
   const bytes = Buffer.from(content, "utf8");
@@ -103,7 +103,7 @@ async function main() {
   comparePairs(snapshot.migrations, snapshot.migrations, "Stored Production snapshot self-check");
 
   const expected = manifest.sequence;
-  assert.equal(expected.length, 15, "Expected exactly fifteen reviewed incremental migrations.");
+  assert.equal(expected.length, 16, "Expected exactly sixteen reviewed incremental migrations.");
   const migrationBodies = [];
   for (const item of expected) {
     const filename = item.file;
@@ -118,11 +118,11 @@ async function main() {
     migrationBodies.push({ filename, version, name, sql });
   }
 
-  console.log("Checking live Production migration ledger against the complete frozen 247-row snapshot...");
+  console.log("Checking live Production migration ledger against the complete frozen 248-row snapshot...");
   const initial = await liveLedger();
   comparePairs(initial, snapshot.migrations, "Live Production ledger vs frozen snapshot");
   assert.deepEqual(initial.at(-1), expectedHead, "Production ledger head is not the frozen expected head.");
-  console.log("PASS: exact 247-row preflight. No history rows will be rewritten or deleted.");
+  console.log("PASS: exact 248-row preflight. No history rows will be rewritten or deleted.");
 
   const tempDir = await mkdtemp(join(tmpdir(), "bethag-cutover-"));
   try {
@@ -134,7 +134,7 @@ async function main() {
         `STOP before ${migration.filename}: expected ${expectedCount} rows, found ${current.length}.`);
       const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
       const currentHistorical = current.filter((row) => historicalVersions.has(row.version));
-      comparePairs(currentHistorical, snapshot.migrations, `Historical 247-row preservation before ${migration.filename}`);
+      comparePairs(currentHistorical, snapshot.migrations, `Historical 248-row preservation before ${migration.filename}`);
       const currentCanonical = current.filter((row) => !historicalVersions.has(row.version));
       comparePairs(currentCanonical, migrationBodies.slice(0, index).map(({ version, name }) => ({ version, name })),
         `Previously applied canonical rows before ${migration.filename}`);
@@ -160,7 +160,7 @@ async function main() {
       assert.equal(after.length, expectedCount + 1, `Postcondition failed after ${migration.filename}: ledger count.`);
       const afterHistorical = after.filter((row) => historicalVersions.has(row.version));
       comparePairs(afterHistorical, snapshot.migrations,
-        `Historical 247-row preservation after ${migration.filename}`);
+        `Historical 248-row preservation after ${migration.filename}`);
       const afterCanonical = after.filter((row) => !historicalVersions.has(row.version));
       comparePairs(afterCanonical, migrationBodies.slice(0, index + 1).map(({ version, name }) => ({ version, name })),
         `Canonical migration rows after ${migration.filename}`);
@@ -168,7 +168,7 @@ async function main() {
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 262, "Final ledger must contain 247 historical + 15 canonical rows.");
+    assert.equal(finalLedger.length, 262, "Final ledger must contain 248 historical + 16 canonical rows.");
     const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
     comparePairs(finalLedger.filter((row) => historicalVersions.has(row.version)), snapshot.migrations, "Final historical ledger preservation");
     comparePairs(finalLedger.filter((row) => !historicalVersions.has(row.version)),
