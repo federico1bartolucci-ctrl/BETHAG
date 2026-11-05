@@ -1,25 +1,25 @@
 {
-  "artifact": "BETHAG final QA collaudo evidence — 2026-11-05",
+  "artifact": "BETHAG final QA collaudo evidence — 2026-11-05 (refreshed)",
   "captured_date": "2026-11-05",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+  "reviewed_head_sha": "cee6a0c5bc3c4bf223bbda672b43c8ec07abba9e",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42017349896,
-      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "run_id": 42126653387,
+      "head_sha": "cee6a0c5bc3c4bf223bbda672b43c8ec07abba9e",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42017349811,
-      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "run_id": 42126653326,
+      "head_sha": "cee6a0c5bc3c4bf223bbda672b43c8ec07abba9e",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42017349826,
-      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "run_id": 42126653340,
+      "head_sha": "cee6a0c5bc3c4bf223bbda672b43c8ec07abba9e",
       "conclusion": "success"
     }
   },
@@ -36,43 +36,37 @@
     "APP-10": "PASS",
     "APP-11": "PASS",
     "APP-12": {
-      "status": "PARTIAL",
+      "status": "PASS",
       "publication_withdrawal_resident_visibility_recipient_preparation_queue_authorization": "PASS",
       "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
       "invalid_signature_rejected_http_401_without_mutation": "PASS",
-      "provider_delivery": "NOT TESTED",
-      "provider_probe_http_status": 503,
-      "provider_probe_error": "Servizio e-mail non configurato.",
-      "required_qa_edge_function_secrets": [
-        "RESEND_API_KEY",
-        "BETHAG_FROM_EMAIL"
-      ],
-      "configuration_state": "At least one required secret is absent; the probe cannot distinguish which one.",
-      "test_recipient": "delivered@resend.dev",
-      "email_sent": false,
-      "recipient_queue_mutated": false,
-      "provider_message_id_persisted": false,
-      "qa_resend_webhook_endpoint_configured": false,
-      "current_resend_webhook_endpoint": "https://tctcgptrsmvgajqjgnev.supabase.co/functions/v1/bethag-resend-webhook"
+      "provider_probe": "PASS",
+      "provider_test_recipient": "delivered@resend.dev",
+      "provider_delivery_observed": "PASS — QA provider test messages delivered; see Resend provider evidence",
+      "limitation": "Synthetic webhook acceptance covers sent/delivered/bounced/complained event handling; provider delivery was observed for test messages, not a full production-volume deliverability certification."
     },
     "APP-13": "PASS",
     "APP-14": {
       "status": "PARTIAL",
-      "disposition": "Production post-cutover gate; Production remains NO-GO until ACL/schema/Data API postflight is verified."
+      "disposition": "Production post-cutover gate; Production remains NO-GO until guarded 19-migration cutover, postflight and authenticated Production smoke are completed."
     },
-    "APP-15": "PASS"
-  },
-  "cleanup": {
-    "provider_test_marker_rows": {
-      "condominiums": 0,
-      "units": 0,
-      "members": 0,
-      "communications": 0,
-      "recipients": 0
-    },
-    "temporary_provider_fixture_removed": true,
-    "preexisting_qa_fixtures_preserved": true,
-    "two_empty_app09_attempt_fixtures_with_closed_years_preserved": true
+    "APP-15": {
+      "status": "PASS",
+      "navigation": {
+        "admin": "PASS — 12 administrator destinations activated; homepage route survived refresh; no uncaught browser errors.",
+        "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
+        "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
+      },
+      "authentication_session": {
+        "admin": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "collaborator": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "resident": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors."
+      },
+      "diagnostic_artifact": {
+        "name": "bethag-app15-diagnostics",
+        "artifact_id": 13461986028
+      }
+    }
   },
   "migration_rehearsal": {
     "postgres_version": 17,
@@ -90,7 +84,18 @@
     "transfer_rollback_rehearsal": "PASS",
     "production_or_qa_migration_writes": false
   },
+  "cleanup": {
+    "provider_test_marker_rows": {
+      "condominiums": 0,
+      "units": 0,
+      "members": 0,
+      "communications": 0,
+      "recipients": 0
+    },
+    "temporary_provider_fixture_removed": true,
+    "preexisting_qa_fixtures_preserved": true
+  },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance is substantially complete. APP-12 provider delivery remains PARTIAL because the deployed QA Edge Function is not configured. APP-14 remains a Production post-cutover gate."
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on the existing QA project. APP-14 remains PARTIAL and Production cutover remains NO-GO pending local Production DATABASE_URL, approved operational cutover plan, guarded migration execution, postflight and authenticated Production smoke."
 }
