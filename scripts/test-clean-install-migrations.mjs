@@ -3,7 +3,7 @@
  * Full chronological clean-install rehearsal for the exact deployable BETHAG
  * migration directory. This is separate from the live-Production cutover
  * rehearsal, whose sixteen pending increments are applied after the existing
- * 247-row ledger state.
+ * 248-row ledger state.
  *
  * The target must be a disposable local PostgreSQL 17 database. Never pass a
  * Supabase URL or a remote database connection string.
