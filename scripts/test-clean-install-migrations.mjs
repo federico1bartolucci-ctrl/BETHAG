@@ -2,7 +2,7 @@
 /**
  * Full chronological clean-install rehearsal for the exact deployable BETHAG
  * migration directory. This is separate from the live-Production cutover
- * rehearsal, whose fifteen pending increments are applied after the existing
+ * rehearsal, whose sixteen pending increments are applied after the existing
  * 247-row ledger state.
  *
  * The target must be a disposable local PostgreSQL 17 database. Never pass a
@@ -43,23 +43,23 @@ const baselineFiles = [
   "20261017000005_bethag_baseline_grants.sql",
 ];
 const existingHead = "20261022202747_harden_close_member_transfer_search_path.sql";
-const freeze = JSON.parse(await readFile(root + "/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
+const freeze = JSON.parse(await readFile(root + "/rebuild/production-migration-cutover-freeze-20261105.json", "utf8"));
 const pendingFiles = freeze.sequence.map((item) => item.file);
 const forwardItems = freeze.live_ledger.forward_migrations_after_2026_11_02_freeze;
 const forwardFiles = forwardItems.map((item) => item.file);
 const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwardFiles].sort();
 const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
 
-assert.equal(freeze.clean_install?.migration_file_count, 24,
-  "Frozen manifest must describe the 24-file clean-install sequence.");
+assert.equal(freeze.clean_install?.migration_file_count, 25,
+  "Frozen manifest must describe the 25-file clean-install sequence.");
 assert.deepEqual(freeze.clean_install.baseline_files, baselineFiles);
 assert.equal(freeze.clean_install.existing_canonical_head, existingHead);
 assert.deepEqual(freeze.clean_install.pending_canonical_increments, pendingFiles);
 assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFiles);
 assert.deepEqual(actualFiles, expectedFiles,
-  "Deployable migration directory differs from the frozen 24-file chronological clean-install sequence.");
-assert.equal(actualFiles.length, 24);
-assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 24,
+  "Deployable migration directory differs from the frozen 25-file chronological clean-install sequence.");
+assert.equal(actualFiles.length, 25);
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 25,
   "Clean-install migration versions must be unique.");
 
 for (const item of freeze.sequence) {
