@@ -45,12 +45,12 @@ assert.deepEqual(snapshot.latest, live.production.latest);
 assert.deepEqual(snapshot.migrations, live.production.migrations);
 assert.equal(freeze.live_ledger.rows, 248);
 assert.equal(freeze.live_ledger.exact_version_name_pair_match, true);
-assert.equal(freeze.expected_postflight.ledger_rows, 264);
-assert.equal(freeze.sequence.length, 16);
+assert.equal(freeze.expected_postflight.ledger_rows, 267);
+assert.equal(freeze.sequence.length, 19);
 assert.equal(freeze.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(freeze.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
-assert.equal(files.length, 25);
-assert.equal(freeze.clean_install.migration_file_count, 25);
+assert.equal(files.length, 28);
+assert.equal(freeze.clean_install.migration_file_count, 28);
 assert.ok(pending.every(item => files.includes(item.file)));
 assert.ok(pending.every(item => !productionSet.has(item.version + "|" + item.name)));
 assert.ok(freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item =>
