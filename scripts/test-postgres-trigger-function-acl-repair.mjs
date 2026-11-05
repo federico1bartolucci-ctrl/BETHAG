@@ -54,7 +54,7 @@ ROLLBACK;`;
 
 execFileSync("psql", [
   "-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1",
-  "-c", setup + "\\n" + migration + "\\n" + migration + "\\n" + verify
+  "-c", setup + "\n" + migration + "\n" + migration + "\n" + verify
 ], { stdio: "inherit" });
 
 console.log(JSON.stringify({
