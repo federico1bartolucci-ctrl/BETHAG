@@ -172,3 +172,17 @@ The additive draft for `workspace_members.data` was tested on isolated PostgreSQ
 Il punto 6 è completato come verifica e preparazione dei gate con esito **NO-GO Production**. La decisione è basata su divergenze effettive e riproducibili, non su un generico mancato allineamento dei registri. Le correzioni sono state predisposte o individuate come migrazioni forward-only, ma nessuna è stata applicata agli ambienti remoti.
 
 La verifica manuale della Dashboard Production per `Automatically expose new tables` resta un gate non attestato; il valore QA è OFF. Anche se la verifica manuale risultasse OFF, i blocker applicativi e di autorizzazione sopra elencati manterrebbero Production NO-GO.
+
+
+## 11. Stato collaudo applicativo QA aggiornato — 2026-11-05
+
+Il collaudo finale sul progetto QA esistente `jhuyhlzzydcgghrzeexn` è stato completato dopo la presente verifica di parità:
+- Final QA collaudo [run 42035330794](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330794): **SUCCESS**.
+- Build [run 42035330772](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330772): **SUCCESS**.
+- Baseline safety [run 42035330822](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330822): **SUCCESS**.
+- APP-01–APP-13 e APP-15: **PASS**. APP-12 include invio tramite Resend al destinatario sintetico `delivered@resend.dev`, callback provider firmato ricevuto dal webhook QA dedicato e persistenza verificata di `provider_message_id`, `sent_at`, `provider_event_id`, `delivered_at`, stato `delivered` e aggregato `Consegnata`.
+- APP-14: **PARTIAL** per i gate di cutover e parità Production ancora aperti.
+
+Questo esito QA non modifica né risolve le divergenze Production descritte nelle sezioni precedenti. In particolare restano bloccanti la colonna `workspace_members.data` assente in Production, il trigger e la funzione co-owner QA-only, le sette definizioni private divergenti, i 19 privilegi EXECUTE mancanti, il bug booleano dei permessi collaboratori e il controllo Dashboard Production Data API non attestato.
+
+**Decisione invariata: Production NO-GO.** Nessuna migrazione, modifica ACL, deploy, merge o cutover Production è stata eseguita dal collaudo QA. Il completamento di APP-01–APP-13 e APP-15 non equivale all'autorizzazione del rilascio Production.
