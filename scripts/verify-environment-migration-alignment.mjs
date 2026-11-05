@@ -65,7 +65,7 @@ const blockers = [
   "The guarded runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and would create migration-version drift.",
   "Reconfirm the 28 October provider backup/restore proof against current Production retention and capture the latest backup identifier.",
   "Production Data API exposure configuration must be verified in Dashboard before release.",
-  "The 248-row plus sixteen-migration rehearsal must pass before any Production DDL.",
+  "The 248-row plus nineteen-migration rehearsal must pass before any Production DDL.",
 ];
 
 console.log(JSON.stringify({

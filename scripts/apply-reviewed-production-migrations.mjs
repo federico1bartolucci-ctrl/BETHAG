@@ -5,7 +5,7 @@
  * This runner deliberately does NOT call Supabase apply_migration. It executes
  * each reviewed SQL file and writes the matching canonical ledger row in the
  * same PostgreSQL transaction. It is disabled unless the operator explicitly
- * sets all three production safety environment variables documented below.
+ * sets all required production safety environment variables documented below.
  *
  * Required:
  *   DATABASE_URL=<direct/session-pooler PostgreSQL URL with DDL privileges>

@@ -2,7 +2,7 @@
 /**
  * Full chronological clean-install rehearsal for the exact deployable BETHAG
  * migration directory. This is separate from the live-Production cutover
- * rehearsal, whose sixteen pending increments are applied after the existing
+ * rehearsal, whose nineteen pending increments are applied after the existing
  * 248-row ledger state.
  *
  * The target must be a disposable local PostgreSQL 17 database. Never pass a
