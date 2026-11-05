@@ -29,7 +29,7 @@ assert.equal(live.comparison.production_only_count, 1);
 assert.equal(live.comparison.qa_only_count, 36);
 assert.deepEqual(productionOnly, live.comparison.production_only);
 assert.deepEqual(qaOnly, live.comparison.qa_only);
-assert.equal(canonicalFiles.length, 24, "Canonical migration chain unexpectedly changed; re-review snapshot before continuing.");
+assert.equal(canonicalFiles.length, 25, "Canonical migration chain unexpectedly changed; re-review snapshot before continuing.");
 assert.equal(live.safety.production_modified, false);
 assert.equal(live.safety.qa_modified, false);
 assert.equal(live.safety.reset_or_replay_performed, false);
