@@ -14,18 +14,16 @@ Le impostazioni della Data API sono state lette dalle schermate della Dashboard 
 | Schema `private` | Non esposto |
 | Tabelle esposte | 0 di 48 |
 | Funzioni esposte | 0 di 173 |
-| Automatically expose new tables | **ON** — da disabilitare |
+| Automatically expose new tables | **OFF** — verificato nella schermata aggiornata del 2026-11-05 |
 | Extra search path | `public`, `extensions` |
 
 La separazione dello schema `private` è corretta: la presenza di privilegi PostgreSQL USAGE per `authenticated` sullo schema non implica che esso sia esposto da PostgREST. La schermata Dashboard conferma che `private` non è nella lista degli schemi esposti.
 
-### Azione residua obbligatoria
+### Conferma della modifica
 
-Disabilitare manualmente nella Dashboard QA **Automatically expose new tables**, quindi salvare. L'opzione concede automaticamente privilegi ai ruoli Data API sulle nuove tabelle; lasciarla attiva contraddice il principio di esposizione opt-in e può rendere raggiungibili nuove tabelle non ancora sottoposte a revisione. La documentazione Supabase raccomanda di disattivarla per controllare manualmente l'accesso.
+La schermata aggiornata inviata il 2026-11-05 mostra il branch `bethag-launch-qa` e l'interruttore **Automatically expose new tables** in posizione OFF (controllo grigio, cursore a sinistra). La schermata mostra inoltre 0/173 funzioni esposte e l'extra search path `public`, `extensions`. La modifica richiesta è quindi confermata visivamente.
 
-Il connettore Supabase disponibile non espone un'azione per leggere/modificare questo specifico parametro della Data API. Le query PostgreSQL non restituiscono in modo affidabile la lista `db-schemas` di PostgREST. Non è stata quindi tentata alcuna modifica SQL sostitutiva o revoca di privilegi alla cieca.
-
-Dopo il salvataggio occorre acquisire una nuova schermata che mostri l'interruttore OFF e ripetere il controllo che gli schemi esposti siano ancora solo `public` e `graphql_public`, con `private` escluso. Non è necessario modificare il numero di tabelle o funzioni esposte (devono restare 0/48 e 0/173, salvo successiva decisione esplicita).
+Il connettore Supabase non esponeva un'azione per modificare questo parametro; l'utente ha effettuato il salvataggio dalla Dashboard. Nessuna revoca SQL sostitutiva è stata eseguita.
 
 ## Verifiche PostgreSQL live — QA e Production
 
@@ -58,6 +56,6 @@ Non sono stati modificati perché la loro semantica applicativa e le policy RLS 
 
 **PASS** per la parità ACL osservata, copertura RLS, assenza di accesso SELECT anonimo, esclusione di `private` dagli schemi esposti e assenza di esposizione attuale di tabelle/funzioni nella Data API.
 
-**OPEN** per un'unica azione manuale di hardening: disabilitare `Automatically expose new tables` nel pannello Data API del QA e fornire la schermata post-salvataggio. Il punto 4 non deve essere dichiarato definitivamente chiuso prima di questa conferma.
+**PASS** per la configurazione Data API: `Automatically expose new tables` risulta OFF nella schermata aggiornata del branch QA. Le verifiche ACL/RLS e Security Advisor sono positive. Non risultano azioni residue di configurazione Data API in questo perimetro.
 
 Riferimento documentazione Supabase: https://supabase.com/docs/guides/api/securing-your-api — sezione “Default privileges for new tables and functions”.
