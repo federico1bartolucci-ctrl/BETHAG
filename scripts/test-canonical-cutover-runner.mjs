@@ -2,9 +2,9 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 247-pair ledger, runs all 15 real SQL
+ * Seeds a disposable copy of the frozen 248-pair ledger, runs all 16 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 262-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 264-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -82,8 +82,8 @@ if (existingPublicTables === 0) {
   }
 }
 
-const snapshot = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261103.json", "utf8"));
-assert.equal(snapshot.count, 247);
+const snapshot = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261105.json", "utf8"));
+assert.equal(snapshot.count, 248);
 const inventory = JSON.parse(await psql(["-At", "-c", `
 SELECT json_build_object(
  'tables',(SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')),
@@ -110,20 +110,27 @@ const seed = [
   }, []).map(rows => "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key,rollback) VALUES " + rows.join(",") + ";")
 ].join("\n");
 await psql([], seed);
-console.log("Seeded disposable local ledger with the frozen 247 version/name pairs.");
+console.log("Seeded disposable local ledger with the frozen 248 version/name pairs.");
 
-console.log("Applying existing canonical Production head (already included in frozen 247-row ledger) to clean local schema...");
+console.log("Applying existing canonical Production head (already included in frozen 248-row ledger) to clean local schema...");
 await psql(["-f", "supabase/migrations/20261022202747_harden_close_member_transfer_search_path.sql"]);
-const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
+const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json", "utf8"));
 for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze) {
   const filename = item.file;
   const sql = await readFile("supabase/rebuild/production-forward-migrations/" + filename, "utf8");
   const cleanInstallSql = await readFile("supabase/migrations/" + filename, "utf8");
   assert.equal(gitBlobSha(cleanInstallSql), item.git_blob_sha, "Clean-install SQL copy differs from frozen Production-forward payload: " + filename);
   assert.equal(gitBlobSha(sql), item.git_blob_sha, "Production-forward SQL differs from frozen Git blob SHA: " + filename);
-  console.log("Applying exact Production-forward SQL (ledger row already exists in frozen 247-pair snapshot): " + filename);
+  console.log("Applying exact Production-forward SQL (ledger row already exists in frozen 248-pair snapshot): " + filename);
   await psql(["-f", "supabase/rebuild/production-forward-migrations/" + filename]);
 }
+
+const productionOnly = freeze.live_ledger.production_only_migration;
+const productionOnlySql = await readFile("supabase/rebuild/production-forward-migrations/" + productionOnly.file, "utf8");
+assert.equal(gitBlobSha(productionOnlySql), productionOnly.git_blob_sha,
+  "Production-only migration replay differs from its captured reviewed Git blob: " + productionOnly.file);
+console.log("Replaying already-applied Production-only migration (historical ledger row remains in the 248-row snapshot): " + productionOnly.file);
+await psql(["-f", "supabase/rebuild/production-forward-migrations/" + productionOnly.file]);
 
 const runner = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
   env: {...process.env, BETHAG_CUTOVER_REHEARSAL:"YES"},
@@ -141,18 +148,18 @@ console.log(out);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,262);
+assert.equal(finalLedger.length,264);
 const historicalVersions = new Set(snapshot.migrations.map(row=>row.version));
 assert.deepEqual(finalLedger.filter(row=>historicalVersions.has(row.version)),snapshot.migrations,"Historical ledger pairs changed.");
-const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json","utf8"));
+const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json","utf8"));
 assert.deepEqual(finalLedger.filter(row=>!historicalVersions.has(row.version)),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4)})));
 console.log(JSON.stringify({
  status:"PASS",
  test:"end-to-end canonical cutover runner rehearsal",
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
- frozen_historical_pairs_preserved:247,
- canonical_rows_added:15,
- final_ledger_rows:262,
+ frozen_historical_pairs_preserved:248,
+ canonical_rows_added:16,
+ final_ledger_rows:264,
  production_or_supabase_touched:false
 },null,2));
