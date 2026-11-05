@@ -40,6 +40,7 @@ let accountingIncomingMemberId = null;
 let blockedUiUnitId = null;
 let blockedUiOwnerId = null;
 let blockedUiTransferId = null;
+let blockedUiIncomingMemberId = null;
 let blockedUiInstallmentId = null;
 
 async function signIn(page, role, email, password, landing) {
@@ -128,6 +129,10 @@ async function cleanupFixtures() {
   if (blockedUiTransferId) {
     const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", blockedUiTransferId);
     if (transfer.error) throw transfer.error;
+  }
+  if (blockedUiIncomingMemberId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", blockedUiIncomingMemberId);
+    if (member.error) throw member.error;
   }
   if (blockedUiInstallmentId) {
     const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", blockedUiInstallmentId);
@@ -776,6 +781,10 @@ try {
   });
   assert.ifError(blockedTransfer.error);
   blockedUiTransferId = blockedTransfer.data;
+  const blockedTransferRow = await cleanup.from("condominium_member_transfers")
+    .select("incoming_member_id").eq("id", blockedUiTransferId).single();
+  assert.ifError(blockedTransferRow.error);
+  blockedUiIncomingMemberId = blockedTransferRow.data.incoming_member_id;
 
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
