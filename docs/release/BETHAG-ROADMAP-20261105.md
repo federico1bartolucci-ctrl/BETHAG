@@ -16,8 +16,8 @@
 | 1–3 | Fasi precedenti della scaletta concordata | CHIUSI secondo lo storico di progetto; non riaperti da questo aggiornamento. |
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
 | 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | **CHIUSO — 2026-11-05**: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only non canonici classificati e payload esatti archiviati; Production-only confrontato semanticamente col draft; divergenze ACL e tre draft forward-only testati due volte su PostgreSQL 17 isolato; CI Build e Baseline SUCCESS sul commit 79311f06. Nessuna modifica remota. |
-| 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **IN CORSO** — avviata dopo la chiusura documentata del punto 5; solo verifiche read-only e gate, nessuna modifica remota |
-| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | DA ESEGUIRE PER ULTIMO |
+| 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **CHIUSO — 2026-11-05, NO-GO Production**: 48 relazioni, 103 policy, 257 indici, 305 vincoli allineati; divergenze applicative e ACL documentate nel report QA-PRODUCTION-PARITY. Branch QA FUNCTIONS_DEPLOYED/ACTIVE_HEALTHY. Nessuna scrittura remota. |
+| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — fase finale; test sintetici sequenziali con cleanup verificato. APP-12 invio reale email richiede destinatario di test autorizzato. |
 
 ## Chiusura del punto 4 — evidenze
 - Dashboard QA `bethag-launch-qa`: **Automatically expose new tables = OFF**, confermato dalla schermata aggiornata del 2026-11-05.
@@ -116,3 +116,22 @@ Il punto 6 è avviato. Ambito: confronto finale read-only tra QA e Production di
 - Il run 41951011743 ha saltato il diagnostic APP autenticato, come previsto. APP-01–APP-15 non avviato. Nessuna scrittura remota, nessun merge, deploy o cutover.
 
 Il punto 6 resta IN CORSO finché non è completata la matrice finale di ogni divergenza con dipendenze, sorgente canonica/QA e piano forward-only, e finché non è documentato il controllo manuale Data API Production. Il gate di rilascio rimane NO-GO; il punto 7 resta non avviato.
+
+
+## Chiusura del punto 6 — 2026-11-05
+
+Il punto 6 è chiuso come verifica finale read-only e decisione di rilascio. Esito: **Production NO-GO**. Le evidenze complete sono in `docs/release/QA-PRODUCTION-PARITY-20261105.md`.
+
+- Allineati: 48 relazioni public (nome/tipo/owner/ACL/RLS), 103 policy RLS, 257 indici, 305 vincoli; 7 Edge Functions con sorgenti `index.ts` identiche; Security Advisor zero lint.
+- Divergenze bloccanti: Production manca `workspace_members.data`; trigger metadata comproprietari e due funzioni private presenti solo in QA; sette definizioni private differenti; 19 funzioni private senza EXECUTE authenticated rispetto a QA; bug Production nella valutazione dei permessi JSONB booleani (chiave false considerata autorizzata).
+- Differenza estensione: pg_net solo QA, senza riferimenti nelle funzioni applicative public/private.
+- Default ACL e trigger PUBLIC EXECUTE: draft forward-only testati in PostgreSQL 17 isolato, non applicati.
+- Draft colonna `workspace_members.data`: test isolato PASS, esistente e nuovo record verificati, idempotenza PASS, rollback.
+- QA branch provider status: `FUNCTIONS_DEPLOYED`, preview `ACTIVE_HEALTHY`; nessun altro branch QA creato.
+- Data API auto-expose Production non verificato manualmente; rimane gate. Anche se OFF, i blocker applicativi mantengono Production NO-GO.
+- Build run [41950916265](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41950916265) SUCCESS; Baseline safety [41950916285](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41950916285) SUCCESS.
+- Nessuna modifica a Production o QA; nessun merge, deploy, migrazione remota, reset o replay.
+
+## Avvio del punto 7 — collaudo finale QA
+
+Il punto 7 è avviato sul solo QA esistente. I test vanno eseguiti in sequenza, non in parallelo, usando fixture con marker univoco e cleanup verificato. APP-12 non deve inviare email reali senza un destinatario di test esplicitamente autorizzato. Gli smoke APP eseguiti in precedenza per errore di condizione workflow non sono conteggiati come collaudo formale.
