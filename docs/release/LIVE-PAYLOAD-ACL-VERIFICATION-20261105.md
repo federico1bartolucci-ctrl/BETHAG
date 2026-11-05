@@ -189,3 +189,13 @@ Sul commit `ad0688f89d5bec973bf2bb097d9e53822d68d1da`:
 - Clean-install 24 migrazioni, guarded runner 15 migrazioni, Production ACL draft, RLS collaborator, build, browser public smoke e autenticazione reale QA: **PASS**.
 - Il diagnostic APP completo è stato saltato, come previsto dalla condizione workflow corretta.
 - Nessun draft è stato applicato su QA o Production.
+
+
+### Dettaglio dei confronti dei 18 file candidati d'archivio
+
+- Byte-identici (7): `20261102044603`, `20261102050957`, `20261102100000`, `20261102200820`, `20261103193927`, `20261104122833`, `20261104125614`.
+- Semanticamente equivalenti (9): `20261102041805`, `20261102043315`, `20261102044002`, `20261102044102`, `20261102044224`, `20261102054253`, `20261102054409`, `20261103072843`, `20261105001928`. Per 02044102 cambia soltanto l'ordine delle coppie REVOKE/GRANT su funzioni distinte; per 05001928 cambia soltanto il testo dell'eccezione dell'assertion.
+- Non equivalenti (2): `20261102043152` (GRANT aggiuntivo a service_role nel file candidato) e `20261102050437` (regex con escape duplicato nel file candidato). Per 02050437 il file alternativo `20261102120000_backfill_condominium_archive_metadata.sql` coincide semanticamente con il payload live.
+- Senza file candidato preesistente (1): `20261104235514_fix_portal_registration_upsert_conflict_target`; il suo payload esatto è comunque preservato nello snapshot forense.
+
+La distinzione tra file candidato, payload effettivamente registrato e snapshot recuperato è vincolante: i file non equivalenti non devono essere usati per ricostruire o riprodurre il ledger.
