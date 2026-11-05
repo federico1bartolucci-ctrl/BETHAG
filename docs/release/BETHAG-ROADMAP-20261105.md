@@ -40,3 +40,14 @@ La chiusura del punto 4 è stata riportata anche nei documenti di rilascio:
 - `docs/release/RELEASE-READINESS-20261027.md`, addendum del 2026-11-05.
 
 La registrazione è circoscritta al punto 4. La matrice APP-01–APP-15 completa e i gate di rilascio Production restano distinti e non sono dichiarati chiusi.
+
+
+## Avanzamento punto 5 — acquisizione live registri (2026-11-05)
+Il punto 5 è **IN CORSO**, non chiuso. È stato acquisito in sola lettura lo snapshot completo dei registri live:
+- Production: 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`.
+- QA esistente: 283 righe, head `20261105001928_align_qa_fund_availability_view_acl`.
+- 247 coppie versione/nome esattamente comuni; 1 Production-only; 35 QA-only.
+- Snapshot integrale: `supabase/rebuild/live-migration-ledgers-20261105.json`.
+- Analisi: `docs/release/LIVE-MIGRATION-RECONCILIATION-20261105.md`.
+
+I vecchi snapshot 247/47 del 3 novembre restano conservati come reperti storici, ma non sono più la fotografia live. Nessun tentativo di pareggiare i conteggi: le righe QA-only e Production-only richiedono classificazione semantica. La verifica hash/payload di tutti i 248/283 record e la revisione delle divergenze di schema restano aperte.
