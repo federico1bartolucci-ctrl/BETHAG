@@ -166,6 +166,11 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_acl_draft_test
 
+      - name: Rehearse forward-only PostgreSQL default ACL repair on isolated database
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_default_acl_repair_test && node scripts/test-postgres-default-acl-repair.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_default_acl_repair_test
+          PGPASSWORD: postgres
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
