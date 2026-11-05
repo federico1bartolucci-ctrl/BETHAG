@@ -179,6 +179,11 @@ async function cleanupFixtures() {
     if (fiscalYear.error) throw fiscalYear.error;
   }
 
+  const syntheticPortal = await cleanup.from("portal_access").delete().eq("data->>source", marker);
+  if (syntheticPortal.error) throw syntheticPortal.error;
+  const syntheticMembers = await cleanup.from("condominium_members").delete().eq("data->>source", marker);
+  if (syntheticMembers.error) throw syntheticMembers.error;
+
   const condos = await cleanup.from("condominiums")
     .select("id,workspace_id,legacy_id")
     .like("name", marker + "%");
