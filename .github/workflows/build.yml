@@ -172,6 +172,12 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_default_acl_repair_test
           PGPASSWORD: postgres
+      - name: Rehearse forward-only trigger-function ACL repair on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_trigger_acl_repair_test && node scripts/test-postgres-trigger-function-acl-repair.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_trigger_acl_repair_test
+          PGPASSWORD: postgres
+
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
