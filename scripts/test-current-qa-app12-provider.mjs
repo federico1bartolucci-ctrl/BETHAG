@@ -101,6 +101,21 @@ try {
     body: JSON.stringify({ communicationId: legacyCommunicationId, workspaceId }),
   });
   const payload = await response.json();
+  const providerState = must(await admin.from("communication_recipients")
+    .select("email,status,error_message,provider_message_id,sent_at")
+    .eq("communication_id", communicationId), "capture provider diagnostic before cleanup");
+  console.log(JSON.stringify({
+    suite: "BETHAG_QA_APP12_PROVIDER_DIAGNOSTIC",
+    http_status: response.status,
+    function_result: payload,
+    recipient_result: providerState.map((row) => ({
+      email: row.email,
+      status: row.status,
+      error_message: row.error_message,
+      has_provider_message_id: Boolean(row.provider_message_id),
+      has_sent_at: Boolean(row.sent_at),
+    })),
+  }, null, 2));
 
   if (response.status === 503 && payload?.error === "Servizio e-mail non configurato.") {
     // The deployed QA function explicitly reports missing RESEND_API_KEY and/or
