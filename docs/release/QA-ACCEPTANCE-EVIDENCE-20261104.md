@@ -97,9 +97,7 @@ The candidate migration was applied inside a QA SQL transaction, then `public.co
 - Collaborator module permission enforcement with RLS: **PASS**.
 - Canonical migration-ledger transaction rehearsal against the 15-migration structural inventory: **PASS**.
 
-This CI result supersedes the preceding failed rehearsal caused by a stale expected function count (171 instead of 172); the expectation was corrected and the full workflow then passed. It proves the isolated migration path, not that migration 15 has been persistently applied to the live QA Supabase project.
-
-**APP-08 remains OPEN.** The live QA migration ledger was last checked and did not yet contain `20261105120000_fix_portal_registration_upsert`. The candidate must still be applied to QA using the approved version-preserving migration path, followed by a true new-owner Auth registration/email-verification/browser-login and portal-access hydration test. No Production operation, merge or deployment was performed. Overall release remains **NO-GO**.
+This CI result superseded the preceding failed rehearsal caused by a stale expected function count (171 instead of 172); the expectation was corrected and the full workflow passed. At the time of this initial CI checkpoint, the persistent QA application and ledger reconciliation were still outstanding. Those actions were completed subsequently and are documented in the single-QA section below.
 
 
 ## Single-QA migration application and ledger alignment — 5 November 2026
