@@ -9,8 +9,8 @@ assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname), "Only iso
 assert.ok(!/supabase\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url), "Remote Supabase URLs are refused");
 
 const migration = await readFile("supabase/rebuild/drafts/20261105050000_reconcile_portal_registration_upsert.sql", "utf8");
-execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1", "-f", "/dev/stdin"], {
-  input: migration, encoding: "utf8", stdio: ["pipe", "inherit", "inherit"],
+execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1", "-c", migration], {
+  stdio: "inherit",
 });
 
 const sql = `
