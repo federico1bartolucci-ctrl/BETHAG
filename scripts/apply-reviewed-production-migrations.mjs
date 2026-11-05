@@ -101,6 +101,9 @@ async function main() {
   assert.equal(snapshot.count, expectedLedgerCount);
   assert.equal(snapshot.migrations.length, expectedLedgerCount);
   comparePairs(snapshot.migrations, snapshot.migrations, "Stored Production snapshot self-check");
+  const productionOnly = manifest.live_ledger.production_only_migration;
+  assert.ok(snapshot.migrations.some(row => row.version === productionOnly.version && row.name === productionOnly.name),
+    "The already-applied Production-only migration must remain inside the historical snapshot.");
 
   const expected = manifest.sequence;
   assert.equal(expected.length, 16, "Expected exactly sixteen reviewed incremental migrations.");
