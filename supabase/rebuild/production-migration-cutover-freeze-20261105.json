@@ -278,6 +278,30 @@
     },
     {
       "order": 16,
+      "file": "20261105010000_reconcile_postgres_public_table_default_acl.sql",
+      "git_blob_sha": "104966fe4315c04238b424beab4fb6a52d2b24ed",
+      "purpose": "Align default privileges for future public tables while preserving provider-owned supabase_admin defaults.",
+      "postcondition": "Authenticated receives CRUD on future public tables; service_role receives CRUD plus structural privileges; anon receives none; no application role receives MAINTAIN.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 17,
+      "file": "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
+      "git_blob_sha": "2ed0e4aa1f7f8b97c52d054f2a0dacdf54e2e53f",
+      "purpose": "Reassert least-privilege EXECUTE ACLs for public trigger functions without changing their ownership or provider execution path.",
+      "postcondition": "PUBLIC, anon and authenticated cannot directly execute the two trigger functions; service_role retains its existing execution privilege; ownership remains postgres.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 18,
+      "file": "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
+      "git_blob_sha": "4702930eb40f85405053a0db10be70bc9987e3f9",
+      "purpose": "Remove PUBLIC and application-role default EXECUTE/sequence privileges for future public functions and sequences.",
+      "postcondition": "No global or public-schema default function/sequence ACL entries remain for PUBLIC, anon, authenticated or service_role; provider supabase_admin defaults are unchanged.",
+      "production_status": "PENDING_NOT_APPLIED"
+    },
+    {
+      "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
       "git_blob_sha": "45a13b3a9d49e7a61c1e336daca8d40c65de8c42",
       "purpose": "Replace the conflicting ON CONFLICT portal registration paths with one guarded upsert helper used by admin approval and resident self-registration.",
@@ -289,15 +313,15 @@
     "Refresh live Production ledger and compare every one of the 248 exact version/name pairs against production-ledger-20261105.json.",
     "Capture the current catalog, role grants, routine ACLs, default ACLs and provider-managed supabase_admin defaults; stop if any preflight invariant differs.",
     "Preserve all 248 historical ledger rows exactly, including Production-only 20261104222229; never replay historical payloads into Production or insert baseline rows.",
-    "Rehearse the three already-recorded Production-forward payloads and the already-applied Production-only ACL payload on isolated PostgreSQL 17, then apply the sixteen pending canonical increments in their reviewed order through the guarded transactional runner.",
-    "Verify each migration postcondition, exact canonical version/name identity, all 248 historical pairs unchanged and final 264-row ledger.",
+    "Rehearse the three already-recorded Production-forward payloads and the already-applied Production-only ACL payload on isolated PostgreSQL 17, then apply the nineteen pending canonical increments in their reviewed order through the guarded transactional runner.",
+    "Verify each migration postcondition, exact canonical version/name identity, all 248 historical pairs unchanged and final 267-row ledger.",
     "Run read-only Production postflight for RLS, effective privileges, function bodies, portal registration helper ACLs, co-owner trigger, archive lifecycle and default ACLs.",
     "Verify Production Data API exposure settings in Dashboard; the internal supabase_functions schema must remain unexposed.",
     "Run post-cutover authenticated smoke tests and verify real admin/collaborator/resident access without modifying existing business data.",
-    "Record the exact approved commit, sixteen migration hashes, backup/restore disposition, maintenance window and rollback criteria."
+    "Record the exact approved commit, nineteen migration hashes, backup/restore disposition, maintenance window and rollback criteria."
   ],
   "expected_postflight": {
-    "ledger_rows": 264,
+    "ledger_rows": 267,
     "new_canonical_rows": [
       {
         "version": "20261022210629",
@@ -360,6 +384,18 @@
         "name": "reconcile_qa_security_and_coowner_rpcs"
       },
       {
+        "version": "20261105010000",
+        "name": "reconcile_postgres_public_table_default_acl"
+      },
+      {
+        "version": "20261105020000",
+        "name": "revoke_public_execute_from_public_trigger_functions"
+      },
+      {
+        "version": "20261105030000",
+        "name": "reconcile_postgres_public_function_sequence_default_acl"
+      },
+      {
         "version": "20261105050000",
         "name": "reconcile_portal_registration_upsert"
       }
@@ -400,7 +436,7 @@
     "workspace_members_data_column_present": true,
     "save_condominium_archive_state_preserved": true,
     "original_247_rows_unchanged": true,
-    "canonical_rows_added": 16,
+    "canonical_rows_added": 19,
     "latest_ledger_version_after_sort": "20261105050000",
     "supabase_admin_default_acl_maintain_entries": 3,
     "provider_default_acl_disposition_required": false,
@@ -426,32 +462,32 @@
   },
   "critical_execution_constraint": {
     "observed": "The previous 247-row cutover freeze is historical. Current Production contains 248 rows, including the already-applied Production-only ACL migration 20261104222229. The new runner and rehearsal are pinned to this exact 248-row snapshot.",
-    "rule": "Do not use the 247-row runner against current Production. Use only the superseding 248-row guarded runner after the 248+16 PostgreSQL 17 rehearsal, backup-risk disposition and application smoke evidence.",
+    "rule": "Do not use the 247-row runner against current Production. Use only the superseding 248-row guarded runner after the 248+19 PostgreSQL 17 rehearsal, backup-risk disposition and application smoke evidence.",
     "status": "REHEARSAL_REQUIRED_PRODUCTION_NOT_YET_AUTHORIZED"
   },
   "no_go_gates": [
     "Reconfirm immediately before cutover that the 28 October provider backup/restore proof remains valid for the current Production project and capture the latest backup identifier/retention window.",
     "Production-only migration 20261104222229 must be preserved as part of the 248-row snapshot and replayed only in isolated rehearsal.",
-    "The sixteen pending canonical migrations must pass the new ordered PostgreSQL 17 rehearsal against the exact 248-row snapshot plus the already-applied Production-only ACL migration.",
+    "The nineteen pending canonical migrations must pass the new ordered PostgreSQL 17 rehearsal against the exact 248-row snapshot plus the already-applied Production-only ACL migration.",
     "Production Data API exposure configuration for supabase_functions must be verified in Dashboard; do not normalize provider-owned grants.",
     "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and is not an acceptable substitute for this canonical cutover.",
     "Production function, schema, ACL and default privilege postflight must pass after cutover.",
     "No Production DDL or ledger writes are authorized by this manifest alone."
   ],
-  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrite or deletes. The 248+16 ordered PostgreSQL 17 rehearsal is isolated CI only. The 28 October backup/restore proof must be reconfirmed against current retention before cutover. No Production DDL or ledger writes have been performed; this manifest is not an execution authorization.",
+  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrite or deletes. The 248+19 ordered PostgreSQL 17 rehearsal is isolated CI only. The 28 October backup/restore proof must be reconfirmed against current retention before cutover. No Production DDL or ledger writes have been performed; this manifest is not an execution authorization.",
   "rehearsal_evidence": {
-    "status": "PENDING_248_ROW_REHEARSAL",
+    "status": "PENDING_248_ROW_PLUS_19_REHEARSAL",
     "date": "2026-11-05",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "historical_rows": 248,
     "production_only_migration_replayed": "20261104222229_reconcile_production_acl_least_privilege.sql",
-    "canonical_rows_expected": 16,
-    "expected_final_ledger_rows": 264,
+    "canonical_rows_expected": 19,
+    "expected_final_ledger_rows": 267,
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false
   },
   "clean_install": {
-    "migration_file_count": 25,
+    "migration_file_count": 28,
     "baseline_files": [
       "20261017000001_bethag_baseline_schema.sql",
       "20261017000002_bethag_baseline_indexes_views.sql",
@@ -476,6 +512,9 @@
       "20261102100100_add_workspace_member_profile_data.sql",
       "20261102100200_preserve_server_owned_condominium_archive_state.sql",
       "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+      "20261105010000_reconcile_postgres_public_table_default_acl.sql",
+      "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
+      "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
       "20261105050000_reconcile_portal_registration_upsert.sql"
     ],
     "exact_production_forward_files": [
@@ -483,6 +522,6 @@
       "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
       "20261103070901_grant_service_role_private_resend_event_rpc.sql"
     ],
-    "ordering": "All 25 deployable migration files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 248-row/16-increment runner."
+    "ordering": "All 28 deployable migration files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 248-row/19-increment runner."
   }
 }
