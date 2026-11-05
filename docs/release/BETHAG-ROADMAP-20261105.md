@@ -265,3 +265,24 @@ Nessuna modifica a Production, nessun merge o deploy e nessun nuovo ambiente QA.
 - Il fixture temporaneo `BETHAG_QA_APP12_WEBHOOK_REPLAY_20261105` e il relativo destinatario sono stati eliminati dopo aver acquisito l'evidenza. Nessun dato QA preesistente è stato modificato.
 - Il test dimostra la verifica della firma, la ricezione del callback Resend QA e l'aggiornamento DB per l'evento `email.delivered`. Non dimostra ancora il percorso completo APP-12 avviato dall'interfaccia/applicazione QA con creazione automatica del destinatario e invio provider nello stesso flusso; tale prova resta necessaria prima di dichiarare APP-12 integralmente PASS.
 - Webhook Production, configurazione Production, schema Production e dati Production invariati. Nessun merge, deploy o cutover.
+
+
+## APP-14 — preparazione cutover Production, aggiornamento 2026-11-05
+
+La matrice QA è stata completata: APP-01–APP-13 e APP-15 risultano PASS sul progetto QA esistente. APP-14 resta **PARTIAL / NO-GO Production**.
+
+Attività svolte in questa fase:
+- Riesaminato il freeze `supabase/rebuild/production-migration-cutover-freeze-20261105.json`: preserva le 248 righe storiche Production e definisce 19 incrementi forward-only, con risultato atteso di 267 righe. Nessuna baseline QA viene copiata nel ledger Production.
+- Verificata la sequenza e i postcondition del preflight/postflight. Il piano comprende permessi collaboratori booleani, colonna profilo, conservazione archivio, trigger metadati comproprietari, grants RPC, ACL di default, funzioni trigger e upsert registrazione portale.
+- Individuata e corretta una divergenza documentale nel planner `scripts/plan-migration-cutover.mjs`: riportava ancora 16 migrazioni, mentre il freeze corrente e il runner ne prevedono 19. Il planner ora riporta 19 in entrambe le fasi (rehearsal e promozione).
+- La baseline safety sul commit precedente ha confermato manifest e planner safety PASS, 248 righe storiche, 19 incrementi e ledger atteso 267; la CI applicativa/build/safety è verde.
+- Nessun comando DDL è stato eseguito su Production o sul QA remoto. Nessun merge, deploy o cutover.
+
+### Gate ancora bloccanti
+
+1. **Rehearsal end-to-end sul target isolato:** eseguire il runner canonico con i 19 SQL reali, ricostruendo lo snapshot 248 e verificando postflight 267. Non confondere il test sintetico del ledger con l'esecuzione dei 19 SQL.
+2. **Connettività:** il runner richiede una `DATABASE_URL` PostgreSQL diretta verso il progetto Production. Le funzioni Supabase MCP disponibili non sostituiscono questa connessione; `apply_migration` non è ammesso perché può generare timestamp/versioni non controllati. Nessuna URL diretta Production è stata usata o resa disponibile in questa fase.
+3. **Data API Production:** attestazione manuale in Dashboard del valore `Automatically expose new tables` e degli schemi esposti; l'evidenza QA non è trasferibile a Production.
+4. **Cutover approval:** fissare finestra, commit esatto, hash SQL, strategia di rollback e criteri di stop, con approvazione esplicita separata prima di qualsiasi DDL Production.
+
+**Decisione operativa:** mantenere Production NO-GO. Non avviare `db push`, `apply_migration`, GRANT/REVOKE, ALTER, merge o deploy finché i gate 1–4 non sono chiusi e documentati.
