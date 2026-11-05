@@ -129,7 +129,7 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - name: Rehearse all 25 clean-install migrations in chronological order
+      - name: Rehearse all 28 clean-install migrations in chronological order
         run: npm run test:clean-install
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
@@ -144,7 +144,7 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - name: Execute all 16 real canonical migrations through the guarded runner on isolated PostgreSQL
+      - name: Execute all 19 real canonical migrations through the guarded runner on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-runner.mjs
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_runner_test
