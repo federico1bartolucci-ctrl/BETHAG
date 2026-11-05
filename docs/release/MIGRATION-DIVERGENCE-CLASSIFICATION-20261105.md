@@ -45,6 +45,7 @@ Sono migrazioni effettive di hardening e correzione del percorso invoker/privile
 - `20261102044002 repair_condominium_archive_rpc_and_json`
 - `20261102044102 repair_authenticated_condominium_archive_rpc_private_execute`
 - `20261102044224 repair_authenticated_invoker_private_rpc_grants`
+- `20261102100000 repair_authenticated_accounting_rpc_private_execute`
 - `20261102044603 revoke_public_execute_from_public_trigger_functions`
 
 Sono riparazioni nate dal percorso di collaudo/riconciliazione QA: permessi booleani collaboratore, accesso RPC autenticato, colonne e funzioni di archiviazione. Non sono righe da copiare nel ledger Production. Le funzionalità corrispondenti vanno provate sul codice canonico e sul catalogo risultante.
