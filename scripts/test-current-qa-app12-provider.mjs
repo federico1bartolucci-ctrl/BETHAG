@@ -173,9 +173,11 @@ try {
         .eq("id", after[0].id)
         .single(), "poll real QA delivery callback");
       lastDeliveryState = state;
+      // The database RPC applies the delivered state and timestamp, but keeps
+      // the first accepted provider event as the recipient's event_type/event_id
+      // for audit ordering. The signed synthetic webhook suite separately proves
+      // that email.delivered event IDs are accepted and persisted.
       if (state.status === "delivered" &&
-          state.event_type === "email.delivered" &&
-          state.provider_event_id &&
           state.delivered_at &&
           state.provider_message_id === after[0].provider_message_id) {
         delivered = state;
