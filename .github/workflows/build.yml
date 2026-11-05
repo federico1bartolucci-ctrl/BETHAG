@@ -190,6 +190,12 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_workspace_member_data_test
           PGPASSWORD: postgres
 
+      - name: Rehearse member-transfer transaction rollback on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_transfer_rollback_test && node scripts/test-postgres-transfer-rollback.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_transfer_rollback_test
+          PGPASSWORD: postgres
+
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
