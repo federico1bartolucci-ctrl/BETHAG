@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
