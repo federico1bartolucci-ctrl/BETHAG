@@ -311,3 +311,18 @@ Il workflow GitHub Actions [42040560319](https://github.com/federico1bartolucci-
 | APP-14 | PARTIAL / NO-GO Production |
 
 Il completamento del collaudo QA non costituisce autorizzazione a promuovere il codice o applicare modifiche a Production.
+
+
+## Rettifica e conferma collaudo punto 7 — 2026-11-05
+
+La precedente chiusura del punto 7 è stata nuovamente verificata dopo la correzione del test di navigazione APP-15. Il run [42042864031](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42042864031), sul commit `1aba1720bd50794b19ec386a0e104962370e8b0f`, è terminato SUCCESS; tutti gli step del job, incluso APP-15 e teardown, sono `completed / success`.
+
+È inoltre terminata con SUCCESS la nuova esecuzione sul commit aggiornato `93f23d95108cba8b4c791fc7a3c99b21cb27799e`:
+- Final QA [run 42043452669](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452669): SUCCESS.
+- Build [run 42043452826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452826): SUCCESS.
+- Baseline safety [run 42043452653](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452653): SUCCESS.
+
+Nel run finale APP-01–APP-15 risultano PASS, inclusi i flussi browser autenticati, il ciclo provider Resend con callback firmato verso QA, navigazione per ruolo e persistenza sessione. Il difetto del test APP-15 era nel selettore dinamico che mutava lo stato del piano; è stato corretto evitando l'interazione non necessaria con il pulsante di attivazione. Il test corretto è stato eseguito nel run 42043452669.
+
+**Punto 7 confermato CHIUSO** sul QA esistente. Nessuna modifica a Production, nessun merge, deploy o cutover. Il punto 6 resta chiuso con decisione NO-GO Production; APP-14 resta PARTIAL / NO-GO.
+
