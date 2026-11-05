@@ -120,6 +120,7 @@ async function cleanupFixtures() {
   // Remove only the three uniquely marked synthetic condominiums left by
   // earlier failed teardown attempts in this same QA browser suite.
   const priorFailedMarkers = [
+    "BETHAG_UI_ACCEPTANCE_1793864395592",
     "BETHAG_UI_ACCEPTANCE_1793864625853",
     "BETHAG_UI_ACCEPTANCE_1793864773907",
     "BETHAG_UI_ACCEPTANCE_1793864944993",
