@@ -263,7 +263,32 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  try {
+    await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  } catch (error) {
+    const savedRow = await cleanup.from("condominiums")
+      .select("id,workspace_id,legacy_id,name,archived_at")
+      .eq("name", condoName).maybeSingle();
+    const body = await adminPage.locator("body").innerText().catch(() => "");
+    console.error("BETHAG_CONDOMINIUM_SAVE_FAILURE", JSON.stringify({
+      marker,
+      error: String(error),
+      dialogs,
+      pageErrors,
+      consoleErrors,
+      failedRequests: failedRequests.slice(-40),
+      savedRow: savedRow.data,
+      savedRowError: savedRow.error?.message,
+      body: body.slice(0, 5000),
+      session: await adminPage.evaluate(() => ({
+        role: localStorage.getItem("bethag-session-v1"),
+        email: localStorage.getItem("bethag-session-email-v1"),
+        profile: localStorage.getItem("bethag-profile-v5"),
+        page: localStorage.getItem("bethag-current-page-v1"),
+      })).catch(() => null),
+    }, null, 2));
+    throw error;
+  }
   const created = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,workspace_id,legacy_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
