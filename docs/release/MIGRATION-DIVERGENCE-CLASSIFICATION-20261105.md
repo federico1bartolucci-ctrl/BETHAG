@@ -9,7 +9,7 @@ La fotografia verificata è nel file `supabase/rebuild/live-migration-ledgers-20
 
 | Versione | Nome | Valutazione |
 |---|---|---|
-| 20261104222229 | reconcile_production_acl_least_privilege | Migrazione ACL forward-only applicata a Production. La query read-only sul registro live ha restituito il payload SQL. Il draft repository `supabase/rebuild/drafts/20261104150000_reconcile_production_acl_least_privilege.sql` contiene lo stesso insieme di operazioni: SELECT-only sulla view `public.condominium_fund_availability`, revoca EXECUTE anon/PUBLIC ai due helper di chiusura trasferimento, restrizione dei default ACL globali e schema public per oggetti di proprietà postgres. Le differenze testuali sono commenti/intestazioni, non operazioni SQL. È un reperto Production-only legittimo: non copiarlo in QA e non aggiungerlo alla catena canonica senza revisione della sequenza. |
+| 20261104222229 | reconcile_production_acl_least_privilege | Migrazione ACL forward-only applicata a Production. La query read-only sul registro live ha restituito il payload SQL. Il draft repository `supabase/rebuild/drafts/20261104150000_reconcile_production_acl_least_privilege.sql` contiene lo stesso insieme di operazioni: SELECT-only sulla view `public.condominium_fund_availability`, revoca EXECUTE anon/PUBLIC sulle funzioni `private.check_condominium_member_transfer_closure(uuid)` e `public.check_condominium_member_transfer_closure(uuid)`, restrizione dei default ACL globali e schema public per oggetti di proprietà postgres. Non revoca EXECUTE sulle funzioni trigger `public.normalize_zero_ownership_owner()` e `public.preserve_closing_condominium_member_history()`, che risultano ancora PUBLIC in Production e revocate nel QA. Le differenze testuali sono commenti/intestazioni, non operazioni SQL. È un reperto Production-only legittimo: non copiarlo in QA e non aggiungerlo alla catena canonica senza revisione della sequenza. |
 
 ## QA-only (36)
 
@@ -71,6 +71,7 @@ Comprendono backfill e preservazione archivio, colonna profilo collaboratore, wr
 2. La migrazione Production-only è stata letta dal registro live e confrontata semanticamente con il draft repository; non è stata riapplicata.
 3. Le 36 righe QA-only sono classificate per famiglie in base ai nomi e alla storia del branch. Per certificare ogni payload storico servono i payload SQL originali di ciascuna riga; il registro/versionamento non basta.
 4. Gli snapshot 247/47 del 3 novembre restano archivi storici, non sono stati sovrascritti.
+5. La verifica SHA-256 live del 5 novembre ha riscontrato payload identici per tutte le 247 coppie comuni; dettagli e divergenze ACL in `LIVE-PAYLOAD-ACL-VERIFICATION-20261105.md`.
 5. Nessun reset, replay, scrittura ledger o modifica schema è stato eseguito su Production o QA.
 
 **Esito del sotto-intervento documentale:** completato.  
