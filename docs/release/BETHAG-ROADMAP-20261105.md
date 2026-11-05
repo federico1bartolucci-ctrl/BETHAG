@@ -135,3 +135,27 @@ Il punto 6 è chiuso come verifica finale read-only e decisione di rilascio. Esi
 ## Avvio del punto 7 — collaudo finale QA
 
 Il punto 7 è avviato sul solo QA esistente. I test vanno eseguiti in sequenza, non in parallelo, usando fixture con marker univoco e cleanup verificato. APP-12 non deve inviare email reali senza un destinatario di test esplicitamente autorizzato. Gli smoke APP eseguiti in precedenza per errore di condizione workflow non sono conteggiati come collaudo formale.
+
+
+## Esito del collaudo finale punto 7 — 2026-11-05
+
+GitHub Actions [final QA collaudo 41953312039](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312039), commit 152b455f0d357fc5c2ab797cb320609467ba6c99: SUCCESS. Build [41953312105](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312105) e baseline safety [41953312100](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312100): SUCCESS.
+
+Risultati QA:
+- APP-01–04 PASS: autenticazione reale, RLS per amministratore/collaboratore/condomino, permessi collaborator true/false/assenti e isolamento cross-workspace.
+- APP-05–08 PASS: creazione/modifica/archiviazione/ripristino condominio e struttura, contabilità, guard esercizio chiuso, subentro valido e revoca portale cedente.
+- APP-09 PASS: rata insoluta, debito riportato sul condòmino e credito riportato sull'unità bloccano la chiusura senza stato parziale.
+- APP-10 PASS: chiamanti resident/cross-workspace non autorizzati respinti.
+- APP-11 PARTIAL: rollback via RPC verificato; la UI ha coperto la chiusura valida, non ancora la visualizzazione dell'errore per una chiusura fallita.
+- APP-12 PARTIAL: pubblicazione/ritiro, visibilità residente, preparazione destinatari e permessi di coda PASS. Simulazione transazionale del gestore eventi sent/delivered/bounced/complained PASS con rollback; nessuna email reale inviata. Restano da provare trasporto webhook firmato e ciclo provider reale con destinatari di test autorizzati.
+- APP-13 PASS: upload collaboratore e download effettivo del file condiviso da parte del condomino.
+- APP-15 PASS per il perimetro core: navigazione 12 destinazioni admin, restrizioni collaborator/resident, sign-in, landing e persistenza sessione.
+- APP-14 resta parziale e Production resta NO-GO per le divergenze del punto 6 e la verifica manuale Data API auto-expose Production ancora mancante.
+
+Pulizia:
+- Il marker univoco del run 41953312039 è assente da condomini, comunicazioni, unità, membri, esercizi, movimenti e portale; utenti Auth temporanei, destinatari sintetici e comunicazioni della simulazione sono zero.
+- Fixture preesistenti QA del 2026-11-02 preservate.
+- Due condomini QA-only vuoti con un esercizio chiuso ciascuno, creati durante i tentativi iniziali APP-09, sono stati conservati perché la protezione applicativa impedisce di cancellare un esercizio chiuso. Non hanno unità, membri, trasferimenti o riporti; non sono usati dal test finale. Nessun trigger è stato disabilitato o aggirato.
+- Il test APP-09 finale riutilizza il fixture preesistente BETHAG_QA_APP08_11_CARRYOVER_FIXTURE e rimuove solo le righe temporanee.
+
+Il punto 7 è quindi **eseguito ma non chiuso integralmente**: APP-11 UI e APP-12 provider/webhook restano PARTIAL. Nessuna modifica Production, nessuna migrazione remota, nessun merge, deploy o cutover. Il rilascio rimane NO-GO.
