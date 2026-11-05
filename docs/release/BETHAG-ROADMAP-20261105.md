@@ -246,3 +246,12 @@ Il retry del solo job Build fallito è terminato con **SUCCESS**, attempt 2 del 
 - Il diagnostic autenticato edit/archive risulta SKIPPED; non viene conteggiato come prova eseguita da questo workflow.
 Il timeout dell'amministratore osservato al primo tentativo non si è riprodotto al retry. È quindi classificato come errore intermittente non riprodotto, non come difetto corretto. Il run finale QA collaudo `42026909921` resta SUCCESS.
 Nessuna modifica a Production, nessun merge o deploy e nessun nuovo ambiente QA.
+
+
+## Instradamento webhook QA isolato — 2026-11-05
+
+- Creato in Resend un secondo webhook dedicato esclusivamente all'endpoint QA `https://jhuyhlzzydcgghrzeexn.supabase.co/functions/v1/bethag-resend-webhook`, sottoscritto a `email.sent`, `email.delivered`, `email.bounced`, `email.complained`.
+- Verifica immediata Resend: due webhook attivi. Quello Production continua a puntare a `https://tctcgptrsmvgajqjgnev.supabase.co/functions/v1/bethag-resend-webhook`; endpoint e sottoscrizioni Production non sono stati modificati.
+- Il nuovo webhook QA è stato creato, ma APP-12 non è ancora chiuso: il suo signing secret deve essere configurato come Edge Function secret `RESEND_WEBHOOK_SIGNING_SECRET` nel solo ambiente QA. Il connettore Supabase disponibile non espone un'operazione per impostare Edge Function secrets, quindi non è stato possibile automatizzare questo passaggio.
+- Dopo la configurazione del secret si dovrà inviare un messaggio di test controllato dalla Edge Function QA, verificare su Resend l'evento e il tentativo verso l'endpoint QA, quindi verificare in QA l'aggiornamento dello stato comunicazione. Non effettuare replay di eventi Production.
+- Nessuna modifica a Production, nessuna modifica al webhook Production, nessun merge, deploy, migrazione o cutover. APP-12 resta PARTIAL fino alla prova end-to-end QA.
