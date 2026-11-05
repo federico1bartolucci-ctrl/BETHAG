@@ -106,7 +106,7 @@ async function main() {
     "The already-applied Production-only migration must remain inside the historical snapshot.");
 
   const expected = manifest.sequence;
-  assert.equal(expected.length, 16, "Expected exactly sixteen reviewed incremental migrations.");
+  assert.equal(expected.length, 19, "Expected exactly nineteen reviewed incremental migrations.");
   const migrationBodies = [];
   for (const item of expected) {
     const filename = item.file;
@@ -171,7 +171,7 @@ async function main() {
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 264, "Final ledger must contain 248 historical + 16 canonical rows.");
+    assert.equal(finalLedger.length, 267, "Final ledger must contain 248 historical + 19 canonical rows.");
     const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
     comparePairs(finalLedger.filter((row) => historicalVersions.has(row.version)), snapshot.migrations, "Final historical ledger preservation");
     comparePairs(finalLedger.filter((row) => !historicalVersions.has(row.version)),
