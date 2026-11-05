@@ -46,7 +46,7 @@ La registrazione è circoscritta al punto 4. La matrice APP-01–APP-15 completa
 Il punto 5 è **IN CORSO**, non chiuso. È stato acquisito in sola lettura lo snapshot completo dei registri live:
 - Production: 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`.
 - QA esistente: 283 righe, head `20261105001928_align_qa_fund_availability_view_acl`.
-- 247 coppie versione/nome esattamente comuni; 1 Production-only; 35 QA-only.
+- 247 coppie versione/nome esattamente comuni; 1 Production-only; 36 QA-only.
 - Snapshot integrale: `supabase/rebuild/live-migration-ledgers-20261105.json`.
 - Analisi: `docs/release/LIVE-MIGRATION-RECONCILIATION-20261105.md`.
 
