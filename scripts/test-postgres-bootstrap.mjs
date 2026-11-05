@@ -28,6 +28,9 @@ const incrementalMigrations = [
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
   "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+  "20261105010000_reconcile_postgres_public_table_default_acl.sql",
+  "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
+  "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
   "20261105050000_reconcile_portal_registration_upsert.sql",
 ];
 const productionForwardMigrations = [
