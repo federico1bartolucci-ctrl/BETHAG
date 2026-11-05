@@ -62,3 +62,25 @@ I vecchi snapshot 247/47 del 3 novembre restano conservati come reperti storici,
 
 
 Aggiornamento 2026-11-05: la CI sul commit `047948b9917b38eddfb0953cecb2939980488d08` è terminata con Baseline safety e Build SUCCESS. Il confronto payload è stato completato per tutte le fonti repository disponibili. Il punto 5 resta aperto esclusivamente per la riconciliazione delle divergenze ACL/default ACL e per la provenienza dei 19 payload QA-only privi di file canonico attuale. Nessuna modifica remota è stata effettuata.
+
+
+## Aggiornamento operativo — 2026-11-05, punto 5
+
+Il punto 5 resta **IN CORSO** e Production resta **NO-GO**.
+
+- I 19 payload QA-only senza file canonico corrente sono stati letti dal ledger live e classificati per effetto SQL nel report `LIVE-PAYLOAD-ACL-VERIFICATION-20261105.md`: ACL RPC, funzioni archivio, backfill dati archivio, trigger incoming co-owner, registrazione portale, ACL view e hardening. La classificazione semantica è documentata; la provenienza repository/autore originario dei 19 file non è attestabile e resta una limitazione esplicita.
+- Il draft forward-only per default ACL tabelle è stato applicato due volte in transazione su PostgreSQL 17 isolato. Postcondition verificate, ACL sentinel `supabase_admin` invariata e rollback eseguito. Esito PASS: build run [41948820926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948820926), commit `1f26698d9ed39fb1c5658999b58e9a2a7c501bef`.
+- In Production è stato verificato che le due funzioni trigger con EXECUTE PUBLIC restituiscono entrambe `trigger` e non sono SECURITY DEFINER; non sono normali funzioni invocabili via RPC. È stato predisposto un draft forward-only per revocare PUBLIC/anon/authenticated preservando owner e service_role, con test PostgreSQL 17 isolato e idempotenza. Non applicato agli ambienti remoti; CI dedicata in corso.
+- Le differenze dei default ACL di funzioni e sequenze sono ancora da risolvere contrattualmente: non viene eseguito alcun pareggiamento automatico.
+- Ultima baseline safety sul commit `0e9b4c5e1d39ca62b39586cb9a81a71e32b3d65d`: run [41949168139](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949168139) SUCCESS. Build run [41949168136](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949168136) in attesa al momento dell'aggiornamento.
+- La build [41948515607](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948515607) ha eseguito, per una condizione workflow non corretta, anche smoke applicativi poi risultati PASS per APP-05, APP-06, APP-08/11 e APP-12. Non sono considerati collaudo formale né chiusura di voci APP. Il cleanup è stato completato e verificato in sola lettura: zero record e zero utenti temporanei con il marker esatto del run. La condizione è stata corretta; sui commit successivi lo step è saltato. La matrice APP-01–APP-15 completa resta NON ESEGUITA e sarà svolta soltanto al punto 7.
+- Nessuna scrittura su QA o Production; nessun reset/replay, merge o cutover. Il solo QA esistente e i dati preesistenti sono preservati.
+
+### Criteri residui per chiudere il punto 5
+
+1. Ottenere CI verde sul draft Production trigger ACL e testarne idempotenza/postcondition.
+2. Definire e documentare il contratto atteso per default ACL di funzioni e sequenze (owner postgres, ruoli applicativi, privilegi minimi necessari), senza modificare default Supabase-managed.
+3. Chiudere la classificazione degli effetti e delle dipendenze di tutte le divergenze ACL, distinguendo gli effetti storici dai payload canonici e dai draft non applicati.
+4. Aggiornare report e scaletta con le evidenze della CI finale sul commit che contiene tutti gli interventi documentali e i test.
+
+Solo dopo questi punti si potrà iniziare il punto 6. Il punto 7 resta riservato al collaudo completo APP-01–APP-15 sul QA esistente.
