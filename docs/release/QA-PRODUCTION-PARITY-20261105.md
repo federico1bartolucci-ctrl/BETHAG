@@ -186,3 +186,23 @@ Il collaudo finale sul progetto QA esistente `jhuyhlzzydcgghrzeexn` è stato com
 Questo esito QA non modifica né risolve le divergenze Production descritte nelle sezioni precedenti. In particolare restano bloccanti la colonna `workspace_members.data` assente in Production, il trigger e la funzione co-owner QA-only, le sette definizioni private divergenti, i 19 privilegi EXECUTE mancanti, il bug booleano dei permessi collaboratori e il controllo Dashboard Production Data API non attestato.
 
 **Decisione invariata: Production NO-GO.** Nessuna migrazione, modifica ACL, deploy, merge o cutover Production è stata eseguita dal collaudo QA. Il completamento di APP-01–APP-13 e APP-15 non equivale all'autorizzazione del rilascio Production.
+
+
+## 12. Aggiornamento collaudo finale QA — run 42040560319
+
+Il workflow [BETHAG final QA collaudo 42040560319](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42040560319) è terminato **SUCCESS** sul commit `7e308fb976245228f693a9ce17be6d2b27cd8e1a`. Il job `final-qa-collaudo` e tutti i suoi step, inclusi cleanup e teardown, risultano `completed / success`.
+
+Evidenze step-by-step:
+- APP-01..04 e APP-13 — real-auth RLS e Storage: SUCCESS.
+- APP-05..07 — condominium, accounting e closed-period guard: SUCCESS.
+- APP-08..11 — transfer, unpaid positions e rollback invariants: SUCCESS.
+- APP-09 — member e unit carryover blockers: SUCCESS.
+- APP-12 — publication, recipient preparation e signed webhook events: SUCCESS.
+- APP-12 — probe del provider email distribuito tramite Resend con destinatario sintetico `delivered@resend.dev`: SUCCESS.
+- APP-05/06/08/11/12 — authenticated browser UI workflows: SUCCESS.
+- APP-15 — role navigation e session persistence: SUCCESS.
+- Stop QA preview e teardown Deno/Node/checkout: SUCCESS.
+
+**Esito aggiornato:** APP-01–APP-13 e APP-15 PASS sul QA esistente. Gli stati precedenti APP-11 PARTIAL e APP-12 PARTIAL sono superati da questo run completo. APP-14 resta PARTIAL / NO-GO Production.
+
+Il risultato del collaudo QA non rimuove i blocker Production già descritti in questo report: colonna `workspace_members.data` assente, trigger/funzione co-owner mancanti, definizioni private divergenti, privilegi EXECUTE mancanti, bug booleano dei permessi collaboratore e verifica manuale Data API Production non attestata. Non è stato eseguito alcun merge, deploy, DDL o cutover Production; nessun ambiente QA aggiuntivo è stato creato.
