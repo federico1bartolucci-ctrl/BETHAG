@@ -17,6 +17,8 @@ CREATE SCHEMA auth;
 CREATE SCHEMA private;
 CREATE TABLE public.condominium_members (
   id uuid PRIMARY KEY,
+  condominium_id uuid NOT NULL,
+  unit_id uuid NOT NULL,
   active boolean NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now(),
   data jsonb NOT NULL DEFAULT '{}'::jsonb
@@ -34,10 +36,10 @@ CREATE TABLE public.condominium_member_transfers (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE public.condominium_installments (
-  member_id uuid, amount numeric, paid_amount numeric
+  condominium_id uuid, unit_id uuid, member_id uuid, amount numeric, paid_amount numeric
 );
 CREATE TABLE public.condominium_expense_allocations (
-  member_id uuid, amount numeric, paid_amount numeric
+  condominium_id uuid, unit_id uuid, member_id uuid, amount numeric, paid_amount numeric
 );
 CREATE TABLE public.condominium_fiscal_carryovers (
   workspace_id uuid, condominium_id uuid, unit_id uuid, member_id uuid, balance numeric
@@ -61,9 +63,11 @@ $trigger$;
 CREATE TRIGGER controlled_failure_after_member_update
 BEFORE UPDATE ON public.condominium_member_transfers
 FOR EACH ROW EXECUTE FUNCTION public.raise_after_member_update();
-INSERT INTO public.condominium_members(id,active,data)
+INSERT INTO public.condominium_members(id,condominium_id,unit_id,active,data)
 VALUES (
   '00000000-0000-0000-0000-000000000101',
+  '00000000-0000-0000-0000-000000000401',
+  '00000000-0000-0000-0000-000000000501',
   true,
   '{"position_status":"In chiusura","current_owner":false}'::jsonb
 );
