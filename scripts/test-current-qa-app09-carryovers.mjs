@@ -117,7 +117,7 @@ try {
   assert.equal(ownerAfterMemberDenied.active, true);
   assert.equal(ownerAfterMemberDenied.data.position_status, "In chiusura");
 
-  must(await admin.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover), "remove member carryover");
+  { const removed = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover); assert.ifError(removed.error); }
   ids.memberCarryover = null;
 
   // APP-09: a unit-level credit carryover must also block closure.
