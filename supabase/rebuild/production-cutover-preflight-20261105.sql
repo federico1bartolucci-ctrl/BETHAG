@@ -122,6 +122,52 @@ BEGIN
     RAISE EXCEPTION 'STOP: archive-preserving save_condominium already present; reconcile before cutover';
   END IF;
 
-  RAISE NOTICE 'PREFLIGHT PASS: 47 relations, exact 248-row ledger, current forward ACL state and nineteen absent canonical version pairs verified. supabase_admin default MAINTAIN exception remains subject to provider/security-owner disposition. This is not release approval.';
+  -- Verify the precise known pre-cutover collaborator bug, not merely the migration ledger.
+  IF position('wm.permissions ? required_permission' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure)) = 0
+     OR position('wm.permissions ? required_permission' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure)) = 0
+     OR position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure)) > 0
+     OR position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure)) > 0 THEN
+    RAISE EXCEPTION 'STOP: collaborator permission function bodies do not match the reviewed pre-cutover state';
+  END IF;
+
+  -- These 18 private RPC grants are an explicit part of migration 20261104130000.
+  SELECT count(*)::integer INTO count_value
+  FROM unnest(ARRAY[
+    'private.admin_approve_portal_registration(uuid,uuid)',
+    'private.archive_condominium(uuid,uuid,text)',
+    'private.claim_first_workspace_admin(uuid)',
+    'private.close_condominium_fiscal_year(uuid,uuid)',
+    'private.close_fiscal_year_and_generate_carryovers(uuid,uuid,uuid)',
+    'private.compensate_fiscal_carryover(uuid,uuid,uuid,numeric,uuid,text)',
+    'private.complete_portal_registration(text,text,text)',
+    'private.confirm_condominium_creation_intake(uuid,uuid)',
+    'private.delete_condominium(uuid,bigint,text)',
+    'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)',
+    'private.generate_installments_from_allocations(uuid,uuid,uuid,text,date,uuid)',
+    'private.generate_installments_from_allocations_schedule(uuid,uuid,uuid,text,date[],uuid,numeric[],boolean)',
+    'private.list_archived_condominiums(uuid)',
+    'private.register_condominium_installment_payment(uuid,uuid,uuid,date,numeric,text,text,text)',
+    'private.restore_condominium(uuid,uuid)',
+    'private.reverse_condominium_installment_payment(uuid,uuid,uuid,text)',
+    'private.set_personal_security_code(text,boolean)',
+    'private.verify_personal_security_code(text)'
+  ]::text[]) f(signature)
+  WHERE to_regprocedure(f.signature) IS NULL
+     OR has_function_privilege('authenticated',to_regprocedure(f.signature)::oid,'EXECUTE');
+  IF count_value <> 0 THEN
+    RAISE EXCEPTION 'STOP: one or more of the eighteen reviewed authenticated private RPC grants are already present or signatures are missing: %',count_value;
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR has_function_privilege('authenticated','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR has_function_privilege('service_role','private.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
+    RAISE EXCEPTION 'STOP: transfer-closure helper ACL differs from the reviewed pre-cutover state';
+  END IF;
+  IF NOT has_schema_privilege('authenticated','private','USAGE')
+     OR NOT has_schema_privilege('service_role','private','USAGE') THEN
+    RAISE EXCEPTION 'STOP: private schema USAGE baseline differs from the reviewed Production state';
+  END IF;
+
+  RAISE NOTICE 'PREFLIGHT PASS: exact 248-row ledger, 47 public tables, zero current MAINTAIN, expected collaborator bug, eighteen missing private RPC grants, transfer helper pre-state and nineteen absent canonical version pairs verified. This is not release approval.';
 END
 $preflight$;
