@@ -214,8 +214,8 @@ for (const filename of pendingCanonicalMigrations) {
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
 assert.deepEqual(
   finalInventory,
-  { ...expected, columns: expected.columns + 1, functions: expected.functions + 1, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 1 } },
-  "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
+  { ...expected, columns: expected.columns + 1, functions: expected.functions + 2, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 2 } },
+  "Incremental migrations changed the expected structural inventory beyond the one collaborator metadata column, one co-owner trigger and one portal upsert helper.",
 );
 console.log(JSON.stringify({ incremental_hardening: "PASS", existing_production_head: alreadyAppliedCanonicalHead, production_forward_migrations: productionForwardMigrations, pending_canonical_migrations: pendingCanonicalMigrations, inventory: finalInventory }, null, 2));
 
