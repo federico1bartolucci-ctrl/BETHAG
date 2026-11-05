@@ -273,3 +273,54 @@ Il report consolidato e aggiornato è `docs/release/APP14-COMPREHENSIVE-AUDIT-20
 **Gate ancora aperti:** disponibilità locale di `DATABASE_URL` PostgreSQL diretto/Session Pooler con ruolo postgres; pin definitivo del commit dopo CI verde; piano operativo con responsabile, finestra manutenzione Europe/Rome, comunicazione utenti, criteri STOP, rollback e contatti. Il restore fisico provider-managed resta non testato ma il rischio residuo è già accettato nel freeze.
 
 **Decisione:** APP-14 resta **NO-GO**. La preparazione tecnica e il preflight read-only sono superati; non sono state eseguite scritture Production, migrazioni, merge, deploy o cutover. Il runner guarded potrà essere avviato soltanto dopo la chiusura documentata dei gate residui e l'approvazione operativa del cutover.
+
+
+---
+
+## Current release status — authoritative update 2026-11-06
+
+This section supersedes the historical 2026-10-27 snapshot and any older migration counts or gate descriptions above. Historical entries remain as provenance and must not be read as the current live state.
+
+**Decision: NO-GO for Production cutover.** No Production or QA database changes, migration execution, merge, deployment, or launch are authorized by this document.
+
+### Verified technical evidence
+
+| Control | Current evidence | Status |
+|---|---|---|
+| Production migration ledger | Frozen read-only snapshot: 248 exact version/name pairs; head `20261104222229_reconcile_production_acl_least_privilege` | SNAPSHOT RECORDED — refresh required immediately before any cutover |
+| Production forward plan | 19 reviewed canonical migrations; 248 historical rows preserved; expected final ledger 267 | REVIEWED — NOT APPLIED |
+| PostgreSQL 17 rehearsal | Isolated rehearsal executed all 19 real SQL files through the guarded runner; final 267-row ledger and postflight asserted | PASS — ISOLATED ONLY |
+| Clean-install chain | Five baseline files plus the reviewed 28-file chain rehearsed in isolated PostgreSQL 17 | PASS — ISOLATED ONLY |
+| Final QA APP-01..APP-15 | Prior accepted QA evidence exists; latest workflow on commit `a6cfc7115dd6d838427237a5fd0edced458b3acb` is still running at time of this update | PENDING CURRENT RUN |
+| Build and real QA session checks | Latest workflow: build and PostgreSQL bootstrap; isolated bootstrap has passed; real QA auth/session step is running | PENDING |
+| Production/QA exact catalog parity | Known environment-specific differences and provider-managed ACL exceptions are documented in the frozen parity evidence | NOT CERTIFIED AS IDENTICAL |
+| Provider physical restore | Not executed; logical restore evidence exists; residual risk acceptance is recorded in the frozen manifest | RESIDUAL RISK — NOT A PHYSICAL RESTORE PASS |
+
+### Production cutover — mandatory operator checklist
+
+All fields below must be completed with actual evidence before the guarded runner can be enabled. Unknown details remain explicitly unassigned; do not infer or fabricate them.
+
+1. **Release identity:** record the exact approved commit SHA, branch, all 19 SQL filenames and their frozen Git blob hashes. Any change invalidates the approval and requires a new review/rehearsal.
+2. **Operator and approver:** name the person executing the cutover and the person authorizing it. The same person may not be silently inferred from repository ownership.
+3. **Maintenance window:** record the agreed Europe/Rome start/end time, expected interruption, and a freeze on schema-changing work.
+4. **Communications:** prepare and send the notice to affected administrators/users, with start, expected impact, completion/rollback notice and contact channel. Retain evidence of dispatch.
+5. **Backup disposition:** identify the current provider backup or logical dump, timestamp, project, checksum and secure storage location. Physical restore remains untested; retain the existing named residual-risk acceptance or obtain provider-backed restore evidence. Never test restore in place on Production.
+6. **Preflight:** refresh all 248 ledger pairs and capture live catalog, RLS, ownership, relation grants, routine ACLs, global/schema default ACLs and Data API exposed-schema configuration. Stop on any difference from reviewed invariants.
+7. **Execution:** use only the guarded runner from the exact approved clean checkout and a direct PostgreSQL connection. Never put `DATABASE_URL` or credentials in chat, issue comments, logs or repository files. Do not use Supabase `apply_migration` for this canonical-version-preserving cutover.
+8. **Postflight:** require all 19 migration postconditions, 267 ledger rows, unchanged historical 248 pairs, ACL/RLS/function/trigger checks and Production Data API exposure confirmation.
+9. **Application smoke:** verify real administrator, collaborator and resident authentication, authorization, navigation, core condominium/accounting/transfer/portal flows, and email delivery. Do not use or modify real business records to create test evidence.
+10. **STOP and recovery:** stop immediately on a ledger/catalog/hash mismatch, failed SQL/postcondition, unexpected lock/timeout, missing privilege, failed smoke test, or evidence of unintended data mutation. Do not improvise reverse SQL. Use the pre-approved provider recovery procedure and named escalation contacts; record incident time and last successful migration.
+11. **Closure:** publish the migration ledger delta, pre/postflight outputs, smoke-test results, communication notices and final decision. A successful SQL run alone does not mean the product launch is approved.
+
+### Approval record
+
+- Exact commit SHA: **NOT APPROVED**
+- Named execution operator: **NOT ASSIGNED**
+- Named release approver: **NOT ASSIGNED**
+- Europe/Rome maintenance window: **NOT SCHEDULED**
+- User communication: **NOT APPROVED / NOT SENT**
+- Production direct PostgreSQL connection: **NOT CONFIGURED IN THE RELEASE RUNNER**
+- Production Data API exposed-schema setting: **NOT VERIFIED**
+- Written approval for the exact migration hashes and operational plan: **NOT RECEIVED**
+
+**Release rule:** the guarded runner remains disabled unless all required environment gates are explicitly supplied by the authorized operator. CI success, QA success, prior general development authorization, or this document alone does not authorize Production execution.
