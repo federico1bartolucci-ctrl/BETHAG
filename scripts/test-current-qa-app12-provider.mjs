@@ -154,7 +154,7 @@ try {
     assert.equal(Number(payload.failed), 0, "Provider reported a failed test message");
 
     const after = must(await admin.from("communication_recipients")
-      .select("email,status,provider_message_id,sent_at")
+      .select("id,email,status,provider_message_id,sent_at")
       .eq("communication_id", communicationId), "verify provider result");
     assert.equal(after.length, 1);
     assert.equal(after[0].email, "delivered@resend.dev");
