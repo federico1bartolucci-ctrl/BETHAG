@@ -32,12 +32,12 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free');
 
-INSERT INTO public.condominiums(id,workspace_id,name,archived_at)
+INSERT INTO public.condominiums(id,workspace_id,name)
 VALUES
- ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Admin approval test condominium',NULL),
- ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','Self registration test condominium',NULL),
- ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium',NULL),
- ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test',now());
+ ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Admin approval test condominium'),
+ ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','Self registration test condominium'),
+ ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium'),
+ ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test');
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','admin',true,'{}'::jsonb);
@@ -48,6 +48,10 @@ VALUES
  ('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000002',NULL,'Self Registered Resident','self-registered@example.invalid','resident',true,41002,'{"apartment":"B2"}'::jsonb),
  ('40000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000003',NULL,'Duplicate Match Resident','duplicate-match@example.invalid','resident',true,41003,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb);
+
+-- The archive guard allows the normal lifecycle transition from active to archived.
+UPDATE public.condominiums SET archived_at=now()
+WHERE id='30000000-0000-0000-0000-000000000004';
 
 INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_id,email,full_name,status)
 VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',
