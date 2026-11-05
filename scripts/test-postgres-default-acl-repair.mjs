@@ -16,11 +16,12 @@ DO $r$ BEGIN
 END $r$;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE,REFERENCES,TRIGGER,TRUNCATE ON TABLES TO service_role;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE SELECT,INSERT,UPDATE ON TABLES FROM authenticated,service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE SELECT,INSERT,UPDATE,DELETE ON TABLES FROM service_role;
 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT SELECT ON TABLES TO service_role;
 CREATE TEMP TABLE admin_acl_before AS SELECT defaclacl::text AS acl FROM pg_default_acl WHERE defaclrole='supabase_admin'::regrole AND defaclnamespace='public'::regnamespace AND defaclobjtype='r';`;
 const verify=`
-DO $v$ DECLARE a text[]; s text[]; n int; m int; BEGIN
+DO $v$ DECLARE a text[]; s text[]; n int; m int; g int; BEGIN
  SELECT array_agg(x.privilege_type ORDER BY x.privilege_type) INTO a FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) x WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND x.grantee='authenticated'::regrole;
  SELECT array_agg(x.privilege_type ORDER BY x.privilege_type) INTO s FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) x WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND x.grantee='service_role'::regrole;
  SELECT count(*) INTO n FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) x WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND x.grantee='anon'::regrole;
@@ -28,6 +29,8 @@ DO $v$ DECLARE a text[]; s text[]; n int; m int; BEGIN
  IF a IS DISTINCT FROM ARRAY['DELETE','INSERT','SELECT','UPDATE']::text[] THEN RAISE EXCEPTION 'authenticated defaults incorrect: %',a; END IF;
  IF s IS DISTINCT FROM ARRAY['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']::text[] THEN RAISE EXCEPTION 'service_role defaults incorrect: %',s; END IF;
  IF n<>0 OR m<>0 THEN RAISE EXCEPTION 'anon or MAINTAIN default remains'; END IF;
+ SELECT count(*) INTO g FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) x WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0 AND d.defaclobjtype='r' AND x.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole);
+ IF g<>0 THEN RAISE EXCEPTION 'unexpected global postgres table defaults: %',g; END IF;
  IF (SELECT count(*) FROM admin_acl_before)<>(SELECT count(*) FROM pg_default_acl d WHERE d.defaclrole='supabase_admin'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND d.defaclacl::text=(SELECT acl FROM admin_acl_before)) THEN RAISE EXCEPTION 'supabase_admin ACL changed'; END IF;
 END $v$; ROLLBACK;`;
 execFileSync('psql',['-X','--no-psqlrc','--dbname',url,'-v','ON_ERROR_STOP=1','-c',setup+'\n'+migration+'\n'+verify],{stdio:'inherit'});
