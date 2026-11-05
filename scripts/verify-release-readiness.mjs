@@ -68,12 +68,13 @@ if (process.env.BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED !== "YES") {
   preCutoverBlockers.push("Production Data API exposure for provider-managed schema supabase_functions has not been verified in Dashboard.");
 }
 const physicalRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
-const riskAcceptedBy = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim();
-const riskAcceptedAt = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim();
-const riskEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
-const riskAccepted = riskAcceptedBy.length > 0 && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskAcceptedAt) && riskEvidence.length > 0;
+const riskRecord = freeze.backup_restore_risk_acceptance;
+const riskAccepted = riskRecord?.accepted === true
+  && Boolean(riskRecord.accepted_by)
+  && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskRecord.accepted_at_utc ?? "")
+  && Boolean(riskRecord.evidence_reference);
 if (!physicalRestoreVerified && !riskAccepted) {
-  preCutoverBlockers.push("Provider-managed physical restore is unverified and no explicit named/timestamped residual-risk acceptance is recorded; the paid Restore to a New Project route remains excluded.");
+  preCutoverBlockers.push("Provider-managed physical restore is unverified and the frozen manifest does not contain a named/timestamped residual-risk acceptance; the paid Restore to a New Project route remains excluded.");
 }
 if (!process.env.DATABASE_URL) preCutoverBlockers.push("Direct PostgreSQL DATABASE_URL with DDL privileges is not available to the guarded runner.");
 if (process.env.BETHAG_CUTOVER_PLAN_APPROVED !== "YES") {

@@ -468,7 +468,6 @@
   "no_go_gates": [
     "QA APP-12 provider delivery is not verified: the deployed QA Edge Function returns HTTP 503 because RESEND_API_KEY and/or BETHAG_FROM_EMAIL is missing; configure QA secrets and rerun with delivered@resend.dev. No email was sent in the current test.",
     "Production Data API exposure configuration for provider-managed schema supabase_functions must be verified in the Supabase Dashboard; do not normalize provider-owned grants.",
-    "The scheduled physical backup was visible and a local logical-dump restore was verified, but a provider-managed physical restore to a new project was not executed. The user previously declined the $9.68/month paid Restore to a New Project route. Preserve that decision; record explicit residual-risk disposition before cutover.",
     "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges. Supabase MCP apply_migration generates server-side timestamps and is not an acceptable substitute.",
     "The exact cutover plan still needs a pinned reviewed commit, maintenance window, communication plan, rollback triggers and responsible operator.",
     "Production function/schema/ACL/default-privilege postflight must pass after the guarded cutover.",
@@ -537,5 +536,17 @@
     "scope": "The user explicitly authorized all operations necessary for release, including Production changes where technically required.",
     "source": "Explicit user instruction in the current project conversation.",
     "limitations": "Authorization does not bypass technical release gates. The prior decision against the paid Restore to a New Project route remains in force; no additional paid recovery project is authorized by this record."
-  }
+  },
+  "backup_restore_risk_acceptance": {
+    "accepted": true,
+    "accepted_by": "Project owner (user)",
+    "accepted_at_utc": "2026-10-27T08:56:11Z",
+    "evidence_reference": "ChatGPT project conversation, 2026-10-27 08:56:11 UTC: user considered the visible scheduled physical backups sufficient for preparation and declined the paid Restore to a New Project physical-restore test.",
+    "scope": "Residual risk accepted: provider-managed physical backup restore was not independently tested; the local logical-dump restore was verified and scheduled physical backup visibility was confirmed.",
+    "physical_restore_status": "NOT EXECUTED",
+    "paid_restore_to_new_project": "DECLINED — USD 9.68/month; no paid recovery project authorized."
+  },
+  "accepted_residual_risks": [
+    "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
+  ]
 }

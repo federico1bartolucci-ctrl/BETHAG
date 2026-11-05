@@ -104,12 +104,13 @@ async function main() {
     assert.equal(process.env.BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED, "YES",
       "Blocked: Production Data API exposure for provider-managed schemas has not been verified in Dashboard.");
     const physicalRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
-    const riskAcceptedBy = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim();
-    const riskAcceptedAt = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim();
-    const riskEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
-    const riskAccepted = riskAcceptedBy.length > 0 && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskAcceptedAt) && riskEvidence.length > 0;
+    const riskRecord = manifest.backup_restore_risk_acceptance;
+    const riskAccepted = riskRecord?.accepted === true
+      && Boolean(riskRecord.accepted_by)
+      && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskRecord.accepted_at_utc ?? "")
+      && Boolean(riskRecord.evidence_reference);
     assert.ok(physicalRestoreVerified || riskAccepted,
-      "Blocked: verify the provider physical restore or record explicit named/timestamped residual-risk acceptance.");
+      "Blocked: verify the provider physical restore or record explicit named/timestamped residual-risk acceptance in the frozen manifest.");
   }
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
