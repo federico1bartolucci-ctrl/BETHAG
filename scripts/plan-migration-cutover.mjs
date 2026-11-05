@@ -45,9 +45,27 @@ assert.equal(incrementalFiles.at(-1), "20261104235514_fix_portal_registration_up
 const canonical = migrationFiles.map((file) => ({ file, version: parseVersion(file), name: file.slice(15, -4) }));
 const productionExact = canonical.filter((file) => production.migrations.some((m) => m.version === file.version && m.name === file.name));
 const productionVersionOnly = canonical.filter((file) => production.migrations.some((m) => m.version === file.version));
+const qaIdentityAliases = [
+  {
+    canonical: { version: "20261102100100", name: "add_workspace_member_profile_data" },
+    observed: { version: "20261102054409", name: "add_workspace_member_profile_data" },
+  },
+  {
+    canonical: { version: "20261102100200", name: "preserve_server_owned_condominium_archive_state" },
+    observed: { version: "20261102054253", name: "preserve_server_owned_condominium_archive_state" },
+  },
+];
 const qaExact = canonical.filter((file) => qa.migrations.some((m) => m.version === file.version && m.name === file.name));
 const qaOnly = qa.migrations.filter((m) => !canonical.some((file) => file.version === m.version && file.name === m.name));
-const canonicalNotQa = canonical.filter((file) => !qa.migrations.some((m) => m.version === file.version && m.name === file.name));
+const isCoveredByQaAlias = (file) => qaIdentityAliases.some(
+  (alias) => alias.canonical.version === file.version
+    && alias.canonical.name === file.name
+    && qa.migrations.some((m) => m.version === alias.observed.version && m.name === alias.observed.name),
+);
+const canonicalNotQa = canonical.filter((file) =>
+  !qa.migrations.some((m) => m.version === file.version && m.name === file.name)
+  && !isCoveredByQaAlias(file)
+);
 
 const report = {
   scope: "READ-ONLY PLAN — no migration tracking or database changes",
@@ -64,6 +82,7 @@ const report = {
   canonical_versions_already_registered_in_production: productionVersionOnly.map((file) => file.file),
   canonical_files_matching_active_qa_exactly: qaExact.map((file) => file.file),
   active_qa_entries_without_canonical_files_to_preserve: qaOnly.length,
+  active_qa_identity_aliases_preserved: qaIdentityAliases,
   canonical_files_not_registered_in_active_qa: canonicalNotQa.map((file) => file.file),
   retired_qa_snapshots: "ARCHIVAL ONLY — not active targets and not used for this plan",
   production: "DO NOT MODIFY. The historical ledger is not equivalent to the clean baseline.",
@@ -84,6 +103,7 @@ const report = {
       latest: qa.migrations.at(-1),
       preserve_all_existing_tracking_rows: true,
       preserve_environment_specific_entries_without_rewrite_or_deletion: true,
+      canonical_identity_aliases: qaIdentityAliases,
       canonical_files_not_registered: canonicalNotQa.map((file) => ({ version: file.version, name: file.name })),
       do_not_rewrite_or_delete_migration_ledger_rows: true,
     },
