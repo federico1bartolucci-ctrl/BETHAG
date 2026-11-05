@@ -52,6 +52,7 @@ try {
   }).select("id").single(), "outgoing owner");
   ids.owner = owner.id;
 
+  // Create both fixture fiscal years as open; the application forbids direct insertion of a closed exercise.
   const source = must(await admin.from("condominium_fiscal_years").insert({
     workspace_id: workspace.id,
     condominium_id: ids.condominium,
