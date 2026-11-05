@@ -1,4 +1,4 @@
--- READ-ONLY RELEASE POSTFLIGHT — expected after sixteen canonical increments.
+-- READ-ONLY RELEASE POSTFLIGHT — expected after nineteen canonical increments.
 -- No schema/data/ledger writes. Historical row preservation is separately checked by the guarded runner.
 DO $postflight$
 DECLARE
@@ -87,7 +87,9 @@ BEGIN
   IF has_function_privilege('anon','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
      OR has_function_privilege('anon','public.check_condominium_member_transfer_closure(uuid)','EXECUTE')
      OR NOT has_function_privilege('authenticated','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
-     OR NOT has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
+     OR NOT has_function_privilege('service_role','private.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.check_condominium_member_transfer_closure(uuid)','EXECUTE')
+     OR NOT has_function_privilege('service_role','public.check_condominium_member_transfer_closure(uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: transfer closure helper EXECUTE ACL differs from reviewed QA policy';
   END IF;
 
@@ -128,7 +130,7 @@ BEGIN
     ('20261105030000','reconcile_postgres_public_function_sequence_default_acl'),
     ('20261105050000','reconcile_portal_registration_upsert')
   );
-  IF canonical_count <> 19 THEN RAISE EXCEPTION 'FAIL: expected sixteen exact canonical version/name pairs, found %',canonical_count; END IF;
+  IF canonical_count <> 19 THEN RAISE EXCEPTION 'FAIL: expected nineteen exact canonical version/name pairs, found %',canonical_count; END IF;
 
   SELECT EXISTS (SELECT 1 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='workspace_members' AND column_name='data' AND data_type='jsonb'),
