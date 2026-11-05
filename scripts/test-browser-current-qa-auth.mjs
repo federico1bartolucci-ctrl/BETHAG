@@ -1,0 +1,91 @@
+import assert from "node:assert/strict";
+import { chromium } from "playwright";
+
+const baseURL = process.env.BETHAG_QA_BASE_URL || "http://127.0.0.1:4173/BETHAG/";
+const accounts = [
+  { role: "Amministratore", email: "bethag-admin-qa@example.com", password: process.env.BETHAG_QA_ADMIN_PASSWORD, expected: "Homepage" },
+  { role: "Collaboratore", email: "bethag-collaboratore-qa@example.com", password: process.env.BETHAG_QA_COLLABORATOR_PASSWORD, expected: "Homepage" },
+  { role: "Condomino", email: "bethag-condomino-qa@example.com", password: process.env.BETHAG_QA_RESIDENT_PASSWORD, expected: "Portale condòmino" },
+];
+for (const a of accounts) assert.ok(a.password, "Missing QA password secret for " + a.role);
+const browser = await chromium.launch({ headless: true });
+const results = [];
+
+async function waitForResidentProfile(page, phase) {
+  // The portal shell renders before the asynchronous workspace hydration has
+  // populated portal_access and condominium_members. Do not treat that
+  // intermediate placeholder as a completed login state.
+  await page.waitForFunction(() => {
+    const heading = document.querySelector(".resident-hero h1");
+    const identity = document.querySelector(".resident-identity strong");
+    const condominiumName = heading?.textContent?.trim() ?? "";
+    const memberName = identity?.textContent?.trim() ?? "";
+    return Boolean(
+      condominiumName &&
+      condominiumName !== "Profilo non associato" &&
+      memberName &&
+      memberName !== "Condomino"
+    );
+  }, null, { timeout: 20000 }).catch(async error => {
+    const body = await page.locator("body").innerText().catch(() => "");
+    throw new Error(
+      "Resident profile did not finish loading during " + phase +
+      "; portal body=" + body.slice(0, 1200) +
+      "; cause=" + error.message
+    );
+  });
+}
+
+try {
+  for (const account of accounts) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    try {
+      await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: "Accedi" }).first().click();
+      await page.getByRole("heading", { name: "Accedi a BETHAG" }).waitFor();
+      await page.getByRole("button", { name: account.role, exact: true }).click();
+      await page.locator('input[type="email"]').first().fill(account.email);
+      await page.locator('input[autocomplete="current-password"]').first().fill(account.password);
+      await page.getByRole("button", { name: "Accedi", exact: true }).last().click();
+      await page.getByText(account.expected, { exact: true }).first().waitFor({ timeout: 25000 });
+      if (account.role === "Condomino") await waitForResidentProfile(page, "initial login");
+      assert.deepEqual(errors, [], "Browser errors: " + errors.join(" | "));
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByText(account.expected, { exact: true }).first().waitFor({ timeout: 20000 });
+      if (account.role === "Condomino") await waitForResidentProfile(page, "session refresh");
+
+      // Verify an explicit logout clears the session and a fresh login restores
+      // the same role-specific landing. Staff use the Settings logout control;
+      // residents use the dedicated portal header logout control.
+      if (account.role === "Condomino") {
+        await page.getByRole("button", { name: "Esci", exact: true }).click();
+      } else {
+        await page.locator(".sidebar .nav-item").filter({ hasText: "Impostazioni" }).first().click();
+        await page.getByRole("heading", { name: "Impostazioni", exact: true }).waitFor({ timeout: 10000 });
+        await page.locator("main button.secondary-button").filter({ hasText: /^Esci$/ }).click();
+      }
+
+      const loginButton = page.getByRole("button", { name: "Accedi" }).first();
+      await loginButton.waitFor({ state: "visible", timeout: 10000 });
+      await loginButton.click();
+      await page.getByRole("heading", { name: "Accedi a BETHAG" }).waitFor({ timeout: 10000 });
+      await page.getByRole("button", { name: account.role, exact: true }).click();
+      await page.locator('input[type="email"]').first().fill(account.email);
+      await page.locator('input[autocomplete="current-password"]').first().fill(account.password);
+      await page.getByRole("button", { name: "Accedi", exact: true }).last().click();
+      await page.getByText(account.expected, { exact: true }).first().waitFor({ timeout: 25000 });
+      if (account.role === "Condomino") await waitForResidentProfile(page, "fresh login after explicit logout");
+      assert.deepEqual(errors, [], "Browser errors: " + errors.join(" | "));
+      results.push({ role: account.role, status: "PASS", checks: ["Supabase Auth sign-in", "role-specific landing", "resident profile hydration", "refresh/session persistence", "explicit logout", "fresh sign-in restores role", "no uncaught page errors"] });
+    } catch (e) {
+      let visible = "";
+      try { visible = (await page.locator("body").innerText()).slice(0, 1000); } catch {}
+      results.push({ role: account.role, status: "FAIL", error: String(e.message).slice(0, 400), pageErrors: errors, visible });
+    } finally { await context.close(); }
+  }
+} finally { await browser.close(); }
+console.log(JSON.stringify({ suite: "BETHAG_CURRENT_QA_REAL_AUTH", target: "jhuyhlzzydcgghrzeexn", results }, null, 2));
+if (results.some(x => x.status !== "PASS")) process.exitCode = 1;

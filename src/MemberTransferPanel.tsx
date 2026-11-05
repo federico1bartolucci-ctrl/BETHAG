@@ -239,9 +239,24 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       setError("Nessun proprietario attivo trovato per l'unità selezionata.");
       return;
     }
+    if (incomingOwnersValid.length !== incomingOwners.length) {
+      setError("Completa i dati di ciascun nuovo proprietario prima di procedere.");
+      return;
+    }
     for (const owner of incomingOwnersValid) {
       if (owner.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) {
         setError("Inserisci un indirizzo email valido per ciascun nuovo proprietario.");
+        return;
+      }
+    }
+    if (incomingOwnersValid.length > 1) {
+      const emails = incomingOwnersValid.map(owner => owner.email.trim().toLowerCase());
+      if (emails.some(email => !email)) {
+        setError("Per ogni comproprietario inserisci un indirizzo e-mail distinto, necessario per la verifica individuale del portale.");
+        return;
+      }
+      if (new Set(emails).size !== emails.length) {
+        setError("Ogni comproprietario deve avere un indirizzo e-mail diverso.");
         return;
       }
     }
@@ -270,7 +285,13 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       if (share > selectedOutgoingShare + 0.0001) { setError("La quota da trasferire supera la quota attualmente posseduta dal cedente."); return; }
     } else if (!currentUnitOwners.length) { setError("Nessun proprietario attivo trovato per l'unità selezionata."); return; }
     if (!previewIsCurrent) { setError("L'anteprima contabile non è aggiornata."); return; }
+    if (incomingOwnersValid.length !== incomingOwners.length) { setError("Completa i dati di ciascun nuovo proprietario prima di procedere."); return; }
     for (const owner of incomingOwnersValid) { if (owner.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) { setError("Inserisci un indirizzo email valido per ciascun nuovo proprietario."); return; } }
+    if (incomingOwnersValid.length > 1) {
+      const emails = incomingOwnersValid.map(owner => owner.email.trim().toLowerCase());
+      if (emails.some(email => !email)) { setError("Per ogni comproprietario inserisci un indirizzo e-mail distinto, necessario per la verifica individuale del portale."); return; }
+      if (new Set(emails).size !== emails.length) { setError("Ogni comproprietario deve avere un indirizzo e-mail diverso."); return; }
+    }
     if (transferScope === "whole_property" && Math.abs(incomingOwnersTotalShare - 100) > 0.0001) { setError("Per il trasferimento dell'intera proprietà, le quote dei nuovi comproprietari devono sommare esattamente il 100%."); return; }
     if (transferScope === "ownership_share" && (incomingOwnersValid.some(o => !Number.isFinite(Number(o.share)) || Number(o.share) <= 0) || incomingOwnersTotalShare <= 0 || incomingOwnersTotalShare > Number(ownershipShare) + 0.0001)) { setError("Le quote dei nuovi comproprietari devono essere positive e la loro somma non può superare la quota trasferita."); return; }
     setBusy(true); setError(""); setMessage("");
@@ -391,7 +412,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         {transferScope === "ownership_share" && <label>Quota da trasferire (%)<input type="number" min="0.01" max="100" step="0.01" value={ownershipShare} onChange={e=>{setOwnershipShare(e.target.value);setPreview(null);}} placeholder={selectedOutgoingShare ? String(selectedOutgoingShare) : "es. 50"} /><small>{selectedOutgoingShare ? "Quota attuale del cedente: " + selectedOutgoingShare + "%" : "La quota del cedente deve essere presente nell'anagrafica."}</small></label>}
         <div style={{ gridColumn: "1 / -1" }}>
           <b>Nuovi proprietari / comproprietari</b>
-          <small style={{ display: "block", marginBottom: 8 }}>Puoi inserire uno o più subentranti. Per l'intera proprietà, le quote devono sommare il 100%.</small>
+          <small style={{ display: "block", marginBottom: 8 }}>Puoi inserire uno o più subentranti. Per l'intera proprietà, le quote devono sommare il 100%. Se inserisci più comproprietari, ciascuno deve avere un indirizzo e-mail distinto per la verifica individuale del portale.</small>
           {incomingOwners.map((owner, index) => <div key={index} className="form-grid" style={{ marginBottom: 8 }}>
             <label>Nome e cognome<input value={owner.name} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,name:e.target.value}:o))} required maxLength={160} placeholder="Nome e cognome" /></label>
             <label>Email<input type="email" value={owner.email} onChange={e=>setIncomingOwners(prev=>prev.map((o,i)=>i===index?{...o,email:e.target.value}:o))} maxLength={254} placeholder="nome@esempio.it" /></label>

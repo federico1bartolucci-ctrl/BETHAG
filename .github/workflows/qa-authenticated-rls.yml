@@ -1,0 +1,38 @@
+name: BETHAG authenticated QA RLS and storage acceptance
+on:
+  push:
+    branches:
+      - ops/qa-secret-validation-20261102
+    paths:
+      - "scripts/test-current-qa-authenticated-rls.mjs"
+      - ".github/workflows/qa-authenticated-rls.yml"
+  workflow_dispatch:
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
+jobs:
+  authenticated-rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Execute role-scoped RLS and Storage tests against approved QA only
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key secret missing"; exit 1; }
+          node scripts/test-current-qa-authenticated-rls.mjs
+# QA verification trigger refreshed 2026-11-02
+# QA verification trigger refreshed 2026-11-02 (round 2)
+# QA authenticated RLS/storage retest requested 2026-11-03 after QA workflow serialization.
+# QA authenticated RLS/storage acceptance rerun trigger 2026-11-04.

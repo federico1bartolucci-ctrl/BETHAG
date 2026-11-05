@@ -17,7 +17,8 @@
     "verify:migration-history": "node scripts/verify-migration-history-reconciliation.mjs",
     "verify:cutover-planner-safety": "node scripts/verify-cutover-planner-safety.mjs",
     "verify:environment-alignment": "node scripts/verify-environment-migration-alignment.mjs",
-    "test:browser-smoke": "npm run build && node scripts/test-browser-public-smoke.mjs"
+    "test:browser-smoke": "npm run build && node scripts/test-browser-public-smoke.mjs",
+    "test:communication-guards": "node --test scripts/test-communication-send-guards.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.1.1",

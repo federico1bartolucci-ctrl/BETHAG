@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
 const productionPath = "supabase/rebuild/production-ledger-20261026.json";
-const qaPath = "supabase/rebuild/qa-ledger-20261026.json";
+const historicalQaPath = "supabase/rebuild/qa-ledger-20261026.json";
+const activeQaPath = "supabase/rebuild/qa-ledger-20261105.json";
 const mainPath = "supabase/rebuild/main-migration-files-20261026.json";
 const reportPath = "supabase/rebuild/migration-history-reconciliation-20261026.json";
 
-const [production, qa, main, savedReport] = await Promise.all([
+const [production, historicalQa, activeQa, main, savedReport] = await Promise.all([
   readFile(productionPath, "utf8").then(JSON.parse),
-  readFile(qaPath, "utf8").then(JSON.parse),
+  readFile(historicalQaPath, "utf8").then(JSON.parse),
+  readFile(activeQaPath, "utf8").then(JSON.parse),
   readFile(mainPath, "utf8").then(JSON.parse),
   readFile(reportPath, "utf8").then(JSON.parse),
 ]);
@@ -18,25 +20,32 @@ const currentFiles = (await readdir("supabase/migrations"))
   .sort((a, b) => a.version.localeCompare(b.version));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
-assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg");
+assert.equal(historicalQa.project_ref, "mxhciszzpqzvsaqcnwhg");
 assert.equal(production.count, production.migrations.length);
-assert.equal(qa.count, qa.migrations.length);
+assert.equal(historicalQa.count, historicalQa.migrations.length);
 assert.equal(main.count, main.files.length);
 assert.equal(production.count, 244, "Refresh Production ledger snapshot when live migration history changes.");
-assert.equal(qa.count, 17, "Refresh QA ledger snapshot when live migration history changes.");
+assert.equal(historicalQa.count, 17, "The October 26 QA ledger is a historical snapshot only.");
+assert.equal(activeQa.project_ref, "jhuyhlzzydcgghrzeexn", "Only the retained QA project may be an active QA target.");
+assert.equal(activeQa.count, activeQa.migrations.length);
+assert.equal(activeQa.count, 282, "Refresh the retained QA snapshot when live migration history changes.");
+assert.deepEqual(activeQa.migrations.at(-1), { version: "20261104235514", name: "fix_portal_registration_upsert_conflict_target" });
 assert.equal(main.count, 203, "Refresh main migration-file inventory when main changes.");
-assert.equal(currentFiles.length, 18, "Canonical migration inventory changed.");
+assert.equal(currentFiles.length, 21, "Canonical migration inventory changed.");
 const postSnapshotRemediationFiles = [
   "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
   "20261027110000_repair_service_role_transfer_invoker_path.sql",
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
+  "20261102100100_add_workspace_member_profile_data.sql",
+  "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
 ];
 assert.ok(postSnapshotRemediationFiles.every((name) => currentFiles.some((file) => file.file === name)), "Missing a post-snapshot transfer security remediation migration.");
 // The saved reconciliation report is a historical snapshot based on the 15-file
 // clean branch and 2026-10-26 ledgers. Keep that comparison reproducible while
 // validating both newer remediation migrations separately above.
 const snapshotFiles = currentFiles.filter((file) => !postSnapshotRemediationFiles.includes(file.file));
-for (const list of [production.migrations, qa.migrations]) {
+for (const list of [production.migrations, historicalQa.migrations]) {
   const versions = list.map((entry) => entry.version);
   assert.ok(versions.every((version) => /^\d{14}$/.test(version)));
   assert.equal(new Set(versions).size, versions.length, "Duplicate migration version in captured ledger.");
@@ -67,7 +76,7 @@ const exact = classify.filter((item) => item.classification === "exact_version_a
 const sameName = classify.filter((item) => item.classification === "same_name_different_version");
 const noSource = classify.filter((item) => item.classification === "no_matching_source_file");
 const productionVersions = new Set(production.migrations.map((item) => item.version));
-const qaVersions = new Set(qa.migrations.map((item) => item.version));
+const qaVersions = new Set(historicalQa.migrations.map((item) => item.version));
 const productionMatches = snapshotFiles
   .filter((file) => productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, productionName: production.migrations.find((item) => item.version === file.version).name }));
@@ -75,18 +84,18 @@ const notInProduction = snapshotFiles
   .filter((file) => !productionVersions.has(file.version))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
 const qaMatches = snapshotFiles
-  .filter((file) => qa.migrations.some((item) => item.version === file.version && item.name === file.name))
+  .filter((file) => historicalQa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
-const qaOnly = qa.migrations.filter((item) => !snapshotFiles.some((file) => file.version === item.version && file.name === item.name));
+const qaOnly = historicalQa.migrations.filter((item) => !snapshotFiles.some((file) => file.version === item.version && file.name === item.name));
 const cleanOnly = snapshotFiles
-  .filter((file) => !qa.migrations.some((item) => item.version === file.version && item.name === file.name))
+  .filter((file) => !historicalQa.migrations.some((item) => item.version === file.version && item.name === file.name))
   .map((file) => ({ file: file.file, version: file.version, name: file.name }));
 
 const calculated = {
   captured_at_utc: "2026-10-26",
   scope: "Read-only migration history reconciliation inventory; no schema, data, or remote migration ledger was changed.",
   production: { project_ref: production.project_ref, ledger_count: production.count, latest: production.migrations.at(-1) },
-  qa: { project_ref: qa.project_ref, ledger_count: qa.count, latest: qa.migrations.at(-1) },
+  qa: { project_ref: historicalQa.project_ref, ledger_count: historicalQa.count, latest: historicalQa.migrations.at(-1) },
   repository_main: {
     migration_files: main.count,
     exact_version_and_name_matches: exact.length,
@@ -126,12 +135,15 @@ assert.ok(qa_alias_sql_review.rows.every((row) => typeof row.disposition === "st
 console.log(JSON.stringify({
   migration_history_reconciliation: "PASS — inventory and mapping artifact are internally consistent",
   production_ledger_rows: production.count,
-  qa_ledger_rows: qa.count,
+  historical_qa_snapshot_rows: historicalQa.count,
+  active_qa_project_ref: activeQa.project_ref,
+  active_qa_ledger_rows: activeQa.count,
+  active_qa_ledger_head: activeQa.migrations.at(-1),
   main_migration_files: main.count,
   clean_branch_migration_files: currentFiles.length,
   post_snapshot_remediation_migrations: currentFiles.filter((file) => postSnapshotRemediationFiles.includes(file.file)).map((file) => file.file),
   production_to_main: { exact_version_and_name: exact.length, same_name_different_version: sameName.length, no_matching_source_file: noSource.length },
   clean_branch_to_production: { exact_version_matches: productionMatches.length, not_registered_in_production: notInProduction.length },
-  clean_branch_to_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
+  clean_branch_to_historical_qa: { exact_version_and_name_matches: qaMatches.length, qa_entries_not_in_clean_branch: qaOnly.length, clean_files_not_in_qa: cleanOnly.length },
   production_tracking_cutover: "BLOCKED — verified restore point OR named written physical-restore risk acceptance, semantic catalog/ACL sign-off, and approved cutover required",
 }, null, 2));

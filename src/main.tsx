@@ -6,7 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
-  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, loadBackendState, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+  analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
 
 /* =========================================================
    BETHAG
@@ -2209,6 +2209,10 @@ function App() {
       load(KEYS.session, null)
     );
 
+  // Resolve role flags before any callbacks/effects can reference them.
+  const isAdministrator = sessionRole === "admin";
+  const isCollaborator = sessionRole === "collaborator";
+
   // The authenticated session must be hydrated before rendering the public
   // login screen. This prevents a refresh from showing the login page while
   // Supabase is still restoring the persisted session.
@@ -2353,6 +2357,23 @@ function App() {
         addons: Array.isArray(stored.addons) ? stored.addons : [],
       };
     });
+
+  useEffect(() => {
+    if (!supabaseConfigured || !profile.workspaceId) return;
+    let cancelled = false;
+    void getWorkspacePlan(profile.workspaceId)
+      .then((plan) => {
+        if (!cancelled && plan) {
+          setSubscription((current) => current.plan === plan ? current : { ...current, plan });
+        }
+      })
+      .catch((error) => {
+        console.warn("Impossibile caricare il piano del workspace:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.workspaceId, profile.email]);
 
   const [search, setSearch] =
     useState("");
@@ -3602,8 +3623,18 @@ function App() {
     aiConfirmedUnitsOverride?: CondominiumCreationUnitDraft[],
   ) => {
     event.preventDefault();
+    console.info("BETHAG_SAVE_CONDOMINIUM_SUBMIT", {
+      stateName: editingCondominium?.name ?? null,
+      stateId: editingCondominium?.id ?? null,
+      role: sessionRole,
+      isAdministrator,
+      supabaseConfigured,
+    });
 
-    if (!requireModulePermission("condomini", "La modifica dei dati del condominio")) return;
+    if (!requireModulePermission("condomini", "La modifica dei dati del condominio")) {
+      console.info("BETHAG_SAVE_CONDOMINIUM_DENIED");
+      return;
+    }
 
     const isEditing =
       Boolean(editingCondominium && editingCondominium.id !== 0);
@@ -3665,6 +3696,14 @@ function App() {
           },
         ];
 
+    console.info("BETHAG_SAVE_CONDOMINIUM_DECISION", {
+      isEditing,
+      formName: data.name,
+      normalizedName: normalizedData.name,
+      stateName: editingCondominium?.name ?? null,
+      workspaceId: profile.workspaceId ?? null,
+    });
+
     const savedItem = isEditing
       ? nextCondominiums.find(
           (item) => item.id === editingCondominium!.id
@@ -3698,7 +3737,9 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
+        console.info("BETHAG_SAVE_CONDOMINIUM_RPC_START", { workspaceId, id: savedItem.id, name: savedItem.name });
         await saveCondominiumBackend(workspaceId, savedItem);
+        console.info("BETHAG_SAVE_CONDOMINIUM_RPC_DONE", { id: savedItem.id, name: savedItem.name });
 
         // Alla prima creazione, la struttura configurata dal wizard genera
         // le sole unità anagrafiche. Proprietari e millesimi restano vuoti:
@@ -4011,10 +4052,21 @@ function App() {
   const archiveCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "L'archiviazione del condominio")) return;
     if (!window.confirm(`Archiviare "${item.name}"? Il condominio non sarà più mostrato nella gestione ordinaria, ma tutti i dati resteranno conservati nell'Archivio.`)) return;
-    const archived = { ...item, archivedAt: new Date().toISOString() };
     try {
-      if (supabaseConfigured && supabase && profile.workspaceId) {
-        await saveCondominiumBackend(profile.workspaceId, archived);
+      let archived: Condominium = { ...item, archivedAt: new Date().toISOString() };
+      if (supabaseConfigured && supabase) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) throw new Error("Sessione autenticata non disponibile.");
+        const workspaceId = await getActiveWorkspaceId(user.id, profile.workspaceId);
+        if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
+        const persisted = await archiveCondominiumBackend(workspaceId, item.id);
+        archived = {
+          ...item,
+          archivedAt: persisted.archived_at,
+          archivedBy: persisted.archived_by,
+          archiveReason: persisted.archive_reason,
+        };
       }
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
@@ -4027,11 +4079,16 @@ function App() {
   const restoreCondominium = async (item: Condominium) => {
     if (!requireModulePermission("condomini", "Il ripristino del condominio")) return;
     if (!window.confirm(`Ripristinare "${item.name}" nella gestione ordinaria?`)) return;
-    const restored = { ...item, archivedAt: undefined, archivedBy: undefined };
     try {
-      if (supabaseConfigured && supabase && profile.workspaceId) {
-        await saveCondominiumBackend(profile.workspaceId, restored);
+      if (supabaseConfigured && supabase) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) throw new Error("Sessione autenticata non disponibile.");
+        const workspaceId = await getActiveWorkspaceId(user.id, profile.workspaceId);
+        if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
+        await restoreCondominiumBackend(workspaceId, item.id);
       }
+      const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
@@ -4086,7 +4143,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) throw new Error("Sessione autenticata non disponibile. Accedi nuovamente a BETHAG.");
 
-        const workspaceId = profile.workspaceId || await getActiveWorkspaceId(session.user.id, null);
+        const workspaceId = await getActiveWorkspaceId(session.user.id, profile.workspaceId);
         if (!workspaceId) throw new Error("Workspace amministratore non trovato.");
 
         await deleteCondominiumBackend(workspaceId, item.id, securityCode);
@@ -6416,6 +6473,17 @@ function App() {
 
         if (!workspaceId || cancelled) return;
 
+        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+          .from("workspaces")
+          .select("plan")
+          .eq("id", workspaceId)
+          .maybeSingle();
+        if (workspaceSettingsError) throw workspaceSettingsError;
+        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
+        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
+        }
+
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
 
@@ -6467,6 +6535,17 @@ function App() {
     let cancelled = false;
     const refreshBackendState = async () => {
       try {
+        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+          .from("workspaces")
+          .select("plan")
+          .eq("id", profile.workspaceId)
+          .maybeSingle();
+        if (workspaceSettingsError) throw workspaceSettingsError;
+        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
+        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
+        }
+
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
         setCondominiums(backend.condominiums);
@@ -6490,8 +6569,13 @@ function App() {
     const handleBackendRefresh = () => { void refreshBackendState(); };
     window.addEventListener("bethag-backend-refresh", handleBackendRefresh);
 
-    // Navigation itself is a refresh boundary: always read the authoritative state.
-    void refreshBackendState();
+    // Full workspace hydration is needed when entering the condominium
+    // registry or archive. Re-running it on every unrelated navigation caused
+    // hundreds of REST requests for large workspaces and blocked the UI.
+    // Standalone modules can still request a refresh through the event above.
+    if (page === "condomini" || page === "archivio") {
+      void refreshBackendState();
+    }
 
     return () => {
       cancelled = true;
@@ -6556,10 +6640,18 @@ function App() {
   ]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.condominiums,
-      JSON.stringify(condominiums)
-    );
+    // Supabase is authoritative in backend mode. Persisting the full workspace
+    // snapshot locally duplicates thousands of rows and exceeds browser quota.
+    if (supabaseConfigured) return;
+    try {
+      localStorage.setItem(
+        KEYS.condominiums,
+        JSON.stringify(condominiums)
+      );
+    } catch (error) {
+      // Local-only fallback must not crash the application when storage is full.
+      console.warn("BETHAG local condominium cache was not persisted", error);
+    }
   }, [condominiums]);
 
   useEffect(() => {
@@ -6655,9 +6747,6 @@ function App() {
     condominiums.find(
       (c) => c.id === id
     )?.name || "Tutti i condomini";
-
-  const isAdministrator = sessionRole === "admin";
-  const isCollaborator = sessionRole === "collaborator";
 
   const currentCollaborator = useMemo(
     () =>
@@ -7500,6 +7589,9 @@ function App() {
               }}
               onDelete={
                 deleteCondominium
+              }
+              onArchive={
+                archiveCondominium
               }
               deadlines={
                 deadlines
@@ -12092,6 +12184,7 @@ function CommunicationsPage({
   onEdit,
   onDelete,
   onPublication,
+  isAdministrator = false,
 }: any) {
   const filtered =
     communications.filter(
@@ -12118,7 +12211,7 @@ function CommunicationsPage({
   return (
     <>
 
-      {isAdministrator ? (
+      {onNew ? (
         <PageHeader
           eyebrow="Comunicazioni"
           title="Comunicazioni"
@@ -16838,7 +16931,8 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       active: form.active,
       updated_at: new Date().toISOString(),
     };
-    const result = editing
+    // "new" is the UI sentinel for insert mode, never a database UUID.
+    const result = editing && editing !== "new"
       ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
       : await supabase.from("condominium_insurance_policies").insert(payload);
     if (result.error) {
@@ -19204,6 +19298,10 @@ class BethagAppErrorBoundary extends React.Component<
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     console.error("BETHAG application render error", error, info);
+    this.setState((current) => ({
+      ...current,
+      message: current.message + (info.componentStack ? "\\n\\nComponente:\\n" + info.componentStack : ""),
+    }));
   }
 
   render() {

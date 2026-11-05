@@ -25,6 +25,9 @@ const incrementalMigrations = [
   "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
   "20261027110000_repair_service_role_transfer_invoker_path.sql",
   "20261028100000_fix_collaborator_module_permission_boolean.sql",
+  "20261102100100_add_workspace_member_profile_data.sql",
+  "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations].sort();
 const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
@@ -190,7 +193,16 @@ for (const filename of incrementalMigrations) {
   psql(["-f", path.join(directory, filename)]);
 }
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
-assert.deepEqual(finalInventory, expected, "Incremental hardening migrations changed the expected structural inventory.");
+assert.deepEqual(
+  finalInventory,
+  {
+    ...expected,
+    columns: expected.columns + 1,
+    functions: expected.functions + 1,
+    function_owners: { postgres: expected.function_owners.postgres + 1 },
+  },
+  "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
+);
 console.log(JSON.stringify({ incremental_hardening: "PASS", applied_migrations: incrementalMigrations, inventory: finalInventory }, null, 2));
 
 const aclChecksSql = `

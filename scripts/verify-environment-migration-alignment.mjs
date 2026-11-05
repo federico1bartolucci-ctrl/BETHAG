@@ -3,13 +3,12 @@ import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
 const migrationDir = "supabase/migrations";
-const [production, qa, mainInventory, reconciliation, liveStatus, liveQaExecuteHardening] = await Promise.all([
+const [production, qa, mainInventory, reconciliation, liveStatus] = await Promise.all([
   readFile(`${root}/production-ledger-20261026.json`, "utf8").then(JSON.parse),
-  readFile(`${root}/qa-ledger-20261026.json`, "utf8").then(JSON.parse),
+  readFile(`${root}/qa-ledger-20261105.json`, "utf8").then(JSON.parse),
   readFile(`${root}/main-migration-files-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/migration-history-reconciliation-20261026.json`, "utf8").then(JSON.parse),
   readFile(`${root}/live-environment-status-20261027.json`, "utf8").then(JSON.parse),
-  readFile(`${root}/live-qa-execute-hardening-20261027.json`, "utf8").then(JSON.parse),
 ]);
 
 const restoreGate = liveStatus.backup_restore_gate;
@@ -18,12 +17,8 @@ assert.equal(restoreGate.source_project_ref, "tctcgptrsmvgajqjgnev");
 assert.equal(restoreGate.release_gate_passed, false, "Do not misrepresent the untested provider restore as successful.");
 assert.equal(restoreGate.schema_acl_parity, "NOT VERIFIED", "Provider restore parity must be explicitly verified.");
 assert.equal(restoreGate.target_project_ref, null, "Do not record a restore target before a real isolated restore exists.");
-assert.equal(restoreGate.restore_completed_at_utc, null, "Do not record completion before provider restore evidence exists.");
+assert.equal(restoreGate.restore_completed_at_utc, null, "Do not record completion before a real isolated restore exists.");
 assert.match(restoreGate.status, /BLOCKED/i, "Provider restore gate must remain blocked until evidenced.");
-
-const environments = [
-  ...liveStatus.environments.map((environment) => ({ name: environment.name, project_ref: environment.project_ref, ledger_count: environment.ledger_count, ledger_head: environment.ledger_head, rebase_status: environment.rebase_status_at_capture ?? "not-applicable" })),
-];
 
 const files = (await readdir(migrationDir))
   .filter((file) => file.endsWith(".sql"))
@@ -55,42 +50,56 @@ const expectedPending = [
   ["20261027100000", "revoke_public_execute_from_transfer_closure_helpers"],
   ["20261027110000", "repair_service_role_transfer_invoker_path"],
   ["20261028100000", "fix_collaborator_module_permission_boolean"],
+  ["20261102100100", "add_workspace_member_profile_data"],
+  ["20261102100200", "preserve_server_owned_condominium_archive_state"],
+  ["20261104235514", "fix_portal_registration_upsert_conflict_target"],
 ].map(([version, name]) => ({ version, name }));
 
 assert.equal(production.project_ref, "tctcgptrsmvgajqjgnev");
-assert.equal(qa.project_ref, "mxhciszzpqzvsaqcnwhg");
+assert.equal(qa.project_ref, "jhuyhlzzydcgghrzeexn", "Only the retained QA project may be an active QA target.");
 assert.equal(production.count, production.migrations.length);
 assert.equal(qa.count, qa.migrations.length);
 assert.equal(production.count, 244, "Refresh the Production ledger snapshot before planning a cutover.");
-assert.equal(qa.count, 17, "Refresh the QA ledger snapshot before planning a cutover.");
+assert.equal(qa.count, 282, "Refresh the retained QA ledger snapshot before planning a cutover.");
+assert.equal(qa.migrations.at(-1).version, "20261104235514", "The retained QA ledger must end at the portal registration repair.");
+assert.equal(qa.migrations.at(-1).name, "fix_portal_registration_upsert_conflict_target");
 assert.equal(mainInventory.count, mainInventory.files.length);
-assert.equal(files.length, 18, "Canonical baseline + incremental migration inventory changed.");
-assert.equal(liveQaExecuteHardening.production_modified, false, "QA ACL hardening evidence must not claim Production was modified.");
-assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.projects_checked, 4);
-assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_public_execute, false);
-assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_authenticated_execute, true);
-assert.equal(liveQaExecuteHardening.qa_post_migration_acl_check.helper_functions_service_role_execute, true);
-assert.equal(liveQaExecuteHardening.qa_environments.length, 4);
-assert.ok(liveQaExecuteHardening.qa_environments.every((environment) => environment.security_advisor_lints === 0), "All four QA/development environments must have zero security advisor lints after helper ACL hardening.");
-assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.insert, 41);
-assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.update, 41);
-assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.authenticated.delete, 42);
-assert.equal(liveQaExecuteHardening.production.effective_current_table_privileges.service_role.maintain, 47);
-const qaByName = Object.fromEntries(liveQaExecuteHardening.qa_environments.map((environment) => [environment.name, environment]));
-for (const name of ["bethag-continuity-qa", "bethag-member-transfer-qa", "bethag-migration-reconciliation-qa"]) {
-  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.insert, 41, name + " current-table INSERT grants must match Production.");
-  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.update, 41, name + " current-table UPDATE grants must match Production.");
-  assert.equal(qaByName[name].effective_current_table_privileges.authenticated.delete, 42, name + " current-table DELETE grants must match Production.");
-  assert.equal(qaByName[name].effective_current_table_privileges.service_role.maintain, 0, name + " must have no service_role MAINTAIN.");
-}
-assert.equal(qaByName["bethag-develop"].effective_current_table_privileges.authenticated.insert, 47, "Develop has broader current-table CRUD and must not be treated as Production ACL parity.");
+assert.equal(files.length, 21, "Canonical baseline + incremental migration inventory changed.");
+
 assert.deepEqual(files.slice(0, 5).map(({ version, name }) => ({ version, name })), expectedBaseline);
 assert.deepEqual(files.slice(5).map(({ version, name }) => ({ version, name })), [productionHead, ...expectedPending]);
 
 const exact = (ledger, item) => ledger.migrations.some((entry) => entry.version === item.version && entry.name === item.name);
-assert.ok(expectedBaseline.every((item) => exact(qa, item)), "QA baseline adoption is not present in the captured ledger.");
+assert.ok(expectedBaseline.every((item) => exact(qa, item)), "The retained QA project must contain the canonical five-file baseline.");
 assert.ok(exact(production, productionHead), "Production head migration differs from the captured canonical head.");
-assert.ok(exact(qa, productionHead), "QA head migration differs from the captured canonical head.");
+assert.ok(exact(qa, productionHead), "The retained QA project must contain the captured canonical head.");
+const qaIdentityAliases = [
+  {
+    canonical: { version: "20261102100100", name: "add_workspace_member_profile_data" },
+    observed: { version: "20261102054409", name: "add_workspace_member_profile_data" },
+  },
+  {
+    canonical: { version: "20261102100200", name: "preserve_server_owned_condominium_archive_state" },
+    observed: { version: "20261102054253", name: "preserve_server_owned_condominium_archive_state" },
+  },
+];
+const hasEquivalentQaIdentity = (item) => qaIdentityAliases.some(
+  (alias) => alias.canonical.version === item.version
+    && alias.canonical.name === item.name
+    && exact(qa, alias.observed),
+);
+assert.ok(
+  expectedPending.every((item) => exact(qa, item) || hasEquivalentQaIdentity(item)),
+  "The retained QA project must contain every canonical increment or its explicitly verified historical identity alias.",
+);
+assert.ok(qaIdentityAliases.every((alias) => exact(qa, alias.observed)), "The two preserved QA identity aliases must remain present.");
+assert.equal(qa.verified_migration_identity_aliases.length, 2, "Both QA migration aliases need live catalog effect evidence.");
+assert.ok(qa.verified_migration_identity_aliases.every((entry) => entry.status === "EFFECT_VERIFIED" && typeof entry.evidence === "string" && entry.evidence.length > 40), "QA migration aliases must retain their catalog verification evidence.");
+assert.deepEqual(
+  qa.verified_migration_identity_aliases.map((entry) => ({ canonical: entry.canonical, observed: entry.observed })),
+  qaIdentityAliases,
+  "QA alias evidence must match the two approved canonical-to-observed identity mappings.",
+);
 
 const productionPending = files
   .filter(({ version, name }) => !exact(production, { version, name }))
@@ -101,23 +110,8 @@ assert.deepEqual(
   "Production pending migration list differs from the approved canonical sequence.",
 );
 
-const qaEquivalentCandidates = [
-  { canonical: "20261023000001_revoke_authenticated_maintain", observed: "20261022230901_revoke_authenticated_maintain" },
-  { canonical: "20261023000002_revoke_default_maintain", observed: "20261022230908_revoke_default_maintain" },
-  { canonical: "20261023000003_revoke_service_role_maintain", observed: "20261023011431_revoke_service_role_maintain_qa_test" },
-  { canonical: "20261023000004_application_default_table_privileges", observed: "20261023011435_define_application_default_table_privileges_qa" },
-];
-for (const mapping of qaEquivalentCandidates) {
-  const [canonicalVersion, canonicalName] = [mapping.canonical.slice(0, 14), mapping.canonical.slice(15)];
-  const [observedVersion, observedName] = [mapping.observed.slice(0, 14), mapping.observed.slice(15)];
-  assert.ok(files.some((file) => file.version === canonicalVersion && file.name === canonicalName), `Missing canonical migration: ${mapping.canonical}`);
-  assert.ok(qa.migrations.some((entry) => entry.version === observedVersion && entry.name === observedName), `QA ledger snapshot changed: ${mapping.observed}`);
-}
-const qaOnlyTestMigrations = [
-  { version: "20261023010544", name: "qa_test_revoke_authenticated_maintain_20261023" },
-  { version: "20261023010548", name: "qa_test_revoke_default_maintain_20261023" },
-];
-assert.ok(qaOnlyTestMigrations.every((item) => exact(qa, item)), "QA-only test migration ledger changed.");
+const qaVersions = qa.migrations.map(({ version }) => version);
+assert.equal(new Set(qaVersions).size, qaVersions.length, "The retained QA ledger contains duplicate migration versions.");
 
 const gates = {
   physical_restore_proof_or_risk_acceptance_recorded:
@@ -127,44 +121,30 @@ const gates = {
       /^\d{4}-\d{2}-\d{2}T.*Z$/.test((process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim()) &&
       (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim()
     ),
-  live_production_and_qa_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
-  qa_variant_sql_equivalence_verified: process.env.BETHAG_QA_EQUIVALENCE_VERIFIED === "YES",
-  all_five_environment_ledgers_recaptured: process.env.BETHAG_ALL_ENVIRONMENT_LEDGERS_CAPTURED === "YES",
+  live_production_acl_parity_verified: process.env.BETHAG_LIVE_ACL_PARITY_VERIFIED === "YES",
+  retained_qa_catalog_and_acl_parity_verified: process.env.BETHAG_LIVE_QA_PARITY_VERIFIED === "YES",
+  production_and_retained_qa_ledgers_recaptured: process.env.BETHAG_PRODUCTION_AND_ACTIVE_QA_LEDGERS_CAPTURED === "YES",
   cutover_plan_approved: process.env.BETHAG_CUTOVER_APPROVED === "YES",
 };
 const blockers = Object.entries(gates).filter(([, passed]) => !passed).map(([gate]) => gate);
 
 console.log(JSON.stringify({
   migration_alignment_inventory: "PASS",
-  environments,
-  environments_without_captured_ledger: liveStatus.environments.filter((environment) => !environment.ledger_count || !environment.ledger_head).map((environment) => environment.name),
-  environments_requiring_reaudit_after_rebase: liveStatus.environments.filter((environment) => environment.rebase_requested).map((environment) => environment.name),
+  active_qa_project_ref: qa.project_ref,
+  active_qa_ledger_records: qa.count,
+  active_qa_ledger_head: qa.migrations.at(-1),
+  retired_qa_snapshots: "ARCHIVAL ONLY — never used as active targets",
   canonical_baseline_migrations: expectedBaseline.length,
-  canonical_incremental_migrations: expectedPending.length + 1,
+  canonical_incremental_migrations: expectedPending.length,
   production_ledger_records: production.count,
   production_pending_canonical_migrations: productionPending,
-  qa_ledger_records: qa.count,
-  qa_equivalent_migrations_requiring_SQL_proof: qaEquivalentCandidates,
-  qa_only_test_migrations_requiring_disposition: qaOnlyTestMigrations,
-  live_environment_status_captured_at_utc: liveStatus.captured_at_utc,
-  live_qa_execute_hardening: liveQaExecuteHardening,
-  live_environment_evidence: liveStatus.environments.map((environment) => ({
-    name: environment.name,
-    ledger_count: environment.ledger_count,
-    ledger_head: environment.ledger_head,
-    schema: environment.schema,
-    acl: environment.acl,
-    default_acl_maintain: environment.default_acl_maintain,
-    close_transfer_security_definer: environment.close_transfer_security_definer,
-    application_row_counts: environment.application_row_counts,
-    catalog_fingerprints: environment.catalog_fingerprints,
-    rebase_status: environment.rebase_status_at_capture ?? "not-applicable",
-  })),
+  active_qa_contains_all_canonical_migrations_or_verified_identity_aliases: true,
+  active_qa_identity_aliases_preserved: qaIdentityAliases,
   original_main_inventory_files: mainInventory.count,
   original_main_exact_version_and_name_matches_production: reconciliation.repository_main.exact_version_and_name_matches,
-  production_live_security_drift: (() => { const production = liveStatus.environments.find((environment) => environment.name === "production"); return { current_table_maintain: production.acl, default_acl_maintain: production.default_acl_maintain, close_transfer_security_definer: production.close_transfer_security_definer, application_row_counts: production.application_row_counts }; })(),
-  note: "The live status file is a dated evidence snapshot, not a live query. bethag-develop's original 15-entry canonical recovery is followed by a separately evidenced helper-ACL remediation. Production remains blocked by current/default MAINTAIN grants, SECURITY DEFINER, row-by-row Production migration source/effect reconciliation, browser-level application acceptance, and cutover approval. Physical-backup recoverability remains untested and requires provider proof or named written risk acceptance. Do not rewrite Production migration history or apply Production SQL until all gates are independently evidenced.",
+  provider_restore_gate: restoreGate,
+  note: "Only jhuyhlzzydcgghrzeexn is the active QA environment. Older QA project snapshots are retained for historical audit only. Production remains frozen until backup restore evidence or named risk acceptance, live ACL/catalog parity, final acceptance, and explicit cutover approval are complete.",
   cutover_ready: blockers.length === 0,
   blockers,
 }, null, 2));
-// A blocked release is an expected state during preflight. Exit non-zero only for inventory inconsistency;\n// release automation must consume cutover_ready and require explicit attestations separately.
+// A blocked release is an expected state during preflight. Exit non-zero only for inventory inconsistency.

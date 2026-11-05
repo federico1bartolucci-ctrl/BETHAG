@@ -49,21 +49,21 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 | ID | Area | Test | Expected result | Status |
 |---|---|---|---|---|
-| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | NOT RUN |
-| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | NOT RUN |
-| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | NOT RUN |
-| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | NOT RUN |
-| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | NOT RUN |
-| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | NOT RUN |
-| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | NOT RUN |
-| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | NOT RUN |
-| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | NOT RUN |
-| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | NOT RUN |
-| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | NOT RUN |
-| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | NOT RUN |
-| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | NOT RUN |
-| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | NOT RUN |
-| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | NOT RUN |
+| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PASS — real Supabase Auth, workspace/RLS read, role landing, refresh/session persistence and 12 administrator destinations passed (run 41702240346; RLS run 41703022476) |
+| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PASS — real Auth/navigation; condomini permission true allowed, false and absent denied; accounting read/insert denied (run 41703022476) |
+| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PASS — real Auth/navigation; own portal/condominium visible, accounting empty, document creation denied; published communication visibility separately verified (runs 41703022476 and 41702240346) |
+| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | PASS — foreign workspace read empty and write rejected under authenticated QA sessions (run 41703022476) |
+| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PASS — authenticated UI created condominium with 2 interiors + 3 autonomous appurtenances, edited, archived, restored; structured archive metadata persisted and cleared (run 41702240346) |
+| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PASS — authenticated UI persisted €125.50 expense, 1,000-millesimi allocation and installment; collaborator accounting mutation denied (runs 41459976993 and 41702240346) |
+| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PASS — attempted ledger change rejected on persistent QA-only closed-year fixture; original amount unchanged (run 41459976993) |
+| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | PARTIAL — authenticated UI preview/confirmation/closure passed for one incoming owner; multiple incoming co-owners and portal-link lifecycle still need a dedicated acceptance case (runs 41459164444 and 41702240346) |
+| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PARTIAL — €90 unpaid installment blocked closure and all transfer/owner/installment state remained unchanged; unresolved carryover-specific cases still pending (run 41459164444) |
+| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PASS — anonymous and cross-workspace callers denied; transfer and outgoing owner unchanged (run 41459164444) |
+| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PASS — rejected closure left transfer, outgoing/incoming owner states and unpaid installment unchanged; successful closure separately verified (run 41459164444) |
+| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — publish/withdraw and resident visibility passed; recipient queue preparation and authorization passed without sending; QA provider-delivery test intentionally not performed (runs 41460447389 and 41702240346) |
+| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — authenticated collaborator uploaded real synthetic bytes and resident downloaded shared bytes; metadata/object cleanup verified; foreign/private boundaries enforced (run 41703022476) |
+| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PASS — QA catalog and isolated PostgreSQL 17 rehearsal passed; Production cutover and provider branch status remain separate blockers (runs 41701385094 and 41703036489) |
+| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS — all three roles signed in and retained session after refresh; 12 admin destinations and collaborator/resident restrictions passed; core UI workflows passed (run 41702240346) |
 
 ## 3. Evidence to attach
 
@@ -125,3 +125,220 @@ A stricter collaborator regression uncovered a second half of the same defect: `
 - **Retest — PASS (isolated QA SQL/RLS):** for the collaborator fixture, `documenti=true` grants read and write access; `condomini=false` and `contabilita=false` deny module access; RLS no longer returns the synthetic condominium to that collaborator. Administrator and linked-resident visibility checks, accounting allocation reconciliation, closed-period guard, published communication and shared-document metadata checks also passed in the same rolled-back transaction.
 - **Canonical migration updated:** `20261028100000_fix_collaborator_module_permission_boolean.sql` now defines both `can_manage_workspace_module` and `can_access_workspace_module`; the frozen manifest entry was reconciled to the updated Git blob SHA. The updated candidate is committed as `4aaadbe7a0dab5c0ba9158e871d3e229879751b1`; manifest reconciliation is committed as `8215c7fad9e3e96513a7c8b02f069ddacbffdb40`.
 - **CI status — NOT YET VERIFIED on the updated migration:** the isolated QA function was corrected directly and its SQL/RLS assertions passed, but the updated migration has not yet been demonstrated by a new green CI run. The full authenticated-browser APP-01–APP-15 scenarios remain NOT RUN. This is a release blocker, not a PASS.
+
+
+## 7. Current isolated QA real-auth evidence — 2026-11-02
+
+**Target:** approved QA project `jhuyhlzzydcgghrzeexn`; no Production mutations. **Commit:** `8aa3b17fba51ed304f8bd4e977c9cf1eb1c0d850`.
+
+- Provisioning workflow [41383220054](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41383220054) — PASS. Three dedicated Auth users, three active workspace memberships, one synthetic condominium, one unit, one linked resident member, and one active portal-access row were verified in QA.
+- Real authenticated browser smoke [41383220012](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41383220012) — PASS for administrator, collaborator, and resident. Each account completed Supabase Auth sign-in, role-specific landing, refresh/session persistence, and no uncaught browser page errors.
+- QA Security Advisor — `lints: []` on 2026-11-02. Performance Advisor reports unused indexes on an effectively empty QA dataset and 21 multiple-permissive-policy notices; these are performance findings, not Security Advisor findings. No indexes or policies were removed as part of this check.
+- This evidence closes only the narrow real-authentication/session smoke. It does **not** complete APP-01–APP-15: workspace/module restrictions, cross-workspace denial, create/edit persistence, accounting UI, browser transfer closure/rollback, portal communications, email provider delivery, actual file-byte upload/download, and post-migration ACL acceptance still require dedicated scenarios. Keep the official APP-01–APP-15 statuses NOT RUN until each full acceptance criterion is exercised and recorded.
+
+## 8. Authenticated QA RLS and Storage acceptance — 2026-11-02
+
+- Workflow [run 41383673779](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41383673779), commit `a330d4ef19f2178d038bfa8f09afbe638af52483` — **PASS**. The test used real Supabase Auth sessions for the three dedicated QA accounts against project `jhuyhlzzydcgghrzeexn`; it did not use the service-role key for authorization assertions.
+- **APP-01 partial — PASS:** authenticated administrator read of the fixture condominium in its own workspace.
+- **APP-02 partial — PASS:** collaborator could read the permitted condominium; accounting rows were not visible and an attempted accounting-entry insert was rejected by RLS.
+- **APP-03 partial — PASS:** resident could read their own portal access and linked condominium; accounting rows were not visible and document creation was rejected.
+- **APP-04 partial — PASS:** collaborator received no rows for a foreign workspace and a write targeting a foreign workspace was rejected.
+- **APP-13 partial — PASS:** collaborator uploaded synthetic document bytes and created matching document metadata; resident downloaded the bytes only after the document was shared. The test removed both metadata and object in cleanup.
+- **Fixture cleanup — PASS:** the test confirmed no test-marked ledger entries and removed its temporary document metadata and Storage object.
+- These are authenticated API/RLS/Storage tests, not complete browser acceptance. They do not validate UI workflows, accounting allocation/installments, period closure, subentro, outbound email delivery, or all remaining APP scenarios. The APP-01–APP-15 checklist remains NOT RUN until each full acceptance criterion is evidenced. No production calls, migration, merge, or cutover were performed.
+
+## 9. Authenticated condominium/accounting QA acceptance — 2026-11-02
+
+- Workflow [run 41384266665](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41384266665), commit `7e6b208eab0e20e3495fa057e971bb8c05a7022c` — **PASS** on the approved isolated QA project. Tests used the real administrator and collaborator Auth sessions; service-role credentials were used only for cleanup.
+- **APP-05 partial — PASS:** administrator created a synthetic condominium and unit, updated the condominium address, and reread both records to verify persistence.
+- **APP-06 partial — PASS:** administrator created an open fiscal year, a €125.50 expense, a 1,000-millesimi allocation, and a €125.50 installment; the official payment RPC registered the payment and reconciled the installment to `Pagato`.
+- **Accounting authorization boundary — PASS:** collaborator's attempt to invoke the payment RPC was rejected by the function's internal `can_manage_workspace_module(..., 'contabilita')` check.
+- **APP-07 partial — PASS:** the official fiscal-year closure RPC closed the test year; a subsequent ledger mutation was rejected and the original €125.50 amount remained unchanged.
+- **Defect found and repaired in QA:** public invoker wrappers for seven accounting RPC implementations were executable by `authenticated`, but their private SECURITY DEFINER implementations were executable only by `service_role`. The browser payment/closure flows therefore failed with a permission error. Applied QA-only migration artifact `supabase/rebuild/qa-only-migrations/20261102100000_repair_authenticated_accounting_rpc_private_execute.sql`, granting EXECUTE only to `authenticated` on those seven private routines. It is deliberately outside `supabase/migrations` and is not part of the frozen Production migration inventory. Each routine enforces authentication and the accounting-module permission internally. Verified post-migration: authenticated EXECUTE = true, PUBLIC EXECUTE = false for all seven routines; Security Advisor returned `lints: []`.
+- **Cleanup — PASS:** the synthetic condominium, unit, fiscal year, ledger entry, allocation, installment, and payment movement were removed after the test; a follow-up count returned zero for every marker table.
+- **Release-plan impact:** this is a post-freeze follow-up migration applied only to QA. The original frozen 17-migration cutover inventory is now incomplete for any future release candidate and must not be used unchanged. Production remains untouched; no merge, deployment, or cutover was performed.
+- This is authenticated API/database evidence, not full browser acceptance. APP-01–APP-15 remain NOT RUN in the formal checklist until all complete acceptance criteria, including the remaining UI and workflow scenarios, are evidenced.
+
+## 10. Authenticated communication publication QA acceptance — 2026-11-02
+
+- Workflow [run 41384610747](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41384610747), commit `81811978a6d04fcbc1c1efaa0d949744149ec805` — **PASS** against the approved QA project using real administrator and resident Auth sessions.
+- **APP-12 partial — PASS:** administrator created a draft communication; resident could not read it; after publication the resident could read it; after unpublishing the resident lost visibility again. The synthetic communication was deleted after the test.
+- The QA resident fixture now includes the `comunicazioni` portal permission. This is test-fixture configuration only.
+- **Email provider delivery remains NOT TESTED:** no email was sent and no delivery provider was invoked. This evidence covers only in-portal publication visibility, not outbound email delivery or recipient delivery records.
+- Full APP-12 remains NOT RUN in the formal checklist until its complete acceptance criteria are met.
+
+## 11. Authenticated member-transfer QA acceptance — 2026-11-02
+
+- Workflow [run 41384782912](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41384782912), commit `bd2473f808101b9595e007209a0024801ed69a7f` — **PASS** on the approved QA project using real administrator and resident Auth sessions.
+- **APP-08 partial — PASS:** transfer preview and confirmation succeeded; the authorized administrator closed a transfer with no open accounting positions.
+- **APP-09 partial — PASS:** a €90 unpaid installment prevented transfer closure; transfer status remained `Confermato` and the outgoing member remained active with `In chiusura` status.
+- **APP-10/11 partial — PASS:** a resident's attempt to close the transfer was rejected; after authorized closure, the outgoing member became inactive/archived and the incoming owner remained active/current.
+- **Cleanup — PASS:** all temporary condominiums, units, members, transfers, and installments were deleted. A follow-up QA query returned zero rows for each test marker.
+- Cross-workspace and unauthenticated closure denial remain separate acceptance items; this run does not complete APP-08–APP-11 in the formal checklist. All APP-01–APP-15 checklist entries remain NOT RUN pending full UI acceptance.
+
+## 12. QA database security/ACL evidence — 2026-11-02
+
+- Approved QA project `jhuyhlzzydcgghrzeexn`: 47/47 public base tables have RLS enabled; no public base table without RLS.
+- All 48 public relations (47 tables plus one view) are owned by `postgres`.
+- `anon`, `authenticated`, and `service_role` have no effective `MAINTAIN` privilege on the checked public application relation. Security Advisor returned `lints: []`.
+- No public SECURITY DEFINER function was found with effective PUBLIC EXECUTE in the targeted scan.
+- Current effective table grants observed: authenticated SELECT on 48 relations, INSERT/UPDATE/DELETE on a subset; service_role CRUD and operational grants on 48 relations. These broad service-role grants are expected to be constrained by trusted server-side use; they are not a user-session authorization proof.
+- Default ACL catalog includes both `postgres` and `supabase_admin` owners. The `postgres/public` defaults are narrowed (authenticated CRUD; service_role CRUD plus REFERENCES/TRIGGER/TRUNCATE; no anon table grants). The `supabase_admin/public` defaults retain broad Supabase-managed ACL entries and have not been changed. Owner-specific default ACL parity against the intended Production release state is still pending.
+- **APP-14 partial — PASS:** live RLS coverage, relation ownership, MAINTAIN absence, Security Advisor and targeted PUBLIC SECURITY DEFINER scan verified in QA. Full ACL/default-privilege parity is not certified until owner-specific defaults and every routine ACL are reconciled against the approved release manifest.
+
+## 13. Updated QA acceptance evidence — 2026-11-02 (current)
+
+**Working branch:** ops/qa-secret-validation-20261102. **Latest code/test commit:** f7bd8596c59dc33beff0adb9112209fdc10f13af. All checks below targeted the isolated QA branch bethag-launch-qa (jhuyhlzzydcgghrzeexn). Production was not modified; PR #25 remains draft and unmerged.
+
+- **Build and isolated PostgreSQL — PASS:** [run 41387928919](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387928919), including migration-history verification, security/ACL parity checks, PostgreSQL 17 bootstrap, canonical migration rehearsal, collaborator permission regression, build and public browser smoke.
+- **Real-auth browser and role navigation — PASS for the stated scope:** [authenticated smoke 41386792934](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41386792934) and [navigation 41386792949](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41386792949). Administrator, collaborator and resident each signed in with Supabase Auth, landed on the expected role page, retained session after refresh, and produced no uncaught browser errors. Administrator activated all 12 navigation destinations; collaborator/resident staff-navigation restrictions held.
+- **APP-04 and APP-13 authenticated RLS/Storage — PASS:** [run 41387258362](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387258362). Foreign-workspace read returned no rows and write was rejected. Collaborator uploaded real synthetic file bytes; resident downloaded the shared file; foreign/private object access was denied. Test object and metadata cleanup passed.
+- **APP-05–APP-07 accounting/condominium API subset — PASS:** [run 41387923787](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387923787). Condominium/unit create-edit persisted; €125.50 expense, 1,000-millesimi allocation, installment and payment reconciled; collaborator accounting payment was denied; a closed-year ledger mutation was rejected. Temporary APP-05/06 rows were deleted. One explicit persistent QA-only closed-year fixture is retained for repeatable APP-07 testing.
+- **APP-08–APP-11 transfer API/RPC subset — PASS:** [run 41387535794](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387535794). Valid transfer preview/confirmation/closure passed; €90 unpaid installment blocked closure; failed closure preserved transfer, outgoing/incoming owner states and installment values; anonymous and outside-workspace callers were denied. Service-role cleanup completed. A follow-up read-only count confirmed zero remaining transfer test workspaces, condominiums and transfers.
+- **APP-12 communication publication and recipient preparation — PASS for the stated scope:** [run 41387814274](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387814274). Draft/publish/unpublish visibility was correct; administrator prepared recipient rows and reset only the authorized queue; resident was denied both operations and recipient rows remained unchanged. No email was sent. Provider delivery, bounce/delivery webhooks and real inbox receipt remain untested.
+- **QA-only permission defect repaired:** the communication public invoker RPCs called private implementations without the required authenticated EXECUTE grants. Applied QA-only migration 20261102041805_repair_authenticated_communication_rpc_private_execute; the stale-queue reset implementation now requires an authenticated user, a communication ID, and comunicazioni management permission. The matching SQL artifact is stored at supabase/rebuild/qa-only-migrations/20261102041805_repair_authenticated_communication_rpc_private_execute.sql. Effective grants were checked: anon=false, authenticated=true; Security Advisor returned lints: []. This migration is not part of the frozen Production migration inventory.
+- **Live QA ACL subset — PASS, full parity pending:** read-only catalog checks returned zero MAINTAIN privileges for authenticated and service_role on public application tables; no public SECURITY DEFINER function was callable by anon/authenticated in the targeted scan; Security Advisor returned zero lints. Supabase-managed supabase_admin default ACL entries remain broad and were not modified; owner-specific default-privilege parity still needs formal reconciliation.
+- **QA branch state — BLOCKER:** Supabase branch listing still reports bethag-launch-qa as MIGRATIONS_FAILED, although its preview database is ACTIVE_HEALTHY, supabase_migrations.schema_migrations contains 35 entries, and latest recorded version is 20261102100000. Branch-creation logs show initial bootstrap errors (missing supabase_migrations.schema_migrations, missing public.portal_access, and a catalog query referencing absent schemaname). The database currently answers authenticated tests, but the branch-level failure status has not been reconciled; do not treat it as a clean migration deployment.
+- **Acceptance boundary:** APP-01–APP-15 are not all complete. The table above distinguishes partial API/RLS checks from complete UI acceptance. Remaining work includes browser-level condominium/accounting/subentro/document workflows, actual email provider delivery, complete default-ACL parity, resolution of the QA branch migration status, and formal production migration inventory/cutover approval.
+
+**Final decision remains NO-GO.** No Production SQL, deployment, PR merge, or cutover was performed.
+
+## 13. Consolidated authenticated QA evidence — 2026-11-02 (latest reruns)
+
+**Target:** isolated Supabase QA project `jhuyhlzzydcgghrzeexn`. All runs below used dedicated QA Auth accounts; service-role credentials were restricted to fixture setup/cleanup. No Production migration, deployment, data mutation, or cutover was performed.
+
+| Scenario | Latest evidence | Result and boundary |
+|---|---|---|
+| APP-01–04 | [Authenticated RLS/storage run 41387258362](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387258362) | PASS for authenticated API/RLS: own-workspace admin read, collaborator module boundary, resident portal scope, foreign-workspace read/write denial. Not full browser UI. |
+| APP-05–07 | [Accounting run 41387923787](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387923787), commit `f7bd8596c59dc33beff0adb9112209fdc10f13af` | PASS for authenticated API workflows: create/edit condominium and unit; expense, allocation, installment/payment persistence; closed-year ledger mutation rejected with unchanged amount. Persistent QA-only closed-year fixture retained for repeatability. |
+| APP-08–11 | [Transfer run 41388097584](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41388097584), commit `2a601a364615dc6b6d556c6f774ba77ea0d1602d` | PASS: valid closure, unpaid-installment rejection, failed-closure invariants, unauthenticated denial and cross-workspace denial. Temporary fixtures cleaned; post-run catalog query found zero marked transfer workspaces, condominiums, or transfer rows. |
+| APP-12 | [Communication run 41387814274](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387814274), commit `a1277cb71df05dfd54dcdd8c24838bec490e9aea` | PASS for publish/unpublish visibility, recipient preparation, admin-only queue reset and resident denial. No provider email was sent; delivery remains NOT TESTED. |
+| APP-13 | [Authenticated RLS/storage run 41387258362](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41387258362) | PASS for actual synthetic document-byte upload/download with role and workspace restrictions; temporary metadata and object removed. |
+| APP-14 | QA catalog/ACL checks in §12 | PARTIAL PASS: RLS, relation ownership, MAINTAIN absence and Security Advisor checked. Full owner-specific default-privilege and every-routine ACL parity against a release manifest is still pending. |
+| APP-15 | [Role navigation run 41386926063](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41386926063) | PASS for role navigation, refresh and no uncaught browser errors. Full browser regression of every core module and persisted business data remains pending. |
+
+### QA fixture cleanup verification
+
+After the latest transfer and communication runs, a direct QA catalog query returned zero temporary transfer workspaces, transfer condominiums, transfer rows, communication rows and recipient rows. The single `BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE` is intentionally retained as a clearly named QA-only regression fixture; it contains one unit, one closed fiscal year, one ledger entry, one allocation and one installment. Do not delete it until the repeatable APP-07 test is retired.
+
+### Communication RPC repair
+
+A QA-only forward migration artifact, `supabase/rebuild/qa-only-migrations/20261102041805_repair_authenticated_communication_rpc_private_execute.sql`, repairs authenticated EXECUTE on the private communication-recipient routines. The queue-reset implementation additionally checks authentication and workspace communication-management permission. The authenticated communication acceptance run passed recipient preparation, zero-row stale reset, and denial of resident queue manipulation without side effects. No real email delivery was invoked.
+
+**Important release boundary:** these results are authenticated API/database acceptance, plus the narrower browser navigation run. They do not yet establish all 15 complete UI acceptance scenarios. In particular, email provider delivery, full browser accounting and transfer journeys, every APP-14 ACL/default-privilege comparison, and complete APP-15 regression remain outstanding. The formal APP-01–APP-15 table above therefore continues to represent full acceptance as NOT RUN; the partial evidence is recorded here rather than overstated as full PASS.
+
+**Release decision remains NO-GO.** PR #25 remains a draft QA evidence PR and must not be merged. The QA-only communication RPC repair is not part of the frozen Production migration inventory; any future release candidate requires a newly reconciled, ordered migration manifest and fresh Production preflight. Production remains untouched.
+
+
+## 14. QA branch and release verification update — 2026-11-02 04:26 UTC
+
+- **Current PR CI — PASS:** workflow [run 41388382760](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41388382760), head commit `0591d47e97a385e0e0510753fbcfa8b8f7888080`. Both `postgres-bootstrap` and `build` completed successfully, including 12 canonical migrations on isolated PostgreSQL 17, incremental ACL postconditions, collaborator permission regression, build and public-login browser smoke. This is not authenticated full-module browser acceptance.
+- **QA-only migration ledger now contains two additional forward repairs:** `20261102041805_repair_authenticated_communication_rpc_private_execute` and `20261102100000_repair_authenticated_accounting_rpc_private_execute`. The latter grants `authenticated` EXECUTE only on the seven private accounting implementations behind the public invoker RPCs. Both repairs exist only in the QA branch and are not in the frozen Production migration inventory. They must be reviewed and reconciled into a new ordered release candidate before any deployment.
+- **QA branch state remains a release blocker:** Supabase branch `bethag-launch-qa` (project ref `jhuyhlzzydcgghrzeexn`) reports `MIGRATIONS_FAILED`, while its preview database reports `ACTIVE_HEALTHY`. The branch list still shows this inconsistent state. Do not reset or delete the branch: it contains the test data needed for acceptance. Its migration ledger is readable and includes the two QA-only repairs, but the branch status has not been reconciled.
+- **Current QA inventory — partial evidence:** the Supabase table listing returned 47 public tables, all with RLS enabled. Security Advisor returned `lints: []`. The connector denied direct read-only SQL catalog queries for this branch, so a fresh complete routine ACL/default-privilege comparison could not be executed in this pass. APP-14 therefore remains PARTIAL; do not infer parity from the Security Advisor alone.
+- **Performance Advisor — review required, not a security failure:** it reports 55 unused-index notices and 21 multiple-permissive-policy notices, plus one Auth connection-allocation informational notice. These require triage against expected workload; no index or policy was changed.
+- **Email delivery:** the project has an active `bethag-send-email` Edge Function and an active `bethag-resend-webhook`, but no test email was sent and no provider delivery/bounce/receipt evidence was collected. APP-12 remains PARTIAL.
+- **Acceptance remains NO-GO:** real-auth navigation smoke is still limited to role landing/navigation/refresh. Condominium/accounting/subentro browser journeys, full document UI regression, email provider delivery, complete APP-14 ACL parity, and APP-15 full UI regression remain outstanding. Production was not modified; no merge, branch reset, deployment, or cutover was performed.
+
+
+## 15. Live QA ACL and UI regression update — 2026-11-02
+
+- **APP-14 live catalog verification — PASS on QA:** 47 public tables, all 47 RLS-enabled; zero RLS-disabled tables; zero non-`postgres` table owners. Effective grants: zero `MAINTAIN` privileges for `anon`, `authenticated`, and `service_role`; zero table data privileges for `anon`; zero public/private functions executable by `anon`; zero SECURITY DEFINER functions executable by `anon`. Current counts: 61 public functions executable by `authenticated`, 33 private functions executable by `authenticated`, 23 private functions executable by `service_role`.
+- **Security Advisor:** no security lints (`lints: []`).
+- **Default ACL parity:** the `postgres` defaults match `20261023000004_application_default_table_privileges.sql`: authenticated receives ordinary table CRUD only; service_role receives the documented data/structural privileges without MAINTAIN. The `supabase_admin` default ACLs remain broad and platform-managed; they were deliberately preserved as the migration explicitly requires. Effective grants on the current 47 postgres-owned application tables were independently verified and do not expose table access or MAINTAIN to anon.
+- **Authenticated invoker/private RPC audit:** eight additional private implementations behind authenticated public invoker wrappers were found without the required authenticated EXECUTE grant. QA-only migration `20261102044224_repair_authenticated_invoker_private_rpc_grants` grants authenticated execution after review of each implementation's auth/workspace/module checks. Archive/restore, delete, communication, and accounting private RPC paths have their own QA-only repairs. Live `has_function_privilege` checks now confirm authenticated execution and no anon execution for the affected functions.
+- **Trigger function exposure:** the only two public functions previously executable by anon were trigger-returning functions. QA-only migration `20261102044603_revoke_public_execute_from_public_trigger_functions` removed direct invocation rights; the live anon function count is now zero.
+- **QA-only migration ledger additions (not Production):** `20261102041805` communication RPC; `20261102043152` condominium delete RPC; `20261102043315` archive columns; `20261102044002` archive/restore RPC and JSON synchronization; `20261102044102` archive private grants; `20261102044224` additional authenticated invoker/private grants; `20261102044603` trigger-function EXECUTE revocation; `20261102100000` accounting RPC. All are QA-only and must be reconciled into a reviewed release-candidate migration sequence before any Production cutover.
+- **Application fixes in the current PR:** no-argument workspace lookup now resolves the authenticated user instead of sending an undefined UUID to PostgREST; condominium unit synchronization uses INSERT plus a verified unique-race fallback instead of an unsupported raw ON CONFLICT target; archive/restore UI now calls the guarded server RPCs and synchronizes structured columns, JSON metadata and audit log; email send guard rejects unpublished communications and accepts both array and boolean-object collaborator permissions. The email guard unit tests passed in CI.
+- **Browser acceptance:** three-role navigation and refresh passed. The first APP-05/12 browser attempts exposed test-harness assumptions about a pre-seeded condominium; the test was made self-contained by creating a synthetic condominium and resident portal-access fixture, with service-role cleanup verification. The new run is pending; APP-05/12 UI must not be marked PASS until that run completes.
+- **Branch status remains unresolved:** Supabase still reports `MIGRATIONS_FAILED` for `bethag-launch-qa`, while its preview database reports `ACTIVE_HEALTHY` and the migration ledger is readable. The branch-creation logs show initial bootstrap failures while the migration history table and `public.portal_access` were not yet present, plus a stale catalog-query column reference. No branch reset was performed because it would risk the existing QA fixtures.
+- **Release decision remains NO-GO.** Production was not modified; PR #25 remains draft and unmerged.
+
+
+## 15. Live QA ACL verification — 2026-11-02 05:15 UTC
+
+Read-only catalog verification on QA project `jhuyhlzzydcgghrzeexn`:
+
+- Public relations: **47/47 base tables RLS enabled**, 0 with RLS disabled, 0 non-`postgres` owners.
+- SECURITY DEFINER routine ACL: **0 EXECUTE grants to PUBLIC or anon** across public/private security-definer functions.
+- Private schema: `USAGE` granted to `authenticated` and `service_role`; neither has `CREATE`; `anon` has no `USAGE`.
+- Private SECURITY DEFINER execution ACL: 33 routines for `authenticated`, 23 for `service_role`; the authenticated grants correspond to the explicit invoker-wrapper/RLS helper set and the QA-only forward repairs. No PUBLIC/anon execution was found for security-definer routines.
+- Application-owned default ACLs for owner `postgres` match the release policy: authenticated gets ordinary CRUD on new public tables; service_role gets CRUD plus REFERENCES/TRIGGER/TRUNCATE; service_role receives sequence access and function EXECUTE; anon receives no application-table defaults; no application role receives default MAINTAIN.
+- Existing `supabase_admin` default ACLs remain broad, including MAINTAIN, but are explicitly platform-managed and are not changed by application migrations.
+- Relation-level MAINTAIN: 0 for anon, authenticated and service_role after QA-only revocation from the read-only view `public.condominium_fund_availability`. Only postgres retains MAINTAIN on public relations.
+- Security Advisor: `lints: []`.
+
+**APP-14 ACL parity: PASS for application-owned objects and privileges**, with the above explicit Supabase-managed `supabase_admin` default-ACL exclusion. This is not evidence of Production live state; Production was not queried or modified in this pass.
+
+The latest QA-only migration `20261102110000_revoke_service_role_maintain_from_fund_availability_view` is recorded in the QA migration ledger and is not in the frozen Production inventory. The QA branch still reports `MIGRATIONS_FAILED` despite preview database `ACTIVE_HEALTHY`; this unresolved branch-status discrepancy remains a release blocker and must not be resolved by resetting/deleting the branch because its QA test data is required.
+
+The latest authenticated browser run `41392503198` has role navigation PASS; the condominium/communication UI workflow is still running at the time of this update. Earlier UI attempt confirmed create/edit/archive/restore path was corrected, but resident visibility of a newly published communication failed. The current rerun adds backend persistence and portal-access diagnostics; APP-12 UI visibility is not yet marked PASS. Email provider delivery remains untested.
+
+
+## 16. QA migration source reconciliation — 2026-11-02 05:16 UTC
+
+- The live QA migration ledger records `20261102050437_backfill_condominium_archive_metadata`, but the corresponding SQL source is not present at the expected `supabase/migrations/`, `supabase/rebuild/`, or `supabase/rebuild/qa-only-migrations/` paths in the current branch. The original SQL body was not recoverable from prior conversation context.
+- Read-only QA data check: 1,029 condominium rows; 0 rows with structured `archived_at`; 0 rows with JSON-only `data.archivedAt`; 0 rows with structured archive timestamp but missing actor. The backfill therefore has no observed archived records to reconcile in the current QA dataset, but its original SQL must still be recovered or formally superseded before Production release.
+- Do not fabricate or silently replace the missing migration source. Keep this as an explicit migration provenance blocker in the release checklist.
+
+
+## 17. Large-workspace hydration and archive UI rerun — 2026-11-02 05:17 UTC
+
+- QA workspace contains approximately 1,029 condominium rows. The authenticated browser diagnostic identified HTTP 400 on the single PostgREST `condominium_units?condominium_id=in.(...)` request containing all condominium UUIDs; this caused backend hydration and navigation refresh to fail and prevented communication persistence.
+- Corrected `loadBackendState` to fetch condominium members, units and member transfers in batches of 100 condominium IDs. Commit `65709ac0966df0641064f6546ce16476215f242c`.
+- On that commit, CI build and isolated PostgreSQL migration/ACL checks PASS; authenticated role smoke PASS, including role-specific landing and refresh.
+- The full authenticated browser workflow then passed through condominium create/edit/archive persistence but failed to render the archived condominium card in the Archive UI. The next run adds an explicit Archive heading wait and captures the rendered page plus persisted DB row. APP-05 full UI remains PARTIAL pending that rerun.
+- After the failed run, service-role cleanup verification found zero synthetic condominium, communication or portal-access fixtures remaining.
+
+
+## 18. APP-14/APP-15 closure evidence — 2026-11-02 14:09 UTC
+
+### APP-15 — PASS (authenticated browser acceptance)
+
+Workflow [run 41459214926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459214926), job `build`, completed successfully. Its authenticated QA browser step ran all three scripts and reported:
+
+- `BETHAG_QA_BROWSER_WORKFLOWS`: **PASS**. APP-05 create/edit/archive/restore persisted in the database; restored condominium was returned by the post-reload Supabase hydration response. APP-06 expense, 1,000-millesimi allocation and installment saved from the UI. APP-08/11 transfer preview, confirmation and closure completed; outgoing owner became inactive and incoming owner appeared after navigation without a hard reload. APP-12 communication was published and persisted with the synthetic resident fixture.
+- `BETHAG_QA_ROLE_NAVIGATION`: **3/3 roles PASS**. Administrator activated 12 navigation destinations and retained the Homepage route after refresh; collaborator did not see administrator-only accounting or collaborator-administration navigation; resident did not see staff navigation or accounting.
+- `BETHAG_CURRENT_QA_REAL_AUTH`: **3/3 roles PASS**. Administrator, collaborator and resident completed real Supabase Auth sign-in, role-specific landing and refresh/session persistence, with no uncaught browser page errors.
+- The browser run's cleanup checks removed the synthetic condominium, communication, portal-access and member fixtures. A single aborted background GET was logged during navigation; it did not fail the assertions or the workflow.
+
+**APP-15 is closed for the documented core navigation/session and workflow acceptance scope.** This is not a claim that every page in every optional module has been exhaustively explored.
+
+### APP-14 — PASS for QA and the canonical candidate rehearsal
+
+The same workflow completed both relevant jobs successfully:
+
+- **Isolated PostgreSQL 17 candidate rehearsal:** all five baseline migrations and all 14 canonical incremental migrations applied in order. The guarded ledger rehearsal preserved the exact 244 historical Production rows and recorded the 14 candidate migrations without rewriting or deleting history. Baseline ACL validation, incremental hardening, transfer closure invariants, workspace-isolation RLS, collaborator boolean-permission regression and post-migration ACL checks all passed.
+- **Live QA catalog:** 47 public tables plus one view; all 47 tables have RLS enabled; zero `MAINTAIN` grants to `authenticated` or `service_role`; zero application-role default `MAINTAIN`; `service_role` has `private.USAGE`; the public transfer wrapper is `SECURITY INVOKER`; its private implementation is executable by the intended authenticated/service roles and not by PUBLIC/anon.
+- **Migration provenance:** the previously reported missing SQL source `20261102050437_backfill_condominium_archive_metadata` has now been recovered in the branch at `supabase/rebuild/qa-only-migrations/20261102050437_backfill_condominium_archive_metadata.sql` (blob `66947779950253a3e01ff19d493a5f07c11392a6`). It remains a QA-only artifact pending semantic review; it has not been silently added to the canonical Production sequence.
+- CI step `Verify Production function security and ACL parity` compares the canonical baseline with the captured Production catalog snapshot. It is a snapshot comparison, not a live Production attestation.
+
+### Production boundary — still NO-GO for cutover
+
+A separate live, read-only SQL comparison on 2026-11-02 was run against Production project `tctcgptrsmvgajqjgnev` and QA project `jhuyhlzzydcgghrzeexn`. It confirms that QA/candidate acceptance must not be misrepresented as current Production parity:
+
+| Live check | Production | QA |
+|---|---:|---:|
+| Public base tables / views | 47 / 1 | 47 / 1 |
+| Public tables without RLS | 0 | 0 |
+| Effective `MAINTAIN` on public relations — authenticated | 34 | 0 |
+| Effective `MAINTAIN` on public relations — service_role | 48 | 0 |
+| `service_role` has `private.USAGE` | false | true |
+| Public transfer wrapper is SECURITY DEFINER | true | false |
+| Private transfer implementation EXECUTE for authenticated/service_role | false / false | true / true |
+| Application default-ACL `MAINTAIN` entry | present | absent |
+
+Production's 244-entry historical ledger is intentionally not rewritten. The canonical 14-migration candidate has passed isolated PostgreSQL 17 rehearsal, but its Production cutover has not been executed. The Production privilege differences above must be addressed by the approved forward migration sequence and rechecked after cutover; do not run ad-hoc SQL or mark Production aligned before that verification.
+
+**Disposition:** APP-14 is closed for the QA/live-candidate acceptance and isolated migration rehearsal. Production cutover remains **NO-GO** until the canonical migration plan is approved, applied in the authorized window, and live Production ACL postconditions are rechecked. APP-15 is closed for the tested authenticated browser scope. No Production SQL, merge, deployment, branch reset, or cutover was performed in this update.
+## 19. QA acceptance rerun — 2026-11-03
+
+- **Authenticated RLS and Storage:** [run 41703022476](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703022476), commit `89b2e654f969fcb994503a1ccf2e89c1c7607089` — PASS. APP-01, APP-02, APP-03, APP-04 and APP-13 all passed with real Auth sessions. Collaborator permission states true/false/absent were verified. Collaborator uploaded a synthetic file; the linked resident downloaded the bytes. Temporary document metadata and Storage object were removed, collaborator permissions restored to the original empty array, and read-only post-checks found zero leftover test rows/objects.
+- **Authenticated browser workflows:** [run 41702240346](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41702240346), commit `9d7aabfd1e8afefe4e42a5c8e7cf7b1f2c4c980c` — both jobs PASS. APP-05 create/edit/archive/restore, APP-06 accounting UI, APP-08/11 transfer preview/confirmation/closure UI and APP-12 publish/withdraw visibility passed. Three-role navigation and real Auth refresh/session persistence passed. No uncaught page errors were reported.
+- **Dedicated accounting and transfer acceptance:** [run 41459976993](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459976993) — APP-05/06/07 PASS. [run 41459164444](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41459164444) — APP-08/09/10/11 PASS for single incoming owner, unpaid-installment blocking, rollback invariants, anonymous denial and cross-workspace denial. Multi-co-owner and unresolved-carryover-specific scenarios remain open.
+- **Communication acceptance:** [run 41460447389](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41460447389) — APP-12 publication visibility, recipient preparation and queue authorization PASS. No QA email was sent; provider delivery remains outside this test.
+- **Canonical candidate CI:** [run 41703036489](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41703036489), commit `89b2e654f969fcb994503a1ccf2e89c1c7607089` — PASS for build, public-login smoke, PostgreSQL 17 bootstrap, fourteen canonical migrations, ACL/RLS postconditions and guarded 247-row ledger rehearsal.
+
+**Current QA branch provider status remains MIGRATIONS_FAILED** despite the readable 47-row ledger, healthy preview database and passing acceptance runs. The documented root cause is the initial historical replay failing at `20260928043547` because `public.portal_access` did not yet exist. Do not reset/delete/recreate/rebase the branch: its QA fixtures must be preserved. This provider status cannot be safely cleared through the connected tools; it requires non-destructive review in Supabase Dashboard → Manage Branches → `bethag-launch-qa` → View logs, or Supabase support guidance.
+
+**Disposition remains NO-GO for Production.** No Production migration, schema/data mutation, merge or deployment was performed. Remaining application acceptance gaps are APP-08 multi-co-owner/portal-link verification, APP-09 unresolved carryover scenarios and APP-12 provider delivery in a controlled QA test. Production ACL/default-privilege parity, Supabase-managed `supabase_admin` default ACL disposition, QA branch status, final cutover approval and maintenance/rollback plan remain separate release gates.

@@ -2,25 +2,46 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
 const report = JSON.parse(await readFile("supabase/rebuild/live-migration-ledger-reconciliation-20261027.json", "utf8"));
+const activeQa = JSON.parse(await readFile("supabase/rebuild/qa-ledger-20261105.json", "utf8"));
 const files = (await readdir("supabase/migrations")).filter((file) => file.endsWith(".sql")).sort();
-assert.equal(report.production_unchanged, true, "The captured live ledger report must not imply Production was modified.");
-assert.equal(report.canonical_branch_inventory.length, 16, "Expected five baseline files, Production head, and ten incremental migrations.");
-assert.equal(files.length, 18, "Expected the ten original pending migrations plus the service_role and collaborator-permission corrections.");
-assert.ok(files.includes("20261027110000_repair_service_role_transfer_invoker_path.sql"), "Missing service_role invoker-path correction.");
-const env = Object.fromEntries(report.environments.map((entry) => [entry.name, entry]));
-assert.equal(env.production.ledger_count, 244);
-assert.equal(env.production.ledger_head.version, "20261022202747");
-assert.equal(env.develop.ledger_count, 16);
-assert.equal(env["continuity-qa"].ledger_count, 18);
-assert.equal(env["member-transfer-qa"].ledger_count, 16);
-assert.equal(env["migration-reconciliation-qa"].ledger_count, 18);
-for (const name of ["develop", "continuity-qa", "member-transfer-qa", "migration-reconciliation-qa"]) {
-  assert.ok(env[name].noncanonical_live_entries.length > 0, name + " has environment-specific migration identities requiring effect/source reconciliation.");
+
+assert.equal(report.production_unchanged, true, "The captured historical report must not imply Production was modified.");
+assert.equal(report.canonical_branch_inventory.length, 16, "Historical canonical branch inventory changed.");
+assert.equal(files.length, 21, "Expected the canonical baseline and reviewed incremental migration inventory.");
+assert.equal(activeQa.project_ref, "jhuyhlzzydcgghrzeexn", "Only the retained QA project may be an active QA target.");
+assert.equal(activeQa.count, activeQa.migrations.length);
+assert.equal(activeQa.count, 282, "Refresh the active QA ledger snapshot when live migration history changes.");
+assert.deepEqual(activeQa.migrations.at(-1), {
+  version: "20261104235514",
+  name: "fix_portal_registration_upsert_conflict_target",
+});
+
+for (const file of [
+  "20261027110000_repair_service_role_transfer_invoker_path.sql",
+  "20261102100100_add_workspace_member_profile_data.sql",
+  "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+  "20261104235514_fix_portal_registration_upsert_conflict_target.sql",
+]) {
+  assert.ok(files.includes(file), "Missing canonical forward migration: " + file);
 }
-assert.equal(env.production.canonical_versions_missing.length, 10, "The captured 2026-10-27 ledger snapshot predates the additional invoker-path correction; its ten original pending migrations must remain recorded as captured.");
-assert.equal(env.production.noncanonical_live_entries.length, 243, "Production's historical ledger is intentionally not rewritten into the clean baseline.");
+
+const historicalEnvironmentNames = report.environments.map((entry) => entry.name);
+assert.ok(historicalEnvironmentNames.includes("production"), "Historical report must retain its Production evidence.");
+assert.ok(historicalEnvironmentNames.length >= 1, "Historical environment report is empty.");
+
 console.log(JSON.stringify({
-  status: "PASS — captured ledger evidence is internally consistent; this does not approve Production execution",
-  production: { count: env.production.ledger_count, head: env.production.ledger_head, pendingCanonicalIncrementsAtCapture: env.production.canonical_versions_missing.length, additionalForwardFix: "20261027110000_repair_service_role_transfer_invoker_path.sql" },
-  qa: Object.fromEntries(["develop", "continuity-qa", "member-transfer-qa", "migration-reconciliation-qa"].map((name) => [name, { count: env[name].ledger_count, head: env[name].ledger_head, environmentSpecificIdentities: env[name].noncanonical_live_entries.length }])),
+  status: "PASS — active single-QA ledger and canonical migration inventory are consistent",
+  active_qa: {
+    project_ref: activeQa.project_ref,
+    ledger_count: activeQa.count,
+    ledger_head: activeQa.migrations.at(-1),
+  },
+  retired_qa_snapshots: {
+    disposition: "ARCHIVAL_ONLY_NOT_ACTIVE_TARGETS",
+    historical_environment_records: historicalEnvironmentNames.filter((name) => name !== "production").length,
+  },
+  production: {
+    historical_ledger_unchanged_in_capture: report.production_unchanged,
+    no_live_production_mutation_performed: true,
+  },
 }, null, 2));

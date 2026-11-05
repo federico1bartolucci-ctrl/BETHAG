@@ -5,6 +5,11 @@ on:
     branches: ["main"]
   pull_request:
 
+# Serialize authenticated writes against the shared QA project with qa-navigation.yml.
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,7 +34,13 @@ jobs:
       - name: Test fresh PostgreSQL bootstrap
         run: npm test
 
+      - name: Test communication send authorization and publication guards
+        run: npm run test:communication-guards
+
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: npm run build
 
       - name: Install Chromium for browser smoke tests
@@ -37,6 +48,31 @@ jobs:
 
       - name: Run isolated public-login browser smoke test
         run: node scripts/test-browser-public-smoke.mjs
+
+      - name: Run authenticated QA edit/archive diagnostic
+        if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102'
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-preview.log; exit 1; }
+          node scripts/test-current-qa-browser-workflows.mjs
+          node scripts/test-current-qa-navigation.mjs
+          node scripts/test-browser-current-qa-auth.mjs
+          node scripts/test-current-qa-app08-11.mjs
+          node scripts/test-qa-app08-new-owner-browser.mjs
+          node scripts/test-current-qa-app05-07.mjs
 
   postgres-bootstrap:
     runs-on: ubuntu-latest
@@ -69,7 +105,7 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
-      - name: Execute all 12 real canonical migrations through the guarded runner on isolated PostgreSQL
+      - name: Execute all 15 real canonical migrations through the guarded runner on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-runner.mjs
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
