@@ -46,7 +46,7 @@ SELECT version,name FROM cutover_ledger_rehearsal ORDER BY version;
 DO $test$
 DECLARE n integer;
 BEGIN
-  FOR n IN 1..16 LOOP
+  FOR n IN 1..19 LOOP
     INSERT INTO cutover_ledger_rehearsal(version,name,statements,created_by,idempotency_key)
     VALUES ('20261027' || lpad(n::text,6,'0'),
             'canonical_migration_' || n,
@@ -54,8 +54,8 @@ BEGIN
             'bethag-reviewed-cutover',
             NULL);
   END LOOP;
-  IF (SELECT count(*) FROM cutover_ledger_rehearsal) <> 264 THEN
-    RAISE EXCEPTION 'Expected 264 rows after rehearsal inserts';
+  IF (SELECT count(*) FROM cutover_ledger_rehearsal) <> 267 THEN
+    RAISE EXCEPTION 'Expected 267 rows after rehearsal inserts';
   END IF;
   IF EXISTS (
     (SELECT version,name FROM cutover_ledger_snapshot ORDER BY version)
@@ -67,7 +67,7 @@ BEGIN
 END
 $test$;
 
-SELECT 'PASS: DATABASE_URL reached PostgreSQL; transaction accepted 16 canonical-style rows and preserved all 248 historical fixture rows';
+SELECT 'PASS: DATABASE_URL reached PostgreSQL; transaction accepted 19 canonical-style rows and preserved all 248 historical fixture rows';
 ROLLBACK;
 `;
 
@@ -78,7 +78,7 @@ console.log(JSON.stringify({
   test: "isolated canonical-ledger transaction rehearsal",
   connection: "psql received DATABASE_URL through --dbname",
   historical_fixture_rows_preserved: 248,
-  canonical_style_rows_inserted_inside_transaction: 16,
+  canonical_style_rows_inserted_inside_transaction: 19,
   transaction_rolled_back: true,
   production_or_supabase_touched: false
 }, null, 2));
