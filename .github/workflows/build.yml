@@ -184,6 +184,12 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_function_sequence_acl_test
           PGPASSWORD: postgres
 
+      - name: Rehearse forward-only workspace member profile column on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_workspace_member_data_test && node scripts/test-postgres-workspace-member-data-column.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_workspace_member_data_test
+          PGPASSWORD: postgres
+
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
