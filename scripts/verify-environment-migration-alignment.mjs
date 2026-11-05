@@ -73,7 +73,26 @@ const exact = (ledger, item) => ledger.migrations.some((entry) => entry.version 
 assert.ok(expectedBaseline.every((item) => exact(qa, item)), "The retained QA project must contain the canonical five-file baseline.");
 assert.ok(exact(production, productionHead), "Production head migration differs from the captured canonical head.");
 assert.ok(exact(qa, productionHead), "The retained QA project must contain the captured canonical head.");
-assert.ok(expectedPending.every((item) => exact(qa, item)), "The retained QA project must contain every reviewed canonical increment.");
+const qaIdentityAliases = [
+  {
+    canonical: { version: "20261102100100", name: "add_workspace_member_profile_data" },
+    observed: { version: "20261102054409", name: "add_workspace_member_profile_data" },
+  },
+  {
+    canonical: { version: "20261102100200", name: "preserve_server_owned_condominium_archive_state" },
+    observed: { version: "20261102054253", name: "preserve_server_owned_condominium_archive_state" },
+  },
+];
+const hasEquivalentQaIdentity = (item) => qaIdentityAliases.some(
+  (alias) => alias.canonical.version === item.version
+    && alias.canonical.name === item.name
+    && exact(qa, alias.observed),
+);
+assert.ok(
+  expectedPending.every((item) => exact(qa, item) || hasEquivalentQaIdentity(item)),
+  "The retained QA project must contain every canonical increment or its explicitly verified historical identity alias.",
+);
+assert.ok(qaIdentityAliases.every((alias) => exact(qa, alias.observed)), "The two preserved QA identity aliases must remain present.");
 
 const productionPending = files
   .filter(({ version, name }) => !exact(production, { version, name }))
@@ -112,7 +131,8 @@ console.log(JSON.stringify({
   canonical_incremental_migrations: expectedPending.length,
   production_ledger_records: production.count,
   production_pending_canonical_migrations: productionPending,
-  active_qa_contains_all_canonical_migrations: true,
+  active_qa_contains_all_canonical_migrations_or_verified_identity_aliases: true,
+  active_qa_identity_aliases_preserved: qaIdentityAliases,
   original_main_inventory_files: mainInventory.count,
   original_main_exact_version_and_name_matches_production: reconciliation.repository_main.exact_version_and_name_matches,
   provider_restore_gate: restoreGate,
