@@ -28,10 +28,20 @@ const sha = (text) => {
 assert.equal(manifest.sequence.length, 19, "Superseding cutover must contain exactly nineteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 248 OR ledger_head <> '20261104222229'/, "Preflight must verify the current 248-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
+assert.match(preflight, /collaborator permission function bodies do not match the reviewed pre-cutover state/,
+  "Preflight must verify the expected pre-cutover collaborator authorization bodies.");
+assert.match(preflight, /eighteen reviewed authenticated private RPC grants/,
+  "Preflight must verify the expected missing authenticated private RPC grants before cutover.");
+assert.match(preflight, /transfer-closure helper ACL differs from the reviewed pre-cutover state/,
+  "Preflight must verify the transfer-closure helper pre-state.");
 assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must expect all nineteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /private\.upsert_portal_access_for_member/, "Postflight must verify portal registration helper wiring and ACLs.");
+assert.match(postflight, /NOT has_function_privilege\('service_role','private\.check_condominium_member_transfer_closure/,
+  "Postflight must verify service_role transfer-closure helper EXECUTE.");
+assert.match(postflight, /expected nineteen exact canonical version\/name pairs/,
+  "Postflight must state the correct nineteen-migration sequence.");
 assert.match(postflight, /canonical_count <> 19 THEN/, "Postflight must verify all nineteen canonical migration records.");
 assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the nineteen canonical increments.");
 assert.equal(manifest.live_ledger.rows, 248);
