@@ -286,3 +286,28 @@ Attività svolte in questa fase:
 4. **Cutover approval:** fissare finestra, commit esatto, hash SQL, strategia di rollback e criteri di stop, con approvazione esplicita separata prima di qualsiasi DDL Production.
 
 **Decisione operativa:** mantenere Production NO-GO. Non avviare `db push`, `apply_migration`, GRANT/REVOKE, ALTER, merge o deploy finché i gate 1–4 non sono chiusi e documentati.
+
+
+## Chiusura collaudo punto 7 — run finale 42040560319 (2026-11-05)
+
+Il workflow GitHub Actions [42040560319](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42040560319) è terminato **SUCCESS** sul commit `7e308fb976245228f693a9ce17be6d2b27cd8e1a`. Tutti gli step del job `final-qa-collaudo` risultano completati con conclusion `success`.
+
+- APP-01..04 e APP-13 — autenticazione reale, RLS e Storage: PASS.
+- APP-05..07 — gestione condominio, contabilità e protezione esercizio chiuso: PASS.
+- APP-08..11 — subentro, posizioni insolute e invarianti rollback: PASS; il flusso UI autenticato incluso nel job è completato.
+- APP-12 — pubblicazione, destinatari, webhook firmati e prova del provider email Resend con destinatario di test `delivered@resend.dev`: PASS. Entrambi gli step dedicati APP-12 sono conclusi SUCCESS.
+- Flussi browser autenticati APP-05/06/08/11/12: PASS.
+- APP-15 — navigazione per ruolo e persistenza sessione: PASS.
+- Build contro il solo progetto QA esistente: PASS.
+
+**Punto 7 CHIUSO** per il perimetro APP-01–APP-15 verificato dal workflow. Il precedente stato PARTIAL di APP-11 e APP-12 è superato da questa esecuzione completa. Non sono stati eseguiti merge, deploy, migrazioni o cutover Production. Il progetto QA esistente è stato mantenuto; Production resta NO-GO per i blocker del punto 6 e i gate APP-14.
+
+### Stato complessivo aggiornato
+
+| Punto | Stato |
+|---|---|
+| 1–7 | CHIUSI per gli ambiti documentati; punto 6 con decisione NO-GO Production |
+| APP-01–APP-13, APP-15 | PASS sul QA esistente |
+| APP-14 | PARTIAL / NO-GO Production |
+
+Il completamento del collaudo QA non costituisce autorizzazione a promuovere il codice o applicare modifiche a Production.
