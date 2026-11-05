@@ -32,3 +32,11 @@ Il punto può chiudersi soltanto quando ogni voce rilevante della storia Product
 
 ## Vincoli di rilascio
 La chiusura del punto 4 non equivale ad autorizzazione al rilascio. Production resta NO-GO finché i gate di rilascio documentati non risultano tutti soddisfatti e non viene data una specifica autorizzazione.
+
+
+## Registrazione nei documenti di progetto — 2026-11-05
+La chiusura del punto 4 è stata riportata anche nei documenti di rilascio:
+- `docs/release/APP-SMOKE-TEST-AND-CUTOVER-APPROVAL.md`, sezione 24;
+- `docs/release/RELEASE-READINESS-20261027.md`, addendum del 2026-11-05.
+
+La registrazione è circoscritta al punto 4. La matrice APP-01–APP-15 completa e i gate di rilascio Production restano distinti e non sono dichiarati chiusi.
