@@ -167,3 +167,19 @@ Le ACL dei due helper di chiusura trasferimento rispetto ad anon erano già alli
 La prima esecuzione della CI sulla PR #57 ha correttamente rifiutato la patch perché era stata inizialmente collocata in `supabase/migrations/`: i controlli hanno rilevato 25 migrazioni canoniche invece delle 24 attese. Quella collocazione è stata rimossa. Il SQL QA-only è ora archiviato in `supabase/rebuild/qa-only/20261105001928_align_qa_fund_availability_view_acl.sql`, fuori dalla catena canonica; il ledger QA live resta invariato a 283 record e la correzione live già verificata non è stata ripetuta né annullata.
 
 La PR #57 è aperta per revisione/CI. La chiusura richiede una nuova esecuzione CI verde, conferma che la catena canonica resta a 24 file e la verifica finale del branch QA. La prima CI non è verde: il suo fallimento è attribuito al conteggio 25/24 causato dalla collocazione iniziale, non a un errore SQL o a una perdita dati.
+
+
+## Log originale del deployment QA — dettaglio della causa (2026-11-02)
+
+La lettura diretta di `postgres_logs` sul progetto QA ha restituito l'errore originale, non una ricostruzione da report:
+
+- `2026-11-02T01:48:44.787Z`, SQLSTATE `42P01`: `relation "public.portal_access" does not exist`.
+- Il comando fallito era `REVOKE ALL ON TABLE` su un elenco di tabelle pubbliche che includeva `public.portal_access`, durante la fase di restrizione dei grant Data API.
+- Nei secondi precedenti, le interrogazioni di inventario avevano restituito `42P01` anche per `supabase_migrations.schema_migrations`, perché il registro non era ancora presente nella fase iniziale di provisioning del branch.
+- La query diagnostica successiva delle 01:48:53Z ha inoltre usato il campo `schemaname` su `information_schema.tables`, che non esiste; è un errore della query diagnostica, distinto dal fallimento di deployment.
+
+La causa specifica del primo errore di migrazione è quindi l'assunzione che `public.portal_access` esistesse già nel momento in cui veniva eseguito il REVOKE. La correzione deve rendere la sequenza compatibile con la presenza/assenza della relazione (o assicurare la sua creazione prima del REVOKE) senza replay storico sul branch live. Il branch è ora sano e la cronologia è stata riconciliata; non si deve ripetere il deployment iniziale né ricreare il branch.
+
+## Limite residuo sulla verifica Data API
+
+La verifica SQL live conferma che `anon` e `authenticated` hanno `USAGE` su `supabase_functions` nel branch QA; questo da solo non prova che lo schema sia incluso negli schemi esposti da PostgREST. La configurazione effettiva `db-schemas` non è leggibile tramite gli strumenti Supabase collegati e le query PostgreSQL non hanno restituito una configurazione `pgrst.db_schemas` visibile. Non è stata revocata `USAGE` alla cieca. La verifica definitiva richiede la configurazione Data API esposta dal pannello/Management API del progetto.
