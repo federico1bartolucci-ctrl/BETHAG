@@ -144,8 +144,8 @@ assert.equal(state.postgres_anon_default_table_privileges, 0, "Postgres default 
 assert.equal(state.postgres_authenticated_default_table_crud, 4, "Authenticated default table CRUD grants are missing after clean install.");
 assert.equal(state.postgres_service_role_default_table_crud, 4, "service_role default table CRUD grants are missing after clean install.");
 assert.equal(state.postgres_service_role_default_table_structural, 3, "service_role default structural table grants are missing after clean install.");
-assert.equal(state.postgres_service_role_default_function_execute, 1, "service_role default function EXECUTE grant is missing after clean install.");
-assert.equal(state.postgres_service_role_default_sequence_privileges, 3, "service_role default sequence privileges are incomplete after clean install.");
+assert.equal(state.postgres_service_role_default_function_execute, 0, "service_role must not receive blanket default function EXECUTE; grant required routines explicitly.");
+assert.equal(state.postgres_service_role_default_sequence_privileges, 0, "service_role must not receive blanket default sequence privileges; grant required sequences explicitly.");
 assert.equal(state.transfer_wrapper_invoker, true, "Public transfer wrapper is not SECURITY INVOKER.");
 assert.equal(state.private_schema_service_role_usage, true, "service_role lacks private schema USAGE.");
 assert.equal(state.prepare_communication_authenticated, true, "Authenticated caller cannot prepare communication recipients.");
