@@ -78,6 +78,7 @@ function quoteSqlLiteral(value) {
 }
 
 async function main() {
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const rehearsal = process.env.BETHAG_CUTOVER_REHEARSAL === "YES";
   assert.ok(process.env.DATABASE_URL, "Blocked: DATABASE_URL is required; do not print or log it.");
   assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
@@ -113,7 +114,6 @@ async function main() {
       "Blocked: verify the provider physical restore or record explicit named/timestamped residual-risk acceptance in the frozen manifest.");
   }
 
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
   assert.equal(manifest.status, "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
     "Manifest status changed; review the plan before proceeding.");
