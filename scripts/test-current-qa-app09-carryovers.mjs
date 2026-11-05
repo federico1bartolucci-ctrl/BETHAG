@@ -15,29 +15,41 @@ const signedIn = await admin.auth.signInWithPassword({
 });
 assert.ifError(signedIn.error);
 
-const marker = "BETHAG_QA_APP09_CARRYOVER_" + Date.now();
+const marker = "BETHAG_QA_APP09_CARRYOVER_RUN_" + Date.now();
 const ids = { condominium: null, unit: null, owner: null, sourceYear: null, targetYear: null, transfer: null, memberCarryover: null, unitCarryover: null };
 const must = (result, label) => { assert.ifError(result.error, label); return result.data; };
 
 try {
   const workspace = must(await admin.from("workspaces").select("id").eq("name", "BETHAG_QA_FIXTURE_20261102").single(), "workspace");
-  const condominium = must(await admin.from("condominiums").insert({
-    workspace_id: workspace.id,
-    name: marker,
-    address: "Via QA carryover",
-    city: "Imola",
-    postal_code: "40026",
-    province: "BO",
-    data: { bethag_qa_marker: marker },
-  }).select("id").single(), "condominium");
+  const condominium = must(await admin.from("condominiums").select("id").eq("name", "BETHAG_QA_APP09_CARRYOVER_FIXTURE").single(), "persistent APP-09 condominium fixture");
   ids.condominium = condominium.id;
+
+  // Reuse the persistent QA fixture's existing closed 2025 source year and open
+  // 2026 target year. Closed fiscal years are intentionally non-deletable.
+  const source = must(await admin.from("condominium_fiscal_years")
+    .select("id")
+    .eq("condominium_id", ids.condominium)
+    .eq("status", "Chiuso")
+    .order("start_date", { ascending: true })
+    .limit(1)
+    .single(), "closed source fiscal year");
+  ids.sourceYear = source.id;
+
+  const target = must(await admin.from("condominium_fiscal_years")
+    .select("id")
+    .eq("condominium_id", ids.condominium)
+    .eq("status", "Aperto")
+    .order("start_date", { ascending: true })
+    .limit(1)
+    .single(), "open target fiscal year");
+  ids.targetYear = target.id;
 
   const unit = must(await admin.from("condominium_units").insert({
     workspace_id: workspace.id,
     condominium_id: ids.condominium,
     unit_code: "T-09-CARRY-" + Date.now(),
     data: { unitType: "Abitazione", millesimi: "1000", active: true, ownerMode: "condominium_member", ownerMemberIds: [], bethag_qa_marker: marker },
-  }).select("id").single(), "unit");
+  }).select("id").single(), "temporary APP-09 unit");
   ids.unit = unit.id;
 
   const owner = must(await admin.from("condominium_members").insert({
@@ -51,41 +63,6 @@ try {
     data: { role: "Proprietario", position_status: "Attivo", current_owner: true, ownership_share: 100, bethag_qa_marker: marker },
   }).select("id").single(), "outgoing owner");
   ids.owner = owner.id;
-
-  // Create both fixture fiscal years as open; the application forbids direct insertion of a closed exercise.
-  const source = must(await admin.from("condominium_fiscal_years").insert({
-    workspace_id: workspace.id,
-    condominium_id: ids.condominium,
-    name: marker + " esercizio origine",
-    start_date: "2025-01-01",
-    end_date: "2025-12-31",
-    status: "Aperto",
-    opening_balance: 0,
-    notes: marker,
-  }).select("id").single(), "source fiscal year");
-  ids.sourceYear = source.id;
-  must(await admin.rpc("close_condominium_fiscal_year", { p_workspace_id: workspace.id, p_fiscal_year_id: ids.sourceYear }), "close source fiscal year through application RPC");
-
-  const target = must(await admin.from("condominium_fiscal_years").insert({
-    workspace_id: workspace.id,
-    condominium_id: ids.condominium,
-    name: marker + " esercizio destinazione",
-    start_date: "2026-01-01",
-    end_date: "2026-12-31",
-    status: "Aperto",
-    opening_balance: 0,
-    notes: marker,
-  }).select("id").single(), "target fiscal year");
-  ids.targetYear = target.id;
-
-  // Close the source year through the supported accounting procedure; direct
-  // insertion of a closed fiscal year is intentionally rejected by the app.
-  const closedSource = await admin.rpc("close_fiscal_year_and_generate_carryovers", {
-    p_workspace_id: workspace.id,
-    p_condominium_id: ids.condominium,
-    p_source_fiscal_year_id: ids.sourceYear,
-  });
-  assert.ifError(closedSource.error);
 
   const incomingEmail = "incoming-app09-" + Date.now() + "@example.com";
   ids.transfer = must(await admin.rpc("confirm_condominium_member_transfer", {
@@ -157,6 +134,7 @@ try {
   console.log(JSON.stringify({
     suite: "BETHAG_QA_APP09_CARRYOVERS",
     target: "jhuyhlzzydcgghrzeexn",
+    fixture: "BETHAG_QA_APP09_CARRYOVER_FIXTURE",
     status: "PASS",
     checks: [
       "member-level debit carryover blocked transfer closure",
@@ -169,10 +147,11 @@ try {
   if (ids.memberCarryover) { const x = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.memberCarryover); assert.ifError(x.error); }
   if (ids.unitCarryover) { const x = await cleanup.from("condominium_fiscal_carryovers").delete().eq("id", ids.unitCarryover); assert.ifError(x.error); }
   if (ids.transfer) { const x = await cleanup.from("condominium_member_transfers").delete().eq("id", ids.transfer); assert.ifError(x.error); }
-  if (ids.sourceYear) { const x = await cleanup.from("condominium_fiscal_years").delete().eq("id", ids.sourceYear); assert.ifError(x.error); }
-  if (ids.targetYear) { const x = await cleanup.from("condominium_fiscal_years").delete().eq("id", ids.targetYear); assert.ifError(x.error); }
-  if (ids.condominium) { const x = await cleanup.from("condominium_members").delete().eq("condominium_id", ids.condominium); assert.ifError(x.error); }
-  if (ids.unit) { const x = await cleanup.from("condominium_units").delete().eq("id", ids.unit); assert.ifError(x.error); }
-  if (ids.condominium) { const x = await cleanup.from("condominiums").delete().eq("id", ids.condominium); assert.ifError(x.error); }
+  if (ids.unit) {
+    const members = await cleanup.from("condominium_members").delete().eq("unit_id", ids.unit);
+    assert.ifError(members.error);
+    const unit = await cleanup.from("condominium_units").delete().eq("id", ids.unit);
+    assert.ifError(unit.error);
+  }
   await admin.auth.signOut();
 }
