@@ -385,10 +385,10 @@ This update supersedes the preceding statement that object-level ACL/default-ACL
 |---|---:|---:|---|
 | Public table/view ACL privilege rows | 508 | 508 | Exact multiset match; no differences |
 | Public/private default ACL rows | 64 | 64 | Exact multiset match; no differences |
-| Public routine ACL rows | 219* | 219* | Exact match |
+| Public routine ACL rows | Same as QA | Same as Production | Exact match; the separate public-only row count was not recorded |
 | Private routine ACL rows | Included below | Included below | Expected QA-only delta |
 
-The complete routine ACL comparison returned 219 rows for Production and 239 for QA. The only 20 QA-only rows are the expected grants in the frozen forward migration plan:
+The complete (public plus private) routine ACL comparison returned 219 rows for Production and 239 for QA. The only 20 QA-only rows are the expected grants in the frozen forward migration plan:
 - 18 `EXECUTE` grants on the reviewed private application RPCs to `authenticated`.
 - 2 `EXECUTE` grants on `private.check_condominium_member_transfer_closure(uuid)`: one to `authenticated` and one to `service_role`.
 - No Production-only routine ACL rows were found. Public routine ACLs match exactly.
@@ -408,4 +408,4 @@ The complete routine ACL comparison returned 219 rows for Production and 239 for
 
 On PR #57 head `0c3429cab272f5813dcc94bf1083e2376fa851aa`, final QA run `42132219836` completed **SUCCESS**. APP-01..APP-15, authenticated browser workflows, signed webhook/provider probe, diagnostics upload, and QA preview cleanup all completed successfully. Build and baseline-safety checks on the preceding documentation commit were already SUCCESS; a new documentation commit will trigger fresh checks and must be verified before this evidence is treated as the final candidate.
 
-*Correction note: the 219/239 counts above are total routine-ACL row counts (public plus private); the exact public-table and default-ACL counts are separately reported above.*
+*Count clarification: 219/239 are total routine-ACL row counts (public plus private), not public-only counts. The public-only comparison was exact; its separate row count was not retained in the evidence summary.*
