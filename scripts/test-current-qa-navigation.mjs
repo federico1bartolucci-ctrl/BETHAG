@@ -27,7 +27,12 @@ try{
     await planNav.waitFor({state:"visible",timeout:10000});
     await planNav.click();
     await page.getByRole("heading",{name:"Piano e upgrade",exact:true}).waitFor({timeout:10000});
-    await page.getByRole("button",{name:"Prova struttura"}).last().click();
+    // The plan-card "Prova struttura" buttons are demo entitlement toggles,
+    // not navigation controls. Clicking a dynamically re-labelled ".last()"
+    // locator can retarget successive cards after each React render and mutate
+    // the test account's local subscription state. Verify the page is rendered
+    // without changing plan state; this suite is specifically for navigation.
+    await page.getByRole("button",{name:"Prova struttura"}).first().waitFor({state:"visible",timeout:10000});
     await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});
     await page.locator(".sidebar .nav-item").filter({hasText:"Homepage"}).first().click();
     const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
