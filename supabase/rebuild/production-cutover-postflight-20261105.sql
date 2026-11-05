@@ -104,7 +104,7 @@ BEGIN
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
   IF ledger_count <> 264 OR ledger_head <> '20261105050000' THEN
-    RAISE EXCEPTION 'FAIL: expected 264 rows with sorted max 20261104130000, found %, %',ledger_count,ledger_head;
+    RAISE EXCEPTION 'FAIL: expected 264 rows with sorted max 20261105050000, found %, %',ledger_count,ledger_head;
   END IF;
   SELECT count(*)::integer INTO canonical_count FROM supabase_migrations.schema_migrations
   WHERE (version,name) IN (
@@ -245,6 +245,7 @@ BEGIN
   FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
   WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace
     AND d.defaclobjtype IN ('f','S')
+    AND (d.defaclnamespace=0 OR d.defaclnamespace='public'::regnamespace)
     AND a.grantee IN (0,'anon'::regrole,'authenticated'::regrole,'service_role'::regrole);
   IF default_maintain <> 0 THEN
     RAISE EXCEPTION 'FAIL: postgres public function/sequence defaults remain for application roles: %',default_maintain;
