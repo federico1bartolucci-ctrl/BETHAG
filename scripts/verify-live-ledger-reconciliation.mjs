@@ -13,7 +13,7 @@ assert.equal(live.production.migrations.length, 248);
 assert.equal(live.qa.migrations.length, 283);
 assert.equal(common.length, 247);
 assert.deepEqual(pOnly, ["20261104222229|reconcile_production_acl_least_privilege"]);
-assert.equal(qOnly.length, 35);
+assert.equal(qOnly.length, 36);
 assert.equal(live.comparison.common_exact_pairs, common.length);
 assert.equal(live.comparison.production_only_count, pOnly.length);
 assert.equal(live.comparison.qa_only_count, qOnly.length);
