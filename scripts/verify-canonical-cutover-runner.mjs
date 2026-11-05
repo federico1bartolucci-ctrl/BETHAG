@@ -31,12 +31,15 @@ assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger wher
 assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must expect all sixteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
-assert.match(postflight, /canonical_count <> 16 THEN/, "Postflight must verify all fifteen canonical migration records.");
+assert.match(postflight, /private\.upsert_portal_access_for_member/, "Postflight must verify portal registration helper wiring and ACLs.");
+assert.match(postflight, /canonical_count <> 16 THEN/, "Postflight must verify all sixteen canonical migration records.");
 assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the sixteen canonical increments.");
 assert.equal(manifest.live_ledger.rows, 248);
 assert.equal(manifest.expected_postflight.ledger_rows, 264);
 assert.equal(manifest.expected_postflight.workspace_members_data_column_present, true);
 assert.equal(manifest.expected_postflight.save_condominium_archive_state_preserved, true);
+assert.equal(manifest.expected_postflight.portal_registration_upsert_helper, true);
+assert.equal(manifest.expected_postflight.portal_registration_authenticated_callers, true);
 assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
 assert.equal(manifest.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION");
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);
