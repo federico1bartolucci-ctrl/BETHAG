@@ -206,3 +206,19 @@ Evidenze step-by-step:
 **Esito aggiornato:** APP-01–APP-13 e APP-15 PASS sul QA esistente. Gli stati precedenti APP-11 PARTIAL e APP-12 PARTIAL sono superati da questo run completo. APP-14 resta PARTIAL / NO-GO Production.
 
 Il risultato del collaudo QA non rimuove i blocker Production già descritti in questo report: colonna `workspace_members.data` assente, trigger/funzione co-owner mancanti, definizioni private divergenti, privilegi EXECUTE mancanti, bug booleano dei permessi collaboratore e verifica manuale Data API Production non attestata. Non è stato eseguito alcun merge, deploy, DDL o cutover Production; nessun ambiente QA aggiuntivo è stato creato.
+
+
+## 13. Riconferma collaudo QA e confronto live autorizzazioni — 2026-11-05
+
+La nuova esecuzione del collaudo sul commit `93f23d95108cba8b4c791fc7a3c99b21cb27799e` è terminata SUCCESS:
+- Final QA [42043452669](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452669): SUCCESS, APP-01–APP-15 PASS.
+- Build [42043452826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452826): SUCCESS.
+- Baseline safety [42043452653](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452653): SUCCESS.
+
+È stato ripetuto in sola lettura il confronto live delle definizioni di `private.can_access_workspace_module(uuid,text)` e `private.can_manage_workspace_module(uuid,text)`:
+- QA: entrambe supportano il formato legacy JSONB array e il formato JSONB object; per gli object richiedono che il valore della chiave sia esattamente `true`, altrimenti negano.
+- Production: entrambe usano ancora il controllo di sola presenza della chiave JSONB (`permissions ? required_permission`), senza verificare che il valore sia `true`. Un oggetto con valore booleano `false` può quindi essere trattato come autorizzato.
+
+La divergenza è confermata sulle definizioni effettivamente installate, non dedotta dal solo ledger. Restano inoltre confermate in Production l'assenza di `public.workspace_members.data` e del trigger `trg_apply_incoming_transfer_member_metadata`.
+
+**Decisione invariata: NO-GO Production.** Nessuna query di scrittura, migrazione, GRANT/REVOKE, deploy o cutover è stata eseguita. PR #57 resta aperta e non unita.
