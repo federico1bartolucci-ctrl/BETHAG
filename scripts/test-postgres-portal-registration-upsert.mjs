@@ -32,11 +32,11 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free');
 
-INSERT INTO public.condominiums(id,workspace_id,name)
+INSERT INTO public.condominiums(id,workspace_id,name,archived_at)
 VALUES
- ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Admin approval test condominium'),
- ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','Self registration test condominium'),
- ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium'),
+ ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Admin approval test condominium',NULL),
+ ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','Self registration test condominium',NULL),
+ ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium',NULL),
  ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test',now());
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
@@ -102,7 +102,7 @@ $resident_assert$;
 INSERT INTO public.portal_access(id,workspace_id,condominium_id,legacy_id,name,email,role,permissions,active)
 VALUES
  ('60000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000003',41003,'Old duplicate row','old-duplicate@example.invalid','resident','[]'::jsonb,true),
- ('60000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000003',41099,'Email duplicate row','duplicate-match@example.invalid','resident','[]'::jsonb,true);
+ ('60000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000003',41099,'Email duplicate row','duplicate-match@example.invalid','resident','[]'::jsonb,true);
 
 DO $duplicate_assert$
 BEGIN
