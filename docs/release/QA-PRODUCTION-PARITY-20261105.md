@@ -222,3 +222,32 @@ La nuova esecuzione del collaudo sul commit `93f23d95108cba8b4c791fc7a3c99b21cb2
 La divergenza è confermata sulle definizioni effettivamente installate, non dedotta dal solo ledger. Restano inoltre confermate in Production l'assenza di `public.workspace_members.data` e del trigger `trg_apply_incoming_transfer_member_metadata`.
 
 **Decisione invariata: NO-GO Production.** Nessuna query di scrittura, migrazione, GRANT/REVOKE, deploy o cutover è stata eseguita. PR #57 resta aperta e non unita.
+
+
+## 14. Audit APP-14 consolidato e verifica Dashboard Production — 2026-11-05
+
+Il report `docs/release/APP14-COMPREHENSIVE-AUDIT-20261105.md` consolida il controllo live Production, la sequenza congelata e i gate operativi.
+
+La precedente nota "Data API auto-expose Production: NON VERIFICATO manualmente" è superata dalle schermate successive dell'operatore:
+- `public` esposto;
+- `private` non esposto;
+- `graphql_public` esposto come schema aggiuntivo;
+- `supabase_functions` non selezionato/non presente nell'elenco;
+- 0/48 tabelle e 0/171 funzioni esposte individualmente;
+- `Automatically expose new tables` OFF, schermata delle 15:37.
+
+Il gate Dashboard Data API è **PASS sulla base delle schermate**. La presenza di `graphql_public` è documentata e non costituisce uno dei criteri di blocco espliciti del piano corrente.
+
+Nuove letture Production hanno confermato:
+- ledger 248/248 coppie versione/nome identiche allo snapshot congelato, head `20261104222229`;
+- 47 tabelle/partizioni + una view;
+- MAINTAIN effettivo zero per authenticated e service_role;
+- Security Advisor zero lint;
+- `workspace_members.data` assente;
+- trigger/funzione co-owner assenti;
+- funzioni collaborator ancora con il controllo booleano difettoso;
+- 18 grant EXECUTE authenticated sulle implementazioni private mancanti e helper transfer-closure privato non eseguibile da authenticated/service_role.
+
+Il preflight read-only aggiornato è stato eseguito su Production senza eccezioni. È stato esteso per controllare le precise precondizioni collaborator, i 18 grant privati, il helper transfer-closure e lo schema private. Il postflight è stato corretto per indicare 19 migrazioni e verificare anche il grant service_role sul helper transfer-closure. Il freeze JSON resta immutato.
+
+La sequenza dei 19 payload già congelati copre le divergenze rilevate; non è stata individuata la necessità di una ventesima migrazione. Restano aperti la connessione PostgreSQL diretta locale, il piano operativo finale e l'approvazione del cutover. **Production resta NO-GO; nessuna scrittura, migrazione, merge o deploy è stata eseguita.**
