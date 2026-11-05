@@ -190,3 +190,40 @@ The new forward correction was applied only to the four non-Production environme
 - La configurazione Data API Production per lo schema provider-managed `supabase_functions` non è ancora verificata manualmente.
 - Il runner richiede un `DATABASE_URL` PostgreSQL diretto e il set completo dei gate; `supabase migration apply_migration` non è un sostituto perché non preserva la sequenza di versioni canoniche.
 - Nessuna migrazione Production applicata, nessuna scrittura ledger, nessun merge/deploy/cutover. Il gate Production resta **NO-GO** fino alla chiusura dei residui.
+
+
+## Addendum operativo — sblocco APP-14 (2026-11-05)
+
+Questo addendum supersede le note storiche non più attuali del documento e del freeze. Il JSON `production-migration-cutover-freeze-20261105.json` resta immutato come reperto congelato; non correggere le sue note storiche APP-12. Per lo stato corrente fanno fede le evidenze qui riportate e i report QA/Production aggiornati.
+
+### Stato tecnico corrente verificato
+
+- Branch: `fix/qa-view-acl-parity-20261105`.
+- Commit con collaudo QA completo: `93f23d95108cba8b4c791fc7a3c99b21cb27799e`; Final QA [42043452669](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452669), Build [42043452826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452826), Baseline Safety [42043452653](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42043452653): tutti SUCCESS.
+- La successiva documentazione ha attivato CI sul commit `bddbf5660a1c33850133f65879f1ae1a6c5d41cd`: Baseline Safety [42044367059](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42044367059) SUCCESS; Final QA [42044367044](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42044367044) SUCCESS. Build [42044367075](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42044367075) era ancora in coda al momento dell'aggiornamento.
+- APP-01–APP-15: PASS sul solo progetto QA esistente; APP-12 provider Resend e webhook firmato verificati verso QA. Non usare più le vecchie note del freeze che descrivono APP-12 come non verificato.
+- Backup: restore logico locale verificato; restore fisico provider-managed NON ESEGUITO. Il rischio residuo è stato accettato dal proprietario il 2026-10-27, come registrato nel freeze. Non dichiarare un physical restore superato e non creare un progetto a pagamento.
+- Ledger Production: 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`; preservare tutte le 248 righe esattamente.
+- Sequenza approvata per rehearsal: 19 migrazioni forward-only; ledger finale atteso 267. Rehearsal PostgreSQL 17 isolato PASS, run [42017349811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349811). Clean install 28 SQL e runner guarded verificati in CI.
+- Divergenze live Production confermate read-only: manca `public.workspace_members.data`; manca il trigger `trg_apply_incoming_transfer_member_metadata`; le funzioni `private.can_access_workspace_module` e `private.can_manage_workspace_module` non rispettano il valore booleano false dei permessi collaboratore. Restano inoltre le altre divergenze applicative/ACL del report `QA-PRODUCTION-PARITY-20261105.md`.
+- Nessun DDL, grant/revoke, scrittura ledger, deploy, merge o cutover Production è stato eseguito.
+
+### Gate APP-14 residui — ordine obbligatorio
+
+1. **Dashboard Data API Production — attestazione manuale, sola lettura.** Aprire il progetto BETHAG Production (`tctcgptrsmvgajqjgnev`) in Supabase Dashboard, quindi `Integrations → Data API → Settings`. Registrare screenshot/data e verificare:
+   - `public` presente negli Exposed schemas;
+   - `supabase_functions` assente dagli Exposed schemas;
+   - `Automatically expose new tables` disattivato.
+   Non cambiare alcuna impostazione durante questa verifica. Se lo schema `supabase_functions` risulta esposto o il toggle è attivo, fermarsi e riportare il dato: non tentare di correggerlo automaticamente. La documentazione Supabase colloca queste opzioni nella sezione Data API Settings e chiarisce che l'esposizione degli schemi e i grant PostgreSQL sono livelli distinti.
+2. **Connessione PostgreSQL diretta.** Recuperare dal pulsante `Connect` del progetto Production una URI PostgreSQL diretta o Session Pooler, con ruolo `postgres` e privilegi DDL. La password deve provenire dal password manager o dalla fonte sicura già in uso: non incollarla in chat, issue, PR o file. Non resettare la password per sbloccare il gate. Il runner richiede la variabile locale `DATABASE_URL`; il connettore Supabase MCP non restituisce la password e `apply_migration` non è un sostituto valido.
+3. **Pin finale e piano operativo.** Dopo CI verde sul commit documentale definitivo, congelare SHA commit e hash dei 19 SQL. Il piano deve indicare operatore responsabile, finestra di manutenzione Europe/Rome, avviso agli utenti, verifica preventiva backup, durata attesa, criteri di stop, contatti e procedura di ripristino. Il rischio residuo del physical restore resta esplicitamente accettato ma non verificato.
+4. **Esecuzione controllata, solo dopo tutti i gate.** Da checkout pulito del commit approvato, impostare localmente le variabili richieste dal runner guarded. Eseguire prima il preflight read-only `production-cutover-preflight-20261105.sql`; solo se PASS e dopo approvazione formale eseguire `scripts/apply-reviewed-production-migrations.mjs`. Il runner deve usare esclusivamente la URI Production fornita dall'operatore, confrontare le 248 righe live con lo snapshot e aggiungere una migrazione per transazione, fermandosi al primo errore. Non eseguire `supabase db push`, `apply_migration` o replay della baseline.
+5. **Postflight e smoke autenticato.** Eseguire `production-cutover-postflight-20261105.sql`; verificare 267 righe, tutte le 248 righe storiche intatte, 19 coppie canoniche esatte, ACL/default ACL, funzioni, trigger, profili e portale. Poi eseguire il test autenticato Production previsto dal piano senza creare o alterare dati reali. Qualunque mismatch = STOP e decisione di rollback secondo il piano approvato.
+
+### Informazioni non ottenibili dagli strumenti collegati
+
+- La Dashboard Data API è un'impostazione di progetto non esposta dal connettore Supabase: serve una verifica visiva dell'operatore.
+- Il connettore restituisce host e stato del progetto, non la password PostgreSQL né una URI autenticata. La connessione va fornita in locale dall'operatore.
+- Non è disponibile un'azione GitHub per scrivere secrets o lanciare un workflow dispatch; non inserire segreti nel repository per aggirare questo limite.
+
+**Decisione corrente: APP-14 PARTIAL / NO-GO.** La preparazione tecnica e la rehearsal sono completate; nessuna modifica Production è autorizzata finché i gate 1–3 non sono documentati e il preflight non passa.
