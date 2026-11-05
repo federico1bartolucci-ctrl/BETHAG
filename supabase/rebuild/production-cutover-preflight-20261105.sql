@@ -97,8 +97,6 @@ BEGIN
   CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a
   WHERE n.nspname IN ('public','private') AND a.grantee=0 AND a.privilege_type='EXECUTE';
   IF public_routines IS DISTINCT FROM ARRAY[
-    'private.check_condominium_member_transfer_closure(p_transfer_id uuid)',
-    'public.check_condominium_member_transfer_closure(p_transfer_id uuid)',
     'public.normalize_zero_ownership_owner()',
     'public.preserve_closing_condominium_member_history()'
   ]::text[] THEN RAISE EXCEPTION 'STOP: PUBLIC EXECUTE baseline changed: %', public_routines; END IF;
