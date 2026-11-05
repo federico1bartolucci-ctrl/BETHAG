@@ -103,8 +103,8 @@ BEGIN
   END IF;
 
   SELECT count(*)::integer, max(version) INTO ledger_count, ledger_head FROM supabase_migrations.schema_migrations;
-  IF ledger_count <> 264 OR ledger_head <> '20261105050000' THEN
-    RAISE EXCEPTION 'FAIL: expected 264 rows with sorted max 20261105050000, found %, %',ledger_count,ledger_head;
+  IF ledger_count <> 267 OR ledger_head <> '20261105050000' THEN
+    RAISE EXCEPTION 'FAIL: expected 267 rows with sorted max 20261105050000, found %, %',ledger_count,ledger_head;
   END IF;
   SELECT count(*)::integer INTO canonical_count FROM supabase_migrations.schema_migrations
   WHERE (version,name) IN (
@@ -123,9 +123,12 @@ BEGIN
     ('20261102100100','add_workspace_member_profile_data'),
     ('20261102100200','preserve_server_owned_condominium_archive_state'),
     ('20261104130000','reconcile_qa_security_and_coowner_rpcs'),
+    ('20261105010000','reconcile_postgres_public_table_default_acl'),
+    ('20261105020000','revoke_public_execute_from_public_trigger_functions'),
+    ('20261105030000','reconcile_postgres_public_function_sequence_default_acl'),
     ('20261105050000','reconcile_portal_registration_upsert')
   );
-  IF canonical_count <> 16 THEN RAISE EXCEPTION 'FAIL: expected sixteen exact canonical version/name pairs, found %',canonical_count; END IF;
+  IF canonical_count <> 19 THEN RAISE EXCEPTION 'FAIL: expected sixteen exact canonical version/name pairs, found %',canonical_count; END IF;
 
   SELECT EXISTS (SELECT 1 FROM information_schema.columns
     WHERE table_schema='public' AND table_name='workspace_members' AND column_name='data' AND data_type='jsonb'),
@@ -251,6 +254,6 @@ BEGIN
     RAISE EXCEPTION 'FAIL: postgres public function/sequence defaults remain for application roles: %',default_maintain;
   END IF;
 
-  RAISE NOTICE 'POSTFLIGHT PASS: 264-row ledger with 248 historical rows preserved by runner; sixteen canonical identities; ACL/RLS/transfer/collaborator/archive/portal-registration postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
+  RAISE NOTICE 'POSTFLIGHT PASS: 267-row ledger with 248 historical rows preserved by runner; nineteen canonical identities; ACL/RLS/transfer/collaborator/archive/portal-registration postconditions. Three supabase_admin default MAINTAIN entries remain a provider/security-owner exception.';
 END
 $postflight$;
