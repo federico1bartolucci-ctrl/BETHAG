@@ -121,6 +121,12 @@ The retained QA ledger also contains two earlier canonical effects under histori
 
 These mappings are captured in `supabase/rebuild/qa-ledger-20261105.json` and enforced by the migration-alignment checks. No migration ledger rows were changed to create the equivalence.
 
-The earlier isolated PostgreSQL 17 CI rehearsal passed all 15 canonical migrations. Because the repository identity has now been aligned to the actual QA-generated version and the two preserved QA aliases are now explicitly evidenced, a fresh CI run is required to revalidate the final inventory and cutover scripts.
+Final aligned CI: [run 41938529832](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41938529832), commit `bc2312fe3381d31ed41e29c238d06e9a21c43f44` — both jobs **SUCCESS**.
+
+- Build, migration-history reconciliation, cutover-planner safety, single-QA environment alignment, Production function security/ACL parity, communication guards, application build and isolated public-login browser smoke: **PASS**.
+- Authenticated QA edit/archive diagnostic: **PASS**.
+- PostgreSQL 17 fresh bootstrap, all 15 canonical migrations through the guarded runner, incremental hardening/ACL postconditions, collaborator permission enforcement with RLS and canonical ledger rehearsal: **PASS**.
+
+This verifies the final repository identity and single-QA alignment on the reviewed branch. It does not close APP-08's new-owner end-to-end registration/email-verification/browser-login acceptance, and it does not authorize Production changes.
 
 **APP-08 remains OPEN.** The persistent database repair and catalog checks are complete, but end-to-end proof for a newly registered incoming owner — Auth account creation, email verification, first browser login and portal hydration after refresh — is still outstanding. The prior transaction tests with existing verified QA identities are not a substitute for that end-to-end proof. Overall release remains **NO-GO**.
