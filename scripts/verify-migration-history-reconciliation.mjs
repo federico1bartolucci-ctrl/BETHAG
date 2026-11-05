@@ -95,8 +95,7 @@ const calculated = {
   captured_at_utc: "2026-10-26",
   scope: "Read-only migration history reconciliation inventory; no schema, data, or remote migration ledger was changed.",
   production: { project_ref: production.project_ref, ledger_count: production.count, latest: production.migrations.at(-1) },
-  historical_qa_snapshot: { project_ref: historicalQa.project_ref, ledger_count: historicalQa.count, latest: historicalQa.migrations.at(-1) },
-  active_qa: { project_ref: activeQa.project_ref, ledger_count: activeQa.count, latest: activeQa.migrations.at(-1) },
+  qa: { project_ref: historicalQa.project_ref, ledger_count: historicalQa.count, latest: historicalQa.migrations.at(-1) },
   repository_main: {
     migration_files: main.count,
     exact_version_and_name_matches: exact.length,
