@@ -1132,5 +1132,31 @@
       "name": "fix_portal_registration_upsert_conflict_target"
     }
   ],
-  "note": "Current single retained QA environment. Captured after applying fix_portal_registration_upsert_conflict_target through the Supabase migration API. Historical snapshots for retired QA projects remain archival only and are not active targets."
+  "note": "Current single retained QA environment. Captured after applying fix_portal_registration_upsert_conflict_target through the Supabase migration API. Historical snapshots for retired QA projects remain archival only and are not active targets.",
+  "verified_migration_identity_aliases": [
+    {
+      "canonical": {
+        "version": "20261102100100",
+        "name": "add_workspace_member_profile_data"
+      },
+      "observed": {
+        "version": "20261102054409",
+        "name": "add_workspace_member_profile_data"
+      },
+      "status": "EFFECT_VERIFIED",
+      "evidence": "Live catalog confirms public.workspace_members.data exists as jsonb NOT NULL with default '{}'::jsonb."
+    },
+    {
+      "canonical": {
+        "version": "20261102100200",
+        "name": "preserve_server_owned_condominium_archive_state"
+      },
+      "observed": {
+        "version": "20261102054253",
+        "name": "preserve_server_owned_condominium_archive_state"
+      },
+      "status": "EFFECT_VERIFIED",
+      "evidence": "Live private.save_condominium definition is SECURITY DEFINER with empty search_path and preserves existing archived_at, archived_by and archive_reason values on conflict updates."
+    }
+  ]
 }
