@@ -117,6 +117,65 @@ async function cleanupFixtures() {
   });
   if (authError) throw authError;
 
+  // Remove only the three uniquely marked synthetic condominiums left by
+  // earlier failed teardown attempts in this same QA browser suite.
+  const priorFailedMarkers = [
+    "BETHAG_UI_ACCEPTANCE_1793864625853",
+    "BETHAG_UI_ACCEPTANCE_1793864773907",
+    "BETHAG_UI_ACCEPTANCE_1793864944993",
+  ];
+  for (const priorMarker of priorFailedMarkers) {
+    const priorResult = await cleanup.from("condominiums").select("id,workspace_id,legacy_id")
+      .eq("name", priorMarker + "_EDITED").maybeSingle();
+    if (priorResult.error) throw priorResult.error;
+    const prior = priorResult.data;
+    if (!prior) continue;
+    const priorComms = await cleanup.from("communications").select("id").eq("condominium_id", prior.id);
+    if (priorComms.error) throw priorComms.error;
+    for (const comm of priorComms.data || []) {
+      const recipients = await cleanup.from("communication_recipients").delete().eq("communication_id", comm.id);
+      if (recipients.error) throw recipients.error;
+      const deleted = await cleanup.from("communications").delete().eq("id", comm.id);
+      if (deleted.error) throw deleted.error;
+    }
+    const priorInstallments = await cleanup.from("condominium_installments").select("id").eq("condominium_id", prior.id);
+    if (priorInstallments.error) throw priorInstallments.error;
+    for (const installment of priorInstallments.data || []) {
+      const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", installment.id);
+      if (movements.error) throw movements.error;
+    }
+    const transfers = await cleanup.from("condominium_member_transfers").delete().eq("condominium_id", prior.id);
+    if (transfers.error) throw transfers.error;
+    const installments = await cleanup.from("condominium_installments").delete().eq("condominium_id", prior.id);
+    if (installments.error) throw installments.error;
+    for (const table of ["condominium_expense_allocations", "condominium_ledger_entries", "condominium_fiscal_carryovers"]) {
+      const deleted = await cleanup.from(table).delete().eq("condominium_id", prior.id);
+      if (deleted.error) throw deleted.error;
+    }
+    const portal = await cleanup.from("portal_access").delete().eq("condominium_id", prior.id);
+    if (portal.error) throw portal.error;
+    const members = await cleanup.from("condominium_members").delete().eq("condominium_id", prior.id);
+    if (members.error) throw members.error;
+    const units = await cleanup.from("condominium_units").delete().eq("condominium_id", prior.id);
+    if (units.error) throw units.error;
+    const years = await cleanup.from("condominium_fiscal_years").delete().eq("condominium_id", prior.id);
+    if (years.error) throw years.error;
+    const removed = await adminApi.rpc("delete_condominium", {
+      p_workspace_id: prior.workspace_id,
+      p_legacy_id: prior.legacy_id,
+      p_security_code: null,
+    });
+    if (removed.error) throw removed.error;
+    const users = await cleanup.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (users.error) throw users.error;
+    for (const user of users.data.users.filter(user => user.user_metadata?.source === priorMarker)) {
+      const memberships = await cleanup.from("workspace_members").delete().eq("user_id", user.id);
+      if (memberships.error) throw memberships.error;
+      const deletedUser = await cleanup.auth.admin.deleteUser(user.id);
+      if (deletedUser.error) throw deletedUser.error;
+    }
+  }
+
   const comms = await cleanup.from("communications").select("id").like("title", marker + "%");
   if (comms.error) throw comms.error;
   for (const comm of comms.data || []) {
