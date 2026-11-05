@@ -104,3 +104,15 @@ Limitazioni conservate nel report:
 ## Avvio del punto 6 — 2026-11-05
 
 Il punto 6 è avviato. Ambito: confronto finale read-only tra QA e Production di schema, RLS/policy, ACL effettive e default ACL, funzioni/trigger, configurazione Data API e registri; produzione di matrice delle divergenze e gate GO/NO-GO. Nessun GRANT/REVOKE/ALTER, deploy o migrazione remota. Il punto 7 resta non avviato.
+
+
+## Aggiornamento verifica punto 6 e rettifica CI — 2026-11-05
+
+- Il confronto read-only è stato ripetuto sui due progetti esistenti. In entrambi: 48 relazioni public, 103 policy, 257 indici, 305 vincoli e 47 relazioni con RLS; resta una relazione senza RLS in ciascun ambiente, già inclusa nel confronto ACL/relkind e non va classificata automaticamente come tabella applicativa esposta.
+- QA: 147 trigger public, 173 funzioni public/private, colonna workspace_members.data presente, pg_net presente.
+- Production: 146 trigger public, 171 funzioni public/private, colonna workspace_members.data assente, pg_net assente.
+- Le divergenze bloccanti restano quelle del report QA-PRODUCTION-PARITY-20261105.md: 19 implementazioni private con EXECUTE authenticated in QA ma non Production, sette definizioni private comuni differenti, trigger incoming co-owner QA-only, bug booleano nei permessi collaboratore Production e configurazione Data API auto-expose Production da verificare manualmente. Production resta NO-GO.
+- Rettifica di trasparenza: il test default ACL tabelle aveva una chiamata psql commentata per un errore di newline; il precedente run 41948820926 non è prova valida per quel draft. La chiamata è stata corretta e la prova reale è passata nel run [41951011743](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41951011743), commit 81656e1c3bb0753c6f8ede97a29e57c1be2a40ec. Nel medesimo run sono PASS anche i draft trigger ACL e function/sequence ACL, clean-install 24 migrazioni, guarded runner 15 migrazioni, RLS collaborator, build, browser public smoke e autenticazione QA. Baseline [41951011690](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41951011690): SUCCESS.
+- Il run 41951011743 ha saltato il diagnostic APP autenticato, come previsto. APP-01–APP-15 non avviato. Nessuna scrittura remota, nessun merge, deploy o cutover.
+
+Il punto 6 resta IN CORSO finché non è completata la matrice finale di ogni divergenza con dipendenze, sorgente canonica/QA e piano forward-only, e finché non è documentato il controllo manuale Data API Production. Il gate di rilascio rimane NO-GO; il punto 7 resta non avviato.
