@@ -63,7 +63,7 @@ assert.equal(freeze.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION");
 
 const blockers = [
   "The guarded runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and would create migration-version drift.",
-  "A current provider-backed physical restore must be evidenced; the isolated PostgreSQL rehearsal is not a provider restore.",
+  "Reconfirm the 28 October provider backup/restore proof against current Production retention and capture the latest backup identifier.",
   "Production Data API exposure configuration must be verified in Dashboard before release.",
   "The 248-row plus sixteen-migration rehearsal must pass before any Production DDL.",
 ];
