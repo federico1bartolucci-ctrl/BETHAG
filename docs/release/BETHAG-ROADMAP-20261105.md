@@ -234,3 +234,15 @@ Evidenza aggiornata:
 ### Stato conclusivo del punto 7
 
 Il collaudo applicativo ha esito **PASS per APP-01–APP-11, APP-13 e APP-15**. APP-12 resta **PARTIAL** limitatamente alla prova del webhook provider instradato a QA; APP-14 resta **PARTIAL** perché i gate Production non sono superati. Il punto 7 non è chiuso integralmente e il rilascio non è autorizzabile tecnicamente. La prossima attività ammessa è predisporre un instradamento webhook QA isolato senza sostituire né disabilitare l'endpoint Production; in assenza di una configurazione sicura e verificabile, mantenere APP-12 aperto anziché alterare il webhook globale.
+
+
+## Retest Build e autenticazione QA — 2026-11-05
+
+Il retry del solo job Build fallito è terminato con **SUCCESS**, attempt 2 del workflow [run 42026909891](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42026909891), sul commit `1835c261cbb4482ebd0b10725958306c18c8dbb4`.
+- Build: SUCCESS.
+- Certify real QA authentication and session persistence: SUCCESS, inclusi i tre account reali amministratore, collaboratore e condomino.
+- Public-login browser smoke test: SUCCESS.
+- PostgreSQL bootstrap: SUCCESS, tutte le prove di bootstrap, migrazioni canoniche, ACL e RLS completate.
+- Il diagnostic autenticato edit/archive risulta SKIPPED; non viene conteggiato come prova eseguita da questo workflow.
+Il timeout dell'amministratore osservato al primo tentativo non si è riprodotto al retry. È quindi classificato come errore intermittente non riprodotto, non come difetto corretto. Il run finale QA collaudo `42026909921` resta SUCCESS.
+Nessuna modifica a Production, nessun merge o deploy e nessun nuovo ambiente QA.
