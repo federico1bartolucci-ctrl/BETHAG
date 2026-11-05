@@ -24,8 +24,8 @@ function ageHours(timestamp) {
 }
 function snapshotTimestamp(value) {
   if (value.captured_at_utc) return value.captured_at_utc;
-  if (value.captured_at) return value.captured_at + "T23:59:59Z";
-  if (value.captured_date) return value.captured_date + "T23:59:59Z";
+  if (value.captured_at) return value.captured_at + "T00:00:00Z";
+  if (value.captured_date) return value.captured_date + "T00:00:00Z";
   return null;
 }
 function snapshotFresh(value, label, maxAgeHours = 24) {
