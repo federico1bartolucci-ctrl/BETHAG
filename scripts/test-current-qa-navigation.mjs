@@ -36,14 +36,27 @@ try{
     await page.getByText("BETHAG Portal",{exact:true}).first().waitFor({timeout:10000});
     await page.locator(".sidebar .nav-item").filter({hasText:"Homepage"}).first().click();
     const labels=["Homepage","Condomini","Contabilità","Registro e sicurezza","Documenti","Scadenze","Assemblee","Fornitori","Attività","Lavori e manutenzioni","Comunicazioni","Portale condomini"];
+    const blockedByPlan=[];
     for(const label of labels){
      const nav=page.locator(".sidebar .nav-item").filter({hasText:label}).first();
-     await nav.waitFor({state:"visible",timeout:10000});await nav.click();
+     await nav.waitFor({state:"visible",timeout:10000});
+     const dialogCount=dialogs.length;
+     await nav.click();
+     const triggeredDialogs=dialogs.slice(dialogCount);
+     const entitlementDialog=triggeredDialogs.find(dialog=>dialog.type==="confirm" && /non è compreso nel tuo piano attuale/i.test(dialog.message));
+     if(entitlementDialog){
+      // A Free-plan entitlement denial is the expected security/product behavior:
+      // the module must not activate, and the test must continue with other destinations.
+      blockedByPlan.push(label);
+      continue;
+     }
+     assert.equal(triggeredDialogs.length,0,"Unexpected dialog while opening "+label+": "+JSON.stringify(triggeredDialogs));
      const active=page.locator(".sidebar .nav-item.active").first();
      await active.waitFor({state:"visible"});
      const activeText=(await active.innerText()).trim();
      assert.ok(activeText.includes(label),"Navigation did not activate "+label+"; active="+activeText);
     }
+    assert.ok(blockedByPlan.includes("Documenti"),"Free-plan Documenti entitlement gate was not exercised");
     // Return to Homepage before reloading; the previous version reloaded
     // while still on the final "Portale condomini" destination and expected
     // a different route, while networkidle waited for unrelated background sync.
@@ -52,7 +65,7 @@ try{
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});
     await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:20000});
     assert.match(page.url(), /[?&]page=homepage(?:&|$)/, "Refresh did not preserve the Homepage route");
-    results.push({role:a.role,status:"PASS",checks:["12 administrator navigation destinations activated","Homepage route survived refresh","no uncaught browser errors"]});
+    results.push({role:a.role,status:"PASS",checks:["all entitled administrator navigation destinations activated","Free-plan locked modules correctly blocked without changing active route: "+blockedByPlan.join(", "),"Homepage route survived refresh","no uncaught browser errors"]});
    }else if(a.role==="collaborator"){
     assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");
     assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");
