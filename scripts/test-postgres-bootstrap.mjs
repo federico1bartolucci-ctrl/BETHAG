@@ -197,7 +197,7 @@ console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAc
 
 // Reproduce the current Production chronology around the clean baseline:
 // the historical canonical head is already in Production, three exact forward
-// migrations were applied after the previous freeze, and sixteen canonical
+// migrations were applied after the previous freeze, and nineteen canonical
 // increments remain to be tracked/applied. The versions are not all greater
 // than the current live ledger head, so order is explicitly evidence-driven.
 const alreadyAppliedCanonicalHead = incrementalMigrations[0];
