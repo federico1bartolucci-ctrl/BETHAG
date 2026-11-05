@@ -126,3 +126,5 @@ jobs:
           if [ -f /tmp/bethag-final-qa-preview.pid ]; then
             kill "$(cat /tmp/bethag-final-qa-preview.pid)" 2>/dev/null || true
           fi
+
+# Re-run final authenticated collaudo on the current PR head after APP-12 provider assertion fix.
