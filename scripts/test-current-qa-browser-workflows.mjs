@@ -28,6 +28,8 @@ const consoleErrorEvents = [];
 let browserNavigationInProgress = false;
 let browserTeardownStarted = false;
 let temporaryResidentId = null;
+let temporaryResidentMemberId = null;
+let temporaryPortalAccessId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
 let accountingFiscalYearId = null;
@@ -179,10 +181,16 @@ async function cleanupFixtures() {
     if (fiscalYear.error) throw fiscalYear.error;
   }
 
-  const syntheticPortal = await cleanup.from("portal_access").delete().eq("data->>source", marker);
-  if (syntheticPortal.error) throw syntheticPortal.error;
-  const syntheticMembers = await cleanup.from("condominium_members").delete().eq("data->>source", marker);
-  if (syntheticMembers.error) throw syntheticMembers.error;
+  if (temporaryPortalAccessId) {
+    const portal = await cleanup.from("portal_access").delete().eq("id", temporaryPortalAccessId);
+    if (portal.error) throw portal.error;
+    temporaryPortalAccessId = null;
+  }
+  if (temporaryResidentMemberId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", temporaryResidentMemberId);
+    if (member.error) throw member.error;
+    temporaryResidentMemberId = null;
+  }
 
   const condos = await cleanup.from("condominiums")
     .select("id,workspace_id,legacy_id")
@@ -868,6 +876,7 @@ try {
     unit_id: residentUnit.data.id,
   }).select("id").single();
   assert.ifError(member.error);
+  temporaryResidentMemberId = member.data.id;
   const portalAccess = await cleanup.from("portal_access").insert({
     workspace_id: created.workspace_id,
     condominium_id: created.id,
@@ -882,6 +891,7 @@ try {
     data: { source: marker },
   }).select("id").single();
   assert.ifError(portalAccess.error);
+  temporaryPortalAccessId = portalAccess.data.id;
 
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   try { await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 }); }
