@@ -123,8 +123,8 @@ BEGIN
   END IF;
 
   -- Verify the precise known pre-cutover collaborator bug, not merely the migration ledger.
-  IF position('wm.permissions ? required_permission' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure)) = 0
-     OR position('wm.permissions ? required_permission' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure)) = 0
+  IF position('? required_permission' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure)) = 0
+     OR position('? required_permission' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure)) = 0
      OR position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_access_workspace_module(uuid,text)'::regprocedure)) > 0
      OR position('(wm.permissions -> required_permission) = ''true''::jsonb' IN pg_get_functiondef('private.can_manage_workspace_module(uuid,text)'::regprocedure)) > 0 THEN
     RAISE EXCEPTION 'STOP: collaborator permission function bodies do not match the reviewed pre-cutover state';
