@@ -118,7 +118,22 @@ jobs:
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
-        run: node scripts/test-current-qa-navigation.mjs && node scripts/test-browser-current-qa-auth.mjs
+        run: |
+          set -o pipefail
+          node scripts/test-current-qa-navigation.mjs 2>&1 | tee /tmp/bethag-app15-navigation.log
+          node scripts/test-browser-current-qa-auth.mjs 2>&1 | tee /tmp/bethag-app15-auth.log
+
+      - name: Upload APP-15 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bethag-app15-diagnostics
+          path: |
+            /tmp/bethag-app15-navigation.log
+            /tmp/bethag-app15-auth.log
+            /tmp/bethag-final-qa-preview.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop QA preview
         if: always()
