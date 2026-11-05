@@ -80,7 +80,7 @@ const riskAcceptedAt = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC
 const riskEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
 const riskAccepted =
   riskAcceptedBy.length > 0 &&
-  /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(riskAcceptedAt) &&
+  /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskAcceptedAt) &&
   riskEvidence.length > 0;
 if (!physicalRestoreVerified && !riskAccepted) {
   blockers.push("Provider physical restore is not evidenced and no named/timestamped/evidence-linked residual-risk acceptance is recorded.");
