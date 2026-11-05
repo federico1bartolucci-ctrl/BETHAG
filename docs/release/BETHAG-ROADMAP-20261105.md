@@ -15,8 +15,8 @@
 |---|---|---|
 | 1–3 | Fasi precedenti della scaletta concordata | CHIUSI secondo lo storico di progetto; non riaperti da questo aggiornamento. |
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
-| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | IN CORSO — 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only legacy senza file canonico; Production-only confrontato col draft. CI verde. Divergenza default ACL QA non spiegata: punto aperto |
-| 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | DA PROGRAMMARE DOPO IL PUNTO 5 |
+| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | **CHIUSO — 2026-11-05**: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only non canonici classificati e payload esatti archiviati; Production-only confrontato semanticamente col draft; divergenze ACL e tre draft forward-only testati due volte su PostgreSQL 17 isolato; CI Build e Baseline SUCCESS sul commit 79311f06. Nessuna modifica remota. |
+| 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **IN CORSO** — avviata dopo la chiusura documentata del punto 5; solo verifiche read-only e gate, nessuna modifica remota |
 | 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | DA ESEGUIRE PER ULTIMO |
 
 ## Chiusura del punto 4 — evidenze
@@ -84,3 +84,23 @@ Il punto 5 resta **IN CORSO** e Production resta **NO-GO**.
 4. Aggiornare report e scaletta con le evidenze della CI finale sul commit che contiene tutti gli interventi documentali e i test.
 
 Solo dopo questi punti si potrà iniziare il punto 6. Il punto 7 resta riservato al collaudo completo APP-01–APP-15 sul QA esistente.
+
+
+## Chiusura del punto 5 — 2026-11-05
+
+Il punto 5 è chiuso come riconciliazione e piano di correzione forward-only, non come autorizzazione ad applicare migrazioni remote.
+
+Evidenze:
+- Ledger live riconciliati: Production 248 righe, QA 283; 247 coppie comuni e payload identici; 17 QA-only con file canonico identici; 19 QA-only non canonici classificati per effetti. Tutti i 19 array SQL originali sono conservati in `supabase/rebuild/qa-live-payloads-20261105.json`, archivio forense non rieseguibile. Tra i 18 file candidati d'archivio precedenti: 7 byte-identici, 9 semanticamente equivalenti, 2 non equivalenti; un payload non aveva un file candidato preesistente ed è stato recuperato dal ledger live.
+- Payload Production-only `20261104222229_reconcile_production_acl_least_privilege`: equivalenza semantica col draft repository dimostrata.
+- Divergenze ACL: trigger EXECUTE PUBLIC in Production; default ACL tabelle, funzioni e sequenze. Contratti e tre draft forward-only sono documentati. Tutti e tre sono stati applicati due volte in PostgreSQL 17 isolato, con postcondition, sentinel `supabase_admin` invariato e rollback.
+- Build run [41949916052](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949916052): SUCCESS. Baseline safety run [41949916059](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949916059): SUCCESS. Autenticazione reale QA e browser public smoke PASS; full APP diagnostic SKIPPED come previsto.
+- Verifiche finali read-only dopo i test: Production ledger 248 righe e QA ledger 283; default ACL live invariati rispetto allo snapshot iniziale. Nessuna migrazione applicata, nessun reset/replay, nessun merge/cutover.
+
+Limitazioni conservate nel report:
+- I payload QA-only non canonici hanno contenuto SQL preservato e classificato, ma non è possibile ricostruire l'autore/commit originario dei payload privi di provenienza Git storica.
+- Il test APP anticipato dal workflow precedente non costituisce collaudo formale; fixture sintetiche e utente temporaneo sono stati rimossi e verificati assenti. APP-01–APP-15 completi restano riservati al punto 7.
+
+## Avvio del punto 6 — 2026-11-05
+
+Il punto 6 è avviato. Ambito: confronto finale read-only tra QA e Production di schema, RLS/policy, ACL effettive e default ACL, funzioni/trigger, configurazione Data API e registri; produzione di matrice delle divergenze e gate GO/NO-GO. Nessun GRANT/REVOKE/ALTER, deploy o migrazione remota. Il punto 7 resta non avviato.
