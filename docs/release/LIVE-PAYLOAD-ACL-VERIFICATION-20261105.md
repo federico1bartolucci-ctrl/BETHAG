@@ -93,3 +93,65 @@ Commit `047948b9917b38eddfb0953cecb2939980488d08`:
 - Baseline safety run `41946929650`: SUCCESS.
 - Build run `41946929620`: SUCCESS.
 - PostgreSQL bootstrap, 24 migrazioni clean-install, 15 migrazioni tramite guarded runner, prove ACL isolate, build, browser smoke e autenticazione reale QA per amministratore/collaboratore/condomino sono terminati con successo.
+
+
+## Classificazione semantica dei 19 payload QA-only senza file canonico corrente
+
+I seguenti payload sono stati letti direttamente dal registro QA live. La classificazione descrive gli statement effettivi, non deduce il comportamento dal nome della migrazione. Non è stato trovato un file autonomo corrispondente in `supabase/migrations/`; la loro provenienza repository resta quindi **non attestata**. Non vanno copiati in blocco su Production né ricreati come migrazioni canoniche senza una decisione separata.
+
+| Versione / nome live | Effetto SQL effettivo | Classe / cautela |
+|---|---|---|
+| `20261102041805_repair_authenticated_communication_rpc_private_execute` | Sostituisce `private.reset_stale_communication_recipients` con controlli `auth.uid()` e permesso modulo Comunicazioni; restringe EXECUTE delle implementazioni private a authenticated. | Riparazione RPC/ACL; funzione successivamente ridefinita da 02200820. |
+| `20261102043152_repair_authenticated_condominium_delete_rpc_private_execute` | Revoca PUBLIC/anon e concede authenticated su `private.delete_condominium(uuid,bigint,text)`. | Riparazione ACL RPC; la definizione live è SECURITY DEFINER con search_path public, ma i riferimenti a tabelle/helper nel corpo sono qualificati. Non è una modifica introdotta da questo payload; mantenere sotto revisione di hardening. |
+| `20261102043315_persist_condominium_archive_columns` | Ridefinisce `private.save_condominium` per persistere `archived_at`, `archived_by`, `archive_reason` e rifiutare l'aggiornamento ordinario di un condominio già archiviato. | Logica lifecycle archivio; superata/rafforzata dal payload 02054253. |
+| `20261102044002_repair_condominium_archive_rpc_and_json` | Crea/ridefinisce `private.archive_condominium` e `private.restore_condominium`; aggiorna colonne strutturate, JSON e audit log; assegna/revoca EXECUTE per authenticated. | Riparazione schema-logica e audit; dipende dalle colonne archivio. |
+| `20261102044102_repair_authenticated_condominium_archive_rpc_private_execute` | Revoca PUBLIC/anon e concede authenticated sulle implementazioni private archive/restore. | Solo ACL RPC; completa 02044002. |
+| `20261102044224_repair_authenticated_invoker_private_rpc_grants` | Revoca PUBLIC/anon e concede authenticated su otto implementazioni private di registrazione portale, bootstrap admin, intake, archivio, pagamenti e codice sicurezza personale. | Riparazione ACL multi-RPC; mantenere i controlli applicativi interni delle funzioni SECURITY DEFINER. |
+| `20261102044603_revoke_public_execute_from_public_trigger_functions` | Revoca EXECUTE da PUBLIC, anon e authenticated su `normalize_zero_ownership_owner()` e `preserve_closing_condominium_member_history()`. | Hardening trigger; in QA il catalogo conferma PUBLIC/anon/authenticated assenti. Il trigger continua a funzionare senza EXECUTE del chiamante. |
+| `20261102050437_backfill_condominium_archive_metadata` | Backfill una tantum delle colonne archivio dai campi JSON legacy `archivedAt`, `archivedBy`, `archiveReason`. | Migrazione dati non da riprodurre alla cieca; il payload storico va conservato, non rieseguito. |
+| `20261102050957_revoke_service_role_maintain_from_fund_availability_view` | Revoca MAINTAIN a service_role sulla view `public.condominium_fund_availability`. | Hardening ACL view; verificare separatamente eventuali privilegi residui sulla relazione. |
+| `20261102054253_preserve_server_owned_condominium_archive_state` | Ridefinisce `private.save_condominium` affinché l'upsert ordinario preservi i tre campi archivio server-owned invece di sovrascriverli. | Correzione di integrità dati; è la definizione successiva da considerare rispetto a 02043315. |
+| `20261102054409_add_workspace_member_profile_data` | Aggiunge `workspace_members.data jsonb NOT NULL DEFAULT '{}'`. | Modifica schema additiva; la colonna è presente nel catalogo QA live. |
+| `20261102100000_repair_authenticated_accounting_rpc_private_execute` | Concede authenticated sulle implementazioni private di chiusura esercizio, carryover, generazione rate e registrazione pagamenti. | Riparazione ACL RPC contabilità; non concede PUBLIC/anon. |
+| `20261102200820_restore_secure_communication_recipient_rpc_execute` | Concede USAGE su schema private ad authenticated; ridefinisce reset stale recipients con controlli auth/modulo e restringe EXECUTE a authenticated. | Versione successiva della riparazione comunicazioni 02041805. |
+| `20261103072843_qa_align_transfer_wrapper_empty_search_path` | Imposta search_path vuoto su `public.close_condominium_member_transfer(uuid)`. | Hardening funzione wrapper di subentro; effetto circoscritto alla configurazione della funzione. |
+| `20261103193927_qa_store_incoming_coowner_profile_metadata` | Crea trigger BEFORE INSERT sui membri per validare e trasferire i metadati dei comproprietari entranti; revoca EXECUTE diretto sulla funzione trigger. | Logica dati/trigger; il trigger e la funzione SECURITY INVOKER con search_path vuoto sono presenti nel catalogo QA. |
+| `20261104122833_grant_service_role_private_resend_event_rpc` | Concede USAGE su schema private ed EXECUTE a service_role per `private.apply_resend_communication_event(...)`; revoca PUBLIC/anon/authenticated. | ACL backend webhook, circoscritta a service_role. |
+| `20261104125614_revoke_authenticated_execute_on_unused_private_workspace_staff` | Revoca authenticated da `private.is_workspace_staff(uuid)`. | Riduzione superficie RPC; non eliminare o invertire senza verificare i chiamanti. |
+| `20261104235514_fix_portal_registration_upsert_conflict_target` | Ridefinisce helper upsert portale, completamento registrazione e approvazione amministratore; esplicita il matching e il conflitto, verifica workspace/membro/condominio e restringe EXECUTE dell'helper interno. | Correzione logica registrazione/consistenza portale; payload ampio e da trattare come storia QA specifica, non come semplice GRANT. |
+| `20261105001928_align_qa_fund_availability_view_acl` | Precontrolla tipo e owner della view e assegna ad authenticated SELECT soltanto, verificando l'assenza degli altri privilegi inclusi MAINTAIN. | Hardening ACL view; il catalogo QA conferma SELECT sì e gli altri privilegi no. |
+
+### Effetti verificati nel catalogo QA live
+
+- Presenti le tre colonne strutturate archivio su `public.condominiums` e la colonna `workspace_members.data`.
+- Presente il trigger `trg_apply_incoming_transfer_member_metadata` su `public.condominium_members`.
+- Le implementazioni private archivio/registrazione rilevate hanno `SECURITY DEFINER` e search_path vuoto; la funzione trigger incoming co-owner è `SECURITY INVOKER`, search_path vuoto e senza EXECUTE diretto ai ruoli applicativi.
+- `private.upsert_portal_access_for_member` è helper interno senza EXECUTE a authenticated/anon/service_role.
+- La view `public.condominium_fund_availability` concede ad authenticated SELECT soltanto.
+- La funzione `private.delete_condominium` è SECURITY DEFINER e ha search_path public; il corpo letto usa riferimenti qualificati (`public.*`, `private.*`, `auth.*`). La configurazione è da mantenere in elenco di revisione, non va confusa con l'effetto del payload 02043152.
+
+Questa classificazione spiega gli effetti dei payload QA-only, ma non ricostruisce l'autore o il commit originario dei 19 file mancanti. La provenienza storica resta una limitazione documentale esplicita.
+
+## Rehearsal forward-only delle ACL e CI aggiornata
+
+### Default ACL tabelle
+
+Il draft `supabase/rebuild/drafts/20261105010000_reconcile_postgres_public_table_default_acl.sql` è stato provato su PostgreSQL 17 isolato. Il test ora applica il draft **due volte nella stessa transazione** e verifica le postcondition: authenticated CRUD, service_role CRUD più privilegi strutturali, nessun default anon, nessun MAINTAIN applicativo, nessun default globale applicativo e ACL sentinel di `supabase_admin` invariata. La transazione viene annullata. Esito **PASS** nel job `postgres-bootstrap` della build run [41948820926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948820926), commit `1f26698d9ed39fb1c5658999b58e9a2a7c501bef`.
+
+### EXECUTE sulle funzioni trigger in Production
+
+Una nuova lettura read-only Production conferma che entrambe le funzioni:
+- restituiscono il tipo PostgreSQL `trigger`;
+- non sono SECURITY DEFINER;
+- hanno EXECUTE PUBLIC/anon/authenticated in Production, mentre QA non lo ha;
+- mantengono EXECUTE esplicito per owner e service_role.
+
+Una funzione che restituisce `trigger` è invocabile nel contesto di un trigger, non come normale funzione RPC. La divergenza non abilita quindi una normale chiamata PostgREST, ma resta un privilegio PUBLIC non necessario. È stato preparato il draft forward-only `supabase/rebuild/drafts/20261105020000_revoke_public_execute_from_public_trigger_functions.sql`, con precontrolli sul tipo/definizione e verifica della conservazione dei privilegi owner/service_role. Il test isolato applica il draft due volte, verifica le ACL e fa rollback. **La relativa CI è in corso sul commit più recente; il draft non è stato applicato a Production o QA.**
+
+### CI e collaudo
+
+- Build run [41948820926](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948820926): **SUCCESS**, compresi PostgreSQL 17, 24 clean-install, 15 guarded migrations, draft ACL tabelle con idempotenza, RLS collaborator, build, browser public smoke e autenticazione reale QA. Il diagnostic APP è stato correttamente saltato su questo commit.
+- Baseline safety run [41948820834](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948820834): **SUCCESS**.
+- Nota di trasparenza: la build precedente [41948515607](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948515607), prima della correzione della condizione workflow, ha eseguito il vecchio script QA browser workflows. Ha prodotto PASS per APP-05, APP-06, APP-08/11 e APP-12, oltre alla navigazione per i tre ruoli. Non è considerata collaudo formale né chiusura di alcuna voce APP. Lo script ha completato il cleanup; una verifica read-only successiva, sul marker esatto del run, ha trovato zero record residui in condomini, comunicazioni, esercizi, movimenti, rate, membri, portal_access, polizze e zero utenti temporanei.
+- La condizione workflow è stata corretta: i workflow completi APP sono rinviati alla fase finale APP-01–APP-15. Il collaudo completo resta **NON ESEGUITO** e non viene anticipato.
+- Nessuna modifica remota a QA o Production; nessun merge, cutover o reset.
