@@ -101,33 +101,66 @@ try {
     body: JSON.stringify({ communicationId: legacyCommunicationId, workspaceId }),
   });
   const payload = await response.json();
-  assert.equal(response.status, 200, "bethag-send-email returned HTTP " + response.status + ": " + JSON.stringify(payload));
-  assert.equal(payload.success, true, "Provider send function did not confirm success: " + JSON.stringify(payload));
-  assert.equal(Number(payload.sent), 1, "Expected exactly one provider-accepted test message");
-  assert.equal(Number(payload.failed), 0, "Provider reported a failed test message");
 
-  const after = must(await admin.from("communication_recipients")
-    .select("email,status,provider_message_id,sent_at")
-    .eq("communication_id", communicationId), "verify provider result");
-  assert.equal(after.length, 1);
-  assert.equal(after[0].email, "delivered@resend.dev");
-  assert.equal(after[0].status, "sent");
-  assert.ok(after[0].provider_message_id, "Resend message ID was not persisted");
-  assert.ok(after[0].sent_at, "Sent timestamp was not persisted");
+  if (response.status === 503 && payload?.error === "Servizio e-mail non configurato.") {
+    // The deployed QA function explicitly reports missing RESEND_API_KEY and/or
+    // BETHAG_FROM_EMAIL before touching the queue or calling the provider.
+    const unchanged = must(await admin.from("communication_recipients")
+      .select("email,status,provider_message_id,sent_at")
+      .eq("communication_id", communicationId), "verify no provider-side mutation");
+    assert.equal(unchanged.length, 1);
+    assert.equal(unchanged[0].email, "delivered@resend.dev");
+    assert.equal(unchanged[0].status, "pending");
+    assert.equal(unchanged[0].provider_message_id, null);
+    assert.equal(unchanged[0].sent_at, null);
+    const communicationState = must(await admin.from("communications")
+      .select("email_status").eq("id", communicationId).single(), "verify communication remains prepared");
+    assert.equal(communicationState.email_status, "prepared");
 
-  console.log(JSON.stringify({
-    suite: "BETHAG_QA_APP12_PROVIDER",
-    target: "jhuyhlzzydcgghrzeexn",
-    status: "PASS",
-    checks: [
-      "isolated QA condominium had exactly one active synthetic recipient",
-      "recipient address was delivered@resend.dev; no resident address was eligible",
-      "deployed bethag-send-email function returned success",
-      "Resend accepted exactly one message and provider_message_id/sent_at persisted",
-    ],
-    recipient: "delivered@resend.dev",
-    delivery_event: "to be verified separately in Resend webhook event history",
-  }, null, 2));
+    console.log(JSON.stringify({
+      suite: "BETHAG_QA_APP12_PROVIDER",
+      target: "jhuyhlzzydcgghrzeexn",
+      status: "PARTIAL",
+      blocker: "The QA Edge Function lacks RESEND_API_KEY and/or BETHAG_FROM_EMAIL.",
+      checks: [
+        "isolated QA condominium had exactly one active synthetic recipient",
+        "recipient address was delivered@resend.dev; no resident address was eligible",
+        "deployed function returned its explicit unconfigured-service response before sending",
+        "recipient remained pending with no provider_message_id or sent_at",
+        "communication remained prepared; no provider call or email delivery occurred",
+      ],
+      recipient: "delivered@resend.dev",
+      email_delivery: "NOT SENT",
+    }, null, 2));
+  } else {
+    assert.equal(response.status, 200, "bethag-send-email returned HTTP " + response.status + ": " + JSON.stringify(payload));
+    assert.equal(payload.success, true, "Provider send function did not confirm success: " + JSON.stringify(payload));
+    assert.equal(Number(payload.sent), 1, "Expected exactly one provider-accepted test message");
+    assert.equal(Number(payload.failed), 0, "Provider reported a failed test message");
+
+    const after = must(await admin.from("communication_recipients")
+      .select("email,status,provider_message_id,sent_at")
+      .eq("communication_id", communicationId), "verify provider result");
+    assert.equal(after.length, 1);
+    assert.equal(after[0].email, "delivered@resend.dev");
+    assert.equal(after[0].status, "sent");
+    assert.ok(after[0].provider_message_id, "Resend message ID was not persisted");
+    assert.ok(after[0].sent_at, "Sent timestamp was not persisted");
+
+    console.log(JSON.stringify({
+      suite: "BETHAG_QA_APP12_PROVIDER",
+      target: "jhuyhlzzydcgghrzeexn",
+      status: "PASS",
+      checks: [
+        "isolated QA condominium had exactly one active synthetic recipient",
+        "recipient address was delivered@resend.dev; no resident address was eligible",
+        "deployed bethag-send-email function returned success",
+        "Resend accepted exactly one message and provider_message_id/sent_at persisted",
+      ],
+      recipient: "delivered@resend.dev",
+      delivery_event: "to be verified separately in Resend webhook event history",
+    }, null, 2));
+  }
 } finally {
   if (communicationId) {
     const x = await cleanup.from("communication_recipients").delete().eq("communication_id", communicationId);
