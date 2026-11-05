@@ -159,3 +159,13 @@ Pulizia:
 - Il test APP-09 finale riutilizza il fixture preesistente BETHAG_QA_APP08_11_CARRYOVER_FIXTURE e rimuove solo le righe temporanee.
 
 Il punto 7 è quindi **eseguito ma non chiuso integralmente**: APP-11 UI e APP-12 provider/webhook restano PARTIAL. Nessuna modifica Production, nessuna migrazione remota, nessun merge, deploy o cutover. Il rilascio rimane NO-GO.
+
+
+## Aggiornamento punto 7 — APP-11 chiuso, APP-12 ancora parziale — 2026-11-05
+
+Il successivo collaudo finale QA [run 41995210778](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41995210778), commit `10bf397364448fc267e6b1a095f640051e4bb18b`, è **SUCCESS**:
+- APP-11 ora PASS: errore di chiusura per rata insoluta visualizzato nella UI; trasferimento resta Confermato e cedente attivo/In chiusura, senza stato parziale.
+- APP-12: pubblicazione/ritiro e visibilità residenti PASS; webhook Svix firmati sintetici sent/delivered/bounced/complained PASS, firma invalida respinta HTTP 401 senza mutazioni. Nessuna email reale inviata; APP-12 resta PARTIAL fino a prova di consegna provider con destinatario test autorizzato.
+- APP-01–APP-11, APP-13 e APP-15 PASS. APP-14 resta PARTIAL perché Production non è ancora allineata e la configurazione Data API Production richiede verifica Dashboard.
+
+Il punto 7 resta **IN CORSO**, senza riaprire i punti 5 e 6. Non è stata eseguita alcuna modifica remota a Production.
