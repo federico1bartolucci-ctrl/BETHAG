@@ -168,7 +168,7 @@ async function main() {
     }
 
     const finalLedger = await liveLedger();
-    assert.equal(finalLedger.length, 262, "Final ledger must contain 248 historical + 16 canonical rows.");
+    assert.equal(finalLedger.length, 264, "Final ledger must contain 248 historical + 16 canonical rows.");
     const historicalVersions = new Set(snapshot.migrations.map((row) => row.version));
     comparePairs(finalLedger.filter((row) => historicalVersions.has(row.version)), snapshot.migrations, "Final historical ledger preservation");
     comparePairs(finalLedger.filter((row) => !historicalVersions.has(row.version)),
