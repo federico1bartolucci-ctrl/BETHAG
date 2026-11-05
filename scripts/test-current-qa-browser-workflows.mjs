@@ -146,6 +146,17 @@ async function cleanupFixtures() {
     const member = await cleanup.from("condominium_members").delete().eq("id", blockedUiOwnerId);
     if (member.error) throw member.error;
   }
+  if (temporaryPortalAccessId) {
+    const portal = await cleanup.from("portal_access").delete().eq("id", temporaryPortalAccessId);
+    if (portal.error) throw portal.error;
+    temporaryPortalAccessId = null;
+  }
+  if (temporaryResidentMemberId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", temporaryResidentMemberId);
+    if (member.error) throw member.error;
+    temporaryResidentMemberId = null;
+  }
+
   if (blockedUiUnitId) {
     const unit = await cleanup.from("condominium_units").delete().eq("id", blockedUiUnitId);
     if (unit.error) throw unit.error;
@@ -179,17 +190,6 @@ async function cleanupFixtures() {
   if (accountingFiscalYearId) {
     const fiscalYear = await cleanup.from("condominium_fiscal_years").delete().eq("id", accountingFiscalYearId);
     if (fiscalYear.error) throw fiscalYear.error;
-  }
-
-  if (temporaryPortalAccessId) {
-    const portal = await cleanup.from("portal_access").delete().eq("id", temporaryPortalAccessId);
-    if (portal.error) throw portal.error;
-    temporaryPortalAccessId = null;
-  }
-  if (temporaryResidentMemberId) {
-    const member = await cleanup.from("condominium_members").delete().eq("id", temporaryResidentMemberId);
-    if (member.error) throw member.error;
-    temporaryResidentMemberId = null;
   }
 
   const condos = await cleanup.from("condominiums")
