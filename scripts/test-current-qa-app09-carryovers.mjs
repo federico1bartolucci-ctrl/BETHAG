@@ -161,7 +161,7 @@ try {
   if (ids.transfer) { const x = await cleanup.from("condominium_member_transfers").delete().eq("id", ids.transfer); assert.ifError(x.error); }
   if (ids.sourceYear) { const x = await cleanup.from("condominium_fiscal_years").delete().eq("id", ids.sourceYear); assert.ifError(x.error); }
   if (ids.targetYear) { const x = await cleanup.from("condominium_fiscal_years").delete().eq("id", ids.targetYear); assert.ifError(x.error); }
-  if (ids.owner) { const x = await cleanup.from("condominium_members").delete().eq("id", ids.owner); assert.ifError(x.error); }
+  if (ids.condominium) { const x = await cleanup.from("condominium_members").delete().eq("condominium_id", ids.condominium); assert.ifError(x.error); }
   if (ids.unit) { const x = await cleanup.from("condominium_units").delete().eq("id", ids.unit); assert.ifError(x.error); }
   if (ids.condominium) { const x = await cleanup.from("condominiums").delete().eq("id", ids.condominium); assert.ifError(x.error); }
   await admin.auth.signOut();
