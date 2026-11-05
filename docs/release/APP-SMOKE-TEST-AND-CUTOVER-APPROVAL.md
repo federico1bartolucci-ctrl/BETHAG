@@ -475,3 +475,27 @@ GitHub Actions [final QA collaudo run 41995210778](https://github.com/federico1b
 - The run used only synthetic QA records and removed its temporary communication, recipient, transfer and unit fixtures. Existing QA acceptance fixtures were preserved.
 
 The current APP matrix is therefore APP-01–APP-11 PASS, APP-12 PARTIAL, APP-13 PASS, APP-14 PARTIAL/Production NO-GO and APP-15 PASS. Point 7 remains open only for the remaining APP-12 provider-delivery evidence and APP-14 Production cutover gate; no Production migration or deployment was performed by this test.
+
+
+## 27. Collaudo QA e rehearsal Production 248+19 — 2026-11-05
+
+GitHub Actions sul commit `ec19cda3734fd818e4005e9efa626b9401549df4`:
+- Final QA collaudo [run 42017349896](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349896): **SUCCESS**.
+- Build [run 42017349811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349811): **SUCCESS**.
+- Baseline safety [run 42017349826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349826): **SUCCESS**.
+
+Matrice aggiornata:
+- APP-01–APP-11, APP-13 e APP-15: **PASS**.
+- APP-12: **PARTIAL**. Pubblicazione/ritiro, visibilità residente, preparazione destinatari, autorizzazione della coda e webhook sintetici Svix firmati (sent/delivered/bounced/complained; firma invalida HTTP 401 senza mutazione) sono PASS. La chiamata alla Edge Function distribuita `bethag-send-email` sul QA restituisce HTTP 503 `Servizio e-mail non configurato`: almeno uno tra `RESEND_API_KEY` e `BETHAG_FROM_EMAIL` manca nella configurazione QA. Il destinatario di test `delivered@resend.dev` è stato preparato ma non è stata inviata alcuna email; la coda è rimasta pending e senza provider_message_id/sent_at. Il marker temporaneo è assente da tutte le tabelle di fixture controllate.
+- APP-14: **PARTIAL / Production NO-GO**. Il gate richiede il postflight ACL/schema dopo il cutover e la verifica Dashboard della Data API Production.
+- APP-15: **PASS** per navigazione per ruolo, sign-in, landing e persistenza sessione.
+
+Resend: dominio `bethag.it` verificato; l'unico webhook account-wide attivo è `https://tctcgptrsmvgajqjgnev.supabase.co/functions/v1/bethag-resend-webhook`, con eventi sent/delivered/bounced/complained. Non è stato creato un webhook QA separato perché, essendo account-wide, riceverebbe anche eventi Production. I webhook sintetici firmati hanno verificato il codice QA senza inviare email.
+
+Rehearsal migrazioni:
+- Clean install 28 file PASS.
+- Guarded runner su snapshot Production 248 righe + 19 incrementi PASS; ledger finale isolato 267 righe.
+- Rehearsal ACL forward-only, workspace_members.data, rollback subentro e permessi collaboratore PASS.
+- Nessuna migrazione applicata a QA o Production.
+
+Il punto 7 resta **IN CORSO** per APP-12 provider delivery e APP-14 Production postflight. Nessun merge, deploy o cutover eseguito.

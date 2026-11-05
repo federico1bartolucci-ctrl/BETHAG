@@ -1,0 +1,96 @@
+{
+  "artifact": "BETHAG final QA collaudo evidence — 2026-11-05",
+  "captured_date": "2026-11-05",
+  "repository": "federico1bartolucci-ctrl/BETHAG",
+  "branch": "fix/qa-view-acl-parity-20261105",
+  "reviewed_head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+  "qa_project_ref": "jhuyhlzzydcgghrzeexn",
+  "existing_qa_branch_preserved": true,
+  "workflow_runs": {
+    "final_qa_collaudo": {
+      "run_id": 42017349896,
+      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "conclusion": "success"
+    },
+    "build": {
+      "run_id": 42017349811,
+      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "conclusion": "success"
+    },
+    "baseline_safety": {
+      "run_id": 42017349826,
+      "head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+      "conclusion": "success"
+    }
+  },
+  "application_tests": {
+    "APP-01": "PASS",
+    "APP-02": "PASS",
+    "APP-03": "PASS",
+    "APP-04": "PASS",
+    "APP-05": "PASS",
+    "APP-06": "PASS",
+    "APP-07": "PASS",
+    "APP-08": "PASS",
+    "APP-09": "PASS",
+    "APP-10": "PASS",
+    "APP-11": "PASS",
+    "APP-12": {
+      "status": "PARTIAL",
+      "publication_withdrawal_resident_visibility_recipient_preparation_queue_authorization": "PASS",
+      "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
+      "invalid_signature_rejected_http_401_without_mutation": "PASS",
+      "provider_delivery": "NOT TESTED",
+      "provider_probe_http_status": 503,
+      "provider_probe_error": "Servizio e-mail non configurato.",
+      "required_qa_edge_function_secrets": [
+        "RESEND_API_KEY",
+        "BETHAG_FROM_EMAIL"
+      ],
+      "configuration_state": "At least one required secret is absent; the probe cannot distinguish which one.",
+      "test_recipient": "delivered@resend.dev",
+      "email_sent": false,
+      "recipient_queue_mutated": false,
+      "provider_message_id_persisted": false,
+      "qa_resend_webhook_endpoint_configured": false,
+      "current_resend_webhook_endpoint": "https://tctcgptrsmvgajqjgnev.supabase.co/functions/v1/bethag-resend-webhook"
+    },
+    "APP-13": "PASS",
+    "APP-14": {
+      "status": "PARTIAL",
+      "disposition": "Production post-cutover gate; Production remains NO-GO until ACL/schema/Data API postflight is verified."
+    },
+    "APP-15": "PASS"
+  },
+  "cleanup": {
+    "provider_test_marker_rows": {
+      "condominiums": 0,
+      "units": 0,
+      "members": 0,
+      "communications": 0,
+      "recipients": 0
+    },
+    "temporary_provider_fixture_removed": true,
+    "preexisting_qa_fixtures_preserved": true,
+    "two_empty_app09_attempt_fixtures_with_closed_years_preserved": true
+  },
+  "migration_rehearsal": {
+    "postgres_version": 17,
+    "clean_install_migration_files": 28,
+    "pending_canonical_cutover_migrations": 19,
+    "frozen_production_history_rows": 248,
+    "expected_postflight_ledger_rows": 267,
+    "isolated_runner_rehearsal": "PASS",
+    "acl_forward_only_drafts": [
+      "table default ACL",
+      "trigger-function PUBLIC EXECUTE",
+      "function/sequence default ACL"
+    ],
+    "workspace_member_profile_column_rehearsal": "PASS",
+    "transfer_rollback_rehearsal": "PASS",
+    "production_or_qa_migration_writes": false
+  },
+  "production_modified": false,
+  "merge_or_deploy_performed": false,
+  "conclusion": "QA application acceptance is substantially complete. APP-12 provider delivery remains PARTIAL because the deployed QA Edge Function is not configured. APP-14 remains a Production post-cutover gate."
+}

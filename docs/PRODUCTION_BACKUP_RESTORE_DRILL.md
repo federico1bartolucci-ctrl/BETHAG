@@ -80,3 +80,10 @@ The gate remains **FAIL / BLOCKED** if the restore was not actually performed, t
 ## Current disposition
 
 This runbook defines the drill; it is not evidence that a backup has been restored. Until the fields above are completed from an actual successful isolated restore, Production release and migration-history cutover remain blocked.
+
+
+## Decision record — 2026-10-27 / aggiornamento 2026-11-05
+
+L'utente ha ritenuto sufficiente, per la fase di preparazione, la visibilità dei backup fisici automatici in Dashboard e il restore locale del dump logico; ha escluso l'opzione a pagamento Supabase “Restore to a New Project” (costo mostrato: 9,68 USD/mese). Il restore logico locale ha verificato i conteggi registrati nel runbook; **non** equivale a un restore fisico provider-managed.
+
+Il 2026-11-05 l'utente ha autorizzato tutte le operazioni necessarie al rilascio. Tale autorizzazione non viene interpretata come autorizzazione a sostenere il costo ricorrente dell'opzione a pagamento né come prova tecnica di un restore fisico. Prima del cutover va registrata la disposizione esplicita del rischio residuo, senza creare un progetto di recupero a pagamento.

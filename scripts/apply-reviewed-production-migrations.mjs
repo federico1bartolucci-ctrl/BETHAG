@@ -11,6 +11,11 @@
  *   DATABASE_URL=<direct/session-pooler PostgreSQL URL with DDL privileges>
  *   BETHAG_PRODUCTION_PROJECT_REF=tctcgptrsmvgajqjgnev
  *   BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES
+ *   BETHAG_CUTOVER_PLAN_APPROVED=YES
+ *   BETHAG_QA_APP_ACCEPTANCE_COMPLETE=YES
+ *   BETHAG_QA_APP12_PROVIDER_VERIFIED=YES
+ *   BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED=YES
+ *   BETHAG_PRODUCTION_BACKUP_VERIFIED=YES OR a named/timestamped residual-risk acceptance
  *
  * Run only from a clean checkout of the reviewed branch, after approval,
  * backup-risk disposition, and application smoke tests. Never use on QA to
@@ -90,11 +95,26 @@ async function main() {
       "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
     assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
       `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
+    assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
+      "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
+    assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
+      "Blocked: QA application acceptance is not complete.");
+    assert.equal(process.env.BETHAG_QA_APP12_PROVIDER_VERIFIED, "YES",
+      "Blocked: QA email provider delivery has not been verified.");
+    assert.equal(process.env.BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED, "YES",
+      "Blocked: Production Data API exposure for provider-managed schemas has not been verified in Dashboard.");
+    const physicalRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
+    const riskAcceptedBy = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_BY ?? "").trim();
+    const riskAcceptedAt = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTED_AT_UTC ?? "").trim();
+    const riskEvidence = (process.env.BETHAG_PHYSICAL_RESTORE_RISK_ACCEPTANCE_EVIDENCE ?? "").trim();
+    const riskAccepted = riskAcceptedBy.length > 0 && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskAcceptedAt) && riskEvidence.length > 0;
+    assert.ok(physicalRestoreVerified || riskAccepted,
+      "Blocked: verify the provider physical restore or record explicit named/timestamped residual-risk acceptance.");
   }
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
-  assert.equal(manifest.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
+  assert.equal(manifest.status, "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
     "Manifest status changed; review the plan before proceeding.");
   assert.equal(manifest.live_ledger.rows, expectedLedgerCount);
   assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);

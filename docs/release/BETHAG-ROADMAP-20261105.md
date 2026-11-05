@@ -5,7 +5,7 @@
 ## Regole di esecuzione
 - Procedere in ordine, un punto alla volta; non iniziare il successivo finché quello corrente non è chiuso con evidenze verificabili.
 - Mantenere esclusivamente il branch QA esistente `bethag-launch-qa`; non crearne altri, non eliminarlo, non eseguire reset, replay o ricostruzioni distruttive.
-- Nessuna modifica a Production senza autorizzazione esplicita separata.
+- Nessuna modifica a Production prima del superamento dei gate e dell’esecuzione del cutover controllato. Autorizzazione esplicita dell’utente a tutte le operazioni di rilascio ricevuta il 2026-11-05; nessuna scrittura Production è stata ancora eseguita.
 - Conservare i dati QA e gli storici dei registri di migrazione.
 - Eseguire il collaudo APP completo APP-01–APP-15 solo nell'ultima fase prevista.
 
@@ -17,7 +17,7 @@
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
 | 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | **CHIUSO — 2026-11-05**: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only non canonici classificati e payload esatti archiviati; Production-only confrontato semanticamente col draft; divergenze ACL e tre draft forward-only testati due volte su PostgreSQL 17 isolato; CI Build e Baseline SUCCESS sul commit 79311f06. Nessuna modifica remota. |
 | 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **CHIUSO — 2026-11-05, NO-GO Production**: 48 relazioni, 103 policy, 257 indici, 305 vincoli allineati; divergenze applicative e ACL documentate nel report QA-PRODUCTION-PARITY. Branch QA FUNCTIONS_DEPLOYED/ACTIVE_HEALTHY. Nessuna scrittura remota. |
-| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — fase finale; test sintetici sequenziali con cleanup verificato. APP-12 invio reale email richiede destinatario di test autorizzato. |
+| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — APP-01–APP-11, APP-13 e APP-15 PASS; APP-12 provider delivery PARTIAL per secrets QA mancanti; APP-14 resta gate Production post-cutover. Run finale 42017349896 SUCCESS. |
 
 ## Chiusura del punto 4 — evidenze
 - Dashboard QA `bethag-launch-qa`: **Automatically expose new tables = OFF**, confermato dalla schermata aggiornata del 2026-11-05.
@@ -169,3 +169,31 @@ Il successivo collaudo finale QA [run 41995210778](https://github.com/federico1b
 - APP-01–APP-11, APP-13 e APP-15 PASS. APP-14 resta PARTIAL perché Production non è ancora allineata e la configurazione Data API Production richiede verifica Dashboard.
 
 Il punto 7 resta **IN CORSO**, senza riaprire i punti 5 e 6. Non è stata eseguita alcuna modifica remota a Production.
+
+
+## Aggiornamento punto 7 e rehearsal cutover — 2026-11-05
+
+Evidenze sul commit `ec19cda3734fd818e4005e9efa626b9401549df4`:
+- Final QA collaudo [run 42017349896](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349896): **SUCCESS** sul solo QA esistente `jhuyhlzzydcgghrzeexn`.
+- Build [run 42017349811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349811): **SUCCESS**. PostgreSQL 17 ha completato clean install delle 28 migrazioni, rehearsal del guarded runner con 19 incrementi canonici sullo snapshot Production da 248 righe (ledger atteso 267), ACL draft, colonna workspace_members.data, rollback subentro, permessi collaboratore e ledger transaction.
+- Baseline safety [run 42017349826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349826): **SUCCESS**.
+
+Matrice applicativa:
+- APP-01–APP-11: PASS.
+- APP-12: PARTIAL. Pubblicazione/ritiro, visibilità residente, preparazione destinatari, permessi di coda e test di webhook sintetici firmati PASS. La funzione email QA risponde HTTP 503 `Servizio e-mail non configurato`: manca almeno uno tra `RESEND_API_KEY` e `BETHAG_FROM_EMAIL`. Il destinatario sintetico era `delivered@resend.dev`; nessuna email è stata inviata, nessun destinatario è stato messo in coda e il marker del test risulta assente da condomini, unità, membri, comunicazioni e destinatari.
+- APP-13: PASS.
+- APP-14: PARTIAL; resta gate di postflight Production dopo il cutover e verifica Dashboard della Data API.
+- APP-15: PASS.
+
+Configurazione Resend osservata: dominio `bethag.it` verificato; webhook attivo per `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, ma l'unico endpoint attuale punta a Production. Non viene creato un secondo webhook account-wide che potrebbe ricevere anche eventi Production e confondere i due ambienti.
+
+Rehearsal migration:
+- 28/28 file clean-install e 19/19 incrementi canonici testati su PostgreSQL 17 isolato.
+- Ledger Production storico 248 righe preservato nel rehearsal; 19 righe canoniche attese, totale 267.
+- I tre draft ACL forward-only hanno superato i test isolati; nessuna migrazione è stata applicata a QA o Production.
+- Evidenza machine-readable: `supabase/rebuild/qa-final-collaudo-20261105.json`.
+
+Autorizzazione:
+- Il 2026-11-05 l'utente ha autorizzato esplicitamente tutte le operazioni necessarie al rilascio, incluse le modifiche Production quando tecnicamente richieste.
+- L'autorizzazione non elimina i gate tecnici. Il punto 7 resta IN CORSO finché APP-12 provider delivery non è verificato e APP-14 non è chiuso con il postflight Production.
+- Nessuna modifica Production, nessun merge, deploy o cutover. Il QA esistente e i fixture preesistenti sono preservati.

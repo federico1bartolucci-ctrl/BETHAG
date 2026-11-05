@@ -59,7 +59,7 @@ assert.ok(productionSet.has(freeze.live_ledger.production_only_migration.version
 
 const productionOnlySql = await readFile(root + "/production-forward-migrations/" + freeze.live_ledger.production_only_migration.file, "utf8");
 assert.equal(gitBlobSha(productionOnlySql), freeze.live_ledger.production_only_migration.git_blob_sha);
-assert.equal(freeze.status, "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION");
+assert.equal(freeze.status, "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING");
 
 const blockers = [
   "The guarded runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and would create migration-version drift.",

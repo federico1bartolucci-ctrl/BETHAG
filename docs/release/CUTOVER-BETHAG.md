@@ -177,3 +177,16 @@ Fail-closed read-only assertions are prepared in `supabase/rebuild/production-cu
 ### QA-only validation of the additional correction
 
 The new forward correction was applied only to the four non-Production environments. Supabase generated environment-specific ledger versions: develop `20261027101109` (17 rows), continuity QA `20261027101123` (19), member-transfer QA `20261027101130` (17), and migration-reconciliation QA `20261027100507` (19). Preserve these exact rows; do not rewrite them to the repository version. Read-only postchecks passed in all four for service_role private-schema USAGE and private function EXECUTE, authenticated EXECUTE retained, anon denied, and the public wrapper remaining SECURITY INVOKER. This is a permission-path test only; transfer business-path and rollback tests remain outstanding. Production was not changed.
+
+
+## Addendum 2026-11-05 — stato attuale del cutover
+
+- Production live ledger: 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`; QA esistente: 283 righe.
+- Sequenza congelata: 19 incrementi canonici, senza inserire baseline e senza riscrivere le 248 righe storiche.
+- Rehearsal PostgreSQL 17 isolato [run 42017349811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349811): **PASS**. Clean install 28 migrazioni; guarded runner 19 incrementi; ledger finale isolato 267; draft ACL, colonna workspace_members.data, rollback subentro e permessi collaboratore PASS.
+- Final QA [run 42017349896](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349896): **SUCCESS**, ma APP-12 provider delivery resta PARTIAL per configurazione Edge Function QA mancante; APP-14 resta gate post-cutover.
+- L'utente ha autorizzato il 2026-11-05 tutte le operazioni necessarie al rilascio, incluse modifiche Production quando richieste. Questa autorizzazione non sostituisce i gate tecnici, il piano operativo e la verifica postflight.
+- Il restore logico locale è stato verificato; il restore fisico provider-managed non è stato eseguito. La precedente opzione Supabase “Restore to a New Project” da 9,68 USD/mese era stata esclusa. Non creare un progetto di recupero a pagamento; il rischio residuo deve essere esplicitamente disposto prima del cutover.
+- La configurazione Data API Production per lo schema provider-managed `supabase_functions` non è ancora verificata manualmente.
+- Il runner richiede un `DATABASE_URL` PostgreSQL diretto e il set completo dei gate; `supabase migration apply_migration` non è un sostituto perché non preserva la sequenza di versioni canoniche.
+- Nessuna migrazione Production applicata, nessuna scrittura ledger, nessun merge/deploy/cutover. Il gate Production resta **NO-GO** fino alla chiusura dei residui.

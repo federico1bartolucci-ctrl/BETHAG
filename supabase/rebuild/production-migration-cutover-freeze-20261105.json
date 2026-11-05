@@ -1,8 +1,8 @@
 {
-  "artifact": "BETHAG Production migration cutover freeze — 248-row live history, sixteen pending canonical increments",
+  "artifact": "BETHAG Production migration cutover freeze — 248-row live history, nineteen pending canonical increments",
   "captured_date": "2026-11-05",
-  "status": "FROZEN_FOR_REVIEW_NOT_AUTHORIZED_FOR_PRODUCTION",
-  "reviewed_source_commit": "PENDING_FINAL_REVIEW_COMMIT",
+  "status": "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
+  "reviewed_source_commit": "ec19cda3734fd818e4005e9efa626b9401549df4",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
@@ -462,29 +462,36 @@
   },
   "critical_execution_constraint": {
     "observed": "The previous 247-row cutover freeze is historical. Current Production contains 248 rows, including the already-applied Production-only ACL migration 20261104222229. The new runner and rehearsal are pinned to this exact 248-row snapshot.",
-    "rule": "Do not use the 247-row runner against current Production. Use only the superseding 248-row guarded runner after the 248+19 PostgreSQL 17 rehearsal, backup-risk disposition and application smoke evidence.",
-    "status": "REHEARSAL_REQUIRED_PRODUCTION_NOT_YET_AUTHORIZED"
+    "rule": "Do not use the historical 247-row runner. Use only the superseding 248-row/19-increment guarded runner after QA APP acceptance, QA provider configuration, backup-risk disposition, Production Data API exposure verification, direct DATABASE_URL availability and exact cutover-plan approval.",
+    "status": "REHEARSAL_PASSED_USER_AUTHORIZED_RELEASE_GATES_PENDING"
   },
   "no_go_gates": [
-    "Reconfirm immediately before cutover that the 28 October provider backup/restore proof remains valid for the current Production project and capture the latest backup identifier/retention window.",
-    "Production-only migration 20261104222229 must be preserved as part of the 248-row snapshot and replayed only in isolated rehearsal.",
-    "The nineteen pending canonical migrations must pass the new ordered PostgreSQL 17 rehearsal against the exact 248-row snapshot plus the already-applied Production-only ACL migration.",
-    "Production Data API exposure configuration for supabase_functions must be verified in Dashboard; do not normalize provider-owned grants.",
-    "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and is not an acceptable substitute for this canonical cutover.",
-    "Production function, schema, ACL and default privilege postflight must pass after cutover.",
-    "No Production DDL or ledger writes are authorized by this manifest alone."
+    "QA APP-12 provider delivery is not verified: the deployed QA Edge Function returns HTTP 503 because RESEND_API_KEY and/or BETHAG_FROM_EMAIL is missing; configure QA secrets and rerun with delivered@resend.dev. No email was sent in the current test.",
+    "Production Data API exposure configuration for provider-managed schema supabase_functions must be verified in the Supabase Dashboard; do not normalize provider-owned grants.",
+    "The scheduled physical backup was visible and a local logical-dump restore was verified, but a provider-managed physical restore to a new project was not executed. The user previously declined the $9.68/month paid Restore to a New Project route. Preserve that decision; record explicit residual-risk disposition before cutover.",
+    "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges. Supabase MCP apply_migration generates server-side timestamps and is not an acceptable substitute.",
+    "The exact cutover plan still needs a pinned reviewed commit, maintenance window, communication plan, rollback triggers and responsible operator.",
+    "Production function/schema/ACL/default-privilege postflight must pass after the guarded cutover.",
+    "No Production DDL or ledger writes until all remaining gates are satisfied and the guarded cutover is explicitly started."
   ],
-  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrite or deletes. The 248+19 ordered PostgreSQL 17 rehearsal is isolated CI only. The 28 October backup/restore proof must be reconfirmed against current retention before cutover. No Production DDL or ledger writes have been performed; this manifest is not an execution authorization.",
+  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrites or deletes. The 248+19 ordered PostgreSQL 17 rehearsal passed in isolated CI. The user authorized release operations on 2026-11-05; this technical freeze does not bypass remaining gates. No Production DDL or ledger writes have been performed.",
   "rehearsal_evidence": {
-    "status": "PENDING_248_ROW_PLUS_19_REHEARSAL",
+    "status": "PASS",
     "date": "2026-11-05",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "historical_rows": 248,
     "production_only_migration_replayed": "20261104222229_reconcile_production_acl_least_privilege.sql",
     "canonical_rows_expected": 19,
     "expected_final_ledger_rows": 267,
+    "clean_install_migration_files": 28,
+    "github_actions_run_id": 42017349811,
+    "github_actions_head_sha": "ec19cda3734fd818e4005e9efa626b9401549df4",
+    "clean_install_rehearsal": "PASS",
+    "guarded_canonical_runner_rehearsal": "PASS",
+    "forward_only_acl_drafts": "PASS",
     "production_ddl_or_ledger_mutations": false,
-    "production_execution_authorized": false
+    "production_execution_authorized": true,
+    "production_execution_performed": false
   },
   "clean_install": {
     "migration_file_count": 28,
@@ -523,5 +530,12 @@
       "20261103070901_grant_service_role_private_resend_event_rpc.sql"
     ],
     "ordering": "All 28 deployable migration files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 248-row/19-increment runner."
+  },
+  "user_authorization": {
+    "status": "RECEIVED",
+    "date": "2026-11-05",
+    "scope": "The user explicitly authorized all operations necessary for release, including Production changes where technically required.",
+    "source": "Explicit user instruction in the current project conversation.",
+    "limitations": "Authorization does not bypass technical release gates. The prior decision against the paid Restore to a New Project route remains in force; no additional paid recovery project is authorized by this record."
   }
 }
