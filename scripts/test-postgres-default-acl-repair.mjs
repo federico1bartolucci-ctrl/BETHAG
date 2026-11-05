@@ -33,5 +33,5 @@ DO $v$ DECLARE a text[]; s text[]; n int; m int; g int; BEGIN
  IF g<>0 THEN RAISE EXCEPTION 'unexpected global postgres table defaults: %',g; END IF;
  IF (SELECT count(*) FROM admin_acl_before)<>(SELECT count(*) FROM pg_default_acl d WHERE d.defaclrole='supabase_admin'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND d.defaclacl::text=(SELECT acl FROM admin_acl_before)) THEN RAISE EXCEPTION 'supabase_admin ACL changed'; END IF;
 END $v$; ROLLBACK;`;
-execFileSync('psql',['-X','--no-psqlrc','--dbname',url,'-v','ON_ERROR_STOP=1','-c',setup+'\n'+migration+'\n'+verify],{stdio:'inherit'});
+// Apply twice in the same isolated transaction: the second execution proves idempotency.\nexecFileSync('psql',['-X','--no-psqlrc','--dbname',url,'-v','ON_ERROR_STOP=1','-c',setup+'\n'+migration+'\n'+migration+'\n'+verify],{stdio:'inherit'});
 console.log(JSON.stringify({status:'PASS',postgres:17,scenario:'historical grant then observed ACL drift',authenticated:['SELECT','INSERT','UPDATE','DELETE'],service_role:['SELECT','INSERT','UPDATE','DELETE','REFERENCES','TRIGGER','TRUNCATE'],anon:'none',maintain:'none',supabase_admin:'unchanged',transaction:'rolled back',remote_databases_touched:false},null,2));
