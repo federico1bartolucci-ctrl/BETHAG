@@ -18,24 +18,24 @@ const expectedCleanInstallFiles = [
   ...manifest.clean_install.pending_canonical_increments,
   ...manifest.clean_install.exact_production_forward_files,
 ].sort();
-assert.equal(cleanInstallFiles.length, 25, "Clean-install migration directory must contain exactly 25 reviewed SQL files.");
+assert.equal(cleanInstallFiles.length, 28, "Clean-install migration directory must contain exactly 28 reviewed SQL files.");
 assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen 25-file clean-install sequence.");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
 const sha = (text) => {
   const bytes = Buffer.from(text, "utf8");
   return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
 };
-assert.equal(manifest.sequence.length, 16, "Superseding cutover must contain exactly sixteen incremental migrations.");
+assert.equal(manifest.sequence.length, 19, "Superseding cutover must contain exactly nineteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 248 OR ledger_head <> '20261104222229'/, "Preflight must verify the current 248-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
-assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must expect all sixteen canonical migrations and the correct ledger head.");
+assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must expect all sixteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /private\.upsert_portal_access_for_member/, "Postflight must verify portal registration helper wiring and ACLs.");
-assert.match(postflight, /canonical_count <> 16 THEN/, "Postflight must verify all sixteen canonical migration records.");
+assert.match(postflight, /canonical_count <> 19 THEN/, "Postflight must verify all sixteen canonical migration records.");
 assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the sixteen canonical increments.");
 assert.equal(manifest.live_ledger.rows, 248);
-assert.equal(manifest.expected_postflight.ledger_rows, 264);
+assert.equal(manifest.expected_postflight.ledger_rows, 267);
 assert.equal(manifest.expected_postflight.workspace_members_data_column_present, true);
 assert.equal(manifest.expected_postflight.save_condominium_archive_state_preserved, true);
 assert.equal(manifest.expected_postflight.portal_registration_upsert_helper, true);
