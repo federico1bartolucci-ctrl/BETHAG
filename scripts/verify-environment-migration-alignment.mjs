@@ -93,6 +93,13 @@ assert.ok(
   "The retained QA project must contain every canonical increment or its explicitly verified historical identity alias.",
 );
 assert.ok(qaIdentityAliases.every((alias) => exact(qa, alias.observed)), "The two preserved QA identity aliases must remain present.");
+assert.equal(qa.verified_migration_identity_aliases.length, 2, "Both QA migration aliases need live catalog effect evidence.");
+assert.ok(qa.verified_migration_identity_aliases.every((entry) => entry.status === "EFFECT_VERIFIED" && typeof entry.evidence === "string" && entry.evidence.length > 40), "QA migration aliases must retain their catalog verification evidence.");
+assert.deepEqual(
+  qa.verified_migration_identity_aliases.map((entry) => ({ canonical: entry.canonical, observed: entry.observed })),
+  qaIdentityAliases,
+  "QA alias evidence must match the two approved canonical-to-observed identity mappings.",
+);
 
 const productionPending = files
   .filter(({ version, name }) => !exact(production, { version, name }))
