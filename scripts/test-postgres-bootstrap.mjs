@@ -28,6 +28,7 @@ const incrementalMigrations = [
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
   "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+  "20261105050000_reconcile_portal_registration_upsert.sql",
 ];
 const productionForwardMigrations = [
   "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
