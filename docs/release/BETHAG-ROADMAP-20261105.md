@@ -1,6 +1,6 @@
 # BETHAG — scaletta operativa aggiornata
 **Aggiornata:** 2026-11-05  
-**Riferimento:** branch `fix/qa-view-acl-parity-20261105`, commit di base `1612b46b727ebe018e545ab989df71d6df2957a6`.
+**Riferimento:** branch `fix/qa-view-acl-parity-20261105`, ultimo avanzamento documentale `4271e96f2be8b77a4ad77c27014aeda35f6316b2` (successivo alla CI verde `e5a31109178f2b2e18c214dc5164fcb3f43d3fed`).
 
 ## Regole di esecuzione
 - Procedere in ordine, un punto alla volta; non iniziare il successivo finché quello corrente non è chiuso con evidenze verificabili.
@@ -15,7 +15,7 @@
 |---|---|---|
 | 1–3 | Fasi precedenti della scaletta concordata | CHIUSI secondo lo storico di progetto; non riaperti da questo aggiornamento. |
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
-| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | DA AVVIARE |
+| 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | IN CORSO — snapshot e classificazione corretti; payload storici e ACL/default ACL ancora da verificare |
 | 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | DA PROGRAMMARE DOPO IL PUNTO 5 |
 | 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | DA ESEGUIRE PER ULTIMO |
 
