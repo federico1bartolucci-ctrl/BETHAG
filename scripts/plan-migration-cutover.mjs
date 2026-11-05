@@ -33,7 +33,7 @@ const report = {
     payload_equivalence: "247/247 common payloads are byte-identical; 17 QA-only migrations with current canonical files are byte-identical; 19 QA-only payloads without a current canonical file are classified and preserved; the Production-only 20261104222229 ACL payload is semantically equivalent to its reviewed draft."
   },
   release_gates: [
-    "Complete the exact 248-row Production snapshot plus nineteen pending canonical migrations PostgreSQL 17 rehearsal, including replay of the already-applied Production-only ACL payload in isolation.",
+    "Complete the exact 248-row Production snapshot plus nineteen pending canonical migrations PostgreSQL 17 rehearsal, including the three already-recorded Production-forward payloads and replay of the already-applied Production-only ACL payload in isolation.",
     "Reconcile live catalog, explicit PUBLIC EXECUTE ACLs and global/schema default privileges.",
     "Verify Data API exposure settings separately in Production; QA screenshots do not prove Production configuration.",
     "Verified isolated backup restore: retain actual provider-backed restore evidence or document an explicit named residual-risk acceptance; do not claim an unperformed physical restore.",
@@ -43,7 +43,7 @@ const report = {
   execution_plan: [
     "Keep Production and the single existing QA environment unchanged during reconciliation.",
     "Do not replay historical migration payloads or copy environment-specific ledger rows.",
-    "Promote only the nineteen reviewed canonical forward migrations through the version-preserving guarded runner after the 248+16 rehearsal and all release gates; do not use Supabase apply_migration because it generates server timestamps and would cause version drift."
+    "Promote only the nineteen reviewed canonical forward migrations through the version-preserving guarded runner after the 248+19 rehearsal and all release gates; do not use Supabase apply_migration because it generates server timestamps and would cause version drift."
   ],
   action: "PLAN_ONLY_NO_COMMANDS"
 };
@@ -65,7 +65,7 @@ if (process.argv.includes("--print-review-checklist")) {
     "Verified isolated backup restore: require actual restore evidence or documented residual-risk acceptance.",
     "6. Preserve the existing QA data; APP-01–APP-13 and APP-15 passed, while APP-14 awaits the Production cutover gate.",
     "7. Obtain written approval for exact commit, SQL hashes, maintenance window and rollback criteria.",
-    "8. Use only the 248-row/16-increment guarded runner with a direct PostgreSQL DATABASE_URL; stop if the direct connection is unavailable.",
+    "8. Use only the 248-row/19-increment guarded runner with a direct PostgreSQL DATABASE_URL; stop if the direct connection is unavailable.",
     "9. Stop if any live ledger, catalog, ACL, backup or source mapping differs from reviewed evidence."
   ].join("\n"));
 }
