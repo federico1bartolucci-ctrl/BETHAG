@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: bethag-final-qa-collaudo
-  cancel-in-progress: true
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
 
 jobs:
   final-qa-collaudo:
@@ -83,12 +83,18 @@ jobs:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app09-carryovers.mjs
 
-      - name: APP-12 — publication and recipient preparation without email delivery
+      - name: Setup Deno for signed webhook acceptance
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: APP-12 — publication, recipient preparation and signed webhook events
         env:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
           BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
-        run: node scripts/test-current-qa-app12.mjs
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app12.mjs && node scripts/test-current-qa-resend-webhook.mjs
 
       - name: APP-05/06/08/11/12 — authenticated browser UI workflows
         env:
