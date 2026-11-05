@@ -3,9 +3,8 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 
 const root = "supabase/rebuild";
-const [live, reconciliation, freeze, snapshot] = await Promise.all([
+const [live, freeze, snapshot] = await Promise.all([
   readFile(root + "/live-migration-ledgers-20261105.json", "utf8").then(JSON.parse),
-  readFile(root + "/migration-history-reconciliation-20261105.json", "utf8").then(JSON.parse),
   readFile(root + "/production-migration-cutover-freeze-20261105.json", "utf8").then(JSON.parse),
   readFile(root + "/production-ledger-20261105.json", "utf8").then(JSON.parse),
 ]);
@@ -37,11 +36,9 @@ assert.deepEqual(live.qa.latest, { version: "20261105001928", name: "align_qa_fu
 assert.equal(common.length, 247);
 assert.deepEqual(productionOnly, ["20261104222229|reconcile_production_acl_least_privilege"]);
 assert.equal(qaOnly.length, 36);
-assert.equal(reconciliation.production.ledger_count, 248);
-assert.equal(reconciliation.qa.ledger_count, 283);
-assert.equal(reconciliation.common_exact_pairs, 247);
-assert.equal(reconciliation.production_only_count, 1);
-assert.equal(reconciliation.qa_only_count, 36);
+assert.equal(live.comparison.common_exact_pairs, 247);
+assert.equal(live.comparison.production_only_count, 1);
+assert.equal(live.comparison.qa_only_count, 36);
 
 assert.equal(snapshot.count, 248);
 assert.deepEqual(snapshot.latest, live.production.latest);
