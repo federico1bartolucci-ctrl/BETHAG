@@ -28,12 +28,12 @@ const sha = (text) => {
 assert.equal(manifest.sequence.length, 19, "Superseding cutover must contain exactly nineteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 248 OR ledger_head <> '20261104222229'/, "Preflight must verify the current 248-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
-assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must expect all sixteen canonical migrations and the correct ledger head.");
+assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must expect all nineteen canonical migrations and the correct ledger head.");
 assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /private\.upsert_portal_access_for_member/, "Postflight must verify portal registration helper wiring and ACLs.");
-assert.match(postflight, /canonical_count <> 19 THEN/, "Postflight must verify all sixteen canonical migration records.");
-assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the sixteen canonical increments.");
+assert.match(postflight, /canonical_count <> 19 THEN/, "Postflight must verify all nineteen canonical migration records.");
+assert.match(postflight, /ledger_count <> 267 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the sixteen canonical increments.");
 assert.equal(manifest.live_ledger.rows, 248);
 assert.equal(manifest.expected_postflight.ledger_rows, 267);
 assert.equal(manifest.expected_postflight.workspace_members_data_column_present, true);
