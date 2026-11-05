@@ -156,3 +156,19 @@ Durante questa verifica:
 - nessuna migrazione applicata;
 - QA esistente `bethag-launch-qa` mantenuto, nessun branch aggiuntivo creato;
 - APP-01–APP-15 non avviato in questa fase.
+
+
+## 9. QA branch provider status and additive column rehearsal
+
+Supabase branch metadata read on 2026-11-05:
+- `bethag-launch-qa`: `FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY`.
+- `main`: `FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY`.
+- No additional QA branch exists; no branch was created or deleted.
+
+The additive draft for `workspace_members.data` was tested on isolated PostgreSQL 17 with an old-schema fixture containing an existing collaborator row. The draft was applied twice; existing row retained and received `{}`, new rows received the same default, the column was verified JSONB NOT NULL, and the transaction rolled back. Build run [41950916265](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41950916265) and baseline safety run [41950916285](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41950916285) both **SUCCESS** on commit `19d951c936023899fb1b2564fc20a4ff0becc5be`.
+
+## 10. Decisione finale punto 6
+
+Il punto 6 è completato come verifica e preparazione dei gate con esito **NO-GO Production**. La decisione è basata su divergenze effettive e riproducibili, non su un generico mancato allineamento dei registri. Le correzioni sono state predisposte o individuate come migrazioni forward-only, ma nessuna è stata applicata agli ambienti remoti.
+
+La verifica manuale della Dashboard Production per `Automatically expose new tables` resta un gate non attestato; il valore QA è OFF. Anche se la verifica manuale risultasse OFF, i blocker applicativi e di autorizzazione sopra elencati manterrebbero Production NO-GO.
