@@ -155,3 +155,37 @@ Una funzione che restituisce `trigger` è invocabile nel contesto di un trigger,
 - Nota di trasparenza: la build precedente [41948515607](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41948515607), prima della correzione della condizione workflow, ha eseguito il vecchio script QA browser workflows. Ha prodotto PASS per APP-05, APP-06, APP-08/11 e APP-12, oltre alla navigazione per i tre ruoli. Non è considerata collaudo formale né chiusura di alcuna voce APP. Lo script ha completato il cleanup; una verifica read-only successiva, sul marker esatto del run, ha trovato zero record residui in condomini, comunicazioni, esercizi, movimenti, rate, membri, portal_access, polizze e zero utenti temporanei.
 - La condizione workflow è stata corretta: i workflow completi APP sono rinviati alla fase finale APP-01–APP-15. Il collaudo completo resta **NON ESEGUITO** e non viene anticipato.
 - Nessuna modifica remota a QA o Production; nessun merge, cutover o reset.
+
+
+## Recupero delle sorgenti QA-only e snapshot payload esatti — 2026-11-05
+
+La prima ricerca limitata a `supabase/migrations/` non aveva rilevato gli archivi di ricostruzione. La scansione completa dell'albero repository ha individuato **18 file candidati** in `supabase/rebuild/qa-only-migrations/`, `qa-recovered-migrations/` e `qa-only/` per 18 dei 19 payload QA-only non canonici. Il confronto diretto con il ledger QA live ha dato:
+- **7/18** file byte-identici al payload live;
+- **9/18** file semanticamente equivalenti dopo aver ignorato commenti/formatting; uno di questi presenta solo un diverso ordine di REVOKE/GRANT su funzioni distinte e uno differisce soltanto nel testo dell'errore dell'assertion;
+- **2/18** candidati con differenze sostanziali, da non usare come fonte eseguibile del payload live:
+  - `20261102043152_repair_authenticated_condominium_delete_rpc_private_execute.sql` nell'archivio concede EXECUTE anche a `service_role`, mentre il ledger live concede soltanto ad `authenticated`;
+  - `20261102050437_backfill_condominium_archive_metadata.sql` nell'archivio usa una regex con backslash duplicati; il payload live usa la regex con singolo backslash. Il file alternativo `20261102120000_backfill_condominium_archive_metadata.sql` ha invece SQL semanticamente identico al payload live di 02050437.
+- Per `20261104235514_fix_portal_registration_upsert_conflict_target` non è stato trovato un file candidato precedente nel repository.
+
+Per evitare ulteriori ambiguità, è stato acquisito un **snapshot forense esatto di tutti i 19 payload** dal registro live QA in `supabase/rebuild/qa-live-payloads-20261105.json`, conservando le versioni, i nomi e gli array di statement originali. Il file è esplicitamente marcato come prova archivistica, non canonica e non rieseguibile. Questo recupera il contenuto SQL esatto, ma non ricostruisce l'autore o il commit originario dei payload mancanti. I file candidati storici restano conservati senza sovrascritture.
+
+## Contratto default ACL funzioni/sequenze e test isolato
+
+È stato definito il criterio least-privilege per gli oggetti futuri creati da `postgres` in `public`:
+- funzioni: default owner-only; EXECUTE a ruoli applicativi solo con GRANT esplicito per singola funzione;
+- sequenze: default owner-only; privilegi espliciti per singola sequenza quando necessari;
+- nessun default globale per PUBLIC/anon/authenticated/service_role; nessuna modifica ai default Supabase-managed di `supabase_admin`.
+
+La scelta è motivata anche dal catalogo live: non esistono sequenze nello schema public né in QA né in Production. Il draft `supabase/rebuild/drafts/20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql` rimuove soltanto i default per le future funzioni/sequenze postgres-owned nello schema public; non modifica oggetti esistenti o grant espliciti.
+
+Test isolato PostgreSQL 17: il draft è stato applicato due volte nella stessa transazione; i default app-role sono risultati assenti, i sentinel di `supabase_admin` invariati e il rollback è riuscito. Esito **PASS** nella build run [41949423856](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949423856).
+
+## CI completa dei tre draft ACL
+
+Sul commit `ad0688f89d5bec973bf2bb097d9e53822d68d1da`:
+- Build run [41949423856](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949423856): **SUCCESS**.
+- Baseline safety run [41949423874](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41949423874): **SUCCESS**.
+- Rehearsal PostgreSQL 17 per default ACL tabelle, EXECUTE delle due funzioni trigger e default ACL funzioni/sequenze: **tutti PASS**, ciascun draft applicato due volte e rollback.
+- Clean-install 24 migrazioni, guarded runner 15 migrazioni, Production ACL draft, RLS collaborator, build, browser public smoke e autenticazione reale QA: **PASS**.
+- Il diagnostic APP completo è stato saltato, come previsto dalla condizione workflow corretta.
+- Nessun draft è stato applicato su QA o Production.
