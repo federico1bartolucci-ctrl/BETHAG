@@ -121,7 +121,7 @@ try {
     // The deployed QA function explicitly reports missing RESEND_API_KEY and/or
     // BETHAG_FROM_EMAIL before touching the queue or calling the provider.
     const unchanged = must(await admin.from("communication_recipients")
-      .select("email,status,provider_message_id,sent_at")
+      .select("id,email,status,provider_message_id,sent_at")
       .eq("communication_id", communicationId), "verify no provider-side mutation");
     assert.equal(unchanged.length, 1);
     assert.equal(unchanged[0].email, "delivered@resend.dev");
