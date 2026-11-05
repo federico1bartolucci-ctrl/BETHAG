@@ -64,6 +64,7 @@ try {
     notes: marker,
   }).select("id").single(), "source fiscal year");
   ids.sourceYear = source.id;
+  must(await admin.rpc("close_condominium_fiscal_year", { p_workspace_id: workspace.id, p_fiscal_year_id: ids.sourceYear }), "close source fiscal year through application RPC");
 
   const target = must(await admin.from("condominium_fiscal_years").insert({
     workspace_id: workspace.id,
