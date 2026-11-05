@@ -77,6 +77,15 @@ try {
   }).select("id").single(), "target fiscal year");
   ids.targetYear = target.id;
 
+  // Close the source year through the supported accounting procedure; direct
+  // insertion of a closed fiscal year is intentionally rejected by the app.
+  const closedSource = await admin.rpc("close_fiscal_year_and_generate_carryovers", {
+    p_workspace_id: workspace.id,
+    p_condominium_id: ids.condominium,
+    p_source_fiscal_year_id: ids.sourceYear,
+  });
+  assert.ifError(closedSource.error);
+
   const incomingEmail = "incoming-app09-" + Date.now() + "@example.com";
   ids.transfer = must(await admin.rpc("confirm_condominium_member_transfer", {
     p_unit_id: ids.unit,
