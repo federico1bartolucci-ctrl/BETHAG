@@ -40,6 +40,13 @@ jobs:
       - name: Test communication send authorization and publication guards
         run: npm run test:communication-guards
 
+      - name: Inspect Production backup inventory before release (read-only)
+        if: github.head_ref == 'fix/qa-view-acl-parity-20261105' && secrets.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BETHAG_PRODUCTION_PROJECT_REF: tctcgptrsmvgajqjgnev
+        run: node scripts/list-supabase-backups.mjs
+
       - name: Build
         env:
           VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
