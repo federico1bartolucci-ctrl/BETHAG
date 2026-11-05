@@ -23,10 +23,10 @@ assert.deepEqual(production.at(-1), { version: "20261104222229", name: "reconcil
 assert.deepEqual(qa.at(-1), { version: "20261105001928", name: "align_qa_fund_availability_view_acl" });
 assert.equal(productionOnly.length, 1);
 assert.deepEqual(productionOnly[0], { version: "20261104222229", name: "reconcile_production_acl_least_privilege" });
-assert.equal(qaOnly.length, 35);
+assert.equal(qaOnly.length, 36);
 assert.equal(live.comparison.common_exact_pairs, 247);
 assert.equal(live.comparison.production_only_count, 1);
-assert.equal(live.comparison.qa_only_count, 35);
+assert.equal(live.comparison.qa_only_count, 36);
 assert.deepEqual(productionOnly, live.comparison.production_only);
 assert.deepEqual(qaOnly, live.comparison.qa_only);
 assert.equal(canonicalFiles.length, 24, "Canonical migration chain unexpectedly changed; re-review snapshot before continuing.");
