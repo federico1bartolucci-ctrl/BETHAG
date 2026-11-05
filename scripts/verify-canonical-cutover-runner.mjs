@@ -32,7 +32,7 @@ assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'
 assert.match(postflight, /'20261104130000','reconcile_qa_security_and_coowner_rpcs'/, "Postflight must verify the final ACL/co-owner migration identity.");
 assert.match(postflight, /'20261102100200','preserve_server_owned_condominium_archive_state'/, "Postflight must verify the archive-state migration identity.");
 assert.match(postflight, /canonical_count <> 16 THEN/, "Postflight must verify all fifteen canonical migration records.");
-assert.match(postflight, /ledger_count <> 262 OR ledger_head <> '20261104130000'/, "Postflight must retain the latest Production forward version while adding older canonical versions.");
+assert.match(postflight, /ledger_count <> 264 OR ledger_head <> '20261105050000'/, "Postflight must retain the latest Production forward version while adding the sixteen canonical increments.");
 assert.equal(manifest.live_ledger.rows, 248);
 assert.equal(manifest.expected_postflight.ledger_rows, 264);
 assert.equal(manifest.expected_postflight.workspace_members_data_column_present, true);
