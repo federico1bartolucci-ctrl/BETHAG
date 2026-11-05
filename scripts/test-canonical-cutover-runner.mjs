@@ -69,6 +69,7 @@ const bootstrapSql = [
     const literal = role.replace(/'/g, "''");
     return "DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = " + q(literal) + ") THEN CREATE ROLE \"" + identifier + "\" NOLOGIN; END IF; END $role$;";
   }),
+  "ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT MAINTAIN ON TABLES TO anon, authenticated, service_role;",
 ].join("\n");
 
 const existingPublicTables = Number(await psql(["-At", "-c",
@@ -132,6 +133,9 @@ assert.equal(gitBlobSha(productionOnlySql), productionOnly.git_blob_sha,
 console.log("Replaying already-applied Production-only migration (historical ledger row remains in the 248-row snapshot): " + productionOnly.file);
 await psql(["-f", "supabase/rebuild/production-forward-migrations/" + productionOnly.file]);
 
+console.log("Running read-only 248-row Production preflight against the reconstructed isolated schema...");
+await psql(["-f", "supabase/rebuild/production-cutover-preflight-20261105.sql"]);
+
 const runner = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
   env: {...process.env, BETHAG_CUTOVER_REHEARSAL:"YES"},
   stdio:["ignore","pipe","pipe"]
@@ -145,6 +149,9 @@ const code = await new Promise((resolve,reject) => {
 });
 if (code !== 0) throw new Error(`Canonical runner rehearsal failed (exit ${code}).\n${out}\n${err}`);
 console.log(out);
+
+console.log("Running read-only 264-row Production postflight against the reconstructed isolated schema...");
+await psql(["-f", "supabase/rebuild/production-cutover-postflight-20261105.sql"]);
 
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
