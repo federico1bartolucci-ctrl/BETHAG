@@ -70,9 +70,9 @@ jobs:
           curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-qa-auth-preview.log; exit 1; }
           node scripts/test-browser-current-qa-auth.mjs
 
-      - name: Run authenticated QA edit/archive diagnostic
-        # Full authenticated APP workflows are deferred to the final APP-01..APP-15 collaudo phase.
-        if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102' || github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
+      - name: Run final APP-01..APP-15 QA collaudo (sequential)
+        # Runs only when the explicit final-collaudo marker is present on this branch.
+        if: github.head_ref == 'fix/qa-view-acl-parity-20261105' && hashFiles('docs/release/APP-COLLAUDO-REQUESTED-20261105.md') != ''
         env:
           BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
           BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
@@ -81,17 +81,15 @@ jobs:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-final-collaudo-preview.log 2>&1 &
           PREVIEW_PID=$!
           trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 60); do
             if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
             sleep 1
           done
-          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-preview.log; exit 1; }
-          node scripts/test-current-qa-browser-workflows.mjs
-          node scripts/test-current-qa-navigation.mjs
-          node scripts/test-browser-current-qa-auth.mjs
+          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-final-collaudo-preview.log; exit 1; }
+          node scripts/run-final-app-collaudo.mjs
 
   postgres-bootstrap:
     runs-on: ubuntu-latest
