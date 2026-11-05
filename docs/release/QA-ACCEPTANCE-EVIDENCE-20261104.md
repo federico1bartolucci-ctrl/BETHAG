@@ -115,6 +115,12 @@ To preserve one QA environment and avoid requiring a direct PostgreSQL connectio
 - Repository migration filename, canonical cutover manifest, preflight/postflight SQL and migration verification scripts were aligned to the exact version/name recorded by the existing QA project. The SQL body is unchanged.
 - Production remains untouched. No Production migration, merge, deployment or cutover was performed.
 
-The earlier isolated PostgreSQL 17 CI rehearsal passed all 15 canonical migrations. Because the repository identity has now been aligned to the actual QA-generated version, a fresh CI run is required to revalidate the renamed migration inventory and cutover scripts.
+The retained QA ledger also contains two earlier canonical effects under historical version identities. They have been preserved, not rewritten:
+- canonical `20261102100100_add_workspace_member_profile_data` is represented by QA row `20261102054409_add_workspace_member_profile_data`; live catalog confirms `workspace_members.data` is `jsonb NOT NULL DEFAULT '{}'`.
+- canonical `20261102100200_preserve_server_owned_condominium_archive_state` is represented by QA row `20261102054253_preserve_server_owned_condominium_archive_state`; live function inspection confirms `private.save_condominium` retains existing archive metadata on conflict updates and keeps its SECURITY DEFINER / empty-search-path settings.
+
+These mappings are captured in `supabase/rebuild/qa-ledger-20261105.json` and enforced by the migration-alignment checks. No migration ledger rows were changed to create the equivalence.
+
+The earlier isolated PostgreSQL 17 CI rehearsal passed all 15 canonical migrations. Because the repository identity has now been aligned to the actual QA-generated version and the two preserved QA aliases are now explicitly evidenced, a fresh CI run is required to revalidate the final inventory and cutover scripts.
 
 **APP-08 remains OPEN.** The persistent database repair and catalog checks are complete, but end-to-end proof for a newly registered incoming owner — Auth account creation, email verification, first browser login and portal hydration after refresh — is still outstanding. The prior transaction tests with existing verified QA identities are not a substitute for that end-to-end proof. Overall release remains **NO-GO**.
