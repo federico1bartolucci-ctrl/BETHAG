@@ -58,7 +58,7 @@ try {
     name: marker + " esercizio origine",
     start_date: "2025-01-01",
     end_date: "2025-12-31",
-    status: "Chiuso",
+    status: "Aperto",
     opening_balance: 0,
     notes: marker,
   }).select("id").single(), "source fiscal year");
