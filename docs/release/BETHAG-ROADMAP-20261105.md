@@ -255,3 +255,13 @@ Nessuna modifica a Production, nessun merge o deploy e nessun nuovo ambiente QA.
 - Il nuovo webhook QA è stato creato, ma APP-12 non è ancora chiuso: il suo signing secret deve essere configurato come Edge Function secret `RESEND_WEBHOOK_SIGNING_SECRET` nel solo ambiente QA. Il connettore Supabase disponibile non espone un'operazione per impostare Edge Function secrets, quindi non è stato possibile automatizzare questo passaggio.
 - Dopo la configurazione del secret si dovrà inviare un messaggio di test controllato dalla Edge Function QA, verificare su Resend l'evento e il tentativo verso l'endpoint QA, quindi verificare in QA l'aggiornamento dello stato comunicazione. Non effettuare replay di eventi Production.
 - Nessuna modifica a Production, nessuna modifica al webhook Production, nessun merge, deploy, migrazione o cutover. APP-12 resta PARTIAL fino alla prova end-to-end QA.
+
+
+## Verifica callback Resend QA dopo configurazione secret — 2026-11-05
+
+- La schermata Supabase QA conferma la presenza del custom secret `RESEND_WEBHOOK_SIGNING_SECRET`; il valore non è stato letto né esposto.
+- Il webhook QA dedicato ha ricevuto gli eventi reali `email.sent` e `email.delivered` per il messaggio di test già inviato a `delivered@resend.dev`. Gli eventi Resend risultano `success`; per `email.delivered` il replay conclusivo ha restituito HTTP 200 con `status=updated`, conteggio `delivered=1` e aggiornamento della comunicazione QA a `Consegnata`.
+- Le risposte precedenti `recipient_not_found` erano coerenti con l'assenza, al momento dei primi tentativi, di una riga destinatario QA con il relativo `provider_message_id`. Non era un errore di firma né un errore di instradamento. È stato creato un fixture tecnico QA isolato, associato al message ID già consegnato; il callback firmato ha aggiornato correttamente il record.
+- Il fixture temporaneo `BETHAG_QA_APP12_WEBHOOK_REPLAY_20261105` e il relativo destinatario sono stati eliminati dopo aver acquisito l'evidenza. Nessun dato QA preesistente è stato modificato.
+- Il test dimostra la verifica della firma, la ricezione del callback Resend QA e l'aggiornamento DB per l'evento `email.delivered`. Non dimostra ancora il percorso completo APP-12 avviato dall'interfaccia/applicazione QA con creazione automatica del destinatario e invio provider nello stesso flusso; tale prova resta necessaria prima di dichiarare APP-12 integralmente PASS.
+- Webhook Production, configurazione Production, schema Production e dati Production invariati. Nessun merge, deploy o cutover.
