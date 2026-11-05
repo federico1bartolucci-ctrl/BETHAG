@@ -199,3 +199,14 @@ Sul commit `ad0688f89d5bec973bf2bb097d9e53822d68d1da`:
 - Senza file candidato preesistente (1): `20261104235514_fix_portal_registration_upsert_conflict_target`; il suo payload esatto è comunque preservato nello snapshot forense.
 
 La distinzione tra file candidato, payload effettivamente registrato e snapshot recuperato è vincolante: i file non equivalenti non devono essere usati per ricostruire o riprodurre il ledger.
+
+
+## Rettifica test ACL default tabelle e nuova evidenza CI — 2026-11-05
+
+Durante la verifica successiva è stato individuato un difetto nel test scripts/test-postgres-default-acl-repair.mjs: una sequenza di newline letterali aveva inglobato la chiamata a psql in un commento JavaScript. Il run precedente 41948820926 aveva quindi riportato PASS senza eseguire il draft delle default ACL tabelle. Quel singolo risultato non è considerato prova valida per tale draft.
+
+Il test è stato corretto: ora la chiamata psql viene eseguita e il draft è applicato due volte nella stessa transazione. Nel run [41951011743](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41951011743), commit 81656e1c3bb0753c6f8ede97a29e57c1be2a40ec, i log mostrano i comandi ALTER DEFAULT PRIVILEGES, entrambe le applicazioni, le asserzioni e il ROLLBACK. Esito PASS effettivo: authenticated CRUD, service_role CRUD più privilegi strutturali, nessun default anon/MAINTAIN, nessun default globale applicativo e sentinel supabase_admin invariato.
+
+Lo stesso run conferma nuovamente PASS per il draft trigger ACL e il draft default ACL funzioni/sequenze, entrambi applicati due volte con asserzioni e rollback. Sono inoltre PASS clean-install 24 migrazioni, guarded runner 15 migrazioni, RLS collaborator, build, browser public smoke e autenticazione reale QA. Baseline safety [41951011690](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41951011690): SUCCESS.
+
+Questa rettifica sostituisce, per la prova del draft default ACL tabelle, l'evidenza non valida del run 41948820926. Nessuna modifica a QA o Production; nessuna migrazione remota applicata.
