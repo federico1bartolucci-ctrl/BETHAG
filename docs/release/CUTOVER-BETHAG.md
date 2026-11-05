@@ -372,3 +372,40 @@ Additional live catalog findings:
 **Production remains NO-GO.** QA APP-01–APP-13 and APP-15 are accepted. APP-14 remains open until exact object-level ACL/default-ACL verification, the direct PostgreSQL connection and guarded runner environment, exact release SHA/hash pinning, and the approved operator/approver/maintenance/communications/STOP plan are evidenced. The physical provider restore remains an explicitly accepted residual risk, not a passed physical restore test.
 
 No Production DDL/DML, migration, ACL change, merge, deployment or cutover has been performed.
+
+
+
+---
+
+## ACL parity reconciliation — 2026-11-06 (read-only verification)
+
+This update supersedes the preceding statement that object-level ACL/default-ACL comparison was still pending. The comparison has now completed successfully using separate read-only catalog queries against Production (`tctcgptrsmvgajqjgnev`) and QA (`jhuyhlzzydcgghrzeexn`). No grants, revokes, schema objects, or data were changed.
+
+| ACL surface | Production | QA | Result |
+|---|---:|---:|---|
+| Public table/view ACL privilege rows | 508 | 508 | Exact multiset match; no differences |
+| Public/private default ACL rows | 64 | 64 | Exact multiset match; no differences |
+| Public routine ACL rows | 219* | 219* | Exact match |
+| Private routine ACL rows | Included below | Included below | Expected QA-only delta |
+
+The complete routine ACL comparison returned 219 rows for Production and 239 for QA. The only 20 QA-only rows are the expected grants in the frozen forward migration plan:
+- 18 `EXECUTE` grants on the reviewed private application RPCs to `authenticated`.
+- 2 `EXECUTE` grants on `private.check_condominium_member_transfer_closure(uuid)`: one to `authenticated` and one to `service_role`.
+- No Production-only routine ACL rows were found. Public routine ACLs match exactly.
+
+**ACL/default-ACL parity gate: PASS — expected pre-cutover private-routine delta fully classified.** This is a privilege-surface comparison only; it does not certify full schema parity or authorize cutover.
+
+### Updated disposition
+
+- Relation ACLs: PASS.
+- Default ACLs: PASS.
+- Public routine ACLs: PASS.
+- Private routine ACLs: PASS against the frozen expected QA/Production delta.
+- Full catalog parity: PARTIAL. QA still has `workspace_members.data jsonb NOT NULL DEFAULT '{}'` and the incoming-transfer member-metadata trigger/function absent from Production; `private.save_condominium` and `private.archive_condominium` implementation hashes also differ. These remain covered by the frozen forward-only migration plan and require Production postflight after an approved cutover.
+- Production decision: **NO-GO**. No Production or QA writes, migration execution, merge, deployment, or cutover occurred.
+
+### Current-head CI refresh
+
+On PR #57 head `0c3429cab272f5813dcc94bf1083e2376fa851aa`, final QA run `42132219836` completed **SUCCESS**. APP-01..APP-15, authenticated browser workflows, signed webhook/provider probe, diagnostics upload, and QA preview cleanup all completed successfully. Build and baseline-safety checks on the preceding documentation commit were already SUCCESS; a new documentation commit will trigger fresh checks and must be verified before this evidence is treated as the final candidate.
+
+*Correction note: the 219/239 counts above are total routine-ACL row counts (public plus private); the exact public-table and default-ACL counts are separately reported above.*
