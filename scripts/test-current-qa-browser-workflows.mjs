@@ -756,6 +756,8 @@ try {
   assert.ifError(blockedInstallment.error);
   blockedUiInstallmentId = blockedInstallment.data.id;
   const blockedIncomingEmail = "bethag-ui-blocked-" + Date.now() + "@example.com";
+  const adminApiSession = await adminApi.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
+  assert.ifError(adminApiSession.error);
   const blockedTransfer = await adminApi.rpc("confirm_condominium_member_transfer", {
     p_unit_id: blockedUiUnitId,
     p_outgoing_member_id: blockedUiOwnerId,
