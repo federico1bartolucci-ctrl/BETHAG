@@ -160,3 +160,10 @@ Le ACL dei due helper di chiusura trasferimento rispetto ad anon erano già alli
 - Nuovo ledger QA: 283 righe; ultima versione `20261105001928`.
 - Production non modificata durante questa correzione.
 - Rimane da registrare e verificare il commit della migrazione nella cronologia Git e la relativa CI prima di dichiarare chiusa la parità di release.
+
+
+## Nota CI e collocazione corretta della patch QA (2026-11-05)
+
+La prima esecuzione della CI sulla PR #57 ha correttamente rifiutato la patch perché era stata inizialmente collocata in `supabase/migrations/`: i controlli hanno rilevato 25 migrazioni canoniche invece delle 24 attese. Quella collocazione è stata rimossa. Il SQL QA-only è ora archiviato in `supabase/rebuild/qa-only/20261105001928_align_qa_fund_availability_view_acl.sql`, fuori dalla catena canonica; il ledger QA live resta invariato a 283 record e la correzione live già verificata non è stata ripetuta né annullata.
+
+La PR #57 è aperta per revisione/CI. La chiusura richiede una nuova esecuzione CI verde, conferma che la catena canonica resta a 24 file e la verifica finale del branch QA. La prima CI non è verde: il suo fallimento è attribuito al conteggio 25/24 causato dalla collocazione iniziale, non a un errore SQL o a una perdita dati.
