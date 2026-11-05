@@ -70,7 +70,7 @@ try {
   recipientIds.push(...inserted.data);
 
   server = spawn("deno", [
-    "run", "--allow-net", "--allow-env",
+    "run", "--node-modules-dir=auto", "--allow-net", "--allow-env",
     "supabase/functions/bethag-resend-webhook/index.ts",
   ], {
     env: {
