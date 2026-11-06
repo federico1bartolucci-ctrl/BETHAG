@@ -129,6 +129,19 @@ if (process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE !== "YES") {
 if (process.env.BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED !== "YES") {
   preCutoverBlockers.push("Production Data API exposure for provider-managed schema supabase_functions has not been verified in Dashboard.");
 }
+const userApproval = freeze.user_authorization ?? {};
+const expectedApprovalHashes = freeze.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha }));
+const exactWrittenCutoverApprovalRecorded =
+  freeze.status === "FROZEN_FOR_REVIEW_APPROVED"
+  && userApproval.status === "RECEIVED"
+  && userApproval.approved_commit_sha === expectedHeadSha
+  && Boolean(userApproval.approved_by)
+  && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(userApproval.approved_at_utc ?? "")
+  && Boolean(userApproval.approval_reference)
+  && JSON.stringify(userApproval.approved_migration_hashes) === JSON.stringify(expectedApprovalHashes);
+if (!exactWrittenCutoverApprovalRecorded) {
+  preCutoverBlockers.push("Final written cutover approval is not recorded for the exact release SHA and ordered nineteen SQL hashes.");
+}
 const physicalRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
 const historicalRiskAcceptance = freeze.backup_restore_risk_acceptance?.accepted === true;
 const riskAccepted = process.env.BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED === "YES";
@@ -171,6 +184,7 @@ const report = {
     paid_restore_to_new_project_authorized: false,
   },
   historical_user_authorization_recorded: freeze.user_authorization?.status === "RECEIVED",
+  exact_written_cutover_approval_recorded: exactWrittenCutoverApprovalRecorded,
   fresh_cutover_plan_approval_received: process.env.BETHAG_CUTOVER_PLAN_APPROVED === "YES",
   ready_for_production_cutover: preCutoverBlockers.length === 0,
   ready_for_production_release: preCutoverBlockers.length === 0 && postCutoverBlockers.length === 0,
