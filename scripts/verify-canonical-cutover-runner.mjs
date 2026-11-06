@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261105.json"), "utf8"));
+const appEvidence = JSON.parse(await readFile(join(root, "supabase/rebuild/qa-final-collaudo-20261105.json"), "utf8"));
 const runner = await readFile(join(root, "scripts/apply-reviewed-production-migrations.mjs"), "utf8");
 const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261105.sql"), "utf8");
 const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261105.sql"), "utf8");
@@ -108,6 +109,7 @@ try {
       DATABASE_URL: "postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
       BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
       BETHAG_EXPECTED_COMMIT_SHA: probeSha,
+      BETHAG_QA_TESTED_COMMIT_SHA: appEvidence.reviewed_head_sha,
       BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
       BETHAG_CUTOVER_PLAN_APPROVED: "YES",
       BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
