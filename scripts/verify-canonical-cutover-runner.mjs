@@ -86,6 +86,8 @@ assert.ok(runner.includes("BETHAG_PSQL_BIN"), "Runner must support an explicit l
 assert.ok(runner.includes("hasLibpqEnvironment"), "Runner must support locally configured libpq connection variables.");
 assert.ok(runner.includes("connectionArgs"), "Runner must support DATABASE_URL or libpq environment variables.");
 assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide a separate read-only Production preflight mode.");
+assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
+  "Production apply must require fresh explicit reconfirmation of residual physical-restore risk when no current physical restore is verified.");
 assert.ok(runner.includes("isExpectedProductionTarget"), "Runner must validate the Production target before preflight/apply.");
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 248-row preservation/);
