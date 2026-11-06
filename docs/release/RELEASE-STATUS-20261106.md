@@ -473,3 +473,17 @@ Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiorna
 - APP-14 è esclusivamente post-cutover.
 
 **Production: NO-GO.** PR #57 resta aperta e non unita. Nessun merge, deploy, freeze operativo, DDL, migrazione o scrittura ledger Production è stato eseguito. La finestra obiettivo del 7 novembre 2026 alle 22:00 Europe/Rome non costituisce autorizzazione.
+
+
+## Addendum — CI sul head documentale finale 31298fe (2026-11-06)
+
+Verificata la pipeline sullo SHA esatto `31298fe782b2a873663062c8054f63bc5909d1e5`:
+- Baseline Safety [run 42272567319](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42272567319): **SUCCESS**.
+- Build + PostgreSQL 17 [run 42272567249](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42272567249): **SUCCESS**.
+- Final QA APP-01..APP-15 [run 42272567645](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42272567645): **SUCCESS**; tutti gli step completati, inclusi probe provider Resend per destinatario di test, flussi browser autenticati, APP-15 e cleanup.
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` registra ora questi tre run sullo SHA esatto. APP-01..APP-13 e APP-15 risultano PASS sul progetto QA; APP-14 resta PARTIAL e subordinato al cutover/postflight/smoke autenticato Production.
+
+La PR #57 è stata ricontrollata: resta aperta, non unita, head `31298fe782b2a873663062c8054f63bc5909d1e5`. Nessun merge, deploy, migrazione o scrittura Production è stato eseguito.
+
+**Production: NO-GO.** Restano aperti i gate locali/operativi, il lockfile non ancora versionato e l'approvazione formale del cutover.
