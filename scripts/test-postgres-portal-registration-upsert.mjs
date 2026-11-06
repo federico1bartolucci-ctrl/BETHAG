@@ -382,6 +382,24 @@ BEGIN
             WHERE requested_user_id='10000000-0000-0000-0000-000000000012') THEN
    RAISE EXCEPTION 'Ambiguous same-workspace self-registration created an automatically assigned request';
  END IF;
+
+ -- Omitting the condominium name must not bypass the same ambiguity guard:
+ -- the matched member's condominium name is used as the ambiguity key.
+ BEGIN
+   PERFORM private.complete_portal_registration(
+     'Unique Duplicate Condo Resident',NULL,NULL
+   );
+   RAISE EXCEPTION 'Expected PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE when condominium name is omitted';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE' THEN RAISE; END IF;
+ END;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000014') IS NOT NULL THEN
+   RAISE EXCEPTION 'Omitted condominium name bypassed duplicate guard and linked the resident';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_access WHERE member_id='40000000-0000-0000-0000-000000000014') THEN
+   RAISE EXCEPTION 'Omitted condominium name bypassed duplicate guard and created portal access';
+ END IF;
 END;
 $same_workspace_duplicate_self_registration$;
 RESET ROLE;
