@@ -91,9 +91,9 @@ VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-00000000
  '10000000-0000-0000-0000-000000000008','corrected-email@example.invalid','Email Mismatch Resident','email_mismatch',
  '40000000-0000-0000-0000-000000000008'),
  ('50000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending'),
+ '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending',NULL),
  ('50000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending');
+ '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL);
 
 -- Exercise the administrator approval path as authenticated. The function must call
 -- the centralized helper and create exactly one matching portal access row.
