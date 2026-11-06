@@ -330,6 +330,10 @@ BEGIN
     RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
   END IF;
 
+  IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
+    RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+  END IF;
+
   IF v_request.status='email_mismatch'
      AND v_request.matched_member_id IS NOT NULL
      AND v_request.matched_member_id<>v_member.id THEN
@@ -337,10 +341,6 @@ BEGIN
   END IF;
   IF lower(trim(coalesce(v_member.email,'')))<>lower(trim(coalesce(v_request.email,''))) THEN
     RAISE EXCEPTION 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
-  END IF;
-
-  IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
-    RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
   END IF;
 
   UPDATE public.condominium_members
