@@ -232,6 +232,7 @@ BEGIN
   SELECT (array_agg(c.workspace_id))[1] INTO v_workspace
   FROM public.condominiums c
   WHERE p_condominium_name IS NOT NULL
+    AND c.archived_at IS NULL
     AND lower(trim(c.name))=lower(trim(p_condominium_name))
   HAVING count(*)=1;
 
@@ -239,6 +240,24 @@ BEGIN
     SELECT (array_agg(w.id))[1] INTO v_workspace
     FROM public.workspaces w
     HAVING count(*)=1;
+  END IF;
+
+  -- Never create an unassigned request that no workspace administrator can
+  -- discover. In a multi-workspace environment, require an exact active
+  -- condominium name; duplicate names remain unassigned for manual resolution.
+  IF v_workspace IS NULL THEN
+    IF nullif(trim(p_condominium_name),'') IS NULL THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NAME_REQUIRED';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.condominiums c
+      WHERE c.archived_at IS NULL
+        AND lower(trim(c.name))=lower(trim(p_condominium_name))
+    ) THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NOT_FOUND';
+    END IF;
   END IF;
 
   INSERT INTO public.portal_registration_requests(
