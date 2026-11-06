@@ -35,7 +35,8 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000007','unrelated-workspace-admin@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000008','corrected-email@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000009','verified-account@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000010','unverified-account@example.invalid',NULL);
+ ('10000000-0000-0000-0000-000000000010','unverified-account@example.invalid',NULL),
+ ('10000000-0000-0000-0000-000000000011','same-workspace-duplicate@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
@@ -47,7 +48,8 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000007','Unrelated Workspace Admin','unrelated-workspace-admin@example.invalid','admin',true),
  ('10000000-0000-0000-0000-000000000008','Email Mismatch Resident','corrected-email@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000009','Account Email Mismatch Resident','verified-account@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000010','Unverified Resident','unverified-account@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000010','Unverified Resident','unverified-account@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000011','Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -62,7 +64,9 @@ VALUES
  ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test'),
  ('30000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001','Ambiguous shared name'),
  ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','Ambiguous shared name'),
- ('30000000-0000-0000-0000-000000000007','20000000-0000-0000-0000-000000000002','Different condominium in workspace two');
+ ('30000000-0000-0000-0000-000000000007','20000000-0000-0000-0000-000000000002','Different condominium in workspace two'),
+ ('30000000-0000-0000-0000-000000000008','20000000-0000-0000-0000-000000000001','Same Workspace Duplicate Name'),
+ ('30000000-0000-0000-0000-000000000009','20000000-0000-0000-0000-000000000001','Same Workspace Duplicate Name');
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES
@@ -82,7 +86,9 @@ VALUES
  ('40000000-0000-0000-0000-000000000008','30000000-0000-0000-0000-000000000001',NULL,'Email Mismatch Resident','old-email@example.invalid','resident',true,41008,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000009','30000000-0000-0000-0000-000000000001',NULL,'Account Email Mismatch Resident','request-email@example.invalid','resident',true,41009,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000010','30000000-0000-0000-0000-000000000001',NULL,'Unverified Resident','unverified-account@example.invalid','resident',true,41010,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000011','30000000-0000-0000-0000-000000000007',NULL,'Wrong Condominium Resident','wrong-condo@example.invalid','resident',true,41011,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000011','30000000-0000-0000-0000-000000000007',NULL,'Wrong Condominium Resident','wrong-condo@example.invalid','resident',true,41011,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000012','30000000-0000-0000-0000-000000000008',NULL,'Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true,41012,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000013','30000000-0000-0000-0000-000000000009',NULL,'Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true,41013,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -99,7 +105,10 @@ VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-00000000
  ('50000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending',NULL),
  ('50000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL);
+ '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL),
+ ('50000000-0000-0000-0000-000000000007',NULL,
+ '10000000-0000-0000-0000-000000000011','same-workspace-duplicate@example.invalid',
+ 'Same Workspace Duplicate Resident','pending','40000000-0000-0000-0000-000000000012');
 
 -- A second request from the same account must not be approved merely because
 -- another condominium registration for that account is matched automatically.
@@ -520,6 +529,37 @@ BEGIN
  END IF;
 END;
 $ambiguous_manual_approval_assert$;
+
+-- Same-name condominiums inside one workspace are still ambiguous when the
+-- same verified email is present on multiple active member records.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+DO $same_workspace_ambiguous_approval$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000007',
+     '40000000-0000-0000-0000-000000000012'
+   );
+   RAISE EXCEPTION 'Expected PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE' THEN RAISE; END IF;
+ END;
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE id='50000000-0000-0000-0000-000000000007'
+     AND status='pending' AND workspace_id IS NULL
+ ) THEN RAISE EXCEPTION 'Ambiguous same-workspace approval changed the request'; END IF;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000012') IS NOT NULL THEN
+   RAISE EXCEPTION 'Ambiguous same-workspace approval linked a resident account'; END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_access
+            WHERE member_id IN ('40000000-0000-0000-0000-000000000012',
+                                '40000000-0000-0000-0000-000000000013')) THEN
+   RAISE EXCEPTION 'Ambiguous same-workspace approval created portal access'; END IF;
+END;
+$same_workspace_ambiguous_approval$;
+RESET ROLE;
 
 -- A legacy-id match and an email match pointing to different rows must fail closed.
 INSERT INTO public.portal_access(id,workspace_id,condominium_id,legacy_id,name,email,role,permissions,active)
