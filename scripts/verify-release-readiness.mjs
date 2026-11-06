@@ -58,6 +58,14 @@ for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze
 if (freeze.rehearsal_evidence.status !== "PASS" || freeze.rehearsal_evidence.github_actions_run_id !== 42017349811) {
   preCutoverBlockers.push("The exact 248-row + 19-increment PostgreSQL 17 rehearsal is not evidenced as PASS.");
 }
+if (appEvidence.reviewed_head_sha !== checkedOutHeadSha || appEvidence.reviewed_head_sha !== expectedHeadSha) {
+  preCutoverBlockers.push("Final QA evidence SHA does not match the exact checked-out/expected commit.");
+}
+for (const [name, run] of Object.entries(appEvidence.workflow_runs)) {
+  if (run.conclusion !== "success" || run.head_sha !== checkedOutHeadSha) {
+    preCutoverBlockers.push(`${name} evidence is not SUCCESS on the exact checked-out commit.`);
+  }
+}
 if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
   preCutoverBlockers.push("Final authenticated QA collaudo did not complete successfully.");
 }
@@ -71,11 +79,8 @@ if (process.env.BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED !== "YES") {
   preCutoverBlockers.push("Production Data API exposure for provider-managed schema supabase_functions has not been verified in Dashboard.");
 }
 const physicalRestoreVerified = process.env.BETHAG_PRODUCTION_BACKUP_VERIFIED === "YES";
-const riskRecord = freeze.backup_restore_risk_acceptance;
-const riskAccepted = riskRecord?.accepted === true
-  && Boolean(riskRecord.accepted_by)
-  && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskRecord.accepted_at_utc ?? "")
-  && Boolean(riskRecord.evidence_reference);
+const historicalRiskAcceptance = freeze.backup_restore_risk_acceptance?.accepted === true;
+const riskAccepted = process.env.BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED === "YES";
 if (!physicalRestoreVerified && !riskAccepted) {
   preCutoverBlockers.push("Provider-managed physical restore is unverified; fresh per-cutover residual-risk reconfirmation is required. Historical manifest acceptance is not sufficient.");
 }
