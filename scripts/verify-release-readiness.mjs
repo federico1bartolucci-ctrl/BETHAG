@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 
 const root = "supabase/rebuild";
 const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
@@ -28,6 +29,8 @@ const expectedFiles = [
 ].sort();
 const preCutoverBlockers = [];
 const postCutoverBlockers = [];
+const checkedOutHeadSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const expectedHeadSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || checkedOutHeadSha;
 
 assert.equal(production.count, 248, "Production snapshot must contain the exact 248-row live ledger.");
 assert.equal(production.migrations.length, 248);
@@ -74,7 +77,7 @@ const riskAccepted = riskRecord?.accepted === true
   && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskRecord.accepted_at_utc ?? "")
   && Boolean(riskRecord.evidence_reference);
 if (!physicalRestoreVerified && !riskAccepted) {
-  preCutoverBlockers.push("Provider-managed physical restore is unverified and the frozen manifest does not contain a named/timestamped residual-risk acceptance; the paid Restore to a New Project route remains excluded.");
+  preCutoverBlockers.push("Provider-managed physical restore is unverified; fresh per-cutover residual-risk reconfirmation is required. Historical manifest acceptance is not sufficient.");
 }
 if (!process.env.DATABASE_URL) preCutoverBlockers.push("Direct PostgreSQL DATABASE_URL with DDL privileges is not available to the guarded runner.");
 if (process.env.BETHAG_CUTOVER_PLAN_APPROVED !== "YES") {
@@ -99,14 +102,14 @@ const report = {
     run_id: freeze.rehearsal_evidence.github_actions_run_id,
     head_sha: freeze.rehearsal_evidence.github_actions_head_sha,
   },
-  final_qa_run_id: appEvidence.workflow_runs.final_qa_collaudo.run_id,
+  checked_out_head_sha: checkedOutHeadSha,\n  expected_head_sha: expectedHeadSha,\n  final_qa_run_id: appEvidence.workflow_runs.final_qa_collaudo.run_id,
   app_statuses: appEvidence.application_tests,
   backup_restore: {
     provider_physical_restore_verified: physicalRestoreVerified,
-    residual_risk_accepted: riskAccepted,
+    residual_risk_accepted_for_this_cutover: riskAccepted,\n    historical_manifest_risk_acceptance_recorded: historicalRiskAcceptance,
     paid_restore_to_new_project_authorized: false,
   },
-  user_release_authorization_received: freeze.user_authorization?.status === "RECEIVED",
+  historical_user_authorization_recorded: freeze.user_authorization?.status === "RECEIVED",\n  fresh_cutover_plan_approval_received: process.env.BETHAG_CUTOVER_PLAN_APPROVED === "YES",
   ready_for_production_cutover: preCutoverBlockers.length === 0,
   ready_for_production_release: preCutoverBlockers.length === 0 && postCutoverBlockers.length === 0,
   pre_cutover_blockers: [...new Set(preCutoverBlockers)],
