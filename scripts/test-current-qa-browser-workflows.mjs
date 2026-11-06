@@ -396,7 +396,27 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  try {
+    await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  } catch (error) {
+    const [diagnostics, persisted] = await Promise.all([
+      adminPage.evaluate(() => ({
+        url: location.href,
+        session: localStorage.getItem("bethag-session-v1"),
+        currentPage: localStorage.getItem("bethag-current-page-v1"),
+        headings: [...document.querySelectorAll("h1,h2,h3,[role=heading]")].map(node => ({
+          tag: node.tagName, role: node.getAttribute("role"), text: node.innerText?.trim()
+        })).slice(0, 40),
+        bodyText: document.body.innerText.slice(0, 7000),
+      })),
+      cleanup.from("condominiums").select("id,workspace_id,legacy_id,name").eq("name", condoName).maybeSingle(),
+    ]);
+    console.error("BETHAG_CONDOMINIUM_SAVE_DIAGNOSTIC", JSON.stringify({
+      diagnostics, persistedRow: persisted.data ?? null, persistenceError: persisted.error?.message ?? null,
+      pageErrors, consoleErrors, failedRequests: failedRequests.slice(-30), waitError: String(error.message)
+    }));
+    throw error;
+  }
   const created = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,workspace_id,legacy_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
