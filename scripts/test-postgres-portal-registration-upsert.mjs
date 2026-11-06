@@ -29,7 +29,9 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000006','workspace-two-admin@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000007','unrelated-workspace-admin@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000008','corrected-email@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000008','corrected-email@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000009','verified-account@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000010','unverified-account@example.invalid',NULL);
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
@@ -39,7 +41,9 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000006','Workspace Two Admin','workspace-two-admin@example.invalid','admin',true),
  ('10000000-0000-0000-0000-000000000007','Unrelated Workspace Admin','unrelated-workspace-admin@example.invalid','admin',true),
- ('10000000-0000-0000-0000-000000000008','Email Mismatch Resident','corrected-email@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000008','Email Mismatch Resident','corrected-email@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000009','Account Email Mismatch Resident','verified-account@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000010','Unverified Resident','unverified-account@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -70,7 +74,9 @@ VALUES
  ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Resident To Be Matched','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000008','30000000-0000-0000-0000-000000000001',NULL,'Email Mismatch Resident','old-email@example.invalid','resident',true,41008,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000008','30000000-0000-0000-0000-000000000001',NULL,'Email Mismatch Resident','old-email@example.invalid','resident',true,41008,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000009','30000000-0000-0000-0000-000000000001',NULL,'Account Email Mismatch Resident','request-email@example.invalid','resident',true,41009,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000010','30000000-0000-0000-0000-000000000001',NULL,'Unverified Resident','unverified-account@example.invalid','resident',true,41010,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -83,7 +89,11 @@ VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-00000000
  '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending',NULL),
  ('50000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000008','corrected-email@example.invalid','Email Mismatch Resident','email_mismatch',
- '40000000-0000-0000-0000-000000000008');
+ '40000000-0000-0000-0000-000000000008'),
+ ('50000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001',
+ '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending'),
+ ('50000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001',
+ '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending');
 
 -- Exercise the administrator approval path as authenticated. The function must call
 -- the centralized helper and create exactly one matching portal access row.
@@ -187,6 +197,63 @@ BEGIN
 END;
 $relink_assert$;
 RESET ROLE;
+
+-- Portal approval must fail closed for an outdated member email, an account
+-- whose verified email differs from the request, and an unverified account.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+DO $email_guard_assert$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000003','40000000-0000-0000-0000-000000000008'
+   );
+   RAISE EXCEPTION 'Expected MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL' THEN RAISE; END IF;
+ END;
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000004','40000000-0000-0000-0000-000000000009'
+   );
+   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for account/request mismatch';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
+ END;
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000005','40000000-0000-0000-0000-000000000010'
+   );
+   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for unverified account';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
+ END;
+END;
+$email_guard_assert$;
+RESET ROLE;
+
+DO $email_guard_state_assert$
+BEGIN
+ IF (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000003') <> 'email_mismatch'
+    OR (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000004') <> 'pending'
+    OR (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000005') <> 'pending' THEN
+   RAISE EXCEPTION 'Rejected portal email approval changed request status';
+ END IF;
+ IF EXISTS (
+   SELECT 1 FROM public.condominium_members
+   WHERE id IN ('40000000-0000-0000-0000-000000000008','40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
+     AND user_id IS NOT NULL
+ ) THEN
+   RAISE EXCEPTION 'Rejected portal email approval linked an account to a condominium member';
+ END IF;
+ IF EXISTS (
+   SELECT 1 FROM public.portal_access
+   WHERE member_id IN ('40000000-0000-0000-0000-000000000008','40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
+ ) THEN
+   RAISE EXCEPTION 'Rejected portal email approval created portal access';
+ END IF;
+END;
+$email_guard_state_assert$;
 
 DO $relink_state_assert$
 BEGIN
@@ -410,6 +477,7 @@ console.log(JSON.stringify({
     "administrator portal approval uses centralized upsert helper",
     "resident self-registration uses centralized upsert helper",
     "ambiguous cross-workspace request remains unassigned until an authorized administrator resolves it",
+    "portal approval rejects unverified accounts and account/request/member email mismatches without linking or granting access",
     "legacy-id/email conflicting duplicates fail closed",
     "archived condominium portal upsert rejected",
     "helper inaccessible directly to anon/authenticated/service_role",
