@@ -11,6 +11,10 @@ assert.ok(!/supabase\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url), 
 const migration = await readFile("supabase/rebuild/drafts/20261105050000_reconcile_portal_registration_upsert.sql", "utf8");
 const canonicalMigration = await readFile("supabase/migrations/20261105050000_reconcile_portal_registration_upsert.sql", "utf8");
 assert.equal(canonicalMigration, migration, "Draft and canonical portal registration migration payloads must be byte-identical");
+assert.match(migration, /LIMIT 1\s+FOR UPDATE;/,
+  "Self-registration must lock the matched member row before checking/linking its user_id");
+assert.match(migration, /WHERE id=p_member_id AND active=true\s+FOR UPDATE;/,
+  "Administrator approval must lock the selected member row before checking/linking its user_id");
 execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1", "-c", migration], {
   stdio: "inherit",
 });
