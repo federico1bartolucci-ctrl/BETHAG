@@ -2595,6 +2595,9 @@ function App() {
         if ((completionError.message || "").includes("PORTAL_MEMBER_CONDOMINIUM_MISMATCH")) {
           throw new Error("Il nominativo corrisponde a un profilo anagrafico associato a un condominio diverso da quello selezionato. Verifica il nome del condominio e riprova.");
         }
+        if ((completionError.message || "").includes("PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE")) {
+          throw new Error("Nel tuo workspace esistono più condomìni con questo nome. Per sicurezza il collegamento automatico è stato bloccato: contatta l'amministratore per identificare il condominio corretto.");
+        }
         throw completionError;
       }
       sessionStorage.removeItem("bethag-pending-resident-registration");
