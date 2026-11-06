@@ -20,7 +20,10 @@ const pending = freeze.sequence.map(item => ({
   file: item.file,
 }));
 const gitBlobSha = (content) => {
-  const bytes = Buffer.from(content, "utf8");
+  // Git hashes canonical LF text blobs; normalize Windows CRLF checkouts so
+  // the same reviewed SQL payload produces the same frozen blob SHA.
+  const canonicalContent = content.replace(/\r\n/g, "\n");
+  const bytes = Buffer.from(canonicalContent, "utf8");
   return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\0"), bytes])).digest("hex");
 };
 
