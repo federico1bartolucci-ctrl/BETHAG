@@ -303,9 +303,9 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "2329c5c3fb537d27d8faccb0c086f5227700ba23",
-      "purpose": "Repair portal registration upsert; enforce exact condominium binding for resident self-registration and administrator approval, serialize member-account linking with row locks, preserve existing member links and staff roles, require verified matching account/member email, and fail closed on same-workspace duplicate condominium names and ambiguous same-email member matches.",
-      "postcondition": "Both authenticated registration entry points use the centralized helper; a supplied condominium name must match the selected member's active condominium; wrong-condominium auto/manual approval fails without linking or portal-access side effects; member rows are locked before user_id checks/updates; unassigned requests with same-named condominiums in one workspace are rejected when multiple active same-name destinations or same-email members make the destination ambiguous; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
+      "git_blob_sha": "27bd2e387d52176a65931352354bf9a298250ab3",
+      "purpose": "Repair portal registration upsert; enforce exact condominium binding for resident self-registration and administrator approval, reject same-name active condominium ambiguity within a workspace, serialize member-account linking with row locks, preserve existing member links and staff roles, and require verified matching account/member email before approval.",
+      "postcondition": "A unique person match cannot auto-link if the requested condominium name identifies multiple active condominiums in the member's workspace; same-workspace ambiguity raises PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE with no member link, portal_access row or registration request side effect. Wrong-condominium self-registration and approval fail closed; member rows are locked before user_id checks/updates; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
     }
   ],
