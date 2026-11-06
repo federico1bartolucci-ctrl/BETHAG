@@ -440,3 +440,5 @@ La disposizione non rimuove gli altri gate: preflight read-only locale sullo SHA
 - Il manifest mantiene invariata la sequenza congelata di 19 migrazioni e i relativi hash; la correzione applicativa non ha modificato i payload SQL.
 - Production resta **NO-GO**: nessun merge, deploy, DDL, migrazione o scrittura ledger Production è stato eseguito.
 
+### Nota diagnostica browser
+Nel log del collaudo UI è stato registrato un singolo `net::ERR_ABORTED` su una richiesta Supabase `deadlines` durante una navigazione intenzionale (`duringNavigation=true`). Non si sono verificati errori pagina non gestiti; il cleanup dei fixture è stato verificato. L'evento è registrato come cancellazione di richiesta durante navigazione, non come risposta backend riuscita e non ha determinato il fallimento del test.
