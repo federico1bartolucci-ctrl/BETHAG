@@ -119,36 +119,33 @@ Il proprietario preferisce eseguire il cutover di sabato in orario serale/nottur
 
 ## Addendum conclusivo QA e candidate refresh — 2026-11-06
 
-Questo addendum prevale sui riferimenti a commit e run precedenti contenuti nelle sezioni storiche del documento.
+Questo addendum prevale sui riferimenti a commit, run e finestre precedenti contenuti nelle sezioni storiche del documento.
 
 ### Commit e CI verificati
+- Head PR #57 al controllo: `efe20d2e90f2ee725d756f958365b454de252759`.
+- Final QA APP-01..APP-15 [run 42213933715](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933715): **SUCCESS**.
+- Build [run 42213933748](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933748): **SUCCESS**.
+- Baseline Safety [run 42213933711](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933711): **SUCCESS**.
+- La CI include build, PostgreSQL 17, clean-install delle 28 migrazioni, rehearsal del runner sulle 19 migrazioni e test isolati ACL/RLS/rollback.
+- APP-14 resta il gate Production preflight/postflight, non un test applicativo QA mancante.
 
-- Head PR #57: `94d162cbe2bcec902c6ccd5cea715a0ce85928b8`.
-- Final QA APP-01..APP-15 [run 42209092261](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092261): **SUCCESS**.
-- Build [run 42209092313](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092313): **SUCCESS**, inclusi build applicativo, bootstrap PostgreSQL 17, clean-install delle 28 migrazioni, runner isolato delle 19 migrazioni canoniche e prove ACL/RLS/rollback.
-- Baseline Safety [run 42209092345](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092345): **SUCCESS**.
-- Final QA: APP-01..APP-04, APP-05..APP-07, APP-08..APP-11, APP-12, APP-13 e APP-15 completati; flussi UI autenticati, probe Resend sintetico, diagnostica e teardown completati con SUCCESS.
-- APP-14 resta il gate di cutover e postflight Production; non è un test QA applicativo mancante.
-
-### Stato release
-
-- Collaudo automatico QA APP-01..APP-15: **CHIUSO / PASS** sul commit indicato.
-- Build, bootstrap e rehearsal migrazioni: **PASS** sullo stesso commit.
-- PR #57: aperta, non unita; head aggiornato al commit indicato.
-- Production: **NO-GO**. Nessuna migrazione, scrittura ledger, modifica ACL, merge o deploy Production è stata eseguita.
-- Il precedente preflight read-only Production era riferito al commit applicativo `4b4ea1a1448f188187441e79fcf1cc192b85a993`, non al nuovo head `94d162c...`; deve essere ripetuto sul commit finale dopo l'ultimo aggiornamento documentale.
-- Il restore fisico provider-managed resta non testato. L'eventuale accettazione del rischio deve essere riconfermata esplicitamente per il piano finale; il backup corrente deve essere verificato e identificato prima della finestra.
+### Gate runner aggiornato
+Il runner Production richiede `BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES` impostato localmente per questa specifica esecuzione se non è verificato un restore fisico provider-managed corrente. La vecchia accettazione storica nel manifest non è sufficiente da sola.
 
 ### Finestra obiettivo
+**Sabato 7 novembre 2026, inizio ore 22:00, Europe/Rome.** Ora di fine non specificata. La finestra è un obiettivo operativo, non una prenotazione né un'autorizzazione al cutover.
 
-La finestra obiettivo scelta dal proprietario e documentata in `CUTOVER-WINDOW-20261115.md` è **domenica 15 novembre 2026, 02:00–04:00 Europe/Rome** (notte tra sabato 14 e domenica 15). È una pianificazione, non una prenotazione né un'autorizzazione. Freeze non attivato e avvisi non inviati. L'orario 04:00 non garantisce la riapertura: prevalgono i criteri STOP e il completamento positivo del postflight.
+### Stato release
+- QA APP-01..APP-15: **CHIUSO / PASS** sullo SHA sopra.
+- PR #57: aperta, non unita.
+- Production: **NO-GO**.
+- Nessuna migrazione, scrittura ledger, merge o deploy Production è stata eseguita.
 
 ### Gate ancora aperti
+1. Revisione tecnica completa del diff PR (61 file; 260 commit al controllo corrente); non risultano review GitHub indipendenti registrate.
+2. Preflight Production read-only sullo SHA finale esatto, dal checkout locale.
+3. Evidenza di backup corrente oppure riconferma esplicita del rischio residuo di restore fisico non testato.
+4. Contatti effettivi di escalation/recovery e piano STOP/rollback.
+5. Approvazione finale esplicita del proprietario riferita allo SHA completo, ai 19 hash SQL, al backup/rischio, alla finestra e ai criteri STOP.
 
-1. Allineare e verificare tutta la documentazione di cutover rispetto alla finestra obiettivo del 15 novembre.
-2. Ripetere preflight Production in sola lettura sul commit finale esatto, con verifica 248/248 ledger pairs, head e 19 hash.
-3. Verificare e registrare il backup corrente; riconfermare il rischio del restore fisico non testato.
-4. Inserire i contatti effettivi di escalation/recovery e confermare freeze operativo e comunicazione agli amministratori.
-5. Ricevere approvazione finale esplicita riferita a SHA completo, 19 hash, backup, finestra e criteri STOP.
-
-**Decisione:** QA automatico chiuso con PASS; release Production non autorizzata. Non eseguire merge, deploy o apply finché tutti i gate e l'approvazione finale non sono completati.
+**Decisione invariata: Production NO-GO.** Nessun merge, deploy, apply o freeze operativo fino alla chiusura dei gate e all'approvazione finale.
