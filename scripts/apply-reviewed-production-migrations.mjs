@@ -94,18 +94,22 @@ async function main() {
     assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
       "Blocked: DATABASE_URL appears to be a placeholder.");
   }
+  const targetHost = hasDatabaseUrl
+    ? (() => { try { return new URL(process.env.DATABASE_URL).hostname; } catch { throw new Error("Blocked: invalid DATABASE_URL."); } })()
+    : process.env.PGHOST;
+  const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
   if (rehearsal) {
-    let targetHost;
-    if (hasDatabaseUrl) {
-      try { targetHost = new URL(process.env.DATABASE_URL).hostname; } catch { throw new Error("Blocked: invalid DATABASE_URL."); }
-    } else {
-      targetHost = process.env.PGHOST;
-    }
     assert.ok(["localhost", "127.0.0.1", "::1"].includes(targetHost),
       "Blocked: rehearsal mode is restricted to a local PostgreSQL host.");
     assert.ok(!process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS && !process.env.BETHAG_PRODUCTION_PROJECT_REF,
       "Blocked: rehearsal mode must not be combined with Production authorization variables.");
     console.log("REHEARSAL MODE: local PostgreSQL only; Production credentials/authorization are not accepted.");
+  } else if (preflightOnly) {
+    assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
+      `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
+    assert.ok(targetHost === `db.${projectRef}.supabase.co` || targetHost?.endsWith(".pooler.supabase.com"),
+      "Blocked: read-only Production preflight requires the expected Supabase direct or pooler host.");
+    console.log("READ-ONLY PREFLIGHT MODE: Production ledger and frozen SQL hashes only; no DDL/DML is permitted.");
   } else {
     assert.equal(process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS, "YES",
       "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
@@ -162,6 +166,20 @@ async function main() {
   comparePairs(initial, snapshot.migrations, "Live Production ledger vs frozen snapshot");
   assert.deepEqual(initial.at(-1), expectedHead, "Production ledger head is not the frozen expected head.");
   console.log("PASS: exact 248-row preflight. No history rows will be rewritten or deleted.");
+
+  if (preflightOnly) {
+    console.log(JSON.stringify({
+      status: "READ_ONLY_PRODUCTION_PREFLIGHT_PASS",
+      target: "production",
+      production_project_ref: projectRef,
+      preserved_historical_rows: expectedLedgerCount,
+      canonical_incremental_rows_reviewed: migrationBodies.length,
+      final_ledger_count_before_cutover: initial.length,
+      current_head: initial.at(-1),
+      note: "Read-only verification complete. No SQL migration body was executed and no ledger row was written.",
+    }, null, 2));
+    return;
+  }
 
   const tempDir = await mkdtemp(join(tmpdir(), "bethag-cutover-"));
   try {
