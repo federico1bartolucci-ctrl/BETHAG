@@ -76,11 +76,11 @@ VALUES
 UPDATE public.condominiums SET archived_at=now()
 WHERE id='30000000-0000-0000-0000-000000000004';
 
-INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_id,email,full_name,status)
+INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_id,email,full_name,status,matched_member_id)
 VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000002','admin-approved@example.invalid','Approved Resident','pending'),
+ '10000000-0000-0000-0000-000000000002','admin-approved@example.invalid','Approved Resident','pending',NULL),
  ('50000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending'),
+ '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending',NULL),
  ('50000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000008','corrected-email@example.invalid','Email Mismatch Resident','email_mismatch',
  '40000000-0000-0000-0000-000000000008');
