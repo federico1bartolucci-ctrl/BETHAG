@@ -487,3 +487,22 @@ Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` registra ora ques
 La PR #57 è stata ricontrollata: resta aperta, non unita, head `31298fe782b2a873663062c8054f63bc5909d1e5`. Nessun merge, deploy, migrazione o scrittura Production è stato eseguito.
 
 **Production: NO-GO.** Restano aperti i gate locali/operativi, il lockfile non ancora versionato e l'approvazione formale del cutover.
+
+---
+
+## Addendum — CI sul nuovo head PR 86776caba, 2026-11-06
+
+**Head verificato:** `86776caba728e23c454f7e1647a339a89e96b46d`.
+
+I tre workflow sono terminati con SUCCESS sul medesimo SHA:
+
+- Baseline Safety: [run 42273445958](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42273445958).
+- Build + PostgreSQL 17: [run 42273445661](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42273445661); entrambi i job `build` e `postgres-bootstrap` completati. Superati audit vulnerabilità ad alta gravità, controlli readiness/hash, clean-install delle 28 migrazioni e rehearsal isolata delle 19 migrazioni canoniche con runner guarded, verifiche ACL/default ACL, RLS collaboratore e rollback.
+- Final QA APP-01..APP-15: [run 42273445811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42273445811); tutti gli step completati con SUCCESS, inclusi flussi autenticati browser, APP-12 provider probe Resend per destinatario di test, APP-15 e cleanup.
+
+**Esito QA:** APP-01..APP-13 e APP-15 PASS sul progetto QA. APP-14 resta PARTIAL e richiede cutover autorizzato, postflight e smoke autenticato Production. Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiornato con i tre run ID e lo SHA esatto.
+
+**Gate residui invariati:** package-lock non ancora versionato e `npm ci` non ancora certificato; preflight locale guarded sul checkout pulito non eseguito; spot-check Data API da ripetere immediatamente prima del cutover; backup/restore fisico provider-managed non testato e rischio da riconfermare; operatore locale, contatti recovery, comunicazione, STOP/rollback e approvazione finale scritta su SHA e 19 hash ancora da completare. La review indipendente a quattro occhi non è disponibile e non viene rappresentata come eseguita.
+
+PR #57 resta aperta e non unita. **Production: NO-GO.** Nessun merge, deploy, freeze operativo, DDL, migrazione o scrittura ledger Production è stato eseguito.
+
