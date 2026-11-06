@@ -62,7 +62,20 @@ assert.ok(productionSet.has(freeze.live_ledger.production_only_migration.version
 
 const productionOnlySql = await readFile(root + "/production-forward-migrations/" + freeze.live_ledger.production_only_migration.file, "utf8");
 assert.equal(gitBlobSha(productionOnlySql), freeze.live_ledger.production_only_migration.git_blob_sha);
-assert.equal(freeze.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING");
+assert.ok(
+  ["FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING", "FROZEN_FOR_REVIEW_APPROVED"].includes(freeze.status),
+  "Freeze must remain pending or carry an explicit final approval record.",
+);
+if (freeze.status === "FROZEN_FOR_REVIEW_APPROVED") {
+  const approval = freeze.user_authorization;
+  assert.equal(approval?.status, "RECEIVED");
+  assert.match(approval?.approved_commit_sha ?? "", /^[0-9a-f]{40}$/);
+  assert.ok(Boolean(approval?.approved_by)
+    && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
+    && Boolean(approval?.approval_reference));
+  assert.deepEqual(approval?.approved_migration_hashes,
+    freeze.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })));
+}
 
 const blockers = [
   "The guarded runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and would create migration-version drift.",
