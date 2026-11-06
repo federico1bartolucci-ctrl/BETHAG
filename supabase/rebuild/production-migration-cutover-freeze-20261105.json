@@ -303,7 +303,7 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "f345b1b1f7ca44dc9a254a8464f30c5573af408d",
+      "git_blob_sha": "3b6b475b0b6e9df043b73ecb147f91ad2853e5ee",
       "purpose": "Replace the conflicting ON CONFLICT portal registration paths with one guarded upsert helper used by admin approval and resident self-registration.",
       "postcondition": "Both authenticated registration entry points use the centralized helper; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
