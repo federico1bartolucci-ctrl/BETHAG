@@ -180,6 +180,7 @@ async function main() {
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
       || path === "scripts/test-release-readiness-utils.mjs"
+      || path === "scripts/test-canonical-cutover-runner.mjs"
       || path === "scripts/verify-canonical-cutover-runner.mjs"
       || path === "scripts/verify-environment-migration-alignment.mjs"
       || path === "supabase/rebuild/production-migration-cutover-freeze-20261105.json";
