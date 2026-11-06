@@ -13752,8 +13752,8 @@ function SubscriptionPage({
   isAdministrator?: boolean;
 }) {
   const plans = [
-    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Accesso alla struttura BETHAG"] },
-    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Condomini","Documenti","Scadenze","Fornitori","Attività","Comunicazioni"] },
+    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Gestione base dei condomini","Accesso alla struttura BETHAG"] },
+    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Documenti","Scadenze","Fornitori","Attività","Comunicazioni"] },
     { id: "professional" as PlanId, title: "BETHAG Professional", description: "Automazione avanzata.", features: ["Tutto Plus","Assemblee avanzate","BETHAG AI","Acquisizione audio","Trascrizione assemblee","Bozza automatica verbale","Workflow di verifica","Automazioni avanzate"] },
     { id: "portal" as PlanId, title: "BETHAG Portal", description: "Amministratore + condomini.", features: ["Tutto Professional","Portale condomini","Utenti e ruoli","Permessi granulari","Documenti condivisi","Verbali pubblicabili","Comunicazioni","Accesso riservato"] },
   ];
