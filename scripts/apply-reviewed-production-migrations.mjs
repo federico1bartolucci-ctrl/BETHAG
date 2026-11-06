@@ -143,8 +143,10 @@ async function main() {
       && Boolean(riskRecord.accepted_by)
       && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(riskRecord.accepted_at_utc ?? "")
       && Boolean(riskRecord.evidence_reference);
-    assert.ok(physicalRestoreVerified || riskAccepted,
-      "Blocked: verify the provider physical restore or record explicit named/timestamped residual-risk acceptance in the frozen manifest.");
+    const riskReconfirmedForThisCutover =
+      process.env.BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED === "YES";
+    assert.ok(physicalRestoreVerified || (riskAccepted && riskReconfirmedForThisCutover),
+      "Blocked: verify a current provider physical restore OR explicitly reconfirm the documented residual physical-restore risk for this exact cutover by setting BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES locally.");
   }
 
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
