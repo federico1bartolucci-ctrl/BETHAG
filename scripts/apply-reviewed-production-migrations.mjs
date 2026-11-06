@@ -87,7 +87,7 @@ async function runPsql(args, { input } = {}) {
     } else if (childEnv.PGPASSWORD) {
       passFileDir = await mkdtemp(join(tmpdir(), "bethag-pgpass-"));
       const passFile = join(passFileDir, "pgpass");
-        const passLine = [childEnv.PGHOST, childEnv.PGPORT, childEnv.PGDATABASE, childEnv.PGUSER, password].map(pgPassEscape).join(":") + String.fromCharCode(10);
+      const passLine = [childEnv.PGHOST, childEnv.PGPORT || "5432", childEnv.PGDATABASE, childEnv.PGUSER, childEnv.PGPASSWORD].map(pgPassEscape).join(":") + String.fromCharCode(10);
       await writeFile(passFile, passLine, { encoding: "utf8", mode: 0o600 });
       await chmod(passFile, 0o600);
       childEnv.PGPASSFILE = passFile;
