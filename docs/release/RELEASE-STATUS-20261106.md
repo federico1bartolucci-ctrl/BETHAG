@@ -405,3 +405,15 @@ I successivi commit di documentazione/evidenza non modificano codice, workflow o
 **Gate invariati — Production NO-GO:** nessuna review indipendente GitHub registrata; lockfile npm non versionato; preflight locale guarded sullo SHA finale non eseguito; spot-check Data API Production immediatamente pre-cutover ancora richiesto; backup fisico non testato e rischio residuo da riconfermare per la finestra; operatore locale, contatti recovery, avviso utenti, STOP/rollback e approvazione finale scritta su SHA e 19 hash non completati. APP-14 resta esclusivamente post-cutover.
 
 Nessun merge, deploy, freeze operativo, DDL o scrittura sul database Production è stato eseguito.
+
+---
+
+## Disposizione revisione tecnica — 2026-11-06
+
+Il proprietario del progetto ha confermato che non è disponibile un secondo revisore. La revisione indipendente a quattro occhi viene pertanto **classificata come non disponibile e non bloccante**, senza dichiararla eseguita o sostituirla nominalmente con una review indipendente.
+
+La revisione di rilascio è interna e si basa sulle verifiche già ripetute durante il progetto, sulle evidenze CI riferite allo SHA applicativo testato, sul rehearsal PostgreSQL 17, sui controlli di coerenza tra migrazioni canoniche/draft/hash/manifest e sulla verifica mirata finale dei runner e dei registri. Ogni ulteriore controllo interno sarà documentato con il relativo SHA e risultato.
+
+**Limite residuo esplicito:** manca il controllo a quattro occhi da parte di una persona distinta dall'autore/proprietario. Questo rischio di processo è accettato per non bloccare il progetto in assenza di un secondo sviluppatore; non equivale a certificazione indipendente.
+
+La disposizione non rimuove gli altri gate: preflight read-only locale sullo SHA finale, verifica Data API, backup/rischio residuo, operatore e piano STOP/rollback, approvazione scritta esatta dei 19 hash, cutover autorizzato, postflight e smoke autenticato Production. Production resta **NO-GO** fino alla chiusura di tali condizioni.
