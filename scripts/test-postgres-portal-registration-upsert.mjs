@@ -109,6 +109,12 @@ BEGIN
  EXCEPTION WHEN raise_exception THEN
    IF SQLERRM <> 'PORTAL_MEMBER_ALREADY_LINKED' THEN RAISE; END IF;
  END;
+END;
+$relink_assert$;
+RESET ROLE;
+
+DO $relink_state_assert$
+BEGIN
  IF (SELECT user_id FROM public.condominium_members
      WHERE id='40000000-0000-0000-0000-000000000006') <> '10000000-0000-0000-0000-000000000003'::uuid THEN
    RAISE EXCEPTION 'Existing condominium member account link was changed';
@@ -118,8 +124,7 @@ BEGIN
    RAISE EXCEPTION 'Rejected account relink unexpectedly changed request status';
  END IF;
 END;
-$relink_assert$;
-RESET ROLE;
+$relink_state_assert$;
 
 -- A staff account that is also a condominium member must not be downgraded.
 SET LOCAL ROLE authenticated;
