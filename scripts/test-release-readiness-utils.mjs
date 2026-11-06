@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gitBlobSha, hasPostgresConnectionConfig } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
 
 test("Git blob hash is identical for LF and CRLF checkout content", () => {
   const lf = "SELECT 1;\nSELECT 2;\n";
@@ -10,6 +10,12 @@ test("Git blob hash is identical for LF and CRLF checkout content", () => {
 
 test("Git blob hash still detects SQL content changes", () => {
   assert.notEqual(gitBlobSha("SELECT 1;\n"), gitBlobSha("SELECT 2;\n"));
+});
+
+test("changed-path parser handles LF and CRLF output", () => {
+  assert.deepEqual(splitChangedPaths("docs/a.md\\nscripts/b.mjs\\n"), ["docs/a.md", "scripts/b.mjs"]);
+  assert.deepEqual(splitChangedPaths("docs/a.md\\r\\nscripts/b.mjs\\r\\n"), ["docs/a.md", "scripts/b.mjs"]);
+  assert.deepEqual(splitChangedPaths(""), []);
 });
 
 test("connection gate accepts DATABASE_URL", () => {
