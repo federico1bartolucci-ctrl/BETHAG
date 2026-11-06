@@ -3,9 +3,8 @@ import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 const baseURL=process.env.BETHAG_QA_BASE_URL||"http://127.0.0.1:4173/BETHAG/";
 const projectURL="https://jhuyhlzzydcgghrzeexn.supabase.co";
-const publishableKey=process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const serviceRoleKey=process.env.BETHAG_QA_SERVICE_ROLE_KEY;
-assert.ok(publishableKey && serviceRoleKey,"QA publishable and service-role keys are required for the isolated Free-plan entitlement check");
+assert.ok(serviceRoleKey,"QA service-role key is required for the isolated Free-plan entitlement check");
 const service=createClient(projectURL,serviceRoleKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const accounts=[
  {role:"admin",label:"Amministratore",email:"bethag-admin-qa@example.com",password:process.env.BETHAG_QA_ADMIN_PASSWORD,landing:"Homepage"},
@@ -32,10 +31,11 @@ try{
    if(a.role==="admin"){
     // Temporarily set the isolated QA workspace to Free so the locked-module
     // checks are real, then restore its original plan in the per-account finally.
-    const api=createClient(projectURL,publishableKey,{auth:{persistSession:false,autoRefreshToken:false}});
-    const auth=await api.auth.signInWithPassword({email:a.email,password:a.password});
-    assert.ifError(auth.error);
-    const membership=await service.from("workspace_members").select("workspace_id").eq("user_id",auth.data.user.id).eq("role","admin").eq("active",true).single();
+    const users=await service.auth.admin.listUsers({page:1,perPage:1000});
+    assert.ifError(users.error);
+    const adminUser=users.data.users.find(user=>(user.email||"").toLowerCase()===a.email.toLowerCase());
+    assert.ok(adminUser,"QA administrator auth user was not found");
+    const membership=await service.from("workspace_members").select("workspace_id").eq("user_id",adminUser.id).eq("role","admin").eq("active",true).single();
     assert.ifError(membership.error);
     const workspace=await service.from("workspaces").select("plan").eq("id",membership.data.workspace_id).single();
     assert.ifError(workspace.error);
