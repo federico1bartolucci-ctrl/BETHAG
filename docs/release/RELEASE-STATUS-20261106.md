@@ -285,3 +285,24 @@ Il preflight SQL non ha modificato schema, dati, ACL o ledger. Il preflight loca
 Restano obbligatori: preflight locale del runner sul checkout finale pulito; backup fisico corrente oppure riconferma esplicita e specifica del rischio residuo di restore non testato; contatti recovery/escalation; freeze e comunicazione agli utenti; criteri STOP/rollback; approvazione finale su SHA, 19 hash e finestra; apply controllato, postflight e smoke autenticato Production.
 
 La finestra obiettivo resta **sabato 7 novembre 2026, ore 22:00 Europe/Rome**. Non costituisce autorizzazione automatica al cutover.
+
+
+---
+
+## Addendum CI e allineamento evidenze — 2026-11-06
+
+**Commit verificato:** `90f7b110c81b70b95b24225862073bd45d75b564`.
+
+I tre workflow GitHub Actions sono stati verificati sul medesimo SHA e risultano tutti completati con esito SUCCESS:
+
+- Final QA APP-01..APP-15: run [42240333748](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42240333748).
+- Build + PostgreSQL 17 bootstrap: run [42240333486](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42240333486).
+- Baseline Safety: run [42240334475](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42240334475).
+
+Il file `supabase/rebuild/qa-final-collaudo-20261105.json` è stato riallineato allo SHA e agli ID delle tre run. L'evidenza distingue APP-01..APP-13 e APP-15, superati in QA, da APP-14, che resta il gate Production post-cutover.
+
+La PR #57 contiene **63 file modificati** al momento di questo addendum. Il precedente riferimento a 61 file è superato.
+
+La modifica di concorrenza Build è inclusa nel commit verificato. La Build non è stata considerata superata sulla base del solo avvio: è stata verificata la conclusione SUCCESS dell'intera run, compresi i job previsti.
+
+**Decisione invariata: Production NO-GO.** Nessun merge, deploy, freeze o apply Production è stato eseguito. La revisione semantica completa dei 63 file resta in corso; l'allineamento dell'evidenza QA non equivale alla sua certificazione.
