@@ -13,8 +13,8 @@ test("Git blob hash still detects SQL content changes", () => {
 });
 
 test("changed-path parser handles LF and CRLF output", () => {
-  assert.deepEqual(splitChangedPaths("docs/a.md\\nscripts/b.mjs\\n"), ["docs/a.md", "scripts/b.mjs"]);
-  assert.deepEqual(splitChangedPaths("docs/a.md\\r\\nscripts/b.mjs\\r\\n"), ["docs/a.md", "scripts/b.mjs"]);
+  assert.deepEqual(splitChangedPaths("docs/a.md\nscripts/b.mjs\n"), ["docs/a.md", "scripts/b.mjs"]);
+  assert.deepEqual(splitChangedPaths("docs/a.md\r\nscripts/b.mjs\r\n"), ["docs/a.md", "scripts/b.mjs"]);
   assert.deepEqual(splitChangedPaths(""), []);
 });
 
