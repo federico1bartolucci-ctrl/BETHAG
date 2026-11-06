@@ -229,14 +229,14 @@ BEGIN
   -- Assign a workspace only when the condominium name identifies exactly
   -- one condominium across the entire database. Grouping by workspace here
   -- would incorrectly choose an arbitrary workspace when names collide.
-  SELECT min(c.workspace_id) INTO v_workspace
+  SELECT (array_agg(c.workspace_id))[1] INTO v_workspace
   FROM public.condominiums c
   WHERE p_condominium_name IS NOT NULL
     AND lower(trim(c.name))=lower(trim(p_condominium_name))
   HAVING count(*)=1;
 
   IF v_workspace IS NULL THEN
-    SELECT min(w.id) INTO v_workspace
+    SELECT (array_agg(w.id))[1] INTO v_workspace
     FROM public.workspaces w
     HAVING count(*)=1;
   END IF;
