@@ -23,7 +23,7 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile, mkdtemp, writeFile, rm } from "node:fs/promises";
+import { readFile, mkdtemp, writeFile, chmod, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
@@ -46,29 +46,73 @@ function gitBlobSha(content) {
   return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
 }
 
-function runPsql(args, { input } = {}) {
-  return new Promise((resolvePromise, reject) => {
-    const psqlExecutable = process.env.BETHAG_PSQL_BIN || "psql";
-    const connectionArgs = process.env.DATABASE_URL
-      ? ["--dbname", process.env.DATABASE_URL]
-      : [];
-    const child = spawn(psqlExecutable, ["-X", "--no-psqlrc", ...connectionArgs, "-v", "ON_ERROR_STOP=1", ...args], {
-      env: process.env,
-      // Inherit the console when no SQL is piped so libpq can request a hidden
-      // password interactively on Windows. Never echo or log credential values.
+function pgPassEscape(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll(":", "\\:");
+}
+
+async function runPsql(args, { input } = {}) {
+  const psqlExecutable = process.env.BETHAG_PSQL_BIN || "psql";
+  const childEnv = { ...process.env };
+  let passFileDir = null;
+  try {
+    if (process.env.DATABASE_URL) {
+      let connectionUrl;
+      try { connectionUrl = new URL(process.env.DATABASE_URL); }
+      catch { throw new Error("Blocked: invalid DATABASE_URL."); }
+      assert.ok(["postgres:", "postgresql:"].includes(connectionUrl.protocol),
+        "Blocked: DATABASE_URL must use the PostgreSQL protocol.");
+      childEnv.PGHOST = connectionUrl.hostname;
+      childEnv.PGPORT = connectionUrl.port || "5432";
+      childEnv.PGDATABASE = decodeURIComponent(connectionUrl.pathname.replace(/^\\//, ""));
+      childEnv.PGUSER = decodeURIComponent(connectionUrl.username);
+      for (const [parameter, envName] of [
+        ["sslmode", "PGSSLMODE"], ["application_name", "PGAPPNAME"],
+        ["connect_timeout", "PGCONNECT_TIMEOUT"], ["options", "PGOPTIONS"],
+        ["target_session_attrs", "PGTARGETSESSIONATTRS"],
+      ]) {
+        if (connectionUrl.searchParams.has(parameter)) childEnv[envName] = connectionUrl.searchParams.get(parameter);
+      }
+      const password = decodeURIComponent(connectionUrl.password);
+      if (password) {
+        passFileDir = await mkdtemp(join(tmpdir(), "bethag-pgpass-"));
+        const passFile = join(passFileDir, "pgpass");
+        const passLine = [childEnv.PGHOST, childEnv.PGPORT, childEnv.PGDATABASE, childEnv.PGUSER, password].map(pgPassEscape).join(":") + "\\n";
+        await writeFile(passFile, passLine, { encoding: "utf8", mode: 0o600 });
+        await chmod(passFile, 0o600);
+        childEnv.PGPASSFILE = passFile;
+      }
+      // Do not expose a credential-bearing URL in psql argv or child env.
+      delete childEnv.DATABASE_URL;
+      delete childEnv.PGPASSWORD;
+    } else if (childEnv.PGPASSWORD) {
+      passFileDir = await mkdtemp(join(tmpdir(), "bethag-pgpass-"));
+      const passFile = join(passFileDir, "pgpass");
+      const passLine = [childEnv.PGHOST, childEnv.PGPORT || "5432", childEnv.PGDATABASE, childEnv.PGUSER, childEnv.PGPASSWORD].map(pgPassEscape).join(":") + "\\n";
+      await writeFile(passFile, passLine, { encoding: "utf8", mode: 0o600 });
+      await chmod(passFile, 0o600);
+      childEnv.PGPASSFILE = passFile;
+      delete childEnv.PGPASSWORD;
+    }
+    const child = spawn(psqlExecutable, ["-X", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", ...args], {
+      env: childEnv,
       stdio: [input === undefined ? "inherit" : "pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
-    child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolvePromise(stdout.trim());
-      else reject(new Error(`psql exited ${code}: ${stderr || stdout}`));
+    await new Promise((resolvePromise, reject) => {
+      child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
+      child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolvePromise();
+        else reject(new Error(`psql exited ${code}: ${stderr || stdout}`));
+      });
+      if (input !== undefined) child.stdin.end(input);
     });
-    if (input !== undefined) child.stdin.end(input);
-  });
+    return stdout.trim();
+  } finally {
+    if (passFileDir) await rm(passFileDir, { recursive: true, force: true });
+  }
 }
 
 async function liveLedger() {
