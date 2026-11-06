@@ -6,6 +6,9 @@ assert.ok(databaseUrl, "DATABASE_URL must be set to the isolated PostgreSQL test
 assert.match(databaseUrl, /^postgres(?:ql)?:\/\//, "DATABASE_URL must be a PostgreSQL connection URL.");
 assert.ok(!/tctcgptrsmvgajqjgnev|supabase\.co/i.test(databaseUrl),
   "Refusing to run the rehearsal against a Supabase/Production URL.");
+const databaseTarget = new URL(databaseUrl);
+assert.ok(["localhost", "127.0.0.1", "::1"].includes(databaseTarget.hostname),
+  "Refusing non-loopback DATABASE_URL; ledger rehearsal is local-only.");
 
 function runPsql(sql) {
   return new Promise((resolve, reject) => {
