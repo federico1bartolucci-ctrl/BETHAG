@@ -164,6 +164,13 @@ BEGIN
     FROM public.condominiums c
     WHERE c.id = v_member.condominium_id;
 
+    -- A unique person match is not sufficient when the resident explicitly
+    -- selected a different condominium. Never auto-link across that choice.
+    IF nullif(trim(p_condominium_name),'') IS NOT NULL
+       AND lower(trim(p_condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_CONDOMINIUM_MISMATCH';
+    END IF;
+
     IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_user_id THEN
       RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
     END IF;
