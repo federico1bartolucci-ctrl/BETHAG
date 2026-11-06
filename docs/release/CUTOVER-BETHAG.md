@@ -447,3 +447,90 @@ Percorso psql verificato sul PC dell'operatore: `C:\\Program Files\\PostgreSQL\\
 | Approvazione formale del piano esatto | NOT APPROVED |
 
 **Decisione: Production NO-GO.** Nessun merge, deploy o comando in modalità apply finché tutti i gate non sono documentati e il piano esatto non è approvato. Nessuna scrittura Production è stata eseguita in questo aggiornamento.
+
+
+## Piano operativo candidato — ruoli esplicitati dal proprietario — 2026-11-06
+
+Questo piano registra la decisione espressa dal proprietario nella conversazione del 2026-11-06: «tu lavori io approvo». La formulazione distingue l'assistenza tecnica dalla responsabilità umana e non attribuisce a ChatGPT poteri operativi o responsabilità legali che non possiede.
+
+### Ruoli e separazione delle responsabilità
+
+| Funzione | Assegnazione | Ambito |
+|---|---|---|
+| Preparazione tecnica | ChatGPT (assistente) | Revisione del piano, verifica degli hash e delle evidenze, predisposizione delle istruzioni, controllo dei risultati e guida passo-passo. Non è una persona fisica né un operatore autorizzato del database. |
+| Operatore umano | Federico Bartolucci, proprietario del progetto | Esecuzione locale dei comandi approvati, gestione privata delle credenziali, controllo della finestra e arresto immediato in caso di STOP. |
+| Approvatore | Federico Bartolucci, proprietario del progetto | Approvazione esplicita del piano esatto e decisione finale di avviare o non avviare il cutover. |
+
+**Eccezione di controllo a doppia persona:** operatore e approvatore sono la stessa persona, su scelta esplicita del proprietario perché il progetto è gestito da lui con supporto tecnico dell'assistente. Questa scelta è registrata in modo trasparente; non viene rappresentata come approvazione indipendente o revisione a quattro occhi. Se l'organizzazione o il livello di rischio richiedono indipendenza dell'approvatore, il cutover resta NO-GO fino alla nomina di una seconda persona.
+
+### Identità tecnica candidata — non ancora autorizzata all'esecuzione
+
+- Repository: `federico1bartolucci-ctrl/BETHAG`.
+- Branch: `fix/qa-view-acl-parity-20261105`.
+- Commit applicativo con QA APP-01..APP-15, Build e Baseline Safety PASS e preflight locale read-only PASS: `4b4ea1a1448f188187441e79fcf1cc192b85a993`.
+- Commit documentale successivo: `b469d781ed9136c3237ae65773abf36c9ce0fc17`. Questo commit aggiorna lo stato documentale e **non** è automaticamente il commit applicativo approvato per il cutover.
+- Progetto Supabase Production: `tctcgptrsmvgajqjgnev`.
+- Stato live osservato al preflight: 248 righe ledger, head `20261104222229_reconcile_production_acl_least_privilege`.
+- Piano SQL congelato: 19 migrazioni incrementali, hash Git blob fissati nel file `supabase/rebuild/production-migration-cutover-freeze-20261105.json`; atteso 267 righe dopo il cutover. Le 248 righe storiche devono restare immutate; zero baseline rows, zero delete/rewrite.
+- Il preflight locale sul commit applicativo `4b4ea1a...` ha restituito `READ_ONLY_PRODUCTION_PREFLIGHT_PASS`: corrispondenza esatta 248/248, verifica dei 19 payload e nessun body SQL eseguito/nessuna riga ledger scritta.
+
+**Vincolo di pin:** prima del cutover occorre scegliere un solo commit completo e immutabile contenente sia il codice applicativo candidato sia la documentazione/runbook approvati. Se la documentazione viene aggiornata dopo il commit candidato, il commit finale deve essere nuovamente sottoposto a CI, revisione diff e preflight read-only; non si può assumere che il precedente preflight autorizzi un diverso SHA. I 19 hash SQL devono corrispondere esattamente al freeze e non possono essere modificati senza nuova revisione e nuova approvazione.
+
+### Finestra, freeze e comunicazioni — da completare
+
+- Fuso: Europe/Rome.
+- Data/ora inizio e fine: **DA CONCORDARE**. Non viene inventata né pianificata una finestra senza la disponibilità del proprietario.
+- Durata stimata e impatto percepito: **DA CONFERMARE** dopo un ultimo controllo del piano; durante l'intervento l'applicazione dovrà essere in maintenance/read-only o non utilizzata per operazioni che scrivono dati, secondo la procedura verificata.
+- Freeze: dalla conferma della finestra fino alla chiusura, nessun commit applicativo, migrazione, modifica schema/ACL, modifica secrets o deploy concorrente. Nessun altro workflow o operatore deve scrivere sul database.
+- Avviso utenti: predisporre e approvare un avviso con data/ora, impatto, divieto temporaneo di operazioni, canale di assistenza e messaggio di fine intervento. **Non inviato**; destinatari e canale devono essere confermati dal proprietario.
+- Contatto/escalation Supabase e contatto tecnico alternativo: **DA INSERIRE**. Non inventare nominativi o recapiti.
+
+### Backup e rischio residuo
+
+Il proprietario ha già accettato il rischio residuo del restore fisico provider-managed non testato (accettazione registrata nel manifest il 2026-10-27). Il restore logico locale è stato verificato, ma non prova il restore fisico. Prima dell'approvazione finale l'operatore deve controllare che esista un backup recente e recuperabile secondo le opzioni disponibili, registrare timestamp/identificativo e destinazione sicura, e confermare che l'accettazione del rischio resta valida per questa specifica release. Non testare mai un restore sopra Production e non creare risorse a pagamento senza autorizzazione separata.
+
+### Sequenza operativa vincolante
+
+1. **Freeze e approvazione:** confermare finestra, avviso, commit finale, hash dei 19 SQL, stato backup/rischio, ruoli e checklist. Registrare l'approvazione esplicita del proprietario riferita a questi identificativi esatti.
+2. **Preflight immediatamente prima:** dal checkout pulito e pinned, in modalità read-only, verificare progetto/host/ruolo, 248 coppie version/name, head, hash SQL e invarianti catalogo/ACL/Data API. Un mismatch, anche singolo, annulla l'approvazione e determina STOP.
+3. **Abilitazione controllata:** solo l'operatore umano, localmente, imposta i gate di apply richiesti dal runner dopo l'approvazione. Le credenziali restano nel terminale/secret store locale e non vengono trasmesse in chat, PR, log o repository. Non usare `apply_migration`, `db push` o SQL manuale come scorciatoia.
+4. **Esecuzione:** usare esclusivamente il runner version-preserving approvato, dal checkout pulito e durante la finestra. Le 19 migrazioni devono essere eseguite nell'ordine congelato; non inserire baseline, non riscrivere/cancellare lo storico e non improvvisare correzioni.
+5. **Postflight:** verificare 267 righe totali, tutte le 248 coppie storiche intatte, esattamente le 19 nuove coppie attese, tutti i postcondition ACL/RLS/routine/default ACL/colonne/trigger/RPC/portal registration e la configurazione Data API. Ogni differenza non prevista è STOP.
+6. **Smoke Production:** solo dopo postflight PASS, verificare autenticazione e permessi di amministratore, collaboratore e condomino, navigazione, funzioni essenziali condominio/contabilità/subentro/portale e invio/callback email con account e destinatari di test controllati. Non creare, modificare o cancellare dati commerciali reali per produrre evidenze.
+7. **Chiusura:** comunicare esito, ripristinare l'accesso ordinario, togliere il freeze solo dopo conferma di stabilità e archiviare output pre/postflight, ledger delta, log smoke e avvisi.
+
+### Criteri STOP immediato
+
+Interrompere senza tentare riparazioni ad hoc se si verifica uno qualsiasi dei seguenti eventi:
+
+- commit, branch, manifest o hash SQL diversi da quelli approvati;
+- ledger diverso da 248 coppie esatte o head inattesa prima dell'esecuzione;
+- host, project ref, ruolo o database non corrispondenti al Production approvato;
+- privilegio mancante, errore di connessione, lock/timeout inatteso o errore SQL;
+- migrazione che fallisce o postcondition che non torna;
+- scrittura concorrente, attività non congelata o presenza di utenti che stanno eseguendo operazioni;
+- differenze inattese su ACL, RLS, ownership, default privileges, funzioni, trigger, schema esposto o dati;
+- smoke test non autorizzato, fallito o con effetti collaterali;
+- impossibilità di verificare backup, contatti o procedura di recovery.
+
+In caso di STOP: non rilanciare il runner alla cieca, non saltare una migrazione, non modificare manualmente il ledger e non eseguire SQL inverso improvvisato. Conservare output e ora dell'ultimo step riuscito, mantenere l'applicazione in stato protetto, avvisare il proprietario e seguire la procedura di recovery provider/DBA già verificata. Il rollback non è automaticamente garantito da una transazione unica dell'intero cutover: deve essere basato su restore/recovery testato e su decisione esplicita, mai su reverse SQL inventato.
+
+### Stato approvazione
+
+| Campo | Stato |
+|---|---|
+| Preparazione tecnica | Assistente ChatGPT — supporto, non operatore umano |
+| Operatore umano | Federico Bartolucci — dichiarato dal proprietario |
+| Approvatore | Federico Bartolucci — dichiarato dal proprietario |
+| Operatore e approvatore distinti | NO — eccezione esplicitamente dichiarata, non controllo indipendente |
+| Commit applicativo candidato | `4b4ea1a1448f188187441e79fcf1cc192b85a993` — da ripinnare se cambia il commit finale |
+| 19 hash SQL | Congelati nel manifest; da riconfermare sul commit finale |
+| Finestra Europe/Rome | NON SCHEDULATA |
+| Freeze schema/codice | NON ATTIVATO |
+| Avviso utenti | DA APPROVARE E INVIARE |
+| Backup recente e rischio residuo | Rischio restore fisico già accettato; backup corrente da riconfermare prima della finestra |
+| Preflight read-only | PASS sul commit applicativo `4b4ea1a...`; da ripetere sul commit finale immediatamente prima del cutover |
+| Approvazione finale riferita a SHA, 19 hash e finestra | NON ANCORA RICEVUTA |
+| Autorizzazione all'apply / merge / deploy | **NON CONCESSA** |
+
+**Decisione corrente: NO-GO.** Questo documento è un piano operativo candidato, non un ordine di esecuzione. La precedente autorizzazione generale a procedere e la decisione sui ruoli non sostituiscono l'approvazione finale riferita a commit, hash, finestra e condizioni sopra. Nessun merge, deploy o comando apply è autorizzato da questo addendum.
