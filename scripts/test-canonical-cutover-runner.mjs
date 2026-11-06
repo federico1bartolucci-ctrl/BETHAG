@@ -113,6 +113,37 @@ const seed = [
 await psql([], seed);
 console.log("Seeded disposable local ledger with the frozen 248 version/name pairs.");
 
+// Negative safety test: a historical manifest acceptance must not authorize
+// Production apply without a fresh per-cutover operator reconfirmation.
+// The runner must stop at the gate before attempting any PostgreSQL connection.
+const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
+  env: {
+    ...process.env,
+    DATABASE_URL: "postgresql://postgres:unused@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
+    BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
+    BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
+    BETHAG_CUTOVER_PLAN_APPROVED: "YES",
+    BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
+    BETHAG_QA_APP12_PROVIDER_VERIFIED: "YES",
+    BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED: "YES",
+    BETHAG_PRODUCTION_BACKUP_VERIFIED: "",
+    BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED: "",
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+});
+let blockedOut = "", blockedErr = "";
+blockedApply.stdout.setEncoding("utf8").on("data", (chunk) => { blockedOut += chunk; });
+blockedApply.stderr.setEncoding("utf8").on("data", (chunk) => { blockedErr += chunk; });
+const blockedCode = await new Promise((resolve, reject) => {
+  blockedApply.on("error", reject);
+  blockedApply.on("close", resolve);
+});
+assert.notEqual(blockedCode, 0, "Production apply must fail closed without fresh residual-risk reconfirmation.");
+assert.match(blockedErr + blockedOut, /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES/,
+  "Production apply must explain the missing fresh residual-risk reconfirmation.");
+console.log("PASS: historical manifest risk acceptance alone cannot pass the Production apply gate; runner stopped before any database connection.");
+
+
 console.log("Applying existing canonical Production head (already included in frozen 248-row ledger) to clean local schema...");
 await psql(["-f", "supabase/migrations/20261022202747_harden_close_member_transfer_search_path.sql"]);
 const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json", "utf8"));
