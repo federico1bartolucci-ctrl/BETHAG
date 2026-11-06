@@ -329,9 +329,31 @@ BEGIN
 END;
 $staff_role_assert$;
 
--- Exercise the self-registration path as the resident account itself.
+-- A unique person match must not override a different condominium explicitly selected by the resident.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000003';
+DO $wrong_condominium_self_registration$
+BEGIN
+ BEGIN
+   PERFORM private.complete_portal_registration(
+     'Self Registered Resident',NULL,'Admin approval test condominium'
+   );
+   RAISE EXCEPTION 'Expected PORTAL_MEMBER_CONDOMINIUM_MISMATCH';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_MEMBER_CONDOMINIUM_MISMATCH' THEN RAISE; END IF;
+ END;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000002') IS NOT NULL THEN
+   RAISE EXCEPTION 'Wrong-condominium self-registration linked the resident account';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_access
+            WHERE member_id='40000000-0000-0000-0000-000000000002') THEN
+   RAISE EXCEPTION 'Wrong-condominium self-registration created portal access';
+ END IF;
+END;
+$wrong_condominium_self_registration$;
+
+-- The exact condominium match can now complete normally.
 SELECT private.complete_portal_registration('Self Registered Resident',NULL,'Self registration test condominium');
 RESET ROLE;
 
