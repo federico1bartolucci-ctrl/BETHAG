@@ -125,10 +125,10 @@ try {
   try { execFileSync("git", ["worktree", "remove", "--force", gateProbeDir], { cwd: root, stdio: "pipe" }); } catch {}
   await rm(gateProbeDir, { recursive: true, force: true });
 }
-assert.notEqual(gateProbe.status, 0, "Production apply must stop without current restore proof or explicit residual-risk reconfirmation.");
+assert.notEqual(gateProbe.status, 0, "Production apply must stop until explicit final cutover approval and all remaining gates are recorded.");
 assert.match(gateProbe.stderr,
-  /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
-  "The runner must stop at an unmet release gate before attempting any Production connection.");
+  /BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  "The runner must reject an unapproved exact-SHA cutover before attempting any Production connection.");
 
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 248-row preservation/);
