@@ -1126,6 +1126,16 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
+/** Persist only best-effort browser cache data; Supabase remains authoritative. */
+function persistLocalCache(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Browser storage is optional cache, never a reason to crash a saved workflow.
+    console.warn(`BETHAG local cache was not persisted (${key})`, error);
+  }
+}
+
 function makeId() {
   return (
     Date.now() +
@@ -6765,86 +6775,71 @@ function App() {
     }
   }, [condominiums]);
 
+  // In backend mode the workspace collections are hydrated from Supabase.
+  // Do not duplicate potentially thousands of server-owned rows in localStorage:
+  // browser quota is limited and a failed cache write must never break rendering.
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.deadlines,
-      JSON.stringify(deadlines)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.deadlines, deadlines);
   }, [deadlines]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.documents,
-      JSON.stringify(documents)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.documents, documents);
   }, [documents]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.assemblies,
-      JSON.stringify(assemblies)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.assemblies, assemblies);
   }, [assemblies]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.suppliers,
-      JSON.stringify(suppliers)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.suppliers, suppliers);
   }, [suppliers]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.activities,
-      JSON.stringify(activities)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.activities, activities);
   }, [activities]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumWorks, condominiumWorks);
   }, [condominiumWorks]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.communications,
-      JSON.stringify(communications)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.communications, communications);
   }, [communications]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumMembers, condominiumMembers);
   }, [condominiumMembers]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumRequests, condominiumRequests);
   }, [condominiumRequests]);
 
+  // Small identity/billing preferences remain useful as a local bootstrap cache.
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.profile,
-      JSON.stringify(profile)
-    );
+    persistLocalCache(KEYS.profile, profile);
   }, [profile]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.portalMembers,
-      JSON.stringify(portalMembers)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.portalMembers, portalMembers);
   }, [portalMembers]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.subscription,
-      JSON.stringify(subscription)
-    );
+    persistLocalCache(KEYS.subscription, subscription);
   }, [subscription]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.collaborators,
-      JSON.stringify(collaborators)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.collaborators, collaborators);
   }, [collaborators]);
 
 
