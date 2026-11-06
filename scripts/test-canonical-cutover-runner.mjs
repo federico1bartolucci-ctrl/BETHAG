@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 
 const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl, "DATABASE_URL must point to the isolated local PostgreSQL rehearsal database.");
@@ -121,6 +121,7 @@ const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production
     ...process.env,
     DATABASE_URL: "postgresql://postgres:unused@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
     BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
+    BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
     BETHAG_CUTOVER_PLAN_APPROVED: "YES",
     BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
