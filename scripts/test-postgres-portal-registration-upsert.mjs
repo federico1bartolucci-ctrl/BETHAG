@@ -63,7 +63,7 @@ VALUES
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Unmatched Resident','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Resident To Be Matched','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
