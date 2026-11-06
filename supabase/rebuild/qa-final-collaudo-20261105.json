@@ -138,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Application acceptance APP-01..APP-13 and APP-15 passed on application commit 2bda4e449018260e8a6657f5a31bb19b4385b268. Release-runner hardening and the full Build, PostgreSQL 17 and Final QA workflows passed on branch head 4cabd5fc4d0d4b641b290e4333dac38e8fedd659. APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA, Build/PostgreSQL 17 and Baseline Safety passed on document head 31298fe782b2a873663062c8054f63bc5909d1e5. Application commit 2bda4e449018260e8a6657f5a31bb19b4385b268 and runner-hardening commit 4cabd5fc4d0d4b641b290e4333dac38e8fedd659 remain separately evidenced. APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -197,6 +197,31 @@
     "postgres17_bootstrap": "PASS — 28 clean-install migrations and 19 canonical guarded migrations rehearsed on isolated PostgreSQL 17; ACL/RLS/rollback and portal registration tests passed.",
     "browser_build_smoke": "PASS — build, Chromium install and isolated public-login browser smoke passed.",
     "final_qa": "PASS — APP-01..APP-13 and APP-15 passed on existing QA project; APP-14 remains Production post-cutover only.",
+    "production_modified": false,
+    "merge_or_deploy_performed": false
+  },
+  "final_head_validation": {
+    "captured_at_utc": "2026-11-06T18:38:59Z",
+    "reviewed_head_sha": "31298fe782b2a873663062c8054f63bc5909d1e5",
+    "workflow_runs": {
+      "baseline_safety": {
+        "run_id": 42272567319,
+        "head_sha": "31298fe782b2a873663062c8054f63bc5909d1e5",
+        "conclusion": "success"
+      },
+      "build": {
+        "run_id": 42272567249,
+        "head_sha": "31298fe782b2a873663062c8054f63bc5909d1e5",
+        "conclusion": "success"
+      },
+      "final_qa_collaudo": {
+        "run_id": 42272567645,
+        "head_sha": "31298fe782b2a873663062c8054f63bc5909d1e5",
+        "conclusion": "success"
+      }
+    },
+    "final_qa_steps": "PASS — authenticated browser UI workflows, APP-12 Resend test-recipient provider probe, APP-15 role navigation/session persistence, diagnostics upload and cleanup all completed successfully.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA project; APP-14 remains Production post-cutover only.",
     "production_modified": false,
     "merge_or_deploy_performed": false
   }
