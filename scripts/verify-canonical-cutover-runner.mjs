@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,6 +87,8 @@ assert.ok(runner.includes("BETHAG_PSQL_BIN"), "Runner must support an explicit l
 assert.ok(runner.includes("hasLibpqEnvironment"), "Runner must support locally configured libpq connection variables.");
 assert.ok(runner.includes("connectionArgs"), "Runner must support DATABASE_URL or libpq environment variables.");
 assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide a separate read-only Production preflight mode.");
+assert.ok(runner.includes("BETHAG_EXPECTED_COMMIT_SHA"), "Production preflight/apply must require the exact approved commit SHA.");
+assert.match(runner, /git", \["status", "--porcelain"\]/, "Production preflight/apply must reject a dirty working tree.");
 assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
   "Production apply must require fresh explicit reconfirmation of residual physical-restore risk when no current physical restore is verified.");
 assert.ok(runner.includes("isExpectedProductionTarget"), "Runner must validate the Production target before preflight/apply.");
@@ -98,6 +100,7 @@ const gateProbe = spawnSync(process.execPath, [join(root, "scripts/apply-reviewe
     ...process.env,
     DATABASE_URL: "postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
     BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
+    BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
     BETHAG_CUTOVER_PLAN_APPROVED: "YES",
     BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
