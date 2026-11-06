@@ -110,10 +110,14 @@
       "original_matched_member_binding": "PASS — an email-mismatch request cannot be approved against a different member",
       "existing_member_account_relink_takeover": "PASS — a member already linked to another user cannot be reassigned",
       "staff_role_preservation": "PASS — admin/collaborator roles are not downgraded during resident portal registration",
-      "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg"
+      "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg",
+      "self_registration_condominium_binding": "PASS — a unique person match cannot override a different condominium explicitly selected by the resident; no member link or portal access is created.",
+      "administrator_approval_condominium_binding": "PASS — manual approval rejects a selected member whose condominium name differs from the request; request remains pending and no account or portal access is linked.",
+      "same_account_other_condominium_request_scoping": "PASS — self-registration does not approve a different condominium request for the same account/email.",
+      "member_first_row_lock_order": "PASS — both registration entry points lock the member before request mutation to avoid lock inversion and concurrent account-link races."
     },
-    "github_actions_run_id": 42249217106,
-    "reviewed_head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
+    "github_actions_run_id": 42254963193,
+    "reviewed_head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
@@ -130,7 +134,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit de39a76d6130aca1f87ba4b15e00b0110e7624be; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42249217215, Build/PostgreSQL 17 rehearsal 42249217106, and Baseline Safety 42249216931 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 5ee618c3f5476b8284e92b4bed8803e69c28f3a1; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42254963559, Build/PostgreSQL 17 rehearsal 42254963193, and Baseline Safety 42254963332 all completed SUCCESS on the same SHA. The portal registration migration, its draft and frozen manifest hash are aligned. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -146,7 +150,9 @@
     "security_advisor_lints": 0,
     "health_advisor_lints": 0,
     "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight.",
-    "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout after approval metadata and exact SHA are frozen"
+    "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout after approval metadata and exact SHA are frozen",
+    "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
+    "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes."
   },
   "captured_at_utc": "2026-11-06T16:16:17Z"
 }

@@ -340,3 +340,51 @@ La registrazione di autorizzazione nel manifest è stata corretta: `user_authori
 L'istruzione «tu lavori io approvo» individua Federico come approvatore/proprietario; non costituisce approvazione finale del cutover né autorizzazione a merge, deploy, freeze o apply. L'operatore umano locale resta da confermare. La finestra obiettivo del 7 novembre 2026 alle 22:00 Europe/Rome non equivale ad autorizzazione.
 
 **Production: NO-GO.** Nessuna migrazione, scrittura ledger, merge, deploy, freeze o altra modifica Production è stata eseguita. Restano necessari: preflight read-only e preflight locale sul checkout documentale finale, backup fisico corrente oppure riconferma esplicita del rischio residuo, contatti recovery, operatore confermato, avviso utenti approvato, criteri STOP/rollback e approvazione finale scritta su SHA, 19 hash SQL e finestra. APP-14 sarà verificato solo dopo il cutover autorizzato.
+
+
+
+---
+
+## Addendum finale — candidato verificato 2026-11-06, ore 16:47 UTC
+
+Questo addendum prevale sui precedenti riferimenti a SHA, conteggio file e run CI.
+
+### Candidato e collaudo esatto
+
+**SHA testato:** `5ee618c3f5476b8284e92b4bed8803e69c28f3a1`.
+
+- Final QA APP-01..APP-15: run [42254963559](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963559) — **SUCCESS**.
+- Build + PostgreSQL 17: run [42254963193](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963193) — **SUCCESS**, inclusi clean-install 28 migrazioni, test Portale, rehearsal delle 19 migrazioni canoniche con runner guarded, ACL/default ACL e rollback subentro.
+- Baseline Safety: run [42254963332](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963332) — **SUCCESS**.
+- APP-01..APP-13 e APP-15: **PASS**. APP-14 resta **PARTIAL / post-cutover only**.
+- APP-12: provider Resend e callback firmato verificati su QA con destinatario di test; non è una certificazione di deliverability di produzione.
+
+### Correzioni Portale incluse e collaudate
+
+- Il self-service rifiuta il collegamento se il condominio selezionato non corrisponde al condominio del profilo anagrafico trovato.
+- L'approvazione amministrativa rifiuta il profilo appartenente a un condominio diverso da quello indicato nella richiesta.
+- Una registrazione non approva più richieste differenti solo perché condividono account/e-mail: l'aggiornamento è circoscritto a utente, e-mail, workspace, membro e condominio coerenti.
+- Le due entry point serializzano il collegamento bloccando prima il membro e poi la richiesta, riducendo il rischio di race e deadlock.
+- Test PostgreSQL 17 isolati: **PASS**; dati sintetici in rollback. Migrazione canonica, draft e hash del manifest risultano byte-identici/allineati.
+
+### Verifica live read-only
+
+**Production:** preflight SQL del repository eseguito tramite Supabase sul progetto Production, senza scritture; esito senza eccezioni. Confermati ledger 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`, 47 tabelle pubbliche tutte con RLS, zero MAINTAIN per authenticated/service_role, zero privilegi diretti sulle tabelle pubbliche per anon, zero lint Security Advisor e zero lint Health Advisor. Tutte le 19 versioni pendenti risultano assenti nel ledger.
+
+**QA:** ledger 283 righe, head `20261105001928_align_qa_fund_availability_view_acl`, 47 tabelle pubbliche tutte con RLS, zero MAINTAIN per authenticated/service_role, zero lint Security/Health Advisor.
+
+Queste verifiche sono read-only. Non sostituiscono il preflight locale del runner guarded sul checkout pulito e sullo SHA finale.
+
+### Gate ancora aperti — Production NO-GO
+
+1. PR #57: **66 file modificati**, aperta e non unita. Non risulta una review indipendente registrata; la revisione del proprietario non è un controllo a quattro occhi.
+2. Preflight locale read-only del runner guarded, con `DATABASE_URL` diretto e `BETHAG_EXPECTED_COMMIT_SHA` fissato allo SHA finale pulito: **non eseguito**.
+3. Verifica diretta nel Dashboard Production delle impostazioni Data API/esposizione schema `supabase_functions`: **non certificata da questa sessione**.
+4. Backup provider-managed e restore fisico: restore fisico non testato; serve backup corrente verificato oppure riconferma esplicita del rischio residuo per questa specifica finestra.
+5. Conferma dell'operatore umano locale, contatti reali di recovery/escalation, piano STOP/rollback e avviso agli amministratori approvato/inviato.
+6. Approvazione scritta finale del proprietario sullo SHA esatto, sui 19 hash SQL, sul rischio backup, sull'operatore e sulla finestra.
+7. Il lockfile npm è generato come artifact CI ma non è ancora versionato nel repository; prima del rilascio pubblico va consolidato e usato con `npm ci` per rendere riproducibili le installazioni.
+
+La finestra obiettivo resta **sabato 7 novembre 2026, ore 22:00 Europe/Rome**; l'ora di fine non è specificata. La finestra non equivale ad autorizzazione.
+
+**Decisione: Production NO-GO.** Nessun merge, deploy, freeze operativo, migrazione o scrittura ledger Production è stato eseguito.
