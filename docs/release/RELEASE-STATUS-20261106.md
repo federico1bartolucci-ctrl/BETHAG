@@ -73,3 +73,23 @@ Il restore logico locale è stato verificato. Il restore fisico provider-managed
 PR #57 resta aperta e non unita. Nessun merge, deploy, migrazione, scrittura ledger o modifica Production è stata eseguita in questa verifica. Non avviare il runner né dichiarare BETHAG pronto al lancio finché i gate sopra non risultano documentati e superati.
 
 Questo documento aggiorna le evidenze al 2026-11-06; non sostituisce il runbook `docs/release/CUTOVER-BETHAG.md`, il freeze SQL o l'approvazione operativa.
+
+
+## Addendum verifiche finali — 2026-11-06
+
+Le evidenze seguenti aggiornano e prevalgono sui riferimenti ai run precedenti contenuti sopra:
+
+- Commit candidato verificato: `4b4ea1a1448f188187441e79fcf1cc192b85a993`.
+- Final QA APP-01..APP-15 [run 42204430131](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42204430131): **SUCCESS**. Tutti gli step sono completati con conclusion success, inclusi APP-12 (provider Resend), i flussi browser autenticati e APP-15 (role navigation/session persistence), oltre al teardown.
+- Baseline Safety [run 42204430120](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42204430120): SUCCESS.
+- Build/PostgreSQL bootstrap [run 42204430272](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42204430272): SUCCESS; rehearsal PostgreSQL 17, clean install 28 migrazioni, runner isolato 19 migrazioni, ACL/RLS e rollback checks superati.
+- Preflight Production eseguito dall'operatore locale sul checkout esatto `4b4ea1a1448f188187441e79fcf1cc192b85a993`: **READ_ONLY_PRODUCTION_PREFLIGHT_PASS**. Connessione autenticata riuscita; 248/248 righe del ledger corrispondenti allo snapshot congelato; head `20261104222229_reconcile_production_acl_least_privilege`; 19 payload incrementali revisionati. Il runner dichiara esplicitamente che nessun body SQL è stato eseguito e nessuna riga del ledger è stata scritta.
+
+### Stato aggiornato dei gate
+
+- Collaudo applicativo QA APP-01..APP-15: **CHIUSO / PASS**.
+- Preflight tecnico Production read-only: **CHIUSO / PASS**.
+- Cutover Production: **ANCORA NO-GO**. Il preflight non applica migrazioni e non equivale ad approvazione del cutover.
+- Restano da formalizzare: nominativo dell'operatore che eseguirà il cutover, nominativo dell'approvatore distinto, finestra di manutenzione in Europe/Rome, freeze schema/codice, comunicazione utenti, criteri STOP, piano di recovery e contatti; accettazione esplicita e riferita al piano esatto del rischio residuo di restore fisico provider-managed non testato; pin e approvazione formale del commit e dei 19 hash.
+
+Nessuna migrazione è stata applicata. Nessun merge, deploy o modifica Production è stato eseguito. Non avviare il runner in modalità apply e non unire PR #57 fino alla chiusura documentata dei gate e all'approvazione esplicita del proprietario del progetto.
