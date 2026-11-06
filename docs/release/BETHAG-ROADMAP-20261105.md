@@ -326,3 +326,54 @@ Nel run finale APP-01–APP-15 risultano PASS, inclusi i flussi browser autentic
 
 **Punto 7 confermato CHIUSO** sul QA esistente. Nessuna modifica a Production, nessun merge, deploy o cutover. Il punto 6 resta chiuso con decisione NO-GO Production; APP-14 resta PARTIAL / NO-GO.
 
+
+
+---
+
+## Rettifica autoritativa della scaletta — 2026-11-06
+
+Questo addendum prevale sugli stati storici riportati sopra. Le note precedenti restano conservate come cronologia e non devono essere usate per riaprire attività già concluse.
+
+### Stato dei punti
+
+| Punto | Stato aggiornato | Evidenza / decisione |
+|---|---|---|
+| 1–3 | CHIUSI | Fasi precedenti già accettate; non riaprire senza nuova evidenza di difetto. |
+| 4 | CHIUSO | Verifica autenticata QA, permessi/RLS, parità ACL e Data API documentata. |
+| 5 | CHIUSO | Riconciliazione dei registri Production/QA e classificazione dei payload completate; preservare tutte le identità storiche. |
+| 6 | CHIUSO | Parità e divergenze QA/Production verificate in sola lettura; decisione Production NO-GO documentata. |
+| 7 | CHIUSO — 2026-11-06 | Final QA APP-01..APP-15 run 42132736491 SUCCESS sul commit applicativo 6988383794995748436aaa691e8a08ed41eb8188. APP-01..APP-13 e APP-15 PASS; APP-14 resta PARTIAL perché la sua componente Production si chiude soltanto dopo cutover, postflight e smoke Production. |
+| 8 | APERTO — NO-GO | Preparazione operativa e cutover Production controllato, subordinati ai gate elencati sotto. |
+
+### Evidenze finali del punto 7
+
+Sul commit applicativo `6988383794995748436aaa691e8a08ed41eb8188`:
+- Final QA APP-01..APP-15 [run 42132736491](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42132736491): SUCCESS.
+- Build + PostgreSQL bootstrap [run 42132736459](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42132736459): SUCCESS.
+- Baseline Safety [run 42132736537](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42132736537): SUCCESS.
+- APP-15: amministratore, collaboratore e condomino superano navigazione autorizzata, restrizioni di ruolo, autenticazione e persistenza sessione.
+- APP-12: pubblicazione, webhook sintetici firmati, rifiuto firma invalida e probe/consegna Resend su destinatario di test PASS; non equivale a certificazione deliverability su volumi Production.
+- Build: clean install 28 migrazioni e guarded runner 19 incrementi su PostgreSQL 17 isolato PASS.
+
+Il punto 7 non va ripetuto. I relativi test si riaprono solo se cambia codice applicativo, migrazioni, configurazione QA rilevante o emerge un difetto documentato. Lo smoke autenticato Production appartiene al punto 8 dopo il cutover, non è un motivo per ripetere APP-01..APP-15 su QA.
+
+### Punto 8 — stato e gate obbligatori
+
+Verifica Production read-only del 2026-11-06: PostgreSQL 17.6, ledger 248 righe, head `20261104222229`; Security Advisor zero lint; Health Advisor zero lint. Il QA esistente conserva 283 righe di ledger. Non pareggiare i conteggi e non riscrivere le 248 righe storiche Production.
+
+Il piano forward-only resta congelato in 19 migrazioni: rehearsal PostgreSQL 17 isolato PASS; ledger atteso dopo l'esecuzione 267. Il preflight read-only Production è documentato PASS. La verifica Data API è PASS sulla base delle schermate dell'operatore: `public` esposto, `private` e `supabase_functions` non esposti, auto-expose OFF; `graphql_public` aggiuntivo esposto.
+
+Restano da completare, nell'ordine:
+1. L'operatore configura localmente `DATABASE_URL` con connessione Direct o Session Pooler Production, ruolo `postgres` e privilegi DDL. Nessuna password o URI va inserita in chat, issue, PR o repository; non resettare la password per aggirare il gate.
+2. Piano operativo compilato: operatore e approvatore nominati, finestra Europe/Rome, freeze schema, avviso agli utenti, criteri STOP, rollback/recovery e contatti.
+3. Pin del commit approvato e degli hash dei 19 SQL; nuovo preflight read-only immediatamente prima del cutover.
+4. Solo dopo gate e approvazione formale: runner guarded dal checkout pulito approvato.
+5. Postflight: 267 righe, 248 storiche intatte, 19 migrazioni esatte e tutte le postcondizioni; quindi smoke autenticato Production e comunicazione finale.
+
+Il restore logico locale è verificato; il restore fisico provider-managed non è stato eseguito. Il rischio residuo resta esplicito e non deve essere descritto come prova di restore fisico.
+
+### Decisione
+
+**Punti 1–7 chiusi. Punto 8 aperto. Production NO-GO.** PR #57 resta aperta e non unita. Nessuna migrazione, scrittura ledger, deploy o modifica Production è stata eseguita. Non ripetere il collaudo QA già superato e non eseguire merge/cutover per il solo fatto che la CI sia verde.
+
+Documento di stato aggiornato: `docs/release/RELEASE-STATUS-20261106.md`.
