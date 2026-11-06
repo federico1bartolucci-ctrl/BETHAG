@@ -1,11 +1,11 @@
 # BETHAG — scaletta operativa aggiornata
 **Aggiornata:** 2026-11-05  
-**Riferimento:** branch `fix/qa-view-acl-parity-20261105`, ultimo avanzamento documentale `4271e96f2be8b77a4ad77c27014aeda35f6316b2` (successivo alla CI verde `e5a31109178f2b2e18c214dc5164fcb3f43d3fed`).
+**Riferimento:** branch `fix/qa-view-acl-parity-20261105`; ultima accettazione QA autenticata fissata al commit `ea32fc492757e5165b41580f082e42916bd54a8c`.
 
 ## Regole di esecuzione
 - Procedere in ordine, un punto alla volta; non iniziare il successivo finché quello corrente non è chiuso con evidenze verificabili.
 - Mantenere esclusivamente il branch QA esistente `bethag-launch-qa`; non crearne altri, non eliminarlo, non eseguire reset, replay o ricostruzioni distruttive.
-- Nessuna modifica a Production prima del superamento dei gate e dell’esecuzione del cutover controllato. Autorizzazione esplicita dell’utente a tutte le operazioni di rilascio ricevuta il 2026-11-05; nessuna scrittura Production è stata ancora eseguita.
+- Nessuna modifica a Production prima del superamento dei gate e dell’approvazione finale esplicita. **L’autorizzazione al cutover Production non è stata ancora ricevuta**: l’istruzione «tu lavori io approvo» identifica il ruolo di approvatore, non autorizza merge, deploy o apply.
 - Conservare i dati QA e gli storici dei registri di migrazione.
 - Eseguire il collaudo APP completo APP-01–APP-15 solo nell'ultima fase prevista.
 
@@ -17,7 +17,7 @@
 | 4 | Verifica autenticata del QA, permessi/RLS, parità ACL, configurazione Data API e documentazione | **CHIUSO — 2026-11-05** |
 | 5 | Riconciliazione read-only della storia migrazioni Production con le sorgenti canoniche e classificazione degli effetti, quindi piano forward-only verificabile | **CHIUSO — 2026-11-05**: 247/247 payload comuni identici; 17/17 QA-only con file canonico identici; 19 QA-only non canonici classificati e payload esatti archiviati; Production-only confrontato semanticamente col draft; divergenze ACL e tre draft forward-only testati due volte su PostgreSQL 17 isolato; CI Build e Baseline SUCCESS sul commit 79311f06. Nessuna modifica remota. |
 | 6 | Verifica finale della parità QA/Production e preparazione dei gate di rilascio, senza applicare modifiche a Production | **CHIUSO — 2026-11-05, NO-GO Production**: 48 relazioni, 103 policy, 257 indici, 305 vincoli allineati; divergenze applicative e ACL documentate nel report QA-PRODUCTION-PARITY. Branch QA FUNCTIONS_DEPLOYED/ACTIVE_HEALTHY. Nessuna scrittura remota. |
-| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **IN CORSO** — ultimo run 42026909921 SUCCESS: APP-01–APP-11, APP-13 e APP-15 PASS; APP-12 invio provider e consegna Resend verificati, ma callback automatica resta instradata a Production (PARTIAL); APP-14 PARTIAL, gate Production non superato. |
+| 7 | Collaudo applicativo completo APP-01–APP-15 sul solo QA esistente e raccolta delle evidenze finali | **QA CHIUSO — 2026-11-06**: APP-01–APP-13 e APP-15 PASS sul commit `ea32fc49`; APP-14 resta il gate Production post-cutover. |
 
 ## Chiusura del punto 4 — evidenze
 - Dashboard QA `bethag-launch-qa`: **Automatically expose new tables = OFF**, confermato dalla schermata aggiornata del 2026-11-05.
@@ -377,3 +377,16 @@ Il restore logico locale è verificato; il restore fisico provider-managed non �
 **Punti 1–7 chiusi. Punto 8 aperto. Production NO-GO.** PR #57 resta aperta e non unita. Nessuna migrazione, scrittura ledger, deploy o modifica Production è stata eseguita. Non ripetere il collaudo QA già superato e non eseguire merge/cutover per il solo fatto che la CI sia verde.
 
 Documento di stato aggiornato: `docs/release/RELEASE-STATUS-20261106.md`.
+
+
+## Addendum di chiusura QA e autorizzazioni — 2026-11-06
+
+- Commit QA certificato: `ea32fc492757e5165b41580f082e42916bd54a8c`.
+- Final QA APP-01..APP-15: run [42246244137](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246244137) — SUCCESS.
+- Build e PostgreSQL 17 (28 migrazioni clean install, 19 canoniche, runner guarded e postflight isolato): run [42246243987](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246243987) — SUCCESS.
+- Baseline Safety: run [42246243967](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246243967) — SUCCESS.
+- PR #57 contiene 65 file modificati ed è ancora aperta e non unita.
+- La correzione del portale copre richieste ambigue tra workspace, visibilità RLS limitata ai gestori dei condomìni attivi corrispondenti, e-mail account verificata e corrispondenza dell'e-mail del condòmino; i test PostgreSQL 17 isolati sono PASS.
+- **Production resta NO-GO.** Nessuna migrazione, merge, deploy, freeze o scrittura Production è stata eseguita.
+- Non è registrata alcuna approvazione finale del cutover riferita allo SHA, ai 19 hash SQL, alla finestra, al rischio backup e ai criteri STOP/rollback. La finestra del 7 novembre alle 22:00 è un obiettivo, non un'autorizzazione.
+- Non risultano review GitHub indipendenti. La revisione del proprietario è valida come approvazione del proprietario, ma non equivale a una verifica indipendente a quattro occhi.
