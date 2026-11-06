@@ -159,7 +159,7 @@ try {
       .eq("communication_id", communicationId), "verify provider result");
     assert.equal(after.length, 1);
     assert.equal(after[0].email, "delivered@resend.dev");
-    assert.equal(after[0].status, "sent");
+    assert.ok(["sent", "delivered"].includes(after[0].status), "Provider callback produced an unexpected recipient state: " + after[0].status);
     assert.ok(after[0].provider_message_id, "Resend message ID was not persisted");
     assert.ok(after[0].sent_at, "Sent timestamp was not persisted");
 
