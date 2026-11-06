@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { gitBlobSha, hasPostgresConnectionConfig } from "./lib/release-readiness-utils.mjs";
 
 const root = "supabase/rebuild";
 const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
@@ -13,10 +13,6 @@ const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
   readFile(root + "/qa-final-collaudo-20261105.json", "utf8").then(JSON.parse),
 ]);
 
-function gitBlobSha(content) {
-  const bytes = Buffer.from(content, "utf8");
-  return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\0"), bytes])).digest("hex");
-}
 
 const migrationDirectory = "supabase/migrations";
 const files = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
@@ -116,7 +112,9 @@ const riskAccepted = process.env.BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED ===
 if (!physicalRestoreVerified && !riskAccepted) {
   preCutoverBlockers.push("Provider-managed physical restore is unverified; fresh per-cutover residual-risk reconfirmation is required. Historical manifest acceptance is not sufficient.");
 }
-if (!process.env.DATABASE_URL) preCutoverBlockers.push("Direct PostgreSQL DATABASE_URL with DDL privileges is not available to the guarded runner.");
+if (!hasPostgresConnectionConfig(process.env)) {
+  preCutoverBlockers.push("PostgreSQL connection is not configured: provide DATABASE_URL or the complete libpq tuple PGHOST/PGDATABASE/PGUSER.");
+}
 if (process.env.BETHAG_CUTOVER_PLAN_APPROVED !== "YES") {
   preCutoverBlockers.push("The exact cutover plan, maintenance window, communication plan and rollback procedure are not approved.");
 }
