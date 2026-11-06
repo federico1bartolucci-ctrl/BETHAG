@@ -114,14 +114,19 @@ async function signInAdminForCleanup() {
   let lastError = null;
   const retryableStatuses = new Set([0,408,425,429,500,502,503,504,520,521,522,523,524]);
   for (let attempt = 1; attempt <= 4; attempt++) {
-    const { error } = await adminApi.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-    });
-    if (!error) return;
-    lastError = error;
-    if (!retryableStatuses.has(Number(error.status || 0)) || attempt === 4) throw error;
-    console.warn("Transient Supabase Auth error during QA cleanup; retry " + attempt + "/3 (HTTP " + error.status + ")");
+    try {
+      const { error } = await adminApi.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword,
+      });
+      if (!error) return;
+      lastError = error;
+      if (!retryableStatuses.has(Number(error.status || 0)) || attempt === 4) throw error;
+    } catch (error) {
+      lastError = error;
+      if (!retryableStatuses.has(Number(error?.status || 0)) || attempt === 4) throw error;
+    }
+    console.warn("Transient Supabase Auth error during QA cleanup; retry " + attempt + "/3 (HTTP " + (lastError?.status ?? "network") + ")");
     await new Promise(resolve => setTimeout(resolve, attempt * 1000));
   }
   throw lastError;
@@ -137,6 +142,7 @@ async function cleanupFixtures() {
     "BETHAG_UI_ACCEPTANCE_1793864625853",
     "BETHAG_UI_ACCEPTANCE_1793864773907",
     "BETHAG_UI_ACCEPTANCE_1793864944993",
+    "BETHAG_UI_ACCEPTANCE_1793984162791",
   ];
   for (const priorMarker of priorFailedMarkers) {
     const priorResult = await cleanup.from("condominiums").select("id,workspace_id,legacy_id")
