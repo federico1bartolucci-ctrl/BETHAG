@@ -239,3 +239,49 @@ Il test PostgreSQL 17 isolato è stato esteso per verificare i tre casi, mantene
 - PR #57 resta aperta e non unita. Nessuna scrittura, migrazione, merge o deploy Production è stata eseguita.
 
 **Decisione invariata: Production NO-GO.** La finestra obiettivo del 7 novembre alle 22:00 Europe/Rome non supera né sostituisce i gate tecnici e operativi.
+
+
+---
+
+## Addendum successivo — candidato verificato 2026-11-06
+
+Questo addendum prevale sugli stati CI precedenti e sull'addendum di revisione che indicava la nuova CI ancora da eseguire.
+
+### Candidato applicativo e CI esatta
+
+**SHA applicativo/SQL testato:** `db8ed14955174ff92ad2df5567c2b4e3153219a2`.
+
+- Final QA APP-01..APP-15: [run 42225387307](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42225387307) — **SUCCESS**.
+- Build + PostgreSQL 17 bootstrap: [run 42225387494](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42225387494) — **SUCCESS**.
+- Baseline Safety: [run 42225387294](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42225387294) — **SUCCESS**.
+- Il bootstrap ha superato le 28 migrazioni clean-install, il rehearsal delle 19 migrazioni canoniche, il runner guarded, gli ACL/default ACL, il rollback subentro e il test dedicato alla registrazione Portale.
+- Il test Portale ha superato i casi aggiunti: nomi condominiali ambigui tra workspace, rifiuto del takeover di un membro già collegato a un altro account e conservazione dei ruoli admin/collaborator.
+- APP-12 provider Resend, flussi browser autenticati e APP-15 per amministratore, collaboratore e condomino: **PASS**.
+- Diagnostica APP-15: artifact `bethag-app15-diagnostics`, ID `13505238133`.
+
+### Correzione SQL finale
+
+Il rehearsal ha intercettato l'uso non supportato di `min(uuid)` nella risoluzione del workspace. È stato sostituito con `array_agg(...)[1]`, applicato sia alla risoluzione del condominio sia al fallback del workspace unico. Draft e migrazione canonica sono nuovamente byte-identici e l'hash è stato ripinnato nel manifest congelato. Il test PostgreSQL 17 sul candidato sopra è **PASS**.
+
+### Verifica live Production — sola lettura
+
+Il preflight SQL read-only della release è stato eseguito sul progetto Production `tctcgptrsmvgajqjgnev` tramite Supabase, senza scritture:
+- PostgreSQL 17.6; ledger **248 righe**, head `20261104222229_reconcile_production_acl_least_privilege`;
+- inventario di 47 relazioni pubbliche conforme;
+- zero privilegi MAINTAIN effettivi per authenticated e service_role;
+- zero privilegi diretti sulle tabelle pubbliche per anon;
+- Security Advisor: zero lint; Health Advisor: zero lint;
+- stato schema atteso prima del cutover confermato: `workspace_members.data`, trigger co-proprietari e helper upsert Portale ancora assenti; correzioni collaboratore non ancora applicate.
+
+Il preflight SQL non ha modificato schema, dati, ACL o ledger. Il preflight locale del runner guarded, con SHA finale e hash SQL congelati, resta un gate distinto da eseguire prima dell'apply.
+
+### Stato decisionale
+
+- Revisione interna dei 61 file della PR: completata con le correzioni sopra; non risulta una review indipendente registrata su GitHub.
+- QA APP-01..APP-13 e APP-15: **CHIUSO / PASS** sullo SHA esatto.
+- APP-14: **PARTIAL**, perché include il cutover e lo smoke Production.
+- Production: **NO-GO**. Ledger invariato a 248 righe; nessuna migrazione, scrittura ledger, merge o deploy eseguito.
+
+Restano obbligatori: preflight locale del runner sul checkout finale pulito; backup fisico corrente oppure riconferma esplicita e specifica del rischio residuo di restore non testato; contatti recovery/escalation; freeze e comunicazione agli utenti; criteri STOP/rollback; approvazione finale su SHA, 19 hash e finestra; apply controllato, postflight e smoke autenticato Production.
+
+La finestra obiettivo resta **sabato 7 novembre 2026, ore 22:00 Europe/Rome**. Non costituisce autorizzazione automatica al cutover.
