@@ -1,5 +1,5 @@
 # BETHAG — scaletta operativa aggiornata
-**Aggiornata:** 2026-11-05  
+**Aggiornata:** 2026-11-06  
 **Riferimento:** branch `fix/qa-view-acl-parity-20261105`; ultima accettazione QA autenticata fissata al commit `ea32fc492757e5165b41580f082e42916bd54a8c`.
 
 ## Regole di esecuzione
