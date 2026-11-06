@@ -417,3 +417,26 @@ La revisione di rilascio è interna e si basa sulle verifiche già ripetute dura
 **Limite residuo esplicito:** manca il controllo a quattro occhi da parte di una persona distinta dall'autore/proprietario. Questo rischio di processo è accettato per non bloccare il progetto in assenza di un secondo sviluppatore; non equivale a certificazione indipendente.
 
 La disposizione non rimuove gli altri gate: preflight read-only locale sullo SHA finale, verifica Data API, backup/rischio residuo, operatore e piano STOP/rollback, approvazione scritta esatta dei 19 hash, cutover autorizzato, postflight e smoke autenticato Production. Production resta **NO-GO** fino alla chiusura di tali condizioni.
+
+---
+
+## Addendum collaudo browser e correzione quota localStorage — 2026-11-06
+
+- **Commit applicativo verificato:** `2bda4e449018260e8a6657f5a31bb19b4385b268`.
+- **Final QA APP-01..APP-15:** [run 42267503344](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42267503344) — **SUCCESS**.
+- **Build + PostgreSQL 17:** [run 42267502889](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42267502889) — **SUCCESS**.
+- **Baseline Safety:** [run 42267502779](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42267502779) — **SUCCESS**.
+- Tutti e tre i workflow si riferiscono allo stesso SHA applicativo.
+- Il collaudo browser ha riprodotto un errore reale: dopo il salvataggio corretto del condominio su Supabase, il frontend tentava di duplicare l'intera raccolta dei condòmini in `localStorage`; la quota browser veniva superata e il render terminava con errore.
+- Correzione: in modalità Supabase le raccolte workspace server-owned non vengono più duplicate in `localStorage`; in modalità locale la cache usa scritture best-effort che non possono interrompere il rendering.
+- Regressione verificata: creazione del condominio persistita su QA e completamento con SUCCESS del flusso browser autenticato, seguito da APP-15 (navigazione per ruolo e persistenza sessione).
+- Evidenza aggiornata in `supabase/rebuild/qa-final-collaudo-20261105.json`; artifact diagnostico APP-15: `13528575819`.
+
+### Stato dopo la correzione
+
+- QA APP-01..APP-13 e APP-15: **PASS** sullo SHA sopra.
+- Build, PostgreSQL 17, clean install e rehearsal delle 19 migrazioni: **PASS**.
+- APP-14: **PARTIAL**, esclusivamente per il cutover/postflight e smoke autenticato Production.
+- Il manifest mantiene invariata la sequenza congelata di 19 migrazioni e i relativi hash; la correzione applicativa non ha modificato i payload SQL.
+- Production resta **NO-GO**: nessun merge, deploy, DDL, migrazione o scrittura ledger Production è stato eseguito.
+
