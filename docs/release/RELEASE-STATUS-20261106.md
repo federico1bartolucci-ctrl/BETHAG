@@ -108,3 +108,8 @@ Il runbook `docs/release/CUTOVER-BETHAG.md` contiene ora il piano candidato con 
 **Restano non completati:** finestra Europe/Rome, freeze effettivo, avviso utenti (da approvare e inviare), verifica del backup corrente, contatti di escalation e approvazione finale del commit completo e dei 19 hash. Il commit applicativo `4b4ea1a1448f188187441e79fcf1cc192b85a993` ha superato QA/build/safety e il preflight read-only, ma il commit documentale è successivo; pertanto il candidato finale dovrà essere ripinnato, sottoposto a CI e preflight read-only nuovamente.
 
 **Decisione invariata: Production NO-GO.** Nessun merge, deploy, apply o modifica Production è stato eseguito o autorizzato. La scelta dei ruoli non equivale all'approvazione finale del cutover.
+
+
+### Preferenza finestra di manutenzione — 2026-11-06
+
+Il proprietario preferisce eseguire il cutover di sabato in orario serale/notturno, per ridurre l'impatto sugli amministratori di condominio. Il runbook registra come fascia proposta **sabato 22:00 – domenica 02:00, Europe/Rome**. La data esatta e la fascia definitiva restano da concordare; non è stata prenotata né attivata alcuna finestra e nessun avviso utenti è stato inviato. L'orario di fine è un limite di pianificazione, non una promessa di riapertura: in caso di controlli incompleti o falliti, prevalgono i criteri STOP e l'app resta protetta.
