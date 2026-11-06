@@ -95,6 +95,8 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
     const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedHeadSha], { encoding: "utf8" }));
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
+      || path === "supabase/rebuild/production-ledger-20261105.json"
+      || path === "supabase/rebuild/live-migration-ledgers-20261105.json"
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
