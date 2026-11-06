@@ -176,7 +176,7 @@ BEGIN
         '["documenti","verbali","regolamento","assemblee","comunicazioni"]'::jsonb
       );
 
-      INSERT INTO public.workspace_members(
+      INSERT INTO public.workspace_members AS existing_member(
         workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
       )
       VALUES(
@@ -184,11 +184,16 @@ BEGIN
         v_member.condominium_id,v_member.legacy_id
       )
       ON CONFLICT(workspace_id,user_id)
-      DO UPDATE SET active=true,role='resident',
+      DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
         condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
 
-      UPDATE public.profiles
-      SET full_name=v_member.name,email=v_email,role='resident',active=true,updated_at=now()
+      UPDATE public.profiles AS existing_profile
+      SET full_name=v_member.name,email=v_email,
+          role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                    THEN existing_profile.role ELSE 'resident' END,
+          active=true,updated_at=now()
       WHERE id=v_user_id;
 
       UPDATE public.portal_registration_requests
@@ -244,8 +249,11 @@ BEGIN
   ON CONFLICT DO NOTHING
   RETURNING id INTO v_request_id;
 
-  UPDATE public.profiles
-  SET full_name=trim(p_full_name),email=v_email,role='resident',active=true,updated_at=now()
+  UPDATE public.profiles AS existing_profile
+  SET full_name=trim(p_full_name),email=v_email,
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
   WHERE id=v_user_id;
 
   RETURN jsonb_build_object('status','pending','request_id',v_request_id);
@@ -315,7 +323,7 @@ BEGIN
     '[]'::jsonb
   );
 
-  INSERT INTO public.workspace_members(
+  INSERT INTO public.workspace_members AS existing_member(
     workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
   )
   VALUES(
@@ -323,12 +331,16 @@ BEGIN
     v_member.condominium_id,v_member.legacy_id
   )
   ON CONFLICT(workspace_id,user_id)
-  DO UPDATE SET active=true,role='resident',
+  DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
     condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
 
-  UPDATE public.profiles
+  UPDATE public.profiles AS existing_profile
   SET full_name=v_member.name,email=lower(trim(v_request.email)),
-      role='resident',active=true,updated_at=now()
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
   WHERE id=v_request.requested_user_id;
 
   UPDATE public.portal_registration_requests
