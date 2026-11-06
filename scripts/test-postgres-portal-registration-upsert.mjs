@@ -57,7 +57,8 @@ VALUES
  ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium'),
  ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test'),
  ('30000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001','Ambiguous shared name'),
- ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','Ambiguous shared name');
+ ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','Ambiguous shared name'),
+ ('30000000-0000-0000-0000-000000000007','20000000-0000-0000-0000-000000000002','Different condominium in workspace two');
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES
@@ -76,7 +77,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Resident To Be Matched','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000008','30000000-0000-0000-0000-000000000001',NULL,'Email Mismatch Resident','old-email@example.invalid','resident',true,41008,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000009','30000000-0000-0000-0000-000000000001',NULL,'Account Email Mismatch Resident','request-email@example.invalid','resident',true,41009,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000010','30000000-0000-0000-0000-000000000001',NULL,'Unverified Resident','unverified-account@example.invalid','resident',true,41010,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000010','30000000-0000-0000-0000-000000000001',NULL,'Unverified Resident','unverified-account@example.invalid','resident',true,41010,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000011','30000000-0000-0000-0000-000000000007',NULL,'Wrong Condominium Resident','wrong-condo@example.invalid','resident',true,41011,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -94,6 +96,21 @@ VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-00000000
  '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending',NULL),
  ('50000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL);
+
+-- A second request from the same account must not be approved merely because
+-- another condominium registration for that account is matched automatically.
+INSERT INTO public.portal_registration_requests(
+ id,workspace_id,requested_user_id,email,full_name,condominium_name,status
+)
+VALUES (
+ '50000000-0000-0000-0000-000000000006',
+ '20000000-0000-0000-0000-000000000001',
+ '10000000-0000-0000-0000-000000000003',
+ 'self-registered@example.invalid',
+ 'Self Registered Resident',
+ 'Admin approval test condominium',
+ 'pending'
+);
 
 -- Exercise the administrator approval path as authenticated. The function must call
 -- the centralized helper and create exactly one matching portal access row.
@@ -329,6 +346,10 @@ BEGIN
      AND permissions='["documenti","verbali","regolamento","assemblee","comunicazioni"]'::jsonb
      AND active=true
  ) THEN RAISE EXCEPTION 'Self-registration did not upsert the expected portal access'; END IF;
+ IF (SELECT status FROM public.portal_registration_requests
+     WHERE id='50000000-0000-0000-0000-000000000006') <> 'pending' THEN
+   RAISE EXCEPTION 'Self-registration approved a different condominium request for the same account';
+ END IF;
 END;
 $resident_assert$;
 
@@ -403,6 +424,36 @@ WHERE p.oid IN (
 );
 SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS table_owner
 FROM pg_class c WHERE c.oid='public.portal_access'::regclass;
+DO $wrong_condominium_manual_approval$
+DECLARE v_request_id uuid;
+BEGIN
+ SELECT id INTO v_request_id
+ FROM public.portal_registration_requests
+ WHERE requested_user_id='10000000-0000-0000-0000-000000000004'
+   AND status='pending' AND workspace_id IS NULL;
+ IF v_request_id IS NULL THEN RAISE EXCEPTION 'Unassigned ambiguous request was not created'; END IF;
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     v_request_id,'40000000-0000-0000-0000-000000000011'
+   );
+   RAISE EXCEPTION 'Expected PORTAL_REQUEST_CONDOMINIUM_MISMATCH';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_REQUEST_CONDOMINIUM_MISMATCH' THEN RAISE; END IF;
+ END;
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE id=v_request_id AND status='pending' AND workspace_id IS NULL
+ ) THEN RAISE EXCEPTION 'Wrong-condominium approval changed the unassigned request'; END IF;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000011') IS NOT NULL THEN
+   RAISE EXCEPTION 'Wrong-condominium approval linked the resident account';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_access WHERE member_id='40000000-0000-0000-0000-000000000011') THEN
+   RAISE EXCEPTION 'Wrong-condominium approval created portal access';
+ END IF;
+END;
+$wrong_condominium_manual_approval$;
+
 DO $resolve_ambiguous$
 DECLARE v_request_id uuid;
 BEGIN

@@ -3071,6 +3071,10 @@ function App() {
         alert("La richiesta è vincolata al profilo anagrafico originariamente individuato. Verifica il profilo associato e riprova.");
       } else if (message.includes("ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH")) {
         alert("L'indirizzo e-mail dell'account non risulta verificato o non coincide con quello della richiesta.");
+      } else if (message.includes("PORTAL_REQUEST_CONDOMINIUM_MISMATCH")) {
+        alert("Il condominio selezionato non corrisponde a quello indicato nella richiesta di registrazione.");
+      } else if (message.includes("PORTAL_REQUEST_CONDOMINIUM_REQUIRED")) {
+        alert("La richiesta non indica il condominio: chiedi al residente di reinviare la registrazione con il nome esatto.");
       } else {
         alert(message || "Impossibile autorizzare la registrazione.");
       }

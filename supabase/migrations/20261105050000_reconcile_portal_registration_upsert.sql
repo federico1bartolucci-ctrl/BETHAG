@@ -123,6 +123,7 @@ DECLARE
   v_member public.condominium_members%rowtype;
   v_candidate_count integer := 0;
   v_workspace uuid;
+  v_condominium_name text;
   v_request_id uuid;
 BEGIN
   IF v_user_id IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
@@ -159,7 +160,7 @@ BEGIN
       )
     LIMIT 1;
 
-    SELECT c.workspace_id INTO v_workspace
+    SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
     FROM public.condominiums c
     WHERE c.id = v_member.condominium_id;
 
@@ -203,7 +204,15 @@ BEGIN
       UPDATE public.portal_registration_requests
       SET status='approved',matched_member_id=v_member.id,workspace_id=v_workspace,
           requested_user_id=v_user_id,reviewed_at=coalesce(reviewed_at,now()),updated_at=now()
-      WHERE lower(trim(email))=v_email AND status IN ('pending','email_mismatch');
+      WHERE requested_user_id = v_user_id
+        AND lower(trim(email)) = v_email
+        AND status IN ('pending','email_mismatch')
+        AND (workspace_id IS NULL OR workspace_id = v_workspace)
+        AND (matched_member_id IS NULL OR matched_member_id = v_member.id)
+        AND (
+          nullif(trim(condominium_name),'') IS NULL
+          OR lower(trim(condominium_name)) = lower(trim(v_condominium_name))
+        );
 
       RETURN jsonb_build_object(
         'status','approved','workspace_id',v_workspace,
@@ -296,6 +305,7 @@ DECLARE
   v_request public.portal_registration_requests%rowtype;
   v_member public.condominium_members%rowtype;
   v_workspace uuid;
+  v_condominium_name text;
   v_account_email text;
   v_email_confirmed_at timestamptz;
 BEGIN
@@ -317,7 +327,7 @@ BEGIN
 
   IF NOT FOUND THEN RAISE EXCEPTION 'Condòmino non trovato o non attivo'; END IF;
 
-  SELECT c.workspace_id INTO v_workspace
+  SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
   FROM public.condominiums c
   WHERE c.id=v_member.condominium_id;
 
@@ -336,6 +346,18 @@ BEGIN
 
   IF v_request.workspace_id IS NOT NULL AND v_request.workspace_id<>v_workspace THEN
     RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- Bind approval to the condominium named in the resident's request. This
+  -- also prevents a manager from resolving an unassigned request against a
+  -- different condominium in the same workspace.
+  IF v_request.workspace_id IS NULL
+     AND nullif(trim(v_request.condominium_name),'') IS NULL THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_REQUIRED';
+  END IF;
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND lower(trim(v_request.condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_MISMATCH';
   END IF;
 
   IF EXISTS(
