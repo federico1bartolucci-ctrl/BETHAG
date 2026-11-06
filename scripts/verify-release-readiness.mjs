@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { gitBlobSha, hasPostgresConnectionConfig } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
 
 const root = "supabase/rebuild";
 const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
@@ -72,7 +72,7 @@ for (const [name, run] of Object.entries(appEvidence.workflow_runs)) {
 if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedHeadSha], { stdio: "ignore" });
-    const laterChanges = execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedHeadSha], { encoding: "utf8" }).trim().split("\\n").filter(Boolean);
+    const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedHeadSha], { encoding: "utf8" }));
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
       || path === "scripts/verify-release-readiness.mjs"
