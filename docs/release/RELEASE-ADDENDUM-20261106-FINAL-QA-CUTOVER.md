@@ -2,31 +2,39 @@
 
 **Data:** 2026-11-06  
 **PR:** [#57](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/57)  
-**Head verificato al momento della redazione:** `94d162cbe2bcec902c6ccd5cea715a0ce85928b8`
+**Head aggiornato:** `efe20d2e90f2ee725d756f958365b454de252759`
 
-## Evidenza QA
+## Evidenza CI sullo SHA esatto
 
-- Final QA APP-01..APP-15: [run 42209092261](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092261) — **SUCCESS**.
-- Build e PostgreSQL bootstrap: [run 42209092313](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092313) — **SUCCESS**.
-- Baseline Safety: [run 42209092345](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42209092345) — **SUCCESS**.
-- Il collaudo comprende i flussi autenticati UI, navigazione/sessione per ruolo, APP-12 con webhook firmato e probe sintetico Resend, nonché teardown QA.
-- APP-14 rimane il gate relativo al cutover e al postflight Production, non un test applicativo QA non eseguito.
+- Final QA APP-01..APP-15: [run 42213933715](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933715) — **SUCCESS**.
+- Build: [run 42213933748](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933748) — **SUCCESS**.
+- Baseline Safety: [run 42213933711](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42213933711) — **SUCCESS**.
+- Il collaudo copre i flussi autenticati UI, navigazione/sessione per ruolo, APP-12 con webhook firmato e probe sintetico Resend, e teardown QA.
+- APP-14 resta il gate del cutover e del postflight Production, non un test applicativo QA mancante.
 
-## Finestra obiettivo scelta
+## Gate di sicurezza aggiornato
 
-**Domenica 15 novembre 2026, 02:00–04:00, Europe/Rome** (notte tra sabato 14 e domenica 15).
+Il runner Production richiede `BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES` impostato localmente per questa specifica esecuzione se non è disponibile una verifica corrente del restore fisico provider-managed. La vecchia accettazione nel manifest, da sola, non basta. Il controllo è incluso nel test statico del runner.
 
-Questa data prevale sulle precedenti proposte generiche riportate nelle sezioni storiche del runbook, incluse le formulazioni “sabato 22:00–domenica 02:00” e “data da concordare”. La finestra è un obiettivo pianificato: non è prenotata, non è autorizzata e non comporta freeze o avvisi già attivi.
+## Finestra obiettivo
 
-Le 04:00 sono il limite della finestra prevista, non una promessa di riapertura. Se preflight, migrazioni, postflight o smoke test non terminano con esito conforme, prevalgono i criteri STOP e l'applicazione resta protetta.
+**Sabato 7 novembre 2026, inizio ore 22:00, Europe/Rome.**  
+L'ora di fine non è specificata e non viene presunta. La finestra è un obiettivo concordato, non una prenotazione, un freeze attivo o un'autorizzazione al cutover.
 
-## Stato e vincoli
+## Stato
 
-- QA APP-01..APP-15: **CHIUSO / PASS** sul commit sopra.
+- QA APP-01..APP-15: **CHIUSO / PASS** sullo SHA sopra.
+- Build, baseline safety e rehearsal automatizzate: **PASS** sullo SHA sopra.
+- PR #57: aperta, non unita.
 - Production: **NO-GO**.
-- PR #57: aperta e non unita.
 - Nessuna migrazione, scrittura ledger, merge o deploy Production è stata eseguita.
-- Il preflight Production precedente era sul commit applicativo `4b4ea1a...`; non è valido come evidenza per il nuovo head. Va ripetuto in sola lettura sul commit finale dopo la chiusura della documentazione.
-- Restano necessari: nuova CI sul commit documentale finale, preflight read-only sullo SHA finale, verifica del backup corrente, riconferma esplicita del rischio di restore fisico non testato, contatti di recovery, freeze e comunicazioni approvate, approvazione finale del proprietario riferita a SHA e 19 hash esatti.
+
+## Gate ancora aperti
+
+1. Revisione tecnica completa del diff della PR (61 file; 260 commit al controllo corrente). Non risultano review GitHub indipendenti registrate.
+2. Preflight Production read-only sullo SHA finale esatto, dal checkout locale.
+3. Evidenza di backup corrente, oppure riconferma esplicita del rischio residuo di restore fisico non testato.
+4. Contatti effettivi di escalation/recovery e piano STOP/rollback.
+5. Approvazione finale esplicita del proprietario riferita allo SHA completo, ai 19 hash SQL, al backup/rischio, alla finestra e ai criteri STOP.
 
 **Nessuna istruzione in questo documento autorizza merge, deploy o apply.**
