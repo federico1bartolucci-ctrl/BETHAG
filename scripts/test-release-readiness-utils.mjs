@@ -45,11 +45,12 @@ test("application evidence retains compatibility with legacy APP aliases", () =>
   assert.equal(getApplicationTest(evidence, 15).status, "PASS");
 });
 
-test("frozen cutover manifest permits only approval metadata changes after QA", () => {
+test("frozen cutover manifest permits review metadata changes but protects the technical payload", () => {
   const reviewed = {
     status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
     safety: "historical safety note",
     user_authorization: { status: "NOT_RECEIVED", approved_commit_sha: null, approved_migration_hashes: [] },
+    review_disposition: { status: "NOT_RECORDED", blocking_for_release: true },
     sequence: [{ file: "001_migration.sql", git_blob_sha: "abc" }],
     live_ledger: { rows: 248 },
     expected_postflight: { ledger_rows: 267 },
@@ -59,6 +60,7 @@ test("frozen cutover manifest permits only approval metadata changes after QA", 
     status: "FROZEN_FOR_REVIEW_APPROVED",
     safety: "approval recorded for exact release candidate",
     user_authorization: { status: "RECEIVED", approved_commit_sha: "a".repeat(40), approved_migration_hashes: [{ file: "001_migration.sql", git_blob_sha: "abc" }] },
+    review_disposition: { status: "INTERNAL_REVIEW_ACCEPTED_AS_PROJECT_CONTROL", blocking_for_release: false },
   };
   assert.deepEqual(frozenManifestPayload(metadataOnly), frozenManifestPayload(reviewed));
   assert.notDeepEqual(
@@ -74,7 +76,6 @@ test("frozen cutover manifest permits only approval metadata changes after QA", 
     frozenManifestPayload(reviewed),
   );
 });
-
 
 test("live snapshot freshness accepts a current timestamp", () => {
   const now = Date.parse("2026-11-06T16:15:00Z");
