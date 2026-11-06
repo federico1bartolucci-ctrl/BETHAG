@@ -79,6 +79,11 @@ for (const [name, run] of Object.entries(appEvidence.workflow_runs ?? {})) {
 if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedHeadSha], { stdio: "ignore" });
+    const testedFreeze = JSON.parse(execFileSync("git", [
+      "show", `${testedQaSha}:supabase/rebuild/production-migration-cutover-freeze-20261105.json`,
+    ], { encoding: "utf8" }));
+    assert.deepEqual(frozenManifestPayload(freeze), frozenManifestPayload(testedFreeze),
+      "Frozen migration sequence, live ledger, hashes or postflight contract changed after QA; only review/approval metadata may change.");
     const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedHeadSha], { encoding: "utf8" }));
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
