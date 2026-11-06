@@ -2,16 +2,16 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, isFreshSnapshot } from "./lib/release-readiness-utils.mjs";
 
 const root = "supabase/rebuild";
-const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
+const [production, liveLedgers, freeze, appEvidence] = await Promise.all([
   readFile(root + "/production-ledger-20261105.json", "utf8").then(JSON.parse),
-  readFile(root + "/qa-ledger-20261105.json", "utf8").then(JSON.parse),
+  readFile(root + "/live-migration-ledgers-20261105.json", "utf8").then(JSON.parse),
   readFile(root + "/production-migration-cutover-freeze-20261105.json", "utf8").then(JSON.parse),
-  readFile(root + "/live-environment-status-20261027.json", "utf8").then(JSON.parse),
   readFile(root + "/qa-final-collaudo-20261105.json", "utf8").then(JSON.parse),
 ]);
+const qa = liveLedgers.qa;
 
 
 const migrationDirectory = "supabase/migrations";
@@ -29,10 +29,18 @@ const checkedOutHeadSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding:
 const expectedHeadSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
 const testedQaSha = process.env.BETHAG_QA_TESTED_COMMIT_SHA?.trim() || "";
 
+assert.ok(isFreshSnapshot(production.captured_at_utc),
+  "Production ledger snapshot is stale or lacks a valid UTC capture timestamp; refresh it read-only.");
+assert.ok(isFreshSnapshot(qa.captured_at_utc),
+  "QA ledger snapshot is stale or lacks a valid UTC capture timestamp; refresh it read-only.");
 assert.equal(production.count, 248, "Production snapshot must contain the exact 248-row live ledger.");
 assert.equal(production.migrations.length, 248);
 assert.equal(qa.count, 283, "The sole existing QA snapshot must contain 283 rows.");
 assert.equal(qa.migrations.length, 283);
+assert.equal(liveLedgers.production.count, production.count,
+  "Combined live ledger capture and Production snapshot row counts disagree.");
+assert.deepEqual(liveLedgers.production.migrations, production.migrations,
+  "Combined live ledger capture and Production snapshot contents disagree.");
 assert.equal(files.length, 28, "The deployable clean-install chain must contain 28 reviewed SQL files.");
 assert.deepEqual(files, expectedFiles, "Deployable migration directory differs from the frozen 28-file set.");
 assert.deepEqual(freeze.clean_install.pending_canonical_increments, pending, "Frozen runner sequence differs from the clean-install inventory.");
