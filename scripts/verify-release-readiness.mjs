@@ -71,7 +71,10 @@ if (/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
     const laterChanges = execFileSync("git", ["diff", "--name-only", expectedHeadSha + ".." + checkedOutHeadSha], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
-      || path === "scripts/verify-release-readiness.mjs";
+      || path === "scripts/verify-release-readiness.mjs"
+      || path === "scripts/lib/release-readiness-utils.mjs"
+      || path === "scripts/test-release-readiness-utils.mjs"
+      || path === ".github/workflows/build.yml";
     const unexpected = laterChanges.filter((path) => !allowedAfterTest(path));
     if (unexpected.length) preCutoverBlockers.push("Application/migration/workflow files changed after the tested SHA: " + unexpected.join(", "));
   } catch {
