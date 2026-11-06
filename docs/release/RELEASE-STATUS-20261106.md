@@ -442,3 +442,34 @@ La disposizione non rimuove gli altri gate: preflight read-only locale sullo SHA
 
 ### Nota diagnostica browser
 Nel log del collaudo UI è stato registrato un singolo `net::ERR_ABORTED` su una richiesta Supabase `deadlines` durante una navigazione intenzionale (`duringNavigation=true`). Non si sono verificati errori pagina non gestiti; il cleanup dei fixture è stato verificato. L'evento è registrato come cancellazione di richiesta durante navigazione, non come risposta backend riuscita e non ha determinato il fallimento del test.
+
+
+---
+
+## Addendum — runner hardening e collaudo finale aggiornato, 2026-11-06
+
+**Head tecnico verificato:** `4cabd5fc4d0d4b641b290e4333dac38e8fedd659`.  
+**Commit applicativo/SQL già collaudato e invariato:** `2bda4e449018260e8a6657f5a31bb19b4385b268`.
+
+Sul medesimo head tecnico sono terminati con SUCCESS tutti e tre i workflow:
+
+- Baseline Safety: [run 42271829680](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42271829680).
+- Build + PostgreSQL 17: [run 42271829700](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42271829700).
+- Final QA APP-01..APP-15: [run 42271829727](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42271829727).
+
+La Build ha superato installazione dipendenze, audit vulnerabilità ad alta gravità, controlli hash/versioni migrazioni, riconciliazione baseline, sicurezza funzioni/ACL Production, clean-install di 28 migrazioni su PostgreSQL 17, rehearsal delle 19 migrazioni canoniche tramite runner guarded, test ACL/RLS e rollback, build, installazione Chromium e smoke test browser login pubblico.
+
+Il runner `scripts/apply-reviewed-production-migrations.mjs` è stato irrobustito per non esporre `DATABASE_URL` o `PGPASSWORD` negli argomenti/process environment del processo figlio: usa un file temporaneo pgpass con permessi restrittivi, rimuove le credenziali dall'ambiente figlio e cancella il file in `finally`. I controlli statici di regressione sono inclusi nella Baseline Safety. Queste modifiche riguardano il runner di rilascio, non il codice applicativo né i payload SQL congelati.
+
+Il Final QA ha completato con SUCCESS anche i flussi browser autenticati, APP-15 per amministratore/collaboratore/condomino e la diagnostica APP-15. APP-01..APP-13 e APP-15 risultano PASS sul progetto QA. APP-14 resta PARTIAL perché richiede il cutover autorizzato, il postflight e lo smoke autenticato Production.
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiornato per distinguere il commit applicativo testato dal successivo head tecnico e per registrare i tre nuovi run ID. Nessuna migrazione o scrittura su QA/Production è stata eseguita in questa fase di aggiornamento documentale.
+
+### Gate ancora aperti
+
+- Il `package-lock.json` generato in CI è ancora un artifact e non è ancora versionato; il passaggio a `npm ci` resta aperto. Non è stato ricostruito né sostituito con un lockfile approssimativo.
+- Il preflight locale read-only del runner guarded sul checkout finale pulito non è eseguibile dall'ambiente GitHub remoto: richiede la macchina locale dell'operatore e credenziali dirette, senza eseguire DDL.
+- Restano da riconfermare immediatamente prima del cutover: Data API Dashboard, backup/rischio residuo del restore fisico non testato, operatore umano locale, contatti recovery, comunicazione agli amministratori, STOP/rollback e approvazione scritta finale riferita a SHA e 19 hash.
+- APP-14 è esclusivamente post-cutover.
+
+**Production: NO-GO.** PR #57 resta aperta e non unita. Nessun merge, deploy, freeze operativo, DDL, migrazione o scrittura ledger Production è stato eseguito. La finestra obiettivo del 7 novembre 2026 alle 22:00 Europe/Rome non costituisce autorizzazione.
