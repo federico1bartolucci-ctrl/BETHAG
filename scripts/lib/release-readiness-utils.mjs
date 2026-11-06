@@ -10,11 +10,12 @@ export function gitBlobSha(content) {
   ])).digest("hex");
 }
 
-/** Match the guarded runner's accepted libpq connection configuration. */
+/** Parse git's changed-path output independent of checkout line endings. */
 export function splitChangedPaths(output) {
   return output.split(/\r?\n/).filter(Boolean);
 }
 
+/** Match the guarded runner's accepted libpq connection configuration. */
 export function hasPostgresConnectionConfig(env) {
   return Boolean(env.DATABASE_URL || (env.PGHOST && env.PGDATABASE && env.PGUSER));
 }
