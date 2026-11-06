@@ -115,6 +115,8 @@ async function main() {
       "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
     assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
       `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
+    assert.ok(targetHost === `db.${projectRef}.supabase.co` || targetHost?.endsWith(".pooler.supabase.com"),
+      "Blocked: Production apply mode requires the expected Supabase direct or pooler host.");
     assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
