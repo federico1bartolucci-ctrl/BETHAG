@@ -71,7 +71,7 @@ if (freeze.status === "FROZEN_FOR_REVIEW_APPROVED") {
   assert.equal(approval?.status, "RECEIVED");
   assert.match(approval?.approved_commit_sha ?? "", /^[0-9a-f]{40}$/);
   assert.ok(Boolean(approval?.approved_by)
-    && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
+    && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
     && Boolean(approval?.approval_reference));
   assert.deepEqual(approval?.approved_migration_hashes,
     freeze.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })));
