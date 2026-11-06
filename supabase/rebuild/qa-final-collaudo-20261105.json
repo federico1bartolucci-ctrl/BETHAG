@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "8bac18745a2b455f9897da6572ff952964310063",
+  "reviewed_head_sha": "593e7200b63e02854e91b87d3c611f51e0efd4e6",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42131808168,
-      "head_sha": "8bac18745a2b455f9897da6572ff952964310063",
+      "run_id": 42219006910,
+      "head_sha": "593e7200b63e02854e91b87d3c611f51e0efd4e6",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42131808194,
-      "head_sha": "8bac18745a2b455f9897da6572ff952964310063",
+      "run_id": 42219006865,
+      "head_sha": "593e7200b63e02854e91b87d3c611f51e0efd4e6",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42131808165,
-      "head_sha": "8bac18745a2b455f9897da6572ff952964310063",
+      "run_id": 42219006716,
+      "head_sha": "593e7200b63e02854e91b87d3c611f51e0efd4e6",
       "conclusion": "success"
     }
   },
@@ -114,5 +114,5 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on the existing QA project on commit 8bac18745a2b455f9897da6572ff952964310063. APP-14 remains PARTIAL and Production cutover remains NO-GO pending the live catalog/ACL parity reconciliation, direct Production DATABASE_URL availability, approved operational cutover plan, guarded migration execution, postflight and authenticated Production smoke."
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on the existing QA project on the exact PR candidate commit 593e7200b63e02854e91b87d3c611f51e0efd4e6. APP-14 remains PARTIAL and Production cutover remains NO-GO pending current local preflight, fresh risk/backup decision, operational approval, guarded migration execution, postflight and authenticated Production smoke."
 }
