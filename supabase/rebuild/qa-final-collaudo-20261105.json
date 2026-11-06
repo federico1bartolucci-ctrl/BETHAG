@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
+  "reviewed_head_sha": "80c47584d0335129641cfd69b8821b812716c8f7",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42225387307,
-      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
+      "run_id": 42231434069,
+      "head_sha": "80c47584d0335129641cfd69b8821b812716c8f7",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42225387494,
-      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
+      "run_id": 42231433915,
+      "head_sha": "80c47584d0335129641cfd69b8821b812716c8f7",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42225387294,
-      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
+      "run_id": 42231433935,
+      "head_sha": "80c47584d0335129641cfd69b8821b812716c8f7",
       "conclusion": "success"
     }
   },
@@ -121,7 +121,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on existing QA on exact commit db8ed14955174ff92ad2df5567c2b4e3153219a2. Build, PostgreSQL 17 bootstrap (28 clean-install migrations and 19 guarded cutover migrations), portal-registration security regressions, and Baseline Safety all passed on the same SHA. Production read-only SQL preflight and Security/Health Advisors passed; live Production remains at 248 ledger rows with head 20261104222229 and has not been modified. APP-14 remains PARTIAL and Production cutover remains NO-GO pending exact-commit local runner preflight, current backup or explicit residual-risk reconfirmation, operational freeze/communications/contacts, final approval, guarded migration execution, postflight and authenticated Production smoke.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on existing QA on exact commit 80c47584d0335129641cfd69b8821b812716c8f7. Build, PostgreSQL 17 bootstrap (28 clean-install migrations and 19 guarded cutover migrations), portal-registration security regressions, and Baseline Safety all passed on the same SHA. Production read-only SQL preflight and Security/Health Advisors passed; live Production remains at 248 ledger rows with head 20261104222229 and has not been modified. APP-14 remains PARTIAL and Production cutover remains NO-GO pending exact-commit local runner preflight, current backup or explicit residual-risk reconfirmation, operational freeze/communications/contacts, final approval, guarded migration execution, postflight and authenticated Production smoke.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
