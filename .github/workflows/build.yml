@@ -30,6 +30,9 @@ jobs:
       - name: Reject invalid or duplicate migration versions
         run: node scripts/check-unique-migration-versions.mjs
 
+      - name: Test release-readiness hash and PostgreSQL connection gates
+        run: node --test scripts/test-release-readiness-utils.mjs
+
       - name: Verify migration history reconciliation and clean database baseline
         run: npm run verify:baseline
 
