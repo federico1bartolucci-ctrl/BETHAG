@@ -207,7 +207,7 @@ async function main() {
   }
 
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
-  assert.equal(manifest.status, "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
+  assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
     "Manifest status changed; review the plan before proceeding.");
   assert.equal(manifest.live_ledger.rows, expectedLedgerCount);
   assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
