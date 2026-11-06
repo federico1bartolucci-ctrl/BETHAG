@@ -1,25 +1,25 @@
 {
-  "artifact": "BETHAG final QA collaudo evidence — refreshed 2026-11-06",
+  "artifact": "BETHAG final QA evidence — refreshed after portal security review",
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02",
+  "reviewed_head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42222394817,
-      "head_sha": "bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02",
+      "run_id": 42225387307,
+      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42222394795,
-      "head_sha": "bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02",
+      "run_id": 42225387494,
+      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42222394790,
-      "head_sha": "bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02",
+      "run_id": 42225387294,
+      "head_sha": "db8ed14955174ff92ad2df5567c2b4e3153219a2",
       "conclusion": "success"
     }
   },
@@ -64,7 +64,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13461986028
+        "artifact_id": 13505238133
       }
     },
     "APP15": {
@@ -81,7 +81,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13464091084
+        "artifact_id": 13505238133
       }
     }
   },
@@ -99,7 +99,14 @@
     ],
     "workspace_member_profile_column_rehearsal": "PASS",
     "transfer_rollback_rehearsal": "PASS",
-    "production_or_qa_migration_writes": false
+    "production_or_qa_migration_writes": false,
+    "portal_registration_upsert_rehearsal": "PASS",
+    "portal_registration_security_regressions": {
+      "ambiguous_condominium_name_across_workspaces": "PASS — request remains unassigned rather than routed arbitrarily",
+      "existing_member_account_relink_takeover": "PASS — a member already linked to another user cannot be reassigned",
+      "staff_role_preservation": "PASS — admin/collaborator roles are not downgraded during resident portal registration",
+      "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg"
+    }
   },
   "cleanup": {
     "provider_test_marker_rows": {
@@ -114,5 +121,21 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on the existing QA project on exact commit bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02. APP-14 remains PARTIAL and Production cutover remains NO-GO pending local read-only preflight, fresh backup/risk decision, operational approval, guarded migration execution, postflight and authenticated Production smoke."
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on existing QA on exact commit db8ed14955174ff92ad2df5567c2b4e3153219a2. Build, PostgreSQL 17 bootstrap (28 clean-install migrations and 19 guarded cutover migrations), portal-registration security regressions, and Baseline Safety all passed on the same SHA. Production read-only SQL preflight and Security/Health Advisors passed; live Production remains at 248 ledger rows with head 20261104222229 and has not been modified. APP-14 remains PARTIAL and Production cutover remains NO-GO pending exact-commit local runner preflight, current backup or explicit residual-risk reconfirmation, operational freeze/communications/contacts, final approval, guarded migration execution, postflight and authenticated Production smoke.",
+  "production_preflight": {
+    "status": "PASS_READ_ONLY_SQL",
+    "captured_date": "2026-11-06",
+    "ledger_rows": 248,
+    "ledger_head": {
+      "version": "20261104222229",
+      "name": "reconcile_production_acl_least_privilege"
+    },
+    "public_relations": 47,
+    "authenticated_maintain_privileges": 0,
+    "service_role_maintain_privileges": 0,
+    "anon_direct_public_table_privileges": 0,
+    "security_advisor_lints": 0,
+    "health_advisor_lints": 0,
+    "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight."
+  }
 }
