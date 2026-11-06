@@ -79,7 +79,11 @@ for (const item of manifest.live_ledger.forward_migrations_after_2026_11_02_free
 }
 assert.match(runner, /BETHAG_ALLOW_PRODUCTION_MIGRATIONS/);
 assert.match(runner, /BETHAG_PRODUCTION_PROJECT_REF/);
-assert.match(runner, /"--dbname",\s*process\.env\.DATABASE_URL/, "psql must receive DATABASE_URL as its database connection string.");
+assert.ok(runner.includes("BETHAG_PSQL_BIN"), "Runner must support an explicit local psql executable path.");
+assert.ok(runner.includes("hasLibpqEnvironment"), "Runner must support locally configured libpq connection variables.");
+assert.ok(runner.includes("connectionArgs"), "Runner must support DATABASE_URL or libpq environment variables.");
+assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide a separate read-only Production preflight mode.");
+assert.ok(runner.includes("isExpectedProductionTarget"), "Runner must validate the Production target before preflight/apply.");
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 248-row preservation/);
 assert.match(runner, /CANONICAL_MIGRATION_LEDGER_PASS/);
