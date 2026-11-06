@@ -100,7 +100,7 @@ async function main() {
   }
   const targetHost = targetUrl?.hostname || process.env.PGHOST;
   const targetUser = targetUrl ? decodeURIComponent(targetUrl.username) : process.env.PGUSER;
-  const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.replace(/^\\//, "")) : process.env.PGDATABASE;
+  const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.substring(1)) : process.env.PGDATABASE;
   const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
   const isExpectedProductionTarget =
     (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
