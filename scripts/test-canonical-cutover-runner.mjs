@@ -141,11 +141,11 @@ const blockedCode = await new Promise((resolve, reject) => {
   blockedApply.on("error", reject);
   blockedApply.on("close", resolve);
 });
-assert.notEqual(blockedCode, 0, "Production apply must fail closed without fresh residual-risk reconfirmation.");
+assert.notEqual(blockedCode, 0, "Production apply must fail closed without exact written cutover approval.");
 assert.match(blockedErr + blockedOut,
   /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
-  "Production apply must stop at an unmet release gate before any database connection.");
-console.log("PASS: historical manifest risk acceptance alone cannot pass the Production apply gate; runner stopped before any database connection.");
+  "Production apply must stop at the explicit approval gate before any database connection.");
+console.log("PASS: pending cutover approval cannot pass the Production apply gate; runner stopped before any database connection.");
 
 
 console.log("Applying existing canonical Production head (already included in frozen 248-row ledger) to clean local schema...");
