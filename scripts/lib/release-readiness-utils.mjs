@@ -34,3 +34,11 @@ export function frozenManifestPayload(manifest) {
   const { status, safety, user_authorization, ...payload } = manifest;
   return payload;
 }
+
+/** Reject missing, stale, or implausibly future-dated live environment snapshots. */
+export function isFreshSnapshot(capturedAt, now = Date.now(), maxAgeHours = 24) {
+  const timestamp = Date.parse(capturedAt ?? "");
+  if (!Number.isFinite(timestamp)) return false;
+  const ageMs = now - timestamp;
+  return ageMs >= -5 * 60 * 1000 && ageMs <= maxAgeHours * 60 * 60 * 1000;
+}
