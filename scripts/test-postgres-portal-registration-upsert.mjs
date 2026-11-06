@@ -313,6 +313,7 @@ console.log(JSON.stringify({
   checks: [
     "administrator portal approval uses centralized upsert helper",
     "resident self-registration uses centralized upsert helper",
+    "ambiguous cross-workspace request remains unassigned until an authorized administrator resolves it",
     "legacy-id/email conflicting duplicates fail closed",
     "archived condominium portal upsert rejected",
     "helper inaccessible directly to anon/authenticated/service_role",
