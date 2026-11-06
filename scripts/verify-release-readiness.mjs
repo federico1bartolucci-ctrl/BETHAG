@@ -58,18 +58,21 @@ if (freeze.rehearsal_evidence.status !== "PASS" || freeze.rehearsal_evidence.git
 if (!/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   preCutoverBlockers.push("Set BETHAG_EXPECTED_COMMIT_SHA to the full 40-character SHA that passed QA/build/baseline.");
 }
-if (appEvidence.reviewed_head_sha !== expectedHeadSha) {
-  preCutoverBlockers.push("Final QA evidence SHA does not match BETHAG_EXPECTED_COMMIT_SHA.");
+if (!/^[0-9a-f]{40}$/.test(testedQaSha)) {
+  preCutoverBlockers.push("Set BETHAG_QA_TESTED_COMMIT_SHA to the full SHA that passed QA/build/baseline.");
+}
+if (appEvidence.reviewed_head_sha !== testedQaSha) {
+  preCutoverBlockers.push("Final QA evidence SHA does not match BETHAG_QA_TESTED_COMMIT_SHA.");
 }
 for (const [name, run] of Object.entries(appEvidence.workflow_runs)) {
-  if (run.conclusion !== "success" || run.head_sha !== expectedHeadSha) {
+  if (run.conclusion !== "success" || run.head_sha !== testedQaSha) {
     preCutoverBlockers.push(`${name} evidence is not SUCCESS on the pinned tested commit.`);
   }
 }
-if (/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
+if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   try {
-    execFileSync("git", ["merge-base", "--is-ancestor", expectedHeadSha, checkedOutHeadSha], { stdio: "ignore" });
-    const laterChanges = execFileSync("git", ["diff", "--name-only", expectedHeadSha + ".." + checkedOutHeadSha], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+    execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedHeadSha], { stdio: "ignore" });
+    const laterChanges = execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedHeadSha], { encoding: "utf8" }).trim().split("\\n").filter(Boolean);
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
       || path === "scripts/verify-release-readiness.mjs"
