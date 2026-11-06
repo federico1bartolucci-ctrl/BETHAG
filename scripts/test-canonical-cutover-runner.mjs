@@ -12,6 +12,7 @@ import { readFile } from "node:fs/promises";
 import { execFileSync, spawn } from "node:child_process";
 
 const databaseUrl = process.env.DATABASE_URL;
+const appEvidence = JSON.parse(await readFile("supabase/rebuild/qa-final-collaudo-20261105.json", "utf8"));
 assert.ok(databaseUrl, "DATABASE_URL must point to the isolated local PostgreSQL rehearsal database.");
 let target;
 try { target = new URL(databaseUrl); } catch { throw new Error("Invalid DATABASE_URL."); }
@@ -122,6 +123,7 @@ const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production
     DATABASE_URL: "postgresql://postgres:unused@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
     BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
     BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    BETHAG_QA_TESTED_COMMIT_SHA: appEvidence.reviewed_head_sha,
     BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
     BETHAG_CUTOVER_PLAN_APPROVED: "YES",
     BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
@@ -140,8 +142,9 @@ const blockedCode = await new Promise((resolve, reject) => {
   blockedApply.on("close", resolve);
 });
 assert.notEqual(blockedCode, 0, "Production apply must fail closed without fresh residual-risk reconfirmation.");
-assert.match(blockedErr + blockedOut, /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES/,
-  "Production apply must explain the missing fresh residual-risk reconfirmation.");
+assert.match(blockedErr + blockedOut,
+  /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  "Production apply must stop at an unmet release gate before any database connection.");
 console.log("PASS: historical manifest risk acceptance alone cannot pass the Production apply gate; runner stopped before any database connection.");
 
 
