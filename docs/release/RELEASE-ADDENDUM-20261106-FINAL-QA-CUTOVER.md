@@ -2,45 +2,49 @@
 
 **Data:** 2026-11-06  
 **PR:** [#57](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/57)  
-**Commit applicativo testato:** `bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02`
+**Commit applicativo e migrazioni testato:** `62967275c6a528be031c26e2352caa39c7031af9`
 
 ## Evidenze CI sullo SHA esatto
 
-- Final QA APP-01..APP-15: [run 42222394817](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394817) — **SUCCESS**.
-- Build + PostgreSQL bootstrap: [run 42222394795](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394795) — **SUCCESS**.
-- Baseline Safety: [run 42222394790](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394790) — **SUCCESS**.
-- PostgreSQL 17 ha superato clean-install 28 migrazioni, runner guarded 19 incrementi, ACL/default ACL, colonna profilo, rollback subentro e test negativo dei gate Production.
-- APP-12 ha verificato l'invio di un solo messaggio sintetico a `delivered@resend.dev`, callback firmato verso QA e persistenza di `delivered/Consegnata`.
-- APP-01..APP-15: **PASS** sul progetto QA esistente. APP-14 resta il gate di cutover/postflight Production, non un test QA applicativo mancante.
+- Final QA APP-01..APP-15: [run 42257477325](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42257477325) — **SUCCESS**.
+- Build + PostgreSQL 17 bootstrap: [run 42257477464](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42257477464) — **SUCCESS**.
+- Baseline Safety: [run 42257477318](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42257477318) — **SUCCESS**.
+- **APP-01..APP-13 e APP-15: PASS. APP-14: PARTIAL**, perché richiede cutover, postflight e smoke autenticato su Production, non eseguiti.
+- PostgreSQL 17 ha superato clean-install delle 28 migrazioni, rehearsal isolata delle 19 migrazioni canoniche, controlli ACL/default ACL, bootstrap, rollback subentro e test negativi dei gate Production.
+- APP-12 ha verificato il flusso di pubblicazione, webhook firmato e invio sintetico tramite Resend al destinatario di test `delivered@resend.dev`.
+- APP-15 ha verificato i tre ruoli, persistenza sessione e navigazione; il test ha impostato temporaneamente il workspace QA a Free, verificato il blocco di Documenti/Scadenze e degli altri moduli a pagamento, quindi ripristinato e verificato il piano originario `portal`.
+- Il workspace QA è stato ricontrollato dopo il test: piano ripristinato a `portal`.
 
-## Correzioni di sicurezza e tracciabilità
+## Correzioni di sicurezza e regressioni
 
-- Il test APP-12 fallisce se il provider è non configurato; non accetta più un risultato `PARTIAL` come workflow verde.
-- Il readiness checker richiede SHA completo esplicito, esiti e SHA coerenti per Final QA/Build/Baseline, PASS per ogni APP e nessuna modifica applicativa/migrazione successiva al commit testato.
-- L'accettazione del rischio restore del 27 ottobre è storica: non sostituisce una riconferma esplicita per la specifica esecuzione.
-- Il runner Production richiede `BETHAG_EXPECTED_COMMIT_SHA` uguale al checkout pulito; rifiuta modifiche tracked e file untracked inattesi.
-- I test negativi del runner usano un worktree isolato per verificare i gate senza confondere gli artefatti locali di `npm install`.
-- Corrette due guardie URL dei test PostgreSQL e il conteggio della sezione C della classificazione QA-only (9 migrazioni).
+- Self-registration rifiuta il collegamento automatico se il residente seleziona un condominio diverso da quello del membro univocamente abbinato.
+- Self-registration e approvazione amministrativa rifiutano i casi ambigui con più condomìni attivi omonimi nello stesso workspace.
+- Entrambi i percorsi bloccano la riga del membro prima di verificare/aggiornare `user_id`, impedendo race condition e sovrascritture concorrenti dell'associazione account-condòmino.
+- Le richieste di registrazione vengono aggiornate solo se corrispondono ad account, email, workspace, membro e condominio attesi; richieste relative ad altri condomìni restano pending.
+- Migrazione canonica, draft e hash del manifest congelato sono allineati; le regressioni sono state eseguite su PostgreSQL 17 isolato.
+- La pulizia del collaudo ritenta gli errori temporanei Supabase Auth (HTTP 5xx/521) e l'APP-15 individua l'utente admin tramite service role, senza un secondo login Auth.
 
-## Stato Production
+## Verifiche read-only Supabase
 
-- Production resta **NO-GO**.
-- Nessuna migrazione, scrittura ledger, merge, deploy o modifica Production è stata eseguita.
-- Ledger Production precedentemente verificato read-only: 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`.
-- Il preflight Production read-only deve essere ripetuto sul checkout finale approvato; la prova storica su un commit precedente non è sufficiente.
-- Restore fisico provider-managed: **NON VERIFICATO**. Restore logico locale verificato, ma non sostitutivo della prova fisica.
+- **Production**: ledger 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`; 47 tabelle pubbliche con RLS; zero privilegi `MAINTAIN` per `authenticated/service_role`; Security Advisor e Health Advisor senza finding.
+- **QA**: ledger 283 righe, head `20261105001928_align_qa_fund_availability_view_acl`; 47 tabelle pubbliche con RLS; zero privilegi `MAINTAIN` per `authenticated/service_role`; Security Advisor e Health Advisor senza finding.
+- Le verifiche sono read-only. Nessuna migrazione o scrittura ledger è stata applicata a Production o QA.
+- Il test della nuova migrazione portal-registration è stato eseguito su PostgreSQL 17 isolato; la migrazione non è stata applicata al ledger QA né a Production.
 
-## Finestra e gate ancora aperti
+## Stato Production e gate ancora aperti
 
-**Inizio concordato:** sabato 7 novembre 2026, ore 22:00, `Europe/Rome`.  
-**Ora di fine:** non specificata. La finestra non è prenotazione, freeze attivo o autorizzazione al cutover.
+**Production resta NO-GO.** La PR #57 è aperta, con 66 file modificati. Non risulta una review indipendente registrata: una revisione del proprietario/autore non sostituisce il controllo a quattro occhi.
 
-Restano obbligatori:
-1. Revisione tecnica completa dei 61 file PR; nessuna review indipendente GitHub risulta registrata.
-2. Verifica backup corrente oppure riconferma esplicita del rischio restore fisico non testato per questa esecuzione.
-3. Contatti reali di recovery/escalation e piano STOP/rollback.
-4. Freeze e avviso agli amministratori, da approvare e inviare.
-5. Preflight Production read-only dal checkout pulito e pinned sullo SHA approvato.
-6. Approvazione finale esplicita riferita a SHA, 19 hash SQL, backup/rischio, finestra e criteri STOP.
+Restano obbligatori prima di qualsiasi cutover:
 
-**Decisione: Production NO-GO.** Nessun merge, deploy, apply, freeze o invio di comunicazioni è autorizzato da questo addendum.
+1. Revisione tecnica indipendente da parte di una seconda persona, con esito registrato su PR #57.
+2. Preflight locale read-only del runner guarded sul checkout pulito, con `DATABASE_URL` PostgreSQL diretto e `BETHAG_EXPECTED_COMMIT_SHA` fissato allo SHA finale approvato: **non eseguito**.
+3. Spot-check immediatamente prima del cutover delle impostazioni Data API Production. Le schermate del 2026-11-05 costituiscono evidenza storica, non una verifica aggiornata in questa sessione.
+4. Identificativo del backup provider-managed corrente e verifica della retention; il restore fisico non è stato testato. Serve backup corrente verificato oppure riconferma esplicita del rischio residuo per questa specifica finestra.
+5. Contatti reali di recovery/escalation, operatore locale, criteri STOP/rollback e avviso agli amministratori approvato e inviato.
+6. Approvazione scritta finale del proprietario riferita allo SHA esatto, ai 19 hash SQL, al rischio backup, all'operatore e alla finestra.
+7. Il lockfile npm è stato generato come artifact CI ma non è ancora versionato nel repository; prima del rilascio pubblico va consolidato e usato per installazioni riproducibili (`npm ci`).
+
+**Finestra obiettivo:** sabato 7 novembre 2026, ore 22:00, `Europe/Rome`. L'ora di fine non è specificata. La finestra non equivale ad autorizzazione.
+
+Nessun merge, deploy, freeze operativo, cutover, migrazione o scrittura ledger Production è stato eseguito. Nessuna azione Production è autorizzata da questo addendum.
