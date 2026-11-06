@@ -5,9 +5,10 @@ on:
     branches: ["main"]
   pull_request:
 
-# The final-collaudo workflow serializes all QA writes. This build branch performs only read-only auth certification.
+# Build auth certification and final collaudo both sign in with the same QA
+# accounts. Serialize them to avoid refresh-token/session contention.
 concurrency:
-  group: ${{ github.head_ref == 'fix/qa-view-acl-parity-20261105' && 'bethag-build-validation' || 'bethag-qa-shared-environment' }}
+  group: bethag-qa-shared-environment
   cancel-in-progress: false
 
 jobs:
