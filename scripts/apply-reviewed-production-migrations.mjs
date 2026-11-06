@@ -93,7 +93,7 @@ function assertFinalApprovalRecord(manifest, expectedCommitSha) {
   assert.equal(approval?.approved_commit_sha, expectedCommitSha,
     "Blocked: written approval does not name the exact checked-out release commit.");
   assert.ok(Boolean(approval?.approved_by)
-    && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
+    && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
     && Boolean(approval?.approval_reference),
   "Blocked: final approval record must identify approver, UTC timestamp and evidence reference.");
   assert.deepEqual(approval?.approved_migration_hashes,
