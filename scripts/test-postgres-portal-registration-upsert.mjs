@@ -28,7 +28,8 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000006','workspace-two-admin@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000007','unrelated-workspace-admin@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000007','unrelated-workspace-admin@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000008','corrected-email@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
@@ -37,7 +38,8 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000006','Workspace Two Admin','workspace-two-admin@example.invalid','admin',true),
- ('10000000-0000-0000-0000-000000000007','Unrelated Workspace Admin','unrelated-workspace-admin@example.invalid','admin',true);
+ ('10000000-0000-0000-0000-000000000007','Unrelated Workspace Admin','unrelated-workspace-admin@example.invalid','admin',true),
+ ('10000000-0000-0000-0000-000000000008','Email Mismatch Resident','corrected-email@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -67,7 +69,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Resident To Be Matched','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Resident To Be Matched','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000008','30000000-0000-0000-0000-000000000001',NULL,'Email Mismatch Resident','old-email@example.invalid','resident',true,41008,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -77,7 +80,10 @@ INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_i
 VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000002','admin-approved@example.invalid','Approved Resident','pending'),
  ('50000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending');
+ '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending'),
+ ('50000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001',
+ '10000000-0000-0000-0000-000000000008','corrected-email@example.invalid','Email Mismatch Resident','email_mismatch',
+ '40000000-0000-0000-0000-000000000008');
 
 -- Exercise the administrator approval path as authenticated. The function must call
 -- the centralized helper and create exactly one matching portal access row.
@@ -103,6 +109,66 @@ BEGIN
  THEN RAISE EXCEPTION 'Admin approval did not mark the request approved'; END IF;
 END;
 $admin_assert$;
+
+-- An email-mismatch request cannot be approved until the condominium member
+-- email is corrected to the verified account email.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+DO $email_mismatch_guard$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000003',
+     '40000000-0000-0000-0000-000000000008'
+   );
+   RAISE EXCEPTION 'Expected MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL' THEN RAISE; END IF;
+ END;
+END;
+$email_mismatch_guard$;
+RESET ROLE;
+
+DO $email_mismatch_state$
+BEGIN
+ IF (SELECT status FROM public.portal_registration_requests
+     WHERE id='50000000-0000-0000-0000-000000000003') <> 'email_mismatch' THEN
+   RAISE EXCEPTION 'Email-mismatch request changed status before member email correction';
+ END IF;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000008') IS NOT NULL THEN
+   RAISE EXCEPTION 'Email-mismatch approval linked the resident before correction';
+ END IF;
+END;
+$email_mismatch_state$;
+
+UPDATE public.condominium_members
+SET email='corrected-email@example.invalid'
+WHERE id='40000000-0000-0000-0000-000000000008';
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+SELECT private.admin_approve_portal_registration(
+ '50000000-0000-0000-0000-000000000003',
+ '40000000-0000-0000-0000-000000000008'
+);
+RESET ROLE;
+
+DO $email_mismatch_corrected$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE id='50000000-0000-0000-0000-000000000003'
+     AND status='approved' AND matched_member_id='40000000-0000-0000-0000-000000000008'
+ ) THEN RAISE EXCEPTION 'Corrected email-mismatch request was not approved'; END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_access
+   WHERE workspace_id='20000000-0000-0000-0000-000000000001'
+     AND member_id='40000000-0000-0000-0000-000000000008'
+     AND lower(email)='corrected-email@example.invalid'
+ ) THEN RAISE EXCEPTION 'Corrected email-mismatch approval did not create portal access'; END IF;
+END;
+$email_mismatch_corrected$;
 
 -- A pending registration must not take over a member already linked to another account.
 SET LOCAL ROLE authenticated;
