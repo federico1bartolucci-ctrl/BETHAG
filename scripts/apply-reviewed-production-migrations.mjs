@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
 import { readFile, mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -106,6 +106,17 @@ async function main() {
   const targetUser = targetUrl ? decodeURIComponent(targetUrl.username) : process.env.PGUSER;
   const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.substring(1)) : process.env.PGDATABASE;
   const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
+  if (!rehearsal) {
+    const expectedCommitSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
+    assert.match(expectedCommitSha, /^[0-9a-f]{40}$/,
+      "Blocked: set BETHAG_EXPECTED_COMMIT_SHA to the full approved 40-character commit SHA.");
+    const checkedOutCommitSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    assert.equal(checkedOutCommitSha, expectedCommitSha,
+      "Blocked: checked-out commit does not match BETHAG_EXPECTED_COMMIT_SHA.");
+    const workingTree = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim();
+    assert.equal(workingTree, "",
+      "Blocked: working tree is not clean; use a clean checkout of the approved commit.");
+  }
   const isExpectedProductionTarget =
     (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
     || (targetHost?.endsWith(".pooler.supabase.com") && targetUser === `postgres.${projectRef}`);
