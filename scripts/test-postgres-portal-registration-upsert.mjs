@@ -234,6 +234,7 @@ BEGIN
  );
 END;
 $resolve_ambiguous$;
+RESET ROLE;
 
 DO $ambiguous_manual_approval_assert$
 BEGIN
