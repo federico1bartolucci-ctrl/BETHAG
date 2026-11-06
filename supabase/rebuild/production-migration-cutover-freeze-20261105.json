@@ -303,8 +303,8 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "42e9a97fa3517f9bfdfbbc1a4ebf591282205b7b",
-      "purpose": "Repair portal registration upsert; allow authorized manual resolution of unassigned requests only for active matching condominiums, while enforcing verified account email, original matched-member binding, existing member-link protection and corrected member email before approval.",
+      "git_blob_sha": "4e6737fbe5480e9bd024753ca8030416a83d1f36",
+      "purpose": "Repair portal registration upsert; authorize workspace managers before revealing account verification details, allow manual resolution of unassigned requests only for active matching condominiums, and enforce verified account email, original matched-member binding, existing member-link protection and corrected member email before approval.",
       "postcondition": "Both authenticated registration entry points use the centralized helper; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
     }
