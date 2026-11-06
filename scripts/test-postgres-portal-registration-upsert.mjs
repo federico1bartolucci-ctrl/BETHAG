@@ -120,6 +120,24 @@ BEGIN
 END;
 $admin_assert$;
 
+-- A manager outside the target workspace cannot probe or approve its request.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000007';
+DO $unauthorized_approval$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000003',
+     '40000000-0000-0000-0000-000000000008'
+   );
+   RAISE EXCEPTION 'Expected workspace authorization denial';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'Autorizzazione gestione Portale richiesta' THEN RAISE; END IF;
+ END;
+END;
+$unauthorized_approval$;
+RESET ROLE;
+
 -- An email-mismatch request cannot be approved until the condominium member
 -- email is corrected to the verified account email.
 SET LOCAL ROLE authenticated;
@@ -134,6 +152,15 @@ BEGIN
    RAISE EXCEPTION 'Expected MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
  EXCEPTION WHEN raise_exception THEN
    IF SQLERRM <> 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL' THEN RAISE; END IF;
+ END;
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000003',
+     '40000000-0000-0000-0000-000000000010'
+   );
+   RAISE EXCEPTION 'Expected MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER' THEN RAISE; END IF;
  END;
 END;
 $email_mismatch_guard$;
