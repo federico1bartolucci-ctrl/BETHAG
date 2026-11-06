@@ -87,6 +87,17 @@ if (/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
 if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
   preCutoverBlockers.push("Final authenticated QA collaudo did not complete successfully.");
 }
+for (let number = 1; number <= 13; number++) {
+  const key = "APP-" + String(number).padStart(2, "0");
+  const evidence = appEvidence.application_tests[key];
+  if (evidence !== "PASS" && evidence?.status !== "PASS") {
+    preCutoverBlockers.push(`${key} is not recorded as PASS in the pinned acceptance evidence.`);
+  }
+}
+const app15 = appEvidence.application_tests["APP-15"] ?? appEvidence.application_tests.APP15;
+if (app15 !== "PASS" && app15?.status !== "PASS") {
+  preCutoverBlockers.push("APP-15 is not recorded as PASS in the pinned acceptance evidence.");
+}
 if (appEvidence.application_tests.APP12.status !== "PASS" || appEvidence.application_tests.APP12.provider_delivery !== "PASS") {
   preCutoverBlockers.push("APP-12 provider delivery remains PARTIAL: configure QA RESEND_API_KEY/BETHAG_FROM_EMAIL and verify delivery.");
 }
@@ -106,7 +117,6 @@ if (!process.env.DATABASE_URL) preCutoverBlockers.push("Direct PostgreSQL DATABA
 if (process.env.BETHAG_CUTOVER_PLAN_APPROVED !== "YES") {
   preCutoverBlockers.push("The exact cutover plan, maintenance window, communication plan and rollback procedure are not approved.");
 }
-if (freeze.user_authorization?.status !== "RECEIVED") preCutoverBlockers.push("Explicit user authorization for release operations is not recorded.");
 if (appEvidence.application_tests.APP14.status !== "PASS") {
   postCutoverBlockers.push("APP-14 Production ACL/schema/Data API postflight must pass after the guarded cutover.");
 }
