@@ -27,7 +27,8 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000003','self-registered@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000006','workspace-two-admin@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000006','workspace-two-admin@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000007','unrelated-workspace-admin@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
@@ -35,11 +36,13 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000003','Self Registered Resident','self-registered@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000006','Workspace Two Admin','workspace-two-admin@example.invalid','admin',true);
+ ('10000000-0000-0000-0000-000000000006','Workspace Two Admin','workspace-two-admin@example.invalid','admin',true),
+ ('10000000-0000-0000-0000-000000000007','Unrelated Workspace Admin','unrelated-workspace-admin@example.invalid','admin',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
- ('20000000-0000-0000-0000-000000000002','Second portal registration workspace','free');
+ ('20000000-0000-0000-0000-000000000002','Second portal registration workspace','free'),
+ ('20000000-0000-0000-0000-000000000003','Unrelated portal registration workspace','free');
 
 INSERT INTO public.condominiums(id,workspace_id,name)
 VALUES
@@ -53,7 +56,8 @@ VALUES
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES
  ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','admin',true,'{}'::jsonb),
- ('20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000006','admin',true,'{}'::jsonb);
+ ('20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000006','admin',true,'{}'::jsonb),
+ ('20000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000007','admin',true,'{}'::jsonb);
 
 INSERT INTO public.condominium_members(id,condominium_id,user_id,name,email,role,active,legacy_id,data)
 VALUES
@@ -196,10 +200,26 @@ BEGIN
 END;
 $ambiguous_workspace_assert$;
 
+-- Unassigned requests are visible to managers in matching workspaces,
+-- but must not leak to administrators of unrelated workspaces.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000007';
+DO $unrelated_workspace_visibility$
+BEGIN
+ IF EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE requested_user_id='10000000-0000-0000-0000-000000000004'
+     AND status='pending' AND workspace_id IS NULL
+ ) THEN
+   RAISE EXCEPTION 'Unassigned request leaked to an unrelated workspace administrator';
+ END IF;
+END;
+$unrelated_workspace_visibility$;
+RESET ROLE;
+
 -- An authorized administrator in the selected workspace can manually resolve
 -- the unassigned request; the request is then bound to that workspace/member.
--- Read the unassigned request as the test owner; the SECURITY DEFINER RPC
--- still evaluates auth.uid() as the explicitly selected workspace-two admin.
+SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000006';
 DO $resolve_ambiguous$
 DECLARE v_request_id uuid;
