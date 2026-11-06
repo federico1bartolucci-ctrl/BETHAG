@@ -3155,7 +3155,14 @@ function App() {
           } catch (registrationError) {
             console.error("BETHAG resident registration completion failed", registrationError);
             await supabase.auth.signOut();
-            alert(registrationError instanceof Error ? registrationError.message : "Impossibile completare la registrazione condòmino.");
+            const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
+            if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NAME_REQUIRED")) {
+              alert("Indica il nome esatto del condominio: serve per indirizzare correttamente la richiesta all'amministratore.");
+            } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NOT_FOUND")) {
+              alert("Il condominio indicato non è stato trovato. Controlla il nome esatto oppure contatta l'amministratore.");
+            } else {
+              alert(registrationErrorMessage || "Impossibile completare la registrazione condòmino.");
+            }
             return;
           }
         }
