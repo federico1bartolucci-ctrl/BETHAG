@@ -332,6 +332,28 @@ BEGIN
 END;
 $resident_assert$;
 
+-- With multiple workspaces, missing or unknown condominium names must
+-- fail closed instead of creating requests invisible to every manager.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
+DO $missing_condominium_name_guard$
+BEGIN
+ BEGIN
+   PERFORM private.complete_portal_registration('Unmatched Resident',NULL,NULL);
+   RAISE EXCEPTION 'Expected PORTAL_CONDOMINIUM_NAME_REQUIRED';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_CONDOMINIUM_NAME_REQUIRED' THEN RAISE; END IF;
+ END;
+ BEGIN
+   PERFORM private.complete_portal_registration('Unmatched Resident',NULL,'No such condominium');
+   RAISE EXCEPTION 'Expected PORTAL_CONDOMINIUM_NOT_FOUND';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_CONDOMINIUM_NOT_FOUND' THEN RAISE; END IF;
+ END;
+END;
+$missing_condominium_name_guard$;
+RESET ROLE;
+
 -- Duplicate condominium names across workspaces must never be routed arbitrarily.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
