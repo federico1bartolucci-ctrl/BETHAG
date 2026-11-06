@@ -396,7 +396,8 @@ CREATE POLICY "managers read portal registration requests"
       AND EXISTS (
         SELECT 1
         FROM public.condominiums c
-        WHERE lower(trim(c.name)) = lower(trim(portal_registration_requests.condominium_name))
+        WHERE c.archived_at IS NULL
+          AND lower(trim(c.name)) = lower(trim(portal_registration_requests.condominium_name))
           AND private.can_manage_workspace_module(c.workspace_id, 'portale')
       )
     )
