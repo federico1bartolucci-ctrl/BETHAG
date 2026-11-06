@@ -143,7 +143,7 @@ const blockedCode = await new Promise((resolve, reject) => {
 });
 assert.notEqual(blockedCode, 0, "Production apply must fail closed without fresh residual-risk reconfirmation.");
 assert.match(blockedErr + blockedOut,
-  /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
   "Production apply must stop at an unmet release gate before any database connection.");
 console.log("PASS: historical manifest risk acceptance alone cannot pass the Production apply gate; runner stopped before any database connection.");
 
