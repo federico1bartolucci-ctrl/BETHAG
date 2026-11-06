@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -89,6 +90,29 @@ assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide
 assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
   "Production apply must require fresh explicit reconfirmation of residual physical-restore risk when no current physical restore is verified.");
 assert.ok(runner.includes("isExpectedProductionTarget"), "Runner must validate the Production target before preflight/apply.");
+
+const gateProbe = spawnSync(process.execPath, [join(root, "scripts/apply-reviewed-production-migrations.mjs")], {
+  encoding: "utf8",
+  timeout: 10_000,
+  env: {
+    ...process.env,
+    DATABASE_URL: "postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
+    BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
+    BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
+    BETHAG_CUTOVER_PLAN_APPROVED: "YES",
+    BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
+    BETHAG_QA_APP12_PROVIDER_VERIFIED: "YES",
+    BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED: "YES",
+    BETHAG_PRODUCTION_BACKUP_VERIFIED: "",
+    BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED: "",
+    BETHAG_CUTOVER_REHEARSAL: "",
+    BETHAG_CUTOVER_PREFLIGHT_ONLY: "",
+  },
+});
+assert.notEqual(gateProbe.status, 0, "Production apply must stop without current restore proof or explicit residual-risk reconfirmation.");
+assert.match(gateProbe.stderr, /BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES/,
+  "The runner must stop at the current residual-risk gate before attempting any Production connection.");
+
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 248-row preservation/);
 assert.match(runner, /CANONICAL_MIGRATION_LEDGER_PASS/);
