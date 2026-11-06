@@ -303,9 +303,9 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "27bd2e387d52176a65931352354bf9a298250ab3",
+      "git_blob_sha": "43029cf687106b22a1067c7205695ddf6677d145",
       "purpose": "Repair portal registration upsert; enforce exact condominium binding for resident self-registration and administrator approval, serialize member-account linking with row locks, preserve existing member links and staff roles, require verified matching account/member email, and fail closed on same-workspace same-name condominium ambiguity for both automatic and manual registration paths.",
-      "postcondition": "Both authenticated registration entry points use the centralized helper; a supplied condominium name must match the selected member's active condominium; wrong-condominium auto/manual approval fails without linking or portal-access side effects; member rows are locked before user_id checks/updates; self-registration is rejected when the selected name identifies multiple active condominiums in the same workspace; unassigned approval is rejected when the verified request email matches multiple active members across same-named condominiums in the selected workspace; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
+      "postcondition": "Both authenticated registration entry points use the centralized helper; a supplied condominium name must match the selected member's active condominium; wrong-condominium auto/manual approval fails without linking or portal-access side effects; member rows are locked before user_id checks/updates; self-registration is rejected when the selected name identifies multiple active condominiums in the same workspace; unassigned approval is rejected when the verified request email matches multiple active members across same-named condominiums in the selected workspace; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role. The ambiguity guard also uses the matched member's condominium name when the resident omits the optional name, so omission cannot bypass the duplicate-name block.",
       "production_status": "PENDING_NOT_APPLIED"
     }
   ],
