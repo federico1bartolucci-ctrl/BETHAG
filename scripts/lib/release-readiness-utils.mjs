@@ -11,6 +11,10 @@ export function gitBlobSha(content) {
 }
 
 /** Match the guarded runner's accepted libpq connection configuration. */
+export function splitChangedPaths(output) {
+  return output.split(/\r?\n/).filter(Boolean);
+}
+
 export function hasPostgresConnectionConfig(env) {
   return Boolean(env.DATABASE_URL || (env.PGHOST && env.PGDATABASE && env.PGUSER));
 }
