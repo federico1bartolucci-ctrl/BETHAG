@@ -195,6 +195,20 @@ async function main() {
       "Blocked: Production apply mode requires the expected Production host, username, and postgres database.");
     assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
+    const approval = manifest.user_authorization;
+    assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED",
+      "Blocked: the frozen manifest is still pending final cutover approval.");
+    assert.equal(approval?.status, "RECEIVED",
+      "BETHAG_CUTOVER_APPROVAL_NOT_RECORDED: explicit final user approval has not been recorded in the frozen manifest.");
+    assert.equal(approval?.approved_commit_sha, process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim(),
+      "Blocked: written approval does not name the exact checked-out release commit.");
+    assert.ok(Boolean(approval?.approved_by)
+      && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
+      && Boolean(approval?.approval_reference),
+    "Blocked: final approval record must identify approver, UTC timestamp and evidence reference.");
+    assert.deepEqual(approval?.approved_migration_hashes,
+      manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })),
+      "Blocked: written approval does not cover the exact ordered nineteen SQL file hashes.");
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
       "Blocked: QA application acceptance is not complete.");
     assert.equal(process.env.BETHAG_QA_APP12_PROVIDER_VERIFIED, "YES",
@@ -214,8 +228,13 @@ async function main() {
   }
 
   const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
-  assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
-    "Manifest status changed; review the plan before proceeding.");
+  if (rehearsal || preflightOnly) {
+    assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
+      "Manifest status changed; review the plan before proceeding.");
+  } else {
+    assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED",
+      "Production apply requires the manifest to record final cutover approval.");
+  }
   assert.equal(manifest.live_ledger.rows, expectedLedgerCount);
   assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
   assert.equal(snapshot.count, expectedLedgerCount);
