@@ -54,7 +54,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001',NULL,'Approved Resident','admin-approved@example.invalid','resident',true,41001,'{"apartment":"A1"}'::jsonb),
  ('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000002',NULL,'Self Registered Resident','self-registered@example.invalid','resident',true,41002,'{"apartment":"B2"}'::jsonb),
  ('40000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000003',NULL,'Duplicate Match Resident','duplicate-match@example.invalid','resident',true,41003,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -88,6 +89,32 @@ BEGIN
  THEN RAISE EXCEPTION 'Admin approval did not mark the request approved'; END IF;
 END;
 $admin_assert$;
+
+-- A staff account that is also a condominium member must not be downgraded.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+SELECT private.complete_portal_registration('QA Portal Admin',NULL,'Admin approval test condominium');
+RESET ROLE;
+
+DO $staff_role_assert$
+BEGIN
+ IF (SELECT role FROM public.workspace_members
+     WHERE workspace_id='20000000-0000-0000-0000-000000000001'
+       AND user_id='10000000-0000-0000-0000-000000000001') <> 'admin' THEN
+   RAISE EXCEPTION 'Resident portal registration downgraded an existing workspace administrator';
+ END IF;
+ IF (SELECT role FROM public.profiles
+     WHERE id='10000000-0000-0000-0000-000000000001') <> 'admin' THEN
+   RAISE EXCEPTION 'Resident portal registration downgraded the administrator profile role';
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM public.portal_access
+     WHERE workspace_id='20000000-0000-0000-0000-000000000001'
+       AND member_id='40000000-0000-0000-0000-000000000005'
+       AND lower(email)='admin-portal-test@example.invalid') THEN
+   RAISE EXCEPTION 'Dual staff/resident portal access was not created';
+ END IF;
+END;
+$staff_role_assert$;
 
 -- Exercise the self-registration path as the resident account itself.
 SET LOCAL ROLE authenticated;
