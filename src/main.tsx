@@ -2591,7 +2591,12 @@ function App() {
         p_fiscal_code: registration.fiscalCode || null,
         p_condominium_name: registration.condominiumName || null,
       });
-      if (completionError) throw completionError;
+      if (completionError) {
+        if ((completionError.message || "").includes("PORTAL_MEMBER_CONDOMINIUM_MISMATCH")) {
+          throw new Error("Il nominativo corrisponde a un profilo anagrafico associato a un condominio diverso da quello selezionato. Verifica il nome del condominio e riprova.");
+        }
+        throw completionError;
+      }
       sessionStorage.removeItem("bethag-pending-resident-registration");
       if (completion?.status === "approved") {
         alert("Registrazione completata. Il tuo account è stato collegato al condominio.");
