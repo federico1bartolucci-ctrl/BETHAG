@@ -379,7 +379,7 @@ Queste verifiche sono read-only. Non sostituiscono il preflight locale del runne
 
 1. PR #57: **66 file modificati**, aperta e non unita. Non risulta una review indipendente registrata; la revisione del proprietario non è un controllo a quattro occhi.
 2. Preflight locale read-only del runner guarded, con `DATABASE_URL` diretto e `BETHAG_EXPECTED_COMMIT_SHA` fissato allo SHA finale pulito: **non eseguito**.
-3. Verifica diretta nel Dashboard Production delle impostazioni Data API/esposizione schema `supabase_functions`: **non certificata da questa sessione**.
+3. Dashboard Data API Production: **PASS sulla base delle schermate fornite dall'operatore il 2026-11-05** (`public` esposto, `private` non esposto, `graphql_public` esposto come schema aggiuntivo, `supabase_functions` non esposto, auto-expose OFF; 0/48 tabelle e 0/171 funzioni esposte individualmente). Non riaperta in questa sessione: resta necessario uno spot-check immediatamente prima del cutover.
 4. Backup provider-managed e restore fisico: restore fisico non testato; serve backup corrente verificato oppure riconferma esplicita del rischio residuo per questa specifica finestra.
 5. Conferma dell'operatore umano locale, contatti reali di recovery/escalation, piano STOP/rollback e avviso agli amministratori approvato/inviato.
 6. Approvazione scritta finale del proprietario sullo SHA esatto, sui 19 hash SQL, sul rischio backup, sull'operatore e sulla finestra.

@@ -593,3 +593,37 @@ Il runner Production richiede `BETHAG_EXPECTED_COMMIT_SHA` corrispondente al che
 - L'autorizzazione finale al cutover è **NOT RECEIVED**. Il manifest usa `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`; l'operatore umano locale deve essere confermato.
 - La finestra del 7 novembre 2026 alle 22:00 Europe/Rome è un obiettivo, non un'autorizzazione.
 - Production resta NO-GO. Nessun merge, deploy, freeze, apply, DDL o scrittura ledger è stato eseguito.
+
+
+
+---
+
+## Rettifica finale dello stato operativo — 2026-11-06
+
+Questo addendum prevale sui precedenti riferimenti a commit, numero file, esiti CI e stato dei gate.
+
+### Candidato verificato
+
+- SHA applicativo/SQL sottoposto a collaudo: `5ee618c3f5476b8284e92b4bed8803e69c28f3a1`.
+- Final QA APP-01..APP-15: run [42254963559](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963559) — SUCCESS.
+- Build + PostgreSQL 17: run [42254963193](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963193) — SUCCESS.
+- Baseline Safety: run [42254963332](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42254963332) — SUCCESS.
+- APP-01..APP-13 e APP-15 PASS; APP-14 resta il gate Production post-cutover.
+- PR #57: 66 file modificati, aperta e non unita. Nessuna review indipendente GitHub risulta registrata.
+
+Il commit documentale/evidenze successivo al candidato è ammesso dal readiness checker solo perché modifica esclusivamente documentazione e `qa-final-collaudo-20261105.json`; il QA applicativo resta riferito allo SHA 5ee618c3. Prima del cutover va fissato un unico SHA finale e ripetuto il preflight locale su quello SHA.
+
+### Stato Supabase live — sola lettura
+
+- Production: 248 righe ledger, head `20261104222229_reconcile_production_acl_least_privilege`; 47 tabelle pubbliche, tutte con RLS; zero MAINTAIN per authenticated/service_role; zero privilegi diretti sulle tabelle pubbliche per anon; tutte le 19 versioni pendenti assenti; Security e Health Advisor senza lint.
+- Il file `production-cutover-preflight-20261105.sql` è stato eseguito tramite Supabase sul progetto Production e terminato senza eccezioni. Nessuna scrittura, migrazione o modifica ledger è stata eseguita.
+- QA: 283 righe ledger, head `20261105001928_align_qa_fund_availability_view_acl`; 47 tabelle con RLS, zero MAINTAIN per authenticated/service_role; Security e Health Advisor senza lint.
+- Data API Dashboard Production: PASS su schermate fornite dall'operatore il 2026-11-05; `public` esposto, `private` e `supabase_functions` non esposti, `graphql_public` esposto come schema aggiuntivo, auto-expose OFF. È richiesto uno spot-check immediatamente prima del cutover.
+
+### Decisione e gate residui
+
+**Production resta NO-GO.** Nessun merge, deploy, freeze operativo, DDL, migrazione o scrittura ledger Production è stato eseguito.
+
+Restano obbligatori: revisione indipendente a quattro occhi (non disponibile/registrata); preflight locale del runner guarded con connessione PostgreSQL diretta sul checkout finale pulito; riconferma del backup corrente e del rischio residuo di restore fisico non testato; conferma dell'operatore umano locale; contatti recovery/escalation; avviso agli amministratori approvato e inviato; criteri STOP/rollback; approvazione scritta finale su SHA, 19 hash SQL, finestra e rischio residuo. APP-14 potrà essere chiuso solo dopo cutover autorizzato, postflight e smoke autenticato Production.
+
+La finestra obiettivo resta sabato 7 novembre 2026, ore 22:00 Europe/Rome; ora di fine non specificata. Non è autorizzazione all'apply.
