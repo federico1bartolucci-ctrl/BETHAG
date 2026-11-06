@@ -43,9 +43,15 @@ function gitBlobSha(content) {
 
 function runPsql(args, { input } = {}) {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn("psql", ["-X", "--no-psqlrc", "--dbname", process.env.DATABASE_URL, "-v", "ON_ERROR_STOP=1", ...args], {
+    const psqlExecutable = process.env.BETHAG_PSQL_BIN || "psql";
+    const connectionArgs = process.env.DATABASE_URL
+      ? ["--dbname", process.env.DATABASE_URL]
+      : [];
+    const child = spawn(psqlExecutable, ["-X", "--no-psqlrc", ...connectionArgs, "-v", "ON_ERROR_STOP=1", ...args], {
       env: process.env,
-      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+      // Inherit the console when no SQL is piped so libpq can request a hidden
+      // password interactively on Windows. Never echo or log credential values.
+      stdio: [input === undefined ? "inherit" : "pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -80,13 +86,22 @@ function quoteSqlLiteral(value) {
 async function main() {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const rehearsal = process.env.BETHAG_CUTOVER_REHEARSAL === "YES";
-  assert.ok(process.env.DATABASE_URL, "Blocked: DATABASE_URL is required; do not print or log it.");
-  assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
-    "Blocked: DATABASE_URL appears to be a placeholder.");
+  const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+  const hasLibpqEnvironment = Boolean(process.env.PGHOST && process.env.PGDATABASE && process.env.PGUSER);
+  assert.ok(hasDatabaseUrl || hasLibpqEnvironment,
+    "Blocked: configure DATABASE_URL or the libpq PGHOST/PGPORT/PGDATABASE/PGUSER variables locally; never print or log credentials.");
+  if (hasDatabaseUrl) {
+    assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
+      "Blocked: DATABASE_URL appears to be a placeholder.");
+  }
   if (rehearsal) {
-    let target;
-    try { target = new URL(process.env.DATABASE_URL); } catch { throw new Error("Blocked: invalid DATABASE_URL."); }
-    assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname),
+    let targetHost;
+    if (hasDatabaseUrl) {
+      try { targetHost = new URL(process.env.DATABASE_URL).hostname; } catch { throw new Error("Blocked: invalid DATABASE_URL."); }
+    } else {
+      targetHost = process.env.PGHOST;
+    }
+    assert.ok(["localhost", "127.0.0.1", "::1"].includes(targetHost),
       "Blocked: rehearsal mode is restricted to a local PostgreSQL host.");
     assert.ok(!process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS && !process.env.BETHAG_PRODUCTION_PROJECT_REF,
       "Blocked: rehearsal mode must not be combined with Production authorization variables.");
