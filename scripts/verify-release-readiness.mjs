@@ -57,6 +57,8 @@ if (freeze.rehearsal_evidence.status !== "PASS" || freeze.rehearsal_evidence.git
 }
 if (!/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   preCutoverBlockers.push("Set BETHAG_EXPECTED_COMMIT_SHA to the full 40-character SHA that passed QA/build/baseline.");
+} else if (checkedOutHeadSha !== expectedHeadSha) {
+  preCutoverBlockers.push("The checked-out commit does not match BETHAG_EXPECTED_COMMIT_SHA.");
 }
 if (!/^[0-9a-f]{40}$/.test(testedQaSha)) {
   preCutoverBlockers.push("Set BETHAG_QA_TESTED_COMMIT_SHA to the full SHA that passed QA/build/baseline.");
@@ -64,7 +66,12 @@ if (!/^[0-9a-f]{40}$/.test(testedQaSha)) {
 if (appEvidence.reviewed_head_sha !== testedQaSha) {
   preCutoverBlockers.push("Final QA evidence SHA does not match BETHAG_QA_TESTED_COMMIT_SHA.");
 }
-for (const [name, run] of Object.entries(appEvidence.workflow_runs)) {
+for (const requiredWorkflow of ["final_qa_collaudo", "build", "baseline_safety"]) {
+  if (!appEvidence.workflow_runs?.[requiredWorkflow]) {
+    preCutoverBlockers.push(`Missing ${requiredWorkflow} workflow evidence.`);
+  }
+}
+for (const [name, run] of Object.entries(appEvidence.workflow_runs ?? {})) {
   if (run.conclusion !== "success" || run.head_sha !== testedQaSha) {
     preCutoverBlockers.push(`${name} evidence is not SUCCESS on the pinned tested commit.`);
   }
@@ -87,7 +94,7 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
 } else {
   preCutoverBlockers.push("Cannot compare post-test changes until both BETHAG_QA_TESTED_COMMIT_SHA and BETHAG_EXPECTED_COMMIT_SHA are supplied.");
 }
-if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
+if (appEvidence.workflow_runs?.final_qa_collaudo?.conclusion !== "success") {
   preCutoverBlockers.push("Final authenticated QA collaudo did not complete successfully.");
 }
 for (let number = 1; number <= 13; number++) {
