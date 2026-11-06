@@ -360,6 +360,20 @@ BEGIN
     RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
   END IF;
 
+  -- If the same name identifies multiple active condominiums inside this
+  -- workspace, the request does not identify a unique destination. Require a
+  -- corrected/qualified request instead of choosing a member arbitrarily.
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND (
+       SELECT count(*)
+       FROM public.condominiums c
+       WHERE c.workspace_id=v_workspace
+         AND c.archived_at IS NULL
+         AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+     ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
   -- Bind approval to the condominium named in the resident's request. This
   -- also prevents a manager from resolving an unassigned request against a
   -- different condominium in the same workspace.
