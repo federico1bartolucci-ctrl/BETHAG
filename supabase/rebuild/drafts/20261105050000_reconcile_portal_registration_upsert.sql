@@ -372,6 +372,36 @@ REVOKE ALL ON FUNCTION private.complete_portal_registration(text,text,text) FROM
 REVOKE ALL ON FUNCTION private.admin_approve_portal_registration(uuid,uuid) FROM PUBLIC, anon;
 
 
+
+-- Unassigned requests are visible only to portal managers in a workspace
+-- containing a condominium with the requested name. This permits a deliberate
+-- manual resolution when identical condominium names exist in multiple
+-- workspaces, without exposing every unassigned request to every workspace.
+DROP POLICY IF EXISTS "managers read portal registration requests"
+  ON public.portal_registration_requests;
+
+CREATE POLICY "managers read portal registration requests"
+  ON public.portal_registration_requests
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING (
+    (
+      workspace_id IS NOT NULL
+      AND private.can_manage_workspace_module(workspace_id, 'portale')
+    )
+    OR (
+      workspace_id IS NULL
+      AND condominium_name IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.condominiums c
+        WHERE lower(trim(c.name)) = lower(trim(portal_registration_requests.condominium_name))
+          AND private.can_manage_workspace_module(c.workspace_id, 'portale')
+      )
+    )
+  );
+
 -- The helper is only an implementation detail of the two SECURITY DEFINER callers.
 -- It must not be directly callable by application roles or service_role.
 REVOKE EXECUTE ON FUNCTION private.upsert_portal_access_for_member(uuid, uuid, text, jsonb)
