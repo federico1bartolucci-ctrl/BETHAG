@@ -31,7 +31,7 @@ export function getApplicationTest(applicationTests, id) {
  * Only review/approval metadata may change after the application QA SHA.
  */
 export function frozenManifestPayload(manifest) {
-  const { status, safety, user_authorization, ...payload } = manifest;
+  const { status, safety, user_authorization, review_disposition, ...payload } = manifest;
   return payload;
 }
 
