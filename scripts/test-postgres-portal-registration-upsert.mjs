@@ -105,10 +105,20 @@ VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-00000000
  ('50000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001',
  '10000000-0000-0000-0000-000000000009','request-email@example.invalid','Account Email Mismatch Resident','pending',NULL),
  ('50000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL),
- ('50000000-0000-0000-0000-000000000007',NULL,
- '10000000-0000-0000-0000-000000000011','same-workspace-duplicate@example.invalid',
- 'Same Workspace Duplicate Resident','pending','40000000-0000-0000-0000-000000000012');
+ '10000000-0000-0000-0000-000000000010','unverified-account@example.invalid','Unverified Resident','pending',NULL);
+
+INSERT INTO public.portal_registration_requests(
+ id,workspace_id,requested_user_id,email,full_name,condominium_name,status
+)
+VALUES (
+ '50000000-0000-0000-0000-000000000007',
+ NULL,
+ '10000000-0000-0000-0000-000000000011',
+ 'same-workspace-duplicate@example.invalid',
+ 'Same Workspace Duplicate Resident',
+ 'Same Workspace Duplicate Name',
+ 'pending'
+);
 
 -- A second request from the same account must not be approved merely because
 -- another condominium registration for that account is matched automatically.
