@@ -8,18 +8,18 @@
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42267503344,
-      "head_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+      "run_id": 42273445811,
+      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42267502889,
-      "head_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+      "run_id": 42273445661,
+      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42267502779,
-      "head_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+      "run_id": 42273445958,
+      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
       "conclusion": "success"
     }
   },
