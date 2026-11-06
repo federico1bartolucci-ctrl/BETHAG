@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
+  "reviewed_head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42257477325,
-      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
+      "run_id": 42260444129,
+      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42257477464,
-      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
+      "run_id": 42260444266,
+      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42257477318,
-      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
+      "run_id": 42260444143,
+      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
       "conclusion": "success"
     }
   },
@@ -120,8 +120,8 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42257477464,
-    "reviewed_head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
+    "github_actions_run_id": 42260444266,
+    "reviewed_head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
@@ -138,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 62967275c6a528be031c26e2352caa39c7031af9; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42257477325, Build/PostgreSQL 17 rehearsal 42257477464, and Baseline Safety 42257477318 all completed SUCCESS on the same SHA. APP-15 includes a live Free-plan check with restoration of the original QA workspace plan. Portal registration fails closed for wrong-condominium and same-workspace duplicate-name ambiguity in both self-registration and administrator approval. Production remains unmodified and NO-GO pending independent second-person review, current backup/Data API verification, direct PostgreSQL preflight, exact cutover approval and explicit written owner authorization.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 74ab9f6ae9133ad9de1d17db4735c65082153580; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
