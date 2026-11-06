@@ -388,3 +388,28 @@ Queste verifiche sono read-only. Non sostituiscono il preflight locale del runne
 La finestra obiettivo resta **sabato 7 novembre 2026, ore 22:00 Europe/Rome**; l'ora di fine non è specificata. La finestra non equivale ad autorizzazione.
 
 **Decisione: Production NO-GO.** Nessun merge, deploy, freeze operativo, migrazione o scrittura ledger Production è stato eseguito.
+
+
+---
+
+## Addendum — evidenze riallineate dopo il collaudo, 2026-11-06
+
+Il registro QA è stato aggiornato per puntare al commit applicativo/SQL collaudato `74ab9f6ae9133ad9de1d17db4735c65082153580`. La sola modifica successiva ha aggiornato il documento di evidenza QA, senza modificare codice applicativo, SQL, workflow o payload delle migrazioni.
+
+**Commit documentale corrente:** `dba3420e9de7db8b5a39a862cf037f628bca14c8`.
+
+Sul commit applicativo/SQL `74ab9f6ae9133ad9de1d17db4735c65082153580`:
+- Final QA APP-01..APP-15: run [42260444129](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42260444129) — SUCCESS.
+- Build + PostgreSQL 17: run [42260444266](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42260444266) — SUCCESS.
+- Baseline Safety: run [42260444143](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42260444143) — SUCCESS.
+
+Il successivo commit documentale `dba3420e9de7db8b5a39a862cf037f628bca14c8` ha nuovamente superato tutti e tre i workflow:
+- Final QA APP-01..APP-15: run [42261631085](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42261631085) — SUCCESS.
+- Build + PostgreSQL 17: run [42261630844](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42261630844) — SUCCESS.
+- Baseline Safety: run [42261630957](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42261630957) — SUCCESS.
+
+Verifica live read-only ripetuta: Production 248 righe, head `20261104222229_reconcile_production_acl_least_privilege`; QA 283 righe, head `20261105001928_align_qa_fund_availability_view_acl`. Nessuna delle 19 versioni pendenti del cutover è presente nel ledger Production. Security Advisor e Health Advisor restituiscono zero lint su entrambi i progetti.
+
+**Gate invariati — Production NO-GO:** nessuna review indipendente GitHub registrata; lockfile npm non versionato; preflight locale guarded sullo SHA finale non eseguito; spot-check Data API Production immediatamente pre-cutover ancora richiesto; backup fisico non testato e rischio residuo da riconfermare per la finestra; operatore locale, contatti recovery, avviso utenti, STOP/rollback e approvazione finale scritta su SHA e 19 hash non completati. APP-14 resta esclusivamente post-cutover.
+
+Nessun merge, deploy, freeze operativo, DDL o scrittura sul database Production è stato eseguito.
