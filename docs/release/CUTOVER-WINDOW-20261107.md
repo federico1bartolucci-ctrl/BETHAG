@@ -38,8 +38,10 @@ Fino all'approvazione finale esplicita del proprietario, riferita allo SHA compl
 ## Ruoli
 
 - ChatGPT: supporto tecnico, preparazione e verifica; non è operatore umano.
-- Federico Bartolucci: operatore umano locale e approvatore/proprietario.
-- Operatore e approvatore coincidono per scelta esplicita del proprietario; questa configurazione non costituisce revisione indipendente a quattro occhi.
+- Federico Bartolucci: proprietario e approvatore finale.
+- Operatore umano locale: **da confermare esplicitamente**; Federico potrà assumere anche questo ruolo solo se lo confermerà al momento dell'approvazione.
+- ChatGPT fornisce preparazione tecnica e guida, ma non è un operatore umano né può eseguire autonomamente il cutover Production.
+- Non è nominato un revisore indipendente: la verifica del proprietario non costituisce controllo indipendente a quattro occhi.
 
 ## Stato
 
