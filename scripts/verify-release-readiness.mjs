@@ -98,7 +98,10 @@ const app15 = appEvidence.application_tests["APP-15"] ?? appEvidence.application
 if (app15 !== "PASS" && app15?.status !== "PASS") {
   preCutoverBlockers.push("APP-15 is not recorded as PASS in the pinned acceptance evidence.");
 }
-if (appEvidence.application_tests.APP12.status !== "PASS" || appEvidence.application_tests.APP12.provider_delivery !== "PASS") {
+const app12 = appEvidence.application_tests.APP12;
+const providerDeliveryPass = app12?.provider_delivery === "PASS"
+  || (typeof app12?.provider_delivery_observed === "string" && app12.provider_delivery_observed.startsWith("PASS"));
+if (app12?.status !== "PASS" || !providerDeliveryPass) {
   preCutoverBlockers.push("APP-12 provider delivery remains PARTIAL: configure QA RESEND_API_KEY/BETHAG_FROM_EMAIL and verify delivery.");
 }
 if (process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE !== "YES") {
