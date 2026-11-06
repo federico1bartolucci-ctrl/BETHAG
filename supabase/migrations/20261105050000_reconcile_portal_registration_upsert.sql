@@ -300,7 +300,11 @@ BEGIN
   FROM public.condominiums c
   WHERE c.id=v_member.condominium_id;
 
-  IF v_workspace IS NULL OR v_request.workspace_id IS NULL OR v_request.workspace_id<>v_workspace THEN
+  -- A request left unassigned because condominium names collide across
+  -- workspaces may be resolved manually by an administrator in the selected
+  -- workspace. A previously assigned request must still match exactly.
+  IF v_workspace IS NULL
+     OR (v_request.workspace_id IS NOT NULL AND v_request.workspace_id<>v_workspace) THEN
     RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
   END IF;
 
