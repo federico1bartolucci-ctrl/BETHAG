@@ -1,7 +1,7 @@
 {
   "artifact": "BETHAG Production migration cutover freeze — 248-row live history, nineteen pending canonical increments",
   "captured_date": "2026-11-05",
-  "status": "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
+  "status": "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
   "reviewed_source_commit": "ec19cda3734fd818e4005e9efa626b9401549df4",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
@@ -473,7 +473,7 @@
     "Production function/schema/ACL/default-privilege postflight must pass after the guarded cutover.",
     "No Production DDL or ledger writes until all remaining gates are satisfied and the guarded cutover is explicitly started."
   ],
-  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrites or deletes. The 248+19 ordered PostgreSQL 17 rehearsal passed in isolated CI. The user authorized release operations on 2026-11-05; this technical freeze does not bypass remaining gates. No Production DDL or ledger writes have been performed.",
+  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrites or deletes. The 248+19 ordered PostgreSQL 17 rehearsal passed in isolated CI. No explicit final user approval for Production cutover has been recorded; this technical freeze is review-only. No Production DDL or ledger writes have been performed.",
   "rehearsal_evidence": {
     "status": "PASS",
     "date": "2026-11-05",
@@ -531,11 +531,11 @@
     "ordering": "All 28 deployable migration files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 248-row/19-increment runner."
   },
   "user_authorization": {
-    "status": "RECEIVED",
-    "date": "2026-11-05",
-    "scope": "The user explicitly authorized all operations necessary for release, including Production changes where technically required.",
-    "source": "Explicit user instruction in the current project conversation.",
-    "limitations": "Authorization does not bypass technical release gates. The prior decision against the paid Restore to a New Project route remains in force; no additional paid recovery project is authorized by this record."
+    "status": "NOT_RECEIVED",
+    "date": null,
+    "scope": "No explicit approval to merge, deploy, apply Production migrations, activate a Production freeze, or execute the cutover has been received. The user's instruction 'tu lavori io approvo' identifies Federico as approver; it does not approve the exact cutover plan or authorize execution.",
+    "source": "The release approval record still requires written approval naming the exact commit SHA, nineteen SQL hashes, backup/restore disposition, maintenance window, operator, and STOP/rollback criteria. No complete approval record exists.",
+    "limitations": "Do not merge, deploy, apply migrations, activate the freeze, or mutate Production until the owner gives explicit final approval against the exact release candidate and all technical gates pass."
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
