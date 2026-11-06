@@ -138,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 2bda4e449018260e8a6657f5a31bb19b4385b268; browser workflow confirmed condominium creation and navigation after eliminating backend-mode localStorage duplication. APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Application acceptance APP-01..APP-13 and APP-15 passed on application commit 2bda4e449018260e8a6657f5a31bb19b4385b268. Release-runner hardening and the full Build, PostgreSQL 17 and Final QA workflows passed on branch head 4cabd5fc4d0d4b641b290e4333dac38e8fedd659. APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -158,7 +158,7 @@
     "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
     "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes."
   },
-  "captured_at_utc": "2026-11-06T18:08:26Z",
+  "captured_at_utc": "2026-11-06T18:36:00Z",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
@@ -170,5 +170,34 @@
       "console_observation": "One Supabase deadlines request was aborted during an intentional browser navigation (net::ERR_ABORTED; duringNavigation=true); no uncaught page error occurred and the test's service-role cleanup was verified.",
       "disposition": "Navigation cancellation recorded as non-blocking test observation; not classified as a successful backend request."
     }
+  },
+  "release_runner_validation": {
+    "captured_date": "2026-11-06",
+    "tested_branch_head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+    "application_sql_commit_unchanged": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+    "workflow_runs": {
+      "baseline_safety": {
+        "run_id": 42271829680,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      },
+      "build": {
+        "run_id": 42271829700,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      },
+      "final_qa_collaudo": {
+        "run_id": 42271829727,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      }
+    },
+    "scope": "Release-runner hardening and CI validation only; no application code, canonical SQL payload, QA data or Production data/schema/ledger changed.",
+    "runner_security": "PASS — DATABASE_URL and PGPASSWORD are removed from child process environment; connection credentials are passed through a restrictive temporary pgpass file and removed in finally; no connection URL is passed in psql argv.",
+    "postgres17_bootstrap": "PASS — 28 clean-install migrations and 19 canonical guarded migrations rehearsed on isolated PostgreSQL 17; ACL/RLS/rollback and portal registration tests passed.",
+    "browser_build_smoke": "PASS — build, Chromium install and isolated public-login browser smoke passed.",
+    "final_qa": "PASS — APP-01..APP-13 and APP-15 passed on existing QA project; APP-14 remains Production post-cutover only.",
+    "production_modified": false,
+    "merge_or_deploy_performed": false
   }
 }
