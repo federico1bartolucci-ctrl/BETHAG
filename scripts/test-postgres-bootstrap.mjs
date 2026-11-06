@@ -3,6 +3,16 @@ import { execFileSync } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+const pgHost = process.env.PGHOST || "";
+const pgPort = process.env.PGPORT || "";
+const pgUser = process.env.PGUSER || "";
+const pgDatabase = process.env.PGDATABASE || "";
+assert.ok(["localhost", "127.0.0.1", "::1"].includes(pgHost),
+  "Refusing non-loopback PGHOST; this bootstrap test may only use disposable local PostgreSQL.");
+assert.equal(pgPort, "5432", "This bootstrap test requires the isolated CI PostgreSQL port 5432.");
+assert.equal(pgUser, "postgres", "This bootstrap test requires the disposable local postgres role.");
+assert.equal(pgDatabase, "bethag_test", "This bootstrap test may only modify the disposable bethag_test database.");
+
 const directory = "supabase/migrations";
 const migrationFiles = [
   "20261017000001_bethag_baseline_schema.sql",
