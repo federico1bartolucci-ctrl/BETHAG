@@ -26,3 +26,11 @@ export function getApplicationTest(applicationTests, id) {
   const legacyKey = "APP" + String(id).padStart(2, "0");
   return applicationTests[canonicalKey] ?? applicationTests[legacyKey];
 }
+
+/** Return the immutable technical payload of the frozen Production cutover manifest.
+ * Only review/approval metadata may change after the application QA SHA.
+ */
+export function frozenManifestPayload(manifest) {
+  const { status, safety, user_authorization, ...payload } = manifest;
+  return payload;
+}
