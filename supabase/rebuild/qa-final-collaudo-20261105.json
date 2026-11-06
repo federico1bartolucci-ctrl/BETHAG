@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
+  "reviewed_head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42254963559,
-      "head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
+      "run_id": 42257477325,
+      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42254963193,
-      "head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
+      "run_id": 42257477464,
+      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42254963332,
-      "head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
+      "run_id": 42257477318,
+      "head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
       "conclusion": "success"
     }
   },
@@ -64,7 +64,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13523355499
+        "artifact_id": 13523531928
       }
     },
     "APP15": {
@@ -81,7 +81,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13523355499
+        "artifact_id": 13523531928
       }
     }
   },
@@ -116,8 +116,8 @@
       "same_account_other_condominium_request_scoping": "PASS — self-registration does not approve a different condominium request for the same account/email.",
       "member_first_row_lock_order": "PASS — both registration entry points lock the member before request mutation to avoid lock inversion and concurrent account-link races."
     },
-    "github_actions_run_id": 42254963193,
-    "reviewed_head_sha": "5ee618c3f5476b8284e92b4bed8803e69c28f3a1",
+    "github_actions_run_id": 42257477464,
+    "reviewed_head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
@@ -134,7 +134,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 5ee618c3f5476b8284e92b4bed8803e69c28f3a1; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42254963559, Build/PostgreSQL 17 rehearsal 42254963193, and Baseline Safety 42254963332 all completed SUCCESS on the same SHA. The portal registration migration, its draft and frozen manifest hash are aligned. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 62967275c6a528be031c26e2352caa39c7031af9; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42257477325, Build/PostgreSQL 17 rehearsal 42257477464, and Baseline Safety 42257477318 all completed SUCCESS on the same SHA. Portal registration now fails closed for same-workspace same-name condominium ambiguity in both self-registration and administrator approval. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -154,5 +154,5 @@
     "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
     "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes."
   },
-  "captured_at_utc": "2026-11-06T16:16:17Z"
+  "captured_at_utc": "2026-11-06T17:03:54Z"
 }
