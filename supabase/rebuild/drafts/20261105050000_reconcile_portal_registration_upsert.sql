@@ -165,6 +165,20 @@ BEGIN
     FROM public.condominiums c
     WHERE c.id = v_member.condominium_id;
 
+    -- A condominium name is not a unique identifier inside a workspace.
+    -- Even a unique person match must not auto-link when the selected name
+    -- resolves to multiple active condominiums in that same workspace.
+    IF nullif(trim(p_condominium_name),'') IS NOT NULL
+       AND (
+         SELECT count(*)
+         FROM public.condominiums c
+         WHERE c.workspace_id=v_workspace
+           AND c.archived_at IS NULL
+           AND lower(trim(c.name))=lower(trim(p_condominium_name))
+       ) > 1 THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+    END IF;
+
     -- A unique person match is not sufficient when the resident explicitly
     -- selected a different condominium. Never auto-link across that choice.
     IF nullif(trim(p_condominium_name),'') IS NOT NULL
