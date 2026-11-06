@@ -23,10 +23,27 @@ try{
    await page.getByRole("button",{name:"Accedi",exact:true}).last().click();
    await page.getByText(a.landing,{exact:true}).first().waitFor({timeout:25000});
    if(a.role==="admin"){
-    const planNav=page.locator(".sidebar .nav-item").filter({hasText:"Piano e upgrade"}).first();
+    const planNav=page.getByRole("button",{name:"Piano e upgrade",exact:true});
     await planNav.waitFor({state:"visible",timeout:10000});
     await planNav.click();
-    await page.getByRole("heading",{name:"Piano e upgrade",exact:true}).waitFor({timeout:10000});
+    try {
+     await page.waitForFunction(
+      () => new URL(window.location.href).searchParams.get("page") === "abbonamento",
+      null,
+      {timeout:10000}
+     );
+     await page.getByRole("heading",{name:"Piano e upgrade",exact:true}).waitFor({timeout:10000});
+    } catch (error) {
+     const activeNav=page.locator(".sidebar .nav-item.active").first();
+     const debug={
+      url:page.url(),
+      activeNav:await activeNav.count()?await activeNav.innerText():"",
+      headings:await page.getByRole("heading").allTextContents(),
+      dialogs,
+     };
+     console.error("APP15_PLAN_NAV_DEBUG",JSON.stringify(debug));
+     throw error;
+    }
     // The plan-card "Prova struttura" buttons are demo entitlement toggles,
     // not navigation controls. Clicking a dynamically re-labelled ".last()"
     // locator can retarget successive cards after each React render and mutate
