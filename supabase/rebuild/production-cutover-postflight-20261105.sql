@@ -22,6 +22,7 @@ DECLARE
   save_condominium_definition text;
   portal_registration_rls boolean;
   portal_registration_policy boolean;
+  portal_admin_definition text;
 BEGIN
   SELECT count(*)::integer INTO relation_count FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND c.relkind IN ('r','p');
@@ -258,6 +259,14 @@ BEGIN
   IF position('private.upsert_portal_access_for_member' IN pg_get_functiondef('private.admin_approve_portal_registration(uuid,uuid)'::regprocedure))=0
      OR position('private.upsert_portal_access_for_member' IN pg_get_functiondef('private.complete_portal_registration(text,text,text)'::regprocedure))=0 THEN
     RAISE EXCEPTION 'FAIL: portal registration entry points do not use the centralized upsert helper';
+  END IF;
+
+  SELECT pg_get_functiondef('private.admin_approve_portal_registration(uuid,uuid)'::regprocedure)
+  INTO portal_admin_definition;
+  IF position('ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' IN portal_admin_definition)=0
+     OR position('MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL' IN portal_admin_definition)=0
+     OR position('MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER' IN portal_admin_definition)=0 THEN
+    RAISE EXCEPTION 'FAIL: portal approval does not enforce verified account email, corrected member email and original matched-member binding';
   END IF;
 
   IF EXISTS (
