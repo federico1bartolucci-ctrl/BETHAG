@@ -136,7 +136,7 @@ const exactWrittenCutoverApprovalRecorded =
   && userApproval.status === "RECEIVED"
   && userApproval.approved_commit_sha === expectedHeadSha
   && Boolean(userApproval.approved_by)
-  && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(userApproval.approved_at_utc ?? "")
+  && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(userApproval.approved_at_utc ?? "")
   && Boolean(userApproval.approval_reference)
   && JSON.stringify(userApproval.approved_migration_hashes) === JSON.stringify(expectedApprovalHashes);
 if (!exactWrittenCutoverApprovalRecorded) {
