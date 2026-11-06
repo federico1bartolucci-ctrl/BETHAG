@@ -15,6 +15,8 @@ assert.match(migration, /LIMIT 1\s+FOR UPDATE;/,
   "Self-registration must lock the matched member row before checking/linking its user_id");
 assert.match(migration, /WHERE id=p_member_id AND active=true\s+FOR UPDATE;/,
   "Administrator approval must lock the selected member row before checking/linking its user_id");
+assert.match(migration, /PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE/,
+  "Self-registration must reject same-name active condominiums inside one workspace");
 execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1", "-c", migration], {
   stdio: "inherit",
 });
@@ -36,7 +38,8 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000008','corrected-email@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000009','verified-account@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000010','unverified-account@example.invalid',NULL),
- ('10000000-0000-0000-0000-000000000011','same-workspace-duplicate@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000011','same-workspace-duplicate@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000012','unique-duplicate-condo-resident@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
@@ -49,7 +52,8 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000008','Email Mismatch Resident','corrected-email@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000009','Account Email Mismatch Resident','verified-account@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000010','Unverified Resident','unverified-account@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000011','Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000011','Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000012','Unique Duplicate Condo Resident','unique-duplicate-condo-resident@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -88,7 +92,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000010','30000000-0000-0000-0000-000000000001',NULL,'Unverified Resident','unverified-account@example.invalid','resident',true,41010,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000011','30000000-0000-0000-0000-000000000007',NULL,'Wrong Condominium Resident','wrong-condo@example.invalid','resident',true,41011,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000012','30000000-0000-0000-0000-000000000008',NULL,'Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true,41012,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000013','30000000-0000-0000-0000-000000000009',NULL,'Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true,41013,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000013','30000000-0000-0000-0000-000000000009',NULL,'Same Workspace Duplicate Resident','same-workspace-duplicate@example.invalid','resident',true,41013,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000014','30000000-0000-0000-0000-000000000008',NULL,'Unique Duplicate Condo Resident','unique-duplicate-condo-resident@example.invalid','resident',true,41014,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -351,6 +356,35 @@ BEGIN
  END IF;
 END;
 $staff_role_assert$;
+
+-- A unique person match must still fail closed when two active condominiums
+-- with the selected name exist inside the same workspace.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000012';
+DO $same_workspace_duplicate_self_registration$
+BEGIN
+ BEGIN
+   PERFORM private.complete_portal_registration(
+     'Unique Duplicate Condo Resident',NULL,'Same Workspace Duplicate Name'
+   );
+   RAISE EXCEPTION 'Expected PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE' THEN RAISE; END IF;
+ END;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000014') IS NOT NULL THEN
+   RAISE EXCEPTION 'Same-workspace duplicate condominium self-registration linked the resident';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_access WHERE member_id='40000000-0000-0000-0000-000000000014') THEN
+   RAISE EXCEPTION 'Same-workspace duplicate condominium self-registration created portal access';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.portal_registration_requests
+            WHERE requested_user_id='10000000-0000-0000-0000-000000000012') THEN
+   RAISE EXCEPTION 'Ambiguous same-workspace self-registration created an automatically assigned request';
+ END IF;
+END;
+$same_workspace_duplicate_self_registration$;
+RESET ROLE;
 
 -- A unique person match must not override a different condominium explicitly selected by the resident.
 SET LOCAL ROLE authenticated;
