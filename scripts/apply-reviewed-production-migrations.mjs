@@ -153,7 +153,8 @@ async function main() {
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
-      || path === "scripts/test-release-readiness-utils.mjs";
+      || path === "scripts/test-release-readiness-utils.mjs"
+      || path === "scripts/verify-canonical-cutover-runner.mjs";
     const unexpectedPostQaChanges = laterChanges.filter((path) => !allowedPostQaChange(path));
     assert.deepEqual(unexpectedPostQaChanges, [],
       "Blocked: application, migration, workflow or other non-documentation files changed after the tested QA SHA: " + unexpectedPostQaChanges.join(", "));
