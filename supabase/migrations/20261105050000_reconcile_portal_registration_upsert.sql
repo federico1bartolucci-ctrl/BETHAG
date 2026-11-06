@@ -292,15 +292,6 @@ BEGIN
     RAISE EXCEPTION 'La richiesta non è associata ad un account autenticato';
   END IF;
 
-  SELECT lower(trim(coalesce(u.email,''))),u.email_confirmed_at
-  INTO v_account_email,v_email_confirmed_at
-  FROM auth.users u
-  WHERE u.id=v_request.requested_user_id;
-  IF NOT FOUND OR v_email_confirmed_at IS NULL
-     OR v_account_email<>lower(trim(coalesce(v_request.email,''))) THEN
-    RAISE EXCEPTION 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
-  END IF;
-
   SELECT * INTO v_member
   FROM public.condominium_members
   WHERE id=p_member_id AND active=true;
@@ -328,6 +319,15 @@ BEGIN
 
   IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
     RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
+  SELECT lower(trim(coalesce(u.email,''))),u.email_confirmed_at
+  INTO v_account_email,v_email_confirmed_at
+  FROM auth.users u
+  WHERE u.id=v_request.requested_user_id;
+  IF NOT FOUND OR v_email_confirmed_at IS NULL
+     OR v_account_email<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
   END IF;
 
   IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
