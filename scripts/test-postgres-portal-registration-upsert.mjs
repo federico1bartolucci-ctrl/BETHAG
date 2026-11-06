@@ -200,10 +200,19 @@ $ambiguous_workspace_assert$;
 -- the unassigned request; the request is then bound to that workspace/member.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000006';
-SELECT private.admin_approve_portal_registration(
- '50000000-0000-0000-0000-000000000003',
- '40000000-0000-0000-0000-000000000007'
-);
+DO $resolve_ambiguous$
+DECLARE v_request_id uuid;
+BEGIN
+ SELECT id INTO v_request_id
+ FROM public.portal_registration_requests
+ WHERE requested_user_id='10000000-0000-0000-0000-000000000004'
+   AND status='pending' AND workspace_id IS NULL;
+ IF v_request_id IS NULL THEN RAISE EXCEPTION 'Unassigned ambiguous request was not created'; END IF;
+ PERFORM private.admin_approve_portal_registration(
+   v_request_id,'40000000-0000-0000-0000-000000000007'
+ );
+END;
+$resolve_ambiguous$;
 RESET ROLE;
 
 DO $ambiguous_manual_approval_assert$
