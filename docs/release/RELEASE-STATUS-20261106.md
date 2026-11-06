@@ -93,3 +93,18 @@ Le evidenze seguenti aggiornano e prevalgono sui riferimenti ai run precedenti c
 - Restano da formalizzare: nominativo dell'operatore che eseguirà il cutover, nominativo dell'approvatore distinto, finestra di manutenzione in Europe/Rome, freeze schema/codice, comunicazione utenti, criteri STOP, piano di recovery e contatti; accettazione esplicita e riferita al piano esatto del rischio residuo di restore fisico provider-managed non testato; pin e approvazione formale del commit e dei 19 hash.
 
 Nessuna migrazione è stata applicata. Nessun merge, deploy o modifica Production è stato eseguito. Non avviare il runner in modalità apply e non unire PR #57 fino alla chiusura documentata dei gate e all'approvazione esplicita del proprietario del progetto.
+
+
+## Piano operativo candidato e ruoli — 2026-11-06
+
+Il proprietario ha dichiarato esplicitamente: «tu lavori io approvo». Ruoli registrati nel runbook:
+- Preparazione tecnica, revisione, checklist e guida: ChatGPT come assistente, non persona fisica né operatore autorizzato.
+- Operatore umano che eseguirà i comandi locali: Federico Bartolucci.
+- Approvatore/proprietario: Federico Bartolucci.
+- Operatore e approvatore coincidono per scelta esplicita; non è una revisione indipendente a quattro occhi. Se è richiesto un controllo indipendente, serve una seconda persona e Production resta NO-GO fino alla nomina.
+
+Il runbook `docs/release/CUTOVER-BETHAG.md` contiene ora il piano candidato con sequenza, criteri STOP, recovery, freeze, comunicazioni, backup/rischio residuo e matrice di approvazione.
+
+**Restano non completati:** finestra Europe/Rome, freeze effettivo, avviso utenti (da approvare e inviare), verifica del backup corrente, contatti di escalation e approvazione finale del commit completo e dei 19 hash. Il commit applicativo `4b4ea1a1448f188187441e79fcf1cc192b85a993` ha superato QA/build/safety e il preflight read-only, ma il commit documentale è successivo; pertanto il candidato finale dovrà essere ripinnato, sottoposto a CI e preflight read-only nuovamente.
+
+**Decisione invariata: Production NO-GO.** Nessun merge, deploy, apply o modifica Production è stato eseguito o autorizzato. La scelta dei ruoli non equivale all'approvazione finale del cutover.
