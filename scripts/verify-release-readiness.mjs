@@ -91,6 +91,7 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
       || path === "scripts/test-release-readiness-utils.mjs"
+      || path === "scripts/test-canonical-cutover-runner.mjs"
       || path === "scripts/verify-canonical-cutover-runner.mjs"
       || path === "scripts/verify-environment-migration-alignment.mjs"
       || path === "supabase/rebuild/production-migration-cutover-freeze-20261105.json"
