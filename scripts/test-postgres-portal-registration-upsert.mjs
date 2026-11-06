@@ -26,14 +26,16 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000002','admin-approved@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000003','self-registered@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000006','workspace-two-admin@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
  ('10000000-0000-0000-0000-000000000002','Approved Resident','admin-approved@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000003','Self Registered Resident','self-registered@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000006','Workspace Two Admin','workspace-two-admin@example.invalid','admin',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -49,7 +51,9 @@ VALUES
  ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','Ambiguous shared name');
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
-VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','admin',true,'{}'::jsonb);
+VALUES
+ ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','admin',true,'{}'::jsonb),
+ ('20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000006','admin',true,'{}'::jsonb);
 
 INSERT INTO public.condominium_members(id,condominium_id,user_id,name,email,role,active,legacy_id,data)
 VALUES
@@ -58,7 +62,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000003',NULL,'Duplicate Match Resident','duplicate-match@example.invalid','resident',true,41003,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000006',NULL,'Unmatched Resident','unmatched-resident@example.invalid','resident',true,41007,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -190,6 +195,42 @@ BEGIN
  END IF;
 END;
 $ambiguous_workspace_assert$;
+
+-- An authorized administrator in the selected workspace can manually resolve
+-- the unassigned request; the request is then bound to that workspace/member.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000006';
+SELECT private.admin_approve_portal_registration(
+ '50000000-0000-0000-0000-000000000003',
+ '40000000-0000-0000-0000-000000000007'
+);
+RESET ROLE;
+
+DO $ambiguous_manual_approval_assert$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE requested_user_id='10000000-0000-0000-0000-000000000004'
+     AND status='approved'
+     AND workspace_id='20000000-0000-0000-0000-000000000002'
+     AND matched_member_id='40000000-0000-0000-0000-000000000007'
+ ) THEN
+   RAISE EXCEPTION 'Authorized manual approval did not resolve the unassigned request';
+ END IF;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000007') <> '10000000-0000-0000-0000-000000000004'::uuid THEN
+   RAISE EXCEPTION 'Manual approval did not link the selected resident account';
+ END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_access
+   WHERE workspace_id='20000000-0000-0000-0000-000000000002'
+     AND member_id='40000000-0000-0000-0000-000000000007'
+     AND lower(email)='unmatched-resident@example.invalid'
+ ) THEN
+   RAISE EXCEPTION 'Manual approval did not create portal access in the selected workspace';
+ END IF;
+END;
+$ambiguous_manual_approval_assert$;
 
 -- A legacy-id match and an email match pointing to different rows must fail closed.
 INSERT INTO public.portal_access(id,workspace_id,condominium_id,legacy_id,name,email,role,permissions,active)
