@@ -506,3 +506,11 @@ I tre workflow sono terminati con SUCCESS sul medesimo SHA:
 
 PR #57 resta aperta e non unita. **Production: NO-GO.** Nessun merge, deploy, freeze operativo, DDL, migrazione o scrittura ledger Production è stato eseguito.
 
+### Correzione allineamento del registro QA — 2026-11-06
+
+La prima CI avviata dopo l'aggiornamento documentale ha rilevato che il campo `reviewed_head_sha` era stato portato al nuovo head senza aggiornare contestualmente i tre riferimenti `workflow_runs` di primo livello. Baseline Safety ha quindi bloccato correttamente il test del runner perché la run Final QA registrata nel registro puntava ancora a `2bda4e4`, mentre lo SHA fissato era `86776caba`.
+
+Il registro è stato corretto in modo atomico sul contenuto JSON: `reviewed_head_sha` e tutti e tre i riferimenti principali (Final QA, Build e Baseline Safety) ora puntano allo stesso SHA `86776caba728e23c454f7e1647a339a89e96b46d` e alle run `42273445811`, `42273445661`, `42273445958`. Le evidenze storiche restano conservate nelle sezioni di validazione precedenti. La correzione riguarda esclusivamente l'allineamento del registro, non il codice applicativo, i workflow o i payload SQL.
+
+La nuova CI sul successivo head documentale deve completarsi prima di considerare chiuso questo allineamento. Nessuna operazione Production è stata eseguita; **Production resta NO-GO**.
+
