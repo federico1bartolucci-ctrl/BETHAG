@@ -110,12 +110,25 @@ async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) 
   throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null));
 }
 
+async function signInAdminForCleanup() {
+  let lastError = null;
+  const retryableStatuses = new Set([0,408,425,429,500,502,503,504,520,521,522,523,524]);
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    const { error } = await adminApi.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword,
+    });
+    if (!error) return;
+    lastError = error;
+    if (!retryableStatuses.has(Number(error.status || 0)) || attempt === 4) throw error;
+    console.warn("Transient Supabase Auth error during QA cleanup; retry " + attempt + "/3 (HTTP " + error.status + ")");
+    await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+  }
+  throw lastError;
+}
+
 async function cleanupFixtures() {
-  const { error: authError } = await adminApi.auth.signInWithPassword({
-    email: adminEmail,
-    password: adminPassword,
-  });
-  if (authError) throw authError;
+  await signInAdminForCleanup();
 
   // Remove only the three uniquely marked synthetic condominiums left by
   // earlier failed teardown attempts in this same QA browser suite.
