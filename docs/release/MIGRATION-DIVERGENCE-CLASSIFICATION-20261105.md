@@ -37,7 +37,7 @@ Sono registrazioni della baseline usata per ricostruire il branch QA. Non sono c
 
 Sono migrazioni effettive di hardening e correzione del percorso invoker/privilegi. La loro assenza dal registro Production non prova da sola che il relativo stato sia assente: le verifiche di catalogo e ACL vanno considerate insieme. Non importare queste righe nel registro Production in blocco; l'eventuale promozione deve avvenire tramite la sequenza canonica già revisionata e il runner di cutover, non mediante copia del ledger QA.
 
-### C. Correzioni applicative/archivio e sincronizzazione (8)
+### C. Correzioni applicative/archivio e sincronizzazione (9)
 - `20261028100000 fix_collaborator_module_permission_boolean`
 - `20261102041805 repair_authenticated_communication_rpc_private_execute`
 - `20261102043152 repair_authenticated_condominium_delete_rpc_private_execute`
