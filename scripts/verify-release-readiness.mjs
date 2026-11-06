@@ -86,6 +86,7 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
       || path === "scripts/test-release-readiness-utils.mjs"
+      || path === "scripts/verify-canonical-cutover-runner.mjs"
       || path === ".github/workflows/build.yml";
     const unexpected = laterChanges.filter((path) => !allowedAfterTest(path));
     if (unexpected.length) preCutoverBlockers.push("Application/migration/workflow files changed after the tested SHA: " + unexpected.join(", "));
