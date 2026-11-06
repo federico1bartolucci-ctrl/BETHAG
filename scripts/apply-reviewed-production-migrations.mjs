@@ -37,7 +37,11 @@ const manifestPath = join(root, "supabase/rebuild/production-migration-cutover-f
 const snapshotPath = join(root, "supabase/rebuild/production-ledger-20261105.json");
 
 function gitBlobSha(content) {
-  const bytes = Buffer.from(content, "utf8");
+  // Git stores text blobs with LF. Windows checkouts may materialize the same
+  // reviewed SQL with CRLF; normalize only line endings before pin comparison.
+  // SQL semantics and every non-newline byte remain covered by the frozen hash.
+  const canonicalContent = content.replace(/\r\n/g, "\n");
+  const bytes = Buffer.from(canonicalContent, "utf8");
   return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
 }
 
