@@ -27,6 +27,7 @@ const preCutoverBlockers = [];
 const postCutoverBlockers = [];
 const checkedOutHeadSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const expectedHeadSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
+const testedQaSha = process.env.BETHAG_QA_TESTED_COMMIT_SHA?.trim() || "";
 
 assert.equal(production.count, 248, "Production snapshot must contain the exact 248-row live ledger.");
 assert.equal(production.migrations.length, 248);
@@ -78,10 +79,10 @@ if (/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
     const unexpected = laterChanges.filter((path) => !allowedAfterTest(path));
     if (unexpected.length) preCutoverBlockers.push("Application/migration/workflow files changed after the tested SHA: " + unexpected.join(", "));
   } catch {
-    preCutoverBlockers.push("The tested QA commit is not an ancestor of the checked-out release candidate.");
+    preCutoverBlockers.push("The tested QA commit is not an ancestor of the exact approved release commit.");
   }
 } else {
-  preCutoverBlockers.push("Cannot compare post-test changes until BETHAG_EXPECTED_COMMIT_SHA is supplied.");
+  preCutoverBlockers.push("Cannot compare post-test changes until both BETHAG_QA_TESTED_COMMIT_SHA and BETHAG_EXPECTED_COMMIT_SHA are supplied.");
 }
 if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
   preCutoverBlockers.push("Final authenticated QA collaudo did not complete successfully.");
