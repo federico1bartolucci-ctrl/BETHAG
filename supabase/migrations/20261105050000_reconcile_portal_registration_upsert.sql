@@ -217,13 +217,14 @@ BEGIN
     RETURN jsonb_build_object('status','email_mismatch','request_id',v_request_id);
   END IF;
 
-  SELECT c.workspace_id INTO v_workspace
+  -- Assign a workspace only when the condominium name identifies exactly
+  -- one condominium across the entire database. Grouping by workspace here
+  -- would incorrectly choose an arbitrary workspace when names collide.
+  SELECT min(c.workspace_id) INTO v_workspace
   FROM public.condominiums c
   WHERE p_condominium_name IS NOT NULL
     AND lower(trim(c.name))=lower(trim(p_condominium_name))
-  GROUP BY c.workspace_id
-  HAVING count(*)=1
-  LIMIT 1;
+  HAVING count(*)=1;
 
   IF v_workspace IS NULL THEN
     SELECT min(w.id) INTO v_workspace
