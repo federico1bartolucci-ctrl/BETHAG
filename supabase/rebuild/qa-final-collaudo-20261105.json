@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
+  "reviewed_head_sha": "dba3420e9de7db8b5a39a862cf037f628bca14c8",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42260444129,
-      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
+      "run_id": 42261631085,
+      "head_sha": "dba3420e9de7db8b5a39a862cf037f628bca14c8",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42260444266,
-      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
+      "run_id": 42261630844,
+      "head_sha": "dba3420e9de7db8b5a39a862cf037f628bca14c8",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42260444143,
-      "head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
+      "run_id": 42261630957,
+      "head_sha": "dba3420e9de7db8b5a39a862cf037f628bca14c8",
       "conclusion": "success"
     }
   },
@@ -120,8 +120,8 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42260444266,
-    "reviewed_head_sha": "74ab9f6ae9133ad9de1d17db4735c65082153580",
+    "github_actions_run_id": 42261630844,
+    "reviewed_head_sha": "dba3420e9de7db8b5a39a862cf037f628bca14c8",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
@@ -138,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 74ab9f6ae9133ad9de1d17db4735c65082153580; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit dba3420e9de7db8b5a39a862cf037f628bca14c8; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
