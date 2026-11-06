@@ -396,7 +396,7 @@ La finestra obiettivo resta **sabato 7 novembre 2026, ore 22:00 Europe/Rome**; l
 
 Il registro QA è stato aggiornato per puntare al commit applicativo/SQL collaudato `74ab9f6ae9133ad9de1d17db4735c65082153580`. La sola modifica successiva ha aggiornato il documento di evidenza QA, senza modificare codice applicativo, SQL, workflow o payload delle migrazioni.
 
-**Commit documentale corrente:** `dba3420e9de7db8b5a39a862cf037f628bca14c8`.
+**Commit documentale precedente (riallineamento del registro QA):** `dba3420e9de7db8b5a39a862cf037f628bca14c8`. Il presente addendum aggiorna il quadro di stato senza modificare codice, SQL o manifest.
 
 Sul commit applicativo/SQL `74ab9f6ae9133ad9de1d17db4735c65082153580`:
 - Final QA APP-01..APP-15: run [42260444129](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42260444129) — SUCCESS.
