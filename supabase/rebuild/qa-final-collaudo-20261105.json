@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "34e04ecff2122d8d5366e58bd8f040ec06b81ff4",
+  "reviewed_head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42233911739,
-      "head_sha": "34e04ecff2122d8d5366e58bd8f040ec06b81ff4",
+      "run_id": 42240333748,
+      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42233911583,
-      "head_sha": "34e04ecff2122d8d5366e58bd8f040ec06b81ff4",
+      "run_id": 42240333486,
+      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42233911393,
-      "head_sha": "34e04ecff2122d8d5366e58bd8f040ec06b81ff4",
+      "run_id": 42240334475,
+      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
       "conclusion": "success"
     }
   },
@@ -121,7 +121,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on existing QA on exact commit 34e04ecff2122d8d5366e58bd8f040ec06b81ff4. Final QA workflow 42233911739, Build/PostgreSQL 17 rehearsal 42233911583, and Baseline Safety 42233911393 all completed SUCCESS on the same SHA. Authenticated browser workflows, APP-12 provider probe and APP-15 role/session persistence passed; diagnostics uploaded and QA preview stopped. Production remains unmodified and NO-GO pending independent review, exact-final-commit local read-only runner preflight, current backup restore proof or explicit residual-risk reconfirmation, operational freeze/communications/recovery contacts, final approval, guarded migration execution, postflight and authenticated Production smoke.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 90f7b110c81b70b95b24225862073bd45d75b564. Final QA workflow 42240333748, Build/PostgreSQL 17 rehearsal 42240333486, and Baseline Safety 42240334475 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending release gates, final approval, guarded migration execution, postflight and authenticated Production smoke.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
