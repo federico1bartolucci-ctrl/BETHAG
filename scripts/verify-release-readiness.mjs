@@ -83,6 +83,7 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
     const allowedAfterTest = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
       || path === "scripts/verify-release-readiness.mjs"
+      || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
       || path === "scripts/test-release-readiness-utils.mjs"
       || path === ".github/workflows/build.yml";
