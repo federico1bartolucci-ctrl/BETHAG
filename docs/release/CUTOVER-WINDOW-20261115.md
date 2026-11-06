@@ -1,19 +1,19 @@
 # BETHAG — addendum finestra di manutenzione
 
-**Data registrazione:** 2026-11-06  
+**Data registrazione:** 2026-11-06 (correzione confermata dal proprietario)  
 **PR:** #57 — branch `fix/qa-view-acl-parity-20261105`  
-**Stato:** finestra obiettivo concordata; cutover NON autorizzato.
+**Stato:** inizio finestra concordato; cutover NON autorizzato.
 
 ## Finestra concordata
 
-- **Domenica 15 novembre 2026**
-- **Dalle 02:00 alle 04:00**
+- **Sabato 7 novembre 2026**
+- **Inizio: ore 22:00**
 - **Fuso:** `Europe/Rome`
-- Corrisponde alla notte tra sabato 14 e domenica 15 novembre.
+- **Ora di fine:** non specificata; non viene presunta né trasferita dalla precedente pianificazione.
 
-La finestra è stata scelta dal proprietario del progetto per ridurre l'impatto sugli amministratori. La registrazione nel piano non equivale a prenotazione presso Supabase, attivazione del freeze, invio dell'avviso o autorizzazione all'esecuzione.
+La finestra è l'obiettivo operativo concordato dal proprietario. La registrazione non equivale a prenotazione presso Supabase, attivazione del freeze, invio dell'avviso o autorizzazione all'esecuzione.
 
-Le ore 04:00 costituiscono un limite temporale pianificato, non una garanzia di riapertura. Se un controllo preflight, una migrazione, un postflight o uno smoke test non termina con PASS, si applicano i criteri STOP del runbook; non si forza la riapertura per rispettare l'orario.
+L'ora di inizio non costituisce una garanzia di completamento o riapertura entro un orario prefissato. Se un controllo preflight, una migrazione, un postflight o uno smoke test non termina con PASS, si applicano i criteri STOP del runbook; non si forza la riapertura.
 
 ## Attività consentite prima della finestra
 
@@ -43,7 +43,8 @@ Fino all'approvazione finale esplicita del proprietario, riferita allo SHA compl
 
 ## Stato
 
-**Finestra concordata come obiettivo: SÌ.**  
+**Inizio finestra concordato: SÌ — 7 novembre 2026, ore 22:00 Europe/Rome.**  
+**Ora di fine: NON SPECIFICATA.**  
 **Avviso approvato/inviato: NO.**  
 **Freeze attivato: NO.**  
 **Approvazione finale del cutover: NO.**  
