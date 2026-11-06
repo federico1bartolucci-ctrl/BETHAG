@@ -128,6 +128,10 @@ async function main() {
     ));
     assert.equal(appEvidence.reviewed_head_sha, testedQaSha,
       "Blocked: pinned QA evidence does not match BETHAG_QA_TESTED_COMMIT_SHA.");
+    for (const workflow of ["final_qa_collaudo", "build", "baseline_safety"]) {
+      assert.ok(appEvidence.workflow_runs?.[workflow],
+        `Blocked: required ${workflow} evidence is missing.`);
+    }
     for (const [workflow, run] of Object.entries(appEvidence.workflow_runs ?? {})) {
       assert.equal(run.conclusion, "success", `Blocked: ${workflow} is not SUCCESS in the pinned QA evidence.`);
       assert.equal(run.head_sha, testedQaSha, `Blocked: ${workflow} did not test the pinned QA SHA.`);
