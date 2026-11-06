@@ -28,6 +28,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { getApplicationTest, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
@@ -118,6 +119,44 @@ async function main() {
       entry !== "?? node_modules/" && entry !== "?? package-lock.json");
     assert.equal(unexpectedWorkingTreeEntries.length, 0,
       "Blocked: tracked changes or unexpected untracked files exist; use a clean checkout of the approved commit.");
+
+    const testedQaSha = process.env.BETHAG_QA_TESTED_COMMIT_SHA?.trim() || "";
+    assert.match(testedQaSha, /^[0-9a-f]{40}$/,
+      "Blocked: set BETHAG_QA_TESTED_COMMIT_SHA to the full commit SHA certified by Final QA, Build and Baseline Safety.");
+    const appEvidence = JSON.parse(await readFile(
+      join(root, "supabase/rebuild/qa-final-collaudo-20261105.json"), "utf8"
+    ));
+    assert.equal(appEvidence.reviewed_head_sha, testedQaSha,
+      "Blocked: pinned QA evidence does not match BETHAG_QA_TESTED_COMMIT_SHA.");
+    for (const [workflow, run] of Object.entries(appEvidence.workflow_runs ?? {})) {
+      assert.equal(run.conclusion, "success", `Blocked: ${workflow} is not SUCCESS in the pinned QA evidence.`);
+      assert.equal(run.head_sha, testedQaSha, `Blocked: ${workflow} did not test the pinned QA SHA.`);
+    }
+    for (let number = 1; number <= 13; number += 1) {
+      const evidence = getApplicationTest(appEvidence.application_tests ?? {}, number);
+      assert.ok(evidence === "PASS" || evidence?.status === "PASS",
+        `Blocked: APP-${String(number).padStart(2, "0")} is not PASS in the pinned QA evidence.`);
+    }
+    const app15 = getApplicationTest(appEvidence.application_tests ?? {}, 15);
+    assert.ok(app15 === "PASS" || app15?.status === "PASS",
+      "Blocked: APP-15 is not PASS in the pinned QA evidence.");
+    const app12 = getApplicationTest(appEvidence.application_tests ?? {}, 12);
+    assert.ok(app12?.status === "PASS"
+      && typeof app12.provider_delivery_observed === "string"
+      && app12.provider_delivery_observed.startsWith("PASS"),
+    "Blocked: APP-12 provider delivery is not PASS in the pinned QA evidence.");
+
+    execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedCommitSha], { stdio: "ignore" });
+    const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedCommitSha], { encoding: "utf8" }));
+    const allowedPostQaChange = (path) => path.startsWith("docs/")
+      || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
+      || path === "scripts/apply-reviewed-production-migrations.mjs"
+      || path === "scripts/verify-release-readiness.mjs"
+      || path === "scripts/lib/release-readiness-utils.mjs"
+      || path === "scripts/test-release-readiness-utils.mjs";
+    const unexpectedPostQaChanges = laterChanges.filter((path) => !allowedPostQaChange(path));
+    assert.deepEqual(unexpectedPostQaChanges, [],
+      "Blocked: application, migration, workflow or other non-documentation files changed after the tested QA SHA: " + unexpectedPostQaChanges.join(", "));
   }
   const isExpectedProductionTarget =
     (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
