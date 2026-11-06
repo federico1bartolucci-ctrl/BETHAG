@@ -61,6 +61,7 @@ try{
       {timeout:10000}
      );
      await page.getByRole("heading",{name:"Piano e upgrade",exact:true}).waitFor({timeout:10000});
+    await page.getByText("BETHAG Free",{exact:true}).first().waitFor({timeout:15000});
     } catch (error) {
      const activeNav=page.locator(".sidebar .nav-item.active").first();
      const debug={
