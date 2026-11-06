@@ -97,11 +97,11 @@ Nessuna migrazione è stata applicata. Nessun merge, deploy o modifica Productio
 
 ## Piano operativo candidato e ruoli — 2026-11-06
 
-Il proprietario ha dichiarato esplicitamente: «tu lavori io approvo». Ruoli registrati nel runbook:
+Il proprietario ha dichiarato: «tu lavori io approvo». Questa frase assegna la preparazione tecnica all'assistente e la decisione finale al proprietario; **non costituisce autorizzazione all'esecuzione del cutover Production**.
 - Preparazione tecnica, revisione, checklist e guida: ChatGPT come assistente, non persona fisica né operatore autorizzato.
-- Operatore umano che eseguirà i comandi locali: Federico Bartolucci.
-- Approvatore/proprietario: Federico Bartolucci.
-- Operatore e approvatore coincidono per scelta esplicita; non è una revisione indipendente a quattro occhi. Se è richiesto un controllo indipendente, serve una seconda persona e Production resta NO-GO fino alla nomina.
+- Approvatore/proprietario: Federico Bartolucci; approvazione finale del cutover non ancora ricevuta.
+- Operatore umano locale: da confermare esplicitamente. Federico potrà assumere anche questo ruolo solo se lo confermerà.
+- Revisore indipendente: non nominato. La revisione del proprietario non equivale a una verifica indipendente a quattro occhi.
 
 Il runbook `docs/release/CUTOVER-BETHAG.md` contiene ora il piano candidato con sequenza, criteri STOP, recovery, freeze, comunicazioni, backup/rischio residuo e matrice di approvazione.
 
