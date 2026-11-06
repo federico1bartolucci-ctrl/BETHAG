@@ -25,13 +25,15 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000001','admin-portal-test@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000002','admin-approved@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000003','self-registered@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
  ('10000000-0000-0000-0000-000000000002','Approved Resident','admin-approved@example.invalid','resident',true),
  ('10000000-0000-0000-0000-000000000003','Self Registered Resident','self-registered@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000005','Relink Attempt','relink-attempt@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
 VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
@@ -55,7 +57,8 @@ VALUES
  ('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000002',NULL,'Self Registered Resident','self-registered@example.invalid','resident',true,41002,'{"apartment":"B2"}'::jsonb),
  ('40000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000003',NULL,'Duplicate Match Resident','duplicate-match@example.invalid','resident',true,41003,'{}'::jsonb),
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000004',NULL,'Archived Resident','archived@example.invalid','resident',true,41004,'{}'::jsonb),
- ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb);
+ ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',NULL,'QA Portal Admin','admin-portal-test@example.invalid','resident',true,41005,'{}'::jsonb),
+ ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','Already Linked Resident','already-linked@example.invalid','resident',true,41006,'{}'::jsonb);
 
 -- The archive guard allows the normal lifecycle transition from active to archived.
 UPDATE public.condominiums SET archived_at=now()
@@ -63,7 +66,9 @@ WHERE id='30000000-0000-0000-0000-000000000004';
 
 INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_id,email,full_name,status)
 VALUES ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',
- '10000000-0000-0000-0000-000000000002','admin-approved@example.invalid','Approved Resident','pending');
+ '10000000-0000-0000-0000-000000000002','admin-approved@example.invalid','Approved Resident','pending'),
+ ('50000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001',
+ '10000000-0000-0000-0000-000000000005','relink-attempt@example.invalid','Relink Attempt','pending');
 
 -- Exercise the administrator approval path as authenticated. The function must call
 -- the centralized helper and create exactly one matching portal access row.
@@ -89,6 +94,32 @@ BEGIN
  THEN RAISE EXCEPTION 'Admin approval did not mark the request approved'; END IF;
 END;
 $admin_assert$;
+
+-- A pending registration must not take over a member already linked to another account.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+DO $relink_assert$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000002',
+     '40000000-0000-0000-0000-000000000006'
+   );
+   RAISE EXCEPTION 'Expected PORTAL_MEMBER_ALREADY_LINKED';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'PORTAL_MEMBER_ALREADY_LINKED' THEN RAISE; END IF;
+ END;
+ IF (SELECT user_id FROM public.condominium_members
+     WHERE id='40000000-0000-0000-0000-000000000006') <> '10000000-0000-0000-0000-000000000003'::uuid THEN
+   RAISE EXCEPTION 'Existing condominium member account link was changed';
+ END IF;
+ IF (SELECT status FROM public.portal_registration_requests
+     WHERE id='50000000-0000-0000-0000-000000000002') <> 'pending' THEN
+   RAISE EXCEPTION 'Rejected account relink unexpectedly changed request status';
+ END IF;
+END;
+$relink_assert$;
+RESET ROLE;
 
 -- A staff account that is also a condominium member must not be downgraded.
 SET LOCAL ROLE authenticated;
