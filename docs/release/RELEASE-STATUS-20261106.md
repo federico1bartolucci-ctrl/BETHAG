@@ -214,3 +214,28 @@ Il successivo commit `78101e12d107e47c0a53701088eb171b4da9cb00` aggiorna esclusi
 La finestra obiettivo resta **sabato 7 novembre 2026, inizio ore 22:00 Europe/Rome**; ora di fine non specificata. Non equivale a freeze né ad autorizzazione al cutover.
 
 **Decisione: Production NO-GO.** Nessun merge, deploy, apply, freeze o invio di comunicazioni è autorizzato da questo addendum.
+
+
+---
+
+## Addendum revisione tecnica del Portale — 2026-11-06
+
+**Commit codice esaminato:** `c93447b5b35e9a897355a74c7b21330701c01452`.
+
+Durante la revisione della migrazione `20261105050000_reconcile_portal_registration_upsert.sql` sono stati corretti tre difetti prima di qualsiasi cutover:
+
+1. **Ambiguità workspace:** una richiesta senza corrispondenza anagrafica non viene più assegnata arbitrariamente quando il nome del condominio compare in workspace differenti. L'assegnazione avviene solo se esiste una sola corrispondenza nell'intero database; in caso contrario `workspace_id` resta NULL per la revisione amministrativa.
+2. **Collegamento account già esistente:** la registrazione self-service e l'approvazione amministrativa rifiutano il tentativo di associare a un nuovo account un condòmino già collegato a un altro utente (`PORTAL_MEMBER_ALREADY_LINKED`).
+3. **Ruoli staff:** la registrazione al Portale non degrada più un ruolo workspace `admin`/`collaborator` né il corrispondente ruolo profilo a `resident`.
+
+Il test PostgreSQL 17 isolato è stato esteso per verificare i tre casi, mantenendo i dati sintetici in rollback. Il draft e la migrazione canonica sono byte-identici; l'hash Git blob della migrazione è stato aggiornato nel manifest congelato. Nessuna migrazione è stata applicata a QA o Production.
+
+### CI e stato del candidato
+
+- Le esecuzioni verdi precedenti (Final QA, Baseline Safety e Build/PostgreSQL) sono riferite al commit precedente `3b6920bbb10a625a36c8010f594a98f61cc729e7`; **non certificano le nuove correzioni SQL e i test aggiunti successivamente**.
+- Il Build sul commit precedente ha avuto un primo tentativo fallito nel login browser dell'amministratore; il rerun dello stesso job è poi passato. Per evitare contesa dei refresh token tra account QA condivisi, il workflow Build ora usa lo stesso gruppo di concurrency del collaudo finale.
+- **Nuova CI sul candidato aggiornato: DA ESEGUIRE / NON ANCORA CERTIFICATA.**
+- Il preflight Production read-only deve essere ripetuto sul commit finale esatto dopo il superamento della nuova CI.
+- PR #57 resta aperta e non unita. Nessuna scrittura, migrazione, merge o deploy Production è stata eseguita.
+
+**Decisione invariata: Production NO-GO.** La finestra obiettivo del 7 novembre alle 22:00 Europe/Rome non supera né sostituisce i gate tecnici e operativi.
