@@ -102,14 +102,14 @@ try{
      const activeText=(await active.innerText()).trim();
      assert.ok(activeText.includes(label),"Navigation did not activate "+label+"; active="+activeText);
     }
-    assert.ok(blockedByPlan.includes("Condomini"),"Free plan did not block the Condomìni module");
+    assert.ok(!blockedByPlan.includes("Condomini"),"Free plan must retain access to the core Condomìni module");
     assert.ok(blockedByPlan.includes("Documenti"),"Free plan did not block the Documenti module");
     await page.locator(".sidebar .nav-item").filter({hasText:"Homepage"}).first().click();
     await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:10000});
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});
     await page.locator(".sidebar .nav-item.active").filter({hasText:"Homepage"}).waitFor({timeout:20000});
     assert.match(page.url(), /[?&]page=homepage(?:&|$)/, "Refresh did not preserve the Homepage route");
-    results.push({role:a.role,status:"PASS",checks:["all entitled administrator navigation destinations activated","Free-plan locked modules correctly blocked without changing active route: "+blockedByPlan.join(", "),"Homepage route survived refresh","no uncaught browser errors"]});
+    results.push({role:a.role,status:"PASS",checks:["all entitled administrator navigation destinations activated","Free plan retained core Condomìni access; locked modules were correctly blocked without changing active route: "+blockedByPlan.join(", "),"Homepage route survived refresh","no uncaught browser errors"]});
    }else if(a.role==="collaborator"){
     assert.equal(await page.locator(".nav-item").filter({hasText:"Contabilità"}).count(),0,"Collaborator unexpectedly sees administrator accounting navigation");
     assert.equal(await page.locator(".nav-item").filter({hasText:"Collaboratori"}).count(),0,"Collaborator unexpectedly sees collaborator administration");
