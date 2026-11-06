@@ -163,6 +163,10 @@ BEGIN
     FROM public.condominiums c
     WHERE c.id = v_member.condominium_id;
 
+    IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_user_id THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+    END IF;
+
     IF lower(trim(coalesce(v_member.email,''))) = v_email THEN
       UPDATE public.condominium_members
       SET user_id = v_user_id, updated_at = now()
@@ -309,6 +313,10 @@ BEGIN
 
   IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
     RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
+  IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
+    RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
   END IF;
 
   UPDATE public.condominium_members
