@@ -5,7 +5,7 @@ const url=process.env.DATABASE_URL;
 assert.ok(url,'DATABASE_URL required');
 const target=new URL(url);
 assert.ok(['localhost','127.0.0.1','::1'].includes(target.hostname),'Only disposable local PostgreSQL is allowed');
-assert.ok(!/supabase\\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url),'Remote Supabase URL refused');
+assert.ok(!/supabase\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url),'Remote Supabase URL refused');
 const migration=await readFile('supabase/rebuild/drafts/20261105010000_reconcile_postgres_public_table_default_acl.sql','utf8');
 const setup=`BEGIN;
 DO $r$ BEGIN
