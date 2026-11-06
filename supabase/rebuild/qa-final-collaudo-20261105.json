@@ -164,6 +164,11 @@
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
     "correction": "Supabase-backed workspace collections are no longer duplicated into localStorage; local-only fallback uses best-effort cache writes that cannot crash rendering.",
     "browser_verification": "PASS — authenticated browser UI workflows completed successfully after the correction; condominium creation persisted in QA.",
-    "commit_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268"
+    "commit_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+    "browser_observations": {
+      "uncaught_page_errors": 0,
+      "console_observation": "One Supabase deadlines request was aborted during an intentional browser navigation (net::ERR_ABORTED; duringNavigation=true); no uncaught page error occurred and the test's service-role cleanup was verified.",
+      "disposition": "Navigation cancellation recorded as non-blocking test observation; not classified as a successful backend request."
+    }
   }
 }
