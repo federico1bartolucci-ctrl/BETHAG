@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest } from "./lib/release-readiness-utils.mjs";
 
 const root = "supabase/rebuild";
 const [production, qa, freeze, liveStatus, appEvidence] = await Promise.all([
@@ -92,16 +92,16 @@ if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
 }
 for (let number = 1; number <= 13; number++) {
   const key = "APP-" + String(number).padStart(2, "0");
-  const evidence = appEvidence.application_tests[key];
+  const evidence = getApplicationTest(appEvidence.application_tests, number);
   if (evidence !== "PASS" && evidence?.status !== "PASS") {
     preCutoverBlockers.push(`${key} is not recorded as PASS in the pinned acceptance evidence.`);
   }
 }
-const app15 = appEvidence.application_tests["APP-15"] ?? appEvidence.application_tests.APP15;
+const app15 = getApplicationTest(appEvidence.application_tests, 15);
 if (app15 !== "PASS" && app15?.status !== "PASS") {
   preCutoverBlockers.push("APP-15 is not recorded as PASS in the pinned acceptance evidence.");
 }
-const app12 = appEvidence.application_tests.APP12;
+const app12 = getApplicationTest(appEvidence.application_tests, 12);
 const providerDeliveryPass = app12?.provider_delivery === "PASS"
   || (typeof app12?.provider_delivery_observed === "string" && app12.provider_delivery_observed.startsWith("PASS"));
 if (app12?.status !== "PASS" || !providerDeliveryPass) {
@@ -125,7 +125,8 @@ if (!hasPostgresConnectionConfig(process.env)) {
 if (process.env.BETHAG_CUTOVER_PLAN_APPROVED !== "YES") {
   preCutoverBlockers.push("The exact cutover plan, maintenance window, communication plan and rollback procedure are not approved.");
 }
-if (appEvidence.application_tests.APP14.status !== "PASS") {
+const app14 = getApplicationTest(appEvidence.application_tests, 14);
+if (app14?.status !== "PASS") {
   postCutoverBlockers.push("APP-14 Production ACL/schema/Data API postflight must pass after the guarded cutover.");
 }
 
