@@ -306,3 +306,37 @@ La PR #57 contiene **63 file modificati** al momento di questo addendum. Il prec
 La modifica di concorrenza Build è inclusa nel commit verificato. La Build non è stata considerata superata sulla base del solo avvio: è stata verificata la conclusione SUCCESS dell'intera run, compresi i job previsti.
 
 **Decisione invariata: Production NO-GO.** Nessun merge, deploy, freeze o apply Production è stato eseguito. La revisione semantica completa dei 63 file resta in corso; l'allineamento dell'evidenza QA non equivale alla sua certificazione.
+
+
+---
+
+## Addendum finale — collaudo e controllo autorizzazioni, 2026-11-06
+
+Questo addendum prevale sugli stati CI precedenti e sui riferimenti storici a commit/file count superati.
+
+### Commit applicativo/SQL collaudato
+
+**SHA:** `ea32fc492757e5165b41580f082e42916bd54a8c`.
+
+- Final QA APP-01..APP-15: [run 42246244137](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246244137) — **SUCCESS**.
+- Build + PostgreSQL 17 bootstrap: [run 42246243987](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246243987) — **SUCCESS**.
+- Baseline Safety: [run 42246243967](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42246243967) — **SUCCESS**.
+- Build: 28 migrazioni clean-install; rehearsal PostgreSQL 17 delle 19 migrazioni canoniche con runner guarded; preflight e postflight isolati; ACL/default ACL; rollback subentro; browser smoke.
+- QA: APP-01..APP-13 e APP-15 **PASS**. APP-14 resta il gate Production post-cutover e non può essere dichiarato PASS prima dell'esecuzione controllata e delle verifiche live.
+- Il test PostgreSQL del Portale verifica richieste con nomi condominiali ambigui, RLS limitata ai gestori dei condomìni attivi corrispondenti, account e-mail verificato, corrispondenza tra e-mail account/richiesta/condòmino, blocco del takeover e conservazione dei ruoli staff.
+
+Il file `supabase/rebuild/qa-final-collaudo-20261105.json` è stato ripinnato allo SHA e agli ID delle tre run sopra.
+
+### Revisione PR
+
+- PR #57: **65 file modificati**, aperta e non unita.
+- La revisione tecnica interna è stata aggiornata sulle correzioni di readiness, runner, RLS e registrazione Portale.
+- Non risulta alcuna review GitHub indipendente registrata. La revisione del proprietario è valida come approvazione del proprietario, ma non equivale a un controllo indipendente a quattro occhi.
+
+### Autorizzazione e decisione Production
+
+La registrazione di autorizzazione nel manifest è stata corretta: `user_authorization.status = NOT_RECEIVED` e stato del freeze `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`.
+
+L'istruzione «tu lavori io approvo» individua Federico come approvatore/proprietario; non costituisce approvazione finale del cutover né autorizzazione a merge, deploy, freeze o apply. L'operatore umano locale resta da confermare. La finestra obiettivo del 7 novembre 2026 alle 22:00 Europe/Rome non equivale ad autorizzazione.
+
+**Production: NO-GO.** Nessuna migrazione, scrittura ledger, merge, deploy, freeze o altra modifica Production è stata eseguita. Restano necessari: preflight read-only e preflight locale sul checkout documentale finale, backup fisico corrente oppure riconferma esplicita del rischio residuo, contatti recovery, operatore confermato, avviso utenti approvato, criteri STOP/rollback e approvazione finale scritta su SHA, 19 hash SQL e finestra. APP-14 sarà verificato solo dopo il cutover autorizzato.
