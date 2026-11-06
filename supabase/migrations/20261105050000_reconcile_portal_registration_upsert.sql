@@ -158,7 +158,8 @@ BEGIN
             = regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g')
         )
       )
-    LIMIT 1;
+    LIMIT 1
+    FOR UPDATE;
 
     SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
     FROM public.condominiums c
@@ -318,6 +319,29 @@ DECLARE
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
 
+  -- Lock the selected member before the request row. Self-registration
+  -- follows the same lock order, preventing concurrent account-link takeover
+  -- and avoiding a member/request lock inversion.
+  SELECT * INTO v_member
+  FROM public.condominium_members
+  WHERE id=p_member_id AND active=true
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Condòmino non trovato o non attivo'; END IF;
+
+  SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
+  FROM public.condominiums c
+  WHERE c.id=v_member.condominium_id;
+
+  IF v_workspace IS NULL THEN
+    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- Authorize the selected workspace before reading or revealing request state.
+  IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
+    RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
   SELECT * INTO v_request
   FROM public.portal_registration_requests
   WHERE id=p_request_id AND status IN ('pending','email_mismatch')
@@ -328,28 +352,9 @@ BEGIN
     RAISE EXCEPTION 'La richiesta non è associata ad un account autenticato';
   END IF;
 
-  SELECT * INTO v_member
-  FROM public.condominium_members
-  WHERE id=p_member_id AND active=true;
-
-  IF NOT FOUND THEN RAISE EXCEPTION 'Condòmino non trovato o non attivo'; END IF;
-
-  SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
-  FROM public.condominiums c
-  WHERE c.id=v_member.condominium_id;
-
   -- A request left unassigned because condominium names collide across
   -- workspaces may be resolved manually by an administrator in the selected
   -- workspace. A previously assigned request must still match exactly.
-  IF v_workspace IS NULL THEN
-    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
-  END IF;
-
-  -- Authorize the selected workspace before revealing whether the request
-  -- was assigned elsewhere or whether the condominium is archived.
-  IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
-    RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
-  END IF;
 
   IF v_request.workspace_id IS NOT NULL AND v_request.workspace_id<>v_workspace THEN
     RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
