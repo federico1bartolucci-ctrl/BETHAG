@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, frozenManifestPayload } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, frozenManifestPayload, isFreshSnapshot } from "./lib/release-readiness-utils.mjs";
 
 test("Git blob hash is identical for LF and CRLF checkout content", () => {
   const lf = "SELECT 1;\nSELECT 2;\n";
@@ -73,4 +73,18 @@ test("frozen cutover manifest permits only approval metadata changes after QA", 
     frozenManifestPayload({ ...metadataOnly, expected_postflight: { ledger_rows: 268 } }),
     frozenManifestPayload(reviewed),
   );
+});
+
+
+test("live snapshot freshness accepts a current timestamp", () => {
+  const now = Date.parse("2026-11-06T16:15:00Z");
+  assert.equal(isFreshSnapshot("2026-11-06T16:00:00Z", now), true);
+});
+
+test("live snapshot freshness rejects stale, missing, invalid and future timestamps", () => {
+  const now = Date.parse("2026-11-06T16:15:00Z");
+  assert.equal(isFreshSnapshot("2026-11-05T15:14:59Z", now), false);
+  assert.equal(isFreshSnapshot(undefined, now), false);
+  assert.equal(isFreshSnapshot("not-a-date", now), false);
+  assert.equal(isFreshSnapshot("2026-11-06T16:21:00Z", now), false);
 });
