@@ -304,8 +304,8 @@
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
       "git_blob_sha": "44d0d8a5a96e6b6a11b6ad216ec3b3de4a8ba6c3",
-      "purpose": "Repair portal registration upsert; authorize the selected workspace before request/archived-state checks, allow manual resolution only for active matching condominiums, and enforce verified account email, original matched-member binding, existing member-link protection and corrected member email before approval.",
-      "postcondition": "Both authenticated registration entry points use the centralized helper; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
+      "purpose": "Repair portal registration upsert; enforce exact condominium binding for resident self-registration and administrator approval, serialize member-account linking with row locks, preserve existing member links and staff roles, and require verified matching account/member email before approval.",
+      "postcondition": "Both authenticated registration entry points use the centralized helper; a supplied condominium name must match the selected member's active condominium; wrong-condominium auto/manual approval fails without linking or portal-access side effects; member rows are locked before user_id checks/updates; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
     }
   ],
