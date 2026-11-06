@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
+  "reviewed_head_sha": "ea32fc492757e5165b41580f082e42916bd54a8c",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
       "run_id": 42246244137,
-      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8c",
       "conclusion": "success"
     },
     "build": {
       "run_id": 42246243987,
-      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8c",
       "conclusion": "success"
     },
     "baseline_safety": {
       "run_id": 42246243967,
-      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8c",
       "conclusion": "success"
     }
   },
@@ -130,7 +130,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit ea32fc492757e5165b41580f082e42916bd54a8; APP-14 remains PARTIAL because Production cutover/postflight/authenticated smoke are not performed. Final QA workflow 42246244137, Build/PostgreSQL 17 rehearsal 42246243987, and Baseline Safety 42246243967 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending final release gates and explicit approval.",
+  "conclusion": "Final authenticated QA acceptance APP-01..APP-13 and APP-15 passed on exact commit ea32fc492757e5165b41580f082e42916bd54a8c. Final QA workflow 42246244137, Build/PostgreSQL 17 rehearsal 42246243987, and Baseline Safety 42246243967 all completed SUCCESS on the same SHA. APP-14 remains the Production post-cutover gate. Production remains unmodified and NO-GO pending final written cutover approval, current backup-risk disposition, guarded migration execution, postflight and authenticated Production smoke.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
