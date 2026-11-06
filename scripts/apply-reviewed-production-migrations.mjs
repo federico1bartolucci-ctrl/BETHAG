@@ -63,7 +63,7 @@ async function runPsql(args, { input } = {}) {
         "Blocked: DATABASE_URL must use the PostgreSQL protocol.");
       childEnv.PGHOST = connectionUrl.hostname;
       childEnv.PGPORT = connectionUrl.port || "5432";
-      childEnv.PGDATABASE = decodeURIComponent(connectionUrl.pathname.replace(/^\\//, ""));
+      childEnv.PGDATABASE = decodeURIComponent(connectionUrl.pathname.slice(1));
       childEnv.PGUSER = decodeURIComponent(connectionUrl.username);
       for (const [parameter, envName] of [
         ["sslmode", "PGSSLMODE"], ["application_name", "PGAPPNAME"],
@@ -76,7 +76,7 @@ async function runPsql(args, { input } = {}) {
       if (password) {
         passFileDir = await mkdtemp(join(tmpdir(), "bethag-pgpass-"));
         const passFile = join(passFileDir, "pgpass");
-        const passLine = [childEnv.PGHOST, childEnv.PGPORT, childEnv.PGDATABASE, childEnv.PGUSER, password].map(pgPassEscape).join(":") + "\\n";
+        const passLine = [childEnv.PGHOST, childEnv.PGPORT, childEnv.PGDATABASE, childEnv.PGUSER, password].map(pgPassEscape).join(":") + String.fromCharCode(10);
         await writeFile(passFile, passLine, { encoding: "utf8", mode: 0o600 });
         await chmod(passFile, 0o600);
         childEnv.PGPASSFILE = passFile;
@@ -87,7 +87,7 @@ async function runPsql(args, { input } = {}) {
     } else if (childEnv.PGPASSWORD) {
       passFileDir = await mkdtemp(join(tmpdir(), "bethag-pgpass-"));
       const passFile = join(passFileDir, "pgpass");
-      const passLine = [childEnv.PGHOST, childEnv.PGPORT || "5432", childEnv.PGDATABASE, childEnv.PGUSER, childEnv.PGPASSWORD].map(pgPassEscape).join(":") + "\\n";
+        const passLine = [childEnv.PGHOST, childEnv.PGPORT, childEnv.PGDATABASE, childEnv.PGUSER, password].map(pgPassEscape).join(":") + String.fromCharCode(10);
       await writeFile(passFile, passLine, { encoding: "utf8", mode: 0o600 });
       await chmod(passFile, 0o600);
       childEnv.PGPASSFILE = passFile;
