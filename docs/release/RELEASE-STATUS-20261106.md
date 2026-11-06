@@ -174,3 +174,43 @@ Questo addendum prevale sui precedenti riferimenti a SHA e run CI contenuti nell
 - Finestra obiettivo: **7 novembre 2026, ore 22:00, Europe/Rome**; ora di fine non specificata. Non è un'autorizzazione al cutover.
 
 **Decisione: Production NO-GO.** PR #57 resta aperta e non unita. Nessun merge, deploy, freeze, invio di comunicazioni o apply Production è stato eseguito. L'eventuale superamento della finestra target non modifica i criteri STOP.
+
+
+---
+
+## Addendum finale di revisione e CI — 2026-11-06
+
+**Commit applicativo testato:** `bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02`.  
+Il successivo commit `78101e12d107e47c0a53701088eb171b4da9cb00` aggiorna esclusivamente l'evidenza QA/documentazione; non modifica codice applicativo, runner o migrazioni.
+
+### CI sul commit applicativo testato — tutti PASS
+- Final QA APP-01..APP-15: [run 42222394817](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394817) — **SUCCESS**.
+- Build + PostgreSQL bootstrap: [run 42222394795](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394795) — **SUCCESS**.
+- Baseline Safety: [run 42222394790](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394790) — **SUCCESS**.
+- Il bootstrap ha provato le 28 migrazioni clean-install, il runner guarded con 19 incrementi e il test negativo dei gate Production su checkout isolato.
+- APP-12 ha verificato un invio sintetico Resend a `delivered@resend.dev`, callback firmato verso QA e persistenza dello stato `Consegnata`.
+
+### Correzioni emerse dalla revisione
+- Il readiness checker vincola le evidenze QA a uno SHA completo, controlla i risultati di ogni APP e rifiuta modifiche applicative/migrazioni successive al commit testato.
+- La vecchia accettazione del rischio restore del 27 ottobre non è considerata sufficiente per un nuovo cutover: serve una riconferma locale riferita alla singola esecuzione o prova corrente di restore fisico.
+- Il test APP-12 fallisce se il provider email non è configurato, invece di lasciare passare la CI con esito `PARTIAL`.
+- Il runner Production richiede lo SHA approvato, verifica il checkout e rifiuta modifiche tracked o file untracked inattesi; il test negativo usa un worktree isolato.
+- Corrette due guardie URL dei test PostgreSQL e la classificazione delle migrazioni QA-only (sezione C: 9, non 8).
+
+### Stato effettivo
+- QA APP-01..APP-15: **CHIUSO / PASS** sul commit applicativo `bc3c74a...`.
+- Build, PostgreSQL bootstrap, Baseline Safety: **PASS** sullo stesso commit.
+- PR #57: aperta, non unita; 61 file modificati. Non risulta una review indipendente registrata.
+- Revisione semantica dell'intero diff: **ancora da completare/certificare**; i controlli eseguiti non equivalgono a una revisione indipendente.
+- Production: **NO-GO**. Nessuna migrazione, scrittura ledger, merge o deploy eseguito.
+
+### Gate Production ancora aperti
+1. Concludere la revisione tecnica completa del diff.
+2. Verificare backup corrente oppure riconfermare esplicitamente il rischio residuo di restore fisico non testato.
+3. Inserire contatti reali di escalation/recovery e completare freeze, avviso utenti e piano STOP/rollback.
+4. Ripetere il preflight Production read-only dal checkout finale pulito, con `BETHAG_EXPECTED_COMMIT_SHA` fissato allo SHA approvato.
+5. Ottenere approvazione finale esplicita su SHA, 19 hash SQL, backup/rischio, finestra e criteri STOP.
+
+La finestra obiettivo resta **sabato 7 novembre 2026, inizio ore 22:00 Europe/Rome**; ora di fine non specificata. Non equivale a freeze né ad autorizzazione al cutover.
+
+**Decisione: Production NO-GO.** Nessun merge, deploy, apply, freeze o invio di comunicazioni è autorizzato da questo addendum.
