@@ -221,6 +221,15 @@ RESET ROLE;
 -- the unassigned request; the request is then bound to that workspace/member.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000006';
+SELECT private.can_manage_workspace_module('20000000-0000-0000-0000-000000000002','portale') AS workspace_two_admin_can_manage_portal;
+SELECT p.proname, pg_get_userbyid(p.proowner) AS function_owner, r.rolsuper, r.rolbypassrls
+FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner
+WHERE p.oid IN (
+  'private.admin_approve_portal_registration(uuid,uuid)'::regprocedure,
+  'private.upsert_portal_access_for_member(uuid,uuid,text,jsonb)'::regprocedure
+);
+SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS table_owner
+FROM pg_class c WHERE c.oid='public.portal_access'::regclass;
 DO $resolve_ambiguous$
 DECLARE v_request_id uuid;
 BEGIN
