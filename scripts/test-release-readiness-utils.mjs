@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest } from "./lib/release-readiness-utils.mjs";
 
 test("Git blob hash is identical for LF and CRLF checkout content", () => {
   const lf = "SELECT 1;\nSELECT 2;\n";
@@ -29,4 +29,18 @@ test("connection gate accepts the runner's PGHOST/PGDATABASE/PGUSER tuple", () =
 test("connection gate rejects incomplete libpq configuration", () => {
   assert.equal(hasPostgresConnectionConfig({ PGHOST: "db.example", PGDATABASE: "postgres" }), false);
   assert.equal(hasPostgresConnectionConfig({}), false);
+});
+
+test("application evidence resolves canonical hyphenated APP keys", () => {
+  const evidence = {
+    "APP-12": { status: "PASS", provider_delivery_observed: "PASS — delivered" },
+    "APP-14": { status: "PARTIAL" },
+  };
+  assert.equal(getApplicationTest(evidence, 12).status, "PASS");
+  assert.equal(getApplicationTest(evidence, 14).status, "PARTIAL");
+});
+
+test("application evidence retains compatibility with legacy APP aliases", () => {
+  const evidence = { APP15: { status: "PASS" } };
+  assert.equal(getApplicationTest(evidence, 15).status, "PASS");
 });
