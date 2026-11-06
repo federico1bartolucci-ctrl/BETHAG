@@ -154,7 +154,6 @@ async function main() {
     const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedCommitSha], { encoding: "utf8" }));
     const allowedPostQaChange = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
-      || path === "supabase/rebuild/production-migration-cutover-freeze-20261105.json"
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
