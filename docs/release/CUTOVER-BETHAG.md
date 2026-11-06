@@ -476,14 +476,18 @@ Questo piano registra la decisione espressa dal proprietario nella conversazione
 
 **Vincolo di pin:** prima del cutover occorre scegliere un solo commit completo e immutabile contenente sia il codice applicativo candidato sia la documentazione/runbook approvati. Se la documentazione viene aggiornata dopo il commit candidato, il commit finale deve essere nuovamente sottoposto a CI, revisione diff e preflight read-only; non si può assumere che il precedente preflight autorizzi un diverso SHA. I 19 hash SQL devono corrispondere esattamente al freeze e non possono essere modificati senza nuova revisione e nuova approvazione.
 
-### Finestra, freeze e comunicazioni — da completare
+### Finestra, freeze e comunicazioni — preferenza del proprietario registrata
 
-- Fuso: Europe/Rome.
-- Data/ora inizio e fine: **DA CONCORDARE**. Non viene inventata né pianificata una finestra senza la disponibilità del proprietario.
-- Durata stimata e impatto percepito: **DA CONFERMARE** dopo un ultimo controllo del piano; durante l'intervento l'applicazione dovrà essere in maintenance/read-only o non utilizzata per operazioni che scrivono dati, secondo la procedura verificata.
+Il proprietario preferisce concentrare la manutenzione nel **sabato sera/notte**, per ridurre l'impatto sugli amministratori di condominio che utilizzeranno BETHAG durante la settimana e nei normali orari di lavoro.
+
+- Giorno preferito: sabato.
+- Fascia proposta per la pianificazione: **22:00–02:00 (Europe/Rome)**, a cavallo tra sabato e domenica. È una proposta tecnica da confermare, non una finestra già prenotata.
+- Data esatta: **DA CONCORDARE** dopo la chiusura dei gate tecnici.
+- Durata effettiva e impatto: da stimare e comunicare prima dell'intervento; non promettere una riapertura entro le 02:00 se i controlli postflight non sono conclusi.
 - Freeze: dalla conferma della finestra fino alla chiusura, nessun commit applicativo, migrazione, modifica schema/ACL, modifica secrets o deploy concorrente. Nessun altro workflow o operatore deve scrivere sul database.
 - Avviso utenti: predisporre e approvare un avviso con data/ora, impatto, divieto temporaneo di operazioni, canale di assistenza e messaggio di fine intervento. **Non inviato**; destinatari e canale devono essere confermati dal proprietario.
 - Contatto/escalation Supabase e contatto tecnico alternativo: **DA INSERIRE**. Non inventare nominativi o recapiti.
+
 
 ### Backup e rischio residuo
 
