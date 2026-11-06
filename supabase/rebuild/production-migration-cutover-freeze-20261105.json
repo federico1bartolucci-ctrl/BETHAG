@@ -303,7 +303,7 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "1e930e5843adbd9c1ca174e2ecdc05096b425132",
+      "git_blob_sha": "831817d86d893ea99bfa847e4e5fdf6468ce43d9",
       "purpose": "Repair portal registration upsert; authorize the selected workspace before request/archived-state checks, allow manual resolution only for active matching condominiums, and enforce verified account email, original matched-member binding, existing member-link protection and corrected member email before approval.",
       "postcondition": "Both authenticated registration entry points use the centralized helper; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
@@ -463,7 +463,7 @@
   "critical_execution_constraint": {
     "observed": "The previous 247-row cutover freeze is historical. Current Production contains 248 rows, including the already-applied Production-only ACL migration 20261104222229. The new runner and rehearsal are pinned to this exact 248-row snapshot.",
     "rule": "Do not use the historical 247-row runner. Use only the superseding 248-row/19-increment guarded runner after QA APP acceptance, QA provider configuration, backup-risk disposition, Production Data API exposure verification, direct DATABASE_URL availability and exact cutover-plan approval.",
-    "status": "REHEARSAL_PASSED_USER_AUTHORIZED_RELEASE_GATES_PENDING"
+    "status": "REHEARSAL_PASSED_FINAL_USER_AUTHORIZATION_PENDING"
   },
   "no_go_gates": [
     "QA APP-12 provider delivery is not verified: the deployed QA Edge Function returns HTTP 503 because RESEND_API_KEY and/or BETHAG_FROM_EMAIL is missing; configure QA secrets and rerun with delivered@resend.dev. No email was sent in the current test.",
@@ -489,7 +489,7 @@
     "guarded_canonical_runner_rehearsal": "PASS",
     "forward_only_acl_drafts": "PASS",
     "production_ddl_or_ledger_mutations": false,
-    "production_execution_authorized": true,
+    "production_execution_authorized": false,
     "production_execution_performed": false
   },
   "clean_install": {
