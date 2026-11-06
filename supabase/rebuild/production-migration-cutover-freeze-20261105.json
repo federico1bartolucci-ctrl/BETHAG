@@ -535,7 +535,12 @@
     "date": null,
     "scope": "No explicit approval to merge, deploy, apply Production migrations, activate a Production freeze, or execute the cutover has been received. The user's instruction 'tu lavori io approvo' identifies Federico as approver; it does not approve the exact cutover plan or authorize execution.",
     "source": "The release approval record still requires written approval naming the exact commit SHA, nineteen SQL hashes, backup/restore disposition, maintenance window, operator, and STOP/rollback criteria. No complete approval record exists.",
-    "limitations": "Do not merge, deploy, apply migrations, activate the freeze, or mutate Production until the owner gives explicit final approval against the exact release candidate and all technical gates pass."
+    "limitations": "Do not merge, deploy, apply migrations, activate the freeze, or mutate Production until the owner gives explicit final approval against the exact release candidate and all technical gates pass.",
+    "approved_by": null,
+    "approved_at_utc": null,
+    "approved_commit_sha": null,
+    "approved_migration_hashes": [],
+    "approval_reference": null
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
