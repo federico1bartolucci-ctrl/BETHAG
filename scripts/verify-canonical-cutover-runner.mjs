@@ -22,9 +22,12 @@ assert.equal(cleanInstallFiles.length, 28, "Clean-install migration directory mu
 assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen 28-file clean-install sequence.");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
 const sha = (text) => {
-  const bytes = Buffer.from(text, "utf8");
+  // Match Git's canonical text-blob representation on Windows and Unix.
+  const canonicalText = text.replace(/\r\n/g, "\n");
+  const bytes = Buffer.from(canonicalText, "utf8");
   return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
 };
+assert.equal(sha("alpha\nbeta\n"), sha("alpha\r\nbeta\r\n"), "Frozen SQL hash verification must be portable across LF/CRLF checkouts.");
 assert.equal(manifest.sequence.length, 19, "Superseding cutover must contain exactly nineteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 248 OR ledger_head <> '20261104222229'/, "Preflight must verify the current 248-row Production ledger.");
 assert.match(preflight, /'20261102100200'/, "Preflight must reject a ledger where a pending archive-state migration is already present.");
