@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, frozenManifestPayload } from "./lib/release-readiness-utils.mjs";
 
 test("Git blob hash is identical for LF and CRLF checkout content", () => {
   const lf = "SELECT 1;\nSELECT 2;\n";
@@ -47,18 +47,18 @@ test("application evidence retains compatibility with legacy APP aliases", () =>
 
 test("frozen cutover manifest permits only approval metadata changes after QA", () => {
   const reviewed = {
-    status: "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
+    status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
     safety: "historical safety note",
-    user_authorization: { status: "RECEIVED" },
+    user_authorization: { status: "NOT_RECEIVED", approved_commit_sha: null, approved_migration_hashes: [] },
     sequence: [{ file: "001_migration.sql", git_blob_sha: "abc" }],
     live_ledger: { rows: 248 },
     expected_postflight: { ledger_rows: 267 },
   };
   const metadataOnly = {
     ...reviewed,
-    status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
-    safety: "corrected safety note",
-    user_authorization: { status: "NOT_RECEIVED" },
+    status: "FROZEN_FOR_REVIEW_APPROVED",
+    safety: "approval recorded for exact release candidate",
+    user_authorization: { status: "RECEIVED", approved_commit_sha: "a".repeat(40), approved_migration_hashes: [{ file: "001_migration.sql", git_blob_sha: "abc" }] },
   };
   assert.deepEqual(frozenManifestPayload(metadataOnly), frozenManifestPayload(reviewed));
   assert.notDeepEqual(
