@@ -2,7 +2,7 @@
   "artifact": "BETHAG Production migration cutover freeze — 248-row live history, nineteen pending canonical increments",
   "captured_date": "2026-11-05",
   "status": "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
-  "reviewed_source_commit": "8a8d1aa170ae754f2ac7c712fd12beae8d171df2",
+  "reviewed_source_commit": "c9639539c9e4f7516ccc67531928c8b13f24d032",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
@@ -463,7 +463,7 @@
   "critical_execution_constraint": {
     "observed": "The previous 247-row cutover freeze is historical. Current Production contains 248 rows, including the already-applied Production-only ACL migration 20261104222229. The new runner and rehearsal are pinned to this exact 248-row snapshot.",
     "rule": "Do not use the historical 247-row runner. Use only the superseding 248-row/19-increment guarded runner after QA APP acceptance, QA provider configuration, backup-risk disposition, Production Data API exposure verification, direct DATABASE_URL availability and exact cutover-plan approval.",
-    "status": "REHEARSAL_PASSED_FINAL_USER_AUTHORIZATION_PENDING"
+    "status": "FINAL_USER_AUTHORIZATION_PENDING"
   },
   "no_go_gates": [
     "Production Data API exposure settings, including provider-managed schema supabase_functions and automatic exposure, must be verified directly in the Production Dashboard immediately before cutover; QA screenshots are not a substitute.",
