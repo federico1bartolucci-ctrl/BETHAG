@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "fd222595ccc55b64d5f894e365560a9d2b0cfc63",
+  "reviewed_head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42248512677,
-      "head_sha": "fd222595ccc55b64d5f894e365560a9d2b0cfc63",
+      "run_id": 42249217215,
+      "head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42248512695,
-      "head_sha": "fd222595ccc55b64d5f894e365560a9d2b0cfc63",
+      "run_id": 42249217106,
+      "head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42248512796,
-      "head_sha": "fd222595ccc55b64d5f894e365560a9d2b0cfc63",
+      "run_id": 42249216931,
+      "head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
       "conclusion": "success"
     }
   },
@@ -112,8 +112,8 @@
       "staff_role_preservation": "PASS — admin/collaborator roles are not downgraded during resident portal registration",
       "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg"
     },
-    "github_actions_run_id": 42248512695,
-    "reviewed_head_sha": "fd222595ccc55b64d5f894e365560a9d2b0cfc63",
+    "github_actions_run_id": 42249217106,
+    "reviewed_head_sha": "de39a76d6130aca1f87ba4b15e00b0110e7624be",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
@@ -130,7 +130,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit fd222595ccc55b64d5f894e365560a9d2b0cfc63; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42248512677, Build/PostgreSQL 17 rehearsal 42248512695, and Baseline Safety 42248512796 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit de39a76d6130aca1f87ba4b15e00b0110e7624be; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42249217215, Build/PostgreSQL 17 rehearsal 42249217106, and Baseline Safety 42249216931 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -147,5 +147,6 @@
     "health_advisor_lints": 0,
     "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight.",
     "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout after approval metadata and exact SHA are frozen"
-  }
+  },
+  "captured_at_utc": "2026-11-06T16:16:17Z"
 }
