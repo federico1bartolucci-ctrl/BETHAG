@@ -124,8 +124,8 @@ async function main() {
   const targetUser = targetUrl ? decodeURIComponent(targetUrl.username) : process.env.PGUSER;
   const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.substring(1)) : process.env.PGDATABASE;
   const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
+  const expectedCommitSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
   if (!rehearsal) {
-    const expectedCommitSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
     assert.match(expectedCommitSha, /^[0-9a-f]{40}$/,
       "Blocked: set BETHAG_EXPECTED_COMMIT_SHA to the full approved 40-character commit SHA.");
     const checkedOutCommitSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
