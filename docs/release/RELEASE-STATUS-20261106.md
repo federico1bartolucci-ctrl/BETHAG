@@ -149,3 +149,28 @@ Il runner Production richiede `BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES` 
 5. Approvazione finale esplicita del proprietario riferita allo SHA completo, ai 19 hash SQL, al backup/rischio, alla finestra e ai criteri STOP.
 
 **Decisione invariata: Production NO-GO.** Nessun merge, deploy, apply o freeze operativo fino alla chiusura dei gate e all'approvazione finale.
+
+
+---
+
+## Addendum di verifica sul candidato corrente — 2026-11-06
+
+Questo addendum prevale sui precedenti riferimenti a SHA e run CI contenuti nelle sezioni storiche.
+
+- **Head PR #57:** `b085473437b6f1a6c6e155b95443cdc504e4f04a`.
+- **Build + PostgreSQL bootstrap:** [run 42215153881](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42215153881), SUCCESS.
+- **Baseline Safety:** [run 42215153704](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42215153704), SUCCESS.
+- **Final QA APP-01..APP-15:** [run 42215153918](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42215153918), SUCCESS.
+- Tutti e tre i workflow si riferiscono allo SHA sopra. Il test negativo del runner conferma che l'assenza della riconferma locale del rischio residuo, quando manca prova di restore fisico corrente, blocca l'esecuzione prima della connessione PostgreSQL.
+- La verifica live Production read-only precedentemente documentata resta riferita al ledger di 248 righe e head `20261104222229`; nessuna migrazione o scrittura Production è stata eseguita.
+
+### Stato operativo aggiornato
+
+- Collaudo QA APP-01..APP-15: **PASS** sul candidato corrente.
+- Runner isolato e controlli di sicurezza CI: **PASS**.
+- Revisione tecnica completa dei 61 file: **NON ANCORA CERTIFICATA**; la revisione eseguita finora è parziale e non equivale a una review indipendente registrata su GitHub.
+- Restore fisico provider-managed corrente: **NON VERIFICATO**. Il rischio residuo richiede una decisione esplicita e attuale dell'approvatore; la vecchia accettazione non viene riutilizzata automaticamente.
+- Contatti recovery/escalation e preflight locale sullo SHA corrente: **DA COMPLETARE**.
+- Finestra obiettivo: **7 novembre 2026, ore 22:00, Europe/Rome**; ora di fine non specificata. Non è un'autorizzazione al cutover.
+
+**Decisione: Production NO-GO.** PR #57 resta aperta e non unita. Nessun merge, deploy, freeze, invio di comunicazioni o apply Production è stato eseguito. L'eventuale superamento della finestra target non modifica i criteri STOP.
