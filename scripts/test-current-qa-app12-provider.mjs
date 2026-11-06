@@ -147,6 +147,7 @@ try {
       recipient: "delivered@resend.dev",
       email_delivery: "NOT SENT",
     }, null, 2));
+    process.exitCode = 1; // A PARTIAL provider result must fail the final QA workflow.
   } else {
     assert.equal(response.status, 200, "bethag-send-email returned HTTP " + response.status + ": " + JSON.stringify(payload));
     assert.equal(payload.success, true, "Provider send function did not confirm success: " + JSON.stringify(payload));
