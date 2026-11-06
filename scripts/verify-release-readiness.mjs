@@ -60,8 +60,9 @@ for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze
   assert.equal(gitBlobSha(sql), item.git_blob_sha, "Production-forward SQL hash mismatch: " + item.file);
 }
 
-if (freeze.rehearsal_evidence.status !== "PASS" || freeze.rehearsal_evidence.github_actions_run_id !== 42017349811) {
-  preCutoverBlockers.push("The exact 248-row + 19-increment PostgreSQL 17 rehearsal is not evidenced as PASS.");
+const buildEvidence = appEvidence.workflow_runs?.build;
+if (buildEvidence?.conclusion !== "success" || buildEvidence?.head_sha !== testedQaSha) {
+  preCutoverBlockers.push("The exact tested QA SHA does not have a successful Build workflow, including the PostgreSQL 17 clean-install and 248+19 guarded migration rehearsal.");
 }
 if (!/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
   preCutoverBlockers.push("Set BETHAG_EXPECTED_COMMIT_SHA to the full 40-character SHA that passed QA/build/baseline.");

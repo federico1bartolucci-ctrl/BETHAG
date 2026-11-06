@@ -2,7 +2,7 @@
   "artifact": "BETHAG Production migration cutover freeze — 248-row live history, nineteen pending canonical increments",
   "captured_date": "2026-11-05",
   "status": "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
-  "reviewed_source_commit": "ec19cda3734fd818e4005e9efa626b9401549df4",
+  "reviewed_source_commit": "8a8d1aa170ae754f2ac7c712fd12beae8d171df2",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
@@ -466,16 +466,17 @@
     "status": "REHEARSAL_PASSED_FINAL_USER_AUTHORIZATION_PENDING"
   },
   "no_go_gates": [
-    "QA APP-12 provider delivery is not verified: the deployed QA Edge Function returns HTTP 503 because RESEND_API_KEY and/or BETHAG_FROM_EMAIL is missing; configure QA secrets and rerun with delivered@resend.dev. No email was sent in the current test.",
-    "Production Data API exposure configuration for provider-managed schema supabase_functions must be verified in the Supabase Dashboard; do not normalize provider-owned grants.",
-    "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges. Supabase MCP apply_migration generates server-side timestamps and is not an acceptable substitute.",
-    "The exact cutover plan still needs a pinned reviewed commit, maintenance window, communication plan, rollback triggers and responsible operator.",
-    "Production function/schema/ACL/default-privilege postflight must pass after the guarded cutover.",
-    "No Production DDL or ledger writes until all remaining gates are satisfied and the guarded cutover is explicitly started."
+    "Production Data API exposure settings, including provider-managed schema supabase_functions and automatic exposure, must be verified directly in the Production Dashboard immediately before cutover; QA screenshots are not a substitute.",
+    "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges configured locally by the operator. Supabase MCP apply_migration is not an acceptable substitute.",
+    "The exact cutover plan must pin the final commit SHA and ordered nineteen SQL hashes, identify the operator and approver, confirm the maintenance window and user communication, and define STOP, rollback and recovery criteria.",
+    "The final exact-SHA QA run must pass APP-01..APP-13 and APP-15; the same SHA must pass Build and the PostgreSQL 17 clean-install and 248+19 guarded rehearsal.",
+    "A second-person independent review of the complete PR has not yet been recorded; an approval by the PR author does not satisfy four-eyes review.",
+    "After the guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests.",
+    "Final written owner approval must explicitly name the exact release SHA, all nineteen SQL hashes, maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write."
   ],
   "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrites or deletes. The 248+19 ordered PostgreSQL 17 rehearsal passed in isolated CI. No explicit final user approval for Production cutover has been recorded; this technical freeze is review-only. No Production DDL or ledger writes have been performed.",
   "rehearsal_evidence": {
-    "status": "PASS",
+    "status": "HISTORICAL_PASS_SUPERSEDED",
     "date": "2026-11-05",
     "target": "isolated PostgreSQL 17 GitHub Actions service; no Supabase remote endpoint",
     "historical_rows": 248,
@@ -490,7 +491,8 @@
     "forward_only_acl_drafts": "PASS",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
-    "production_execution_performed": false
+    "production_execution_performed": false,
+    "note": "The 2026-11-05 rehearsal is retained as historical evidence only. The portal-registration condominium-binding correction changed the pending migration payload; the current release candidate must be certified by the Build workflow's PostgreSQL 17 rehearsal on the exact tested QA SHA."
   },
   "clean_install": {
     "migration_file_count": 28,
