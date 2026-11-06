@@ -538,3 +538,46 @@ In caso di STOP: non rilanciare il runner alla cieca, non saltare una migrazione
 | Autorizzazione all'apply / merge / deploy | **NON CONCESSA** |
 
 **Decisione corrente: NO-GO.** Questo documento è un piano operativo candidato, non un ordine di esecuzione. La precedente autorizzazione generale a procedere e la decisione sui ruoli non sostituiscono l'approvazione finale riferita a commit, hash, finestra e condizioni sopra. Nessun merge, deploy o comando apply è autorizzato da questo addendum.
+
+
+---
+
+## Addendum di rettifica operativa — 2026-11-06
+
+Questo addendum prevale sui valori di finestra, commit e accettazione rischio riportati nelle sezioni storiche precedenti.
+
+### Identità e CI del candidato
+- Commit applicativo testato: `bc3c74a53eee8e7fd7c0d3ec67d6aa0074b46c02`.
+- Final QA APP-01..APP-15: run [42222394817](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394817) — PASS.
+- Build/PostgreSQL bootstrap: run [42222394795](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394795) — PASS.
+- Baseline Safety: run [42222394790](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42222394790) — PASS.
+- I 19 payload SQL restano congelati; nessuna migrazione è stata applicata a Production.
+
+### Finestra
+- **Inizio concordato:** sabato 7 novembre 2026, ore 22:00, `Europe/Rome`.
+- **Ora di fine:** non specificata; non si presume una riapertura entro le 02:00.
+- L'inizio concordato non è prenotazione, freeze attivo, avviso inviato o autorizzazione al cutover.
+
+### Backup e rischio residuo
+Il restore fisico provider-managed resta **NON VERIFICATO**. L'accettazione registrata il 27 ottobre è storica e non viene riutilizzata automaticamente per questa release. Prima di un eventuale cutover occorre verificare l'evidenza di backup corrente oppure ottenere una riconferma esplicita, locale e riferita a questa specifica esecuzione. Il restore logico locale non prova il restore fisico.
+
+### Gate attuali
+| Campo | Stato al 2026-11-06 |
+|---|---|
+| Operatore umano | Federico Bartolucci |
+| Approvatore | Federico Bartolucci |
+| Revisione indipendente a quattro occhi | NON DISPONIBILE / NON REGISTRATA |
+| Revisione completa dei 61 file PR | ANCORA DA COMPLETARE E CERTIFICARE |
+| Finestra di inizio | CONCORDATA: 7 novembre, ore 22:00 |
+| Ora di fine | NON SPECIFICATA |
+| Freeze schema/codice | NON ATTIVATO |
+| Avviso amministratori | NON APPROVATO / NON INVIATO |
+| Backup corrente | DA VERIFICARE |
+| Rischio restore fisico | DA RICONFERMARE PER QUESTA ESECUZIONE |
+| Contatti recovery/escalation | DA INSERIRE |
+| Preflight Production read-only sul commit `bc3c74a...` | DA ESEGUIRE |
+| Approvazione finale su SHA, 19 hash, backup/rischio, finestra e STOP | NON RICEVUTA |
+
+Il runner Production richiede `BETHAG_EXPECTED_COMMIT_SHA` corrispondente al checkout pulito approvato; rifiuta modifiche tracked e file untracked inattesi. Il preflight e l'apply devono essere eseguiti esclusivamente dal checkout pinned, dopo chiusura dei gate e approvazione finale.
+
+**Decisione: Production NO-GO.** Nessun merge, deploy, apply, freeze o comunicazione agli amministratori è stato eseguito o autorizzato. Se un gate resta aperto o fallisce, prevale STOP anche se la finestra concordata è iniziata.
