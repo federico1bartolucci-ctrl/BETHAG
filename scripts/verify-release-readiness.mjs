@@ -30,7 +30,7 @@ const expectedFiles = [
 const preCutoverBlockers = [];
 const postCutoverBlockers = [];
 const checkedOutHeadSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-const expectedHeadSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || checkedOutHeadSha;
+const expectedHeadSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
 
 assert.equal(production.count, 248, "Production snapshot must contain the exact 248-row live ledger.");
 assert.equal(production.migrations.length, 248);
@@ -58,13 +58,31 @@ for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze
 if (freeze.rehearsal_evidence.status !== "PASS" || freeze.rehearsal_evidence.github_actions_run_id !== 42017349811) {
   preCutoverBlockers.push("The exact 248-row + 19-increment PostgreSQL 17 rehearsal is not evidenced as PASS.");
 }
-if (appEvidence.reviewed_head_sha !== checkedOutHeadSha || appEvidence.reviewed_head_sha !== expectedHeadSha) {
-  preCutoverBlockers.push("Final QA evidence SHA does not match the exact checked-out/expected commit.");
+if (!/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
+  preCutoverBlockers.push("Set BETHAG_EXPECTED_COMMIT_SHA to the full 40-character SHA that passed QA/build/baseline.");
+}
+if (appEvidence.reviewed_head_sha !== expectedHeadSha) {
+  preCutoverBlockers.push("Final QA evidence SHA does not match BETHAG_EXPECTED_COMMIT_SHA.");
 }
 for (const [name, run] of Object.entries(appEvidence.workflow_runs)) {
-  if (run.conclusion !== "success" || run.head_sha !== checkedOutHeadSha) {
-    preCutoverBlockers.push(`${name} evidence is not SUCCESS on the exact checked-out commit.`);
+  if (run.conclusion !== "success" || run.head_sha !== expectedHeadSha) {
+    preCutoverBlockers.push(`${name} evidence is not SUCCESS on the pinned tested commit.`);
   }
+}
+if (/^[0-9a-f]{40}$/.test(expectedHeadSha)) {
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", expectedHeadSha, checkedOutHeadSha], { stdio: "ignore" });
+    const laterChanges = execFileSync("git", ["diff", "--name-only", expectedHeadSha + ".." + checkedOutHeadSha], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+    const allowedAfterTest = (path) => path.startsWith("docs/")
+      || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
+      || path === "scripts/verify-release-readiness.mjs";
+    const unexpected = laterChanges.filter((path) => !allowedAfterTest(path));
+    if (unexpected.length) preCutoverBlockers.push("Application/migration/workflow files changed after the tested SHA: " + unexpected.join(", "));
+  } catch {
+    preCutoverBlockers.push("The tested QA commit is not an ancestor of the checked-out release candidate.");
+  }
+} else {
+  preCutoverBlockers.push("Cannot compare post-test changes until BETHAG_EXPECTED_COMMIT_SHA is supplied.");
 }
 if (appEvidence.workflow_runs.final_qa_collaudo.conclusion !== "success") {
   preCutoverBlockers.push("Final authenticated QA collaudo did not complete successfully.");
@@ -108,7 +126,7 @@ const report = {
     head_sha: freeze.rehearsal_evidence.github_actions_head_sha,
   },
   checked_out_head_sha: checkedOutHeadSha,
-  expected_head_sha: expectedHeadSha,
+  tested_head_sha: expectedHeadSha,
   final_qa_run_id: appEvidence.workflow_runs.final_qa_collaudo.run_id,
   app_statuses: appEvidence.application_tests,
   backup_restore: {
