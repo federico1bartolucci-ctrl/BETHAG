@@ -28,7 +28,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { getApplicationTest, splitChangedPaths } from "./lib/release-readiness-utils.mjs";
+import { getApplicationTest, splitChangedPaths, frozenManifestPayload } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
@@ -151,6 +151,11 @@ async function main() {
     "Blocked: APP-12 provider delivery is not PASS in the pinned QA evidence.");
 
     execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedCommitSha], { stdio: "ignore" });
+    const testedManifest = JSON.parse(execFileSync("git", [
+      "show", `${testedQaSha}:supabase/rebuild/production-migration-cutover-freeze-20261105.json`,
+    ], { encoding: "utf8" }));
+    assert.deepEqual(frozenManifestPayload(manifest), frozenManifestPayload(testedManifest),
+      "Blocked: frozen migration sequence, live ledger, hashes or postflight contract changed after QA; only review/approval metadata may change.");
     const laterChanges = splitChangedPaths(execFileSync("git", ["diff", "--name-only", testedQaSha + ".." + expectedCommitSha], { encoding: "utf8" }));
     const allowedPostQaChange = (path) => path.startsWith("docs/")
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
