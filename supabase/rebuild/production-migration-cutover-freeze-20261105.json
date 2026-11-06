@@ -303,7 +303,7 @@
     {
       "order": 19,
       "file": "20261105050000_reconcile_portal_registration_upsert.sql",
-      "git_blob_sha": "5da96b5c2ce732ac457e763d91c99cb88ffeb0dc",
+      "git_blob_sha": "b616733790787c4c2e5d541b4006d98333a96baa",
       "purpose": "Repair portal registration upsert behavior; allow authorized administrators to resolve unassigned ambiguous-workspace requests while preserving exact workspace matching for already-assigned requests.",
       "postcondition": "Both authenticated registration entry points use the centralized helper; duplicate legacy-id/email matches and archived condominiums fail closed; helper is not directly executable by anon/authenticated/service_role.",
       "production_status": "PENDING_NOT_APPLIED"
