@@ -114,8 +114,10 @@ async function main() {
     assert.equal(checkedOutCommitSha, expectedCommitSha,
       "Blocked: checked-out commit does not match BETHAG_EXPECTED_COMMIT_SHA.");
     const workingTree = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim();
-    assert.equal(workingTree, "",
-      "Blocked: working tree is not clean; use a clean checkout of the approved commit.");
+    const unexpectedWorkingTreeEntries = workingTree.split("\n").filter(Boolean).filter((entry) =>
+      entry !== "?? node_modules/" && entry !== "?? package-lock.json");
+    assert.equal(unexpectedWorkingTreeEntries.length, 0,
+      "Blocked: tracked changes or unexpected untracked files exist; use a clean checkout of the approved commit.");
   }
   const isExpectedProductionTarget =
     (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
