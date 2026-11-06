@@ -179,6 +179,52 @@ BEGIN
 END;
 $email_mismatch_state$;
 
+-- A verified account email must match the registration request, and an
+-- unverified account must never be linked or granted portal access.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+DO $account_email_guard$
+BEGIN
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000004','40000000-0000-0000-0000-000000000009'
+   );
+   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for account/request mismatch';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
+ END;
+ BEGIN
+   PERFORM private.admin_approve_portal_registration(
+     '50000000-0000-0000-0000-000000000005','40000000-0000-0000-0000-000000000010'
+   );
+   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for unverified account';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
+ END;
+END;
+$account_email_guard$;
+RESET ROLE;
+
+DO $account_email_guard_state$
+BEGIN
+ IF (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000004') <> 'pending'
+    OR (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000005') <> 'pending' THEN
+   RAISE EXCEPTION 'Rejected account email approval changed request status';
+ END IF;
+ IF EXISTS (
+   SELECT 1 FROM public.condominium_members
+   WHERE id IN ('40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
+     AND user_id IS NOT NULL
+ ) OR EXISTS (
+   SELECT 1 FROM public.portal_access
+   WHERE member_id IN ('40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
+ ) THEN
+   RAISE EXCEPTION 'Rejected account email approval linked a member or created portal access';
+ END IF;
+END;
+$account_email_guard_state$;
+
+
 UPDATE public.condominium_members
 SET email='corrected-email@example.invalid'
 WHERE id='40000000-0000-0000-0000-000000000008';
@@ -225,76 +271,7 @@ END;
 $relink_assert$;
 RESET ROLE;
 
-DO $email_fixture_assert$
-BEGIN
- IF NOT EXISTS (
-   SELECT 1 FROM public.portal_registration_requests
-   WHERE id='50000000-0000-0000-0000-000000000003'
-     AND status='email_mismatch'
-     AND requested_user_id='10000000-0000-0000-0000-000000000008'
-     AND matched_member_id='40000000-0000-0000-0000-000000000008'
- ) THEN
-   RAISE EXCEPTION 'Email mismatch approval fixture was not inserted as expected';
- END IF;
-END;
-$email_fixture_assert$;
 
--- Portal approval must fail closed for an outdated member email, an account
--- whose verified email differs from the request, and an unverified account.
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
-DO $email_guard_assert$
-BEGIN
- BEGIN
-   PERFORM private.admin_approve_portal_registration(
-     '50000000-0000-0000-0000-000000000003','40000000-0000-0000-0000-000000000008'
-   );
-   RAISE EXCEPTION 'Expected MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
- EXCEPTION WHEN raise_exception THEN
-   IF SQLERRM <> 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL' THEN RAISE; END IF;
- END;
- BEGIN
-   PERFORM private.admin_approve_portal_registration(
-     '50000000-0000-0000-0000-000000000004','40000000-0000-0000-0000-000000000009'
-   );
-   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for account/request mismatch';
- EXCEPTION WHEN raise_exception THEN
-   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
- END;
- BEGIN
-   PERFORM private.admin_approve_portal_registration(
-     '50000000-0000-0000-0000-000000000005','40000000-0000-0000-0000-000000000010'
-   );
-   RAISE EXCEPTION 'Expected ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH for unverified account';
- EXCEPTION WHEN raise_exception THEN
-   IF SQLERRM <> 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH' THEN RAISE; END IF;
- END;
-END;
-$email_guard_assert$;
-RESET ROLE;
-
-DO $email_guard_state_assert$
-BEGIN
- IF (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000003') <> 'email_mismatch'
-    OR (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000004') <> 'pending'
-    OR (SELECT status FROM public.portal_registration_requests WHERE id='50000000-0000-0000-0000-000000000005') <> 'pending' THEN
-   RAISE EXCEPTION 'Rejected portal email approval changed request status';
- END IF;
- IF EXISTS (
-   SELECT 1 FROM public.condominium_members
-   WHERE id IN ('40000000-0000-0000-0000-000000000008','40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
-     AND user_id IS NOT NULL
- ) THEN
-   RAISE EXCEPTION 'Rejected portal email approval linked an account to a condominium member';
- END IF;
- IF EXISTS (
-   SELECT 1 FROM public.portal_access
-   WHERE member_id IN ('40000000-0000-0000-0000-000000000008','40000000-0000-0000-0000-000000000009','40000000-0000-0000-0000-000000000010')
- ) THEN
-   RAISE EXCEPTION 'Rejected portal email approval created portal access';
- END IF;
-END;
-$email_guard_state_assert$;
 
 DO $relink_state_assert$
 BEGIN
