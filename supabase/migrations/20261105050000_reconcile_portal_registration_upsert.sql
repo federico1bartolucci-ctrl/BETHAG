@@ -401,6 +401,23 @@ BEGIN
     RAISE EXCEPTION 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
   END IF;
 
+  -- An unassigned request may be manually resolved only when its verified
+  -- account email identifies one active member across same-named condominiums
+  -- in the selected workspace. Same-name duplicates sharing an email remain
+  -- ambiguous and must fail closed rather than link to an arbitrary property.
+  IF v_request.workspace_id IS NULL AND (
+    SELECT count(*)
+    FROM public.condominium_members cm
+    JOIN public.condominiums c ON c.id=cm.condominium_id
+    WHERE cm.active=true
+      AND c.archived_at IS NULL
+      AND c.workspace_id=v_workspace
+      AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+      AND lower(trim(coalesce(cm.email,'')))=lower(trim(coalesce(v_request.email,'')))
+  ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
   UPDATE public.condominium_members
   SET user_id=v_request.requested_user_id,updated_at=now()
   WHERE id=v_member.id
