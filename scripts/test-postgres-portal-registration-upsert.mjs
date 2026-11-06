@@ -198,7 +198,8 @@ $ambiguous_workspace_assert$;
 
 -- An authorized administrator in the selected workspace can manually resolve
 -- the unassigned request; the request is then bound to that workspace/member.
-SET LOCAL ROLE authenticated;
+-- Read the unassigned request as the test owner; the SECURITY DEFINER RPC
+-- still evaluates auth.uid() as the explicitly selected workspace-two admin.
 SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000006';
 DO $resolve_ambiguous$
 DECLARE v_request_id uuid;
@@ -213,7 +214,6 @@ BEGIN
  );
 END;
 $resolve_ambiguous$;
-RESET ROLE;
 
 DO $ambiguous_manual_approval_assert$
 BEGIN
