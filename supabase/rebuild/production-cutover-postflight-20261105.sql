@@ -20,6 +20,8 @@ DECLARE
   workspace_member_data_exists boolean;
   workspace_member_data_default text;
   save_condominium_definition text;
+  portal_registration_rls boolean;
+  portal_registration_policy boolean;
 BEGIN
   SELECT count(*)::integer INTO relation_count FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND c.relkind IN ('r','p');
@@ -138,6 +140,26 @@ BEGIN
   INTO workspace_member_data_exists,workspace_member_data_default;
   IF workspace_member_data_exists IS DISTINCT FROM true OR workspace_member_data_default IS NULL THEN
     RAISE EXCEPTION 'FAIL: workspace_members.data jsonb/default missing';
+  END IF;
+
+  SELECT relrowsecurity INTO portal_registration_rls
+  FROM pg_class WHERE oid='public.portal_registration_requests'::regclass;
+  IF portal_registration_rls IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL: portal_registration_requests row-level security is not enabled';
+  END IF;
+  SELECT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public'
+      AND tablename='portal_registration_requests'
+      AND policyname='managers read portal registration requests'
+      AND cmd='SELECT'
+      AND roles @> ARRAY['authenticated']::name[]
+      AND position('private.can_manage_workspace_module' IN lower(qual)) > 0
+      AND position('archived_at' IN lower(qual)) > 0
+      AND position('condominium_name' IN lower(qual)) > 0
+  ) INTO portal_registration_policy;
+  IF portal_registration_policy IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL: scoped RLS policy for unassigned portal registration requests is missing or weakened';
   END IF;
 
   SELECT pg_get_functiondef('private.save_condominium(uuid,bigint,text,text,text,text,text,jsonb)'::regprocedure)
