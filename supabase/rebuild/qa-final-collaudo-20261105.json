@@ -53,7 +53,7 @@
     "APP-15": {
       "status": "PASS",
       "navigation": {
-        "admin": "PASS — 12 administrator destinations activated; homepage route survived refresh; no uncaught browser errors.",
+        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
         "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
         "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
       },
@@ -70,7 +70,7 @@
     "APP15": {
       "status": "PASS",
       "navigation": {
-        "admin": "PASS — all entitled destinations activated; observed plan-gated destinations are accepted only on explicit entitlement denial; homepage route survived refresh; no uncaught browser errors.",
+        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
         "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
         "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
       },
@@ -114,7 +114,11 @@
       "self_registration_condominium_binding": "PASS — a unique person match cannot override a different condominium explicitly selected by the resident; no member link or portal access is created.",
       "administrator_approval_condominium_binding": "PASS — manual approval rejects a selected member whose condominium name differs from the request; request remains pending and no account or portal access is linked.",
       "same_account_other_condominium_request_scoping": "PASS — self-registration does not approve a different condominium request for the same account/email.",
-      "member_first_row_lock_order": "PASS — both registration entry points lock the member before request mutation to avoid lock inversion and concurrent account-link races."
+      "member_first_row_lock_order": "PASS — both registration entry points lock the member before request mutation to avoid lock inversion and concurrent account-link races.",
+      "same_workspace_duplicate_name_self_registration": "PASS — a unique person match cannot auto-link when the selected condominium name identifies multiple active condominiums in the same workspace; no member link, portal access or request side effect is created.",
+      "same_workspace_duplicate_name_manual_approval": "PASS — manual approval fails closed when the selected workspace contains multiple active condominiums with the requested name; the request remains pending and no account or portal access is linked.",
+      "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
+      "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
     "github_actions_run_id": 42257477464,
     "reviewed_head_sha": "62967275c6a528be031c26e2352caa39c7031af9",
@@ -134,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 62967275c6a528be031c26e2352caa39c7031af9; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42257477325, Build/PostgreSQL 17 rehearsal 42257477464, and Baseline Safety 42257477318 all completed SUCCESS on the same SHA. Portal registration now fails closed for same-workspace same-name condominium ambiguity in both self-registration and administrator approval. Production remains unmodified and NO-GO pending final release gates and explicit written approval.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 62967275c6a528be031c26e2352caa39c7031af9; APP-14 remains PARTIAL because Production cutover/postflight/authenticated Production smoke are not performed. Final QA workflow 42257477325, Build/PostgreSQL 17 rehearsal 42257477464, and Baseline Safety 42257477318 all completed SUCCESS on the same SHA. APP-15 includes a live Free-plan check with restoration of the original QA workspace plan. Portal registration fails closed for wrong-condominium and same-workspace duplicate-name ambiguity in both self-registration and administrator approval. Production remains unmodified and NO-GO pending independent second-person review, current backup/Data API verification, direct PostgreSQL preflight, exact cutover approval and explicit written owner authorization.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
