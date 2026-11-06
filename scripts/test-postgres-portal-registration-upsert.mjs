@@ -225,6 +225,20 @@ END;
 $relink_assert$;
 RESET ROLE;
 
+DO $email_fixture_assert$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE id='50000000-0000-0000-0000-000000000003'
+     AND status='email_mismatch'
+     AND requested_user_id='10000000-0000-0000-0000-000000000008'
+     AND matched_member_id='40000000-0000-0000-0000-000000000008'
+ ) THEN
+   RAISE EXCEPTION 'Email mismatch approval fixture was not inserted as expected';
+ END IF;
+END;
+$email_fixture_assert$;
+
 -- Portal approval must fail closed for an outdated member email, an account
 -- whose verified email differs from the request, and an unverified account.
 SET LOCAL ROLE authenticated;
