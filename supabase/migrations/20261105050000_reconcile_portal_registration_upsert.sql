@@ -277,6 +277,8 @@ DECLARE
   v_request public.portal_registration_requests%rowtype;
   v_member public.condominium_members%rowtype;
   v_workspace uuid;
+  v_account_email text;
+  v_email_confirmed_at timestamptz;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
 
@@ -288,6 +290,15 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'Richiesta non trovata o già gestita'; END IF;
   IF v_request.requested_user_id IS NULL THEN
     RAISE EXCEPTION 'La richiesta non è associata ad un account autenticato';
+  END IF;
+
+  SELECT lower(trim(coalesce(u.email,''))),u.email_confirmed_at
+  INTO v_account_email,v_email_confirmed_at
+  FROM auth.users u
+  WHERE u.id=v_request.requested_user_id;
+  IF NOT FOUND OR v_email_confirmed_at IS NULL
+     OR v_account_email<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
   END IF;
 
   SELECT * INTO v_member
@@ -317,6 +328,15 @@ BEGIN
 
   IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
     RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
+  IF v_request.status='email_mismatch'
+     AND v_request.matched_member_id IS NOT NULL
+     AND v_request.matched_member_id<>v_member.id THEN
+    RAISE EXCEPTION 'MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER';
+  END IF;
+  IF lower(trim(coalesce(v_member.email,'')))<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
   END IF;
 
   IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
