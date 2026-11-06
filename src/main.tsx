@@ -2998,16 +2998,33 @@ function App() {
     }
     let cancelled = false;
     const loadRegistrationRequests = async () => {
-      const { data, error } = await supabase
-        .from("portal_registration_requests")
-        .select("*")
-        .eq("workspace_id", profile.workspaceId)
-        .in("status", ["pending","email_mismatch"])
-        .order("created_at", { ascending: false });
-      if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
+      const [assigned, unassigned] = await Promise.all([
+        supabase
+          .from("portal_registration_requests")
+          .select("*")
+          .eq("workspace_id", profile.workspaceId)
+          .in("status", ["pending","email_mismatch"])
+          .order("created_at", { ascending: false }),
+        // RLS returns only unassigned requests whose condominium name matches
+        // a condominium managed by this workspace. These requests need manual
+        // resolution when identical names exist across different workspaces.
+        supabase
+          .from("portal_registration_requests")
+          .select("*")
+          .is("workspace_id", null)
+          .in("status", ["pending","email_mismatch"])
+          .order("created_at", { ascending: false }),
+      ]);
+      if (assigned.error || unassigned.error) {
+        console.error("BETHAG portal registration requests load error", assigned.error || unassigned.error);
+        return;
+      }
+      const combined = [...(assigned.data || []), ...(unassigned.data || [])]
+        .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+      if (!cancelled) setRegistrationRequests(combined as PortalRegistrationRequest[]);
     };
     void loadRegistrationRequests();
-  return () => { cancelled = true; };
+    return () => { cancelled = true; };
   }, [sessionRole, profile.workspaceId]);
 
   const approvePortalRegistration = async (requestId: string, memberId: string) => {
