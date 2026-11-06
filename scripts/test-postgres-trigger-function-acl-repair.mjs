@@ -6,7 +6,7 @@ const url = process.env.DATABASE_URL;
 assert.ok(url, "DATABASE_URL required");
 const target = new URL(url);
 assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname), "Only disposable local PostgreSQL is allowed");
-assert.ok(!/supabase\\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url), "Remote Supabase URL refused");
+assert.ok(!/supabase\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url), "Remote Supabase URL refused");
 
 const migration = await readFile(
   "supabase/rebuild/drafts/20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
