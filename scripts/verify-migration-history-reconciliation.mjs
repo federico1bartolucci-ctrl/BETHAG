@@ -13,9 +13,9 @@ const qaOnly = qa.filter((row) => !productionSet.has(pair(row)));
 const canonicalFiles = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
 
 assert.equal(live.captured_at, "2026-11-06");
-assert.match(live.captured_at_utc ?? "", /^2026-11-06T\\d{2}:\\d{2}:\\d{2}Z$/);
-assert.match(live.production.captured_at_utc ?? "", /^2026-11-06T\\d{2}:\\d{2}:\\d{2}Z$/);
-assert.match(live.qa.captured_at_utc ?? "", /^2026-11-06T\\d{2}:\\d{2}:\\d{2}Z$/);
+assert.match(live.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
+assert.match(live.production.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
+assert.match(live.qa.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
 assert.equal(live.production.project_ref, "tctcgptrsmvgajqjgnev");
 assert.equal(live.qa.project_ref, "jhuyhlzzydcgghrzeexn");
 assert.equal(production.length, 248);
