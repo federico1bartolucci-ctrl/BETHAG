@@ -94,10 +94,18 @@ async function main() {
     assert.ok(!process.env.DATABASE_URL.includes("YOUR_") && !process.env.DATABASE_URL.includes("placeholder"),
       "Blocked: DATABASE_URL appears to be a placeholder.");
   }
-  const targetHost = hasDatabaseUrl
-    ? (() => { try { return new URL(process.env.DATABASE_URL).hostname; } catch { throw new Error("Blocked: invalid DATABASE_URL."); } })()
-    : process.env.PGHOST;
+  let targetUrl = null;
+  if (hasDatabaseUrl) {
+    try { targetUrl = new URL(process.env.DATABASE_URL); } catch { throw new Error("Blocked: invalid DATABASE_URL."); }
+  }
+  const targetHost = targetUrl?.hostname || process.env.PGHOST;
+  const targetUser = targetUrl ? decodeURIComponent(targetUrl.username) : process.env.PGUSER;
+  const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.replace(/^\\//, "")) : process.env.PGDATABASE;
   const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
+  const isExpectedProductionTarget =
+    (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
+    || (targetHost?.endsWith(".pooler.supabase.com") && targetUser === `postgres.${projectRef}`);
+
   if (rehearsal) {
     assert.ok(["localhost", "127.0.0.1", "::1"].includes(targetHost),
       "Blocked: rehearsal mode is restricted to a local PostgreSQL host.");
@@ -107,16 +115,16 @@ async function main() {
   } else if (preflightOnly) {
     assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
       `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
-    assert.ok(targetHost === `db.${projectRef}.supabase.co` || targetHost?.endsWith(".pooler.supabase.com"),
-      "Blocked: read-only Production preflight requires the expected Supabase direct or pooler host.");
+    assert.ok(isExpectedProductionTarget && targetDatabase === "postgres",
+      "Blocked: read-only preflight requires the expected Production host, username, and postgres database.");
     console.log("READ-ONLY PREFLIGHT MODE: Production ledger and frozen SQL hashes only; no DDL/DML is permitted.");
   } else {
     assert.equal(process.env.BETHAG_ALLOW_PRODUCTION_MIGRATIONS, "YES",
       "Blocked: set BETHAG_ALLOW_PRODUCTION_MIGRATIONS=YES only after formal cutover approval.");
     assert.equal(process.env.BETHAG_PRODUCTION_PROJECT_REF, projectRef,
       `Blocked: BETHAG_PRODUCTION_PROJECT_REF must explicitly equal ${projectRef}.`);
-    assert.ok(targetHost === `db.${projectRef}.supabase.co` || targetHost?.endsWith(".pooler.supabase.com"),
-      "Blocked: Production apply mode requires the expected Supabase direct or pooler host.");
+    assert.ok(isExpectedProductionTarget && targetDatabase === "postgres",
+      "Blocked: Production apply mode requires the expected Production host, username, and postgres database.");
     assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
