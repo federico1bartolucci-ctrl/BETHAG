@@ -470,7 +470,6 @@
     "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges configured locally by the operator. Supabase MCP apply_migration is not an acceptable substitute.",
     "The exact cutover plan must pin the final commit SHA and ordered nineteen SQL hashes, identify the operator and approver, confirm the maintenance window and user communication, and define STOP, rollback and recovery criteria.",
     "The final exact-SHA QA run must pass APP-01..APP-13 and APP-15; the same SHA must pass Build and the PostgreSQL 17 clean-install and 248+19 guarded rehearsal.",
-    "A second-person independent review of the complete PR has not yet been recorded; an approval by the PR author does not satisfy four-eyes review.",
     "After the guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests.",
     "Final written owner approval must explicitly name the exact release SHA, all nineteen SQL hashes, maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write."
   ],
@@ -555,5 +554,14 @@
   },
   "accepted_residual_risks": [
     "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
-  ]
+  ],
+  "review_disposition": {
+    "status": "INTERNAL_REVIEW_ACCEPTED_AS_PROJECT_CONTROL",
+    "independent_reviewer_available": false,
+    "independent_review_recorded": false,
+    "blocking_for_release": false,
+    "review_method": "Owner-approved internal technical review supported by repeated prior reviews, exact-SHA CI evidence, PostgreSQL 17 clean-install and guarded migration rehearsal, frozen SQL blob hashes, read-only live ledger reconciliation, and final targeted checks.",
+    "limitation": "This is not a four-eyes review and must never be represented as an independent review. Residual single-reviewer risk is disclosed and accepted as a project-process limitation; all technical, operational, backup, preflight, approval and postflight gates remain mandatory.",
+    "owner_decision": "2026-11-06: project owner accepted internal review in place of an unavailable independent reviewer."
+  }
 }
