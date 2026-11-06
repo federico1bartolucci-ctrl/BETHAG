@@ -3,23 +3,23 @@
   "captured_date": "2026-11-06",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
+  "reviewed_head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42240333748,
-      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
+      "run_id": 42246244137,
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42240333486,
-      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
+      "run_id": 42246243987,
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42240334475,
-      "head_sha": "90f7b110c81b70b95b24225862073bd45d75b564",
+      "run_id": 42246243967,
+      "head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
       "conclusion": "success"
     }
   },
@@ -102,11 +102,20 @@
     "production_or_qa_migration_writes": false,
     "portal_registration_upsert_rehearsal": "PASS",
     "portal_registration_security_regressions": {
-      "ambiguous_condominium_name_across_workspaces": "PASS — request remains unassigned rather than routed arbitrarily",
+      "ambiguous_condominium_name_across_workspaces": "PASS — request remains unassigned; authorized managers of matching active condominiums can resolve it manually",
+      "scoped_rls_visibility": "PASS — only managers of matching active condominiums can read an unassigned request; an unrelated workspace manager cannot read it",
+      "manual_approval_of_unassigned_request": "PASS — the authorized administrator can bind the request to the selected workspace/member",
+      "verified_account_email": "PASS — unverified account email or mismatch with the request email is rejected",
+      "member_email_correction": "PASS — approval is blocked until the condominium member email matches the verified account email",
+      "original_matched_member_binding": "PASS — an email-mismatch request cannot be approved against a different member",
       "existing_member_account_relink_takeover": "PASS — a member already linked to another user cannot be reassigned",
       "staff_role_preservation": "PASS — admin/collaborator roles are not downgraded during resident portal registration",
       "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg"
-    }
+    },
+    "github_actions_run_id": 42246243987,
+    "reviewed_head_sha": "ea32fc492757e5165b41580f082e42916bd54a8",
+    "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
+    "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets"
   },
   "cleanup": {
     "provider_test_marker_rows": {
@@ -121,7 +130,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit 90f7b110c81b70b95b24225862073bd45d75b564. Final QA workflow 42240333748, Build/PostgreSQL 17 rehearsal 42240333486, and Baseline Safety 42240334475 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending release gates, final approval, guarded migration execution, postflight and authenticated Production smoke.",
+  "conclusion": "QA application acceptance APP-01..APP-13 and APP-15 passed on exact commit ea32fc492757e5165b41580f082e42916bd54a8; APP-14 remains PARTIAL because Production cutover/postflight/authenticated smoke are not performed. Final QA workflow 42246244137, Build/PostgreSQL 17 rehearsal 42246243987, and Baseline Safety 42246243967 all completed SUCCESS on the same SHA. Production remains unmodified and NO-GO pending final release gates and explicit approval.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -136,6 +145,7 @@
     "anon_direct_public_table_privileges": 0,
     "security_advisor_lints": 0,
     "health_advisor_lints": 0,
-    "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight."
+    "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight.",
+    "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout"
   }
 }
