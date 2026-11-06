@@ -409,3 +409,41 @@ The complete (public plus private) routine ACL comparison returned 219 rows for 
 On PR #57 head `0c3429cab272f5813dcc94bf1083e2376fa851aa`, final QA run `42132219836` completed **SUCCESS**. APP-01..APP-15, authenticated browser workflows, signed webhook/provider probe, diagnostics upload, and QA preview cleanup all completed successfully. Build and baseline-safety checks on the preceding documentation commit were already SUCCESS; a new documentation commit will trigger fresh checks and must be verified before this evidence is treated as the final candidate.
 
 *Count clarification: 219/239 are total routine-ACL row counts (public plus private), not public-only counts. The public-only comparison was exact; its separate row count was not retained in the evidence summary.*
+
+
+---
+
+## Addendum operativo — 2026-11-06
+
+Questo addendum aggiorna le evidenze operative correnti; le sezioni storiche precedenti restano conservate come cronologia e non prevalgono sul report `docs/release/RELEASE-STATUS-20261106.md`.
+
+### Stato verificato
+
+- Production `tctcgptrsmvgajqjgnev`, PostgreSQL 17.6.
+- Il 2026-11-06 l'operatore ha stabilito una connessione autenticata da Windows PowerShell tramite Session Pooler.
+- Query read-only dell'operatore: database `postgres`, ruolo `postgres`, ledger **248** righe, head `20261104222229_reconcile_production_acl_least_privilege`.
+- Il manifest congelato conserva 248 coppie versione/nome e definisce 19 migrazioni incrementali forward-only; totale atteso dopo il cutover: **267**.
+- Il rischio relativo al mancato test di restore fisico provider-managed resta accettato dal proprietario nel manifest, ma il restore fisico è **NOT EXECUTED**. Il restore logico locale verificato non equivale a un test fisico.
+- QA APP-01..APP-13 e APP-15: PASS; APP-14 resta parziale fino al postflight Production.
+
+### Aggiornamento runner
+
+Il runner supporta ora `DATABASE_URL` oppure le variabili libpq `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGSSLMODE`; `BETHAG_PSQL_BIN` consente di indicare il percorso locale di `psql.exe`. È stata aggiunta la modalità `BETHAG_CUTOVER_PREFLIGHT_ONLY=YES`: verifica manifest, hash dei 19 SQL, ledger completo 248 righe e head; termina prima di eseguire SQL o scrivere il ledger. Questa modalità non autorizza il cutover.
+
+Percorso psql verificato sul PC dell'operatore: `C:\\Program Files\\PostgreSQL\\17\\bin\\psql.exe`. Il runner non è ancora stato eseguito da un checkout locale pulito; la sua verifica completa resta aperta.
+
+### Gate residui
+
+| Gate | Stato |
+|---|---|
+| Client PostgreSQL e login Session Pooler | PASS |
+| Conteggio/head ledger manuali | PASS |
+| Preflight runner: 248 coppie esatte + 19 hash SQL | PENDING |
+| Pin commit finale e CI sul commit previsto | PENDING |
+| Operatore e approvatore nominati | PENDING |
+| Finestra di manutenzione Europe/Rome | PENDING |
+| Freeze schema e comunicazione utenti | PENDING |
+| Criteri STOP, recovery e contatti | PENDING |
+| Approvazione formale del piano esatto | NOT APPROVED |
+
+**Decisione: Production NO-GO.** Nessun merge, deploy o comando in modalità apply finché tutti i gate non sono documentati e il piano esatto non è approvato. Nessuna scrittura Production è stata eseguita in questo aggiornamento.
