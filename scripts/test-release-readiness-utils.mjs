@@ -44,3 +44,33 @@ test("application evidence retains compatibility with legacy APP aliases", () =>
   const evidence = { APP15: { status: "PASS" } };
   assert.equal(getApplicationTest(evidence, 15).status, "PASS");
 });
+
+test("frozen cutover manifest permits only approval metadata changes after QA", () => {
+  const reviewed = {
+    status: "FROZEN_FOR_REVIEW_AUTHORIZED_BY_USER_GATES_PENDING",
+    safety: "historical safety note",
+    user_authorization: { status: "RECEIVED" },
+    sequence: [{ file: "001_migration.sql", git_blob_sha: "abc" }],
+    live_ledger: { rows: 248 },
+    expected_postflight: { ledger_rows: 267 },
+  };
+  const metadataOnly = {
+    ...reviewed,
+    status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
+    safety: "corrected safety note",
+    user_authorization: { status: "NOT_RECEIVED" },
+  };
+  assert.deepEqual(frozenManifestPayload(metadataOnly), frozenManifestPayload(reviewed));
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, sequence: [{ file: "001_migration.sql", git_blob_sha: "changed" }] }),
+    frozenManifestPayload(reviewed),
+  );
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, live_ledger: { rows: 249 } }),
+    frozenManifestPayload(reviewed),
+  );
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, expected_postflight: { ledger_rows: 268 } }),
+    frozenManifestPayload(reviewed),
+  );
+});
