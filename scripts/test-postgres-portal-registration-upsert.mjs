@@ -24,22 +24,27 @@ ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;
 INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('10000000-0000-0000-0000-000000000001','admin-portal-test@example.invalid',now()),
  ('10000000-0000-0000-0000-000000000002','admin-approved@example.invalid',now()),
- ('10000000-0000-0000-0000-000000000003','self-registered@example.invalid',now());
+ ('10000000-0000-0000-0000-000000000003','self-registered@example.invalid',now()),
+ ('10000000-0000-0000-0000-000000000004','unmatched-resident@example.invalid',now());
 
 INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000001','QA Portal Admin','admin-portal-test@example.invalid','admin',true),
  ('10000000-0000-0000-0000-000000000002','Approved Resident','admin-approved@example.invalid','resident',true),
- ('10000000-0000-0000-0000-000000000003','Self Registered Resident','self-registered@example.invalid','resident',true);
+ ('10000000-0000-0000-0000-000000000003','Self Registered Resident','self-registered@example.invalid','resident',true),
+ ('10000000-0000-0000-0000-000000000004','Unmatched Resident','unmatched-resident@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
-VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free');
+VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
+ ('20000000-0000-0000-0000-000000000002','Second portal registration workspace','free');
 
 INSERT INTO public.condominiums(id,workspace_id,name)
 VALUES
  ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Admin approval test condominium'),
  ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001','Self registration test condominium'),
  ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000001','Duplicate matching test condominium'),
- ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test');
+ ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000001','Archived condominium test'),
+ ('30000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000001','Ambiguous shared name'),
+ ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','Ambiguous shared name');
 
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
 VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','admin',true,'{}'::jsonb);
@@ -103,6 +108,25 @@ BEGIN
  ) THEN RAISE EXCEPTION 'Self-registration did not upsert the expected portal access'; END IF;
 END;
 $resident_assert$;
+
+-- Duplicate condominium names across workspaces must never be routed arbitrarily.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
+SELECT private.complete_portal_registration('Unmatched Resident',NULL,'Ambiguous shared name');
+RESET ROLE;
+
+DO $ambiguous_workspace_assert$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM public.portal_registration_requests
+   WHERE requested_user_id='10000000-0000-0000-0000-000000000004'
+     AND status='pending'
+     AND workspace_id IS NULL
+ ) THEN
+   RAISE EXCEPTION 'Ambiguous condominium name was assigned to a workspace instead of remaining unassigned';
+ END IF;
+END;
+$ambiguous_workspace_assert$;
 
 -- A legacy-id match and an email match pointing to different rows must fail closed.
 INSERT INTO public.portal_access(id,workspace_id,condominium_id,legacy_id,name,email,role,permissions,active)
