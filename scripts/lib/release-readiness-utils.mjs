@@ -19,3 +19,10 @@ export function splitChangedPaths(output) {
 export function hasPostgresConnectionConfig(env) {
   return Boolean(env.DATABASE_URL || (env.PGHOST && env.PGDATABASE && env.PGUSER));
 }
+
+/** Read an application test by its canonical APP-## key, with legacy alias fallback. */
+export function getApplicationTest(applicationTests, id) {
+  const canonicalKey = "APP-" + String(id).padStart(2, "0");
+  const legacyKey = "APP" + String(id).padStart(2, "0");
+  return applicationTests[canonicalKey] ?? applicationTests[legacyKey];
+}
