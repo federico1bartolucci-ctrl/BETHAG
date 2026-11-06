@@ -75,7 +75,7 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 ## 4. Cutover approval — must be completed by the named approver
 
-- Approver name/role: **NOT RECORDED**
+- Approver name/role: **Federico Bartolucci — project owner/approver identified; final cutover approval NOT RECEIVED.**
 - Approved commit SHA: **NOT RECORDED**
 - Exact ordered migration list/hash: **NOT APPROVED**
 - Maintenance window and communication plan: **NOT APPROVED**
