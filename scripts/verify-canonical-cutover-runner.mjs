@@ -146,8 +146,8 @@ try {
 }
 assert.notEqual(gateProbe.status, 0, "Production apply must stop until explicit final cutover approval and all remaining gates are recorded.");
 assert.match(gateProbe.stderr,
-  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|manifest does not record owner approval for this exact execution commit|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
-  "The runner must reject an unapproved exact-SHA cutover before attempting any Production connection.");
+  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|release fingerprint|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  "The runner must reject an unapproved fingerprint-based cutover before attempting any Production connection.");
 
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
 assert.match(runner, /Historical 248-row preservation/);
