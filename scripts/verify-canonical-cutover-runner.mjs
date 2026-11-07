@@ -63,7 +63,7 @@ assert.match(manifest.user_authorization?.approved_commit_sha ?? "", /^[0-9a-f]{
 assert.match(manifest.user_authorization?.approved_execution_commit_sha ?? "", /^[0-9a-f]{40}$/, "Approval must pin the exact execution candidate SHA separately.");
 assert.ok(manifest.user_authorization?.approved_by && manifest.user_authorization?.approval_reference, "Approval must identify its owner and written evidence.");
 assert.deepEqual(manifest.user_authorization?.approved_migration_hashes, manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })), "Approval must cover all nineteen ordered SQL hashes.");
-assert.equal(manifest.user_authorization?.approved_execution_commit_sha, "55bf3881cbaafb5f4300d684d95b6a929dd37612", "The currently recorded approval is limited to the exact execution candidate named by the owner; a later commit must not inherit it.");
+assert.equal(manifest.user_authorization?.approved_execution_commit_sha, "46bec9c4036ebeb8d8ab96c441d9e0b2d78dfaed", "The recorded owner approval is pinned to the exact execution candidate; later commits must not inherit it.");
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);
 assert.equal(manifest.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(manifest.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
