@@ -80,7 +80,7 @@ Questo addendum è la fonte di verità per lo stato di rilascio dal momento del 
 
 Dopo la prima stesura di questo addendum, il manifest congelato è stato aggiornato esclusivamente nei metadati di approvazione:
 - `status` impostato a `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`;
-- precedente autorizzazione conservata in `superseded_user_authorization` solo come traccia storica;
+- precedente autorizzazione storica conservata nell’addendum documentale, non nel payload congelato del manifest;
 - `user_authorization` corrente impostata a `PENDING`, senza SHA approvato, approvatore, timestamp o hash approvati;
 - sequenza, ordine e tutti i 19 `git_blob_sha` SQL lasciati invariati.
 
@@ -234,3 +234,38 @@ Configurazione visibile:
 **Esito:** il gate di verifica della Data API exposure è PASS sulla base dell'evidenza Dashboard fornita il 2026-11-07. La configurazione rispetta il requisito che lo schema `private` non sia esposto. Lo screenshot è conservato nella conversazione di progetto; non è stato modificato alcun setting.
 
 Restano aperti: prova della connessione PostgreSQL diretta/Session Pooler e preflight guarded runner da checkout pulito senza apply, con conferma del ruolo DB effettivo; riconferma operatore/finestra/piano STOP-recovery. Nessuna operazione Production è stata eseguita.
+
+
+## 13. Contratto esplicito dei campi modificabili del manifest — 2026-11-07
+
+Il confronto strutturato tra il manifest sullo SHA QA certificato `a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e` e quello sul precedente head documentale `54990b44dcdf9d1430bf5636314623a576f89ab4` ha rilevato 13 differenze a livello di percorso JSON.
+
+La riconciliazione ha confermato:
+- `sequence`: 19/19 elementi identici, inclusi ordine, nome file, stato e Git blob SHA;
+- `live_ledger`: snapshot identico, 248 righe, head `20261104222229`;
+- `expected_postflight`: identico;
+- nessuna variazione dei payload SQL o dei relativi hash.
+
+### Campi ammessi a variare dopo la certificazione QA
+
+Il contratto eseguibile in `scripts/lib/release-readiness-utils.mjs` ammette esclusivamente questi quattro campi di primo livello:
+- `status`;
+- `safety`;
+- `user_authorization`;
+- `review_disposition`.
+
+Questi campi descrivono stato e decisioni di revisione/autorizzazione. La modifica di `user_authorization` non rende valida un'approvazione: il runner richiede comunque stato `RECEIVED`, SHA sorgente esatto, SHA di esecuzione approvato separatamente e corrispondenza puntuale di tutti i 19 hash ordinati.
+
+### Campi non ammessi
+
+`superseded_user_authorization` e `current_release_reconciliation` non sono stati aggiunti all'allowlist. Sono sezioni storiche/di riconciliazione aggiunte dopo la QA e non devono essere trattate come metadati liberamente modificabili. La prima autorizzazione storica è conservata in questo documento come evidenza, mentre lo stato corrente del manifest resta `user_authorization.status = PENDING`.
+
+Ogni nuova chiave di primo livello non prevista dal contratto resta parte del payload congelato e provoca il blocco del confronto, salvo una modifica esplicita e testata del contratto stesso. Non sono introdotte eccezioni generiche per “metadati documentali”.
+
+### Correzione applicata
+
+Il manifest è stato ricostruito a partire dalla versione presente sullo SHA QA certificato, mantenendo esclusivamente i cambiamenti ammessi a `status` e `user_authorization`. Le due sezioni aggiunte successivamente sono state rimosse dal manifest; la loro funzione documentale è assolta da questo addendum. Sequenza 19 migrazioni, hash, snapshot 248 righe e postflight sono preservati.
+
+Il test unitario è stato rafforzato per dimostrare che l'aggiunta di `superseded_user_authorization` o `current_release_reconciliation` cambia il payload congelato e quindi non viene ignorata dal runner.
+
+Questa correzione non approva alcun SHA, non autorizza il cutover e non modifica Production. Il nuovo commit deve superare CI sullo SHA esatto prima di ogni ulteriore preflight.
