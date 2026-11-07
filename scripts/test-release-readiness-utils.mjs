@@ -58,7 +58,19 @@ test("frozen cutover manifest permits approval metadata changes but protects tec
   const metadataOnly = {
     ...reviewed,
     status: "FROZEN_FOR_REVIEW_APPROVED",
-    safety: "Preserve all 248 Production rows and require guarded preflight.",
+    safety: "Updated owner-facing execution summary; executable gates remain enforced by the runner.",
+    no_go_gates: ["Updated operational checklist; executable gates remain enforced by the runner."],
+    critical_execution_constraint: { status: "OWNER_FINAL_EXECUTION_SHA_APPROVAL_PENDING", rule: "Preserve the 248-row ledger." },
+    live_catalog: {
+      supabase_admin_default_acl_disposition: {
+        qa_only_system_schema_default_acl: {
+          exposure_status: "VERIFIED_NOT_EXPOSED",
+          note: "Owner verified the Data API configuration in Production Dashboard.",
+          exposure_evidence: { verified_date: "2026-11-07", private_exposed: false },
+          role_level_override: { effective_dashboard_data_api_config: "VERIFIED_BY_OWNER_IN_PRODUCTION_DASHBOARD_2026-11-07" },
+        },
+      },
+    },
     user_authorization: { status: "RECEIVED", approved_commit_sha: "a".repeat(40), approved_migration_hashes: [{ file: "001_migration.sql", git_blob_sha: "abc" }] },
     review_disposition: { status: "NOT_RECORDED", blocking_for_release: true },
   };
@@ -67,8 +79,12 @@ test("frozen cutover manifest permits approval metadata changes but protects tec
     frozenManifestPayload({ ...metadataOnly, review_disposition: { status: "BLOCKED", blocking_for_release: true } }),
     frozenManifestPayload(reviewed),
   );
+  // Operational approval summaries, NO-GO checklist wording and owner-recorded
+  // Dashboard evidence may evolve after QA. The executable gates and immutable
+  // migration/live-ledger/postflight payload remain independently enforced.
+  assert.deepEqual(frozenManifestPayload(metadataOnly), frozenManifestPayload(reviewed));
   assert.notDeepEqual(
-    frozenManifestPayload({ ...metadataOnly, safety: "Remove guarded preflight requirement." }),
+    frozenManifestPayload({ ...metadataOnly, review_disposition: { status: "BLOCKED", blocking_for_release: true } }),
     frozenManifestPayload(reviewed),
   );
   assert.notDeepEqual(
