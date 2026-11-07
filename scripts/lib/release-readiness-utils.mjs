@@ -28,10 +28,10 @@ export function getApplicationTest(applicationTests, id) {
 }
 
 /** Return the immutable technical payload of the frozen Production cutover manifest.
- * Only review/approval metadata may change after the application QA SHA.
+ * Only approval/status metadata may change after the application QA SHA; review disposition remains frozen.
  */
 export function frozenManifestPayload(manifest) {
-  const { status, user_authorization, review_disposition, ...payload } = manifest;
+  const { status, user_authorization, ...payload } = manifest;
   return payload;
 }
 
