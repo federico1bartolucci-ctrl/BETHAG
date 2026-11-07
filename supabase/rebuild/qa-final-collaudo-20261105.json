@@ -3,23 +3,23 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+  "reviewed_head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42334059983,
-      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+      "run_id": 42335679462,
+      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42334060031,
-      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+      "run_id": 42335679466,
+      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42334060039,
-      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+      "run_id": 42335679476,
+      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
       "conclusion": "success"
     }
   },
@@ -139,7 +139,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15 PASS on exact PR head a441a5dc0ff27eee9078cd0878c1a111d95493fb; Build, Baseline Safety and final QA workflows SUCCESS (42334060031, 42334060039, 42334059983). APP-14 still requires Production post-cutover validation. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-15 PASS on exact QA-tested source SHA a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e; Build, Baseline Safety and Final QA workflows SUCCESS (42335679466, 42335679476, 42335679462). APP-14 remains PARTIAL and requires Production post-cutover validation. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
