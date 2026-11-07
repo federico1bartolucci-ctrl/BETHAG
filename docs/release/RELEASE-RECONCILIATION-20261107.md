@@ -485,3 +485,29 @@ I 19 Git blob SHA del manifest sono stati verificati sul tree candidato e restan
 Il commit di questo aggiornamento è documentale/evidenziale e non modifica il candidato applicativo né le migrazioni. Il preflight locale potrà usare `decc0dfda68f573f13e386beaa22d259f7f8b619` come `BETHAG_QA_TESTED_COMMIT_SHA` e lo SHA esatto del checkout pulito finale come `BETHAG_EXPECTED_COMMIT_SHA`, purché il diff successivo resti limitato ai percorsi post-QA ammessi dal runner.
 
 **CI sul candidato `decc0dfda68f573f13e386beaa22d259f7f8b619`: PASS. Integrità 19/19 e ledger 248/248: PASS. Production cutover: NO-GO fino al preflight diretto, alla chiusura dei dati operativi e all'approvazione scritta puntuale.**
+
+
+## 13. Riconciliazione finale manifest/Data API — 2026-11-07
+
+Questa sezione prevale sulle descrizioni precedenti del manifest e dello stato di approvazione.
+
+- Head PR #57 al momento della riconciliazione: `9273d4f605b5f2982127c1dff7879b05f59382c9`.
+- Il manifest `supabase/rebuild/production-migration-cutover-freeze-20261105.json` è stato aggiornato per registrare l'evidenza Dashboard Data API del proprietario del 7 novembre: esposti `graphql_public` e `public`; `private` non esposto; `supabase_functions` assente dalle opzioni di esposizione; esposizione automatica di nuove tabelle disattivata; 0/48 tabelle e 0/171 funzioni esposte. Questa è evidenza Dashboard fornita/verificata dal proprietario, non una lettura indipendente tramite connettore.
+- Il manifest mantiene `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`; `user_authorization.status = PENDING`; SHA approvato nullo; approvatore, timestamp e riferimento approvazione nulli; array degli hash approvati vuoto.
+- È stata rimossa dal campo descrittivo `safety` una frase storica che indicava un'approvazione del proprietario su uno SHA differente. Tale approvazione non è utilizzabile per il candidato corrente.
+- I 19 elementi della sequenza, l'ordine e tutti i 19 Git blob SHA sono rimasti invariati. Lo snapshot Production 248 righe e i suoi hash/record non sono stati modificati.
+- I gate residui nel manifest sono stati riallineati: certificazione CI sullo SHA finale, preflight guarded read-only sullo SHA finale, backup corrente e verifica Dashboard immediatamente pre-cutover, connessione PostgreSQL diretta, approvazione scritta exact-SHA e postflight Production.
+- La descrizione della PR #57 è stata aggiornata per distinguere i precedenti PASS CI dal nuovo candidato e per riportare in modo coerente lo stato NO-GO.
+
+### CI sul nuovo head
+
+Il commit `9273d4f605b5f2982127c1dff7879b05f59382c9` ha avviato i tre workflow richiesti:
+- Final QA APP-01..APP-15: run `42394602979`, inizialmente IN_PROGRESS.
+- Build/PostgreSQL 17: run `42394602930`, inizialmente IN_PROGRESS.
+- Baseline Safety: run `42394602902`, SUCCESS.
+
+I risultati Final QA e Build sul nuovo SHA devono essere acquisiti a completamento; i precedenti PASS sul commit `437f515...` non vengono trasferiti automaticamente.
+
+### Decisione
+
+**Preparazione documentale riconciliata; certificazione CI del nuovo head e preflight exact-SHA ancora pendenti. Approvazione finale PENDING. Production NO-GO.** Nessuna modifica Production, merge, deploy, DDL, DML o scrittura ledger è stata eseguita.
