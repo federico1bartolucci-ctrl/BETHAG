@@ -57,7 +57,9 @@ assert.equal(manifest.expected_postflight.save_condominium_archive_state_preserv
 assert.equal(manifest.expected_postflight.portal_registration_upsert_helper, true);
 assert.equal(manifest.expected_postflight.portal_registration_authenticated_callers, true);
 assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
-assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING");
+assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED");
+assert.equal(manifest.user_authorization?.status, "RECEIVED");
+assert.equal(manifest.user_authorization?.approved_migration_hashes?.length, 19);
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);
 assert.equal(manifest.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(manifest.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
