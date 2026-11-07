@@ -927,17 +927,41 @@ try {
 
   // Verify the owner list is refreshed from the server when returning to the
   // condominium registry after confirmation/closure, without a hard reload.
-  const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
-    const requestUrl = new URL(response.url());
-    if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
-    const rows = await response.json().catch(() => []);
-    return Array.isArray(rows) && rows.some(row =>
-      String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
-    );
-  }, { timeout: 20000 });
-  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
-  await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
-  await incomingOwnerRefresh;
+  // Supabase QA can transiently return Cloudflare 520/521 during browser
+  // navigation. Retry the same in-app navigation and require a successful
+  // server response containing the confirmed incoming owner; do not treat a
+  // failed HTTP response or a stale DOM as a refresh pass.
+  let incomingOwnerRefreshVerified = false;
+  const incomingOwnerRefreshAttempts = [];
+  for (let attempt = 1; attempt <= 4 && !incomingOwnerRefreshVerified; attempt++) {
+    const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
+      const requestUrl = new URL(response.url());
+      if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members")) return false;
+      if (!response.ok()) {
+        incomingOwnerRefreshAttempts.push({ attempt, status: response.status() });
+        return false;
+      }
+      const rows = await response.json().catch(() => []);
+      const matched = Array.isArray(rows) && rows.some(row =>
+        String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
+      );
+      if (matched) incomingOwnerRefreshAttempts.push({ attempt, status: response.status(), matched: true });
+      return matched;
+    }, { timeout: 12000 }).catch(() => null);
+
+    await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
+    await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+    incomingOwnerRefreshVerified = Boolean(await incomingOwnerRefresh);
+    if (!incomingOwnerRefreshVerified && attempt < 4) {
+      await adminPage.waitForTimeout(attempt * 1000);
+    }
+  }
+  assert.equal(
+    incomingOwnerRefreshVerified,
+    true,
+    "Incoming owner was not observed in a successful server refresh after 4 navigation attempts: " +
+      JSON.stringify({ incomingOwnerRefreshAttempts, failedRequests: failedRequests.slice(-20) })
+  );
   const refreshedCondominiumCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).first();
   await refreshedCondominiumCard.getByRole("button", { name: "Dettagli", exact: true }).click();
   await adminPage.locator(".detail-page-header h1").filter({ hasText: editedCondoName }).waitFor({ timeout: 10000 });
