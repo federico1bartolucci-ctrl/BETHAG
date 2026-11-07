@@ -103,7 +103,7 @@ jobs:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app12-provider.mjs
 
-      - name: Prepare reversible Plus plan fixture for browser feature acceptance
+      - name: Prepare reversible Portal plan fixture for portal publication acceptance
         env:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
           SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
@@ -157,4 +157,4 @@ jobs:
             kill "$(cat /tmp/bethag-final-qa-preview.pid)" 2>/dev/null || true
           fi
 
-# Re-run final authenticated collaudo after aligning the browser feature fixture with the Plus entitlement.
+# Re-run final authenticated collaudo after aligning the browser publication fixture with the Portal entitlement.
