@@ -45,7 +45,7 @@ test("application evidence retains compatibility with legacy APP aliases", () =>
   assert.equal(getApplicationTest(evidence, 15).status, "PASS");
 });
 
-test("frozen cutover manifest permits review metadata changes but protects the technical payload", () => {
+test("frozen cutover manifest permits approval metadata changes but protects technical and review disposition", () => {
   const reviewed = {
     status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
     safety: "Preserve all 248 Production rows and require guarded preflight.",
@@ -60,9 +60,13 @@ test("frozen cutover manifest permits review metadata changes but protects the t
     status: "FROZEN_FOR_REVIEW_APPROVED",
     safety: "Preserve all 248 Production rows and require guarded preflight.",
     user_authorization: { status: "RECEIVED", approved_commit_sha: "a".repeat(40), approved_migration_hashes: [{ file: "001_migration.sql", git_blob_sha: "abc" }] },
-    review_disposition: { status: "INTERNAL_REVIEW_ACCEPTED_AS_PROJECT_CONTROL", blocking_for_release: false },
+    review_disposition: { status: "NOT_RECORDED", blocking_for_release: true },
   };
   assert.deepEqual(frozenManifestPayload(metadataOnly), frozenManifestPayload(reviewed));
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, review_disposition: { status: "BLOCKED", blocking_for_release: true } }),
+    frozenManifestPayload(reviewed),
+  );
   assert.notDeepEqual(
     frozenManifestPayload({ ...metadataOnly, safety: "Remove guarded preflight requirement." }),
     frozenManifestPayload(reviewed),
