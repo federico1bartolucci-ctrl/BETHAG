@@ -51,6 +51,16 @@ test("frozen cutover manifest permits approval metadata changes but protects tec
     safety: "Preserve all 248 Production rows and require guarded preflight.",
     user_authorization: { status: "NOT_RECEIVED", approved_commit_sha: null, approved_migration_hashes: [] },
     review_disposition: { status: "NOT_RECORDED", blocking_for_release: true },
+    critical_execution_constraint: { status: "OWNER_SOURCE_APPROVAL_RECORDED_EXECUTION_SHA_PIN_PENDING", rule: "Preserve the 248-row ledger." },
+    live_catalog: {
+      supabase_admin_default_acl_disposition: {
+        qa_only_system_schema_default_acl: {
+          exposure_status: "NOT_VERIFIED",
+          note: "Confirm schema is not exposed.",
+          role_level_override: { effective_dashboard_data_api_config: "NOT_AVAILABLE_THROUGH_CURRENT_SUPABASE_CONNECTOR" },
+        },
+      },
+    },
     sequence: [{ file: "001_migration.sql", git_blob_sha: "abc" }],
     live_ledger: { rows: 248 },
     expected_postflight: { ledger_rows: 267 },
