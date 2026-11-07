@@ -6557,6 +6557,8 @@ function App() {
 
 
   const backendHydrated = useRef(false);
+  const skipNextBackendSync = useRef(false);
+  const skipNextNavigationRefresh = useRef(false);
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
@@ -6608,6 +6610,11 @@ function App() {
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
 
+        // Hydration is read-only: do not immediately mirror the freshly loaded
+        // server snapshot back to Supabase. That duplicate bulk upsert races the
+        // first render and can overload PostgREST during session restoration.
+        skipNextBackendSync.current = true;
+        skipNextNavigationRefresh.current = page === "condomini" || page === "archivio";
         setCondominiums(backend.condominiums);
 
         setCondominiumMembers(backend.condominiumMembers);
@@ -6669,6 +6676,8 @@ function App() {
 
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
+        // Applying server state must not trigger a second full-workspace write.
+        skipNextBackendSync.current = true;
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
@@ -6695,7 +6704,14 @@ function App() {
     // hundreds of REST requests for large workspaces and blocked the UI.
     // Standalone modules can still request a refresh through the event above.
     if (page === "condomini" || page === "archivio") {
-      void refreshBackendState();
+      if (skipNextNavigationRefresh.current) {
+        // The initial authenticated hydration has already loaded this page's
+        // complete workspace snapshot. Avoid issuing the same 20+ REST reads
+        // a second time immediately after a hard reload.
+        skipNextNavigationRefresh.current = false;
+      } else {
+        void refreshBackendState();
+      }
     }
 
     return () => {
@@ -6712,6 +6728,11 @@ function App() {
       !backendHydrated.current ||
       (sessionRole !== "admin" && sessionRole !== "collaborator")
     ) return;
+
+    if (skipNextBackendSync.current) {
+      skipNextBackendSync.current = false;
+      return;
+    }
 
     const timer = window.setTimeout(() => {
       const allowedModules =
