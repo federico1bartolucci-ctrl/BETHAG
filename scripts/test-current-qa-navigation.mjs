@@ -6,6 +6,30 @@ const projectURL="https://jhuyhlzzydcgghrzeexn.supabase.co";
 const serviceRoleKey=process.env.BETHAG_QA_SERVICE_ROLE_KEY;
 assert.ok(serviceRoleKey,"QA service-role key is required for the isolated Free-plan entitlement check");
 const service=createClient(projectURL,serviceRoleKey,{auth:{persistSession:false,autoRefreshToken:false}});
+
+async function withTransientSupabaseRetry(operation, description, attempts = 4) {
+ const retryableStatuses = new Set([0,408,425,429,500,502,503,504,520,521,522,523,524]);
+ let lastError = null;
+ for (let attempt = 1; attempt <= attempts; attempt++) {
+  try {
+   const result = await operation();
+   if (!result.error) return result;
+   lastError = result.error;
+   const status = Number(lastError.status || 0);
+   if (!retryableStatuses.has(status) || attempt === attempts) throw lastError;
+  } catch (error) {
+   lastError = error;
+   const status = Number(error?.status || 0);
+   if (!retryableStatuses.has(status) || attempt === attempts) {
+    error.message = description + " failed after " + attempt + " attempt(s): " + error.message;
+    throw error;
+   }
+  }
+  console.warn("Transient Supabase error during " + description + "; retry " + attempt + "/" + (attempts - 1) + " (HTTP " + (lastError?.status ?? "network") + ")");
+  await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+ }
+ throw lastError;
+}
 const accounts=[
  {role:"admin",label:"Amministratore",email:"bethag-admin-qa@example.com",password:process.env.BETHAG_QA_ADMIN_PASSWORD,landing:"Homepage"},
  {role:"collaborator",label:"Collaboratore",email:"bethag-collaboratore-qa@example.com",password:process.env.BETHAG_QA_COLLABORATOR_PASSWORD,landing:"Homepage"},
@@ -43,10 +67,14 @@ try{
     const freePlan=await service.from("workspaces").update({plan:"free"}).eq("id",membership.data.workspace_id);
     assert.ifError(freePlan.error);
     restoreWorkspacePlan=async()=>{
-     const restored=await service.from("workspaces").update({plan:originalPlan}).eq("id",membership.data.workspace_id);
-     assert.ifError(restored.error);
-     const verified=await service.from("workspaces").select("plan").eq("id",membership.data.workspace_id).single();
-     assert.ifError(verified.error);
+     await withTransientSupabaseRetry(
+      () => service.from("workspaces").update({plan:originalPlan}).eq("id",membership.data.workspace_id),
+      "APP-15 workspace plan restoration"
+     );
+     const verified=await withTransientSupabaseRetry(
+      () => service.from("workspaces").select("plan").eq("id",membership.data.workspace_id).single(),
+      "APP-15 workspace plan restoration verification"
+     );
      assert.equal(verified.data.plan,originalPlan,"QA workspace plan was not restored after APP-15");
     };
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});
