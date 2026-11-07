@@ -54,3 +54,17 @@ Questa rettifica prevale su ogni precedente finestra, SHA di esecuzione e stato 
 - **Stato operativo:** Production **NO-GO** fino a CI sul commit finale, approvazione del suo SHA, preflight locale read-only con connessione PostgreSQL diretta, controllo Data API e backup/rischio residuo, oltre a tutti i gate del runner.
 
 La conferma della finestra non costituisce autorizzazione a eseguire le migrazioni, né autorizza merge, deploy o scritture Production. APP-14 resta subordinato al postflight e agli smoke test autenticati successivi al cutover. Il restore fisico provider-managed non è stato testato e non viene dichiarato come tale.
+
+
+## Aggiornamento successivo — 2026-11-07 20:44 UTC
+
+La cattura read-only dei registri live è stata rinnovata da Supabase e registrata nei due snapshot:
+- Production: 248 righe; QA: 283 righe.
+- 247 coppie esatte comuni; una riga esclusiva Production; 36 righe esclusive QA.
+- Timestamp UTC della cattura: `2026-11-07T20:40:05.822Z`.
+- Confronto Production con il precedente snapshot: 248/248 coppie versione/nome invariate.
+- Nessuna modifica ai database, nessun reset/replay, nessuna scrittura ai registri live.
+
+La prima riesecuzione CI ha individuato due verificatori con data del 6 novembre codificata rigidamente. Sono stati aggiornati per verificare coerenza e formato dei timestamp UTC senza fissare un giorno di calendario. Il controllo Baseline Safety sul commit `6063d5e85dd906a04f79f1aec5f4aebaf9f81aa1` è SUCCESS; Build/PostgreSQL 17 e Final QA APP-01..APP-15 sono ancora in esecuzione/attesa al momento di questa nota.
+
+**Nessuna approvazione del nuovo SHA eseguibile è implicita in questo aggiornamento.** La fingerprint approvata in precedenza non viene dichiarata valida per il nuovo head fino al ricalcolo e alla verifica automatica. PR #57 resta aperta; Production resta NO-GO.
