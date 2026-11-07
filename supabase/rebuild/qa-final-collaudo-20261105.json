@@ -3,23 +3,24 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
+  "reviewed_head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42335679462,
-      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
+      "run_id": 42343070828,
+      "run_attempt": 2,
+      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42335679466,
-      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
+      "run_id": 42343070801,
+      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42335679476,
-      "head_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
+      "run_id": 42343070748,
+      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
       "conclusion": "success"
     }
   },
@@ -120,8 +121,8 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42330953652,
-    "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+    "github_actions_run_id": 42343070801,
+    "reviewed_head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets",
     "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on current PR QA-tested head."
@@ -139,7 +140,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15 PASS on exact QA-tested source SHA a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e; Build, Baseline Safety and Final QA workflows SUCCESS (42335679466, 42335679476, 42335679462). APP-14 remains PARTIAL and requires Production post-cutover validation. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-15 PASS on exact QA-tested source SHA 553ee1fd017566bb80d137f3e9b91135745e627a; Build, Baseline Safety and Final QA workflows SUCCESS (42343070801, 42343070748, 42343070828 attempt 2). PostgreSQL 17 isolated build rehearsal including all 19 canonical guarded migrations PASS. Production read-only ledger/catalog verification on 2026-11-07 PASS for the recorded assertions; guarded runner direct-connection preflight remains pending. APP-14 remains PARTIAL and requires Production post-cutover validation. Production unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -157,7 +158,33 @@
     "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight.",
     "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout after approval metadata and exact SHA are frozen",
     "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
-    "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes."
+    "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes.",
+    "latest_read_only_verification": {
+      "captured_at_utc": "2026-11-07",
+      "live_ledger_rows": 248,
+      "live_ledger_head": {
+        "version": "20261104222229",
+        "name": "reconcile_production_acl_least_privilege"
+      },
+      "snapshot_pair_match": "248/248 exact ordered version/name pairs",
+      "canonical_migration_hashes": "19/19 Git blob SHA match frozen manifest",
+      "pending_canonical_versions_absent": true,
+      "read_only_catalog_assertions": [
+        "47 public tables inventory exact",
+        "authenticated MAINTAIN=0",
+        "service_role MAINTAIN=0",
+        "anon direct public table privileges=0",
+        "postgres-owned public default MAINTAIN=0",
+        "provider-managed supabase_admin default MAINTAIN entries=3, unchanged",
+        "PUBLIC EXECUTE allowlist equals the two documented trigger functions",
+        "public close-transfer wrapper SECURITY INVOKER",
+        "service_role private schema/function path present",
+        "workspace_members.data absent",
+        "transfer-closure helper ACL matches reviewed pre-cutover state"
+      ],
+      "writes_performed": false,
+      "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
+    }
   },
   "captured_at_utc": "2026-11-07",
   "storage_regression": {
