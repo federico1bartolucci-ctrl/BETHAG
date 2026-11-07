@@ -124,6 +124,7 @@ const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production
     BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
     BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     BETHAG_QA_TESTED_COMMIT_SHA: appEvidence.reviewed_head_sha,
+    BETHAG_APPROVED_SOURCE_COMMIT_SHA: appEvidence.reviewed_head_sha,
     BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
     BETHAG_CUTOVER_PLAN_APPROVED: "YES",
     BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
