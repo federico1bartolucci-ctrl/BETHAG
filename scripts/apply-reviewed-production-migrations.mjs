@@ -17,11 +17,12 @@
  *   BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED=YES
  *   BETHAG_PRODUCTION_BACKUP_VERIFIED=YES OR a named/timestamped residual-risk acceptance
  *   BETHAG_APPROVED_SOURCE_COMMIT_SHA=<owner-approved source SHA>
- *   BETHAG_APPROVED_EXECUTION_COMMIT_SHA=<exact runner checkout SHA>
+ *   BETHAG_APPROVED_RELEASE_FINGERPRINT=<owner-approved SHA-256 release fingerprint>
  *
- * The owner-approved source SHA and executable checkout SHA are separate pins:
- * the approval record is bound to the reviewed source and ordered SQL hashes;
- * the execution pin is confirmed only after runner changes and CI are complete.
+ * The owner-approved source SHA and deterministic executable release fingerprint
+ * are separate from the Git commit used to record approval. Documentation and
+ * approval-metadata commits do not invalidate the fingerprint; critical code,
+ * SQL, workflow, preflight or postflight changes do.
  *
  * Run only from a clean checkout of the reviewed branch, after approval,
  * backup-risk disposition, and application smoke tests. Never use on QA to
