@@ -98,3 +98,68 @@ test("live snapshot freshness rejects stale, missing, invalid and future timesta
   assert.equal(isFreshSnapshot("not-a-date", now), false);
   assert.equal(isFreshSnapshot("2026-11-06T16:21:00Z", now), false);
 });
+
+
+test("release fingerprint ignores approval metadata and registration commit identity", async () => {
+  const { releaseFingerprint } = await import("./lib/release-readiness-utils.mjs");
+  const manifest = {
+    status: "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
+    user_authorization: { status: "PENDING", approved_by: null },
+    sequence: Array.from({ length: 19 }, (_, i) => ({
+      file: String(i).padStart(14, "0") + "_migration_" + i + ".sql",
+      git_blob_sha: "a".repeat(40),
+    })),
+    live_ledger: { rows: 248 },
+  };
+  const files = {
+    "scripts/runner.mjs": "runner\n",
+    "supabase/preflight.sql": "SELECT 1;\n",
+  };
+  const first = releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest, fileContents: files });
+  const approved = {
+    ...manifest,
+    status: "FROZEN_FOR_REVIEW_APPROVED",
+    user_authorization: {
+      status: "RECEIVED", approved_by: "owner", approved_execution_commit_sha: "c".repeat(40),
+      approved_release_fingerprint: first,
+    },
+  };
+  assert.equal(releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest: approved, fileContents: files }), first);
+});
+
+test("release fingerprint changes for critical runner, SQL, workflow and pre/postflight content", async () => {
+  const { releaseFingerprint } = await import("./lib/release-readiness-utils.mjs");
+  const manifest = {
+    sequence: Array.from({ length: 19 }, (_, i) => ({
+      file: String(i).padStart(14, "0") + "_migration_" + i + ".sql",
+      git_blob_sha: "a".repeat(40),
+    })),
+    live_ledger: { rows: 248 },
+  };
+  const files = {
+    "scripts/runner.mjs": "runner\n",
+    ".github/workflows/build.yml": "build\n",
+    ".github/workflows/final-qa-collaudo.yml": "qa\n",
+    "supabase/preflight.sql": "SELECT 1;\n",
+    "supabase/postflight.sql": "SELECT 2;\n",
+  };
+  const baseline = releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest, fileContents: files });
+  for (const path of Object.keys(files)) {
+    const changed = { ...files, [path]: files[path] + "-- changed\n" };
+    assert.notEqual(releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest, fileContents: changed }), baseline, path);
+  }
+});
+
+test("release fingerprint preserves migration order and source QA identity", async () => {
+  const { releaseFingerprint } = await import("./lib/release-readiness-utils.mjs");
+  const sequence = Array.from({ length: 19 }, (_, i) => ({
+    file: String(i).padStart(14, "0") + "_migration_" + i + ".sql",
+    git_blob_sha: String(i).padStart(40, "0"),
+  }));
+  const manifest = { sequence, live_ledger: { rows: 248 } };
+  const files = { "scripts/runner.mjs": "runner\n" };
+  const baseline = releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest, fileContents: files });
+  const reordered = { ...manifest, sequence: [...sequence].reverse() };
+  assert.notEqual(releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest: reordered, fileContents: files }), baseline);
+  assert.notEqual(releaseFingerprint({ sourceCommitSha: "c".repeat(40), manifest, fileContents: files }), baseline);
+});
