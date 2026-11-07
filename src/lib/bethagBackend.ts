@@ -1479,14 +1479,41 @@ export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
   return data as string;
 }
 
+function isRetryableBackendSyncError(error: unknown): boolean {
+  const candidate = error as { name?: string; message?: string; status?: number; code?: string } | null;
+  const status = Number(candidate?.status ?? 0);
+  if ([0, 408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+  if (candidate?.name === "TypeError" && /fetch|network/i.test(String(candidate.message ?? ""))) return true;
+  return /failed to fetch|network request failed|networkerror|temporarily unavailable/i.test(
+    String(candidate?.message ?? error ?? "")
+  );
+}
+
+function waitForBackendSyncRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+}
+
 export function syncBackendState(
   workspaceId: string,
   state: BackendState,
   allowedModules: string[] | null = null
 ) {
-  return enqueueBackendSync(() =>
-    syncBackendStateNow(workspaceId, state, allowedModules)
-  );
+  return enqueueBackendSync(async () => {
+    let lastError: unknown;
+    // Workspace synchronization consists of idempotent upserts and read/verify
+    // operations. Retry only transient transport/server failures; never retry
+    // authorization, validation, constraint, or other permanent 4xx errors.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await syncBackendStateNow(workspaceId, state, allowedModules);
+      } catch (error) {
+        lastError = error;
+        if (!isRetryableBackendSyncError(error) || attempt === 2) throw error;
+        await waitForBackendSyncRetry(400 * (2 ** attempt));
+      }
+    }
+    throw lastError;
+  });
 }
 
 function parseBethagAmount(value: unknown): number {
