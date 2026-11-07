@@ -84,8 +84,10 @@ assert.equal(relationGrants.filter((grant) => grant.grantee === "postgres").leng
 assert.match(runbook, /Production ACL recheck — read-only, 2026-11-08/);
 assert.match(runbook, /direct relation-level `MAINTAIN` grants to `authenticated` on `public` relations returned \*\*zero rows\*\*/);
 assert.match(runbook, /`supabase_admin`-owned default ACL for `anon`, `authenticated`, and `service_role`/);
-assert.match(runbook, /hosted `postgres` role is not authorized to change `supabase_admin` default privileges/);
-assert.match(runbook, /Full ACL release gate: \*\*BLOCKED\*\*/);
+assert.match(runbook, /zero\*\* tables, views, sequences, or functions in `public` owned by `supabase_admin`/);
+assert.match(runbook, /ACCEPTED PROVIDER-MANAGED BASELINE/);
+assert.match(runbook, /Production ACL disposition: \*\*PASS/);
+assert.match(runbook, /cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9/);
 
 // Pin the known Production exception set so future runbook edits cannot
 // silently drop an affected relation from the release-blocker record.
@@ -142,6 +144,6 @@ console.log(JSON.stringify({
   baseline_relation_grant_options_found: relationGrantOptionLines.length,
   historical_production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
   latest_live_authenticated_maintain_check: "ZERO_DIRECT_RELATION_GRANTS_2026-11-08",
-  platform_managed_supabase_admin_default_acl: "REMAINS_PRESENT",
-  release_acl_parity: "BLOCKED_PLATFORM_DEFAULT_ACL_DISPOSITION_AND_FULL_REPLAY_PENDING",
+  platform_managed_supabase_admin_default_acl: "ACCEPTED_PROVIDER_MANAGED_BASELINE_NO_PUBLIC_OBJECTS",
+  production_acl_disposition: "PASS_FOR_CURRENT_APPLICATION_OWNED_OBJECTS_AND_DEFAULTS",
 }, null, 2));
