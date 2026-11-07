@@ -57,10 +57,13 @@ assert.equal(manifest.expected_postflight.save_condominium_archive_state_preserv
 assert.equal(manifest.expected_postflight.portal_registration_upsert_helper, true);
 assert.equal(manifest.expected_postflight.portal_registration_authenticated_callers, true);
 assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
-assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING", "Current release candidate must remain blocked pending fresh exact-SHA owner approval.");
-assert.equal(manifest.user_authorization?.status, "PENDING", "Superseded owner authorization must not authorize the current release candidate.");
-assert.equal(manifest.user_authorization?.approved_commit_sha, null, "No prior approved SHA may remain active for this release candidate.");
-assert.equal(manifest.user_authorization?.approved_migration_hashes?.length, 0, "No migration hashes may be owner-approved before fresh exact-SHA approval.");
+assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED", "The owner-approved manifest state must be explicit and internally consistent.");
+assert.equal(manifest.user_authorization?.status, "RECEIVED", "The written owner approval must be recorded.");
+assert.match(manifest.user_authorization?.approved_commit_sha ?? "", /^[0-9a-f]{40}$/, "Approval must pin the exact QA-tested source SHA.");
+assert.match(manifest.user_authorization?.approved_execution_commit_sha ?? "", /^[0-9a-f]{40}$/, "Approval must pin the exact execution candidate SHA separately.");
+assert.ok(manifest.user_authorization?.approved_by && manifest.user_authorization?.approval_reference, "Approval must identify its owner and written evidence.");
+assert.deepEqual(manifest.user_authorization?.approved_migration_hashes, manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })), "Approval must cover all nineteen ordered SQL hashes.");
+assert.equal(manifest.user_authorization?.approved_execution_commit_sha, "55bf3881cbaafb5f4300d684d95b6a929dd37612", "The currently recorded approval is limited to the exact execution candidate named by the owner; a later commit must not inherit it.");
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);
 assert.equal(manifest.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(manifest.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
