@@ -42,3 +42,45 @@ export function isFreshSnapshot(capturedAt, now = Date.now(), maxAgeHours = 24) 
   const ageMs = now - timestamp;
   return ageMs >= -5 * 60 * 1000 && ageMs <= maxAgeHours * 60 * 60 * 1000;
 }
+
+
+/** Canonical JSON representation: object keys sorted recursively; array order preserved. */
+export function canonicalJson(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+  if (value && typeof value === "object") {
+    return "{" + Object.keys(value).sort().map((key) =>
+      JSON.stringify(key) + ":" + canonicalJson(value[key])
+    ).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Fingerprint the executable release contract, not the Git commit that records
+ * its approval. fileContents must contain every security/execution-critical
+ * path, keyed by repository-relative path. The manifest's approval/review
+ * metadata is deliberately excluded; its ordered migration payload is not.
+ */
+export function releaseFingerprint({ sourceCommitSha, manifest, fileContents }) {
+  if (!/^[0-9a-f]{40}$/.test(sourceCommitSha ?? "")) {
+    throw new TypeError("A full QA-tested source commit SHA is required.");
+  }
+  if (!manifest || !Array.isArray(manifest.sequence) || manifest.sequence.length !== 19) {
+    throw new TypeError("The frozen manifest must contain exactly nineteen ordered migrations.");
+  }
+  if (!fileContents || typeof fileContents !== "object" || Array.isArray(fileContents)) {
+    throw new TypeError("Critical release file contents are required.");
+  }
+  const paths = Object.keys(fileContents).sort();
+  if (paths.length === 0 || paths.some((path) => typeof fileContents[path] !== "string")) {
+    throw new TypeError("Critical release file contents must be non-empty text entries.");
+  }
+  const files = paths.map((path) => ({ path, git_blob_sha: gitBlobSha(fileContents[path]) }));
+  const payload = {
+    source_commit_sha: sourceCommitSha,
+    frozen_manifest_payload: frozenManifestPayload(manifest),
+    ordered_migrations: manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })),
+    critical_files: files,
+  };
+  return createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex");
+}
