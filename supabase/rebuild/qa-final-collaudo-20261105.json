@@ -8,19 +8,19 @@
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42417449538,
+      "run_id": 42419684025,
       "run_attempt": 1,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42417449514,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+      "run_id": 42419684103,
+      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42417449521,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+      "run_id": 42419684071,
+      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
       "conclusion": "success"
     }
   },
@@ -257,5 +257,29 @@
     "lockfile_installation": "PASS — npm ci used by both Build and Final QA; package-lock.json unchanged.",
     "production_modified": false,
     "merge_or_deploy_performed": false
+  },
+  "execution_head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+  "current_head_validation": {
+    "execution_head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+    "verified_at": "2026-11-07",
+    "workflows": {
+      "baseline_safety": {
+        "run_id": 42419684071,
+        "conclusion": "success"
+      },
+      "build_postgres17": {
+        "run_id": 42419684103,
+        "conclusion": "success"
+      },
+      "final_qa_app01_app15": {
+        "run_id": 42419684025,
+        "conclusion": "success"
+      }
+    },
+    "build_postgres17_rehearsal": {
+      "status": "PASS",
+      "steps": "Baseline bootstrap, 28 chronological clean-install migrations, portal-registration repair, 19 canonical migrations through guarded runner, ACL/postcondition rehearsals, collaborator permission RLS and rollback checks all succeeded on isolated PostgreSQL 17."
+    },
+    "app_acceptance": "APP-01..APP-15 PASS; QA fixture restored; preview stopped; cleanup completed."
   }
 }
