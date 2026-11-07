@@ -25,6 +25,7 @@ const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
 const consoleErrorEvents = [];
+const backendRequestDiagnostics = [];
 const activeAdminRequests = new Set();
 const navigationAbortedAdminRequests = new WeakSet();
 let browserNavigationInProgress = false;
@@ -327,6 +328,37 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
+  const adminCdp = await adminContext.newCDPSession(adminPage);
+  await adminCdp.send("Network.enable");
+  const cdpBackendRequests = new Map();
+  adminCdp.on("Network.requestWillBeSent", event => {
+    if (!event.request.url.includes("/rest/v1/condominium_units")) return;
+    const diagnostic = {
+      requestId: event.requestId,
+      url: event.request.url,
+      documentURL: event.documentURL,
+      initiatorType: event.initiator?.type ?? null,
+      initiatorStack: (event.initiator?.stack?.callFrames ?? []).slice(0, 8).map(frame => ({
+        functionName: frame.functionName,
+        url: frame.url,
+        lineNumber: frame.lineNumber + 1,
+        columnNumber: frame.columnNumber + 1,
+      })),
+      timestamp: event.timestamp,
+    };
+    cdpBackendRequests.set(event.requestId, diagnostic);
+    backendRequestDiagnostics.push(diagnostic);
+  });
+  adminCdp.on("Network.loadingFailed", event => {
+    const diagnostic = cdpBackendRequests.get(event.requestId);
+    if (!diagnostic) return;
+    diagnostic.loadingFailed = {
+      errorText: event.errorText,
+      canceled: event.canceled ?? false,
+      blockedReason: event.blockedReason ?? null,
+      timestamp: event.timestamp,
+    };
+  });
   adminPage.on("console", message => {
     consoleMessages.push({ type: message.type(), text: message.text() });
     if (message.type() === "error") {
@@ -1197,7 +1229,7 @@ try {
   assert.deepEqual(
     backendNetworkFailures,
     [],
-    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests })
+    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests, backendRequestDiagnostics })
   );
   const backendHttpFailures = failedRequests.filter(request =>
     request.status >= 400 && /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url)
