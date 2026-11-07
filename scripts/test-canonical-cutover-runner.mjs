@@ -143,7 +143,7 @@ const blockedCode = await new Promise((resolve, reject) => {
 });
 assert.notEqual(blockedCode, 0, "Production apply must fail closed without exact written cutover approval.");
 assert.match(blockedErr + blockedOut,
-  /frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
   "Production apply must stop at the explicit approval gate before any database connection.");
 console.log("PASS: pending cutover approval cannot pass the Production apply gate; runner stopped before any database connection.");
 
