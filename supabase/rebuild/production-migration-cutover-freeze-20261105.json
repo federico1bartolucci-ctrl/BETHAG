@@ -1,7 +1,7 @@
 {
   "artifact": "BETHAG Production migration cutover freeze — 248-row live history, nineteen pending canonical increments",
   "captured_date": "2026-11-05",
-  "status": "FROZEN_FOR_REVIEW_APPROVED",
+  "status": "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
   "reviewed_source_commit": "dd51be5a29495f54e6dc83d62f4c3d29c682ad82",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
@@ -532,6 +532,35 @@
     "ordering": "All 28 deployable migration files are applied in lexicographic 14-digit version order for a new installation; the existing Production cutover uses the separate guarded 248-row/19-increment runner."
   },
   "user_authorization": {
+    "status": "PENDING",
+    "approved_commit_sha": null,
+    "approved_by": null,
+    "approved_at_utc": null,
+    "approval_reference": null,
+    "approved_migration_hashes": []
+  },
+  "backup_restore_risk_acceptance": {
+    "accepted": true,
+    "accepted_by": "Project owner (user)",
+    "accepted_at_utc": "2026-10-27T08:56:11Z",
+    "evidence_reference": "ChatGPT project conversation, 2026-10-27 08:56:11 UTC: user considered the visible scheduled physical backups sufficient for preparation and declined the paid Restore to a New Project physical-restore test.",
+    "scope": "Residual risk accepted: provider-managed physical backup restore was not independently tested; the local logical-dump restore was verified and scheduled physical backup visibility was confirmed.",
+    "physical_restore_status": "NOT EXECUTED",
+    "paid_restore_to_new_project": "DECLINED — USD 9.68/month; no paid recovery project authorized."
+  },
+  "accepted_residual_risks": [
+    "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
+  ],
+  "review_disposition": {
+    "status": "INTERNAL_REVIEW_ACCEPTED_AS_PROJECT_CONTROL",
+    "independent_reviewer_available": false,
+    "independent_review_recorded": false,
+    "blocking_for_release": false,
+    "review_method": "Owner-approved internal technical review supported by repeated prior reviews, exact-SHA CI evidence, PostgreSQL 17 clean-install and guarded migration rehearsal, frozen SQL blob hashes, read-only live ledger reconciliation, and final targeted checks.",
+    "limitation": "This is not a four-eyes review and must never be represented as an independent review. Residual single-reviewer risk is disclosed and accepted as a project-process limitation; all technical, operational, backup, preflight, approval and postflight gates remain mandatory.",
+    "owner_decision": "2026-11-06: project owner accepted internal review in place of an unavailable independent reviewer."
+  },
+  "superseded_user_authorization": {
     "status": "RECEIVED",
     "date": "2026-11-07",
     "scope": "Explicit owner authorization to proceed with the Production cutover on source commit 161d2c1fb83dade5a82c0794f080ae88107e2c0c, applying exactly the nineteen ordered SQL migration files and Git blob hashes in this frozen manifest, subject to the guarded runner's separate exact execution-checkout approval and all immediate preflight gates. Maintenance window: 2026-11-07 22:00 to 2026-11-08 02:00 Europe/Rome. Operator and recovery decision-maker: project owner. Residual provider-managed physical-backup restore risk accepted. Stop on first migration failure; no manual repair or blind rerun; keep service unavailable if post-cutover smoke tests fail.",
@@ -618,27 +647,15 @@
         "git_blob_sha": "43029cf687106b22a1067c7205695ddf6677d145"
       }
     ],
-    "approval_reference": "ChatGPT project conversation, explicit owner approval dated 2026-11-07; exact source SHA and ordered 19 SQL hashes stated immediately before confirmation."
+    "approval_reference": "ChatGPT project conversation, explicit owner approval dated 2026-11-07; exact source SHA and ordered 19 SQL hashes stated immediately before confirmation.",
+    "disposition": "SUPERSEDED_FOR_CURRENT_RELEASE_CANDIDATE",
+    "superseded_reason": "Approval SHA does not match the current release candidate; must not authorize execution."
   },
-  "backup_restore_risk_acceptance": {
-    "accepted": true,
-    "accepted_by": "Project owner (user)",
-    "accepted_at_utc": "2026-10-27T08:56:11Z",
-    "evidence_reference": "ChatGPT project conversation, 2026-10-27 08:56:11 UTC: user considered the visible scheduled physical backups sufficient for preparation and declined the paid Restore to a New Project physical-restore test.",
-    "scope": "Residual risk accepted: provider-managed physical backup restore was not independently tested; the local logical-dump restore was verified and scheduled physical backup visibility was confirmed.",
-    "physical_restore_status": "NOT EXECUTED",
-    "paid_restore_to_new_project": "DECLINED — USD 9.68/month; no paid recovery project authorized."
-  },
-  "accepted_residual_risks": [
-    "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
-  ],
-  "review_disposition": {
-    "status": "INTERNAL_REVIEW_ACCEPTED_AS_PROJECT_CONTROL",
-    "independent_reviewer_available": false,
-    "independent_review_recorded": false,
-    "blocking_for_release": false,
-    "review_method": "Owner-approved internal technical review supported by repeated prior reviews, exact-SHA CI evidence, PostgreSQL 17 clean-install and guarded migration rehearsal, frozen SQL blob hashes, read-only live ledger reconciliation, and final targeted checks.",
-    "limitation": "This is not a four-eyes review and must never be represented as an independent review. Residual single-reviewer risk is disclosed and accepted as a project-process limitation; all technical, operational, backup, preflight, approval and postflight gates remain mandatory.",
-    "owner_decision": "2026-11-06: project owner accepted internal review in place of an unavailable independent reviewer."
+  "current_release_reconciliation": {
+    "date": "2026-11-07",
+    "last_qa_application_source_sha": "a5be3e1dfb8f43d7f7a4e8ff4bc10c87b3fc1f3e",
+    "current_documentation_head_at_reconciliation": "dc6031863cdc179553a407508efc15b85c456675",
+    "approval_state": "PENDING_NEW_EXACT_SHA_OWNER_APPROVAL",
+    "note": "The 19 ordered SQL migration payloads and git_blob_sha values are unchanged. Prior owner authorization is retained only as historical evidence and is explicitly superseded."
   }
 }
