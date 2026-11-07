@@ -75,6 +75,15 @@ test("frozen cutover manifest permits review metadata changes but protects the t
     frozenManifestPayload({ ...metadataOnly, expected_postflight: { ledger_rows: 268 } }),
     frozenManifestPayload(reviewed),
   );
+  // Post-QA history/reconciliation sections are not implicit mutable metadata.
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, superseded_user_authorization: { status: "RECEIVED" } }),
+    frozenManifestPayload(reviewed),
+  );
+  assert.notDeepEqual(
+    frozenManifestPayload({ ...metadataOnly, current_release_reconciliation: { approval_state: "PENDING" } }),
+    frozenManifestPayload(reviewed),
+  );
 });
 
 test("live snapshot freshness accepts a current timestamp", () => {
