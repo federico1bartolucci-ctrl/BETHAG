@@ -5,6 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { releaseFingerprint } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261105.json"), "utf8"));
@@ -60,10 +61,13 @@ assert.equal(manifest.live_ledger.exact_version_name_pair_match, true);
 assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED", "The owner-approved manifest state must be explicit and internally consistent.");
 assert.equal(manifest.user_authorization?.status, "RECEIVED", "The written owner approval must be recorded.");
 assert.match(manifest.user_authorization?.approved_commit_sha ?? "", /^[0-9a-f]{40}$/, "Approval must pin the exact QA-tested source SHA.");
-assert.match(manifest.user_authorization?.approved_execution_commit_sha ?? "", /^[0-9a-f]{40}$/, "Approval must pin the exact execution candidate SHA separately.");
+assert.ok(manifest.user_authorization?.approved_execution_commit_sha === null || /^[0-9a-f]{40}$/.test(manifest.user_authorization?.approved_execution_commit_sha ?? ""), "Historical execution SHA metadata, if retained, must be a full SHA.");
 assert.ok(manifest.user_authorization?.approved_by && manifest.user_authorization?.approval_reference, "Approval must identify its owner and written evidence.");
 assert.deepEqual(manifest.user_authorization?.approved_migration_hashes, manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })), "Approval must cover all nineteen ordered SQL hashes.");
-assert.equal(manifest.user_authorization?.approved_execution_commit_sha, "46bec9c4036ebeb8d8ab96c441d9e0b2d78dfaed", "The recorded owner approval is pinned to the exact execution candidate; later commits must not inherit it.");
+assert.ok(!runner.includes("approval?.approved_execution_commit_sha"), "Runner approval must not depend on the Git commit that records approval.");
+assert.ok(runner.includes("approved_release_fingerprint"), "Runner must verify the approved release fingerprint.");
+assert.ok(runner.includes("BETHAG_APPROVED_RELEASE_FINGERPRINT"), "Operator must supply the approved release fingerprint explicitly.");
+assert.ok(runner.includes("calculateReleaseFingerprint"), "Runner must calculate the release fingerprint from the checked-out critical files.");
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);
 assert.equal(manifest.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(manifest.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
@@ -101,10 +105,10 @@ assert.ok(runner.includes("String.fromCharCode(10)"), "pgpass entries must end w
 assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide a separate read-only Production preflight mode.");
 assert.ok(runner.includes("BETHAG_EXPECTED_COMMIT_SHA"), "Production preflight/apply must require the exact approved commit SHA.");
 assert.ok(runner.includes("BETHAG_APPROVED_SOURCE_COMMIT_SHA"), "Approval must bind the immutable owner-approved source release separately from the runner checkout.");
-assert.ok(runner.includes("BETHAG_APPROVED_EXECUTION_COMMIT_SHA"), "Execution must require a separate explicit approval pin for the exact runner checkout.");
+assert.ok(runner.includes("BETHAG_EXPECTED_COMMIT_SHA"), "Runner must still pin the actual clean checkout SHA for reproducibility.");
 assert.ok(runner.includes("approval?.approved_commit_sha, approvedSourceCommitSha"), "Manifest approval must be checked against the owner-approved source SHA, not the self-referential execution SHA.");
-assert.ok(runner.includes("approval?.approved_execution_commit_sha, executionCommitSha"), "Manifest approval must independently pin the exact execution commit SHA.");
-assert.match(runner, /process\.env\.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha/, "Runner must reject an execution SHA that has not been explicitly approved.");
+
+assert.match(runner, /process\.env\.BETHAG_APPROVED_RELEASE_FINGERPRINT, calculatedFingerprint/, "Runner must reject a fingerprint not explicitly approved by the owner.");
 assert.match(runner, /git", \["status", "--porcelain"\]/, "Production preflight/apply must reject a dirty working tree.");
 assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
   "Production apply must require fresh explicit reconfirmation of residual physical-restore risk when no current physical restore is verified.");
