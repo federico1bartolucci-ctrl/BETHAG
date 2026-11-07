@@ -6569,6 +6569,37 @@ function App() {
   const backendHydrated = useRef(false);
   const skipNextBackendSync = useRef(false);
   const skipNextNavigationRefresh = useRef(false);
+  const backendSyncSnapshot = useRef<Record<string, any[]> | null>(null);
+
+  const selectBackendSyncState = (source: Record<string, any[]>) => ({
+    condominiums: source.condominiums ?? [],
+    condominiumMembers: source.condominiumMembers ?? [],
+    documents: source.documents ?? [],
+    deadlines: source.deadlines ?? [],
+    assemblies: source.assemblies ?? [],
+    suppliers: source.suppliers ?? [],
+    activities: source.activities ?? [],
+    condominiumWorks: source.condominiumWorks ?? [],
+    communications: source.communications ?? [],
+    condominiumRequests: source.condominiumRequests ?? [],
+    portalMembers: source.portalMembers ?? [],
+    collaborators: source.collaborators ?? [],
+  });
+
+  const currentBackendSyncState = () => ({
+    condominiums,
+    condominiumMembers,
+    documents,
+    deadlines,
+    assemblies,
+    suppliers,
+    activities,
+    condominiumWorks,
+    communications,
+    condominiumRequests,
+    portalMembers,
+    collaborators,
+  });
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
@@ -6623,6 +6654,7 @@ function App() {
         // Hydration is read-only: do not immediately mirror the freshly loaded
         // server snapshot back to Supabase. That duplicate bulk upsert races the
         // first render and can overload PostgREST during session restoration.
+        backendSyncSnapshot.current = selectBackendSyncState(backend);
         skipNextBackendSync.current = true;
         skipNextNavigationRefresh.current = page === "condomini" || page === "archivio";
         setCondominiums(backend.condominiums);
@@ -6686,6 +6718,7 @@ function App() {
 
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
+        backendSyncSnapshot.current = selectBackendSyncState(backend);
         // Applying server state must not trigger a second full-workspace write.
         skipNextBackendSync.current = true;
         setCondominiums(backend.condominiums);
@@ -6739,35 +6772,62 @@ function App() {
       (sessionRole !== "admin" && sessionRole !== "collaborator")
     ) return;
 
+    const currentState = currentBackendSyncState();
+    const previousState = backendSyncSnapshot.current;
+
     if (skipNextBackendSync.current) {
       skipNextBackendSync.current = false;
+      backendSyncSnapshot.current = currentState;
+      return;
+    }
+
+    if (!previousState) {
+      backendSyncSnapshot.current = currentState;
+      return;
+    }
+
+    // Synchronize only the module whose in-memory collection actually changed.
+    // A communication edit must not replay condominium units/members, and a
+    // document edit must not trigger unrelated portal or accounting writes.
+    const changedModules: string[] = [];
+    if (
+      previousState.condominiums !== currentState.condominiums ||
+      previousState.condominiumMembers !== currentState.condominiumMembers
+    ) changedModules.push("condomini");
+    if (previousState.documents !== currentState.documents) changedModules.push("documenti");
+    if (previousState.deadlines !== currentState.deadlines) changedModules.push("scadenze");
+    if (previousState.assemblies !== currentState.assemblies) changedModules.push("assemblee");
+    if (previousState.suppliers !== currentState.suppliers) changedModules.push("fornitori");
+    if (
+      previousState.activities !== currentState.activities ||
+      previousState.condominiumWorks !== currentState.condominiumWorks
+    ) changedModules.push("attivita");
+    if (previousState.communications !== currentState.communications) changedModules.push("comunicazioni");
+    if (previousState.portalMembers !== currentState.portalMembers) changedModules.push("portale");
+
+    if (!changedModules.length) return;
+
+    const allowedModules = sessionRole === "collaborator"
+      ? changedModules.filter((module) => serverCollaboratorPermissions.includes(module))
+      : changedModules;
+
+    if (!allowedModules.length) {
+      backendSyncSnapshot.current = currentState;
       return;
     }
 
     const timer = window.setTimeout(() => {
-      const allowedModules =
-        sessionRole === "collaborator"
-          ? serverCollaboratorPermissions
-          : null;
-
       void syncBackendState(
         profile.workspaceId,
-        {
-          condominiums,
-          condominiumMembers,
-          documents,
-          deadlines,
-          assemblies,
-          suppliers,
-          activities,
-          condominiumWorks,
-          communications,
-          condominiumRequests,
-          portalMembers,
-          collaborators,
-        },
+        currentState,
         allowedModules
-      ).catch((error) => {
+      ).then(() => {
+        // Do not overwrite a newer snapshot if another module changed while
+        // this queued synchronization was still running.
+        if (backendSyncSnapshot.current === previousState) {
+          backendSyncSnapshot.current = currentState;
+        }
+      }).catch((error) => {
         console.error("BETHAG backend sync failed", error);
       });
     }, 500);
