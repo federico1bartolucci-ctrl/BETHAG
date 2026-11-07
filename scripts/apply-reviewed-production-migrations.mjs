@@ -128,14 +128,20 @@ function comparePairs(actual, expected, label) {
   }
 }
 
-function assertFinalApprovalRecord(manifest, expectedCommitSha) {
+function assertFinalApprovalRecord(manifest, approvedSourceCommitSha, executionCommitSha) {
   const approval = manifest.user_authorization;
   assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED",
     "Blocked: the frozen manifest is still pending final cutover approval.");
   assert.equal(approval?.status, "RECEIVED",
     "BETHAG_CUTOVER_APPROVAL_NOT_RECORDED: explicit final user approval has not been recorded in the frozen manifest.");
-  assert.equal(approval?.approved_commit_sha, expectedCommitSha,
-    "Blocked: written approval does not name the exact checked-out release commit.");
+  assert.match(approvedSourceCommitSha, /^[0-9a-f]{40}$/,
+    "Blocked: BETHAG_APPROVED_SOURCE_COMMIT_SHA must identify the exact owner-approved source release.");
+  assert.equal(approval?.approved_commit_sha, approvedSourceCommitSha,
+    "Blocked: written approval does not name the owner-approved source release.");
+  assert.match(executionCommitSha, /^[0-9a-f]{40}$/,
+    "Blocked: BETHAG_APPROVED_EXECUTION_COMMIT_SHA must identify the exact runner checkout approved for execution.");
+  assert.equal(process.env.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha,
+    "Blocked: execution commit has not been explicitly approved after runner changes.");
   assert.ok(Boolean(approval?.approved_by)
     && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
     && Boolean(approval?.approval_reference),
@@ -169,6 +175,7 @@ async function main() {
   const targetDatabase = targetUrl ? decodeURIComponent(targetUrl.pathname.substring(1)) : process.env.PGDATABASE;
   const preflightOnly = process.env.BETHAG_CUTOVER_PREFLIGHT_ONLY === "YES";
   const expectedCommitSha = process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim() || "";
+  const approvedSourceCommitSha = process.env.BETHAG_APPROVED_SOURCE_COMMIT_SHA?.trim() || "";
   if (!rehearsal) {
     assert.match(expectedCommitSha, /^[0-9a-f]{40}$/,
       "Blocked: set BETHAG_EXPECTED_COMMIT_SHA to the full approved 40-character commit SHA.");
@@ -250,7 +257,7 @@ async function main() {
     assert.ok(isExpectedProductionTarget && targetDatabase === "postgres",
       "Blocked: read-only preflight requires the expected Production host, username, and postgres database.");
     if (manifest.status === "FROZEN_FOR_REVIEW_APPROVED") {
-      assertFinalApprovalRecord(manifest, expectedCommitSha);
+      assertFinalApprovalRecord(manifest, approvedSourceCommitSha, expectedCommitSha);
     } else {
       assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
         "Read-only preflight requires a pending or exactly approved frozen manifest.");
@@ -265,7 +272,7 @@ async function main() {
       "Blocked: Production apply mode requires the expected Production host, username, and postgres database.");
     assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
-    assertFinalApprovalRecord(manifest, expectedCommitSha);
+    assertFinalApprovalRecord(manifest, approvedSourceCommitSha, expectedCommitSha);
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
       "Blocked: QA application acceptance is not complete.");
     assert.equal(process.env.BETHAG_QA_APP12_PROVIDER_VERIFIED, "YES",
