@@ -325,3 +325,42 @@ La configurazione Data API Production resta documentata come verificata da scree
 - Production: **NO-GO**.
 
 Nessun merge, deploy, freeze operativo, apply di migrazioni o modifica Production è autorizzato da questa sezione.
+
+
+## 15. Riconciliazione finale delle evidenze QA — SHA 5656525
+
+**Data:** 2026-11-07  
+**Candidato QA verificato:** `5656525e8b3f4c8b257e54ff453973372a52dc7b`
+
+Sul commit esatto risultano conclusi con esito SUCCESS tutti i workflow:
+
+- Final QA APP-01..APP-15: [run 42344566629](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42344566629), attempt 1.
+- Build e PostgreSQL 17: [run 42344566626](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42344566626).
+- Baseline Safety: [run 42344566690](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42344566690).
+
+La correzione del test browser relativa al refresh dell'elenco proprietari dopo il subentro è quindi verificata sul nuovo SHA. Il test accetta esclusivamente una risposta backend positiva contenente il nuovo proprietario attivo; gli errori transitori 520/521 non vengono classificati come successo.
+
+### Integrità degli artefatti congelati
+
+Verifiche read-only effettuate sulla branch:
+
+- Manifest congelato: sequenza di **19 migrazioni**; tutti i **19 Git blob SHA** coincidono esattamente con i blob presenti in `supabase/migrations`.
+- Snapshot storico Production: **248** voci nel ledger.
+- Manifest invariato nello stato `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`.
+- `user_authorization.status = PENDING`; `approved_commit_sha = null`; `approved_migration_hashes = []`.
+- Nessuna migrazione applicata a Production; nessuna scrittura Production, merge o deploy.
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiornato per riportare il nuovo SHA e i tre run appena conclusi. Le evidenze storiche precedenti sono mantenute dove già registrate.
+
+### Revisione indipendente: rinuncia esplicita del titolare
+
+Il titolare del progetto ha comunicato che non dispone di una persona terza a cui affidare la revisione indipendente e ha deciso di non procedere. La revisione indipendente è pertanto **RINUNCIATA DAL TITOLARE / NON ESEGUITA**. Non viene rappresentata come APPROVE, come revisione superata o come verifica equivalente. Le verifiche tecniche e CI svolte dall'autore restano controlli interni.
+
+### Gate ancora aperti e decisione di rilascio
+
+- Preflight locale del guarded runner da checkout pulito, con connessione PostgreSQL diretta/Session Pooler: **PENDING**.
+- Conferma operatore, finestra operativa completa e piano STOP/recovery: **PENDING**.
+- Approvazione finale scritta riferita allo SHA definitivo e ai 19 hash ordinati: **PENDING**.
+- APP-14: **PARTIAL**, da chiudere soltanto dopo cutover, postflight e smoke autenticati su Production.
+
+**Decisione corrente: NO-GO per Production cutover.** La rinuncia alla review indipendente è registrata come scelta consapevole del titolare, ma non riduce né sostituisce gli altri gate. PR #57 resta OPEN e NOT MERGED. Non eseguire merge, deploy, migrazioni o modifiche Production senza una successiva approvazione esplicita e riferita allo SHA finale.
