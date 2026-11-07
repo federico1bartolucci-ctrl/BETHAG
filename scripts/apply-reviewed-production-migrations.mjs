@@ -146,6 +146,8 @@ function assertFinalApprovalRecord(manifest, approvedSourceCommitSha, executionC
     "Blocked: written approval does not name the owner-approved source release.");
   assert.match(executionCommitSha, /^[0-9a-f]{40}$/,
     "Blocked: BETHAG_APPROVED_EXECUTION_COMMIT_SHA must identify the exact runner checkout approved for execution.");
+  assert.equal(approval?.approved_execution_commit_sha, executionCommitSha,
+    "Blocked: the manifest does not record owner approval for this exact execution commit.");
   assert.equal(process.env.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha,
     "Blocked: execution commit has not been explicitly approved after runner changes.");
   assert.ok(Boolean(approval?.approved_by)
