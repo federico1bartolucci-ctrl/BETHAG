@@ -381,3 +381,53 @@ Correzione test-only applicata nel commit `d58043312d92e778abdd48abc133078735baa
 Il commit `d580433...` è il nuovo head candidato e richiede l'esecuzione completa della CI. Nessun risultato del commit `5656525...` o `0a6476f...` viene attribuito al nuovo SHA. Il registro QA continua correttamente a identificare `5656525...` come SHA sul quale APP-01..APP-15 è stato superato.
 
 Production resta NO-GO; nessuna modifica a Production, manifest congelato, 19 migrazioni o snapshot è stata eseguita.
+
+
+## 17. Collaudo finale e sincronizzazione per modulo — 2026-11-07
+
+### Candidato applicativo verificato
+
+Il candidato applicativo sottoposto alla suite completa è lo SHA `e928370272e2102289d83703df1ab21427d5f9a0` della PR #57.
+
+Esiti GitHub Actions sullo stesso SHA:
+
+- Final QA APP-01..APP-15: [run 42349948523](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42349948523) — **SUCCESS**; tutti gli step di accettazione completati, nessuno saltato.
+- Build e PostgreSQL 17: [run 42349948537](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42349948537) — **SUCCESS**; bootstrap PostgreSQL 17, clean install cronologica e rehearsal isolato delle 19 migrazioni canoniche.
+- Baseline Safety: [run 42349948545](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42349948545) — **SUCCESS**.
+
+### Correzione del blocco browser
+
+La causa applicativa era la sincronizzazione globale: una variazione di un singolo modulo poteva avviare anche letture e riscritture di unità, condòmini e altri dati non interessati. Questo generava richieste concorrenti e cancellazioni di fetch durante il ripristino/ricaricamento della schermata.
+
+La sincronizzazione è stata resa **selettiva per modulo**: vengono sincronizzate soltanto le collezioni effettivamente cambiate. Invito, modifica, disattivazione e rimozione dei collaboratori restano azioni esplicite su `workspace_members`; non viene più riprodotto automaticamente uno snapshot di collaboratori durante aggiornamenti estranei.
+
+Sul candidato verificato:
+- il percorso browser APP-05 di archiviazione e ripristino del condominio è PASS;
+- i percorsi browser APP-06, APP-08, APP-11 e APP-12 sono PASS;
+- APP-15: navigazione e persistenza sessione per amministratore, collaboratore e condomino sono PASS;
+- nessun `net::ERR_ABORTED` o errore di rete browser è stato registrato nel run finale;
+- il fixture temporaneo Portal è stato ripristinato a piano `free`;
+- le richieste ai servizi QA sono risultate regolari; non è stata modificata la configurazione CORS.
+
+Il precedente messaggio CORS non dimostrava un errore di configurazione CORS: i log Supabase del tentativo fallito mostravano risposte transitorie Cloudflare 521/525 e 503. La correzione ha eliminato le richieste duplicate/non pertinenti che aggravavano il caricamento.
+
+### Evidenze e limiti
+
+- APP-01..APP-13 e APP-15: **PASS su QA**.
+- APP-14: **PARTIAL / POST-CUTOVER**; resta subordinato a cutover autorizzato, postflight e smoke autenticati in Production.
+- Il test provider Resend ha usato esclusivamente il destinatario sintetico `delivered@resend.dev`; non certifica la deliverability di massa né l'invio a condomini reali.
+- Il fixture di piano è stato riportato a `free`; i dati QA preesistenti sono stati preservati.
+- Manifest Production: stessa sequenza congelata di **19 migrazioni** e stessi 19 Git blob SHA; `user_authorization.status = PENDING`.
+- Snapshot storico Production: **248** voci, blob SHA invariato rispetto al precedente riferimento certificato.
+- Production: nessuna scrittura, migrazione, deploy o modifica ACL eseguita.
+- PR #57: **OPEN / NOT MERGED**.
+- La revisione indipendente resta **RINUNCIATA DAL TITOLARE / NON ESEGUITA**; non è stata rappresentata come superata.
+- Il restore fisico provider-managed non è stato eseguito.
+
+### Decisione
+
+**QA applicativo: PASS sullo SHA sorgente `e928370272e2102289d83703df1ab21427d5f9a0`.**
+
+**Production cutover: NO-GO.** Restano obbligatori preflight read-only aggiornato, conferma operatore/finestra/piano STOP-recovery e nuova approvazione scritta sullo SHA finale. Il superamento della suite QA non autorizza merge, deploy o migrazioni Production.
+
+Questo aggiornamento documentale registra gli esiti sullo SHA sorgente indicato. Il commit documentale che contiene il presente paragrafo è distinto dal candidato applicativo e deve superare la propria CI sul nuovo SHA; non si trasferisce automaticamente alcuna approvazione o certificazione a un commit successivo.
