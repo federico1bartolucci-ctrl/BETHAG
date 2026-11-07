@@ -497,7 +497,7 @@
     "Final written owner approval must be recorded in this manifest for the exact approved source SHA, exact execution SHA and all nineteen ordered SQL hashes, together with the maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write.",
     "After any guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests."
   ],
-  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. The nineteen ordered SQL blob hashes in this manifest remain frozen and unmodified. The project owner has explicitly approved the QA-tested source SHA and exact execution candidate SHA recorded in user_authorization, including the stated maintenance window and residual provider physical-restore risk. This records approval only; no Production DDL or ledger writes have been performed. Execution remains blocked until exact-SHA CI, clean local checkout, direct read-only Production preflight, current backup verification, Data API recheck, and all guarded-runner requirements pass.",
+  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. The nineteen ordered SQL blob hashes in this manifest remain frozen and unmodified. The project owner has explicitly approved the QA-tested source SHA and exact execution commit SHA recorded in user_authorization, including the stated maintenance window and residual provider physical-restore risk. This records approval only; no Production DDL or ledger writes have been performed. Execution remains blocked until exact-SHA CI, clean local checkout, direct read-only Production preflight, current backup verification, Data API recheck, and all guarded-runner requirements pass.",
   "rehearsal_evidence": {
     "status": "HISTORICAL_PASS_SUPERSEDED",
     "date": "2026-11-05",
@@ -558,10 +558,10 @@
   "user_authorization": {
     "status": "RECEIVED",
     "approved_commit_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
-    "approved_execution_commit_sha": "55bf3881cbaafb5f4300d684d95b6a929dd37612",
+    "approved_execution_commit_sha": "46bec9c4036ebeb8d8ab96c441d9e0b2d78dfaed",
     "approved_by": "Federico Bartolucci",
-    "approved_at_utc": "2026-11-07T17:14:12Z",
-    "approval_reference": "Explicit written owner approval in ChatGPT project conversation, 2026-11-07 17:14:12 UTC; approval covers the exact execution candidate 55bf3881cbaafb5f4300d684d95b6a929dd37612, QA-tested source decc0dfda68f573f13e386beaa22d259f7f8b619, all nineteen ordered migration hashes, Production project tctcgptrsmvgajqjgnev, and the stated 2026-11-07 22:00–2026-11-08 00:00 Europe/Rome maintenance window.",
+    "approved_at_utc": "2026-11-07T17:23:53Z",
+    "approval_reference": "Explicit written owner approval in ChatGPT project conversation, 2026-11-07 17:23:53 UTC; supersedes the prior execution-candidate approval and covers exact execution commit 46bec9c4036ebeb8d8ab96c441d9e0b2d78dfaed, QA-tested source decc0dfda68f573f13e386beaa22d259f7f8b619, all nineteen ordered frozen migration hashes, Production project tctcgptrsmvgajqjgnev, and maintenance window 2026-11-07 22:00–2026-11-08 00:00 Europe/Rome.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
