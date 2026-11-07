@@ -100,3 +100,21 @@ Restano nel confronto immutabile la sequenza delle 19 migrazioni, tutti i relati
 Sono stati aggiornati i test unitari per coprire le variazioni ammesse e continuare a respingere modifiche a review disposition, sequenza/hash, ledger e postflight. La modifica tocca un file incluso nel fingerprint: il fingerprint precedente non è riutilizzabile. In attesa di CI completa e ricalcolo del fingerprint sul nuovo head.
 
 **Stato:** correzione implementata nel branch, non ancora certificata CI. Preflight Production da ripetere solo dopo CI e approvazione del nuovo fingerprint/SHA. Production resta **NO-GO**; nessuna migrazione, merge, deploy o scrittura Production è stata eseguita.
+
+## Esito aggiornato — CI completa sul commit f079d2980c6fa5bac050ac5e77f27657e43eabfe
+
+Verifica effettuata il 2026-11-07 dopo la conclusione dei workflow:
+
+- Baseline Safety — [run 42416411867](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42416411867): SUCCESS.
+- Build + PostgreSQL 17 — [run 42416411861](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42416411861): SUCCESS.
+- Final QA APP-01..APP-15 — [run 42416411839](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42416411839): SUCCESS.
+- Fingerprint calcolata dal workflow QA: `033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301`.
+- APP-01..APP-15 completati con esito PASS. Inclusi RLS/Storage con autenticazione reale, condomìni, contabilità, subentro e rollback con rate insolute, comunicazioni, webhook firmati, prova provider email, workflow browser autenticati, navigazione e persistenza sessione per admin/collaboratore/condomino.
+- Fixture piano QA ripristinato a `free`; preview QA arrestata; diagnostica APP-15 caricata come artifact del run.
+- Build e prove isolate PostgreSQL 17 completate, incluse bootstrap, 28 migrazioni clean-install e rehearsal delle 19 migrazioni canoniche tramite runner guarded.
+
+La fingerprint sopra è la **candidata corrente** per il commit indicato. Non esiste ancora approvazione del proprietario per questa nuova coppia SHA/fingerprint. Le approvazioni precedenti riferite a fingerprint o SHA diversi non sono riutilizzabili.
+
+I controlli Supabase Advisory Security e Health interrogati su Production e QA non hanno restituito lint. Questo risultato non sostituisce il preflight SQL completo né la verifica Dashboard Data API.
+
+**Stato:** CI e collaudo QA completati; approvazione del proprietario della coppia SHA/fingerprint, preflight locale read-only e gate operativi ancora pendenti. Nessuna scrittura, migrazione, merge o deploy Production eseguito. Production resta **NO-GO**; APP-14 resta PARTIAL fino al postflight e agli smoke test autenticati Production.
