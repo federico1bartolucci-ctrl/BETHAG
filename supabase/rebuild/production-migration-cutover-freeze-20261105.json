@@ -558,10 +558,10 @@
   "user_authorization": {
     "status": "RECEIVED",
     "approved_commit_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
-    "approved_execution_commit_sha": null,
+    "approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
     "approved_by": "Federico Bartolucci",
-    "approved_at_utc": "2026-11-07T20:56:05Z",
-    "approval_reference": "Owner's explicit written approval in the BETHAG project conversation: QA-tested source SHA decc0dfda68f573f13e386beaa22d259f7f8b619 and exact release fingerprint f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a were approved; owner subsequently confirmed the maintenance window as 2026-11-08 00:00–04:00 Europe/Rome on 2026-11-07. This approval preserves the exact nineteen ordered frozen migration hashes and the 248-row Production history. The final executable checkout SHA is intentionally unset and requires separate explicit approval after documentation and CI are finalized. Additional explicit owner approval received in the BETHAG project conversation on 2026-11-07: approved the then-current executable SHA ee8726aaf46dde3107511276a3c11a1060e9b822 together with exact release fingerprint b06a4ef236f6225681892c29d3822e1b4e8c78950407044f01655b732aebfc82, preserving the exact nineteen ordered migration hashes and all 248 historical Production ledger rows. This manifest-only approval-record commit is not itself authorized for execution; its resulting execution SHA must be separately approved because the runner pins the exact checkout SHA.",
+    "approved_at_utc": "2026-11-07T21:00:00Z",
+    "approval_reference": "Explicit owner approval in BETHAG project conversation: approve the exact executable SHA c2dbe15d100b133391d2ba7617fb6089c9734320 and release fingerprint 033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301, with QA source SHA decc0dfda68f573f13e386beaa22d259f7f8b619. Scope is READ-ONLY PRODUCTION PREFLIGHT ONLY. This approval does NOT authorize Production apply, migration execution, merge or deploy. Preserve the exact nineteen ordered migration hashes and all 248 historical Production ledger rows.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -645,7 +645,9 @@
     "approved_cutover_scope": "Apply exactly the nineteen frozen canonical migrations in order; preserve all 248 historical Production ledger rows unchanged; stop on any preflight, migration, or postflight discrepancy.",
     "residual_backup_restore_risk_reconfirmed": true,
     "residual_backup_restore_risk": "Provider-managed physical restore was not independently tested; the previously accepted residual risk is reconfirmed for this cutover. No claim of a successful physical restore test.",
-    "approved_release_fingerprint": "b06a4ef236f6225681892c29d3822e1b4e8c78950407044f01655b732aebfc82"
+    "approved_release_fingerprint": "033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301",
+    "approval_scope": "READ_ONLY_PREFLIGHT_ONLY",
+    "production_apply_authorized": false
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
