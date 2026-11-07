@@ -68,3 +68,19 @@ La cattura read-only dei registri live è stata rinnovata da Supabase e registra
 La prima riesecuzione CI ha individuato due verificatori con data del 6 novembre codificata rigidamente. Sono stati aggiornati per verificare coerenza e formato dei timestamp UTC senza fissare un giorno di calendario. Il controllo Baseline Safety sul commit `6063d5e85dd906a04f79f1aec5f4aebaf9f81aa1` è SUCCESS; Build/PostgreSQL 17 e Final QA APP-01..APP-15 sono ancora in esecuzione/attesa al momento di questa nota.
 
 **Nessuna approvazione del nuovo SHA eseguibile è implicita in questo aggiornamento.** La fingerprint approvata in precedenza non viene dichiarata valida per il nuovo head fino al ricalcolo e alla verifica automatica. PR #57 resta aperta; Production resta NO-GO.
+
+
+## Esito conclusivo CI sul commit df886051844a2b075f28bf183b2944341cac319b
+
+La riesecuzione completa sul commit indicato si è conclusa con esito **SUCCESS** per tutti e tre i workflow:
+- Baseline Safety — run 42412484597.
+- Build e bootstrap PostgreSQL 17 — run 42412484587.
+- Collaudo finale APP-01..APP-15 — run 42412484715.
+
+Il collaudo QA ha superato i test autenticati RLS/Storage, flussi di condomìni e contabilità, subentro e rollback con rate insolute, pubblicazione/revoca comunicazioni, webhook firmati, prova del provider email con destinatario di test, workflow browser autenticati e navigazione/persistenza sessione per amministratore, collaboratore e condomino. Il fixture del piano QA è stato ripristinato e l'anteprima QA arrestata.
+
+La fingerprint ricalcolata dal workflow QA è `b06a4ef236f6225681892c29d3822e1b4e8c78950407044f01655b732aebfc82` su 41 file critici. **Non coincide** con la fingerprint precedentemente approvata (`f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a`); pertanto non viene considerata approvata. Il manifest mantiene `approved_execution_commit_sha: null` e lo stato di approvazione finale dell'esecuzione resta pendente.
+
+Verifica aggiuntiva read-only: tutti i 19 blob Git delle migrazioni canoniche coincidono con i 19 hash approvati nel manifest. Production risulta `ACTIVE_HEALTHY`, PostgreSQL 17.6.1.166; Security Advisor e Health Advisor non restituiscono lint. Nessuna scrittura o migrazione è stata eseguita su Production.
+
+PR #57 è stata aggiornata per riportare head, esiti CI, fingerprint candidata e gate residui. Resta aperta e non merged. Production resta **NO-GO** fino a riconciliazione e approvazione esplicita della fingerprint e dello SHA eseguibile corrente, preflight locale PostgreSQL read-only, verifica immediata backup/Data API e completamento degli altri gate operativi. APP-14 resta PARTIAL fino al postflight Production e agli smoke test autenticati.
