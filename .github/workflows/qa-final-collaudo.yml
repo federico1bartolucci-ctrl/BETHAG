@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Calculate deterministic release fingerprint (read-only)
+        run: node scripts/print-release-fingerprint.mjs
+
       - name: Build against the existing QA project only
         env:
           VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
