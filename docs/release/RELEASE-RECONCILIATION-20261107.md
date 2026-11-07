@@ -364,3 +364,20 @@ Il titolare del progetto ha comunicato che non dispone di una persona terza a cu
 - APP-14: **PARTIAL**, da chiudere soltanto dopo cutover, postflight e smoke autenticati su Production.
 
 **Decisione corrente: NO-GO per Production cutover.** La rinuncia alla review indipendente è registrata come scelta consapevole del titolare, ma non riduce né sostituisce gli altri gate. PR #57 resta OPEN e NOT MERGED. Non eseguire merge, deploy, migrazioni o modifiche Production senza una successiva approvazione esplicita e riferita allo SHA finale.
+
+
+## 16. Esito CI documentale e correzione retry APP-15 — 2026-11-07
+
+Sul commit documentale precedente `0a6476f58f0ef25a58b9a62d85515c444d556544`:
+- Build e PostgreSQL bootstrap: SUCCESS, run 42345524279.
+- Baseline Safety: SUCCESS, run 42345524241.
+- Final QA: FAILURE, run 42345524237. Gli step APP-01..APP-14 sono passati; APP-15 è fallito durante il ripristino del piano originale del workspace di test. Il log mostra una risposta Cloudflare HTTP 520 da Supabase durante la chiamata service-role in `restoreWorkspacePlan` del test `scripts/test-current-qa-navigation.mjs`. Non è stata rilevata un'asserzione funzionale negativa sui permessi/navigation; tuttavia APP-15 non è conteggiato come PASS su questo commit.
+
+Correzione test-only applicata nel commit `d58043312d92e778abdd48abc133078735baa48b`:
+- introdotto retry limitato per errori Supabase transitori (rete, HTTP 408/425/429/5xx inclusi 520/521);
+- retry applicato sia all'aggiornamento di ripristino del piano sia alla lettura di verifica;
+- errori permanenti continuano a fallire immediatamente; il test passa solo dopo verifica del piano ripristinato.
+
+Il commit `d580433...` è il nuovo head candidato e richiede l'esecuzione completa della CI. Nessun risultato del commit `5656525...` o `0a6476f...` viene attribuito al nuovo SHA. Il registro QA continua correttamente a identificare `5656525...` come SHA sul quale APP-01..APP-15 è stato superato.
+
+Production resta NO-GO; nessuna modifica a Production, manifest congelato, 19 migrazioni o snapshot è stata eseguita.
