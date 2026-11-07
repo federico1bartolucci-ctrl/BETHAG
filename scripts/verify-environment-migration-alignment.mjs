@@ -1,62 +1,103 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 
-const root="supabase/rebuild";
-const [production,qa,reconciliation,freeze,liveStatus]=await Promise.all([
- readFile(root+"/production-ledger-20261103.json","utf8").then(JSON.parse),
- readFile(root+"/qa-ledger-20261103.json","utf8").then(JSON.parse),
- readFile(root+"/migration-history-reconciliation-20261103.json","utf8").then(JSON.parse),
- readFile(root+"/production-migration-cutover-freeze-20261103.json","utf8").then(JSON.parse),
- readFile(root+"/live-environment-status-20261027.json","utf8").then(JSON.parse),
+const root = "supabase/rebuild";
+const [live, freeze, snapshot] = await Promise.all([
+  readFile(root + "/live-migration-ledgers-20261105.json", "utf8").then(JSON.parse),
+  readFile(root + "/production-migration-cutover-freeze-20261105.json", "utf8").then(JSON.parse),
+  readFile(root + "/production-ledger-20261105.json", "utf8").then(JSON.parse),
 ]);
-const files=(await readdir("supabase/migrations")).filter(file=>file.endsWith(".sql")).sort();
-const pending=freeze.sequence.map(item=>({version:item.file.slice(0,14),name:item.file.slice(15,-4),file:item.file}));
-const exact=(ledger,item)=>ledger.migrations.some(row=>row.version===item.version&&row.name===item.name);
+const files = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql")).sort();
+const productionSet = new Set(live.production.migrations.map(row => row.version + "|" + row.name));
+const qaSet = new Set(live.qa.migrations.map(row => row.version + "|" + row.name));
+const common = [...productionSet].filter(pair => qaSet.has(pair));
+const productionOnly = [...productionSet].filter(pair => !qaSet.has(pair));
+const qaOnly = [...qaSet].filter(pair => !productionSet.has(pair));
+const pending = freeze.sequence.map(item => ({
+  version: item.file.slice(0, 14),
+  name: item.file.slice(15, -4),
+  file: item.file,
+}));
+const gitBlobSha = (content) => {
+  // Git hashes canonical LF text blobs; normalize Windows CRLF checkouts so
+  // the same reviewed SQL payload produces the same frozen blob SHA.
+  const canonicalContent = content.replace(/\r\n/g, "\n");
+  const bytes = Buffer.from(canonicalContent, "utf8");
+  return createHash("sha1").update(Buffer.concat([Buffer.from("blob " + bytes.length + "\0"), bytes])).digest("hex");
+};
 
-assert.equal(production.count,247);
-assert.equal(production.migrations.length,247);
-assert.deepEqual(production.latest,{version:"20261103070901",name:"grant_service_role_private_resend_event_rpc"});
-assert.equal(qa.count,47);
-assert.equal(qa.migrations.length,47);
-assert.equal(qa.branch_status,"MIGRATIONS_FAILED");
-assert.equal(reconciliation.production.ledger_count,247);
-assert.equal(reconciliation.qa.ledger_count,47);
-assert.equal(freeze.live_ledger.rows,247);
-assert.equal(freeze.expected_postflight.ledger_rows,262);
-assert.equal(files.length,24);
-assert.equal(pending.length,15);
-assert.ok(pending.every(item=>files.includes(item.file)));
-assert.ok(pending.every(item=>!exact(production,item)));
-assert.ok(exact(production,{version:"20261022202747",name:"harden_close_member_transfer_search_path"}));
-assert.ok(freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item=>exact(production,item)));
+assert.equal(live.captured_at, "2026-11-06");
+assert.match(live.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
+assert.match(live.production.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
+assert.match(live.qa.captured_at_utc ?? "", /^2026-11-06T\d{2}:\d{2}:\d{2}Z$/);
+assert.equal(live.production.project_ref, "tctcgptrsmvgajqjgnev");
+assert.equal(live.production.count, 248);
+assert.equal(live.production.migrations.length, 248);
+assert.deepEqual(live.production.latest, { version: "20261104222229", name: "reconcile_production_acl_least_privilege" });
+assert.equal(live.qa.project_ref, "jhuyhlzzydcgghrzeexn");
+assert.equal(live.qa.count, 283);
+assert.equal(live.qa.migrations.length, 283);
+assert.deepEqual(live.qa.latest, { version: "20261105001928", name: "align_qa_fund_availability_view_acl" });
+assert.equal(common.length, 247);
+assert.deepEqual(productionOnly, ["20261104222229|reconcile_production_acl_least_privilege"]);
+assert.equal(qaOnly.length, 36);
+assert.equal(live.comparison.common_exact_pairs, 247);
+assert.equal(live.comparison.production_only_count, 1);
+assert.equal(live.comparison.qa_only_count, 36);
 
-const restoreGate=liveStatus.backup_restore_gate;
-assert.ok(restoreGate,"Missing historical provider backup/restore gate evidence.");
-assert.equal(restoreGate.source_project_ref,"tctcgptrsmvgajqjgnev");
-assert.equal(restoreGate.release_gate_passed,false,"Do not misrepresent the provider restore as passed.");
-assert.equal(restoreGate.schema_acl_parity,"NOT VERIFIED");
-assert.equal(restoreGate.target_project_ref,null);
-assert.equal(restoreGate.restore_completed_at_utc,null);
+assert.equal(snapshot.count, 248);
+assert.deepEqual(snapshot.latest, live.production.latest);
+assert.deepEqual(snapshot.migrations, live.production.migrations);
+assert.equal(freeze.live_ledger.rows, 248);
+assert.equal(freeze.live_ledger.exact_version_name_pair_match, true);
+assert.equal(freeze.expected_postflight.ledger_rows, 267);
+assert.equal(freeze.sequence.length, 19);
+assert.equal(freeze.live_ledger.production_only_migration.version, "20261104222229");
+assert.equal(freeze.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
+assert.equal(files.length, 28);
+assert.equal(freeze.clean_install.migration_file_count, 28);
+assert.ok(pending.every(item => files.includes(item.file)));
+assert.ok(pending.every(item => !productionSet.has(item.version + "|" + item.name)));
+assert.ok(freeze.live_ledger.forward_migrations_after_2026_11_02_freeze.every(item =>
+  productionSet.has(item.version + "|" + item.name)));
+assert.ok(productionSet.has(freeze.live_ledger.production_only_migration.version + "|" + freeze.live_ledger.production_only_migration.name));
 
-const blockers=[
- "QA branch currently reports MIGRATIONS_FAILED; do not use it as cutover target.",
- "Three Supabase-managed supabase_admin default ACL entries still grant MAINTAIN; provider guidance or named security-owner disposition required.",
- "Provider-backed physical restore has not been performed; do not claim it has.",
- "APP-01–APP-15 full authenticated acceptance evidence is not recorded.",
- "Written cutover approval, exact commit/hash list, maintenance window and rollback criteria are not recorded.",
+const productionOnlySql = await readFile(root + "/production-forward-migrations/" + freeze.live_ledger.production_only_migration.file, "utf8");
+assert.equal(gitBlobSha(productionOnlySql), freeze.live_ledger.production_only_migration.git_blob_sha);
+assert.ok(
+  ["FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING", "FROZEN_FOR_REVIEW_APPROVED"].includes(freeze.status),
+  "Freeze must remain pending or carry an explicit final approval record.",
+);
+if (freeze.status === "FROZEN_FOR_REVIEW_APPROVED") {
+  const approval = freeze.user_authorization;
+  assert.equal(approval?.status, "RECEIVED");
+  assert.match(approval?.approved_commit_sha ?? "", /^[0-9a-f]{40}$/);
+  assert.ok(Boolean(approval?.approved_by)
+    && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
+    && Boolean(approval?.approval_reference));
+  assert.deepEqual(approval?.approved_migration_hashes,
+    freeze.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })));
+}
+
+const blockers = [
+  "The guarded runner requires a direct PostgreSQL DATABASE_URL; Supabase MCP apply_migration generates server-side timestamps and would create migration-version drift.",
+  "Reconfirm the 28 October provider backup/restore proof against current Production retention and capture the latest backup identifier.",
+  "Production Data API exposure configuration must be verified in Dashboard before release.",
+  "The 248-row plus nineteen-migration rehearsal must pass before any Production DDL.",
 ];
+
 console.log(JSON.stringify({
- environment_migration_alignment:"PASS — latest read-only Production/QA ledgers and frozen 15-migration sequence are consistent",
- environments:[
-  {name:"production",project_ref:production.project_ref,ledger_count:production.count,ledger_head:production.latest},
-  {name:"qa",project_ref:qa.project_ref,ledger_count:qa.count,ledger_head:qa.latest,branch_status:qa.branch_status},
- ],
- production_forward_migrations_preserved:freeze.live_ledger.forward_migrations_after_2026_11_02_freeze,
- clean_branch_migration_files:files.length,
- pending_canonical_migrations:pending.length,
- expected_postflight_ledger_rows:262,
- historical_ledger_rows_to_rewrite:0,
- backup_restore_gate:"BLOCKED — provider physical restore not evidenced",
- cutover_blockers:blockers,
- production_or_qa_modified:false,
-},null,2));
+  status: "PASS — current 248/283 live ledger snapshots and superseding cutover manifest are internally consistent",
+  production: { rows: live.production.count, head: live.production.latest },
+  qa: { rows: live.qa.count, head: live.qa.latest },
+  common_exact_pairs: common.length,
+  production_only: productionOnly,
+  qa_only_count: qaOnly.length,
+  canonical_migration_files: files.length,
+  pending_canonical_increments: pending.length,
+  expected_postflight_ledger_rows: freeze.expected_postflight.ledger_rows,
+  historical_rows_to_rewrite: 0,
+  cutover_blockers: blockers,
+  remote_databases_modified: false,
+}, null, 2));

@@ -1126,6 +1126,16 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
+/** Persist only best-effort browser cache data; Supabase remains authoritative. */
+function persistLocalCache(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Browser storage is optional cache, never a reason to crash a saved workflow.
+    console.warn(`BETHAG local cache was not persisted (${key})`, error);
+  }
+}
+
 function makeId() {
   return (
     Date.now() +
@@ -2591,7 +2601,15 @@ function App() {
         p_fiscal_code: registration.fiscalCode || null,
         p_condominium_name: registration.condominiumName || null,
       });
-      if (completionError) throw completionError;
+      if (completionError) {
+        if ((completionError.message || "").includes("PORTAL_MEMBER_CONDOMINIUM_MISMATCH")) {
+          throw new Error("Il nominativo corrisponde a un profilo anagrafico associato a un condominio diverso da quello selezionato. Verifica il nome del condominio e riprova.");
+        }
+        if ((completionError.message || "").includes("PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE")) {
+          throw new Error("Nel tuo workspace esistono più condomìni con questo nome. Per sicurezza il collegamento automatico è stato bloccato: contatta l'amministratore per identificare il condominio corretto.");
+        }
+        throw completionError;
+      }
       sessionStorage.removeItem("bethag-pending-resident-registration");
       if (completion?.status === "approved") {
         alert("Registrazione completata. Il tuo account è stato collegato al condominio.");
@@ -2998,16 +3016,33 @@ function App() {
     }
     let cancelled = false;
     const loadRegistrationRequests = async () => {
-      const { data, error } = await supabase
-        .from("portal_registration_requests")
-        .select("*")
-        .eq("workspace_id", profile.workspaceId)
-        .in("status", ["pending","email_mismatch"])
-        .order("created_at", { ascending: false });
-      if (!error && !cancelled) setRegistrationRequests((data || []) as PortalRegistrationRequest[]);
+      const [assigned, unassigned] = await Promise.all([
+        supabase
+          .from("portal_registration_requests")
+          .select("*")
+          .eq("workspace_id", profile.workspaceId)
+          .in("status", ["pending","email_mismatch"])
+          .order("created_at", { ascending: false }),
+        // RLS returns only unassigned requests whose condominium name matches
+        // a condominium managed by this workspace. These requests need manual
+        // resolution when identical names exist across different workspaces.
+        supabase
+          .from("portal_registration_requests")
+          .select("*")
+          .is("workspace_id", null)
+          .in("status", ["pending","email_mismatch"])
+          .order("created_at", { ascending: false }),
+      ]);
+      if (assigned.error || unassigned.error) {
+        console.error("BETHAG portal registration requests load error", assigned.error || unassigned.error);
+        return;
+      }
+      const combined = [...(assigned.data || []), ...(unassigned.data || [])]
+        .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+      if (!cancelled) setRegistrationRequests(combined as PortalRegistrationRequest[]);
     };
     void loadRegistrationRequests();
-  return () => { cancelled = true; };
+    return () => { cancelled = true; };
   }, [sessionRole, profile.workspaceId]);
 
   const approvePortalRegistration = async (requestId: string, memberId: string) => {
@@ -3054,6 +3089,10 @@ function App() {
         alert("La richiesta è vincolata al profilo anagrafico originariamente individuato. Verifica il profilo associato e riprova.");
       } else if (message.includes("ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH")) {
         alert("L'indirizzo e-mail dell'account non risulta verificato o non coincide con quello della richiesta.");
+      } else if (message.includes("PORTAL_REQUEST_CONDOMINIUM_MISMATCH")) {
+        alert("Il condominio selezionato non corrisponde a quello indicato nella richiesta di registrazione.");
+      } else if (message.includes("PORTAL_REQUEST_CONDOMINIUM_REQUIRED")) {
+        alert("La richiesta non indica il condominio: chiedi al residente di reinviare la registrazione con il nome esatto.");
       } else {
         alert(message || "Impossibile autorizzare la registrazione.");
       }
@@ -3138,7 +3177,14 @@ function App() {
           } catch (registrationError) {
             console.error("BETHAG resident registration completion failed", registrationError);
             await supabase.auth.signOut();
-            alert(registrationError instanceof Error ? registrationError.message : "Impossibile completare la registrazione condòmino.");
+            const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
+            if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NAME_REQUIRED")) {
+              alert("Indica il nome esatto del condominio: serve per indirizzare correttamente la richiesta all'amministratore.");
+            } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NOT_FOUND")) {
+              alert("Il condominio indicato non è stato trovato. Controlla il nome esatto oppure contatta l'amministratore.");
+            } else {
+              alert(registrationErrorMessage || "Impossibile completare la registrazione condòmino.");
+            }
             return;
           }
         }
@@ -4042,6 +4088,10 @@ function App() {
       setCondominiumUnits((current) => [...current, ...generatedUnits]);
     }
 
+    // Condominium persistence already completed through the explicit backend
+    // save operation above. Do not enqueue a second workspace-wide sync for
+    // this local projection update.
+    if (supabaseConfigured) skipNextBackendSync.current = true;
     setCondominiums(nextCondominiums);
     setSelectedCondominium(savedItem);
     setEditingCondominium(null);
@@ -4068,6 +4118,9 @@ function App() {
           archiveReason: persisted.archive_reason,
         };
       }
+      // The archive RPC is the authoritative write; this state update only
+      // reflects its result and must not start a full workspace sync.
+      if (supabaseConfigured) skipNextBackendSync.current = true;
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
     } catch (error) {
@@ -4089,6 +4142,9 @@ function App() {
         await restoreCondominiumBackend(workspaceId, item.id);
       }
       const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
+      // The restore RPC is the authoritative write; avoid replaying the whole
+      // workspace snapshot merely to update the visible condominium list.
+      if (supabaseConfigured) skipNextBackendSync.current = true;
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
@@ -6511,6 +6567,39 @@ function App() {
 
 
   const backendHydrated = useRef(false);
+  const skipNextBackendSync = useRef(false);
+  const skipNextNavigationRefresh = useRef(false);
+  const backendSyncSnapshot = useRef<Record<string, any[]> | null>(null);
+
+  const selectBackendSyncState = (source: Record<string, any[]>) => ({
+    condominiums: source.condominiums ?? [],
+    condominiumMembers: source.condominiumMembers ?? [],
+    documents: source.documents ?? [],
+    deadlines: source.deadlines ?? [],
+    assemblies: source.assemblies ?? [],
+    suppliers: source.suppliers ?? [],
+    activities: source.activities ?? [],
+    condominiumWorks: source.condominiumWorks ?? [],
+    communications: source.communications ?? [],
+    condominiumRequests: source.condominiumRequests ?? [],
+    portalMembers: source.portalMembers ?? [],
+    collaborators: source.collaborators ?? [],
+  });
+
+  const currentBackendSyncState = () => ({
+    condominiums,
+    condominiumMembers,
+    documents,
+    deadlines,
+    assemblies,
+    suppliers,
+    activities,
+    condominiumWorks,
+    communications,
+    condominiumRequests,
+    portalMembers,
+    collaborators,
+  });
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase || !sessionRole) return;
@@ -6562,6 +6651,12 @@ function App() {
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
 
+        // Hydration is read-only: do not immediately mirror the freshly loaded
+        // server snapshot back to Supabase. That duplicate bulk upsert races the
+        // first render and can overload PostgREST during session restoration.
+        backendSyncSnapshot.current = selectBackendSyncState(backend);
+        skipNextBackendSync.current = true;
+        skipNextNavigationRefresh.current = page === "condomini" || page === "archivio";
         setCondominiums(backend.condominiums);
 
         setCondominiumMembers(backend.condominiumMembers);
@@ -6623,6 +6718,9 @@ function App() {
 
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
+        backendSyncSnapshot.current = selectBackendSyncState(backend);
+        // Applying server state must not trigger a second full-workspace write.
+        skipNextBackendSync.current = true;
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
@@ -6649,7 +6747,14 @@ function App() {
     // hundreds of REST requests for large workspaces and blocked the UI.
     // Standalone modules can still request a refresh through the event above.
     if (page === "condomini" || page === "archivio") {
-      void refreshBackendState();
+      if (skipNextNavigationRefresh.current) {
+        // The initial authenticated hydration has already loaded this page's
+        // complete workspace snapshot. Avoid issuing the same 20+ REST reads
+        // a second time immediately after a hard reload.
+        skipNextNavigationRefresh.current = false;
+      } else {
+        void refreshBackendState();
+      }
     }
 
     return () => {
@@ -6667,30 +6772,62 @@ function App() {
       (sessionRole !== "admin" && sessionRole !== "collaborator")
     ) return;
 
-    const timer = window.setTimeout(() => {
-      const allowedModules =
-        sessionRole === "collaborator"
-          ? serverCollaboratorPermissions
-          : null;
+    const currentState = currentBackendSyncState();
+    const previousState = backendSyncSnapshot.current;
 
+    if (skipNextBackendSync.current) {
+      skipNextBackendSync.current = false;
+      backendSyncSnapshot.current = currentState;
+      return;
+    }
+
+    if (!previousState) {
+      backendSyncSnapshot.current = currentState;
+      return;
+    }
+
+    // Synchronize only the module whose in-memory collection actually changed.
+    // A communication edit must not replay condominium units/members, and a
+    // document edit must not trigger unrelated portal or accounting writes.
+    const changedModules: string[] = [];
+    if (
+      previousState.condominiums !== currentState.condominiums ||
+      previousState.condominiumMembers !== currentState.condominiumMembers
+    ) changedModules.push("condomini");
+    if (previousState.documents !== currentState.documents) changedModules.push("documenti");
+    if (previousState.deadlines !== currentState.deadlines) changedModules.push("scadenze");
+    if (previousState.assemblies !== currentState.assemblies) changedModules.push("assemblee");
+    if (previousState.suppliers !== currentState.suppliers) changedModules.push("fornitori");
+    if (
+      previousState.activities !== currentState.activities ||
+      previousState.condominiumWorks !== currentState.condominiumWorks
+    ) changedModules.push("attivita");
+    if (previousState.communications !== currentState.communications) changedModules.push("comunicazioni");
+    if (previousState.portalMembers !== currentState.portalMembers) changedModules.push("portale");
+
+    if (!changedModules.length) return;
+
+    const allowedModules = sessionRole === "collaborator"
+      ? changedModules.filter((module) => serverCollaboratorPermissions.includes(module))
+      : changedModules;
+
+    if (!allowedModules.length) {
+      backendSyncSnapshot.current = currentState;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
       void syncBackendState(
         profile.workspaceId,
-        {
-          condominiums,
-          condominiumMembers,
-          documents,
-          deadlines,
-          assemblies,
-          suppliers,
-          activities,
-          condominiumWorks,
-          communications,
-          condominiumRequests,
-          portalMembers,
-          collaborators,
-        },
+        currentState,
         allowedModules
-      ).catch((error) => {
+      ).then(() => {
+        // Do not overwrite a newer snapshot if another module changed while
+        // this queued synchronization was still running.
+        if (backendSyncSnapshot.current === previousState) {
+          backendSyncSnapshot.current = currentState;
+        }
+      }).catch((error) => {
         console.error("BETHAG backend sync failed", error);
       });
     }, 500);
@@ -6729,86 +6866,71 @@ function App() {
     }
   }, [condominiums]);
 
+  // In backend mode the workspace collections are hydrated from Supabase.
+  // Do not duplicate potentially thousands of server-owned rows in localStorage:
+  // browser quota is limited and a failed cache write must never break rendering.
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.deadlines,
-      JSON.stringify(deadlines)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.deadlines, deadlines);
   }, [deadlines]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.documents,
-      JSON.stringify(documents)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.documents, documents);
   }, [documents]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.assemblies,
-      JSON.stringify(assemblies)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.assemblies, assemblies);
   }, [assemblies]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.suppliers,
-      JSON.stringify(suppliers)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.suppliers, suppliers);
   }, [suppliers]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.activities,
-      JSON.stringify(activities)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.activities, activities);
   }, [activities]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumWorks, JSON.stringify(condominiumWorks));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumWorks, condominiumWorks);
   }, [condominiumWorks]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.communications,
-      JSON.stringify(communications)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.communications, communications);
   }, [communications]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumMembers, JSON.stringify(condominiumMembers));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumMembers, condominiumMembers);
   }, [condominiumMembers]);
 
   useEffect(() => {
-    localStorage.setItem(KEYS.condominiumRequests, JSON.stringify(condominiumRequests));
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.condominiumRequests, condominiumRequests);
   }, [condominiumRequests]);
 
+  // Small identity/billing preferences remain useful as a local bootstrap cache.
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.profile,
-      JSON.stringify(profile)
-    );
+    persistLocalCache(KEYS.profile, profile);
   }, [profile]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.portalMembers,
-      JSON.stringify(portalMembers)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.portalMembers, portalMembers);
   }, [portalMembers]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.subscription,
-      JSON.stringify(subscription)
-    );
+    persistLocalCache(KEYS.subscription, subscription);
   }, [subscription]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEYS.collaborators,
-      JSON.stringify(collaborators)
-    );
+    if (supabaseConfigured) return;
+    persistLocalCache(KEYS.collaborators, collaborators);
   }, [collaborators]);
 
 
@@ -13719,8 +13841,8 @@ function SubscriptionPage({
   isAdministrator?: boolean;
 }) {
   const plans = [
-    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Accesso alla struttura BETHAG"] },
-    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Condomini","Documenti","Scadenze","Fornitori","Attività","Comunicazioni"] },
+    { id: "free" as PlanId, title: "BETHAG Free", description: "Il gestionale essenziale.", features: ["Homepage e dashboard","Profilo amministratore","Gestione base dei condomini","Accesso alla struttura BETHAG"] },
+    { id: "plus" as PlanId, title: "BETHAG Plus", description: "Automazione documentale.", features: ["Tutto Free","Documenti","Scadenze","Fornitori","Attività","Comunicazioni"] },
     { id: "professional" as PlanId, title: "BETHAG Professional", description: "Automazione avanzata.", features: ["Tutto Plus","Assemblee avanzate","BETHAG AI","Acquisizione audio","Trascrizione assemblee","Bozza automatica verbale","Workflow di verifica","Automazioni avanzate"] },
     { id: "portal" as PlanId, title: "BETHAG Portal", description: "Amministratore + condomini.", features: ["Tutto Professional","Portale condomini","Utenti e ruoli","Permessi granulari","Documenti condivisi","Verbali pubblicabili","Comunicazioni","Accesso riservato"] },
   ];

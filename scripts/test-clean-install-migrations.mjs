@@ -2,8 +2,8 @@
 /**
  * Full chronological clean-install rehearsal for the exact deployable BETHAG
  * migration directory. This is separate from the live-Production cutover
- * rehearsal, whose fifteen pending increments are applied after the existing
- * 247-row ledger state.
+ * rehearsal, whose nineteen pending increments are applied after the existing
+ * 248-row ledger state.
  *
  * The target must be a disposable local PostgreSQL 17 database. Never pass a
  * Supabase URL or a remote database connection string.
@@ -43,23 +43,23 @@ const baselineFiles = [
   "20261017000005_bethag_baseline_grants.sql",
 ];
 const existingHead = "20261022202747_harden_close_member_transfer_search_path.sql";
-const freeze = JSON.parse(await readFile(root + "/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
+const freeze = JSON.parse(await readFile(root + "/rebuild/production-migration-cutover-freeze-20261105.json", "utf8"));
 const pendingFiles = freeze.sequence.map((item) => item.file);
 const forwardItems = freeze.live_ledger.forward_migrations_after_2026_11_02_freeze;
 const forwardFiles = forwardItems.map((item) => item.file);
 const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwardFiles].sort();
 const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
 
-assert.equal(freeze.clean_install?.migration_file_count, 24,
-  "Frozen manifest must describe the 24-file clean-install sequence.");
+assert.equal(freeze.clean_install?.migration_file_count, 28,
+  "Frozen manifest must describe the 28-file clean-install sequence.");
 assert.deepEqual(freeze.clean_install.baseline_files, baselineFiles);
 assert.equal(freeze.clean_install.existing_canonical_head, existingHead);
 assert.deepEqual(freeze.clean_install.pending_canonical_increments, pendingFiles);
 assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFiles);
 assert.deepEqual(actualFiles, expectedFiles,
-  "Deployable migration directory differs from the frozen 24-file chronological clean-install sequence.");
-assert.equal(actualFiles.length, 24);
-assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 24,
+  "Deployable migration directory differs from the frozen 28-file chronological clean-install sequence.");
+assert.equal(actualFiles.length, 28);
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 28,
   "Clean-install migration versions must be unique.");
 
 for (const item of freeze.sequence) {
@@ -86,7 +86,7 @@ for (const pattern of [
 }
 const bootstrapSql = [
   "CREATE SCHEMA IF NOT EXISTS auth;",
-  "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);",
+  "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz);",
   "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS 'SELECT NULLIF(current_setting(''request.jwt.claim.sub'', true), '''')::uuid';",
   "CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS 'SELECT NULL::text';",
   "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS 'SELECT ''{}''::jsonb';",
@@ -112,6 +112,11 @@ const query = [
 "  'application_maintain_relations', (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND (has_table_privilege('anon',c.oid,'MAINTAIN') OR has_table_privilege('authenticated',c.oid,'MAINTAIN') OR has_table_privilege('service_role',c.oid,'MAINTAIN'))),",
 "  'postgres_default_maintain', (SELECT count(*)::int FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclobjtype='r' AND n.nspname='public' AND a.privilege_type='MAINTAIN' AND a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)),",
 "  'postgres_anon_default_table_privileges', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='anon'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
+"  'postgres_authenticated_default_table_crud', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='authenticated'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
+"  'postgres_service_role_default_table_crud', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
+"  'postgres_service_role_default_table_structural', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('REFERENCES','TRIGGER','TRUNCATE')),",
+"  'postgres_service_role_default_function_execute', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='f' AND a.grantee='service_role'::regrole AND a.privilege_type='EXECUTE'),",
+"  'postgres_service_role_default_sequence_privileges', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='S' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('SELECT','UPDATE','USAGE')),",
 "  'transfer_wrapper_invoker', (SELECT NOT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='close_condominium_member_transfer' AND pg_get_function_identity_arguments(p.oid)='p_transfer_id uuid'),",
 "  'private_schema_service_role_usage', has_schema_privilege('service_role','private','USAGE'),",
 "  'prepare_communication_authenticated', has_function_privilege('authenticated','private.prepare_communication_recipients(uuid)','EXECUTE'),",
@@ -136,6 +141,11 @@ assert.equal(state.public_tables, 47, "Unexpected public table inventory after c
 assert.equal(state.application_maintain_relations, 0, "Application roles retain MAINTAIN on public relations.");
 assert.equal(state.postgres_default_maintain, 0, "Postgres default privileges still grant MAINTAIN to application roles.");
 assert.equal(state.postgres_anon_default_table_privileges, 0, "Postgres default table privileges still grant anon CRUD rights.");
+assert.equal(state.postgres_authenticated_default_table_crud, 4, "Authenticated default table CRUD grants are missing after clean install.");
+assert.equal(state.postgres_service_role_default_table_crud, 4, "service_role default table CRUD grants are missing after clean install.");
+assert.equal(state.postgres_service_role_default_table_structural, 3, "service_role default structural table grants are missing after clean install.");
+assert.equal(state.postgres_service_role_default_function_execute, 0, "service_role must not receive blanket default function EXECUTE; grant required routines explicitly.");
+assert.equal(state.postgres_service_role_default_sequence_privileges, 0, "service_role must not receive blanket default sequence privileges; grant required sequences explicitly.");
 assert.equal(state.transfer_wrapper_invoker, true, "Public transfer wrapper is not SECURITY INVOKER.");
 assert.equal(state.private_schema_service_role_usage, true, "service_role lacks private schema USAGE.");
 assert.equal(state.prepare_communication_authenticated, true, "Authenticated caller cannot prepare communication recipients.");

@@ -3,6 +3,16 @@ import { execFileSync } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+const pgHost = process.env.PGHOST || "";
+const pgPort = process.env.PGPORT || "";
+const pgUser = process.env.PGUSER || "";
+const pgDatabase = process.env.PGDATABASE || "";
+assert.ok(["localhost", "127.0.0.1", "::1"].includes(pgHost),
+  "Refusing non-loopback PGHOST; this bootstrap test may only use disposable local PostgreSQL.");
+assert.equal(pgPort, "5432", "This bootstrap test requires the isolated CI PostgreSQL port 5432.");
+assert.equal(pgUser, "postgres", "This bootstrap test requires the disposable local postgres role.");
+assert.equal(pgDatabase, "bethag_test", "This bootstrap test may only modify the disposable bethag_test database.");
+
 const directory = "supabase/migrations";
 const migrationFiles = [
   "20261017000001_bethag_baseline_schema.sql",
@@ -28,6 +38,10 @@ const incrementalMigrations = [
   "20261102100100_add_workspace_member_profile_data.sql",
   "20261102100200_preserve_server_owned_condominium_archive_state.sql",
   "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+  "20261105010000_reconcile_postgres_public_table_default_acl.sql",
+  "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
+  "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
+  "20261105050000_reconcile_portal_registration_upsert.sql",
 ];
 const productionForwardMigrations = [
   "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
@@ -193,7 +207,7 @@ console.log(JSON.stringify({ baseline_acl_validation: "PASS", checks: baselineAc
 
 // Reproduce the current Production chronology around the clean baseline:
 // the historical canonical head is already in Production, three exact forward
-// migrations were applied after the previous freeze, and fifteen canonical
+// migrations were applied after the previous freeze, and nineteen canonical
 // increments remain to be tracked/applied. The versions are not all greater
 // than the current live ledger head, so order is explicitly evidence-driven.
 const alreadyAppliedCanonicalHead = incrementalMigrations[0];
@@ -213,8 +227,8 @@ for (const filename of pendingCanonicalMigrations) {
 const finalInventory = JSON.parse(psql(["-A", "-t", "-c", query], undefined).trim());
 assert.deepEqual(
   finalInventory,
-  { ...expected, columns: expected.columns + 1, functions: expected.functions + 1, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 1 } },
-  "Incremental migrations changed the expected structural inventory beyond the one reviewed collaborator metadata column.",
+  { ...expected, columns: expected.columns + 1, functions: expected.functions + 2, triggers: expected.triggers + 1, function_owners: { postgres: expected.functions + 2 } },
+  "Incremental migrations changed the expected structural inventory beyond the one collaborator metadata column, one co-owner trigger and one portal upsert helper.",
 );
 console.log(JSON.stringify({ incremental_hardening: "PASS", existing_production_head: alreadyAppliedCanonicalHead, production_forward_migrations: productionForwardMigrations, pending_canonical_migrations: pendingCanonicalMigrations, inventory: finalInventory }, null, 2));
 

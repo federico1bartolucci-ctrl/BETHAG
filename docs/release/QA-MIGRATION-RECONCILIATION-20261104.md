@@ -128,3 +128,58 @@ Nessuna migrazione DDL è stata rieseguita sul QA live. Il solo intervento live 
 2. Verificare la parità finale QA/Production per schema, ACL, default privileges e funzioni; le differenze QA-specifiche documentate devono restare intenzionali.
 3. Non avviare il lancio finché il collaudo funzionale e la checklist pre-rilascio non sono completati.
 
+
+
+## Aggiornamento verificato — 2026-11-05 (stato live successivo)
+
+Questa sezione supersede i conteggi e le conclusioni temporali riportati sopra quando divergono dai registri live del 5 novembre.
+
+### Stato branch e registri
+- Supabase branch `bethag-launch-qa`: `FUNCTIONS_DEPLOYED`; preview `ACTIVE_HEALTHY`.
+- Registro Production: 248 versioni.
+- Registro QA prima dell'allineamento ACL: 282 versioni.
+- Production aveva una versione non presente nel ledger QA: `20261104222229_reconcile_production_acl_least_privilege`.
+- Tale versione è Production-only e corrisponde alla migrazione ACL conservata in `supabase/rebuild/drafts/`; non deve essere copiata automaticamente nel ledger QA.
+- QA mantiene le proprie migrazioni specifiche. Non è stato eseguito alcun reset, rebase, delete/recreate o replay storico.
+
+### Differenza ACL rilevata e corretta sul solo QA
+La comparazione live ha rilevato che `public.condominium_fund_availability` è una vista di proprietà `postgres` in entrambi gli ambienti, ma in QA `authenticated` aveva anche INSERT, UPDATE e DELETE, mentre Production concedeva soltanto SELECT.
+
+Il 5 novembre è stata applicata a QA la migrazione forward-only `20261105001928_align_qa_fund_availability_view_acl`. La migrazione:
+- verifica preventivamente che l'oggetto sia ancora una vista di proprietà postgres;
+- revoca i privilegi diretti ad authenticated sulla vista;
+- ripristina esclusivamente SELECT;
+- fallisce se rimane qualsiasi privilegio aggiuntivo.
+
+Verifica live successiva: ACL QA `authenticated=r/postgres`; SELECT=true e INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN=false. La vista, i dati e le righe applicative non sono stati modificati.
+
+Le ACL dei due helper di chiusura trasferimento rispetto ad anon erano già allineate (EXECUTE=false). I default privileges postgres, sia globali sia nello schema public, risultavano già allineati tra QA e Production; non sono stati modificati da questa correzione.
+
+### Stato della correzione
+- Applicazione migrazione QA: SUCCESS.
+- Nuovo ledger QA: 283 righe; ultima versione `20261105001928`.
+- Production non modificata durante questa correzione.
+- Rimane da registrare e verificare il commit della migrazione nella cronologia Git e la relativa CI prima di dichiarare chiusa la parità di release.
+
+
+## Nota CI e collocazione corretta della patch QA (2026-11-05)
+
+La prima esecuzione della CI sulla PR #57 ha correttamente rifiutato la patch perché era stata inizialmente collocata in `supabase/migrations/`: i controlli hanno rilevato 25 migrazioni canoniche invece delle 24 attese. Quella collocazione è stata rimossa. Il SQL QA-only è ora archiviato in `supabase/rebuild/qa-only/20261105001928_align_qa_fund_availability_view_acl.sql`, fuori dalla catena canonica; il ledger QA live resta invariato a 283 record e la correzione live già verificata non è stata ripetuta né annullata.
+
+La PR #57 è aperta per revisione/CI. La chiusura richiede una nuova esecuzione CI verde, conferma che la catena canonica resta a 24 file e la verifica finale del branch QA. La prima CI non è verde: il suo fallimento è attribuito al conteggio 25/24 causato dalla collocazione iniziale, non a un errore SQL o a una perdita dati.
+
+
+## Log originale del deployment QA — dettaglio della causa (2026-11-02)
+
+La lettura diretta di `postgres_logs` sul progetto QA ha restituito l'errore originale, non una ricostruzione da report:
+
+- `2026-11-02T01:48:44.787Z`, SQLSTATE `42P01`: `relation "public.portal_access" does not exist`.
+- Il comando fallito era `REVOKE ALL ON TABLE` su un elenco di tabelle pubbliche che includeva `public.portal_access`, durante la fase di restrizione dei grant Data API.
+- Nei secondi precedenti, le interrogazioni di inventario avevano restituito `42P01` anche per `supabase_migrations.schema_migrations`, perché il registro non era ancora presente nella fase iniziale di provisioning del branch.
+- La query diagnostica successiva delle 01:48:53Z ha inoltre usato il campo `schemaname` su `information_schema.tables`, che non esiste; è un errore della query diagnostica, distinto dal fallimento di deployment.
+
+La causa specifica del primo errore di migrazione è quindi l'assunzione che `public.portal_access` esistesse già nel momento in cui veniva eseguito il REVOKE. La correzione deve rendere la sequenza compatibile con la presenza/assenza della relazione (o assicurare la sua creazione prima del REVOKE) senza replay storico sul branch live. Il branch è ora sano e la cronologia è stata riconciliata; non si deve ripetere il deployment iniziale né ricreare il branch.
+
+## Limite residuo sulla verifica Data API
+
+La verifica SQL live conferma che `anon` e `authenticated` hanno `USAGE` su `supabase_functions` nel branch QA; questo da solo non prova che lo schema sia incluso negli schemi esposti da PostgREST. La configurazione effettiva `db-schemas` non è leggibile tramite gli strumenti Supabase collegati e le query PostgreSQL non hanno restituito una configurazione `pgrst.db_schemas` visibile. Non è stata revocata `USAGE` alla cieca. La verifica definitiva richiede la configurazione Data API esposta dal pannello/Management API del progetto.

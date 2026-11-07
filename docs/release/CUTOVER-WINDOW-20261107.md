@@ -1,0 +1,68 @@
+# BETHAG — addendum finestra di manutenzione
+
+**Data registrazione:** 2026-11-06 (correzione confermata dal proprietario)  
+**PR:** #57 — branch `fix/qa-view-acl-parity-20261105`  
+**Stato:** inizio finestra concordato; cutover NON autorizzato.
+
+## Finestra concordata
+
+- **Sabato 7 novembre 2026**
+- **Inizio: ore 22:00**
+- **Fuso:** `Europe/Rome`
+- **Ora di fine:** non specificata; non viene presunta né trasferita dalla precedente pianificazione.
+
+La finestra è l'obiettivo operativo concordato dal proprietario. La registrazione non equivale a prenotazione presso Supabase, attivazione del freeze, invio dell'avviso o autorizzazione all'esecuzione.
+
+L'ora di inizio non costituisce una garanzia di completamento o riapertura entro un orario prefissato. Se un controllo preflight, una migrazione, un postflight o uno smoke test non termina con PASS, si applicano i criteri STOP del runbook; non si forza la riapertura.
+
+## Attività consentite prima della finestra
+
+- Preparare l'avviso agli amministratori, lasciandolo in bozza.
+- Verificare il backup corrente e registrarne timestamp, identificativo e disponibilità.
+- Riconfermare esplicitamente il rischio residuo: il restore logico locale è stato verificato, mentre il restore fisico provider-managed non è stato testato.
+- Verificare contatti di escalation e recovery.
+- Fissare il commit completo finale e riconfermare gli hash dei 19 payload SQL.
+- Eseguire CI e preflight Production esclusivamente read-only sullo SHA finale.
+- Predisporre checklist e comandi locali senza eseguirli in modalità apply.
+
+## Gate che restano chiusi
+
+Fino all'approvazione finale esplicita del proprietario, riferita allo SHA completo, ai 19 hash SQL, al backup/rischio residuo, alla finestra e ai criteri STOP:
+
+- nessun merge della PR #57;
+- nessun deploy;
+- nessuna migrazione o scrittura sul database Production;
+- nessun freeze operativo;
+- nessun avviso agli amministratori inviato.
+
+## Ruoli
+
+- ChatGPT: supporto tecnico, preparazione e verifica; non è operatore umano.
+- Federico Bartolucci: proprietario e approvatore finale.
+- Operatore umano locale: **da confermare esplicitamente**; Federico potrà assumere anche questo ruolo solo se lo confermerà al momento dell'approvazione.
+- ChatGPT fornisce preparazione tecnica e guida, ma non è un operatore umano né può eseguire autonomamente il cutover Production.
+- Non è nominato un revisore indipendente: la verifica del proprietario non costituisce controllo indipendente a quattro occhi.
+
+## Stato
+
+**Inizio finestra concordato: SÌ — 7 novembre 2026, ore 22:00 Europe/Rome.**  
+**Ora di fine: NON SPECIFICATA.**  
+**Avviso approvato/inviato: NO.**  
+**Freeze attivato: NO.**  
+**Approvazione finale del cutover: NO.**  
+**Production: NO-GO.**
+
+
+## Aggiornamento tecnico — 2026-11-07
+
+- Candidato applicativo QA certificato: `decc0dfda68f573f13e386beaa22d259f7f8b619`.
+- Final QA APP-01..APP-15: run 42351102824 — SUCCESS.
+- Build/PostgreSQL 17: run 42351102941 — SUCCESS.
+- Baseline Safety: run 42351102866 — SUCCESS.
+- Dipendenze: Build e Final QA allineati a `npm ci`; lockfile invariato.
+- Manifest canonico: 19 migrazioni, 19/19 hash invariati.
+- Production: ledger 248/248 corrispondente allo snapshot; le 19 migrazioni sono ancora pendenti; nessuna scrittura eseguita.
+
+**Gate operativi ancora aperti:** ora di fine finestra, conferma dell'operatore umano locale, preflight guarded read-only con PostgreSQL Direct/Session Pooler, riconferma backup/rischio residuo e approvazione scritta riferita allo SHA eseguibile e ai 19 hash. Il freeze operativo e l'avviso agli amministratori restano disattivati/non inviato. L'inizio finestra alle 22:00 non costituisce autorizzazione al cutover.
+
+**Decisione:** Production NO-GO. Nessun merge, deploy o apply autorizzato.

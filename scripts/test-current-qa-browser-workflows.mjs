@@ -25,9 +25,14 @@ const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
 const consoleErrorEvents = [];
+const backendRequestDiagnostics = [];
+const activeAdminRequests = new Set();
+const navigationAbortedAdminRequests = new WeakSet();
 let browserNavigationInProgress = false;
 let browserTeardownStarted = false;
 let temporaryResidentId = null;
+let temporaryResidentMemberId = null;
+let temporaryPortalAccessId = null;
 let temporaryResidentEmail = null;
 let temporaryResidentPassword = null;
 let accountingFiscalYearId = null;
@@ -37,6 +42,11 @@ let accountingInstallmentId = null;
 let accountingTransferId = null;
 let accountingOutgoingMemberId = null;
 let accountingIncomingMemberId = null;
+let blockedUiUnitId = null;
+let blockedUiOwnerId = null;
+let blockedUiTransferId = null;
+let blockedUiIncomingMemberId = null;
+let blockedUiInstallmentId = null;
 
 async function signIn(page, role, email, password, landing) {
   page.on("pageerror", e => pageErrors.push(role + ": " + e.message));
@@ -93,22 +103,114 @@ async function clickUntilVisible(page, locator, target, description, attempts = 
 
 async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
+  const retryableStatuses = new Set([0, 408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
   let last = null;
+  let lastTransientError = null;
+  let attempt = 0;
   while (Date.now() < deadline) {
+    attempt += 1;
     last = await loadRow();
-    if (last.error) throw last.error;
+    if (last.error) {
+      const status = Number(last.error.status || 0);
+      if (!retryableStatuses.has(status)) throw last.error;
+      lastTransientError = last.error;
+      if (Date.now() >= deadline) break;
+      console.warn("Transient Supabase error while waiting for " + description + " (HTTP " + status + "); retry " + attempt);
+      await new Promise(resolve => setTimeout(resolve, Math.min(attempt * 500, 2000)));
+      continue;
+    }
     if (predicate(last.data)) return last.data;
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null));
+  throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null) +
+    "; last transient error=" + (lastTransientError?.message || "none"));
+}
+
+async function signInAdminForCleanup() {
+  let lastError = null;
+  const retryableStatuses = new Set([0,408,425,429,500,502,503,504,520,521,522,523,524]);
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const { error } = await adminApi.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword,
+      });
+      if (!error) return;
+      lastError = error;
+      if (!retryableStatuses.has(Number(error.status || 0)) || attempt === 4) throw error;
+    } catch (error) {
+      lastError = error;
+      if (!retryableStatuses.has(Number(error?.status || 0)) || attempt === 4) throw error;
+    }
+    console.warn("Transient Supabase Auth error during QA cleanup; retry " + attempt + "/3 (HTTP " + (lastError?.status ?? "network") + ")");
+    await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+  }
+  throw lastError;
 }
 
 async function cleanupFixtures() {
-  const { error: authError } = await adminApi.auth.signInWithPassword({
-    email: adminEmail,
-    password: adminPassword,
-  });
-  if (authError) throw authError;
+  await signInAdminForCleanup();
+
+  // Remove only the three uniquely marked synthetic condominiums left by
+  // earlier failed teardown attempts in this same QA browser suite.
+  const priorFailedMarkers = [
+    "BETHAG_UI_ACCEPTANCE_1793864395592",
+    "BETHAG_UI_ACCEPTANCE_1793864625853",
+    "BETHAG_UI_ACCEPTANCE_1793864773907",
+    "BETHAG_UI_ACCEPTANCE_1793864944993",
+    "BETHAG_UI_ACCEPTANCE_1793984162791",
+  ];
+  for (const priorMarker of priorFailedMarkers) {
+    const priorResult = await cleanup.from("condominiums").select("id,workspace_id,legacy_id")
+      .eq("name", priorMarker + "_EDITED").maybeSingle();
+    if (priorResult.error) throw priorResult.error;
+    const prior = priorResult.data;
+    if (!prior) continue;
+    const priorComms = await cleanup.from("communications").select("id").eq("condominium_id", prior.id);
+    if (priorComms.error) throw priorComms.error;
+    for (const comm of priorComms.data || []) {
+      const recipients = await cleanup.from("communication_recipients").delete().eq("communication_id", comm.id);
+      if (recipients.error) throw recipients.error;
+      const deleted = await cleanup.from("communications").delete().eq("id", comm.id);
+      if (deleted.error) throw deleted.error;
+    }
+    const priorInstallments = await cleanup.from("condominium_installments").select("id").eq("condominium_id", prior.id);
+    if (priorInstallments.error) throw priorInstallments.error;
+    for (const installment of priorInstallments.data || []) {
+      const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", installment.id);
+      if (movements.error) throw movements.error;
+    }
+    const transfers = await cleanup.from("condominium_member_transfers").delete().eq("condominium_id", prior.id);
+    if (transfers.error) throw transfers.error;
+    const installments = await cleanup.from("condominium_installments").delete().eq("condominium_id", prior.id);
+    if (installments.error) throw installments.error;
+    for (const table of ["condominium_expense_allocations", "condominium_ledger_entries", "condominium_fiscal_carryovers"]) {
+      const deleted = await cleanup.from(table).delete().eq("condominium_id", prior.id);
+      if (deleted.error) throw deleted.error;
+    }
+    const portal = await cleanup.from("portal_access").delete().eq("condominium_id", prior.id);
+    if (portal.error) throw portal.error;
+    const members = await cleanup.from("condominium_members").delete().eq("condominium_id", prior.id);
+    if (members.error) throw members.error;
+    const units = await cleanup.from("condominium_units").delete().eq("condominium_id", prior.id);
+    if (units.error) throw units.error;
+    const years = await cleanup.from("condominium_fiscal_years").delete().eq("condominium_id", prior.id);
+    if (years.error) throw years.error;
+    const removed = await adminApi.rpc("delete_condominium", {
+      p_workspace_id: prior.workspace_id,
+      p_legacy_id: prior.legacy_id,
+      p_security_code: null,
+    });
+    if (removed.error) throw removed.error;
+    const users = await cleanup.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (users.error) throw users.error;
+    for (const user of users.data.users.filter(user => user.user_metadata?.source === priorMarker)) {
+      const memberships = await cleanup.from("workspace_members").delete().eq("user_id", user.id);
+      if (memberships.error) throw memberships.error;
+      const deletedUser = await cleanup.auth.admin.deleteUser(user.id);
+      if (deletedUser.error) throw deletedUser.error;
+    }
+  }
 
   const comms = await cleanup.from("communications").select("id").like("title", marker + "%");
   if (comms.error) throw comms.error;
@@ -121,6 +223,39 @@ async function cleanupFixtures() {
 
   // Direct DELETE is intentionally avoided: the application protects
   // condominium deletion behind its authenticated, audited RPC.
+  if (blockedUiTransferId) {
+    const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", blockedUiTransferId);
+    if (transfer.error) throw transfer.error;
+  }
+  if (blockedUiIncomingMemberId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", blockedUiIncomingMemberId);
+    if (member.error) throw member.error;
+  }
+  if (blockedUiInstallmentId) {
+    const movements = await cleanup.from("condominium_payment_movements").delete().eq("installment_id", blockedUiInstallmentId);
+    if (movements.error) throw movements.error;
+    const installment = await cleanup.from("condominium_installments").delete().eq("id", blockedUiInstallmentId);
+    if (installment.error) throw installment.error;
+  }
+  if (blockedUiOwnerId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", blockedUiOwnerId);
+    if (member.error) throw member.error;
+  }
+  if (temporaryPortalAccessId) {
+    const portal = await cleanup.from("portal_access").delete().eq("id", temporaryPortalAccessId);
+    if (portal.error) throw portal.error;
+    temporaryPortalAccessId = null;
+  }
+  if (temporaryResidentMemberId) {
+    const member = await cleanup.from("condominium_members").delete().eq("id", temporaryResidentMemberId);
+    if (member.error) throw member.error;
+    temporaryResidentMemberId = null;
+  }
+
+  if (blockedUiUnitId) {
+    const unit = await cleanup.from("condominium_units").delete().eq("id", blockedUiUnitId);
+    if (unit.error) throw unit.error;
+  }
   if (accountingTransferId) {
     const transfer = await cleanup.from("condominium_member_transfers").delete().eq("id", accountingTransferId);
     if (transfer.error) throw transfer.error;
@@ -193,6 +328,37 @@ async function cleanupFixtures() {
 try {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
+  const adminCdp = await adminContext.newCDPSession(adminPage);
+  await adminCdp.send("Network.enable");
+  const cdpBackendRequests = new Map();
+  adminCdp.on("Network.requestWillBeSent", event => {
+    if (!event.request.url.includes("/rest/v1/condominium_units")) return;
+    const diagnostic = {
+      requestId: event.requestId,
+      url: event.request.url,
+      documentURL: event.documentURL,
+      initiatorType: event.initiator?.type ?? null,
+      initiatorStack: (event.initiator?.stack?.callFrames ?? []).slice(0, 8).map(frame => ({
+        functionName: frame.functionName,
+        url: frame.url,
+        lineNumber: frame.lineNumber + 1,
+        columnNumber: frame.columnNumber + 1,
+      })),
+      timestamp: event.timestamp,
+    };
+    cdpBackendRequests.set(event.requestId, diagnostic);
+    backendRequestDiagnostics.push(diagnostic);
+  });
+  adminCdp.on("Network.loadingFailed", event => {
+    const diagnostic = cdpBackendRequests.get(event.requestId);
+    if (!diagnostic) return;
+    diagnostic.loadingFailed = {
+      errorText: event.errorText,
+      canceled: event.canceled ?? false,
+      blockedReason: event.blockedReason ?? null,
+      timestamp: event.timestamp,
+    };
+  });
   adminPage.on("console", message => {
     consoleMessages.push({ type: message.type(), text: message.text() });
     if (message.type() === "error") {
@@ -200,12 +366,28 @@ try {
       consoleErrorEvents.push({ text: message.text(), duringNavigation: browserNavigationInProgress, duringTeardown: browserTeardownStarted });
     }
   });
-  adminPage.on("requestfailed", request => failedRequests.push({
-    url: request.url(),
-    error: request.failure()?.errorText ?? "unknown",
-    duringNavigation: browserNavigationInProgress,
-    duringTeardown: browserTeardownStarted,
-  }));
+  adminPage.on("request", request => {
+    activeAdminRequests.add(request);
+    // The old document can dispatch a debounced fetch just after reload starts
+    // but before its unload completes. Remember that request even if Chromium
+    // reports ERR_ABORTED only after the new document has hydrated.
+    if (browserNavigationInProgress && request.url().includes(".supabase.co/")) {
+      navigationAbortedAdminRequests.add(request);
+    }
+  });
+  adminPage.on("requestfinished", request => activeAdminRequests.delete(request));
+  adminPage.on("requestfailed", request => {
+    failedRequests.push({
+      url: request.url(),
+      error: request.failure()?.errorText ?? "unknown",
+      // A request already in flight when a hard navigation begins can report
+      // ERR_ABORTED after the navigation response has arrived. Keep its
+      // navigation classification attached to the request itself.
+      duringNavigation: browserNavigationInProgress || navigationAbortedAdminRequests.has(request),
+      duringTeardown: browserTeardownStarted,
+    });
+    activeAdminRequests.delete(request);
+  });
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
@@ -277,7 +459,27 @@ try {
   assert.equal(await field(adminPage, "Indirizzo *").inputValue(), "Via QA UI 1", "Condominium address field was not filled");
   assert.equal(await field(adminPage, "Numero interni").inputValue(), "2", "Interior count field was not filled");
   await adminPage.getByRole("button", { name: "Salva condominio" }).click();
-  await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  try {
+    await adminPage.locator("h1").filter({ hasText: condoName }).first().waitFor({ timeout: 20000 });
+  } catch (error) {
+    const [diagnostics, persisted] = await Promise.all([
+      adminPage.evaluate(() => ({
+        url: location.href,
+        session: localStorage.getItem("bethag-session-v1"),
+        currentPage: localStorage.getItem("bethag-current-page-v1"),
+        headings: [...document.querySelectorAll("h1,h2,h3,[role=heading]")].map(node => ({
+          tag: node.tagName, role: node.getAttribute("role"), text: node.innerText?.trim()
+        })).slice(0, 40),
+        bodyText: document.body.innerText.slice(0, 7000),
+      })),
+      cleanup.from("condominiums").select("id,workspace_id,legacy_id,name").eq("name", condoName).maybeSingle(),
+    ]);
+    console.error("BETHAG_CONDOMINIUM_SAVE_DIAGNOSTIC", JSON.stringify({
+      diagnostics, persistedRow: persisted.data ?? null, persistenceError: persisted.error?.message ?? null,
+      pageErrors, consoleErrors, failedRequests: failedRequests.slice(-30), waitError: String(error.message)
+    }));
+    throw error;
+  }
   const created = await waitForDbRow(
     () => cleanup.from("condominiums").select("id,workspace_id,legacy_id").eq("name", condoName).maybeSingle(),
     row => Boolean(row?.id),
@@ -480,10 +682,18 @@ try {
       row.id === created.id && row.name === editedCondoName && row.archived_at === null
     );
   }, { timeout: 60000 });
+  // The condominium response is only one member of loadBackendState's
+  // Promise.all. Keep the navigation window open until the complete workspace
+  // hydration settles, and classify any pre-existing in-flight request that
+  // the hard reload cancels as navigation-related.
+  for (const request of activeAdminRequests) {
+    if (request.url().includes(".supabase.co/")) navigationAbortedAdminRequests.add(request);
+  }
   browserNavigationInProgress = true;
   try {
     await adminPage.reload({ waitUntil: "domcontentloaded" });
     await restoredCondominiumHydration;
+    await adminPage.waitForLoadState("networkidle", { timeout: 15000 });
   } finally {
     browserNavigationInProgress = false;
   }
@@ -697,19 +907,132 @@ try {
   assert.ifError(outgoingAfterClosure.error);
   assert.equal(outgoingAfterClosure.data.active, false);
 
-  // Verify the owner list is refreshed from the server when returning to the
-  // condominium registry after confirmation/closure, without a hard reload.
-  const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
-    const requestUrl = new URL(response.url());
-    if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members") || !response.ok()) return false;
-    const rows = await response.json().catch(() => []);
-    return Array.isArray(rows) && rows.some(row =>
-      String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
-    );
-  }, { timeout: 20000 });
+  // APP-11 UI error path: an unpaid installment must be reported in the UI
+  // and must leave the confirmed transfer and outgoing owner unchanged.
+  const blockedUnit = await cleanup.from("condominium_units").insert({
+    workspace_id: created.workspace_id,
+    condominium_id: created.id,
+    unit_code: marker + "_UNIT_BLOCKED",
+    building_code: "QA",
+    data: { bethag_qa_marker: marker },
+  }).select("id").single();
+  assert.ifError(blockedUnit.error);
+  blockedUiUnitId = blockedUnit.data.id;
+  const blockedOwner = await cleanup.from("condominium_members").insert({
+    condominium_id: created.id,
+    unit_id: blockedUiUnitId,
+    name: marker + "_CEDENTE_BLOCCO_UI",
+    role: "resident",
+    active: true,
+    data: { role: "Proprietario", current_owner: true, position_status: "Attivo", ownership_share: 100, bethag_qa_marker: marker },
+  }).select("id").single();
+  assert.ifError(blockedOwner.error);
+  blockedUiOwnerId = blockedOwner.data.id;
+  const blockedInstallment = await cleanup.from("condominium_installments").insert({
+    workspace_id: created.workspace_id,
+    condominium_id: created.id,
+    fiscal_year_id: accountingFiscalYearId,
+    member_id: blockedUiOwnerId,
+    unit_id: blockedUiUnitId,
+    title: marker + "_RATA_INSOLUTA_UI",
+    due_date: "2026-12-20",
+    amount: 90,
+    paid_amount: 0,
+    status: "Da pagare",
+    notes: marker,
+  }).select("id").single();
+  assert.ifError(blockedInstallment.error);
+  blockedUiInstallmentId = blockedInstallment.data.id;
+  const blockedIncomingEmail = "bethag-ui-blocked-" + Date.now() + "@example.com";
+  const adminApiSession = await adminApi.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
+  assert.ifError(adminApiSession.error);
+  const blockedTransfer = await adminApi.rpc("confirm_condominium_member_transfer", {
+    p_unit_id: blockedUiUnitId,
+    p_outgoing_member_id: blockedUiOwnerId,
+    p_incoming_name: marker + "_ACQUIRENTE_BLOCCO_UI",
+    p_incoming_email: blockedIncomingEmail,
+    p_incoming_user_id: null,
+    p_transfer_date: "2026-11-03",
+    p_transfer_type: "Vendita",
+    p_notes: marker + "_BLOCKED_UI",
+    p_data: {
+      bethag_qa_marker: marker,
+      transfer_scope: "whole_property",
+      outgoing_member_ids: [blockedUiOwnerId],
+      incoming_members: [{ name: marker + "_ACQUIRENTE_BLOCCO_UI", email: blockedIncomingEmail, ownership_share: 100 }],
+    },
+  });
+  assert.ifError(blockedTransfer.error);
+  blockedUiTransferId = blockedTransfer.data;
+  const blockedTransferRow = await cleanup.from("condominium_member_transfers")
+    .select("incoming_member_id").eq("id", blockedUiTransferId).single();
+  assert.ifError(blockedTransferRow.error);
+  blockedUiIncomingMemberId = blockedTransferRow.data.incoming_member_id;
+
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
   await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
-  await incomingOwnerRefresh;
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Contabilità" }).first().click();
+  await adminPage.getByRole("heading", { name: "Contabilità e rendiconto", exact: true }).waitFor({ timeout: 15000 });
+  await adminPage.locator(".filter-bar label").filter({ hasText: "Condominio" }).locator("select").selectOption(String(created.legacy_id));
+  await adminPage.getByRole("button", { name: "Subentri e trasferimenti", exact: true }).click();
+  const blockedTransferCard = adminPage.locator(".row-card").filter({ hasText: marker + "_ACQUIRENTE_BLOCCO_UI" });
+  await blockedTransferCard.getByRole("button", { name: "Chiudi posizione", exact: true }).click();
+  const closureAlert = adminPage.getByRole("alert").filter({ hasText: "Chiusura non consentita" });
+  await closureAlert.waitFor({ state: "visible", timeout: 15000 });
+  assert.match(await closureAlert.innerText(), /rate 90\.00 €/);
+  const blockedTransferState = await cleanup.from("condominium_member_transfers")
+    .select("status").eq("id", blockedUiTransferId).single();
+  assert.ifError(blockedTransferState.error);
+  assert.equal(blockedTransferState.data.status, "Confermato");
+  const blockedOwnerState = await cleanup.from("condominium_members")
+    .select("active,data").eq("id", blockedUiOwnerId).single();
+  assert.ifError(blockedOwnerState.error);
+  assert.equal(blockedOwnerState.data.active, true);
+  assert.equal(blockedOwnerState.data.data.position_status, "In chiusura");
+  const blockedInstallmentState = await cleanup.from("condominium_installments")
+    .select("amount,paid_amount,status").eq("id", blockedUiInstallmentId).single();
+  assert.ifError(blockedInstallmentState.error);
+  assert.equal(Number(blockedInstallmentState.data.amount), 90);
+  assert.equal(Number(blockedInstallmentState.data.paid_amount), 0);
+  assert.equal(blockedInstallmentState.data.status, "Da pagare");
+
+  // Verify the owner list is refreshed from the server when returning to the
+  // condominium registry after confirmation/closure, without a hard reload.
+  // Supabase QA can transiently return Cloudflare 520/521 during browser
+  // navigation. Retry the same in-app navigation and require a successful
+  // server response containing the confirmed incoming owner; do not treat a
+  // failed HTTP response or a stale DOM as a refresh pass.
+  let incomingOwnerRefreshVerified = false;
+  const incomingOwnerRefreshAttempts = [];
+  for (let attempt = 1; attempt <= 4 && !incomingOwnerRefreshVerified; attempt++) {
+    const incomingOwnerRefresh = adminPage.waitForResponse(async response => {
+      const requestUrl = new URL(response.url());
+      if (!requestUrl.pathname.endsWith("/rest/v1/condominium_members")) return false;
+      if (!response.ok()) {
+        incomingOwnerRefreshAttempts.push({ attempt, status: response.status() });
+        return false;
+      }
+      const rows = await response.json().catch(() => []);
+      const matched = Array.isArray(rows) && rows.some(row =>
+        String(row.id) === String(confirmedTransfer.incoming_member_id) && row.active === true
+      );
+      if (matched) incomingOwnerRefreshAttempts.push({ attempt, status: response.status(), matched: true });
+      return matched;
+    }, { timeout: 12000 }).catch(() => null);
+
+    await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Condomini" }).first().click();
+    await adminPage.getByRole("heading", { name: "Condomìni", exact: true }).waitFor({ timeout: 15000 });
+    incomingOwnerRefreshVerified = Boolean(await incomingOwnerRefresh);
+    if (!incomingOwnerRefreshVerified && attempt < 4) {
+      await adminPage.waitForTimeout(attempt * 1000);
+    }
+  }
+  assert.equal(
+    incomingOwnerRefreshVerified,
+    true,
+    "Incoming owner was not observed in a successful server refresh after 4 navigation attempts: " +
+      JSON.stringify({ incomingOwnerRefreshAttempts, failedRequests: failedRequests.slice(-20) })
+  );
   const refreshedCondominiumCard = adminPage.locator(".entity-card").filter({ hasText: editedCondoName }).first();
   await refreshedCondominiumCard.getByRole("button", { name: "Dettagli", exact: true }).click();
   await adminPage.locator(".detail-page-header h1").filter({ hasText: editedCondoName }).waitFor({ timeout: 10000 });
@@ -717,7 +1040,7 @@ try {
   await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_ACQUIRENTE_UI", exact: true }).waitFor({ timeout: 15000 });
   assert.equal(await refreshedUnitCard.getByRole("button", { name: "Apri scheda di " + marker + "_CEDENTE_UI", exact: true }).count(), 0);
 
-  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload"] });
+  results.push({ id: "APP-08/11", status: "PASS", checks: ["transfer preview generated from UI", "administrator confirmed whole-property transfer from UI", "zero-balance position closed from UI", "outgoing owner archived and inactive", "incoming owner refreshed and visible in current property list after navigation without hard reload", "unpaid installment displayed a closure error in the UI", "failed UI closure left transfer confirmed and outgoing owner active/In chiusura"] });
 
   temporaryResidentEmail = "bethag-ui-" + marker.toLowerCase().replace(/[^a-z0-9]/g, "") + "@example.com";
   temporaryResidentPassword = randomBytes(24).toString("base64url");
@@ -747,6 +1070,7 @@ try {
     unit_id: residentUnit.data.id,
   }).select("id").single();
   assert.ifError(member.error);
+  temporaryResidentMemberId = member.data.id;
   const portalAccess = await cleanup.from("portal_access").insert({
     workspace_id: created.workspace_id,
     condominium_id: created.id,
@@ -761,6 +1085,7 @@ try {
     data: { source: marker },
   }).select("id").single();
   assert.ifError(portalAccess.error);
+  temporaryPortalAccessId = portalAccess.data.id;
 
   await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
   try { await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 }); }
@@ -779,20 +1104,26 @@ try {
   await field(adminPage, "Contenuto *").fill("Messaggio sintetico di verifica UI BETHAG.");
   const portalCheckbox = adminPage.locator(".modal .checkbox-field input[type='checkbox']").first();
   if (!(await portalCheckbox.isChecked())) await portalCheckbox.check();
+  const dialogsBeforeCommunicationSave = dialogs.length;
   await adminPage.getByRole("button", { name: "Salva", exact: true }).click();
-  const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
-  await commCard.waitFor({ timeout: 20000 });
+  assert.deepEqual(
+    dialogs.slice(dialogsBeforeCommunicationSave),
+    [],
+    "Portal publication must not trigger a plan-upgrade or permission confirmation: " + JSON.stringify(dialogs.slice(dialogsBeforeCommunicationSave))
+  );
   let persistedCommunication;
   try {
+    // Backend persistence is the source of truth. Do not wait for a potentially
+    // stale client-side card before proving that the publish operation committed.
     persistedCommunication = await waitForDbRow(
       () => cleanup.from("communications").select("id,published,condominium_id,legacy_id,title,data").eq("title", communicationTitle).maybeSingle(),
       row => Boolean(row?.published === true && row?.condominium_id === created.id),
       "Published communication backend persistence",
-      20000
+      30000
     );
   } catch (syncError) {
     const storedRows = await cleanup.from("communications").select("id,title,published,condominium_id,workspace_id,data").eq("workspace_id", created.workspace_id).like("title", marker + "%");
-    throw new Error("Communication sync failed: " + JSON.stringify({
+    throw new Error("Communication persistence failed: " + JSON.stringify({
       cause: syncError.message,
       rows: storedRows.data,
       rowsError: storedRows.error?.message,
@@ -804,6 +1135,28 @@ try {
   }
   assert.equal(persistedCommunication.published, true);
   assert.equal(persistedCommunication.condominium_id, created.id);
+
+  // Force a fresh authenticated read after the database commit, then assert
+  // that the UI hydrates the exact persisted communication from the backend.
+  await adminPage.reload({ waitUntil: "domcontentloaded" });
+  await adminPage.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 25000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
+  await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 });
+  const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
+  try {
+    await commCard.waitFor({ state: "visible", timeout: 20000 });
+  } catch (uiSyncError) {
+    throw new Error("Published communication is persisted but missing from the refreshed administrator UI. " + JSON.stringify({
+      communicationId: persistedCommunication.id,
+      title: communicationTitle,
+      url: adminPage.url(),
+      body: (await adminPage.locator("body").innerText()).slice(0, 4000),
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+      cause: uiSyncError.message,
+    }));
+  }
   const persistedPortalAccess = await cleanup.from("portal_access")
     .select("id,active,user_id,condominium_id,permissions")
     .eq("id", portalAccess.data.id)
@@ -876,7 +1229,7 @@ try {
   assert.deepEqual(
     backendNetworkFailures,
     [],
-    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests })
+    "Backend requests may be aborted only by browser teardown; all other failures are unexpected: " + JSON.stringify({ backendNetworkFailures, failedRequests, backendRequestDiagnostics })
   );
   const backendHttpFailures = failedRequests.filter(request =>
     request.status >= 400 && /\/rest\/v1\/(?:condominium_members|condominium_units|portal_access)/.test(request.url)

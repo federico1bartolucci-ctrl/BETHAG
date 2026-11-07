@@ -2,16 +2,17 @@
 /**
  * End-to-end rehearsal of the SAME guarded canonical migration runner against
  * a local PostgreSQL database initialized from the five-file clean baseline.
- * Seeds a disposable copy of the frozen 247-pair ledger, runs all 15 real SQL
+ * Seeds a disposable copy of the frozen 248-pair ledger, runs all 19 real SQL
  * migrations through the production runner's local-only mode, then verifies
- * the exact 262-row result. Never accepts remote/Supabase DATABASE_URL values.
+ * the exact 267-row result. Never accepts remote/Supabase DATABASE_URL values.
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 
 const databaseUrl = process.env.DATABASE_URL;
+const appEvidence = JSON.parse(await readFile("supabase/rebuild/qa-final-collaudo-20261105.json", "utf8"));
 assert.ok(databaseUrl, "DATABASE_URL must point to the isolated local PostgreSQL rehearsal database.");
 let target;
 try { target = new URL(databaseUrl); } catch { throw new Error("Invalid DATABASE_URL."); }
@@ -60,7 +61,7 @@ for (const pattern of [
 }
 const bootstrapSql = [
   "CREATE SCHEMA IF NOT EXISTS auth;",
-  "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);",
+  "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz);",
   "CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;",
   "CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT NULL::text $$;",
   "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;",
@@ -69,6 +70,7 @@ const bootstrapSql = [
     const literal = role.replace(/'/g, "''");
     return "DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = " + q(literal) + ") THEN CREATE ROLE \"" + identifier + "\" NOLOGIN; END IF; END $role$;";
   }),
+  "ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT MAINTAIN ON TABLES TO anon, authenticated, service_role;",
 ].join("\n");
 
 const existingPublicTables = Number(await psql(["-At", "-c",
@@ -82,8 +84,8 @@ if (existingPublicTables === 0) {
   }
 }
 
-const snapshot = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261103.json", "utf8"));
-assert.equal(snapshot.count, 247);
+const snapshot = JSON.parse(await readFile("supabase/rebuild/production-ledger-20261105.json", "utf8"));
+assert.equal(snapshot.count, 248);
 const inventory = JSON.parse(await psql(["-At", "-c", `
 SELECT json_build_object(
  'tables',(SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')),
@@ -110,20 +112,64 @@ const seed = [
   }, []).map(rows => "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key,rollback) VALUES " + rows.join(",") + ";")
 ].join("\n");
 await psql([], seed);
-console.log("Seeded disposable local ledger with the frozen 247 version/name pairs.");
+console.log("Seeded disposable local ledger with the frozen 248 version/name pairs.");
 
-console.log("Applying existing canonical Production head (already included in frozen 247-row ledger) to clean local schema...");
+// Negative safety test: a historical manifest acceptance must not authorize
+// Production apply without a fresh per-cutover operator reconfirmation.
+// The runner must stop at the gate before attempting any PostgreSQL connection.
+const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
+  env: {
+    ...process.env,
+    DATABASE_URL: "postgresql://postgres:unused@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
+    BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
+    BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    BETHAG_QA_TESTED_COMMIT_SHA: appEvidence.reviewed_head_sha,
+    BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
+    BETHAG_CUTOVER_PLAN_APPROVED: "YES",
+    BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
+    BETHAG_QA_APP12_PROVIDER_VERIFIED: "YES",
+    BETHAG_PRODUCTION_DATA_API_EXPOSURE_VERIFIED: "YES",
+    BETHAG_PRODUCTION_BACKUP_VERIFIED: "",
+    BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED: "",
+  },
+  stdio: ["ignore", "pipe", "pipe"],
+});
+let blockedOut = "", blockedErr = "";
+blockedApply.stdout.setEncoding("utf8").on("data", (chunk) => { blockedOut += chunk; });
+blockedApply.stderr.setEncoding("utf8").on("data", (chunk) => { blockedErr += chunk; });
+const blockedCode = await new Promise((resolve, reject) => {
+  blockedApply.on("error", reject);
+  blockedApply.on("close", resolve);
+});
+assert.notEqual(blockedCode, 0, "Production apply must fail closed without exact written cutover approval.");
+assert.match(blockedErr + blockedOut,
+  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  "Production apply must stop at the explicit approval gate before any database connection.");
+console.log("PASS: pending cutover approval cannot pass the Production apply gate; runner stopped before any database connection.");
+
+
+console.log("Applying existing canonical Production head (already included in frozen 248-row ledger) to clean local schema...");
 await psql(["-f", "supabase/migrations/20261022202747_harden_close_member_transfer_search_path.sql"]);
-const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json", "utf8"));
+const freeze = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json", "utf8"));
 for (const item of freeze.live_ledger.forward_migrations_after_2026_11_02_freeze) {
   const filename = item.file;
   const sql = await readFile("supabase/rebuild/production-forward-migrations/" + filename, "utf8");
   const cleanInstallSql = await readFile("supabase/migrations/" + filename, "utf8");
   assert.equal(gitBlobSha(cleanInstallSql), item.git_blob_sha, "Clean-install SQL copy differs from frozen Production-forward payload: " + filename);
   assert.equal(gitBlobSha(sql), item.git_blob_sha, "Production-forward SQL differs from frozen Git blob SHA: " + filename);
-  console.log("Applying exact Production-forward SQL (ledger row already exists in frozen 247-pair snapshot): " + filename);
+  console.log("Applying exact Production-forward SQL (ledger row already exists in frozen 248-pair snapshot): " + filename);
   await psql(["-f", "supabase/rebuild/production-forward-migrations/" + filename]);
 }
+
+const productionOnly = freeze.live_ledger.production_only_migration;
+const productionOnlySql = await readFile("supabase/rebuild/production-forward-migrations/" + productionOnly.file, "utf8");
+assert.equal(gitBlobSha(productionOnlySql), productionOnly.git_blob_sha,
+  "Production-only migration replay differs from its captured reviewed Git blob: " + productionOnly.file);
+console.log("Replaying already-applied Production-only migration (historical ledger row remains in the 248-row snapshot): " + productionOnly.file);
+await psql(["-f", "supabase/rebuild/production-forward-migrations/" + productionOnly.file]);
+
+console.log("Running read-only 248-row Production preflight against the reconstructed isolated schema...");
+await psql(["-f", "supabase/rebuild/production-cutover-preflight-20261105.sql"]);
 
 const runner = spawn(process.execPath, ["scripts/apply-reviewed-production-migrations.mjs"], {
   env: {...process.env, BETHAG_CUTOVER_REHEARSAL:"YES"},
@@ -139,20 +185,23 @@ const code = await new Promise((resolve,reject) => {
 if (code !== 0) throw new Error(`Canonical runner rehearsal failed (exit ${code}).\n${out}\n${err}`);
 console.log(out);
 
+console.log("Running read-only 267-row Production postflight against the reconstructed isolated schema...");
+await psql(["-f", "supabase/rebuild/production-cutover-postflight-20261105.sql"]);
+
 const finalLedger = JSON.parse(await psql(["-At","-c",
   "SELECT COALESCE(json_agg(json_build_object('version',version,'name',name) ORDER BY version),'[]'::json)::text FROM supabase_migrations.schema_migrations;"]));
-assert.equal(finalLedger.length,262);
+assert.equal(finalLedger.length,267);
 const historicalVersions = new Set(snapshot.migrations.map(row=>row.version));
 assert.deepEqual(finalLedger.filter(row=>historicalVersions.has(row.version)),snapshot.migrations,"Historical ledger pairs changed.");
-const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261103.json","utf8"));
+const manifest = JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json","utf8"));
 assert.deepEqual(finalLedger.filter(row=>!historicalVersions.has(row.version)),manifest.sequence.map(m=>({version:m.file.slice(0,14),name:m.file.slice(15,-4)})));
 console.log(JSON.stringify({
  status:"PASS",
  test:"end-to-end canonical cutover runner rehearsal",
  target:"isolated local PostgreSQL 17",
  actual_migration_sql_files_executed:manifest.sequence.map(m=>m.file),
- frozen_historical_pairs_preserved:247,
- canonical_rows_added:15,
- final_ledger_rows:262,
+ frozen_historical_pairs_preserved:248,
+ canonical_rows_added:19,
+ final_ledger_rows:267,
  production_or_supabase_touched:false
 },null,2));

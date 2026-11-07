@@ -1,0 +1,261 @@
+{
+  "artifact": "BETHAG final QA evidence — refreshed after portal security review",
+  "captured_date": "2026-11-07",
+  "repository": "federico1bartolucci-ctrl/BETHAG",
+  "branch": "fix/qa-view-acl-parity-20261105",
+  "reviewed_head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+  "qa_project_ref": "jhuyhlzzydcgghrzeexn",
+  "existing_qa_branch_preserved": true,
+  "workflow_runs": {
+    "final_qa_collaudo": {
+      "run_id": 42351102824,
+      "run_attempt": 1,
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "conclusion": "success"
+    },
+    "build": {
+      "run_id": 42351102941,
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "conclusion": "success"
+    },
+    "baseline_safety": {
+      "run_id": 42351102866,
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "conclusion": "success"
+    }
+  },
+  "application_tests": {
+    "APP-01": "PASS",
+    "APP-02": "PASS",
+    "APP-03": "PASS",
+    "APP-04": "PASS",
+    "APP-05": "PASS",
+    "APP-06": "PASS",
+    "APP-07": "PASS",
+    "APP-08": "PASS",
+    "APP-09": "PASS",
+    "APP-10": "PASS",
+    "APP-11": "PASS",
+    "APP-12": {
+      "status": "PASS",
+      "publication_withdrawal_resident_visibility_recipient_preparation_queue_authorization": "PASS",
+      "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
+      "invalid_signature_rejected_http_401_without_mutation": "PASS",
+      "provider_probe": "PASS",
+      "provider_test_recipient": "delivered@resend.dev",
+      "provider_delivery_observed": "PASS — QA provider test messages delivered; see Resend provider evidence",
+      "limitation": "Synthetic webhook acceptance covers sent/delivered/bounced/complained event handling; provider delivery was observed for test messages, not a full production-volume deliverability certification."
+    },
+    "APP-13": "PASS",
+    "APP-14": {
+      "status": "PARTIAL",
+      "disposition": "Production post-cutover gate; Production remains NO-GO until guarded 19-migration cutover, postflight and authenticated Production smoke are completed."
+    },
+    "APP-15": {
+      "status": "PASS",
+      "navigation": {
+        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
+        "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
+        "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
+      },
+      "authentication_session": {
+        "admin": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "collaborator": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "resident": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors."
+      },
+      "diagnostic_artifact": {
+        "name": "bethag-app15-diagnostics",
+        "artifact_id": 13565058466
+      }
+    },
+    "APP15": {
+      "status": "PASS",
+      "navigation": {
+        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
+        "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
+        "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
+      },
+      "authentication_session": {
+        "admin": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "collaborator": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
+        "resident": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors."
+      },
+      "diagnostic_artifact": {
+        "name": "bethag-app15-diagnostics",
+        "artifact_id": 13565058466
+      }
+    }
+  },
+  "migration_rehearsal": {
+    "postgres_version": 17,
+    "clean_install_migration_files": 28,
+    "pending_canonical_cutover_migrations": 19,
+    "frozen_production_history_rows": 248,
+    "expected_postflight_ledger_rows": 267,
+    "isolated_runner_rehearsal": "PASS",
+    "acl_forward_only_drafts": [
+      "table default ACL",
+      "trigger-function PUBLIC EXECUTE",
+      "function/sequence default ACL"
+    ],
+    "workspace_member_profile_column_rehearsal": "PASS",
+    "transfer_rollback_rehearsal": "PASS",
+    "production_or_qa_migration_writes": false,
+    "portal_registration_upsert_rehearsal": "PASS",
+    "portal_registration_security_regressions": {
+      "ambiguous_condominium_name_across_workspaces": "PASS — request remains unassigned; authorized managers of matching active condominiums can resolve it manually",
+      "scoped_rls_visibility": "PASS — only managers of matching active condominiums can read an unassigned request; an unrelated workspace manager cannot read it",
+      "manual_approval_of_unassigned_request": "PASS — the authorized administrator can bind the request to the selected workspace/member",
+      "verified_account_email": "PASS — unverified account email or mismatch with the request email is rejected",
+      "member_email_correction": "PASS — approval is blocked until the condominium member email matches the verified account email",
+      "original_matched_member_binding": "PASS — an email-mismatch request cannot be approved against a different member",
+      "existing_member_account_relink_takeover": "PASS — a member already linked to another user cannot be reassigned",
+      "staff_role_preservation": "PASS — admin/collaborator roles are not downgraded during resident portal registration",
+      "uuid_workspace_aggregation": "PASS — workspace disambiguation uses PostgreSQL-compatible array_agg",
+      "self_registration_condominium_binding": "PASS — a unique person match cannot override a different condominium explicitly selected by the resident; no member link or portal access is created.",
+      "administrator_approval_condominium_binding": "PASS — manual approval rejects a selected member whose condominium name differs from the request; request remains pending and no account or portal access is linked.",
+      "same_account_other_condominium_request_scoping": "PASS — self-registration does not approve a different condominium request for the same account/email.",
+      "member_first_row_lock_order": "PASS — both registration entry points lock the member before request mutation to avoid lock inversion and concurrent account-link races.",
+      "same_workspace_duplicate_name_self_registration": "PASS — a unique person match cannot auto-link when the selected condominium name identifies multiple active condominiums in the same workspace; no member link, portal access or request side effect is created.",
+      "same_workspace_duplicate_name_manual_approval": "PASS — manual approval fails closed when the selected workspace contains multiple active condominiums with the requested name; the request remains pending and no account or portal access is linked.",
+      "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
+      "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
+    },
+    "github_actions_run_id": 42349948537,
+    "reviewed_head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+    "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
+    "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets",
+    "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on exact application source SHA e928370272e2102289d83703df1ab21427d5f9a0; isolated database only."
+  },
+  "cleanup": {
+    "provider_test_marker_rows": {
+      "condominiums": 0,
+      "units": 0,
+      "members": 0,
+      "communications": 0,
+      "recipients": 0
+    },
+    "temporary_provider_fixture_removed": true,
+    "preexisting_qa_fixtures_preserved": true
+  },
+  "production_modified": false,
+  "merge_or_deploy_performed": false,
+  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA decc0dfda68f573f13e386beaa22d259f7f8b619 (runs 42351102824, 42351102941, 42351102866). Both Build and Final QA install dependencies with npm ci from the committed package-lock. Frozen Production manifest 19/19 hashes unchanged; Production ledger 248/248 exact and all 19 canonical increments absent. No Production writes, merge or deploy. APP-14 remains PARTIAL pending cutover/postflight. Production remains NO-GO.",
+  "production_preflight": {
+    "status": "PASS_READ_ONLY_SQL",
+    "captured_date": "2026-11-06",
+    "ledger_rows": 248,
+    "ledger_head": {
+      "version": "20261104222229",
+      "name": "reconcile_production_acl_least_privilege"
+    },
+    "public_relations": 47,
+    "authenticated_maintain_privileges": 0,
+    "service_role_maintain_privileges": 0,
+    "anon_direct_public_table_privileges": 0,
+    "security_advisor_lints": 0,
+    "health_advisor_lints": 0,
+    "scope": "The reviewed read-only Production preflight SQL was executed through the Supabase connector. It performed no schema, data, ACL or ledger writes. This does not replace the guarded runner's exact-commit local preflight.",
+    "exact_release_commit_preflight": "NOT_RUN — repeat the local guarded read-only preflight from the final clean, pinned release checkout after approval metadata and exact SHA are frozen",
+    "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
+    "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes.",
+    "latest_read_only_verification": {
+      "captured_at_utc": "2026-11-07",
+      "live_ledger_rows": 248,
+      "live_ledger_head": {
+        "version": "20261104222229",
+        "name": "reconcile_production_acl_least_privilege"
+      },
+      "snapshot_pair_match": "248/248 exact ordered version/name pairs",
+      "canonical_migration_hashes": "19/19 Git blob SHA match frozen manifest",
+      "pending_canonical_versions_absent": true,
+      "read_only_catalog_assertions": [
+        "47 public tables inventory exact",
+        "authenticated MAINTAIN=0",
+        "service_role MAINTAIN=0",
+        "anon direct public table privileges=0",
+        "postgres-owned public default MAINTAIN=0",
+        "provider-managed supabase_admin default MAINTAIN entries=3, unchanged",
+        "PUBLIC EXECUTE allowlist equals the two documented trigger functions",
+        "public close-transfer wrapper SECURITY INVOKER",
+        "service_role private schema/function path present",
+        "workspace_members.data absent",
+        "transfer-closure helper ACL matches reviewed pre-cutover state"
+      ],
+      "writes_performed": false,
+      "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
+    }
+  },
+  "captured_at_utc": "2026-11-07T07:25:02Z",
+  "storage_regression": {
+    "status": "PASS",
+    "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
+    "correction": "Supabase-backed workspace collections are no longer duplicated into localStorage; local-only fallback uses best-effort cache writes that cannot crash rendering.",
+    "browser_verification": "PASS — authenticated browser UI workflows completed successfully after the correction; condominium creation persisted in QA.",
+    "commit_sha": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+    "browser_observations": {
+      "uncaught_page_errors": 0,
+      "console_observation": "One Supabase deadlines request was aborted during an intentional browser navigation (net::ERR_ABORTED; duringNavigation=true); no uncaught page error occurred and the test's service-role cleanup was verified.",
+      "disposition": "Navigation cancellation recorded as non-blocking test observation; not classified as a successful backend request."
+    }
+  },
+  "release_runner_validation": {
+    "captured_date": "2026-11-06",
+    "tested_branch_head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+    "application_sql_commit_unchanged": "2bda4e449018260e8a6657f5a31bb19b4385b268",
+    "workflow_runs": {
+      "baseline_safety": {
+        "run_id": 42271829680,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      },
+      "build": {
+        "run_id": 42271829700,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      },
+      "final_qa_collaudo": {
+        "run_id": 42271829727,
+        "head_sha": "4cabd5fc4d0d4b641b290e4333dac38e8fedd659",
+        "conclusion": "success"
+      }
+    },
+    "scope": "Release-runner hardening and CI validation only; no application code, canonical SQL payload, QA data or Production data/schema/ledger changed.",
+    "runner_security": "PASS — DATABASE_URL and PGPASSWORD are removed from child process environment; connection credentials are passed through a restrictive temporary pgpass file and removed in finally; no connection URL is passed in psql argv.",
+    "postgres17_bootstrap": "PASS — 28 clean-install migrations and 19 canonical guarded migrations rehearsed on isolated PostgreSQL 17; ACL/RLS/rollback and portal registration tests passed.",
+    "browser_build_smoke": "PASS — build, Chromium install and isolated public-login browser smoke passed.",
+    "final_qa": "PASS — APP-01..APP-13 and APP-15 passed on existing QA project; APP-14 remains Production post-cutover only.",
+    "production_modified": false,
+    "merge_or_deploy_performed": false
+  },
+  "final_head_validation": {
+    "reviewed_head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+    "workflow_runs": {
+      "final_qa_collaudo": {
+        "run_id": 42351102824,
+        "run_attempt": 1,
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+        "conclusion": "success"
+      },
+      "build": {
+        "run_id": 42351102941,
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+        "conclusion": "success"
+      },
+      "baseline_safety": {
+        "run_id": 42351102866,
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+        "conclusion": "success"
+      }
+    },
+    "final_qa_steps": "PASS — APP-01..APP-15 completed successfully on exact commit decc0dfda68f573f13e386beaa22d259f7f8b619; run 42351102824. All acceptance steps, including authenticated browser workflows, fixture restoration and APP-15, concluded SUCCESS.",
+    "build": "PASS — run 42351102941; build and PostgreSQL 17 bootstrap jobs SUCCESS. QA workflow uses npm ci from the committed package-lock.",
+    "baseline_safety": "PASS — run 42351102866.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
+    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; migration payloads unchanged.",
+    "production_snapshot_verification": "PASS — 248/248 ordered Production version/name pairs match frozen snapshot; all 19 canonical versions remain absent from live ledger.",
+    "lockfile_installation": "PASS — npm ci used by both Build and Final QA; package-lock.json unchanged.",
+    "production_modified": false,
+    "merge_or_deploy_performed": false
+  }
+}
