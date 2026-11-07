@@ -124,7 +124,7 @@ const blockedApply = spawn(process.execPath, ["scripts/apply-reviewed-production
     BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev",
     BETHAG_EXPECTED_COMMIT_SHA: process.env.GITHUB_SHA || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     BETHAG_QA_TESTED_COMMIT_SHA: appEvidence.reviewed_head_sha,
-    BETHAG_APPROVED_SOURCE_COMMIT_SHA: appEvidence.reviewed_head_sha,
+    BETHAG_APPROVED_SOURCE_COMMIT_SHA: JSON.parse(await readFile("supabase/rebuild/production-migration-cutover-freeze-20261105.json", "utf8")).user_authorization.approved_commit_sha,
     BETHAG_ALLOW_PRODUCTION_MIGRATIONS: "YES",
     BETHAG_CUTOVER_PLAN_APPROVED: "YES",
     BETHAG_QA_APP_ACCEPTANCE_COMPLETE: "YES",
@@ -144,7 +144,7 @@ const blockedCode = await new Promise((resolve, reject) => {
 });
 assert.notEqual(blockedCode, 0, "Production apply must fail closed without exact written cutover approval.");
 assert.match(blockedErr + blockedOut,
-  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|BETHAG_APPROVED_RELEASE_FINGERPRINT|release fingerprint|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
   "Production apply must stop at the explicit approval gate before any database connection.");
 console.log("PASS: pending cutover approval cannot pass the Production apply gate; runner stopped before any database connection.");
 
