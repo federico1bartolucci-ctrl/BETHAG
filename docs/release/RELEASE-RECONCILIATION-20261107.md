@@ -431,3 +431,27 @@ Il precedente messaggio CORS non dimostrava un errore di configurazione CORS: i 
 **Production cutover: NO-GO.** Restano obbligatori preflight read-only aggiornato, conferma operatore/finestra/piano STOP-recovery e nuova approvazione scritta sullo SHA finale. Il superamento della suite QA non autorizza merge, deploy o migrazioni Production.
 
 Questo aggiornamento documentale registra gli esiti sullo SHA sorgente indicato. Il commit documentale che contiene il presente paragrafo è distinto dal candidato applicativo e deve superare la propria CI sul nuovo SHA; non si trasferisce automaticamente alcuna approvazione o certificazione a un commit successivo.
+
+
+## 18. Riallineamento registro QA e lockfile — 2026-11-07
+
+### Ultima evidenza CI disponibile prima dell'allineamento workflow
+
+Sul commit esatto `15e925e36e83da4f92881f88d6574dfec2dd7cf2` risultano completati con SUCCESS:
+- Final QA APP-01..APP-15: [run 42350285439](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42350285439).
+- Build e PostgreSQL 17: [run 42350285472](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42350285472), entrambi i job SUCCESS.
+- Baseline Safety: [run 42350285429](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42350285429).
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato riallineato a questi esiti, mantenendo esplicito che appartengono al parent SHA sopra indicato. Non sono trasferiti al commit successivo.
+
+### Dipendenze riproducibili
+
+Il workflow `.github/workflows/qa-final-collaudo.yml` è stato uniformato a `npm ci`, come il workflow Build, per installare esclusivamente le dipendenze definite dal lockfile committato. Il file `package-lock.json` non è stato modificato.
+
+### Gate di ricertificazione
+
+La modifica del workflow genera un nuovo SHA candidato. Final QA APP-01..APP-15, Build/PostgreSQL 17 e Baseline Safety devono terminare SUCCESS tutti sul medesimo nuovo SHA. Fino a tale esito, il nuovo candidato resta NON CERTIFICATO.
+
+Manifest congelato, sequenza/ordine dei 19 SQL hash, snapshot storico Production da 248 righe e ledger live non sono stati modificati. Nessuna scrittura Production, merge, deploy o applicazione migrazioni è stata eseguita.
+
+**Production resta NO-GO; APP-14 resta PARTIAL / POST-CUTOVER.**

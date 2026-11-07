@@ -3,24 +3,24 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+  "reviewed_head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42349948523,
+      "run_id": 42350285439,
       "run_attempt": 1,
-      "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42349948537,
-      "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+      "run_id": 42350285472,
+      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42349948545,
-      "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+      "run_id": 42350285429,
+      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
       "conclusion": "success"
     }
   },
@@ -140,7 +140,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15 PASS on exact application source SHA e928370272e2102289d83703df1ab21427d5f9a0; Build/PostgreSQL 17, Baseline Safety and Final QA workflows SUCCESS (42349948537, 42349948545, 42349948523). PostgreSQL 17 isolated build rehearsal including all 19 canonical guarded migrations PASS. Frozen manifest sequence verified 19/19 Git blob SHA; Production ledger snapshot remains 248 entries and byte-identical to the prior certified snapshot. Production read-only only; no merge or deploy. Independent review was explicitly waived by project owner due to no available independent reviewer; this is not represented as a completed independent approval. APP-14 remains PARTIAL and requires Production post-cutover validation. Production unmodified; no cutover authorization granted.",
+  "conclusion": "Latest completed pre-alignment CI: Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA 15e925e36e83da4f92881f88d6574dfec2dd7cf2. Lockfile installation is being standardized from npm install to npm ci; certification of the resulting commit is pending. Frozen manifest 19/19 unchanged; Production ledger 248 rows, read-only only. APP-14 remains PARTIAL and Production remains NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -186,7 +186,7 @@
       "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
     }
   },
-  "captured_at_utc": "2026-11-07T07:10:21Z",
+  "captured_at_utc": "2026-11-07T07:12:21Z",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
@@ -229,34 +229,33 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "reviewed_head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+    "reviewed_head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
     "workflow_runs": {
       "final_qa_collaudo": {
-        "run_id": 42349948523,
+        "run_id": 42350285439,
         "run_attempt": 1,
-        "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42349948537,
-        "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+        "run_id": 42350285472,
+        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
         "conclusion": "success"
       },
       "baseline_safety": {
-        "run_id": 42349948545,
-        "head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+        "run_id": 42350285429,
+        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
         "conclusion": "success"
       }
     },
-    "final_qa_steps": "PASS — APP-01..APP-15 workflow completed successfully on exact commit e928370272e2102289d83703df1ab21427d5f9a0; Final QA run 42349948523, Build/PostgreSQL 17 run 42349948537, Baseline Safety run 42349948545. No failed or skipped acceptance steps.",
-    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
-    "postgres17": "PASS — isolated PostgreSQL 17 bootstrap, chronological clean-install rehearsal and guarded 19-migration runner rehearsal recorded by Build workflow 42349948537.",
-    "retry_regression": "PASS — bounded retry for transient Supabase 520/521 during authenticated owner-list refresh; only a successful backend response containing the new active owner is accepted.",
-    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; migration payloads unchanged.",
-    "production_snapshot_verification": "PASS — snapshot contains 248 ordered ledger entries; frozen manifest remains pending and unchanged.",
+    "final_qa_steps": "PASS — APP-01..APP-15 completed successfully on exact commit 15e925e36e83da4f92881f88d6574dfec2dd7cf2; run 42350285439.",
+    "build": "PASS — run 42350285472, including build and PostgreSQL 17 bootstrap jobs.",
+    "baseline_safety": "PASS — run 42350285429.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on QA; APP-14 remains Production post-cutover validation.",
+    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; independently rechecked on this commit.",
+    "production_snapshot_verification": "PASS — 248/248 ordered Production version/name pairs match frozen snapshot; all 19 canonical versions remain absent from live ledger.",
     "production_modified": false,
     "merge_or_deploy_performed": false,
-    "module_scoped_sync_regression": "PASS — automatic persistence is scoped to the collection/module that actually changed. The APP-05 restore and APP-12 communication browser flows passed without the prior unrelated condominium_units lookup abort; no unexpected browser network failures were recorded.",
-    "qa_fixture_restoration": "PASS — temporary Portal plan fixture restored to Free after browser acceptance; synthetic test fixtures cleaned and pre-existing QA fixtures preserved."
+    "note": "This evidence records the latest completed CI on the parent SHA. The lockfile-install workflow change in the next commit requires all three workflows to rerun on that exact new SHA; no result is transferred."
   }
 }
