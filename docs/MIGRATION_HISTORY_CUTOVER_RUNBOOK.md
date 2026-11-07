@@ -209,12 +209,15 @@ This section supersedes the earlier 2026-10-22/23 statements only where it repor
 - The read-only query for `public` table default ACLs found no `MAINTAIN` entry for `anon` or `authenticated` under owner `postgres`.
 - The same query still found `MAINTAIN` in the `supabase_admin`-owned default ACL for `anon`, `authenticated`, and `service_role`, alongside the other table privileges returned by that query.
 - The query also returned `REFERENCES`, `TRIGGER`, and `TRUNCATE` defaults for `service_role` under owner `postgres`; these are not `MAINTAIN` grants and are recorded separately from the platform-managed discrepancy.
-- The hosted `postgres` role is not authorized to change `supabase_admin` default privileges. Do not attempt role escalation, catalog edits, or workarounds. Obtain a documented Supabase Support/platform disposition or an explicit security-owner acceptance of the residual platform-managed defaults before treating this dimension as signed off.
+- Supabase's current Knowledge Base confirms that these defaults are immutable to the hosted `postgres` role and apply only to objects created by `supabase_admin`; application objects created by `postgres` use the separate `postgres` defaults. The documented supported control is therefore to harden and verify the `postgres` defaults, audit objects actually owned by `supabase_admin`, and keep extensions out of `public` where supported. Reference: https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9.
+- A fresh read-only Production ownership query returned **zero** tables, views, sequences, or functions in `public` owned by `supabase_admin`. The three provider-managed default-ACL entries therefore currently match no application object in `public`.
+- No role escalation, catalog edits, or workaround is permitted or required. Preserve the provider-managed defaults and continue auditing ownership after platform upgrades and extension changes.
 
 **Gate decision**
 - Direct relation-level `authenticated MAINTAIN` discrepancy: **RESOLVED in current Production observation**.
-- Customer-owned `postgres` default `MAINTAIN` for `anon`/`authenticated`: **ABSENT in current Production observation**.
-- Platform-managed `supabase_admin` default ACL: **STILL PRESENT; disposition outstanding**.
-- Full ACL release gate: **BLOCKED** pending platform-managed default-ACL disposition and the remaining complete catalog/replay evidence. This read-only check does not establish backup/restore readiness, QA acceptance completion, Data API exposure approval, or cutover authorization.
+- Customer-owned `postgres` default `MAINTAIN` for `anon`/`authenticated`/`service_role`: **ABSENT in current Production observation**.
+- Platform-managed `supabase_admin` default ACL: **ACCEPTED PROVIDER-MANAGED BASELINE**; immutable by design, with zero current `public` objects owned by that role.
+- Production ACL disposition: **PASS for the observed application-owned objects and defaults**. Recheck object ownership and effective privileges after extensions/upgrades and immediately before cutover.
+- This read-only check does not establish the remaining exact-SHA approval, local direct-connection preflight, current backup visibility, final Dashboard Data API recheck, or Production cutover authorization.
 
 Production schema, data, and migration ledger were not modified by this recheck or by this documentation update.
