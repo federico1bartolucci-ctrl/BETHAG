@@ -334,7 +334,15 @@ try {
       consoleErrorEvents.push({ text: message.text(), duringNavigation: browserNavigationInProgress, duringTeardown: browserTeardownStarted });
     }
   });
-  adminPage.on("request", request => activeAdminRequests.add(request));
+  adminPage.on("request", request => {
+    activeAdminRequests.add(request);
+    // The old document can dispatch a debounced fetch just after reload starts
+    // but before its unload completes. Remember that request even if Chromium
+    // reports ERR_ABORTED only after the new document has hydrated.
+    if (browserNavigationInProgress && request.url().includes(".supabase.co/")) {
+      navigationAbortedAdminRequests.add(request);
+    }
+  });
   adminPage.on("requestfinished", request => activeAdminRequests.delete(request));
   adminPage.on("requestfailed", request => {
     failedRequests.push({
