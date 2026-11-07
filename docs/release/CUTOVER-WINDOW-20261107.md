@@ -51,3 +51,18 @@ Fino all'approvazione finale esplicita del proprietario, riferita allo SHA compl
 **Freeze attivato: NO.**  
 **Approvazione finale del cutover: NO.**  
 **Production: NO-GO.**
+
+
+## Aggiornamento tecnico — 2026-11-07
+
+- Candidato applicativo QA certificato: `decc0dfda68f573f13e386beaa22d259f7f8b619`.
+- Final QA APP-01..APP-15: run 42351102824 — SUCCESS.
+- Build/PostgreSQL 17: run 42351102941 — SUCCESS.
+- Baseline Safety: run 42351102866 — SUCCESS.
+- Dipendenze: Build e Final QA allineati a `npm ci`; lockfile invariato.
+- Manifest canonico: 19 migrazioni, 19/19 hash invariati.
+- Production: ledger 248/248 corrispondente allo snapshot; le 19 migrazioni sono ancora pendenti; nessuna scrittura eseguita.
+
+**Gate operativi ancora aperti:** ora di fine finestra, conferma dell'operatore umano locale, preflight guarded read-only con PostgreSQL Direct/Session Pooler, riconferma backup/rischio residuo e approvazione scritta riferita allo SHA eseguibile e ai 19 hash. Il freeze operativo e l'avviso agli amministratori restano disattivati/non inviato. L'inizio finestra alle 22:00 non costituisce autorizzazione al cutover.
+
+**Decisione:** Production NO-GO. Nessun merge, deploy o apply autorizzato.

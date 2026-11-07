@@ -455,3 +455,33 @@ La modifica del workflow genera un nuovo SHA candidato. Final QA APP-01..APP-15,
 Manifest congelato, sequenza/ordine dei 19 SQL hash, snapshot storico Production da 248 righe e ledger live non sono stati modificati. Nessuna scrittura Production, merge, deploy o applicazione migrazioni è stata eseguita.
 
 **Production resta NO-GO; APP-14 resta PARTIAL / POST-CUTOVER.**
+
+
+## 19. Ricertificazione completa dopo allineamento lockfile — 2026-11-07
+
+Il candidato `decc0dfda68f573f13e386beaa22d259f7f8b619` ha superato tutti e tre i workflow sullo SHA esatto:
+
+- Final QA APP-01..APP-15: [run 42351102824](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42351102824) — SUCCESS; tutti gli step sono SUCCESS, inclusi i flussi browser autenticati, il ripristino del fixture Portal e APP-15.
+- Build/PostgreSQL 17: [run 42351102941](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42351102941) — SUCCESS; entrambi i job conclusi SUCCESS.
+- Baseline Safety: [run 42351102866](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42351102866) — SUCCESS.
+
+L'installazione dipendenze del workflow Final QA usa ora `npm ci`, come Build. Il lockfile `package-lock.json` non è stato modificato. Il registro QA è aggiornato per riferire questi tre run e il loro SHA esatto; APP-01..APP-13 e APP-15 sono PASS, APP-14 resta PARTIAL / POST-CUTOVER.
+
+### Verifica Production read-only contestuale
+
+La nuova query live ha restituito 248 righe nel ledger Production, head `20261104222229`, e zero versioni tra le 19 migrazioni canoniche già registrate. Il confronto ordinato live/snapshot ha restituito 248/248 coppie versione/nome identiche. Security Advisor e Health Advisor: zero lint. Nessuna query ha effettuato scritture.
+
+I 19 Git blob SHA del manifest sono stati verificati sul tree candidato e restano invariati. La differenza rispetto al parent è limitata a workflow Final QA, registro QA e documentazione; nessun file SQL, manifest congelato, snapshot Production o package-lock è stato modificato.
+
+### Preparazione operativa: gate ancora da chiudere
+
+- Finestra obiettivo registrata: 7 novembre 2026 dalle 22:00 Europe/Rome; ora di fine ancora NON SPECIFICATA.
+- Operatore umano locale: NON CONFERMATO.
+- Preflight guarded in sola lettura da checkout pulito con PostgreSQL Direct/Session Pooler: NON ESEGUITO da questa sessione; le query Supabase via connettore non lo sostituiscono.
+- Backup fisico provider-managed: NON TESTATO; il rischio residuo resta documentato e non viene presentato come restore superato.
+- Approvazione manifest: PENDING; nessuno SHA o hash approvato.
+- Freeze operativo e avviso agli amministratori: NON ATTIVATI / NON INVIATO.
+
+Il commit di questo aggiornamento è documentale/evidenziale e non modifica il candidato applicativo né le migrazioni. Il preflight locale potrà usare `decc0dfda68f573f13e386beaa22d259f7f8b619` come `BETHAG_QA_TESTED_COMMIT_SHA` e lo SHA esatto del checkout pulito finale come `BETHAG_EXPECTED_COMMIT_SHA`, purché il diff successivo resti limitato ai percorsi post-QA ammessi dal runner.
+
+**CI sul candidato `decc0dfda68f573f13e386beaa22d259f7f8b619`: PASS. Integrità 19/19 e ledger 248/248: PASS. Production cutover: NO-GO fino al preflight diretto, alla chiusura dei dati operativi e all'approvazione scritta puntuale.**

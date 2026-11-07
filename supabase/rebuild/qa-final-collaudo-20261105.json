@@ -3,24 +3,24 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+  "reviewed_head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42350285439,
+      "run_id": 42351102824,
       "run_attempt": 1,
-      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42350285472,
-      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+      "run_id": 42351102941,
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42350285429,
-      "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+      "run_id": 42351102866,
+      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
       "conclusion": "success"
     }
   },
@@ -140,7 +140,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Latest completed pre-alignment CI: Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA 15e925e36e83da4f92881f88d6574dfec2dd7cf2. Lockfile installation is being standardized from npm install to npm ci; certification of the resulting commit is pending. Frozen manifest 19/19 unchanged; Production ledger 248 rows, read-only only. APP-14 remains PARTIAL and Production remains NO-GO.",
+  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA decc0dfda68f573f13e386beaa22d259f7f8b619 (runs 42351102824, 42351102941, 42351102866). Both Build and Final QA install dependencies with npm ci from the committed package-lock. Frozen Production manifest 19/19 hashes unchanged; Production ledger 248/248 exact and all 19 canonical increments absent. No Production writes, merge or deploy. APP-14 remains PARTIAL pending cutover/postflight. Production remains NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -186,7 +186,7 @@
       "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
     }
   },
-  "captured_at_utc": "2026-11-07T07:12:21Z",
+  "captured_at_utc": "2026-11-07T07:25:02Z",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
@@ -229,33 +229,33 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "reviewed_head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+    "reviewed_head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
     "workflow_runs": {
       "final_qa_collaudo": {
-        "run_id": 42350285439,
+        "run_id": 42351102824,
         "run_attempt": 1,
-        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42350285472,
-        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+        "run_id": 42351102941,
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
         "conclusion": "success"
       },
       "baseline_safety": {
-        "run_id": 42350285429,
-        "head_sha": "15e925e36e83da4f92881f88d6574dfec2dd7cf2",
+        "run_id": 42351102866,
+        "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
         "conclusion": "success"
       }
     },
-    "final_qa_steps": "PASS — APP-01..APP-15 completed successfully on exact commit 15e925e36e83da4f92881f88d6574dfec2dd7cf2; run 42350285439.",
-    "build": "PASS — run 42350285472, including build and PostgreSQL 17 bootstrap jobs.",
-    "baseline_safety": "PASS — run 42350285429.",
-    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on QA; APP-14 remains Production post-cutover validation.",
-    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; independently rechecked on this commit.",
+    "final_qa_steps": "PASS — APP-01..APP-15 completed successfully on exact commit decc0dfda68f573f13e386beaa22d259f7f8b619; run 42351102824. All acceptance steps, including authenticated browser workflows, fixture restoration and APP-15, concluded SUCCESS.",
+    "build": "PASS — run 42351102941; build and PostgreSQL 17 bootstrap jobs SUCCESS. QA workflow uses npm ci from the committed package-lock.",
+    "baseline_safety": "PASS — run 42351102866.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
+    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; migration payloads unchanged.",
     "production_snapshot_verification": "PASS — 248/248 ordered Production version/name pairs match frozen snapshot; all 19 canonical versions remain absent from live ledger.",
+    "lockfile_installation": "PASS — npm ci used by both Build and Final QA; package-lock.json unchanged.",
     "production_modified": false,
-    "merge_or_deploy_performed": false,
-    "note": "This evidence records the latest completed CI on the parent SHA. The lockfile-install workflow change in the next commit requires all three workflows to rerun on that exact new SHA; no result is transferred."
+    "merge_or_deploy_performed": false
   }
 }
