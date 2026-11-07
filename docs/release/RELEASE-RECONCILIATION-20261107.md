@@ -93,7 +93,7 @@ Questo paragrafo integra e, per gli esiti CI qui indicati, prevale sulle sezioni
 
 ### Candidato e workflow sullo SHA esatto
 
-- SHA verificato: `c78a4c47cc7fb301be1fca0db72ef4ff05c0594b`.
+- SHA verificato: `ed6ff431421f8c62bd9ec8ea7b56db72a57b3f0a`.
 - Final QA APP-01..APP-15: [run 42337313192](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313192), attempt 2, `completed / success`; job `final-qa-collaudo` concluso SUCCESS.
 - Build: [run 42337313106](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313106), `completed / success`.
 - Baseline Safety: [run 42337313117](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313117), `completed / success`.
@@ -105,7 +105,7 @@ Nel primo attempt del Final QA, i test browser si erano arrestati per risposte C
 
 - APP-12 ha superato il probe provider Resend con destinatario sintetico di test; non certifica deliverability reale su larga scala o tutti i template Production.
 - APP-14 resta **PARTIAL / POST-CUTOVER**: non sono stati eseguiti postflight ACL/schema né smoke autenticati su Production.
-- La review GitHub indipendente non risulta registrata. La verifica del proprietario/autore non la sostituisce.
+- La review GitHub indipendente non risulta registrata. Il manifest registra però la decisione del proprietario del 2026-11-06 di accettare la revisione tecnica interna come controllo di progetto, dichiarando esplicitamente che non è una revisione a quattro occhi e che l'assenza di un revisore indipendente non è bloccante per il rilascio. Il rischio di revisione a singolo soggetto resta trasparente e accettato.
 - Il restore fisico provider-managed resta non testato; il restore logico locale non è equivalente.
 - Il manifest mantiene l'approvazione corrente PENDING e nessuno SHA approvato; la protezione exact-SHA resta attiva.
 
@@ -115,11 +115,45 @@ PR #57 resta OPEN e NOT MERGED. Nessun merge, deploy, freeze operativo, apply di
 
 ### Gate residui
 
-1. Ottenere una review tecnica indipendente effettiva, registrata su GitHub, da persona diversa dall'autore.
-2. Verificare l'integrità dei 19 payload/hash sul candidato finale.
-3. Eseguire il preflight diretto del runner da checkout pulito e le verifiche Production read-only immediatamente pre-cutover.
-4. Riconfermare operatore, finestra, recovery/STOP e rischio residuo backup.
-5. Ottenere approvazione scritta riferita allo SHA finale e ai 19 hash ordinati.
-6. Solo dopo, valutare separatamente merge, deploy e cutover; APP-14 si chiude esclusivamente con postflight e smoke autenticati Production.
+1. Verificare l'integrità dei 19 payload/hash sul candidato finale.
+2. Eseguire il preflight diretto del runner da checkout pulito e le verifiche Production read-only immediatamente pre-cutover.
+3. Riconfermare operatore, finestra, recovery/STOP e rischio residuo backup.
+4. Ottenere approvazione scritta riferita allo SHA finale e ai 19 hash ordinati.
+5. Solo dopo, valutare separatamente merge, deploy e cutover; APP-14 si chiude esclusivamente con postflight e smoke autenticati Production.
 
-**Esito aggiornato:** Build, Baseline Safety e Final QA APP-01..APP-15 PASS sullo SHA `c78a4c47...`; **Production resta NO-GO**.
+La review indipendente resta non disponibile/non registrata; il proprietario ha accettato la revisione interna come controllo di progetto non indipendente. Non è un gate bloccante secondo il manifest e non deve essere descritta come review indipendente.
+
+**Esito aggiornato:** Build, Baseline Safety e Final QA APP-01..APP-15 PASS sullo SHA `ed6ff431...`; **Production resta NO-GO**.
+
+
+## 9. Riconciliazione conclusiva del candidato — 2026-11-07
+
+Questa sezione prevale sulle sezioni precedenti di questo documento e sugli addenda storici che riportano SHA candidati anteriori.
+
+### Candidato e CI verificati
+
+- Candidato verificato: `ed6ff431421f8c62bd9ec8ea7b56db72a57b3f0a`.
+- Final QA APP-01..APP-15: [run 42338407965](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42338407965) — SUCCESS; tutti gli step del job `final-qa-collaudo` conclusi con SUCCESS, inclusi i flussi browser autenticati e APP-15.
+- Build e PostgreSQL bootstrap 17: [run 42338407967](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42338407967) — entrambi i job SUCCESS. Rehearsal clean-install delle 28 migrazioni e runner guarded con 19 migrazioni canoniche su database isolati: SUCCESS.
+- Baseline Safety: [run 42338407961](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42338407961) — SUCCESS.
+- Verifica dei payload SQL sul candidato: 19/19 Git blob SHA corrispondenti ai valori congelati nel manifest; nessun payload, ordine o hash è stato modificato.
+
+### Revisione e rischio residuo
+
+- Nessuna review GitHub indipendente è registrata.
+- Il manifest conserva la decisione del proprietario del 2026-11-06: revisione interna accettata come controllo di progetto, non indipendente, con rischio single-reviewer dichiarato e accettato. Il manifest indica espressamente che questo limite non è bloccante per il rilascio.
+- Il restore fisico provider-managed non è stato eseguito. Il rischio residuo resta accettato secondo il manifest; il restore logico locale verificato non equivale a un restore fisico.
+- APP-12 ha superato il probe provider con destinatario sintetico Resend; non costituisce certificazione della deliverability reale verso tutti i destinatari Production.
+- APP-14 resta PARTIAL / POST-CUTOVER fino a postflight ACL/schema e smoke autenticati sul database Production.
+
+### Stato GitHub e autorizzazione
+
+- PR #57: OPEN, NOT MERGED; head `ed6ff431421f8c62bd9ec8ea7b56db72a57b3f0a`, base `main` (`51157c1e475de9379cab4aea2cf38c039a9c4bab`).
+- Il manifest mantiene `user_authorization.status = PENDING`, senza SHA approvato e senza hash approvati. La precedente autorizzazione riferita a un diverso SHA resta superseded e non è riutilizzabile.
+- Nessun merge, deploy, freeze operativo, DDL/DML, applicazione di migrazioni o scrittura del ledger Production è stato eseguito.
+
+### Effetto di questo aggiornamento documentale
+
+La presente modifica corregge esclusivamente la riconciliazione documentale. Non modifica codice applicativo, workflow, manifest, migrazioni SQL o relativi hash. Il commit generato da questo aggiornamento documentale sarà un nuovo SHA: prima di considerarlo candidato finale dovrà superare nuovamente i workflow CI previsti sullo SHA esatto. Le evidenze verdi sopra restano riferite al commit `ed6ff431...`, non al futuro commit documentale.
+
+**Decisione:** QA sul candidato `ed6ff431...` PASS; Production resta **NO-GO** fino al completamento dei gate pre-cutover e alla nuova approvazione esatta.
