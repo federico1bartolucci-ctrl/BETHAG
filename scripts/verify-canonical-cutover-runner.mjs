@@ -103,6 +103,7 @@ assert.ok(runner.includes("BETHAG_EXPECTED_COMMIT_SHA"), "Production preflight/a
 assert.ok(runner.includes("BETHAG_APPROVED_SOURCE_COMMIT_SHA"), "Approval must bind the immutable owner-approved source release separately from the runner checkout.");
 assert.ok(runner.includes("BETHAG_APPROVED_EXECUTION_COMMIT_SHA"), "Execution must require a separate explicit approval pin for the exact runner checkout.");
 assert.ok(runner.includes("approval?.approved_commit_sha, approvedSourceCommitSha"), "Manifest approval must be checked against the owner-approved source SHA, not the self-referential execution SHA.");
+assert.ok(runner.includes("approval?.approved_execution_commit_sha, executionCommitSha"), "Manifest approval must independently pin the exact execution commit SHA.");
 assert.match(runner, /process\.env\.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha/, "Runner must reject an execution SHA that has not been explicitly approved.");
 assert.match(runner, /git", \["status", "--porcelain"\]/, "Production preflight/apply must reject a dirty working tree.");
 assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
@@ -141,7 +142,7 @@ try {
 }
 assert.notEqual(gateProbe.status, 0, "Production apply must stop until explicit final cutover approval and all remaining gates are recorded.");
 assert.match(gateProbe.stderr,
-  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|manifest does not record owner approval for this exact execution commit|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
   "The runner must reject an unapproved exact-SHA cutover before attempting any Production connection.");
 
 assert.match(runner, /Live Production ledger vs frozen snapshot/);
