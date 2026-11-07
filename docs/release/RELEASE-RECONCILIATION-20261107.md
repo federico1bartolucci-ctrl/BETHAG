@@ -74,3 +74,14 @@ Pertanto:
 **Production cutover: NO-GO fino alla nuova certificazione sullo SHA documentale finale, al preflight aggiornato e a una nuova approvazione esplicita.**
 
 Questo addendum è la fonte di verità per lo stato di rilascio dal momento del suo commit. Non autorizza modifiche a Production.
+
+
+## 7. Manifest approval guard — riallineamento completato
+
+Dopo la prima stesura di questo addendum, il manifest congelato è stato aggiornato esclusivamente nei metadati di approvazione:
+- `status` impostato a `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`;
+- precedente autorizzazione conservata in `superseded_user_authorization` solo come traccia storica;
+- `user_authorization` corrente impostata a `PENDING`, senza SHA approvato, approvatore, timestamp o hash approvati;
+- sequenza, ordine e tutti i 19 `git_blob_sha` SQL lasciati invariati.
+
+Questo riallineamento è necessario anche come salvaguardia eseguibile: il runner guarded non può interpretare la vecchia autorizzazione come consenso valido per il candidato attuale. La nuova approvazione dovrà essere registrata nel manifest soltanto dopo il completamento dei gate sullo SHA finale.
