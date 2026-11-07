@@ -560,8 +560,8 @@
     "approved_commit_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
     "approved_execution_commit_sha": null,
     "approved_by": "Federico Bartolucci",
-    "approved_at_utc": "2026-11-07T18:54:52Z",
-    "approval_reference": "Owner's explicit written approval in the BETHAG project conversation: QA-tested source SHA decc0dfda68f573f13e386beaa22d259f7f8b619 and exact release fingerprint f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a were approved; owner subsequently confirmed the maintenance window as 2026-11-08 00:00–04:00 Europe/Rome on 2026-11-07. This approval preserves the exact nineteen ordered frozen migration hashes and the 248-row Production history. The final executable checkout SHA is intentionally unset and requires separate explicit approval after documentation and CI are finalized.",
+    "approved_at_utc": "2026-11-07T20:56:05Z",
+    "approval_reference": "Owner's explicit written approval in the BETHAG project conversation: QA-tested source SHA decc0dfda68f573f13e386beaa22d259f7f8b619 and exact release fingerprint f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a were approved; owner subsequently confirmed the maintenance window as 2026-11-08 00:00–04:00 Europe/Rome on 2026-11-07. This approval preserves the exact nineteen ordered frozen migration hashes and the 248-row Production history. The final executable checkout SHA is intentionally unset and requires separate explicit approval after documentation and CI are finalized. Additional explicit owner approval received in the BETHAG project conversation on 2026-11-07: approved the then-current executable SHA ee8726aaf46dde3107511276a3c11a1060e9b822 together with exact release fingerprint b06a4ef236f6225681892c29d3822e1b4e8c78950407044f01655b732aebfc82, preserving the exact nineteen ordered migration hashes and all 248 historical Production ledger rows. This manifest-only approval-record commit is not itself authorized for execution; its resulting execution SHA must be separately approved because the runner pins the exact checkout SHA.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -645,7 +645,7 @@
     "approved_cutover_scope": "Apply exactly the nineteen frozen canonical migrations in order; preserve all 248 historical Production ledger rows unchanged; stop on any preflight, migration, or postflight discrepancy.",
     "residual_backup_restore_risk_reconfirmed": true,
     "residual_backup_restore_risk": "Provider-managed physical restore was not independently tested; the previously accepted residual risk is reconfirmed for this cutover. No claim of a successful physical restore test.",
-    "approved_release_fingerprint": "f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a"
+    "approved_release_fingerprint": "b06a4ef236f6225681892c29d3822e1b4e8c78950407044f01655b732aebfc82"
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
