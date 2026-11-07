@@ -34,7 +34,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { getApplicationTest, splitChangedPaths, frozenManifestPayload } from "./lib/release-readiness-utils.mjs";
+import { getApplicationTest, splitChangedPaths, frozenManifestPayload, releaseFingerprint } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
@@ -134,7 +134,13 @@ function comparePairs(actual, expected, label) {
   }
 }
 
-function assertFinalApprovalRecord(manifest, approvedSourceCommitSha, executionCommitSha) {
+const fingerprintCriticalPaths = ["scripts/apply-reviewed-production-migrations.mjs","scripts/verify-canonical-cutover-runner.mjs","scripts/lib/release-readiness-utils.mjs","scripts/test-release-readiness-utils.mjs","scripts/test-canonical-cutover-runner.mjs","scripts/verify-release-readiness.mjs",".github/workflows/build.yml",".github/workflows/final-qa-collaudo.yml","supabase/rebuild/production-cutover-preflight-20261105.sql","supabase/rebuild/production-cutover-postflight-20261105.sql","supabase/rebuild/production-ledger-20261105.json","supabase/rebuild/live-migration-ledgers-20261105.json"];
+async function calculateReleaseFingerprint(manifest, sourceCommitSha) {
+  const paths = [...fingerprintCriticalPaths, ...manifest.sequence.map((item) => "supabase/migrations/" + item.file), ...manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.map((item) => "supabase/rebuild/production-forward-migrations/" + item.file), "supabase/rebuild/production-forward-migrations/" + manifest.live_ledger.production_only_migration.file];
+  const fileContents = Object.fromEntries(await Promise.all([...new Set(paths)].sort().map(async (path) => [path, await readFile(join(root, path), "utf8")])));
+  return releaseFingerprint({ sourceCommitSha, manifest, fileContents });
+}
+function assertFinalApprovalRecord(manifest, approvedSourceCommitSha, calculatedFingerprint) {
   const approval = manifest.user_authorization;
   assert.equal(manifest.status, "FROZEN_FOR_REVIEW_APPROVED",
     "Blocked: the frozen manifest is still pending final cutover approval.");
@@ -144,12 +150,12 @@ function assertFinalApprovalRecord(manifest, approvedSourceCommitSha, executionC
     "Blocked: BETHAG_APPROVED_SOURCE_COMMIT_SHA must identify the exact owner-approved source release.");
   assert.equal(approval?.approved_commit_sha, approvedSourceCommitSha,
     "Blocked: written approval does not name the owner-approved source release.");
-  assert.match(executionCommitSha, /^[0-9a-f]{40}$/,
-    "Blocked: BETHAG_APPROVED_EXECUTION_COMMIT_SHA must identify the exact runner checkout approved for execution.");
-  assert.equal(approval?.approved_execution_commit_sha, executionCommitSha,
-    "Blocked: the manifest does not record owner approval for this exact execution commit.");
-  assert.equal(process.env.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha,
-    "Blocked: execution commit has not been explicitly approved after runner changes.");
+  assert.match(calculatedFingerprint, /^[0-9a-f]{64}$/,
+    "Blocked: the executable release fingerprint could not be calculated.");
+  assert.equal(approval?.approved_release_fingerprint, calculatedFingerprint,
+    "Blocked: written owner approval does not cover this exact executable release fingerprint.");
+  assert.equal(process.env.BETHAG_APPROVED_RELEASE_FINGERPRINT, calculatedFingerprint,
+    "Blocked: operator has not explicitly supplied the owner-approved release fingerprint.");
   assert.ok(Boolean(approval?.approved_by)
     && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(approval?.approved_at_utc ?? "")
     && Boolean(approval?.approval_reference),
@@ -265,7 +271,8 @@ async function main() {
     assert.ok(isExpectedProductionTarget && targetDatabase === "postgres",
       "Blocked: read-only preflight requires the expected Production host, username, and postgres database.");
     if (manifest.status === "FROZEN_FOR_REVIEW_APPROVED") {
-      assertFinalApprovalRecord(manifest, approvedSourceCommitSha, expectedCommitSha);
+      const calculatedFingerprint = await calculateReleaseFingerprint(manifest, approvedSourceCommitSha);
+      assertFinalApprovalRecord(manifest, approvedSourceCommitSha, calculatedFingerprint);
     } else {
       assert.equal(manifest.status, "FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING",
         "Read-only preflight requires a pending or exactly approved frozen manifest.");
@@ -280,7 +287,8 @@ async function main() {
       "Blocked: Production apply mode requires the expected Production host, username, and postgres database.");
     assert.equal(process.env.BETHAG_CUTOVER_PLAN_APPROVED, "YES",
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
-    assertFinalApprovalRecord(manifest, approvedSourceCommitSha, expectedCommitSha);
+    const calculatedFingerprint = await calculateReleaseFingerprint(manifest, approvedSourceCommitSha);
+    assertFinalApprovalRecord(manifest, approvedSourceCommitSha, calculatedFingerprint);
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
       "Blocked: QA application acceptance is not complete.");
     assert.equal(process.env.BETHAG_QA_APP12_PROVIDER_VERIFIED, "YES",
