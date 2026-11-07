@@ -100,14 +100,27 @@ async function clickUntilVisible(page, locator, target, description, attempts = 
 
 async function waitForDbRow(loadRow, predicate, description, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
+  const retryableStatuses = new Set([0, 408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
   let last = null;
+  let lastTransientError = null;
+  let attempt = 0;
   while (Date.now() < deadline) {
+    attempt += 1;
     last = await loadRow();
-    if (last.error) throw last.error;
+    if (last.error) {
+      const status = Number(last.error.status || 0);
+      if (!retryableStatuses.has(status)) throw last.error;
+      lastTransientError = last.error;
+      if (Date.now() >= deadline) break;
+      console.warn("Transient Supabase error while waiting for " + description + " (HTTP " + status + "); retry " + attempt);
+      await new Promise(resolve => setTimeout(resolve, Math.min(attempt * 500, 2000)));
+      continue;
+    }
     if (predicate(last.data)) return last.data;
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null));
+  throw new Error(description + " timed out; last row=" + JSON.stringify(last?.data ?? null) +
+    "; last transient error=" + (lastTransientError?.message || "none"));
 }
 
 async function signInAdminForCleanup() {
@@ -1034,19 +1047,19 @@ try {
   const portalCheckbox = adminPage.locator(".modal .checkbox-field input[type='checkbox']").first();
   if (!(await portalCheckbox.isChecked())) await portalCheckbox.check();
   await adminPage.getByRole("button", { name: "Salva", exact: true }).click();
-  const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
-  await commCard.waitFor({ timeout: 20000 });
   let persistedCommunication;
   try {
+    // Backend persistence is the source of truth. Do not wait for a potentially
+    // stale client-side card before proving that the publish operation committed.
     persistedCommunication = await waitForDbRow(
       () => cleanup.from("communications").select("id,published,condominium_id,legacy_id,title,data").eq("title", communicationTitle).maybeSingle(),
       row => Boolean(row?.published === true && row?.condominium_id === created.id),
       "Published communication backend persistence",
-      20000
+      30000
     );
   } catch (syncError) {
     const storedRows = await cleanup.from("communications").select("id,title,published,condominium_id,workspace_id,data").eq("workspace_id", created.workspace_id).like("title", marker + "%");
-    throw new Error("Communication sync failed: " + JSON.stringify({
+    throw new Error("Communication persistence failed: " + JSON.stringify({
       cause: syncError.message,
       rows: storedRows.data,
       rowsError: storedRows.error?.message,
@@ -1058,6 +1071,28 @@ try {
   }
   assert.equal(persistedCommunication.published, true);
   assert.equal(persistedCommunication.condominium_id, created.id);
+
+  // Force a fresh authenticated read after the database commit, then assert
+  // that the UI hydrates the exact persisted communication from the backend.
+  await adminPage.reload({ waitUntil: "domcontentloaded" });
+  await adminPage.getByText("Homepage", { exact: true }).first().waitFor({ timeout: 25000 });
+  await adminPage.locator(".sidebar .nav-item").filter({ hasText: "Comunicazioni" }).first().click();
+  await adminPage.locator(".page-header h1").filter({ hasText: "Comunicazioni" }).waitFor({ timeout: 15000 });
+  const commCard = adminPage.locator(".communication-card").filter({ hasText: communicationTitle });
+  try {
+    await commCard.waitFor({ state: "visible", timeout: 20000 });
+  } catch (uiSyncError) {
+    throw new Error("Published communication is persisted but missing from the refreshed administrator UI. " + JSON.stringify({
+      communicationId: persistedCommunication.id,
+      title: communicationTitle,
+      url: adminPage.url(),
+      body: (await adminPage.locator("body").innerText()).slice(0, 4000),
+      consoleErrors,
+      failedRequests,
+      pageErrors,
+      cause: uiSyncError.message,
+    }));
+  }
   const persistedPortalAccess = await cleanup.from("portal_access")
     .select("id,active,user_id,condominium_id,permissions")
     .eq("id", portalAccess.data.id)
