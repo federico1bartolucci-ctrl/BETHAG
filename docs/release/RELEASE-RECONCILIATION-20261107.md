@@ -204,3 +204,16 @@ Verifiche eseguite senza scritture:
 - Il PASS CI sullo SHA `f38f894...` non equivale ad autorizzazione al cutover.
 
 **Decisione aggiornata:** CI sullo SHA `f38f894...` PASS; preflight Production **parzialmente completato**; fase 3 **NON CHIUSA** finché i tre controlli residui (Data API Dashboard, connessione diretta/Session Pooler, riconciliazione default ACL) non dispongono di evidenza verificabile. Production resta **NO-GO**.
+
+
+## 11. Chiarimento default ACL — query catalogo Production del 2026-11-07
+
+La query diretta su `pg_default_acl` in Production ha permesso di precisare la discrepanza descritta nella sezione 10:
+
+- Per oggetti `public` creati dal ruolo `postgres`: default table ACL con privilegi completi al solo `postgres`; `service_role` riceve solo `REFERENCES, TRIGGER, TRUNCATE`. Non risultano default table CRUD per `anon` o `authenticated` sotto il ruolo owner `postgres`.
+- Per oggetti `public` creati dal ruolo provider-managed `supabase_admin`: i default ACL comprendono CRUD e privilegi aggiuntivi per `anon`, `authenticated`, `service_role` e `postgres`; le sequence default ACL includono SELECT/UPDATE/USAGE per tali ruoli.
+- Il manifest conserva `postgres_default_anon_crud = true`, ma la query live colloca i default ACL anon ampi sotto owner `supabase_admin`, non sotto owner `postgres`. Il manifest descrive inoltre separatamente `supabase_admin_defaults_untouched = true` e la disposition provider-managed. La differenza è quindi soprattutto di etichettatura/semantica del campo e di distinzione tra owner, non prova di un GRANT anon aggiuntivo effettuato dall'applicazione.
+- Il manifest dichiara i default ACL `supabase_admin` provider-managed e non modificabili dal ruolo postgres; il riferimento documentale Supabase è registrato nel manifest. Non tentare di correggerli con GRANT/REVOKE né alterare il baseline provider-managed.
+- Il requisito applicativo va quindi valutato sul ruolo effettivo che crea le nuove tabelle. Per il runner/cutover controllato, il punto verificabile è che gli oggetti applicativi siano creati dal ruolo previsto e che le default ACL applicabili a quel ruolo siano quelle attese dalla migrazione canonica. La query conferma l'assenza di default anon CRUD per owner `postgres`, ma non autorizza a ignorare le ACL provider-managed di `supabase_admin`.
+
+**Esito del controllo default ACL:** chiarita la causa della discrepanza e confermata la necessità di mantenere intatti i default provider-managed; nessuna modifica ai privilegi eseguita. Questo controllo catalogo può considerarsi documentato, fermo restando il controllo sul ruolo effettivo usato dal runner nella prova diretta.
