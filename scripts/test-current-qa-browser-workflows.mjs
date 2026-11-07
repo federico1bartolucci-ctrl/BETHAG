@@ -25,6 +25,8 @@ const consoleErrors = [];
 const consoleMessages = [];
 const failedRequests = [];
 const consoleErrorEvents = [];
+const activeAdminRequests = new Set();
+const navigationAbortedAdminRequests = new WeakSet();
 let browserNavigationInProgress = false;
 let browserTeardownStarted = false;
 let temporaryResidentId = null;
@@ -332,12 +334,20 @@ try {
       consoleErrorEvents.push({ text: message.text(), duringNavigation: browserNavigationInProgress, duringTeardown: browserTeardownStarted });
     }
   });
-  adminPage.on("requestfailed", request => failedRequests.push({
-    url: request.url(),
-    error: request.failure()?.errorText ?? "unknown",
-    duringNavigation: browserNavigationInProgress,
-    duringTeardown: browserTeardownStarted,
-  }));
+  adminPage.on("request", request => activeAdminRequests.add(request));
+  adminPage.on("requestfinished", request => activeAdminRequests.delete(request));
+  adminPage.on("requestfailed", request => {
+    failedRequests.push({
+      url: request.url(),
+      error: request.failure()?.errorText ?? "unknown",
+      // A request already in flight when a hard navigation begins can report
+      // ERR_ABORTED after the navigation response has arrived. Keep its
+      // navigation classification attached to the request itself.
+      duringNavigation: browserNavigationInProgress || navigationAbortedAdminRequests.has(request),
+      duringTeardown: browserTeardownStarted,
+    });
+    activeAdminRequests.delete(request);
+  });
   adminPage.on("response", response => { if (response.status() >= 400) failedRequests.push({ url: response.url(), status: response.status() }); });
   const dialogs = [];
   adminPage.on("dialog", async d => { dialogs.push({ type: d.type(), message: d.message() }); await d.accept(); });
@@ -632,10 +642,18 @@ try {
       row.id === created.id && row.name === editedCondoName && row.archived_at === null
     );
   }, { timeout: 60000 });
+  // The condominium response is only one member of loadBackendState's
+  // Promise.all. Keep the navigation window open until the complete workspace
+  // hydration settles, and classify any pre-existing in-flight request that
+  // the hard reload cancels as navigation-related.
+  for (const request of activeAdminRequests) {
+    if (request.url().includes(".supabase.co/")) navigationAbortedAdminRequests.add(request);
+  }
   browserNavigationInProgress = true;
   try {
     await adminPage.reload({ waitUntil: "domcontentloaded" });
     await restoredCondominiumHydration;
+    await adminPage.waitForLoadState("networkidle", { timeout: 15000 });
   } finally {
     browserNavigationInProgress = false;
   }
