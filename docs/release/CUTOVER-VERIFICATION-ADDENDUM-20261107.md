@@ -84,3 +84,19 @@ La fingerprint ricalcolata dal workflow QA è `b06a4ef236f6225681892c29d3822e1b4
 Verifica aggiuntiva read-only: tutti i 19 blob Git delle migrazioni canoniche coincidono con i 19 hash approvati nel manifest. Production risulta `ACTIVE_HEALTHY`, PostgreSQL 17.6.1.166; Security Advisor e Health Advisor non restituiscono lint. Nessuna scrittura o migrazione è stata eseguita su Production.
 
 PR #57 è stata aggiornata per riportare head, esiti CI, fingerprint candidata e gate residui. Resta aperta e non merged. Production resta **NO-GO** fino a riconciliazione e approvazione esplicita della fingerprint e dello SHA eseguibile corrente, preflight locale PostgreSQL read-only, verifica immediata backup/Data API e completamento degli altri gate operativi. APP-14 resta PARTIAL fino al postflight Production e agli smoke test autenticati.
+
+## Correzione controllo manifest post-QA — 2026-11-07 21:35 UTC
+
+La prima esecuzione locale del preflight read-only si è arrestata prima di qualsiasi connessione PostgreSQL: il confronto del payload congelato includeva campi operativi aggiornabili dopo QA (stato/approvazione, riepilogo di sicurezza, checklist NO-GO e prove Data API raccolte dal proprietario). Non è stata eseguita alcuna query né scrittura Production.
+
+Nel branch è stata introdotta una proiezione esplicita dei soli campi metadata ammessi a variare:
+- stato e record di approvazione;
+- riepilogo operativo `safety` e checklist testuale `no_go_gates`;
+- stato informativo dell'approvazione SHA;
+- evidenze owner-verified della configurazione Data API per lo schema provider-managed.
+
+Restano nel confronto immutabile la sequenza delle 19 migrazioni, tutti i relativi hash, lo snapshot e le coppie del ledger storico, il contratto postflight e la disposizione di revisione. I gate eseguibili del runner non sono rimossi né sostituiti da questa esclusione.
+
+Sono stati aggiornati i test unitari per coprire le variazioni ammesse e continuare a respingere modifiche a review disposition, sequenza/hash, ledger e postflight. La modifica tocca un file incluso nel fingerprint: il fingerprint precedente non è riutilizzabile. In attesa di CI completa e ricalcolo del fingerprint sul nuovo head.
+
+**Stato:** correzione implementata nel branch, non ancora certificata CI. Preflight Production da ripetere solo dopo CI e approvazione del nuovo fingerprint/SHA. Production resta **NO-GO**; nessuna migrazione, merge, deploy o scrittura Production è stata eseguita.
