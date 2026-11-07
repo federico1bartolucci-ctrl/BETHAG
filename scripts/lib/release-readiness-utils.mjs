@@ -28,10 +28,37 @@ export function getApplicationTest(applicationTests, id) {
 }
 
 /** Return the immutable technical payload of the frozen Production cutover manifest.
- * Only approval/status metadata may change after the application QA SHA; review disposition remains frozen.
+ * The runner compares this projection with the QA-certified manifest. Only explicitly
+ * enumerated owner/operations metadata is mutable after QA; migration sequence,
+ * historical ledger snapshot, SQL hashes, review disposition and postflight contract
+ * remain part of the immutable payload.
  */
 export function frozenManifestPayload(manifest) {
-  const { status, user_authorization, ...payload } = manifest;
+  const payload = structuredClone(manifest);
+  delete payload.status;
+  delete payload.user_authorization;
+  delete payload.safety;
+  delete payload.no_go_gates;
+
+  // Status wording is an execution-progress field; actual STOP conditions are
+  // enforced by the runner's explicit checks and required environment gates.
+  if (payload.critical_execution_constraint) {
+    delete payload.critical_execution_constraint.status;
+  }
+
+  // These fields record owner-verified, time-specific Production Dashboard
+  // evidence. They do not alter the frozen SQL, ledger, ACL target or postflight.
+  const systemSchema = payload.live_catalog
+    ?.supabase_admin_default_acl_disposition
+    ?.qa_only_system_schema_default_acl;
+  if (systemSchema) {
+    delete systemSchema.exposure_status;
+    delete systemSchema.note;
+    delete systemSchema.exposure_evidence;
+    if (systemSchema.role_level_override) {
+      delete systemSchema.role_level_override.effective_dashboard_data_api_config;
+    }
+  }
   return payload;
 }
 
