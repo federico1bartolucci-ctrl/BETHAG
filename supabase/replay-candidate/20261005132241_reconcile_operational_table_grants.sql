@@ -1,0 +1,12 @@
+grant select, insert, update, delete on table public.condominium_legal_cases to authenticated;
+grant select on table public.condominium_payment_reversal_audit to authenticated;
+grant select, insert, update, delete on table public.condominium_register_items to authenticated;
+grant select, insert, update, delete on table public.condominium_suppliers to authenticated;
+grant select, insert, update, delete on table public.condominium_tax_obligations to authenticated;
+grant select, insert, update, delete on table public.condominium_unit_transformations to authenticated;
+grant select, insert, update, delete on table public.condominium_unit_transformation_items to authenticated;
+grant select, insert, update, delete on table public.condominium_works to authenticated;
+grant select, insert, update, delete on table public.condominium_work_events to authenticated;
+grant select, insert, update, delete on table public.condominium_work_progress to authenticated;
+grant select, insert, update, delete on table public.condominium_work_documents to authenticated;
+grant select, insert, update, delete on table public.condominium_fund_availability to authenticated;

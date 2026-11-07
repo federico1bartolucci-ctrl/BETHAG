@@ -1,0 +1,613 @@
+activities|id|uuid|t|gen_random_uuid()
+activities|workspace_id|uuid|t|
+activities|condominium_id|uuid|f|
+activities|title|text|t|
+activities|status|text|f|
+activities|activity_date|timestamp with time zone|f|
+activities|data|jsonb|t|'{}'::jsonb
+activities|created_at|timestamp with time zone|t|now()
+activities|updated_at|timestamp with time zone|t|now()
+activities|legacy_id|bigint|f|
+assemblies|id|uuid|t|gen_random_uuid()
+assemblies|workspace_id|uuid|t|
+assemblies|condominium_id|uuid|f|
+assemblies|title|text|t|
+assemblies|assembly_date|timestamp with time zone|f|
+assemblies|status|text|f|
+assemblies|data|jsonb|t|'{}'::jsonb
+assemblies|created_at|timestamp with time zone|t|now()
+assemblies|updated_at|timestamp with time zone|t|now()
+assemblies|legacy_id|bigint|f|
+communication_recipients|id|uuid|t|gen_random_uuid()
+communication_recipients|communication_id|uuid|t|
+communication_recipients|workspace_id|uuid|t|
+communication_recipients|condominium_id|uuid|f|
+communication_recipients|member_id|uuid|f|
+communication_recipients|user_id|uuid|f|
+communication_recipients|email|text|t|
+communication_recipients|name|text|t|
+communication_recipients|recipient_role|text|t|'resident'::text
+communication_recipients|status|text|t|'pending'::text
+communication_recipients|provider_message_id|text|f|
+communication_recipients|error_message|text|f|
+communication_recipients|sent_at|timestamp with time zone|f|
+communication_recipients|delivered_at|timestamp with time zone|f|
+communication_recipients|created_at|timestamp with time zone|t|now()
+communication_recipients|updated_at|timestamp with time zone|t|now()
+communication_recipients|bounced_at|timestamp with time zone|f|
+communication_recipients|complained_at|timestamp with time zone|f|
+communication_recipients|event_type|text|f|
+communication_recipients|provider_event_id|text|f|
+communication_recipients|queued_at|timestamp with time zone|f|
+communications|id|uuid|t|gen_random_uuid()
+communications|workspace_id|uuid|t|
+communications|condominium_id|uuid|f|
+communications|title|text|t|
+communications|body|text|f|
+communications|published|boolean|t|false
+communications|email_status|text|f|
+communications|email_prepared_at|timestamp with time zone|f|
+communications|data|jsonb|t|'{}'::jsonb
+communications|created_at|timestamp with time zone|t|now()
+communications|updated_at|timestamp with time zone|t|now()
+communications|legacy_id|bigint|f|
+condominium_accounting_settings|id|uuid|t|gen_random_uuid()
+condominium_accounting_settings|workspace_id|uuid|t|
+condominium_accounting_settings|condominium_id|uuid|t|
+condominium_accounting_settings|accounting_start_date|date|t|make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 1, 1)
+condominium_accounting_settings|accounting_end_date|date|t|make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 12, 31)
+condominium_accounting_settings|ordinary_installment_count|integer|t|12
+condominium_accounting_settings|ordinary_due_dates|date[]|t|'{}'::date[]
+condominium_accounting_settings|extraordinary_mode|text|t|'separata'::text
+condominium_accounting_settings|extraordinary_allow_multi_year|boolean|t|true
+condominium_accounting_settings|created_at|timestamp with time zone|t|now()
+condominium_accounting_settings|updated_at|timestamp with time zone|t|now()
+condominium_allocation_intakes|id|uuid|t|gen_random_uuid()
+condominium_allocation_intakes|workspace_id|uuid|t|
+condominium_allocation_intakes|condominium_id|uuid|t|
+condominium_allocation_intakes|source|text|t|'Manuale'::text
+condominium_allocation_intakes|status|text|t|'Bozza'::text
+condominium_allocation_intakes|document_id|uuid|f|
+condominium_allocation_intakes|ledger_entry_id|uuid|f|
+condominium_allocation_intakes|allocation_table_id|uuid|f|
+condominium_allocation_intakes|title|text|t|''::text
+condominium_allocation_intakes|description|text|t|''::text
+condominium_allocation_intakes|expense_amount|numeric(14,2)|f|
+condominium_allocation_intakes|extracted_data|jsonb|t|'{}'::jsonb
+condominium_allocation_intakes|rows|jsonb|t|'[]'::jsonb
+condominium_allocation_intakes|validation_errors|jsonb|t|'[]'::jsonb
+condominium_allocation_intakes|notes|text|t|''::text
+condominium_allocation_intakes|created_by|uuid|f|
+condominium_allocation_intakes|confirmed_by|uuid|f|
+condominium_allocation_intakes|confirmed_at|timestamp with time zone|f|
+condominium_allocation_intakes|created_at|timestamp with time zone|t|now()
+condominium_allocation_intakes|updated_at|timestamp with time zone|t|now()
+condominium_allocation_rules|id|uuid|t|gen_random_uuid()
+condominium_allocation_rules|workspace_id|uuid|t|
+condominium_allocation_rules|condominium_id|uuid|t|
+condominium_allocation_rules|name|text|t|
+condominium_allocation_rules|expense_type|text|f|
+condominium_allocation_rules|category|text|f|
+condominium_allocation_rules|allocation_table_id|uuid|t|
+condominium_allocation_rules|priority|integer|t|100
+condominium_allocation_rules|active|boolean|t|true
+condominium_allocation_rules|notes|text|t|''::text
+condominium_allocation_rules|created_at|timestamp with time zone|t|now()
+condominium_allocation_rules|updated_at|timestamp with time zone|t|now()
+condominium_audit_log|id|uuid|t|gen_random_uuid()
+condominium_audit_log|workspace_id|uuid|t|
+condominium_audit_log|condominium_id|uuid|f|
+condominium_audit_log|entity_type|text|t|
+condominium_audit_log|entity_id|uuid|f|
+condominium_audit_log|action|text|t|
+condominium_audit_log|description|text|t|''::text
+condominium_audit_log|data|jsonb|t|'{}'::jsonb
+condominium_audit_log|created_at|timestamp with time zone|t|now()
+condominium_budgets|id|uuid|t|gen_random_uuid()
+condominium_budgets|workspace_id|uuid|t|
+condominium_budgets|condominium_id|uuid|t|
+condominium_budgets|fiscal_year_id|uuid|f|
+condominium_budgets|category|text|t|'Generale'::text
+condominium_budgets|description|text|t|''::text
+condominium_budgets|amount|numeric|t|0
+condominium_budgets|notes|text|t|''::text
+condominium_budgets|created_at|timestamp with time zone|t|now()
+condominium_budgets|updated_at|timestamp with time zone|t|now()
+condominium_consumption_readings|id|uuid|t|gen_random_uuid()
+condominium_consumption_readings|workspace_id|uuid|t|
+condominium_consumption_readings|condominium_id|uuid|t|
+condominium_consumption_readings|fiscal_year_id|uuid|f|
+condominium_consumption_readings|unit_id|uuid|t|
+condominium_consumption_readings|service_type|text|t|'Riscaldamento'::text
+condominium_consumption_readings|period_start|date|f|
+condominium_consumption_readings|period_end|date|f|
+condominium_consumption_readings|meter_code|text|t|''::text
+condominium_consumption_readings|previous_reading|numeric(14,4)|f|
+condominium_consumption_readings|current_reading|numeric(14,4)|f|
+condominium_consumption_readings|consumption|numeric(14,4)|f|
+condominium_consumption_readings|kwh|numeric(14,4)|f|
+condominium_consumption_readings|allocation_value|numeric(14,4)|f|
+condominium_consumption_readings|charge_amount|numeric(14,2)|f|
+condominium_consumption_readings|source|text|t|'Manuale'::text
+condominium_consumption_readings|notes|text|t|''::text
+condominium_consumption_readings|data|jsonb|t|'{}'::jsonb
+condominium_consumption_readings|created_at|timestamp with time zone|t|now()
+condominium_consumption_readings|updated_at|timestamp with time zone|t|now()
+condominium_creation_intakes|id|uuid|t|gen_random_uuid()
+condominium_creation_intakes|workspace_id|uuid|t|
+condominium_creation_intakes|status|text|t|'Bozza'::text
+condominium_creation_intakes|source|text|t|'AI'::text
+condominium_creation_intakes|source_documents|jsonb|t|'[]'::jsonb
+condominium_creation_intakes|extracted_data|jsonb|t|'{}'::jsonb
+condominium_creation_intakes|structure|jsonb|t|'{}'::jsonb
+condominium_creation_intakes|validation_errors|jsonb|t|'[]'::jsonb
+condominium_creation_intakes|warnings|jsonb|t|'[]'::jsonb
+condominium_creation_intakes|notes|text|t|''::text
+condominium_creation_intakes|created_by|uuid|f|
+condominium_creation_intakes|confirmed_by|uuid|f|
+condominium_creation_intakes|confirmed_at|timestamp with time zone|f|
+condominium_creation_intakes|created_at|timestamp with time zone|t|now()
+condominium_creation_intakes|updated_at|timestamp with time zone|t|now()
+condominium_creation_intakes|created_condominium_id|uuid|f|
+condominium_expense_allocations|id|uuid|t|gen_random_uuid()
+condominium_expense_allocations|workspace_id|uuid|t|
+condominium_expense_allocations|condominium_id|uuid|t|
+condominium_expense_allocations|ledger_entry_id|uuid|t|
+condominium_expense_allocations|unit_id|uuid|f|
+condominium_expense_allocations|member_id|uuid|f|
+condominium_expense_allocations|allocation_basis|text|t|'Millesimi'::text
+condominium_expense_allocations|millesimi|numeric(12,4)|f|
+condominium_expense_allocations|amount|numeric(14,2)|t|0
+condominium_expense_allocations|paid_amount|numeric(14,2)|t|0
+condominium_expense_allocations|due_date|date|f|
+condominium_expense_allocations|status|text|t|'Da pagare'::text
+condominium_expense_allocations|notes|text|t|''::text
+condominium_expense_allocations|created_at|timestamp with time zone|t|now()
+condominium_expense_allocations|updated_at|timestamp with time zone|t|now()
+condominium_expense_allocations|allocation_table_id|uuid|f|
+condominium_fiscal_carryover_compensations|id|uuid|t|gen_random_uuid()
+condominium_fiscal_carryover_compensations|workspace_id|uuid|t|
+condominium_fiscal_carryover_compensations|condominium_id|uuid|t|
+condominium_fiscal_carryover_compensations|carryover_id|uuid|t|
+condominium_fiscal_carryover_compensations|target_installment_id|uuid|f|
+condominium_fiscal_carryover_compensations|amount|numeric|t|
+condominium_fiscal_carryover_compensations|notes|text|t|''::text
+condominium_fiscal_carryover_compensations|created_by|uuid|f|
+condominium_fiscal_carryover_compensations|created_at|timestamp with time zone|t|now()
+condominium_fiscal_carryovers|id|uuid|t|gen_random_uuid()
+condominium_fiscal_carryovers|workspace_id|uuid|t|
+condominium_fiscal_carryovers|condominium_id|uuid|t|
+condominium_fiscal_carryovers|source_fiscal_year_id|uuid|t|
+condominium_fiscal_carryovers|target_fiscal_year_id|uuid|t|
+condominium_fiscal_carryovers|unit_id|uuid|f|
+condominium_fiscal_carryovers|member_id|uuid|f|
+condominium_fiscal_carryovers|balance|numeric(14,2)|t|
+condominium_fiscal_carryovers|kind|text|t|
+condominium_fiscal_carryovers|status|text|t|'Da riportare'::text
+condominium_fiscal_carryovers|notes|text|t|''::text
+condominium_fiscal_carryovers|created_at|timestamp with time zone|t|now()
+condominium_fiscal_carryovers|updated_at|timestamp with time zone|t|now()
+condominium_fiscal_years|id|uuid|t|gen_random_uuid()
+condominium_fiscal_years|workspace_id|uuid|t|
+condominium_fiscal_years|condominium_id|uuid|t|
+condominium_fiscal_years|name|text|t|
+condominium_fiscal_years|start_date|date|t|
+condominium_fiscal_years|end_date|date|t|
+condominium_fiscal_years|status|text|t|'Aperto'::text
+condominium_fiscal_years|opening_balance|numeric(14,2)|t|0
+condominium_fiscal_years|notes|text|t|''::text
+condominium_fiscal_years|created_at|timestamp with time zone|t|now()
+condominium_fiscal_years|updated_at|timestamp with time zone|t|now()
+condominium_funds|id|uuid|t|gen_random_uuid()
+condominium_funds|workspace_id|uuid|t|
+condominium_funds|condominium_id|uuid|t|
+condominium_funds|name|text|t|
+condominium_funds|purpose|text|t|''::text
+condominium_funds|target_amount|numeric(14,2)|t|0
+condominium_funds|allocated_amount|numeric(14,2)|t|0
+condominium_funds|used_amount|numeric(14,2)|t|0
+condominium_funds|active|boolean|t|true
+condominium_funds|notes|text|t|''::text
+condominium_funds|created_at|timestamp with time zone|t|now()
+condominium_funds|updated_at|timestamp with time zone|t|now()
+condominium_installments|id|uuid|t|gen_random_uuid()
+condominium_installments|workspace_id|uuid|t|
+condominium_installments|condominium_id|uuid|t|
+condominium_installments|fiscal_year_id|uuid|f|
+condominium_installments|member_id|uuid|f|
+condominium_installments|unit_id|uuid|f|
+condominium_installments|title|text|t|
+condominium_installments|due_date|date|f|
+condominium_installments|amount|numeric|t|0
+condominium_installments|paid_amount|numeric|t|0
+condominium_installments|status|text|t|'Da pagare'::text
+condominium_installments|notes|text|t|''::text
+condominium_installments|created_at|timestamp with time zone|t|now()
+condominium_installments|updated_at|timestamp with time zone|t|now()
+condominium_installments|ledger_entry_id|uuid|f|
+condominium_insurance_policies|id|uuid|t|gen_random_uuid()
+condominium_insurance_policies|workspace_id|uuid|t|
+condominium_insurance_policies|condominium_id|uuid|t|
+condominium_insurance_policies|company_name|text|t|''::text
+condominium_insurance_policies|policy_number|text|t|''::text
+condominium_insurance_policies|policy_type|text|t|'Globale fabbricati'::text
+condominium_insurance_policies|coverage|text|t|''::text
+condominium_insurance_policies|start_date|date|f|
+condominium_insurance_policies|end_date|date|f|
+condominium_insurance_policies|premium|numeric(12,2)|t|0
+condominium_insurance_policies|deductible|numeric(12,2)|t|0
+condominium_insurance_policies|contact_name|text|t|''::text
+condominium_insurance_policies|contact_email|text|t|''::text
+condominium_insurance_policies|contact_phone|text|t|''::text
+condominium_insurance_policies|notes|text|t|''::text
+condominium_insurance_policies|document_id|bigint|f|
+condominium_insurance_policies|active|boolean|t|true
+condominium_insurance_policies|created_at|timestamp with time zone|t|now()
+condominium_insurance_policies|updated_at|timestamp with time zone|t|now()
+condominium_ledger_entries|id|uuid|t|gen_random_uuid()
+condominium_ledger_entries|workspace_id|uuid|t|
+condominium_ledger_entries|condominium_id|uuid|t|
+condominium_ledger_entries|fiscal_year_id|uuid|f|
+condominium_ledger_entries|entry_date|date|t|
+condominium_ledger_entries|direction|text|t|
+condominium_ledger_entries|category|text|t|
+condominium_ledger_entries|description|text|t|
+condominium_ledger_entries|amount|numeric(14,2)|t|
+condominium_ledger_entries|payment_status|text|t|'Registrato'::text
+condominium_ledger_entries|due_date|date|f|
+condominium_ledger_entries|supplier_id|uuid|f|
+condominium_ledger_entries|unit_id|uuid|f|
+condominium_ledger_entries|member_id|uuid|f|
+condominium_ledger_entries|document_id|uuid|f|
+condominium_ledger_entries|notes|text|t|''::text
+condominium_ledger_entries|data|jsonb|t|'{}'::jsonb
+condominium_ledger_entries|created_at|timestamp with time zone|t|now()
+condominium_ledger_entries|updated_at|timestamp with time zone|t|now()
+condominium_ledger_entries|fund_id|uuid|f|
+condominium_ledger_entries|expense_type|text|t|'Ordinaria'::text
+condominium_ledger_entries|deliberation_date|date|f|
+condominium_ledger_entries|assembly_id|uuid|f|
+condominium_legal_cases|id|uuid|t|gen_random_uuid()
+condominium_legal_cases|workspace_id|uuid|t|
+condominium_legal_cases|condominium_id|uuid|t|
+condominium_legal_cases|title|text|t|
+condominium_legal_cases|counterpart|text|t|''::text
+condominium_legal_cases|status|text|t|'Aperto'::text
+condominium_legal_cases|opened_date|date|f|
+condominium_legal_cases|closed_date|date|f|
+condominium_legal_cases|notes|text|t|''::text
+condominium_legal_cases|data|jsonb|t|'{}'::jsonb
+condominium_legal_cases|created_at|timestamp with time zone|t|now()
+condominium_legal_cases|updated_at|timestamp with time zone|t|now()
+condominium_member_transfers|id|uuid|t|gen_random_uuid()
+condominium_member_transfers|workspace_id|uuid|t|
+condominium_member_transfers|condominium_id|uuid|t|
+condominium_member_transfers|unit_id|uuid|t|
+condominium_member_transfers|outgoing_member_id|uuid|t|
+condominium_member_transfers|incoming_member_id|uuid|f|
+condominium_member_transfers|transfer_date|date|t|
+condominium_member_transfers|transfer_type|text|t|'Vendita'::text
+condominium_member_transfers|status|text|t|'Confermato'::text
+condominium_member_transfers|notes|text|t|''::text
+condominium_member_transfers|data|jsonb|t|'{}'::jsonb
+condominium_member_transfers|created_by|uuid|f|
+condominium_member_transfers|created_at|timestamp with time zone|t|now()
+condominium_member_transfers|updated_at|timestamp with time zone|t|now()
+condominium_member_transfers|closed_at|timestamp with time zone|f|
+condominium_member_transfers|closed_by|uuid|f|
+condominium_members|id|uuid|t|gen_random_uuid()
+condominium_members|condominium_id|uuid|t|
+condominium_members|user_id|uuid|f|
+condominium_members|name|text|t|
+condominium_members|email|text|f|
+condominium_members|role|text|t|'resident'::text
+condominium_members|active|boolean|t|true
+condominium_members|permissions|jsonb|t|'{}'::jsonb
+condominium_members|data|jsonb|t|'{}'::jsonb
+condominium_members|created_at|timestamp with time zone|t|now()
+condominium_members|updated_at|timestamp with time zone|t|now()
+condominium_members|legacy_id|bigint|f|
+condominium_members|unit_id|uuid|f|
+condominium_millesimal_tables|id|uuid|t|gen_random_uuid()
+condominium_millesimal_tables|workspace_id|uuid|t|
+condominium_millesimal_tables|condominium_id|uuid|t|
+condominium_millesimal_tables|name|text|t|
+condominium_millesimal_tables|description|text|t|''::text
+condominium_millesimal_tables|total_millesimi|numeric|t|1000
+condominium_millesimal_tables|active|boolean|t|true
+condominium_millesimal_tables|notes|text|t|''::text
+condominium_millesimal_tables|created_at|timestamp with time zone|t|now()
+condominium_millesimal_tables|updated_at|timestamp with time zone|t|now()
+condominium_millesimal_tables|basis_type|text|t|'Millesimi'::text
+condominium_millesimal_tables|scope_mode|text|t|'all'::text
+condominium_millesimal_tables|scope_unit_ids|uuid[]|t|'{}'::uuid[]
+condominium_millesimal_tables|scope_building_codes|text[]|t|'{}'::text[]
+condominium_millesimal_values|id|uuid|t|gen_random_uuid()
+condominium_millesimal_values|workspace_id|uuid|t|
+condominium_millesimal_values|condominium_id|uuid|t|
+condominium_millesimal_values|table_id|uuid|t|
+condominium_millesimal_values|unit_id|uuid|t|
+condominium_millesimal_values|value|numeric|t|0
+condominium_millesimal_values|excluded|boolean|t|false
+condominium_millesimal_values|notes|text|t|''::text
+condominium_millesimal_values|created_at|timestamp with time zone|t|now()
+condominium_millesimal_values|updated_at|timestamp with time zone|t|now()
+condominium_payment_movements|id|uuid|t|gen_random_uuid()
+condominium_payment_movements|workspace_id|uuid|t|
+condominium_payment_movements|condominium_id|uuid|t|
+condominium_payment_movements|installment_id|uuid|t|
+condominium_payment_movements|payment_date|date|t|
+condominium_payment_movements|amount|numeric|t|0
+condominium_payment_movements|method|text|t|'Bonifico'::text
+condominium_payment_movements|reference|text|t|''::text
+condominium_payment_movements|notes|text|t|''::text
+condominium_payment_movements|created_at|timestamp with time zone|t|now()
+condominium_payment_reversal_audit|id|uuid|t|gen_random_uuid()
+condominium_payment_reversal_audit|original_payment_id|uuid|t|
+condominium_payment_reversal_audit|workspace_id|uuid|t|
+condominium_payment_reversal_audit|condominium_id|uuid|t|
+condominium_payment_reversal_audit|installment_id|uuid|t|
+condominium_payment_reversal_audit|amount|numeric|t|
+condominium_payment_reversal_audit|payment_date|date|t|
+condominium_payment_reversal_audit|method|text|t|'Bonifico'::text
+condominium_payment_reversal_audit|reference|text|t|''::text
+condominium_payment_reversal_audit|notes|text|t|''::text
+condominium_payment_reversal_audit|reversal_reason|text|t|
+condominium_payment_reversal_audit|reversed_at|timestamp with time zone|t|now()
+condominium_payment_reversal_audit|reversed_by|uuid|t|
+condominium_register_items|id|uuid|t|gen_random_uuid()
+condominium_register_items|workspace_id|uuid|t|
+condominium_register_items|condominium_id|uuid|t|
+condominium_register_items|item_type|text|t|'Sicurezza'::text
+condominium_register_items|category|text|t|'Generale'::text
+condominium_register_items|title|text|t|
+condominium_register_items|location|text|t|''::text
+condominium_register_items|responsible|text|t|''::text
+condominium_register_items|expiry_date|date|f|
+condominium_register_items|status|text|t|'Attivo'::text
+condominium_register_items|document_id|uuid|f|
+condominium_register_items|notes|text|t|''::text
+condominium_register_items|data|jsonb|t|'{}'::jsonb
+condominium_register_items|created_at|timestamp with time zone|t|now()
+condominium_register_items|updated_at|timestamp with time zone|t|now()
+condominium_register_items|supplier_id|uuid|f|
+condominium_register_items|estimated_amount|numeric|t|0
+condominium_requests|id|uuid|t|gen_random_uuid()
+condominium_requests|workspace_id|uuid|t|
+condominium_requests|condominium_id|uuid|t|
+condominium_requests|member_id|uuid|f|
+condominium_requests|requester_user_id|uuid|f|
+condominium_requests|title|text|t|
+condominium_requests|description|text|f|
+condominium_requests|status|text|t|'Nuova'::text
+condominium_requests|data|jsonb|t|'{}'::jsonb
+condominium_requests|created_at|timestamp with time zone|t|now()
+condominium_requests|updated_at|timestamp with time zone|t|now()
+condominium_requests|legacy_id|bigint|f|
+condominium_suppliers|id|uuid|t|gen_random_uuid()
+condominium_suppliers|workspace_id|uuid|t|
+condominium_suppliers|condominium_id|uuid|t|
+condominium_suppliers|business_name|text|t|
+condominium_suppliers|contact_name|text|t|''::text
+condominium_suppliers|fiscal_code|text|t|''::text
+condominium_suppliers|vat_number|text|t|''::text
+condominium_suppliers|email|text|t|''::text
+condominium_suppliers|phone|text|t|''::text
+condominium_suppliers|category|text|t|''::text
+condominium_suppliers|contract_start|date|f|
+condominium_suppliers|contract_end|date|f|
+condominium_suppliers|notes|text|t|''::text
+condominium_suppliers|data|jsonb|t|'{}'::jsonb
+condominium_suppliers|created_at|timestamp with time zone|t|now()
+condominium_suppliers|updated_at|timestamp with time zone|t|now()
+condominium_tax_obligations|id|uuid|t|gen_random_uuid()
+condominium_tax_obligations|workspace_id|uuid|t|
+condominium_tax_obligations|condominium_id|uuid|t|
+condominium_tax_obligations|title|text|t|
+condominium_tax_obligations|category|text|t|'Fiscale'::text
+condominium_tax_obligations|due_date|date|t|
+condominium_tax_obligations|amount|numeric(14,2)|f|
+condominium_tax_obligations|status|text|t|'Da fare'::text
+condominium_tax_obligations|notes|text|t|''::text
+condominium_tax_obligations|created_at|timestamp with time zone|t|now()
+condominium_tax_obligations|updated_at|timestamp with time zone|t|now()
+condominium_unit_transformation_items|id|uuid|t|gen_random_uuid()
+condominium_unit_transformation_items|transformation_id|uuid|t|
+condominium_unit_transformation_items|unit_id|uuid|t|
+condominium_unit_transformation_items|direction|text|t|
+condominium_unit_transformation_items|sequence_no|integer|t|1
+condominium_unit_transformation_items|unit_snapshot|jsonb|t|'{}'::jsonb
+condominium_unit_transformation_items|created_at|timestamp with time zone|t|now()
+condominium_unit_transformations|id|uuid|t|gen_random_uuid()
+condominium_unit_transformations|workspace_id|uuid|t|
+condominium_unit_transformations|condominium_id|uuid|t|
+condominium_unit_transformations|transformation_type|text|t|
+condominium_unit_transformations|status|text|t|'Bozza'::text
+condominium_unit_transformations|effective_date|date|t|
+condominium_unit_transformations|cadastral_protocol|text|t|''::text
+condominium_unit_transformations|cadastral_protocol_date|date|f|
+condominium_unit_transformations|accounting_resolution_status|text|t|'Da verificare'::text
+condominium_unit_transformations|millesimal_review_status|text|t|'Da verificare'::text
+condominium_unit_transformations|notes|text|t|''::text
+condominium_unit_transformations|data|jsonb|t|'{}'::jsonb
+condominium_unit_transformations|created_by|uuid|f|
+condominium_unit_transformations|confirmed_by|uuid|f|
+condominium_unit_transformations|created_at|timestamp with time zone|t|now()
+condominium_unit_transformations|updated_at|timestamp with time zone|t|now()
+condominium_unit_transformations|confirmed_at|timestamp with time zone|f|
+condominium_unit_transformations|millesimal_snapshot|jsonb|t|'{}'::jsonb
+condominium_unit_transformations|accounting_snapshot|jsonb|t|'{}'::jsonb
+condominium_unit_transformations|source_unit_count|integer|t|0
+condominium_unit_transformations|destination_unit_count|integer|t|0
+condominium_units|id|uuid|t|gen_random_uuid()
+condominium_units|workspace_id|uuid|t|
+condominium_units|condominium_id|uuid|t|
+condominium_units|legacy_id|bigint|f|
+condominium_units|unit_code|text|t|
+condominium_units|data|jsonb|t|'{}'::jsonb
+condominium_units|created_at|timestamp with time zone|t|now()
+condominium_units|updated_at|timestamp with time zone|t|now()
+condominium_units|building_code|text|t|''::text
+condominium_units|lifecycle_status|text|t|'Attiva'::text
+condominium_units|lifecycle_effective_date|date|f|
+condominium_units|superseded_at|timestamp with time zone|f|
+condominium_work_documents|id|uuid|t|gen_random_uuid()
+condominium_work_documents|workspace_id|uuid|t|
+condominium_work_documents|condominium_id|uuid|t|
+condominium_work_documents|work_id|uuid|t|
+condominium_work_documents|document_id|bigint|f|
+condominium_work_documents|title|text|t|''::text
+condominium_work_documents|notes|text|t|''::text
+condominium_work_documents|created_at|timestamp with time zone|t|now()
+condominium_work_events|id|uuid|t|gen_random_uuid()
+condominium_work_events|workspace_id|uuid|t|
+condominium_work_events|condominium_id|uuid|t|
+condominium_work_events|work_id|uuid|t|
+condominium_work_events|event_type|text|t|
+condominium_work_events|event_date|timestamp with time zone|t|now()
+condominium_work_events|title|text|t|''::text
+condominium_work_events|description|text|t|''::text
+condominium_work_events|amount|numeric|t|0
+condominium_work_events|data|jsonb|t|'{}'::jsonb
+condominium_work_events|created_at|timestamp with time zone|t|now()
+condominium_work_progress|id|uuid|t|gen_random_uuid()
+condominium_work_progress|workspace_id|uuid|t|
+condominium_work_progress|condominium_id|uuid|t|
+condominium_work_progress|work_id|uuid|t|
+condominium_work_progress|progress_no|integer|t|
+condominium_work_progress|progress_date|date|t|
+condominium_work_progress|title|text|t|''::text
+condominium_work_progress|status|text|t|'Presentato'::text
+condominium_work_progress|percentage|numeric|t|0
+condominium_work_progress|amount|numeric|t|0
+condominium_work_progress|paid_amount|numeric|t|0
+condominium_work_progress|notes|text|t|''::text
+condominium_work_progress|created_at|timestamp with time zone|t|now()
+condominium_work_progress|updated_at|timestamp with time zone|t|now()
+condominium_work_progress|ledger_entry_id|uuid|f|
+condominium_work_progress|payment_entry_id|uuid|f|
+condominium_works|id|uuid|t|gen_random_uuid()
+condominium_works|workspace_id|uuid|t|
+condominium_works|condominium_id|uuid|t|
+condominium_works|title|text|t|
+condominium_works|category|text|t|'Manutenzione'::text
+condominium_works|description|text|t|''::text
+condominium_works|status|text|t|'Da programmare'::text
+condominium_works|priority|text|t|'Media'::text
+condominium_works|supplier_id|uuid|f|
+condominium_works|register_item_id|uuid|f|
+condominium_works|start_date|date|f|
+condominium_works|expected_end_date|date|f|
+condominium_works|actual_end_date|date|f|
+condominium_works|estimated_amount|numeric|t|0
+condominium_works|approved_amount|numeric|t|0
+condominium_works|actual_amount|numeric|t|0
+condominium_works|notes|text|t|''::text
+condominium_works|data|jsonb|t|'{}'::jsonb
+condominium_works|created_at|timestamp with time zone|t|now()
+condominium_works|updated_at|timestamp with time zone|t|now()
+condominium_works|fund_id|uuid|f|
+condominium_works|progress_percent|numeric|t|0
+condominium_works|paid_amount|numeric|t|0
+condominium_works|remaining_amount|numeric|t|0
+condominium_works|payment_status|text|t|'Nessun importo'::text
+condominiums|id|uuid|t|gen_random_uuid()
+condominiums|workspace_id|uuid|t|
+condominiums|name|text|t|
+condominiums|address|text|f|
+condominiums|city|text|f|
+condominiums|postal_code|text|f|
+condominiums|province|text|f|
+condominiums|data|jsonb|t|'{}'::jsonb
+condominiums|created_at|timestamp with time zone|t|now()
+condominiums|updated_at|timestamp with time zone|t|now()
+condominiums|legacy_id|bigint|f|
+condominiums|archived_at|timestamp with time zone|f|
+condominiums|archived_by|uuid|f|
+condominiums|archive_reason|text|f|
+deadlines|id|uuid|t|gen_random_uuid()
+deadlines|workspace_id|uuid|t|
+deadlines|condominium_id|uuid|f|
+deadlines|title|text|t|
+deadlines|due_date|date|f|
+deadlines|status|text|f|
+deadlines|data|jsonb|t|'{}'::jsonb
+deadlines|created_at|timestamp with time zone|t|now()
+deadlines|updated_at|timestamp with time zone|t|now()
+deadlines|legacy_id|bigint|f|
+documents|id|uuid|t|gen_random_uuid()
+documents|workspace_id|uuid|t|
+documents|condominium_id|uuid|f|
+documents|title|text|t|
+documents|category|text|f|
+documents|status|text|f|
+documents|file_path|text|f|
+documents|data|jsonb|t|'{}'::jsonb
+documents|created_at|timestamp with time zone|t|now()
+documents|updated_at|timestamp with time zone|t|now()
+documents|legacy_id|bigint|f|
+documents|file_size_bytes|bigint|f|
+portal_access|id|uuid|t|gen_random_uuid()
+portal_access|workspace_id|uuid|t|
+portal_access|condominium_id|uuid|t|
+portal_access|legacy_id|bigint|f|
+portal_access|name|text|t|
+portal_access|email|text|t|
+portal_access|role|text|t|'resident'::text
+portal_access|apartment|text|f|
+portal_access|permissions|jsonb|t|'[]'::jsonb
+portal_access|active|boolean|t|true
+portal_access|user_id|uuid|f|
+portal_access|data|jsonb|t|'{}'::jsonb
+portal_access|created_at|timestamp with time zone|t|now()
+portal_access|updated_at|timestamp with time zone|t|now()
+portal_access|member_id|uuid|f|
+portal_registration_requests|id|uuid|t|gen_random_uuid()
+portal_registration_requests|workspace_id|uuid|f|
+portal_registration_requests|requested_user_id|uuid|f|
+portal_registration_requests|matched_member_id|uuid|f|
+portal_registration_requests|email|text|t|
+portal_registration_requests|full_name|text|t|
+portal_registration_requests|fiscal_code|text|f|
+portal_registration_requests|condominium_name|text|f|
+portal_registration_requests|status|text|t|'pending'::text
+portal_registration_requests|note|text|f|
+portal_registration_requests|created_at|timestamp with time zone|t|now()
+portal_registration_requests|updated_at|timestamp with time zone|t|now()
+portal_registration_requests|reviewed_at|timestamp with time zone|f|
+portal_registration_requests|reviewed_by|uuid|f|
+profiles|id|uuid|t|
+profiles|full_name|text|f|
+profiles|email|text|f|
+profiles|role|text|t|'resident'::text
+profiles|active|boolean|t|true
+profiles|created_at|timestamp with time zone|t|now()
+profiles|updated_at|timestamp with time zone|t|now()
+suppliers|id|uuid|t|gen_random_uuid()
+suppliers|workspace_id|uuid|t|
+suppliers|condominium_id|uuid|f|
+suppliers|name|text|t|
+suppliers|category|text|f|
+suppliers|status|text|f|
+suppliers|data|jsonb|t|'{}'::jsonb
+suppliers|created_at|timestamp with time zone|t|now()
+suppliers|updated_at|timestamp with time zone|t|now()
+suppliers|legacy_id|bigint|f|
+user_security_settings|user_id|uuid|t|
+user_security_settings|personal_code_hash|text|f|
+user_security_settings|personal_code_enabled|boolean|t|false
+user_security_settings|updated_at|timestamp with time zone|t|now()
+workspace_members|workspace_id|uuid|t|
+workspace_members|user_id|uuid|t|
+workspace_members|role|text|t|
+workspace_members|active|boolean|t|true
+workspace_members|permissions|jsonb|t|'{}'::jsonb
+workspace_members|created_at|timestamp with time zone|t|now()
+workspace_members|condominium_id|uuid|f|
+workspace_members|legacy_id|bigint|f|
+workspace_members|data|jsonb|t|'{}'::jsonb
+workspaces|id|uuid|t|gen_random_uuid()
+workspaces|name|text|t|
+workspaces|plan|text|t|'free'::text
+workspaces|created_at|timestamp with time zone|t|now()
+workspaces|updated_at|timestamp with time zone|t|now()
