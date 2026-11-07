@@ -141,5 +141,7 @@ console.log(JSON.stringify({
   baseline_column_acl_statements_found: columnGrantLines.length,
   baseline_relation_grant_options_found: relationGrantOptionLines.length,
   historical_production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
-  latest_live_authenticated_maintain_check: "ZERO_DIRECT_RELATION_GRANTS_2026-11-08",\n  platform_managed_supabase_admin_default_acl: "REMAINS_PRESENT",\n  release_acl_parity: "BLOCKED_PLATFORM_DEFAULT_ACL_DISPOSITION_AND_FULL_REPLAY_PENDING",
+  latest_live_authenticated_maintain_check: "ZERO_DIRECT_RELATION_GRANTS_2026-11-08",
+  platform_managed_supabase_admin_default_acl: "REMAINS_PRESENT",
+  release_acl_parity: "BLOCKED_PLATFORM_DEFAULT_ACL_DISPOSITION_AND_FULL_REPLAY_PENDING",
 }, null, 2));
