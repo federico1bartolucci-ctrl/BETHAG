@@ -3,23 +3,23 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+  "reviewed_head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42330953679,
-      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+      "run_id": 42334059983,
+      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42330953652,
-      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+      "run_id": 42334060031,
+      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42330953653,
-      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+      "run_id": 42334060039,
+      "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
       "conclusion": "success"
     }
   },
@@ -139,7 +139,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-13 and APP-15 PASS; APP-14 remains a Production post-cutover gate. Build/PostgreSQL 17 and Baseline Safety SUCCESS on exact PR head ad8c2386af1e3b5084202117c2e9130b69fac182 (runs 42330953652, 42330953653, 42330953679). Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-15 PASS on exact PR head a441a5dc0ff27eee9078cd0878c1a111d95493fb; Build, Baseline Safety and final QA workflows SUCCESS (42334060031, 42334060039, 42334059983). APP-14 still requires Production post-cutover validation. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -159,7 +159,7 @@
     "sql_file_sha": "b7df2c6ee1cab8bd2a9c4817107bc08d0393b7bb",
     "exact_sql_file_execution": "PASS_READ_ONLY — executed the reviewed production-cutover-preflight-20261105.sql through the Supabase connector; no writes."
   },
-  "captured_at_utc": "2026-11-06T18:36:00Z",
+  "captured_at_utc": "2026-11-07",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
@@ -202,28 +202,29 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+    "reviewed_head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
     "workflow_runs": {
       "baseline_safety": {
-        "run_id": 42330953653,
-        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+        "run_id": 42334060039,
+        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42330953652,
-        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+        "run_id": 42334060031,
+        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
         "conclusion": "success"
       },
       "final_qa_collaudo": {
-        "run_id": 42330953679,
-        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
+        "run_id": 42334059983,
+        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
         "conclusion": "success"
       }
     },
-    "final_qa_steps": "PASS — workflow completed successfully on exact commit; APP-01..APP-13 and APP-15 PASS. APP-14 remains Production post-cutover.",
-    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover.",
+    "final_qa_steps": "PASS — APP-01..APP-15 workflow completed successfully on exact commit.",
+    "application_acceptance": "APP-01..APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
     "postgres17": "PASS — isolated PostgreSQL 17 bootstrap and guarded 19-migration rehearsal recorded by Build workflow.",
     "reproducible_install": "PASS — Build workflow SUCCESS on pinned commit.",
+    "transient_backend_retry": "PASS — bounded retry for transient Supabase/network failures; permanent auth/validation/constraint errors are not retried.",
     "production_modified": false,
     "merge_or_deploy_performed": false
   }
