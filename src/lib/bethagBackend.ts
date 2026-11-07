@@ -649,21 +649,10 @@ async function syncBackendStateNow(
     await upsertRows(table, rows, table === "condominium_works" ? "id" : undefined);
   }
 
-  const collaboratorRows =
-    allowedModules === null
-      ? (state.collaborators ?? []).map((item: any) => ({
-          workspace_id: workspaceId,
-          user_id: item.userId ?? null,
-          role: "collaborator",
-          active: item.status !== "Disattivato",
-          permissions: item.permissions ?? [],
-          legacy_id: item.id,
-          data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
-        })).filter((row: any) => row.user_id)
-      : [];
-
-  if (allowedModules === null && collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
-
+  // Collaborator membership, status and permissions are changed only by
+  // their explicit invitation/update/removal actions. Replaying the complete
+  // in-memory collaborator snapshot during unrelated workspace syncs can
+  // overwrite server-owned membership state and creates redundant writes.
   const portalRows = canSyncPortal
     ? (state.portalMembers ?? []).map((item: any) => ({
         workspace_id: workspaceId,
@@ -696,9 +685,9 @@ async function syncBackendStateNow(
   // hydration/refresh non deve mai cancellare autorizzazioni server.
   // La rimozione passa esclusivamente dalle azioni esplicite dell'interfaccia.
 
-  // Anche i collaboratori sono persistenti: la sincronizzazione automatica
-  // può creare/aggiornare record ma non eliminarli in base a uno stato locale
-  // potenzialmente incompleto. La cancellazione resta un'azione esplicita.
+  // Anche i collaboratori sono persistenti: invito, aggiornamento,
+  // disattivazione e rimozione passano esclusivamente dalle azioni esplicite
+  // che operano direttamente su workspace_members.
 
   if (!canSyncCondomini) return;
 
