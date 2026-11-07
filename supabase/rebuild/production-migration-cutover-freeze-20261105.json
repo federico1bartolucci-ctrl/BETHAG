@@ -497,7 +497,7 @@
     "Final written owner approval must be recorded in this manifest for the exact approved source SHA, exact execution SHA and all nineteen ordered SQL hashes, together with the maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write.",
     "After any guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests."
   ],
-  "safety": "The project owner has explicitly approved the QA-tested source SHA decc0dfda68f573f13e386beaa22d259f7f8b619, release fingerprint f11960285adfe86b6382a4f03121640dbd61d357ceb08825cc4da3708583b62a, exact nineteen ordered frozen migration hashes, Production project tctcgptrsmvgajqjgnev, and maintenance window 2026-11-08 00:00–04:00 Europe/Rome. The final executable checkout SHA is not yet approved and must be separately approved after final documentation/CI. No Production DDL or ledger writes have been performed. Execution remains blocked until exact-SHA CI, clean local checkout, direct read-only Production preflight, current backup verification or fresh residual-risk reconfirmation, Data API recheck, and all guarded-runner requirements pass.",
+  "safety": "The project owner approved the QA-tested source SHA decc0dfda68f573f13e386beaa22d259f7f8b619, release fingerprint 033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301, exact nineteen ordered frozen migration hashes, Production project tctcgptrsmvgajqjgnev, and maintenance window 2026-11-08 00:00–04:00 Europe/Rome. The previously approved execution SHA c2dbe15d100b133391d2ba7617fb6089c9734320 was superseded by subsequent commits and is not approval of the final documentation-reconciled branch head. A fresh explicit approval of the final execution SHA is required before read-only Production preflight. No Production DDL or ledger writes have been performed. Production execution remains blocked until exact-head approval, clean local checkout, direct read-only Production preflight, current backup verification or fresh residual-risk reconfirmation, Data API recheck, and all guarded-runner requirements pass.",
   "rehearsal_evidence": {
     "status": "HISTORICAL_PASS_SUPERSEDED",
     "date": "2026-11-05",
@@ -558,10 +558,10 @@
   "user_authorization": {
     "status": "RECEIVED",
     "approved_commit_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
-    "approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
+    "approved_execution_commit_sha": null,
     "approved_by": "Federico Bartolucci",
     "approved_at_utc": "2026-11-07T21:00:00Z",
-    "approval_reference": "Explicit owner approval in BETHAG project conversation: approve the exact executable SHA c2dbe15d100b133391d2ba7617fb6089c9734320 and release fingerprint 033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301, with QA source SHA decc0dfda68f573f13e386beaa22d259f7f8b619. Scope is READ-ONLY PRODUCTION PREFLIGHT ONLY. This approval does NOT authorize Production apply, migration execution, merge or deploy. Preserve the exact nineteen ordered migration hashes and all 248 historical Production ledger rows.",
+    "approval_reference": "The owner previously approved execution SHA c2dbe15d100b133391d2ba7617fb6089c9734320 and fingerprint 033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301 for READ-ONLY PRODUCTION PREFLIGHT ONLY. Subsequent commits advanced the branch head; that exact execution-SHA approval is not extended to the current head. The QA source approval, fingerprint approval and nineteen ordered migration hashes remain recorded, but a fresh explicit approval of the final documentation-reconciled execution SHA is required before any Production preflight. This does NOT authorize Production apply, migration execution, merge or deploy.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -647,7 +647,9 @@
     "residual_backup_restore_risk": "Provider-managed physical restore was not independently tested; the previously accepted residual risk is reconfirmed for this cutover. No claim of a successful physical restore test.",
     "approved_release_fingerprint": "033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301",
     "approval_scope": "READ_ONLY_PREFLIGHT_ONLY",
-    "production_apply_authorized": false
+    "production_apply_authorized": false,
+    "previously_approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
+    "execution_approval_status": "PENDING_FINAL_DOCUMENTATION_HEAD_APPROVAL"
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
