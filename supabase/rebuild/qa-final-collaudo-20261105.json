@@ -10,17 +10,17 @@
     "final_qa_collaudo": {
       "run_id": 42419684025,
       "run_attempt": 1,
-      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     },
     "build": {
       "run_id": 42419684103,
-      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     },
     "baseline_safety": {
       "run_id": 42419684071,
-      "head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     }
   },
@@ -280,6 +280,8 @@
       "status": "PASS",
       "steps": "Baseline bootstrap, 28 chronological clean-install migrations, portal-registration repair, 19 canonical migrations through guarded runner, ACL/postcondition rehearsals, collaborator permission RLS and rollback checks all succeeded on isolated PostgreSQL 17."
     },
-    "app_acceptance": "APP-01..APP-15 PASS; QA fixture restored; preview stopped; cleanup completed."
+    "app_acceptance": "APP-01..APP-15 PASS; QA fixture restored; preview stopped; cleanup completed.",
+    "workflow_execution_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+    "note": "workflow_runs.*.head_sha records the QA-tested source SHA consumed by the guarded runner; current_head_validation.execution_head_sha records the GitHub Actions workflow checkout SHA. These are distinct by design."
   }
 }
