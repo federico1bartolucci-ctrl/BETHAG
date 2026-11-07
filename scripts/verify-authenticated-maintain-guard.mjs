@@ -82,10 +82,10 @@ assert.equal(relationGrants.filter((grant) => grant.grantee === "postgres").leng
 // Preserve the 2026-10-22/23 discrepancy as historical evidence, but require
 // the later read-only Production recheck to supersede its active status.
 assert.match(runbook, /Production ACL recheck — read-only, 2026-11-08/);
-assert.match(runbook, /zero direct relation-level MAINTAIN grants to authenticated/);
-assert.match(runbook, /supabase_admin-owned default ACL entries still grant MAINTAIN/);
-assert.match(runbook, /platform-managed residual; not customer-remediable through the postgres role/);
-assert.match(runbook, /full ACL release gate remains blocked/);
+assert.match(runbook, /direct relation-level `MAINTAIN` grants to `authenticated` on `public` relations returned \*\*zero rows\*\*/);
+assert.match(runbook, /`supabase_admin`-owned default ACL for `anon`, `authenticated`, and `service_role`/);
+assert.match(runbook, /hosted `postgres` role is not authorized to change `supabase_admin` default privileges/);
+assert.match(runbook, /Full ACL release gate: \*\*BLOCKED\*\*/);
 
 // Pin the known Production exception set so future runbook edits cannot
 // silently drop an affected relation from the release-blocker record.
@@ -140,6 +140,6 @@ console.log(JSON.stringify({
   authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
   baseline_column_acl_statements_found: columnGrantLines.length,
   baseline_relation_grant_options_found: relationGrantOptionLines.length,
-  production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
-  release_acl_parity: "BLOCKED_PENDING_RECONCILIATION",
+  historical_production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
+  latest_live_authenticated_maintain_check: "ZERO_DIRECT_RELATION_GRANTS_2026-11-08",\n  platform_managed_supabase_admin_default_acl: "REMAINS_PRESENT",\n  release_acl_parity: "BLOCKED_PLATFORM_DEFAULT_ACL_DISPOSITION_AND_FULL_REPLAY_PENDING",
 }, null, 2));
