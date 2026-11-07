@@ -3,24 +3,24 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+  "reviewed_head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42351102824,
+      "run_id": 42417449538,
       "run_attempt": 1,
-      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42351102941,
-      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "run_id": 42417449514,
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42351102866,
-      "head_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
+      "run_id": 42417449521,
+      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
       "conclusion": "success"
     }
   },
@@ -140,7 +140,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA decc0dfda68f573f13e386beaa22d259f7f8b619 (runs 42351102824, 42351102941, 42351102866). Both Build and Final QA install dependencies with npm ci from the committed package-lock. Frozen Production manifest 19/19 hashes unchanged; Production ledger 248/248 exact and all 19 canonical increments absent. No Production writes, merge or deploy. APP-14 remains PARTIAL pending cutover/postflight. Production remains NO-GO.",
+  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA f5214533a1905fa16a8771631391ba53c2596884 (runs 42417449538, 42417449514, 42417449521). This updates only the pinned evidence metadata; application tests and frozen SQL payload remain unchanged. APP-14 remains PARTIAL pending Production cutover/postflight. Production remains NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -186,7 +186,7 @@
       "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
     }
   },
-  "captured_at_utc": "2026-11-07T07:25:02Z",
+  "captured_at_utc": "2026-11-07T21:48:44Z",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
