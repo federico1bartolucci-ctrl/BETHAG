@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-11-06",
+  "captured_at": "2026-11-07",
   "project_ref": "tctcgptrsmvgajqjgnev",
   "count": 248,
   "first_version": "20260928021707",
@@ -1001,5 +1001,5 @@
       "name": "reconcile_production_acl_least_privilege"
     }
   ],
-  "captured_at_utc": "2026-11-06T16:16:15Z"
+  "captured_at_utc": "2026-11-07T20:40:05.822Z"
 }
