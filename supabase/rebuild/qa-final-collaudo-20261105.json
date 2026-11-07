@@ -3,23 +3,23 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+  "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42321848489,
-      "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+      "run_id": 42330953679,
+      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42321849251,
-      "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+      "run_id": 42330953652,
+      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42321848502,
-      "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+      "run_id": 42330953653,
+      "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
       "conclusion": "success"
     }
   },
@@ -120,8 +120,8 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42321849251,
-    "reviewed_head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+    "github_actions_run_id": 42330953652,
+    "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets",
     "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on current PR QA-tested head."
@@ -139,7 +139,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 with npm ci, and Baseline Safety passed on PR head f3b99354f995bd50877f968f5852f0b28dadf5b7 (runs 42317982310, 42317982320, 42317982329). APP-01..APP-13 and APP-15 PASS in QA; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-13 and APP-15 PASS; APP-14 remains a Production post-cutover gate. Build/PostgreSQL 17 and Baseline Safety SUCCESS on exact PR head ad8c2386af1e3b5084202117c2e9130b69fac182 (runs 42330953652, 42330953653, 42330953679). Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -202,28 +202,28 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "reviewed_head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+    "reviewed_head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
     "workflow_runs": {
       "baseline_safety": {
-        "run_id": 42321848502,
-        "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+        "run_id": 42330953653,
+        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42321849251,
-        "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+        "run_id": 42330953652,
+        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
         "conclusion": "success"
       },
       "final_qa_collaudo": {
-        "run_id": 42321848489,
-        "head_sha": "2f99ce04d010858edac820609f0ad8f403934d17",
+        "run_id": 42330953679,
+        "head_sha": "ad8c2386af1e3b5084202117c2e9130b69fac182",
         "conclusion": "success"
       }
     },
-    "final_qa_steps": "PASS — all APP-01..APP-13 and APP-15 checks, including authenticated browser UI, real-auth RLS/Storage, APP-12 signed webhook/provider test recipient and APP-15 role navigation/session persistence.",
-    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on the existing QA project; APP-14 remains a Production post-cutover gate.",
-    "postgres17": "PASS — 28 chronological clean-install migrations and 19 canonical guarded migrations rehearsed on isolated PostgreSQL 17; ACL/default ACL, collaborator RLS, ledger transaction and rollback checks passed.",
-    "reproducible_install": "PASS — build workflow installed dependencies with npm ci against the committed package-lock.json.",
+    "final_qa_steps": "PASS — workflow completed successfully on exact commit; APP-01..APP-13 and APP-15 PASS. APP-14 remains Production post-cutover.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover.",
+    "postgres17": "PASS — isolated PostgreSQL 17 bootstrap and guarded 19-migration rehearsal recorded by Build workflow.",
+    "reproducible_install": "PASS — Build workflow SUCCESS on pinned commit.",
     "production_modified": false,
     "merge_or_deploy_performed": false
   }
