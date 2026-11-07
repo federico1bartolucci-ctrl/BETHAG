@@ -96,7 +96,7 @@ assert.ok(runner.includes("BETHAG_CUTOVER_PREFLIGHT_ONLY"), "Runner must provide
 assert.ok(runner.includes("BETHAG_EXPECTED_COMMIT_SHA"), "Production preflight/apply must require the exact approved commit SHA.");
 assert.ok(runner.includes("BETHAG_APPROVED_SOURCE_COMMIT_SHA"), "Approval must bind the immutable owner-approved source release separately from the runner checkout.");
 assert.ok(runner.includes("BETHAG_APPROVED_EXECUTION_COMMIT_SHA"), "Execution must require a separate explicit approval pin for the exact runner checkout.");
-assert.match(runner, /approved_commit_sha, approvedSourceCommitSha/, "Manifest approval must be checked against the owner-approved source SHA, not the self-referential execution SHA.");
+assert.match(runner, /approval\\?\\.approved_commit_sha, approvedSourceCommitSha/, "Manifest approval must be checked against the owner-approved source SHA, not the self-referential execution SHA.");
 assert.match(runner, /process\.env\.BETHAG_APPROVED_EXECUTION_COMMIT_SHA, executionCommitSha/, "Runner must reject an execution SHA that has not been explicitly approved.");
 assert.match(runner, /git", \["status", "--porcelain"\]/, "Production preflight/apply must reject a dirty working tree.");
 assert.ok(runner.includes("BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED"),
