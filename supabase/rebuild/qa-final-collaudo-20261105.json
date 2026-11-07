@@ -3,24 +3,24 @@
   "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
+  "reviewed_head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42343070828,
-      "run_attempt": 2,
-      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
+      "run_id": 42344566629,
+      "run_attempt": 1,
+      "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42343070801,
-      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
+      "run_id": 42344566626,
+      "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42343070748,
-      "head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
+      "run_id": 42344566690,
+      "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
       "conclusion": "success"
     }
   },
@@ -121,11 +121,11 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42343070801,
-    "reviewed_head_sha": "553ee1fd017566bb80d137f3e9b91135745e627a",
+    "github_actions_run_id": 42344566626,
+    "reviewed_head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets",
-    "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on current PR QA-tested head."
+    "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on exact current PR head; isolated database only."
   },
   "cleanup": {
     "provider_test_marker_rows": {
@@ -140,7 +140,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15 PASS on exact QA-tested source SHA 553ee1fd017566bb80d137f3e9b91135745e627a; Build, Baseline Safety and Final QA workflows SUCCESS (42343070801, 42343070748, 42343070828 attempt 2). PostgreSQL 17 isolated build rehearsal including all 19 canonical guarded migrations PASS. Production read-only ledger/catalog verification on 2026-11-07 PASS for the recorded assertions; guarded runner direct-connection preflight remains pending. APP-14 remains PARTIAL and requires Production post-cutover validation. Production unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-15 PASS on exact QA-tested source SHA 5656525e8b3f4c8b257e54ff453973372a52dc7b; Build, Baseline Safety and Final QA workflows SUCCESS (42344566626, 42344566690, 42344566629). PostgreSQL 17 isolated build rehearsal including all 19 canonical guarded migrations PASS. Frozen manifest sequence verified 19/19 Git blob SHA; Production ledger snapshot remains 248 entries. Production read-only verification only; guarded runner direct-connection preflight remains pending. Independent review was explicitly waived by project owner due to no available independent reviewer; this is not represented as a completed independent approval. APP-14 remains PARTIAL and requires Production post-cutover validation. Production unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -229,29 +229,31 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "reviewed_head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+    "reviewed_head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
     "workflow_runs": {
       "baseline_safety": {
-        "run_id": 42334060039,
-        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+        "run_id": 42344566690,
+        "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42334060031,
-        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+        "run_id": 42344566626,
+        "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
         "conclusion": "success"
       },
       "final_qa_collaudo": {
-        "run_id": 42334059983,
-        "head_sha": "a441a5dc0ff27eee9078cd0878c1a111d95493fb",
+        "run_id": 42344566629,
+        "head_sha": "5656525e8b3f4c8b257e54ff453973372a52dc7b",
+        "run_attempt": 1,
         "conclusion": "success"
       }
     },
-    "final_qa_steps": "PASS — APP-01..APP-15 workflow completed successfully on exact commit.",
-    "application_acceptance": "APP-01..APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
-    "postgres17": "PASS — isolated PostgreSQL 17 bootstrap and guarded 19-migration rehearsal recorded by Build workflow.",
-    "reproducible_install": "PASS — Build workflow SUCCESS on pinned commit.",
-    "transient_backend_retry": "PASS — bounded retry for transient Supabase/network failures; permanent auth/validation/constraint errors are not retried.",
+    "final_qa_steps": "PASS — APP-01..APP-15 workflow completed successfully on exact commit 5656525e8b3f4c8b257e54ff453973372a52dc7b.",
+    "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation.",
+    "postgres17": "PASS — isolated PostgreSQL 17 bootstrap and guarded 19-migration rehearsal recorded by Build workflow 42344566626.",
+    "retry_regression": "PASS — bounded retry for transient Supabase 520/521 during authenticated owner-list refresh; only a successful backend response containing the new active owner is accepted.",
+    "canonical_manifest_verification": "PASS — 19/19 Git blob SHA match frozen manifest; migration payloads unchanged.",
+    "production_snapshot_verification": "PASS — snapshot contains 248 ordered ledger entries; frozen manifest remains pending and unchanged.",
     "production_modified": false,
     "merge_or_deploy_performed": false
   }
