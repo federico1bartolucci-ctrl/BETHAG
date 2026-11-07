@@ -1046,7 +1046,13 @@ try {
   await field(adminPage, "Contenuto *").fill("Messaggio sintetico di verifica UI BETHAG.");
   const portalCheckbox = adminPage.locator(".modal .checkbox-field input[type='checkbox']").first();
   if (!(await portalCheckbox.isChecked())) await portalCheckbox.check();
+  const dialogsBeforeCommunicationSave = dialogs.length;
   await adminPage.getByRole("button", { name: "Salva", exact: true }).click();
+  assert.deepEqual(
+    dialogs.slice(dialogsBeforeCommunicationSave),
+    [],
+    "Portal publication must not trigger a plan-upgrade or permission confirmation: " + JSON.stringify(dialogs.slice(dialogsBeforeCommunicationSave))
+  );
   let persistedCommunication;
   try {
     // Backend persistence is the source of truth. Do not wait for a potentially
