@@ -4088,6 +4088,10 @@ function App() {
       setCondominiumUnits((current) => [...current, ...generatedUnits]);
     }
 
+    // Condominium persistence already completed through the explicit backend
+    // save operation above. Do not enqueue a second workspace-wide sync for
+    // this local projection update.
+    if (supabaseConfigured) skipNextBackendSync.current = true;
     setCondominiums(nextCondominiums);
     setSelectedCondominium(savedItem);
     setEditingCondominium(null);
@@ -4114,6 +4118,9 @@ function App() {
           archiveReason: persisted.archive_reason,
         };
       }
+      // The archive RPC is the authoritative write; this state update only
+      // reflects its result and must not start a full workspace sync.
+      if (supabaseConfigured) skipNextBackendSync.current = true;
       setCondominiums((current) => current.map((c) => c.id === item.id ? archived : c));
       selectCondominium(null);
     } catch (error) {
@@ -4135,6 +4142,9 @@ function App() {
         await restoreCondominiumBackend(workspaceId, item.id);
       }
       const restored = { ...item, archivedAt: undefined, archivedBy: undefined, archiveReason: undefined };
+      // The restore RPC is the authoritative write; avoid replaying the whole
+      // workspace snapshot merely to update the visible condominium list.
+      if (supabaseConfigured) skipNextBackendSync.current = true;
       setCondominiums((current) => current.map((c) => c.id === item.id ? restored : c));
     } catch (error) {
       console.error("BETHAG condominium restore failed", error);
