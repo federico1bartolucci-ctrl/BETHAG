@@ -19,13 +19,13 @@ if (mode === "prepare") {
   assert.equal(data.id, workspaceId, "Unexpected QA workspace");
   assert.equal(data.plan, "free", "QA workspace plan changed unexpectedly; refusing to overwrite it");
   fs.writeFileSync(statePath, JSON.stringify({ projectRef, workspaceId, originalPlan: data.plan }), "utf8");
-  const update = await db.from("workspaces").update({ plan: "plus" }).eq("id", workspaceId).eq("plan", "free").select("id,plan").single();
+  const update = await db.from("workspaces").update({ plan: "portal" }).eq("id", workspaceId).eq("plan", "free").select("id,plan").single();
   assert.ifError(update.error);
-  assert.equal(update.data.plan, "plus");
+  assert.equal(update.data.plan, "portal");
   const verify = await db.from("workspaces").select("plan").eq("id", workspaceId).single();
   assert.ifError(verify.error);
-  assert.equal(verify.data.plan, "plus", "QA Plus fixture was not persisted");
-  console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_PLAN_FIXTURE", status: "PREPARED", projectRef, workspaceId, originalPlan: "free", testPlan: "plus" }));
+  assert.equal(verify.data.plan, "portal", "QA Portal fixture was not persisted");
+  console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_PLAN_FIXTURE", status: "PREPARED", projectRef, workspaceId, originalPlan: "free", testPlan: "portal" }));
 } else {
   if (!fs.existsSync(statePath)) {
     console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_PLAN_FIXTURE", status: "RESTORE_NOT_REQUIRED", projectRef, workspaceId }));
@@ -35,8 +35,8 @@ if (mode === "prepare") {
     assert.equal(state.workspaceId, workspaceId, "Refusing to restore a different workspace");
     const current = await db.from("workspaces").select("plan").eq("id", workspaceId).single();
     assert.ifError(current.error);
-    assert.equal(current.data.plan, "plus", "QA workspace plan changed unexpectedly; refusing to overwrite it");
-    const update = await db.from("workspaces").update({ plan: state.originalPlan }).eq("id", workspaceId).eq("plan", "plus").select("id,plan").single();
+    assert.equal(current.data.plan, "portal", "QA workspace plan changed unexpectedly; refusing to overwrite it");
+    const update = await db.from("workspaces").update({ plan: state.originalPlan }).eq("id", workspaceId).eq("plan", "portal").select("id,plan").single();
     assert.ifError(update.error);
     assert.equal(update.data.plan, state.originalPlan);
     const verify = await db.from("workspaces").select("plan").eq("id", workspaceId).single();
