@@ -269,3 +269,59 @@ Il manifest è stato ricostruito a partire dalla versione presente sullo SHA QA 
 Il test unitario è stato rafforzato per dimostrare che l'aggiunta di `superseded_user_authorization` o `current_release_reconciliation` cambia il payload congelato e quindi non viene ignorata dal runner.
 
 Questa correzione non approva alcun SHA, non autorizza il cutover e non modifica Production. Il nuovo commit deve superare CI sullo SHA esatto prima di ogni ulteriore preflight.
+
+## 14. Riconciliazione dopo Final QA — head 553ee1f — 2026-11-07
+
+Questa sezione registra le verifiche successive alla sezione 13. Non modifica il manifest, lo snapshot Production, i payload SQL, gli hash o gli ambienti.
+
+### CI sullo SHA esatto
+
+Head PR #57 verificato via GitHub: `553ee1fd017566bb80d137f3e9b91135745e627a`.
+
+- Final QA APP-01..APP-15: run [42343070828](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42343070828), attempt 2 — SUCCESS; tutti gli step, inclusi i flussi browser autenticati e APP-15, risultano completati con SUCCESS.
+- Build: run [42343070801](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42343070801) — SUCCESS.
+- Baseline Safety: run [42343070748](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42343070748) — SUCCESS.
+- Le tre run risultano associate allo stesso head SHA completo `553ee1fd017566bb80d137f3e9b91135745e627a`.
+
+### Integrità del congelamento
+
+Verifica del Git tree sullo SHA `553ee1f...` contro i 19 `git_blob_sha` del manifest:
+
+- Migrazioni canoniche: **19/19 hash coincidenti**.
+- Sequenza e ordine: 19 elementi, invariati.
+- Stato di tutte le 19 migrazioni: `PENDING_NOT_APPLIED`.
+- Manifest: `FROZEN_FOR_REVIEW_CUTOVER_APPROVAL_PENDING`.
+- `user_authorization.status = PENDING`; `approved_commit_sha = null`; `approved_migration_hashes = []`.
+- Snapshot `production-ledger-20261105.json` e manifest freeze sono presenti nel medesimo tree; nessun aggiornamento del loro contenuto è stato effettuato in questa attività.
+
+Verifica live Production esclusivamente read-only:
+
+- Ledger live: **248 righe**; head `20261104222229_reconcile_production_acl_least_privilege`.
+- Confronto ordinato con `production-ledger-20261105.json`: **248/248 coppie versione/nome identiche**, nessuna riga mancante o aggiuntiva.
+- Le 19 versioni canoniche in attesa risultano assenti dal ledger.
+- Le asserzioni read-only eseguite su inventario relazioni, privilegi MAINTAIN, privilegi diretti anon, default MAINTAIN del ruolo postgres, default provider-managed `supabase_admin`, routine PUBLIC EXECUTE, wrapper SECURITY INVOKER, colonna `workspace_members.data` e stato ACL helper trasferimento sono terminate senza eccezioni.
+- L'esecuzione di queste query non ha prodotto DDL, DML, GRANT/REVOKE o scritture al ledger.
+
+**Limite della verifica:** il blocco read-only eseguito tramite connettore non equivale all'esecuzione integrale dello script preflight ufficiale tramite runner guarded da checkout pulito e connessione PostgreSQL diretta/Session Pooler. Non viene dichiarato quel gate come superato.
+
+### Gate ancora aperti per chiudere la fase 3
+
+1. Eseguire da checkout pulito sullo SHA finale il runner/preflight guarded in modalità senza apply, usando la connessione PostgreSQL diretta o Session Pooler; acquisire evidenza del ruolo DB effettivo e del risultato integrale del runner. Il connettore Supabase disponibile in questa sessione espone il progetto Production per query SQL, ma non fornisce la prova della connessione diretta del runner.
+2. Riconfermare operatore umano, finestra completa (inizio e fine) e piano STOP/recovery. La precedente indicazione della sola ora di inizio non definisce una finestra operativa completa.
+3. Mantenere la nuova approvazione del proprietario in stato PENDING fino alla chiusura dei gate; nessuno SHA e nessun hash sono approvati da questa verifica.
+
+La configurazione Data API Production resta documentata come verificata da screenshot Dashboard nella sezione 12. Il rischio di restore fisico provider-managed resta non testato e accettato come rischio residuo secondo la decisione già registrata; non deve essere descritto come restore fisico eseguito.
+
+### Stato decisionale
+
+- CI e collaudo automatico sullo SHA `553ee1f...`: **PASS**.
+- Integrità 19 migrazioni: **PASS, 19/19**.
+- Ledger Production: **PASS, 248/248**.
+- Preflight read-only via connettore: **PASS per le asserzioni eseguite; non sostituisce il runner guarded integrale**.
+- Runner guarded da checkout pulito/connessione diretta: **PENDING**.
+- Operatore/finestra completa/STOP-recovery: **PENDING**.
+- Approvazione manifest: **PENDING**.
+- PR #57: **OPEN, NOT MERGED**.
+- Production: **NO-GO**.
+
+Nessun merge, deploy, freeze operativo, apply di migrazioni o modifica Production è autorizzato da questa sezione.
