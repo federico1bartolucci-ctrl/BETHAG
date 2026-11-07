@@ -138,13 +138,36 @@
         },
         "expected_upstream_bootstrap": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
         "disposition": "PRESERVE_PROVIDER_SYSTEM_SCHEMA; VERIFY_NOT_EXPOSED_BEFORE_RELEASE",
-        "exposure_status": "NOT_VERIFIED",
-        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Confirm schema is not in the Data API exposed-schema list.",
+        "exposure_status": "VERIFIED_NOT_EXPOSED",
+        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Production Dashboard verification on 2026-11-07 confirmed supabase_functions is absent from the exposed-schema choices; preserve this provider-managed schema and recheck immediately before cutover.",
         "role_level_override": {
           "pgrst_db_schemas_override_present": false,
           "authenticator_role_config_checked": true,
           "database_role_config_checked": true,
-          "effective_dashboard_data_api_config": "NOT_AVAILABLE_THROUGH_CURRENT_SUPABASE_CONNECTOR"
+          "effective_dashboard_data_api_config": "VERIFIED_BY_OWNER_IN_PRODUCTION_DASHBOARD_2026-11-07"
+        },
+        "exposure_evidence": {
+          "verified_date": "2026-11-07",
+          "verified_by": "Project owner / Production Dashboard operator",
+          "exposed_schemas": [
+            "graphql_public",
+            "public"
+          ],
+          "available_schema_choices": [
+            "graphql_public",
+            "private",
+            "public"
+          ],
+          "private_exposed": false,
+          "supabase_functions_present_in_exposed_schema_choices": false,
+          "exposed_tables": "0/48",
+          "exposed_functions": "0/171",
+          "automatic_new_table_exposure": false,
+          "extra_search_path": [
+            "public",
+            "extensions"
+          ],
+          "note": "The owner visually verified the Production Data API settings in Supabase Dashboard. supabase_functions was absent from the available exposed-schema choices and therefore was not exposed by this setting. This is Dashboard evidence, not an independent connector read."
         }
       },
       "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
@@ -463,17 +486,18 @@
   "critical_execution_constraint": {
     "observed": "The previous 247-row cutover freeze is historical. Current Production contains 248 rows, including the already-applied Production-only ACL migration 20261104222229. The new runner and rehearsal are pinned to this exact 248-row snapshot.",
     "rule": "Do not use the historical 247-row runner. Use only the superseding 248-row/19-increment guarded runner after QA APP acceptance, QA provider configuration, backup-risk disposition, Production Data API exposure verification, direct DATABASE_URL availability and exact cutover-plan approval.",
-    "status": "OWNER_SOURCE_APPROVAL_RECORDED_EXECUTION_SHA_PIN_PENDING"
+    "status": "OWNER_FINAL_EXACT_SHA_APPROVAL_PENDING"
   },
   "no_go_gates": [
-    "Production Data API exposure settings, including provider-managed schema supabase_functions and automatic exposure, must be verified directly in the Production Dashboard immediately before cutover; QA screenshots are not a substitute.",
+    "A clean checkout and exact final execution SHA must be pinned; all required workflows must pass on that exact SHA or the precise QA-source relationship accepted by the guarded runner.",
+    "The guarded read-only Production preflight must pass locally on the exact final execution SHA, confirming all 248 historical version/name pairs, the frozen head and all nineteen SQL blob hashes without executing SQL or writing the ledger.",
+    "Immediately before cutover, the operator must verify a current identifiable provider backup and recheck Production Data API exposed schemas and overrides in Dashboard; supabase_functions must remain unexposed. Do not claim a physical restore test passed.",
     "The guarded version-preserving runner requires a direct PostgreSQL DATABASE_URL with DDL privileges configured locally by the operator. Supabase MCP apply_migration is not an acceptable substitute.",
-    "The exact cutover plan must pin the final commit SHA and ordered nineteen SQL hashes, identify the operator and approver, confirm the maintenance window and user communication, and define STOP, rollback and recovery criteria.",
-    "The final exact-SHA QA run must pass APP-01..APP-13 and APP-15; the same SHA must pass Build and the PostgreSQL 17 clean-install and 248+19 guarded rehearsal.",
-    "After the guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests.",
-    "Final written owner approval must explicitly name the exact release SHA, all nineteen SQL hashes, maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write."
+    "The exact cutover plan must pin the final execution SHA and ordered nineteen SQL hashes, identify the operator and approver, confirm the maintenance window and user communication, and define STOP and forward-recovery criteria.",
+    "Final written owner approval must be recorded in this manifest for the exact approved source SHA, exact execution SHA and all nineteen ordered SQL hashes, together with the maintenance window, operator and residual backup/restore risk before any Production DDL or ledger write.",
+    "After any guarded cutover, Production postflight must confirm 267 ledger rows, all 248 historical rows unchanged, the exact 19 canonical additions, ACL/RLS postconditions and authenticated administrator/collaborator/resident smoke tests."
   ],
-  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. No baseline rows, history rewrites or deletes. Owner approved source SHA 161d2c1fb83dade5a82c0794f080ae88107e2c0c and exactly the nineteen ordered SQL blob hashes in this manifest on 2026-11-07. Production execution remains blocked until the separate exact execution checkout SHA is approved, immediate preflight gates pass, and the guarded runner is executed. No Production DDL or ledger writes have been performed.",
+  "safety": "Preserve all 248 live Production ledger rows exactly, including 20261104222229. The nineteen ordered SQL blob hashes in this manifest remain frozen and unmodified. No final exact-execution-SHA cutover approval has been recorded; user_authorization remains PENDING. Production execution remains blocked until the final source and execution SHAs are explicitly approved, immediate preflight gates pass, and the guarded runner is deliberately authorized. No Production DDL or ledger writes have been performed.",
   "rehearsal_evidence": {
     "status": "HISTORICAL_PASS_SUPERSEDED",
     "date": "2026-11-05",
