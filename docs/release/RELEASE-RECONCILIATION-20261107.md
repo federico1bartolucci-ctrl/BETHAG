@@ -217,3 +217,20 @@ La query diretta su `pg_default_acl` in Production ha permesso di precisare la d
 - Il requisito applicativo va quindi valutato sul ruolo effettivo che crea le nuove tabelle. Per il runner/cutover controllato, il punto verificabile è che gli oggetti applicativi siano creati dal ruolo previsto e che le default ACL applicabili a quel ruolo siano quelle attese dalla migrazione canonica. La query conferma l'assenza di default anon CRUD per owner `postgres`, ma non autorizza a ignorare le ACL provider-managed di `supabase_admin`.
 
 **Esito del controllo default ACL:** chiarita la causa della discrepanza e confermata la necessità di mantenere intatti i default provider-managed; nessuna modifica ai privilegi eseguita. Questo controllo catalogo può considerarsi documentato, fermo restando il controllo sul ruolo effettivo usato dal runner nella prova diretta.
+
+
+## 12. Evidenza Dashboard Data API Production — 2026-11-07
+
+Evidenza acquisita tramite screenshot della Dashboard Supabase fornito dal proprietario del progetto durante la verifica della fase 3. La barra URL identifica il progetto Production `tctcgptrsmvgajqjgnev` e la pagina Integrations → Data API → Settings.
+
+Configurazione visibile:
+- Schemi esposti: 2 di 3.
+- `public`: selezionato/esposto.
+- `graphql_public`: selezionato/esposto.
+- `private`: non selezionato/non esposto.
+- `Automatically expose new tables`: interruttore disattivato.
+- Extra search path visibile: `public`, `extensions`.
+
+**Esito:** il gate di verifica della Data API exposure è PASS sulla base dell'evidenza Dashboard fornita il 2026-11-07. La configurazione rispetta il requisito che lo schema `private` non sia esposto. Lo screenshot è conservato nella conversazione di progetto; non è stato modificato alcun setting.
+
+Restano aperti: prova della connessione PostgreSQL diretta/Session Pooler e preflight guarded runner da checkout pulito senza apply, con conferma del ruolo DB effettivo; riconferma operatore/finestra/piano STOP-recovery. Nessuna operazione Production è stata eseguita.
