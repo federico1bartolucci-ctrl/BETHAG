@@ -1,25 +1,25 @@
 {
   "artifact": "BETHAG final QA evidence — refreshed after portal security review",
-  "captured_date": "2026-11-06",
+  "captured_date": "2026-11-07",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+  "reviewed_head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42273445811,
-      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+      "run_id": 42317982310,
+      "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42273445661,
-      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+      "run_id": 42317982320,
+      "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
       "conclusion": "success"
     },
     "baseline_safety": {
-      "run_id": 42273445958,
-      "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+      "run_id": 42317982329,
+      "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
       "conclusion": "success"
     }
   },
@@ -138,7 +138,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA, Build/PostgreSQL 17 and Baseline Safety passed on PR head 86776caba728e23c454f7e1647a339a89e96b46d (runs 42273445811, 42273445661, 42273445958). APP-01..APP-13 and APP-15 PASS in QA; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
+  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 with npm ci, and Baseline Safety passed on PR head f3b99354f995bd50877f968f5852f0b28dadf5b7 (runs 42317982310, 42317982320, 42317982329). APP-01..APP-13 and APP-15 PASS in QA; APP-14 remains a Production post-cutover gate. Production remains unmodified; no merge or deploy performed.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -201,28 +201,29 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "captured_at_utc": "2026-11-06T22:05:00Z",
-    "reviewed_head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+    "captured_at_utc": "2026-11-07T00:30:00Z",
+    "reviewed_head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
     "workflow_runs": {
       "baseline_safety": {
-        "run_id": 42273445958,
-        "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+        "run_id": 42317982329,
+        "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
         "conclusion": "success"
       },
       "build": {
-        "run_id": 42273445661,
-        "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+        "run_id": 42317982320,
+        "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
         "conclusion": "success"
       },
       "final_qa_collaudo": {
-        "run_id": 42273445811,
-        "head_sha": "86776caba728e23c454f7e1647a339a89e96b46d",
+        "run_id": 42317982310,
+        "head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
         "conclusion": "success"
       }
     },
     "final_qa_steps": "PASS — real-auth RLS/Storage, condominium/accounting/closed-period, transfer/unpaid positions/rollback, carryover blockers, APP-12 signed webhook and Resend test-recipient provider probe, authenticated browser UI workflows, APP-15 role navigation/session persistence, diagnostics upload and cleanup all completed successfully.",
     "application_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA project; APP-14 remains PARTIAL and requires authorized Production cutover, postflight and authenticated Production smoke.",
     "postgres17": "PASS — 28 chronological clean-install migrations and 19 canonical migrations rehearsed through guarded runner on isolated PostgreSQL 17; ACL/default ACL, collaborator RLS, ledger transaction and rollback checks passed.",
+    "reproducible_install": "PASS — build workflow installed dependencies using npm ci against the committed package-lock.json.",
     "production_modified": false,
     "merge_or_deploy_performed": false
   }
