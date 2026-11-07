@@ -201,7 +201,6 @@
     "merge_or_deploy_performed": false
   },
   "final_head_validation": {
-    "captured_at_utc": "2026-11-07T00:30:00Z",
     "reviewed_head_sha": "f3b99354f995bd50877f968f5852f0b28dadf5b7",
     "workflow_runs": {
       "baseline_safety": {
