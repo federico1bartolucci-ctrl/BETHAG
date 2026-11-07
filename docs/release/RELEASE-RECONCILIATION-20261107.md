@@ -157,3 +157,50 @@ Questa sezione prevale sulle sezioni precedenti di questo documento e sugli adde
 La presente modifica corregge esclusivamente la riconciliazione documentale. Non modifica codice applicativo, workflow, manifest, migrazioni SQL o relativi hash. Il commit generato da questo aggiornamento documentale sarà un nuovo SHA: prima di considerarlo candidato finale dovrà superare nuovamente i workflow CI previsti sullo SHA esatto. Le evidenze verdi sopra restano riferite al commit `ed6ff431...`, non al futuro commit documentale.
 
 **Decisione:** QA sul candidato `ed6ff431...` PASS; Production resta **NO-GO** fino al completamento dei gate pre-cutover e alla nuova approvazione esatta.
+
+
+## 10. Stato consolidato — head f38f894 e preflight Production del 2026-11-07
+
+Questa sezione è l'aggiornamento più recente e prevale sulle sezioni 1–9 per quanto riguarda candidato GitHub, CI e preflight Production.
+
+### Head GitHub e CI sullo SHA esatto
+
+- PR #57: OPEN, NOT MERGED; branch `fix/qa-view-acl-parity-20261105` → `main`.
+- Head effettivo verificato via GitHub: `f38f89424acfbd76771be8983f71807b1a25a91a`.
+- Base SHA rilevato: `51157c1e475de9379cab4aea2cf38c039a9c4bab`.
+- Il commit `f38f894...` modifica questo solo documento rispetto al parent `ed6ff431421f8c62bd9ec8ea7b56db72a57b3f0a`; nessuna modifica a codice, SQL, manifest o workflow.
+- Final QA APP-01..APP-15: [run 42339282179](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42339282179) — SUCCESS.
+- Build: [run 42339282090](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42339282090) — SUCCESS.
+- Baseline Safety: [run 42339282082](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42339282082) — SUCCESS.
+- Le tre run sono riferite allo SHA `f38f894...`. I precedenti SHA e run restano evidenze storiche e non sono il candidato corrente.
+
+### Preflight Production read-only — Supabase `tctcgptrsmvgajqjgnev`
+
+Verifiche eseguite senza scritture:
+
+- PostgreSQL 17.6; ledger `supabase_migrations.schema_migrations`: 248 righe, head `20261104222229`.
+- Ledger live confrontato con `supabase/rebuild/production-ledger-20261105.json`: 248/248 version/name corrispondenti.
+- Le 19 migrazioni canoniche del cutover risultano tutte assenti dal ledger; target post-cutover previsto 267 righe. Nessuna migrazione è stata applicata.
+- 47 tabelle e 1 view in `public`; RLS attiva su 47/47 tabelle.
+- Security Advisor: zero lint; Health Advisor: zero lint.
+- Privilegi effettivi: anon senza SELECT/INSERT/UPDATE/DELETE sulle relazioni public; authenticated senza MAINTAIN; service_role senza MAINTAIN.
+- Due routine pubbliche SECURITY INVOKER, `normalize_zero_ownership_owner()` e `preserve_closing_condominium_member_history()`, risultano ancora eseguibili via PUBLIC. La migrazione canonica prevista deve revocare l'accesso diretto ai client preservando il servizio autorizzato.
+- `workspace_members.data` non è ancora presente; la migrazione target prevista lo introduce.
+- È emersa una differenza da documentare/riconciliare tra il dato storico del manifest sui default ACL e la query live attuale: il live non mostra default CRUD anon sulle nuove tabelle. Nessun GRANT/REVOKE è stato eseguito.
+- Performance Advisor: 60 INFO `unused_index`, 21 WARN `multiple_permissive_policies`, 1 INFO `auth_db_connections_absolute`. Sono avvisi performance, non Security Advisor lint; non sono stati modificati indici o policy.
+
+### Limiti ancora aperti del preflight
+
+1. **Dashboard Data API exposure:** non verificata direttamente nella Dashboard Supabase. Le query SQL non sono prova sufficiente della lista di schemi esposti dalla Data API. Prima del cutover l'operatore deve acquisire evidenza della configurazione effettiva; verificare in particolare che `private` non sia esposto e che gli schemi pubblici siano quelli intenzionali.
+2. **Connessione PostgreSQL diretta/Session Pooler:** non verificata dal runner guarded in un checkout pulito. Occorre prova di connessione e preflight runner senza applicare migrazioni.
+3. **Default ACL:** mismatch tra snapshot storico del manifest e stato live attuale da riconciliare esplicitamente con query e motivazione, senza modifiche ai privilegi in questa fase.
+4. Finestra, operatore e piano recovery/STOP devono essere riconfermati. Il restore fisico provider-managed non è testato; il restore logico locale non lo sostituisce.
+
+### Approvazione e divieti
+
+- Manifest: `user_authorization.status = PENDING`, `approved_commit_sha = null`, `approved_migration_hashes = []`.
+- Nessuna approvazione precedente è riutilizzabile per un nuovo SHA.
+- Nessun merge, deploy, freeze operativo, DDL/DML, GRANT/REVOKE, migrazione o modifica Production è stato eseguito.
+- Il PASS CI sullo SHA `f38f894...` non equivale ad autorizzazione al cutover.
+
+**Decisione aggiornata:** CI sullo SHA `f38f894...` PASS; preflight Production **parzialmente completato**; fase 3 **NON CHIUSA** finché i tre controlli residui (Data API Dashboard, connessione diretta/Session Pooler, riconciliazione default ACL) non dispongono di evidenza verificabile. Production resta **NO-GO**.
