@@ -85,3 +85,41 @@ Dopo la prima stesura di questo addendum, il manifest congelato è stato aggiorn
 - sequenza, ordine e tutti i 19 `git_blob_sha` SQL lasciati invariati.
 
 Questo riallineamento è necessario anche come salvaguardia eseguibile: il runner guarded non può interpretare la vecchia autorizzazione come consenso valido per il candidato attuale. La nuova approvazione dovrà essere registrata nel manifest soltanto dopo il completamento dei gate sullo SHA finale.
+
+
+## 8. Aggiornamento evidenze — 2026-11-07, ore 04:20 UTC
+
+Questo paragrafo integra e, per gli esiti CI qui indicati, prevale sulle sezioni precedenti che riportano candidati SHA anteriori.
+
+### Candidato e workflow sullo SHA esatto
+
+- SHA verificato: `c78a4c47cc7fb301be1fca0db72ef4ff05c0594b`.
+- Final QA APP-01..APP-15: [run 42337313192](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313192), attempt 2, `completed / success`; job `final-qa-collaudo` concluso SUCCESS.
+- Build: [run 42337313106](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313106), `completed / success`.
+- Baseline Safety: [run 42337313117](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42337313117), `completed / success`.
+- I tre workflow riportano lo stesso head SHA completo.
+
+Nel primo attempt del Final QA, i test browser si erano arrestati per risposte Cloudflare 521/CORS dall'host Supabase QA. Il secondo attempt è stato eseguito sullo stesso SHA e tutti gli step sono terminati SUCCESS, inclusi flussi browser autenticati e APP-15. Il primo errore è quindi registrato come incidente transitorio di disponibilità QA, non come difetto applicativo dimostrato.
+
+### Limiti delle evidenze
+
+- APP-12 ha superato il probe provider Resend con destinatario sintetico di test; non certifica deliverability reale su larga scala o tutti i template Production.
+- APP-14 resta **PARTIAL / POST-CUTOVER**: non sono stati eseguiti postflight ACL/schema né smoke autenticati su Production.
+- La review GitHub indipendente non risulta registrata. La verifica del proprietario/autore non la sostituisce.
+- Il restore fisico provider-managed resta non testato; il restore logico locale non è equivalente.
+- Il manifest mantiene l'approvazione corrente PENDING e nessuno SHA approvato; la protezione exact-SHA resta attiva.
+
+### Stato operativo invariato
+
+PR #57 resta OPEN e NOT MERGED. Nessun merge, deploy, freeze operativo, apply di migrazioni o modifica Production è stato eseguito. Il ledger Production e i payload congelati non sono stati modificati da questa verifica.
+
+### Gate residui
+
+1. Ottenere una review tecnica indipendente effettiva, registrata su GitHub, da persona diversa dall'autore.
+2. Verificare l'integrità dei 19 payload/hash sul candidato finale.
+3. Eseguire il preflight diretto del runner da checkout pulito e le verifiche Production read-only immediatamente pre-cutover.
+4. Riconfermare operatore, finestra, recovery/STOP e rischio residuo backup.
+5. Ottenere approvazione scritta riferita allo SHA finale e ai 19 hash ordinati.
+6. Solo dopo, valutare separatamente merge, deploy e cutover; APP-14 si chiude esclusivamente con postflight e smoke autenticati Production.
+
+**Esito aggiornato:** Build, Baseline Safety e Final QA APP-01..APP-15 PASS sullo SHA `c78a4c47...`; **Production resta NO-GO**.
