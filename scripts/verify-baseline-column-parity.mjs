@@ -9,7 +9,7 @@ const expectedTables = snapshot.objects.tables.filter((table) => table.schema_na
 assert.equal(expectedTables.length, 47);
 
 const tableBlocks = new Map();
-for (const match of sql.matchAll(/CREATE TABLE "public"\\."([^"]+)" \\(/g)) {
+for (const match of sql.matchAll(/CREATE TABLE "public"\."([^"]+)" \(/g)) {
   const openParen = match.index + match[0].lastIndexOf("(");
   const parsed = readBalancedParentheses(sql, openParen);
   tableBlocks.set(match[1], parsed.value);
