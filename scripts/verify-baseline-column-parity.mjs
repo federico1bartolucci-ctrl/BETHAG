@@ -9,18 +9,10 @@ const expectedTables = snapshot.objects.tables.filter((table) => table.schema_na
 assert.equal(expectedTables.length, 47);
 
 const tableBlocks = new Map();
-for (const match of sql.matchAll(/CREATE TABLE "public"\."([^"]+)" \(/g)) {
-  const start = match.index + match[0].length;
-  let depth = 1, quote = false, end = start;
-  for (; end < sql.length; end++) {
-    const char = sql[end];
-    if (char === '"' && sql[end + 1] === '"') { end++; continue; }
-    if (char === '"') quote = !quote;
-    if (!quote && char === "(") depth++;
-    if (!quote && char === ")" && --depth === 0) break;
-  }
-  assert.ok(end < sql.length, `Unterminated CREATE TABLE for ${match[1]}`);
-  tableBlocks.set(match[1], sql.slice(start, end));
+for (const match of sql.matchAll(/CREATE TABLE "public"\\."([^"]+)" \\(/g)) {
+  const openParen = match.index + match[0].lastIndexOf("(");
+  const parsed = readBalancedParentheses(sql, openParen);
+  tableBlocks.set(match[1], parsed.value);
 }
 assert.equal(tableBlocks.size, expectedTables.length, "Baseline and snapshot public table counts differ.");
 
