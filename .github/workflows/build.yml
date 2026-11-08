@@ -33,13 +33,13 @@ jobs:
 
       - name: Type-check all Supabase Edge Functions
         run: |
-          deno check supabase/functions/bethag-send-email/index.ts
-          deno check supabase/functions/bethag-invite-collaborator/index.ts
-          deno check supabase/functions/bethag-invite-resident/index.ts
-          deno check supabase/functions/delete-account/index.ts
-          deno check supabase/functions/bethag-ai-condominium/index.ts
-          deno check supabase/functions/bethag-ai-document/index.ts
-          deno check supabase/functions/bethag-resend-webhook/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-send-email/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-invite-collaborator/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-invite-resident/index.ts
+          deno check --node-modules-dir=auto supabase/functions/delete-account/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-ai-condominium/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-ai-document/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-resend-webhook/index.ts
 
       - name: Install dependencies from the committed lockfile
         run: npm ci
