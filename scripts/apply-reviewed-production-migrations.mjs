@@ -233,10 +233,16 @@ async function main() {
       && app12.provider_delivery_observed.startsWith("PASS"),
     "Blocked: APP-12 provider delivery is not PASS in the pinned QA evidence.");
 
+    // A squash merge can preserve the exact reviewed tree while replacing its
+    // commit ancestry. Do not treat ancestry alone as proof: in that case the
+    // complete tree delta below must consist exclusively of the explicit
+    // post-QA documentation/approval/runner allowlist, and the frozen payload
+    // must still match byte-for-byte after canonical JSON normalization.
+    let qaIsAncestor = true;
     try {
       execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedCommitSha], { stdio: "ignore" });
     } catch {
-      throw new Error("Blocked: pinned QA source commit is not an ancestor of the execution commit.");
+      qaIsAncestor = false;
     }
     const testedManifest = JSON.parse(execFileSync("git", [
       "show", `${testedQaSha}:supabase/rebuild/production-migration-cutover-freeze-20261105.json`,
@@ -259,6 +265,9 @@ async function main() {
     const unexpectedPostQaChanges = laterChanges.filter((path) => !allowedPostQaChange(path));
     assert.deepEqual(unexpectedPostQaChanges, [],
       "Blocked: application, migration, workflow or other non-documentation files changed after the tested QA SHA: " + unexpectedPostQaChanges.join(", "));
+    if (!qaIsAncestor) {
+      console.log("QA provenance fallback: squash merge accepted only after exact allowlisted tree-delta and frozen-manifest checks.");
+    }
   }
   const isExpectedProductionTarget =
     (targetHost === `db.${projectRef}.supabase.co` && targetUser === "postgres")
