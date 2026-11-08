@@ -1247,6 +1247,9 @@ console.log(JSON.stringify({ suite: "BETHAG_QA_BROWSER_WORKFLOWS", target: "jhuy
 if (results.length !== 4 || results.some(x => x.status !== "PASS")) process.exitCode = 1;
 if (consoleErrors.length) console.log("BETHAG_BROWSER_CONSOLE_ERRORS", JSON.stringify(consoleErrors));
 if (failedRequests.length) console.log("BETHAG_BROWSER_FAILED_REQUESTS", JSON.stringify(failedRequests));
+const unitDiagnostics = consoleMessages.filter(message => message.text.includes("[BETHAG][units:"));
+console.log("BETHAG_UNIT_DIAGNOSTICS", JSON.stringify(unitDiagnostics));
+console.log("BETHAG_UNIT_BACKEND_REQUESTS", JSON.stringify(backendRequestDiagnostics));
 
 // Re-run marker: strict-mode heading selector uses the unique h1 after save.
 
