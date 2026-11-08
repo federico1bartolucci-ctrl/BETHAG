@@ -79,6 +79,20 @@ async function invoke(slug, body) {
   return payload;
 }
 
+async function expectStatus(slug, body, expectedStatus) {
+  const response = await fetch(url + "/functions/v1/" + slug, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + login.data.session.access_token,
+      apikey: key,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  assert.equal(response.status, expectedStatus, slug + " expected HTTP " + expectedStatus + " but got " + response.status + ": " + JSON.stringify(payload));
+}
+
 let uploaded = false;
 try {
   const upload = await service.storage.from("bethag-documents").upload(storagePath, makePdf(), {
@@ -87,6 +101,13 @@ try {
   });
   assert.ifError(upload.error);
   uploaded = true;
+
+  await expectStatus("bethag-invite-collaborator", {}, 400);
+  console.log("PASS: collaborator invitation rejects incomplete input without mutation");
+  await expectStatus("bethag-invite-resident", {}, 400);
+  console.log("PASS: resident invitation rejects incomplete input without mutation");
+  await expectStatus("delete-account", { confirmation: "NO" }, 400);
+  console.log("PASS: account deletion rejects invalid confirmation without mutation");
 
   const file = { filename, storagePath, mimeType: "application/pdf" };
   const condominium = await invoke("bethag-ai-condominium", { workspaceId, files: [file] });
