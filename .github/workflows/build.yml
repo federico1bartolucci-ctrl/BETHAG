@@ -31,6 +31,9 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Verify AI model identifiers and disabled cost gate
+        run: node scripts/test-ai-provider-config.mjs
+
       - name: Type-check all Supabase Edge Functions
         run: |
           deno check --node-modules-dir=auto supabase/functions/bethag-send-email/index.ts
