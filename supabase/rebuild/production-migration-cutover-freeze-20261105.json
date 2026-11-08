@@ -558,10 +558,10 @@
   "user_authorization": {
     "status": "RECEIVED",
     "approved_commit_sha": "5d96342209be77e189012dec754bc764999e64e2",
-    "approved_execution_commit_sha": "ef06aa675e8e56961e11351010d6fa740978e85d",
+    "approved_execution_commit_sha": "c396c09a73d6e2f7463045b428629f5b32828281",
     "approved_by": "Federico Bartolucci",
-    "approved_at_utc": "2026-11-08T17:39:34Z",
-    "approval_reference": "ChatGPT project conversation, 2026-11-08 17:34 Europe/Rome: project owner explicitly confirmed authorization for READ_ONLY_PRODUCTION_PREFLIGHT_ONLY on execution commit 4a8a161a834f9ca707e71778e8770035326f953c, QA source 5d96342209be77e189012dec754bc764999e64e2, release fingerprint 18d197d40f9b72681094b9a8f607efeca88675be6745baf32b64f3ad234338b4, maintenance window 2026-11-08 16:30–20:30 Europe/Rome. This approval does NOT authorize migration execution, DDL/DML, or Production apply. Additional owner confirmation in ChatGPT project conversation on 2026-11-08: explicit authorization for the read-only Production preflight on execution commit da6f7dd1c0a8bc325df0097486c53733b3b2a3b1. This does not authorize Production DDL, DML, migration execution, or apply. Additional explicit owner authorization in ChatGPT project conversation on 2026-11-08 at 18:39 Europe/Rome: Federico authorized recording a NEW approval strictly for READ_ONLY_PRODUCTION_PREFLIGHT_ONLY on execution commit ef06aa675e8e56961e11351010d6fa740978e85d, QA source 5d96342209be77e189012dec754bc764999e64e2, release fingerprint e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a. This authorization permits only exact 248-row live-ledger verification and validation of the nineteen frozen SQL hashes; it does NOT authorize DDL, DML, migration execution, ledger writes, or Production apply.",
+    "approved_at_utc": "2026-11-08T18:34:19.823Z",
+    "approval_reference": "ChatGPT project conversation, 2026-11-08: after the explicit request to confirm scope, the project owner replied “procedi”, authorizing Production application of the exact nineteen frozen canonical migrations through the guarded sequential forward-only runner, including DDL/DML and canonical ledger writes, on Production project tctcgptrsmvgajqjgnev. The owner explicitly accepted the residual risk that provider-managed physical restore has not been independently tested. Execution checkout approved: c396c09a73d6e2f7463045b428629f5b32828281; QA source: 5d96342209be77e189012dec754bc764999e64e2; release fingerprint: e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a; exact ordered nineteen SQL blob hashes are the frozen approved_migration_hashes array. Approval is limited to this frozen scope; any hash, fingerprint, source, target, or scope mismatch is STOP. No authorization for ad hoc SQL, Supabase apply_migration, baseline replay, historical ledger rewriting, or non-forward-only recovery.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -642,14 +642,14 @@
     ],
     "approved_maintenance_window": "2026-11-08 18:30–20:30 Europe/Rome",
     "approved_operator": "Federico Bartolucci",
-    "approved_cutover_scope": "READ-ONLY PRODUCTION PREFLIGHT ONLY: verify the exact 248-row live ledger against the frozen snapshot and validate the nineteen migration file hashes. No DDL, DML, migration execution, ledger write, or Production apply is authorized.",
+    "approved_cutover_scope": "PRODUCTION_APPLY: apply exactly the nineteen ordered canonical migrations in manifest.sequence to Production project tctcgptrsmvgajqjgnev using only scripts/apply-reviewed-production-migrations.mjs; sequential transactions with matching canonical ledger insertions; forward-only; preserve all 248 historical rows; expected final ledger 267 rows. No baseline migrations, no Supabase apply_migration, no SQL Editor/manual SQL, no historical ledger rewrite, no ad hoc rollback. Stop on any mismatch or uncertain outcome.",
     "residual_backup_restore_risk_reconfirmed": true,
-    "residual_backup_restore_risk": "Provider-managed physical restore was not independently tested; the previously accepted residual risk is reconfirmed for this cutover. No claim of a successful physical restore test.",
+    "residual_backup_restore_risk": "Explicitly reconfirmed by the project owner in the 2026-11-08 ChatGPT project conversation (“procedi”) for this exact Production cutover: provider-managed physical restore was not independently tested. Do not represent it as tested; require the runner's per-cutover BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES attestation.",
     "approved_release_fingerprint": "e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a",
-    "approval_scope": "READ_ONLY_PREFLIGHT_ONLY",
-    "production_apply_authorized": false,
+    "approval_scope": "PRODUCTION_APPLY",
+    "production_apply_authorized": true,
     "previously_approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
-    "execution_approval_status": "APPROVED_READ_ONLY_PREFLIGHT_ONLY"
+    "execution_approval_status": "APPROVED_PRODUCTION_APPLY"
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
