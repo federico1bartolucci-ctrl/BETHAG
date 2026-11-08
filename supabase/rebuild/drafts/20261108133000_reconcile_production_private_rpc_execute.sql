@@ -1,9 +1,11 @@
--- Reconcile authenticated EXECUTE for private implementations reached through
+-- Reconcile authenticated EXECUTE for 18 reviewed private implementations reached through
 -- existing public SECURITY INVOKER RPC wrappers.
 --
 -- Scope is intentionally narrow: only functions with reviewed QA/Production
 -- implementation fingerprints and an explicit authentication/workspace guard
 -- (or a verified delegation to the guarded installment-schedule implementation).
+-- claim_first_workspace_admin is deliberately excluded: its current bootstrap
+-- logic allows any authenticated user to claim an uninitialized workspace.
 --
 -- This migration is forward-only and fails closed if any signature, function
 -- security mode, implementation fingerprint, wrapper mode, or wrapper grant
@@ -27,7 +29,6 @@ BEGIN
       ('admin_approve_portal_registration', 'uuid, uuid', '97fe47c5c67a17bf101dfbecb08b988d|87a015497a99e034fe0386b78c72b506'),
       ('archive_condominium', 'uuid, uuid, text', '9f093be6082d6dff2105b5d55fe5c248|14f5c993fb0f5fb69a3d1ae327402bce'),
       ('check_condominium_member_transfer_closure', 'uuid', '4404f20fa64462d3f5cac62f33bc20a3'),
-      ('claim_first_workspace_admin', 'uuid', '4453430b65ad07c5ae0282750cfe37ed'),
       ('close_condominium_fiscal_year', 'uuid, uuid', '30354a41f2d548d8da14f5d43afee8cd'),
       ('close_fiscal_year_and_generate_carryovers', 'uuid, uuid, uuid', '8a1b4c8f95089942b6be28b76a18b18a'),
       ('compensate_fiscal_carryover', 'uuid, uuid, uuid, numeric, uuid, text', 'f1d48dc255b73d13e0a141d7f8580768'),
@@ -109,7 +110,6 @@ BEGIN
       ('admin_approve_portal_registration', 'uuid, uuid'),
       ('archive_condominium', 'uuid, uuid, text'),
       ('check_condominium_member_transfer_closure', 'uuid'),
-      ('claim_first_workspace_admin', 'uuid'),
       ('close_condominium_fiscal_year', 'uuid, uuid'),
       ('close_fiscal_year_and_generate_carryovers', 'uuid, uuid, uuid'),
       ('compensate_fiscal_carryover', 'uuid, uuid, uuid, numeric, uuid, text'),
