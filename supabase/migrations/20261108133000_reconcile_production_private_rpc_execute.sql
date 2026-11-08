@@ -78,7 +78,7 @@ BEGIN
       RAISE EXCEPTION 'Authenticated cannot execute the public wrapper: %', item.function_name;
     END IF;
 
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', private_oid);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', private_oid::regprocedure);
   END LOOP;
 END
 $migration$;
