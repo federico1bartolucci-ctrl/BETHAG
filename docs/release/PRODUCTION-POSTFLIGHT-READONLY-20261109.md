@@ -38,3 +38,18 @@ This evidence establishes the **current live schema/ledger postconditions**, not
 **APP-14 remains OPEN/PARTIAL:** authenticated Production smoke tests have not been performed by this verification. They must use existing approved administrator, collaborator and resident test identities and remain non-destructive. Verify login, workspace/condominium listing, role/module boundaries, resident-only portal scope, and absence of cross-workspace access. Do not create or alter real condominium records.
 
 Production release remains **NO-GO for general launch** until APP-14 authenticated smoke tests and the remaining operational sign-offs are evidenced. No claim is made that provider-managed physical restore has been tested.
+
+
+## Supabase Advisor review — 2026-11-09
+
+Fresh Production Advisor calls after the postflight returned:
+
+- **Security Advisor:** 0 lints.
+- **Health Advisor:** 0 lints.
+- **Performance Advisor:** informational/warning findings only: 59 unused-index notices, 21 multiple-permissive-policy notices, and 1 Auth connection-allocation information notice.
+
+No performance finding was remediated in this pass. Unused-index notices are not sufficient evidence to drop indexes, and consolidating permissive RLS policies would change security-sensitive behavior; both require separate workload/policy analysis and isolated regression tests. These findings do not override the clean Security and Health Advisor results, but should be reviewed after launch-readiness or in a separately scoped optimization task.
+
+## APP-14 execution boundary
+
+The repository contains QA-only credentials/workflows and explicitly pins those workflows to the QA project. They were not repurposed against Production. No approved Production test identities or authentication method were available to this verification session. Therefore no Production sign-in was attempted and no real resident/workspace data was touched. APP-14 remains **PARTIAL / NO-GO** until the project owner supplies or operates approved Production test identities and records the non-destructive role smoke-test evidence.
