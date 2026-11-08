@@ -62,6 +62,17 @@ export function frozenManifestPayload(manifest) {
   return payload;
 }
 
+/** Require a distinct, explicit owner authorization for Production DDL/DML.
+ * A read-only preflight approval must never satisfy the Production apply gate.
+ */
+export function assertProductionApplyApproval(approval) {
+  if (approval?.approval_scope !== "PRODUCTION_APPLY"
+    || approval?.production_apply_authorized !== true
+    || approval?.execution_approval_status !== "APPROVED_PRODUCTION_APPLY") {
+    throw new Error("Blocked: manifest approval is limited to read-only preflight; explicit Production APPLY authorization is required.");
+  }
+}
+
 /** Reject missing, stale, or implausibly future-dated live environment snapshots. */
 export function isFreshSnapshot(capturedAt, now = Date.now(), maxAgeHours = 24) {
   const timestamp = Date.parse(capturedAt ?? "");
