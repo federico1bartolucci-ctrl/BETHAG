@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, frozenManifestPayload, isFreshSnapshot } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, frozenManifestPayload, isFreshSnapshot, assertProductionApplyApproval } from "./lib/release-readiness-utils.mjs";
 
 test("Git blob hash is identical for LF and CRLF checkout content", () => {
   const lf = "SELECT 1;\nSELECT 2;\n";
@@ -196,4 +196,27 @@ test("release fingerprint preserves migration order and source QA identity", asy
   const reordered = { ...manifest, sequence: [...sequence].reverse() };
   assert.notEqual(releaseFingerprint({ sourceCommitSha: "b".repeat(40), manifest: reordered, fileContents: files }), baseline);
   assert.notEqual(releaseFingerprint({ sourceCommitSha: "c".repeat(40), manifest, fileContents: files }), baseline);
+});
+
+
+test("read-only preflight approval cannot authorize Production apply", () => {
+  assert.throws(() => assertProductionApplyApproval({
+    approval_scope: "READ_ONLY_PREFLIGHT_ONLY",
+    production_apply_authorized: false,
+    execution_approval_status: "APPROVED_READ_ONLY_PREFLIGHT_ONLY",
+  }), /explicit Production APPLY authorization is required/);
+});
+
+test("Production apply requires all three explicit approval fields", () => {
+  const approval = {
+    approval_scope: "PRODUCTION_APPLY",
+    production_apply_authorized: true,
+    execution_approval_status: "APPROVED_PRODUCTION_APPLY",
+  };
+  assert.doesNotThrow(() => assertProductionApplyApproval(approval));
+  for (const field of Object.keys(approval)) {
+    const incomplete = { ...approval };
+    delete incomplete[field];
+    assert.throws(() => assertProductionApplyApproval(incomplete), /explicit Production APPLY authorization is required/);
+  }
 });
