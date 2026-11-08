@@ -208,7 +208,10 @@ jobs:
       - name: Rehearse secure first-workspace bootstrap on isolated PostgreSQL 17
         run: createdb --host=localhost --port=5432 --username=postgres bethag_first_workspace_test && node scripts/test-first-workspace-bootstrap.mjs
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_first_workspace_test
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGDATABASE: bethag_first_workspace_test
           PGPASSWORD: postgres
 
       - name: Rehearse forward-only PostgreSQL default ACL repair on isolated database
