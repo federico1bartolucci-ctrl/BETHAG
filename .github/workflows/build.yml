@@ -9,7 +9,7 @@ on:
 # Keep the local build/bootstrap workflow independent so neither can cancel
 # the other's pending run while sharing the same concurrency group.
 concurrency:
-  group: ${{ github.head_ref == 'fix/qa-view-acl-parity-20261105' && format('bethag-build-validation-{0}', github.sha) || 'bethag-qa-shared-environment' }}
+  group: ${{ github.event_name == 'pull_request' && format('bethag-build-validation-pr-{0}', github.event.pull_request.number) || (github.head_ref == 'fix/qa-view-acl-parity-20261105' && format('bethag-build-validation-{0}', github.sha)) || 'bethag-qa-shared-environment' }}
   cancel-in-progress: false
 
 jobs:
