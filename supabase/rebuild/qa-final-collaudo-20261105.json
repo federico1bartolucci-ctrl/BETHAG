@@ -3,19 +3,19 @@
   "captured_date": "2026-11-08",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "main",
-  "reviewed_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+  "reviewed_head_sha": "aaf1eff0a51bebd5aa052debb4a795f95bc67302",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42430065044,
+      "run_id": 42478782401,
       "run_attempt": 1,
-      "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+      "head_sha": "aaf1eff0a51bebd5aa052debb4a795f95bc67302",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42428242253,
-      "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+      "run_id": 42478782409,
+      "head_sha": "aaf1eff0a51bebd5aa052debb4a795f95bc67302",
       "conclusion": "success",
       "jobs": {
         "build": "success",
@@ -23,8 +23,8 @@
       }
     },
     "baseline_safety": {
-      "run_id": 42419684071,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+      "run_id": 42478782398,
+      "head_sha": "aaf1eff0a51bebd5aa052debb4a795f95bc67302",
       "conclusion": "success"
     }
   },
