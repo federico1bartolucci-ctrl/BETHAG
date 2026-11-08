@@ -1,7 +1,7 @@
 name: Deploy BETHAG to GitHub Pages
 # Automatic deployment workflow
-# Trigger latest automatic navigation refresh
-# Trigger latest transfer validation fix
+# Production client configuration is injected at build time; the publishable
+# key is designed for browser use and database access remains protected by RLS.
 
 on:
   push:
@@ -34,8 +34,12 @@ jobs:
         with:
           node-version: 24
       - name: Install dependencies
-        run: npm install
-      - name: Build BETHAG
+        run: npm ci
+      - name: Build BETHAG for Production
+        env:
+          VITE_SUPABASE_ENABLE: "true"
+          VITE_SUPABASE_URL: https://tctcgptrsmvgajqjgnev.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ
         run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
