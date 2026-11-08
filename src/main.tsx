@@ -9906,6 +9906,7 @@ function CondominiumsPage(
               selected.id
           )}
           condominiumMembers={condominiumMembers.filter((x: CondominiumMember) => x.condominiumId === selected.id)}
+          allCondominiumUnits={condominiumUnits}
           condominiumUnits={condominiumUnits.filter((x: CondominiumUnit) => x.condominiumId === selected.id)}
           onNewUnit={onNewUnit}
           onEditUnit={onEditUnit}
@@ -10249,6 +10250,15 @@ function CondominiumDetails(
 
   return (
     <section className="detail-card">
+
+      <div style={{ margin: "12px 0", padding: "10px", border: "1px solid #d97706", borderRadius: "8px", background: "#fffbeb", color: "#78350f", fontSize: "12px" }}>
+        <strong>Diagnostica temporanea unità</strong>
+        <div>Condominio: {String(item?.name ?? "—")} | ID: {String(item?.id ?? "—")} | unità dichiarate: {String(item?.units ?? "—")}</div>
+        <div>Unità caricate nel workspace: {String(Array.isArray(props.allCondominiumUnits) ? props.allCondominiumUnits.length : "dato non disponibile")}</div>
+        <div>Unità associate a questo condominio: {String(Array.isArray(condominiumUnits) ? condominiumUnits.length : "dato non disponibile")}</div>
+        <div>ID condominio presenti nei dati caricati: {Array.from(new Set((Array.isArray(props.allCondominiumUnits) ? props.allCondominiumUnits : []).map((unit: any) => String(unit.condominiumId ?? "mancante")))).join(", ") || "nessuno"}</div>
+        <div>Tipo ID selezionato: {typeof item?.id} | Tipo ID unità: {typeof (props.allCondominiumUnits?.[0]?.condominiumId)}</div>
+      </div>
 
       <div className="section-title">
 
