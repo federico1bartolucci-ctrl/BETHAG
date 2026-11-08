@@ -106,6 +106,13 @@ jobs:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app12-provider.mjs
 
+      - name: Phase 1 — authenticated Edge Functions acceptance (invitations, deletion guards and AI)
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-qa-edge-functions-phase1.mjs
+
       - name: Prepare reversible Portal plan fixture for portal publication acceptance
         env:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
