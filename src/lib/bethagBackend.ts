@@ -1457,20 +1457,15 @@ export async function restoreCondominium(workspaceId: string, legacyId: number) 
   if (restoreError) throw restoreError;
 }
 
-export async function createFirstWorkspaceForAuthenticatedAdmin(workspaceName: string) {
+export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
   if (!supabase) throw new Error("Supabase non configurato.");
-  const normalizedName = workspaceName.trim().slice(0, 120);
-  if (!normalizedName) throw new Error("Inserisci un nome valido per il workspace.");
 
-  const { data, error } = await supabase.rpc("create_first_workspace_for_authenticated_admin", {
-    p_workspace_name: normalizedName,
+  const { data, error } = await supabase.rpc("claim_first_workspace_admin", {
+    p_workspace_id: workspaceId ?? null,
   });
 
   if (error) throw error;
-  if (typeof data !== "string" || !data) {
-    throw new Error("Il server non ha restituito il workspace creato.");
-  }
-  return data;
+  return data as string;
 }
 
 function isRetryableBackendSyncError(error: unknown): boolean {
