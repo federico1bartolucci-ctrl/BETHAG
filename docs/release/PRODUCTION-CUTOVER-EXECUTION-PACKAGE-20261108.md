@@ -119,3 +119,34 @@ The following must be completed only after the final execution commit and finger
 - Approval evidence reference:
 
 **Status: NOT APPROVED FOR PRODUCTION APPLY.** The user's instruction to proceed with preparation is not interpreted as final authorization to execute Production DDL/DML or write migration ledger rows.
+
+## 10. Traceability reconciliation — 2026-11-08
+
+This section supersedes any ambiguous execution-SHA wording in the earlier preparation notes. It does not expand authorization.
+
+### Commit chain established from Git history
+
+- `ef06aa675e8e56961e11351010d6fa740978e85d` is the execution commit named by the read-only approval metadata recorded in the manifest version present on `92fa9423ef00223371516345c0fbe6b7e229d9ce`.
+- `92fa9423ef00223371516345c0fbe6b7e229d9ce` is one commit after `ef06aa6`; the only changed path is `supabase/rebuild/production-migration-cutover-freeze-20261105.json`. That manifest update records the new read-only approval metadata and fingerprint `e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a`.
+- `25a3362be02dcf5ffddf8e2ff02a7a6719ddd7aa` is one commit after `92fa942`; the only changed path is this read-only preflight evidence document.
+
+### What the recorded runner output proves
+
+The operator-supplied console output records a successful read-only runner invocation with expected checkout SHA `92fa9423ef00223371516345c0fbe6b7e229d9ce`, QA source SHA `5d96342209be77e189012dec754bc764999e64e2`, and fingerprint `e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a`. It reports an exact 248-row ledger match and review of 19 frozen SQL hashes, with no migration SQL executed and no ledger row written.
+
+### Explicit limitation — approval SHA versus executed SHA
+
+The manifest's `approved_execution_commit_sha` is `ef06aa675e8e56961e11351010d6fa740978e85d`, while the recorded runner invocation used `92fa9423ef00223371516345c0fbe6b7e229d9ce` as its expected checkout SHA. Git history confirms that the latter contains only the manifest approval-metadata update relative to the former; the SQL migration payload and executable runner were not changed in that one-commit step.
+
+Nevertheless, the recorded approval names `ef06aa6` as the approved execution SHA, not `92fa942`. Therefore this evidence supports the read-only ledger/hash result, but it does not establish a perfect literal match between the approved execution SHA field and the runner's expected checkout SHA. Do not describe the run as an exact-SHA approval match.
+
+The earlier statement in section 3 that the preflight was evidenced on `35f78a773f8517a36b052d5a4ba55905130193b6` is historical/stale for the 2026-11-08 run and must not be used as its execution SHA.
+
+### Disposition
+
+- Read-only preflight result: `PASS` as recorded in the operator-supplied output.
+- Exact approval-to-runner execution-SHA correspondence: `NOT FULLY ESTABLISHED`.
+- Production apply authorization: `NOT GRANTED`.
+- Production DDL/DML or ledger writes: `NOT PERFORMED` by the recorded preflight.
+- Resolution required before any future apply: issue a new, separate owner approval that explicitly names the final execution commit and exact release fingerprint; then satisfy all fresh cutover gates. This document-only reconciliation does not request or imply that approval.
+
