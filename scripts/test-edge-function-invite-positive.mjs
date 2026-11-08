@@ -23,7 +23,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.pathname.startsWith("/auth/v1/admin/users/") && method === "PUT") return json({ id: url.pathname.split("/").pop() });
   if (url.pathname === "/rest/v1/workspace_members" && method === "GET") return json({ workspace_id: "workspace-test", role: "admin", active: true });
   if (url.pathname === "/rest/v1/condominiums" && method === "GET") return json({ id: "condo-uuid", workspace_id: "workspace-test", legacy_id: 77, name: "Condominio test" });
-  if (url.pathname === "/rest/v1/condominium_members" && method === "GET") return json({ id: "member-uuid", condominium_id: "condo-uuid", user_id: null, name: "Mario Rossi", email: "mario@example.test", role: memberRole, active: true, permissions: [], data: { apartment: "12", role: memberRole }, legacy_id: 12, unit_id: "unit-uuid" });
+  if (url.pathname === "/rest/v1/condominium_members" && method === "GET") return json({ id: "member-uuid", condominium_id: "condo-uuid", user_id: null, name: "Mario Rossi", email: "mario@example.test", role: "resident", active: true, permissions: [], data: { apartment: "12", role: memberRole }, legacy_id: 12, unit_id: "unit-uuid" });
   if (url.pathname === "/rest/v1/profiles" && method === "GET") return json({ role: "resident" });
   if (url.pathname === "/rest/v1/profiles" && method === "POST") return json({}, 201);
   if (url.pathname === "/rest/v1/condominium_members" && method === "PATCH") return new Response(null, { status: 204 });
