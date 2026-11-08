@@ -49,21 +49,21 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 | ID | Area | Test | Expected result | Status |
 |---|---|---|---|---|
-| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PASS — real Auth session, own-condominium RLS read, role landing and refresh/session persistence passed (runs 41703022476 and 41702240346) |
-| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PASS for tested permission matrix — true allowed read; explicit false/missing denied; accounting read/insert denied; staff navigation restricted (run 41703022476) |
-| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PASS — own portal/condominium visible, accounting empty, document creation denied, staff navigation absent (runs 41703022476 and 41702240346) |
-| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | PASS — authenticated QA read returned no rows and foreign-workspace write was rejected |
-| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PASS — browser create/edit, 2 interiors + 3 autonomous appurtenances, archive and restore (run 41702240346) |
-| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PASS — browser expense €125.50, 1,000-millesimi allocation and unpaid installment; collaborator/resident accounting denial verified (runs 41702240346 and 41703022476) |
-| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PASS — closed-year ledger mutation rejected and amount unchanged; persistent QA-only regression fixture retained (run 41459976993) |
-| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | PASS — browser preview/confirmation/closure, incoming-owner refresh and automatic deactivation of the outgoing owner's active portal link passed (run 41705150691) |
-| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PARTIAL — unpaid installment rejected and owner/transfer/accounting state unchanged (run 41459164444); unresolved carryover cases still pending |
-| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PASS — anonymous and cross-workspace callers denied; foreign-workspace RLS read/write denied; no side effects (runs 41459164444 and 41703022476) |
-| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PARTIAL — transaction-level failed-closure rollback and invariants passed (run 41459164444); a deliberately failed closure through the browser UI remains untested |
-| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — browser publish/withdraw and resident visibility passed (run 41702240346); one authorized Production email reached Resend `email.delivered` and synced to `Consegnata` (PR #46); multi-recipient, bounce and complaint cases remain untested |
-| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — collaborator upload + metadata, resident shared-file byte download, temporary object/metadata removed (run 41703022476) |
-| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PARTIAL — QA live catalog and isolated PostgreSQL 17 rehearsal pass; Production retains three provider-managed default MAINTAIN entries and four PUBLIC EXECUTE routines, and provider QA branch status remains MIGRATIONS_FAILED |
-| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS for documented core scope — 12 administrator destinations, collaborator/resident restrictions, refresh/session persistence and explicit logout/fresh login for all three roles passed (runs 41702240346 and 41704321311); optional modules are not an exhaustive exploratory audit |
+| APP-01 | Authentication | Sign in as administrator; refresh and reopen the workspace | Session persists; correct workspace loads without console/API errors | PASS — real Auth session, own-condominium RLS read, role landing and refresh/session persistence (final QA run 41953312039, commit 152b455) |
+| APP-02 | Authentication | Sign in as collaborator | Only assigned workspace/modules and permitted actions are available | PASS for tested permission matrix — true allowed read; explicit false/missing denied; accounting read/insert denied; staff navigation restricted (run 41953312039) |
+| APP-03 | Authentication/RLS | Sign in as resident | Only own linked condominium/unit/portal content is visible; no administrator-only actions | PASS — own portal/condominium visible, accounting empty, document creation denied, staff navigation absent (run 41953312039) |
+| APP-04 | Isolation | Attempt to read or mutate another workspace's known synthetic record | Denied or returns no data; no cross-workspace leakage | PASS — authenticated QA read returned no rows and foreign-workspace write was rejected (run 41953312039) |
+| APP-05 | Condominium | Create/edit a synthetic condominium and hierarchical unit structure | Saved data persists after reload; hierarchy and relationships remain consistent | PASS — API persistence plus browser create/edit, 2 interiors + 3 autonomous appurtenances, archive and restore (run 41953312039) |
+| APP-06 | Accounting | Create a synthetic expense/allocation and installments | Amounts and allocations are consistent; unauthorized roles cannot mutate accounting | PASS — API and browser expense €125.50, 1,000-millesimi allocation and unpaid installment; collaborator/resident accounting denial verified (run 41953312039) |
+| APP-07 | Accounting guard | Attempt to alter a closed accounting period | Operation is rejected and no partial writes remain | PASS — closed-year ledger mutation rejected and amount unchanged; persistent QA-only regression fixture retained (run 41953312039) |
+| APP-08 | Member transfer | Preview and close a valid transfer with one or more incoming co-owners | New owners remain current; outgoing owner is archived only after valid closure; portal links are correct | PASS — real RPC preview/confirmation/closure, browser closure, incoming-owner refresh without hard reload and outgoing portal-link deactivation (run 41953312039 plus 41705150691) |
+| APP-09 | Member transfer guard | Attempt close with open accounting positions or unresolved carryovers | Closure is rejected; no partial changes; original owner and accounting state remain intact | PASS — unpaid installment blocks closure; member-level debit and unit-level credit carryovers independently block closure; transfer remains Confermato and outgoing owner remains active/In chiusura (run 41953312039) |
+| APP-10 | Member transfer authorization | Attempt close as unauthenticated and as an authenticated user outside the workspace | Denied; no side effects | PASS — resident denied transfer confirmation; foreign-workspace RLS read/write denied; no side effects (run 41953312039) |
+| APP-11 | Rollback | Force a controlled failure in QA during closure transaction | Entire transaction rolls back; no half-archived member, portal, or accounting state | PASS — unpaid-installment failure via real RPC and authenticated browser UI; error displayed, transfer stayed Confermato and outgoing owner stayed active/In chiusura; no partial accounting/portal state (run 41995210778) |
+| APP-12 | Portal | Post portal content and separately exercise email/communication flow | Portal content and email delivery are distinct; recipient/visibility rules hold | PARTIAL — UI publication/withdrawal, resident visibility and recipient preparation PASS; local Edge Function accepted valid Svix signatures for sent/delivered/bounced/complained events, persisted recipient timestamps and aggregate Parzialmente inviata, and rejected invalid signatures with HTTP 401 and no mutation (run 41995210778). No real email was sent; provider deliverability remains untested |
+| APP-13 | Documents | Upload/read a synthetic document using each permitted role | Storage access matches workspace and role policy | PASS — collaborator upload + metadata, resident shared-file byte download, temporary object/metadata removed (run 41953312039) |
+| APP-14 | Migration/ACL | Re-run read-only ACL checks after candidate migration rehearsal | No app-role MAINTAIN; only intended PUBLIC EXECUTE exceptions remain | PARTIAL / RELEASE NO-GO — QA ACL and all three forward-only ACL drafts pass isolated PostgreSQL 17 idempotency tests; Production application-schema, function ACL and default-ACL divergences remain, and Data API auto-expose Production still requires manual confirmation. No remote migration applied |
+| APP-15 | Regression | Refresh page, sign out/in, navigate core dashboard modules | No uncaught browser errors; data persists and navigation works | PASS for documented core scope — 12 administrator destinations, collaborator/resident restrictions, role-specific landing, refresh/session persistence and explicit logout/fresh login for all three roles (run 41953312039 plus 41704321311); optional modules are not an exhaustive exploratory audit |
 
 ## 3. Evidence to attach
 
@@ -75,7 +75,7 @@ For every row, record PASS/FAIL, UTC timestamp, test account role, sanitized evi
 
 ## 4. Cutover approval — must be completed by the named approver
 
-- Approver name/role: **NOT RECORDED**
+- Approver name/role: **Federico Bartolucci — project owner/approver identified; final cutover approval NOT RECEIVED.**
 - Approved commit SHA: **NOT RECORDED**
 - Exact ordered migration list/hash: **NOT APPROVED**
 - Maintenance window and communication plan: **NOT APPROVED**
@@ -429,3 +429,91 @@ GitHub Actions [run 41705150691](https://github.com/federico1bartolucci-ctrl/BET
 GitHub Actions [run 41704321311](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41704321311) passed explicit logout and fresh login for administrator, collaborator and resident, in addition to role landing, refresh/session persistence and zero uncaught page errors. APP-15 is therefore PASS for the documented core scope.
 
 The APP-08 portal-link criterion and APP-15 sign-out/sign-in criterion are closed. APP-09 carryover edge cases, APP-11 deliberately failed closure through the UI, APP-12 multi-recipient/bounce/complaint delivery, and APP-14 Production/provider ACL disposition remain partial.
+
+
+## 24. QA verification closure — 2026-11-05 (point 4)
+
+The current QA verification tranche for project roadmap point 4 is closed. Evidence is tied to the existing QA branch `bethag-launch-qa` (`jhuyhlzzydcgghrzeexn`) and repository commit `1612b46b727ebe018e545ab989df71d6df2957a6`.
+
+- GitHub Actions [build run 41943778380](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778380): **SUCCESS**. Both jobs completed successfully, including real QA authentication/session persistence and the authenticated edit/archive diagnostic; PostgreSQL 17 bootstrap, isolated migration rehearsals, ACL/RLS assertions, application build and public-login browser smoke also passed.
+- GitHub Actions [baseline safety run 41943778409](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778409): **SUCCESS**.
+- The QA Dashboard screenshot dated 2026-11-05 confirms `Automatically expose new tables` is OFF. The read-only Data API/ACL comparison and Security Advisor results are recorded in `DATA-API-ACL-VERIFICATION-20261105.md`.
+- QA fixtures were cleaned by the authenticated diagnostic; no QA reset, branch recreation or historical replay was performed.
+- Production was not modified.
+
+This closure applies to roadmap **point 4 only**. It does not mean APP-01–APP-15 as a complete acceptance matrix is finished: the remaining partial cases and Production/provider release gates recorded above remain open. It does not authorize merge, deployment or Production cutover. Production remains **NO-GO** pending the separately documented gates and explicit release approval.
+
+
+## 25. Final authenticated QA collaudo — 2026-11-05
+
+GitHub Actions [final QA collaudo run 41953312039](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312039), commit 152b455f0d357fc5c2ab797cb320609467ba6c99: SUCCESS. The run targeted only the existing QA project jhuyhlzzydcgghrzeexn and executed the acceptance scripts sequentially.
+
+- APP-01–04: real Auth sessions for administrator, collaborator and resident; RLS own-workspace, collaborator permission true/false/missing, resident portal boundary and foreign-workspace isolation — PASS.
+- APP-05–07: condominium create/edit, 2 interiors + 3 autonomous appurtenances, archive/restore; €125.50 expense, 1,000-millesimi allocation and unpaid installment; closed-year ledger mutation rejected without changing the original amount — PASS.
+- APP-08–10: valid transfer preview/confirmation/closure, outgoing-owner archive and portal-link deactivation; incoming owner visible after navigation without hard reload; resident and foreign-workspace authorization denials — PASS.
+- APP-09: member-level debit and unit-level credit carryovers independently block closure. Transfer remains Confermato and outgoing owner remains active/In chiusura after each rejection — PASS.
+- APP-11: API/RPC failed-closure rollback and unchanged owner/transfer/accounting state — PASS. The browser suite tested successful closure; deliberate failed-closure messaging through the UI remains untested, so APP-11 remains PARTIAL.
+- APP-12: API/browser publication, withdrawal, resident visibility, recipient preparation and administrator-only queue reset — PASS. Email delivery was deliberately not attempted. A separate transaction-scoped QA SQL simulation of private.apply_resend_communication_event covered email.sent, email.delivered, email.bounced and email.complained, including aggregate Parzialmente inviata; the transaction rolled back and no provider email was sent. Signed webhook transport and real provider delivery/bounce/complaint remain untested, so APP-12 remains PARTIAL.
+- APP-13: collaborator uploaded document and resident downloaded the actual shared bytes; temporary metadata/object cleanup — PASS.
+- APP-15: administrator 12 navigation destinations, collaborator/resident navigation restrictions, real sign-in, role landing and refresh/session persistence for all three roles — PASS.
+- Build [41953312105](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312105): SUCCESS. Baseline safety [41953312100](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41953312100): SUCCESS.
+- Cleanup: the run's unique APP-05/06/08/12 marker was absent from condominiums, communications, members, units, fiscal years, ledger entries and portal rows after completion; temporary Auth users, synthetic event recipients and event-test communications count zero. Existing 2026-11-02 QA acceptance fixtures were preserved.
+
+Two empty QA-only APP-09 fixture condominiums created during earlier failed test-preparation attempts remain because each has a closed fiscal year and the application deliberately prevents deletion of closed exercises. They contain no units, members, transfers or carryovers; they were not used by the final APP-09 test. The final APP-09 script reuses the pre-existing BETHAG_QA_APP08_11_CARRYOVER_FIXTURE and removes only its temporary unit/member/carryover/transfer/target-year rows. No trigger was bypassed and no closed fiscal year was altered.
+
+The final collaudo does not authorize Production. APP-11 and APP-12 remain partial as stated; APP-14 remains partial because Production parity/Data API gates are not cleared. Production remains NO-GO; no Production SQL, migration, ledger mutation, merge, deployment or cutover was performed.
+
+
+## 26. APP-11 UI rollback and signed webhook acceptance — 2026-11-05
+
+GitHub Actions [final QA collaudo run 41995210778](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41995210778), commit `10bf397364448fc267e6b1a095f640051e4bb18b`: **SUCCESS** on the existing QA project only.
+
+- APP-11: the authenticated browser deliberately attempted closure with an unpaid installment; the UI displayed the closure error and the database retained the transfer as Confermato and the outgoing owner as active/In chiusura. The RPC rollback and unchanged accounting state were also verified. APP-11 is now **PASS**.
+- APP-12: administrator publication/withdrawal, resident visibility, recipient preparation and queue authorization passed. The local Edge Function accepted valid Svix signatures for sent/delivered/bounced/complained events, persisted recipient statuses/timestamps and aggregate Parzialmente inviata, and rejected an invalid signature with HTTP 401 and no database mutation.
+- No email was sent. The test exercised signed synthetic webhook events and the internal QA RPC, not live provider delivery. APP-12 remains **PARTIAL** until an explicitly authorized real test recipient/provider delivery is verified.
+- Browser page errors: zero. The only aborted request occurred during navigation teardown; fixture cleanup completed successfully.
+- The run used only synthetic QA records and removed its temporary communication, recipient, transfer and unit fixtures. Existing QA acceptance fixtures were preserved.
+
+The current APP matrix is therefore APP-01–APP-11 PASS, APP-12 PARTIAL, APP-13 PASS, APP-14 PARTIAL/Production NO-GO and APP-15 PASS. Point 7 remains open only for the remaining APP-12 provider-delivery evidence and APP-14 Production cutover gate; no Production migration or deployment was performed by this test.
+
+
+## 27. Collaudo QA e rehearsal Production 248+19 — 2026-11-05
+
+GitHub Actions sul commit `ec19cda3734fd818e4005e9efa626b9401549df4`:
+- Final QA collaudo [run 42017349896](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349896): **SUCCESS**.
+- Build [run 42017349811](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349811): **SUCCESS**.
+- Baseline safety [run 42017349826](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42017349826): **SUCCESS**.
+
+Matrice aggiornata:
+- APP-01–APP-11, APP-13 e APP-15: **PASS**.
+- APP-12: **PARTIAL**. Pubblicazione/ritiro, visibilità residente, preparazione destinatari, autorizzazione della coda e webhook sintetici Svix firmati (sent/delivered/bounced/complained; firma invalida HTTP 401 senza mutazione) sono PASS. La chiamata alla Edge Function distribuita `bethag-send-email` sul QA restituisce HTTP 503 `Servizio e-mail non configurato`: almeno uno tra `RESEND_API_KEY` e `BETHAG_FROM_EMAIL` manca nella configurazione QA. Il destinatario di test `delivered@resend.dev` è stato preparato ma non è stata inviata alcuna email; la coda è rimasta pending e senza provider_message_id/sent_at. Il marker temporaneo è assente da tutte le tabelle di fixture controllate.
+- APP-14: **PARTIAL / Production NO-GO**. Il gate richiede il postflight ACL/schema dopo il cutover e la verifica Dashboard della Data API Production.
+- APP-15: **PASS** per navigazione per ruolo, sign-in, landing e persistenza sessione.
+
+Resend: dominio `bethag.it` verificato; l'unico webhook account-wide attivo è `https://tctcgptrsmvgajqjgnev.supabase.co/functions/v1/bethag-resend-webhook`, con eventi sent/delivered/bounced/complained. Non è stato creato un webhook QA separato perché, essendo account-wide, riceverebbe anche eventi Production. I webhook sintetici firmati hanno verificato il codice QA senza inviare email.
+
+Rehearsal migrazioni:
+- Clean install 28 file PASS.
+- Guarded runner su snapshot Production 248 righe + 19 incrementi PASS; ledger finale isolato 267 righe.
+- Rehearsal ACL forward-only, workspace_members.data, rollback subentro e permessi collaboratore PASS.
+- Nessuna migrazione applicata a QA o Production.
+
+Il punto 7 resta **IN CORSO** per APP-12 provider delivery e APP-14 Production postflight. Nessun merge, deploy o cutover eseguito.
+
+
+## 28. Collaudo finale QA APP-01..APP-15 e provider delivery reale — 2026-11-05
+
+GitHub Actions [final QA collaudo run 42035330794](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330794), commit `21f59b0845eac376064e0d612f27889f17c07e4b`: **SUCCESS**. Build [run 42035330772](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330772) e baseline safety [run 42035330822](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/42035330822): **SUCCESS**.
+
+Matrice aggiornata sul solo progetto QA esistente `jhuyhlzzydcgghrzeexn`:
+- APP-01–APP-11: **PASS**.
+- APP-12: **PASS**, incluso provider delivery reale. La Edge Function distribuita `bethag-send-email` ha inviato esattamente un messaggio al destinatario sintetico Resend `delivered@resend.dev`; Resend ha accettato il messaggio; `provider_message_id` e `sent_at` sono stati persistiti. Il webhook QA dedicato ha verificato la firma del provider e persistito l'evento `email.delivered`; `provider_event_id`, `delivered_at`, stato destinatario `delivered` e aggregato comunicazione `Consegnata` sono stati verificati prima della pulizia della fixture.
+- APP-13: **PASS**.
+- APP-14: **PARTIAL / Production NO-GO**. La verifica di parità ha ancora blocker di schema, trigger, funzioni private, privilegi EXECUTE e autorizzazioni collaboratori in Production; il controllo manuale Dashboard Production per Data API resta da attestare. Nessuna modifica Production è autorizzata da questo collaudo.
+- APP-15: **PASS** per navigazione per ruolo e persistenza sessione.
+
+Il collaudo ha eseguito anche i flussi browser autenticati APP-05/06/08/11/12 con esito **SUCCESS**. Build e baseline safety sono verdi sul medesimo commit. La correzione del test APP-12 ha aggiunto la selezione dell'ID primario del destinatario, necessaria per correlare il callback asincrono alla riga corretta; nessuna modifica al codice applicativo è stata richiesta per tale correzione.
+
+La fixture provider era isolata sul QA e conteneva un solo destinatario sintetico. Il webhook QA dedicato non modifica il webhook account-wide Production. Le fixture temporanee del test sono state pulite; i dati di accettazione QA preesistenti sono stati preservati.
+
+**Decisione:** il collaudo applicativo QA è completato con APP-01–APP-13 e APP-15 PASS; APP-14 resta PARTIAL. Production resta **NO-GO**. PR #57 resta aperta e non mergeata; nessun merge, deploy, migrazione, modifica del ledger o cutover Production è stato eseguito. Il rilascio non è autorizzato.

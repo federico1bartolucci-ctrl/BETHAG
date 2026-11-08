@@ -1,0 +1,163 @@
+name: BETHAG final QA collaudo APP-01..APP-15
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: bethag-qa-shared-environment
+  cancel-in-progress: false
+
+jobs:
+  final-qa-collaudo:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Calculate deterministic release fingerprint (read-only)
+        run: node scripts/print-release-fingerprint.mjs
+
+      - name: Build against the existing QA project only
+        env:
+          VITE_SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          VITE_SUPABASE_ENABLE: "true"
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install chromium
+
+      - name: Start QA preview
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-final-qa-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          echo "$PREVIEW_PID" > /tmp/bethag-final-qa-preview.pid
+          for attempt in $(seq 1 60); do
+            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/bethag-final-qa-preview.log
+          exit 1
+
+      - name: APP-01..04 and APP-13 — real-auth RLS and Storage
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-authenticated-rls.mjs
+
+      - name: APP-05..07 — condominium, accounting and closed-period guard
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app05-07.mjs
+
+      - name: APP-08..11 — transfer, unpaid positions and rollback invariants
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app08-11.mjs
+
+      - name: APP-09 — member and unit carryover blockers
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app09-carryovers.mjs
+
+      - name: Setup Deno for signed webhook acceptance
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: APP-12 — publication, recipient preparation and signed webhook events
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app12.mjs && node scripts/test-current-qa-resend-webhook.mjs
+
+      - name: APP-12 — probe deployed email provider configuration with Resend test recipient
+        env:
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+        run: node scripts/test-current-qa-app12-provider.mjs
+
+      - name: Prepare reversible Portal plan fixture for portal publication acceptance
+        env:
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+        run: node scripts/qa-browser-plan-fixture.mjs prepare
+
+      - name: APP-05/06/08/11/12 — authenticated browser UI workflows
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+        run: node scripts/test-current-qa-browser-workflows.mjs
+
+      - name: Restore original QA workspace plan
+        if: always()
+        env:
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://jhuyhlzzydcgghrzeexn.supabase.co
+        run: node scripts/qa-browser-plan-fixture.mjs restore
+
+      - name: APP-15 — role navigation and session persistence
+        env:
+          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
+          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
+          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
+          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
+          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
+        run: |
+          set -o pipefail
+          node scripts/test-current-qa-navigation.mjs 2>&1 | tee /tmp/bethag-app15-navigation.log
+          node scripts/test-browser-current-qa-auth.mjs 2>&1 | tee /tmp/bethag-app15-auth.log
+
+      - name: Upload APP-15 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bethag-app15-diagnostics
+          path: |
+            /tmp/bethag-app15-navigation.log
+            /tmp/bethag-app15-auth.log
+            /tmp/bethag-final-qa-preview.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop QA preview
+        if: always()
+        run: |
+          if [ -f /tmp/bethag-final-qa-preview.pid ]; then
+            kill "$(cat /tmp/bethag-final-qa-preview.pid)" 2>/dev/null || true
+          fi
+
+# Re-run final authenticated collaudo after aligning the browser publication fixture with the Portal entitlement.

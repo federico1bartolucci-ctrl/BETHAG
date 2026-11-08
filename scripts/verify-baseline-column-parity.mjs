@@ -10,22 +10,14 @@ assert.equal(expectedTables.length, 47);
 
 const tableBlocks = new Map();
 for (const match of sql.matchAll(/CREATE TABLE "public"\."([^"]+)" \(/g)) {
-  const start = match.index + match[0].length;
-  let depth = 1, quote = false, end = start;
-  for (; end < sql.length; end++) {
-    const char = sql[end];
-    if (char === '"' && sql[end + 1] === '"') { end++; continue; }
-    if (char === '"') quote = !quote;
-    if (!quote && char === "(") depth++;
-    if (!quote && char === ")" && --depth === 0) break;
-  }
-  assert.ok(end < sql.length, `Unterminated CREATE TABLE for ${match[1]}`);
-  tableBlocks.set(match[1], sql.slice(start, end));
+  const openParen = match.index + match[0].lastIndexOf("(");
+  const parsed = readBalancedParentheses(sql, openParen);
+  tableBlocks.set(match[1], parsed.value);
 }
 assert.equal(tableBlocks.size, expectedTables.length, "Baseline and snapshot public table counts differ.");
 
 function parseColumnLine(line) {
-  const match = line.match(/^\s{2}"([^"]+)"\s+(.+?),?$/);
+  const match = line.match(/^\s+"([^"]+)"\s+(.+?),?$/);
   if (!match) return null;
   const [, name, remainder] = match;
   let type = "", depth = 0, quote = false;
@@ -57,7 +49,8 @@ let columnsChecked = 0;
 for (const table of expectedTables) {
   const block = tableBlocks.get(table.table_name);
   assert.ok(block, `Baseline is missing table public.${table.table_name}`);
-  const actualColumns = block.split("\n").map(parseColumnLine).filter(Boolean);
+  const actualColumns = block.split(/\r?\n/).map(parseColumnLine).filter(Boolean);
+  assert.ok(actualColumns.length > 0, `Baseline parser found no columns for public.${table.table_name}`);
   const expectedColumns = [...table.columns].sort((a, b) => a.position - b.position);
   const actualByName = new Map(actualColumns.map((column) => [column.name, column]));
   const expectedNames = expectedColumns.map((column) => column.name);

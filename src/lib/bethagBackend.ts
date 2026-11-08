@@ -649,21 +649,10 @@ async function syncBackendStateNow(
     await upsertRows(table, rows, table === "condominium_works" ? "id" : undefined);
   }
 
-  const collaboratorRows =
-    allowedModules === null
-      ? (state.collaborators ?? []).map((item: any) => ({
-          workspace_id: workspaceId,
-          user_id: item.userId ?? null,
-          role: "collaborator",
-          active: item.status !== "Disattivato",
-          permissions: item.permissions ?? [],
-          legacy_id: item.id,
-          data: { name: item.name ?? "", email: item.email ?? "", status: item.status ?? "Attivo" },
-        })).filter((row: any) => row.user_id)
-      : [];
-
-  if (allowedModules === null && collaboratorRows.length) await upsertRows("workspace_members", collaboratorRows, "workspace_id,user_id");
-
+  // Collaborator membership, status and permissions are changed only by
+  // their explicit invitation/update/removal actions. Replaying the complete
+  // in-memory collaborator snapshot during unrelated workspace syncs can
+  // overwrite server-owned membership state and creates redundant writes.
   const portalRows = canSyncPortal
     ? (state.portalMembers ?? []).map((item: any) => ({
         workspace_id: workspaceId,
@@ -696,9 +685,9 @@ async function syncBackendStateNow(
   // hydration/refresh non deve mai cancellare autorizzazioni server.
   // La rimozione passa esclusivamente dalle azioni esplicite dell'interfaccia.
 
-  // Anche i collaboratori sono persistenti: la sincronizzazione automatica
-  // può creare/aggiornare record ma non eliminarli in base a uno stato locale
-  // potenzialmente incompleto. La cancellazione resta un'azione esplicita.
+  // Anche i collaboratori sono persistenti: invito, aggiornamento,
+  // disattivazione e rimozione passano esclusivamente dalle azioni esplicite
+  // che operano direttamente su workspace_members.
 
   if (!canSyncCondomini) return;
 
@@ -1479,14 +1468,41 @@ export async function claimFirstWorkspaceAdmin(workspaceId?: string | null) {
   return data as string;
 }
 
+function isRetryableBackendSyncError(error: unknown): boolean {
+  const candidate = error as { name?: string; message?: string; status?: number; code?: string } | null;
+  const status = Number(candidate?.status ?? 0);
+  if ([0, 408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+  if (candidate?.name === "TypeError" && /fetch|network/i.test(String(candidate.message ?? ""))) return true;
+  return /failed to fetch|network request failed|networkerror|temporarily unavailable/i.test(
+    String(candidate?.message ?? error ?? "")
+  );
+}
+
+function waitForBackendSyncRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+}
+
 export function syncBackendState(
   workspaceId: string,
   state: BackendState,
   allowedModules: string[] | null = null
 ) {
-  return enqueueBackendSync(() =>
-    syncBackendStateNow(workspaceId, state, allowedModules)
-  );
+  return enqueueBackendSync(async () => {
+    let lastError: unknown;
+    // Workspace synchronization consists of idempotent upserts and read/verify
+    // operations. Retry only transient transport/server failures; never retry
+    // authorization, validation, constraint, or other permanent 4xx errors.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await syncBackendStateNow(workspaceId, state, allowedModules);
+      } catch (error) {
+        lastError = error;
+        if (!isRetryableBackendSyncError(error) || attempt === 2) throw error;
+        await waitForBackendSyncRetry(400 * (2 ** attempt));
+      }
+    }
+    throw lastError;
+  });
 }
 
 function parseBethagAmount(value: unknown): number {

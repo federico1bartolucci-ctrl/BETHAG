@@ -6,6 +6,9 @@ assert.ok(databaseUrl, "DATABASE_URL must be set to the isolated PostgreSQL test
 assert.match(databaseUrl, /^postgres(?:ql)?:\/\//, "DATABASE_URL must be a PostgreSQL connection URL.");
 assert.ok(!/tctcgptrsmvgajqjgnev|supabase\.co/i.test(databaseUrl),
   "Refusing to run the rehearsal against a Supabase/Production URL.");
+const databaseTarget = new URL(databaseUrl);
+assert.ok(["localhost", "127.0.0.1", "::1"].includes(databaseTarget.hostname),
+  "Refusing non-loopback DATABASE_URL; ledger rehearsal is local-only.");
 
 function runPsql(sql) {
   return new Promise((resolve, reject) => {
@@ -38,7 +41,7 @@ CREATE TEMP TABLE cutover_ledger_rehearsal (
 INSERT INTO cutover_ledger_rehearsal(version,name,statements,created_by,idempotency_key)
 SELECT to_char( date '2026-01-01' + n, 'YYYYMMDD') || lpad(n::text, 6, '0'),
        'historical_' || n, ARRAY['SELECT 1;'], 'fixture', NULL
-FROM generate_series(1,247) AS n;
+FROM generate_series(1,248) AS n;
 
 CREATE TEMP TABLE cutover_ledger_snapshot AS
 SELECT version,name FROM cutover_ledger_rehearsal ORDER BY version;
@@ -46,7 +49,7 @@ SELECT version,name FROM cutover_ledger_rehearsal ORDER BY version;
 DO $test$
 DECLARE n integer;
 BEGIN
-  FOR n IN 1..15 LOOP
+  FOR n IN 1..19 LOOP
     INSERT INTO cutover_ledger_rehearsal(version,name,statements,created_by,idempotency_key)
     VALUES ('20261027' || lpad(n::text,6,'0'),
             'canonical_migration_' || n,
@@ -54,8 +57,8 @@ BEGIN
             'bethag-reviewed-cutover',
             NULL);
   END LOOP;
-  IF (SELECT count(*) FROM cutover_ledger_rehearsal) <> 262 THEN
-    RAISE EXCEPTION 'Expected 262 rows after rehearsal inserts';
+  IF (SELECT count(*) FROM cutover_ledger_rehearsal) <> 267 THEN
+    RAISE EXCEPTION 'Expected 267 rows after rehearsal inserts';
   END IF;
   IF EXISTS (
     (SELECT version,name FROM cutover_ledger_snapshot ORDER BY version)
@@ -67,7 +70,7 @@ BEGIN
 END
 $test$;
 
-SELECT 'PASS: DATABASE_URL reached PostgreSQL; transaction accepted 15 canonical-style rows and preserved all 247 historical fixture rows';
+SELECT 'PASS: DATABASE_URL reached PostgreSQL; transaction accepted 19 canonical-style rows and preserved all 248 historical fixture rows';
 ROLLBACK;
 `;
 
@@ -77,8 +80,8 @@ console.log(JSON.stringify({
   status: "PASS",
   test: "isolated canonical-ledger transaction rehearsal",
   connection: "psql received DATABASE_URL through --dbname",
-  historical_fixture_rows_preserved: 247,
-  canonical_style_rows_inserted_inside_transaction: 15,
+  historical_fixture_rows_preserved: 248,
+  canonical_style_rows_inserted_inside_transaction: 19,
   transaction_rolled_back: true,
   production_or_supabase_touched: false
 }, null, 2));

@@ -125,3 +125,16 @@ The candidate release sequence now contains twelve incremental migrations after 
 
 
 The new service-role invocation-path migration was applied and post-checked on all four non-Production environments. Supabase recorded environment-specific versions: develop `20261027101109`, continuity QA `20261027101123`, member-transfer QA `20261027101130`, and migration-reconciliation QA `20261027100507`. Permission assertions passed in all four (service_role schema USAGE/function EXECUTE; authenticated retained; anon denied; wrapper SECURITY INVOKER). This is not an application transfer test and does not change Production. The complete role-based smoke-test suite remains pending.
+
+
+## Addendum — QA point 4 closure, 2026-11-05
+
+Roadmap point 4 (authenticated verification of the existing QA branch, role/session checks, ACL/RLS comparison, Data API settings and evidence documentation) is **CLOSED**.
+
+Evidence:
+- QA branch: `bethag-launch-qa` (`jhuyhlzzydcgghrzeexn`), preserved in place.
+- Data API: Dashboard screenshot confirms `Automatically expose new tables = OFF`; detailed read-only evidence is in `DATA-API-ACL-VERIFICATION-20261105.md`.
+- Build [run 41943778380](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778380) and baseline safety [run 41943778409](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/41943778409) on commit `1612b46b727ebe018e545ab989df71d6df2957a6`: both **SUCCESS**. The build's authenticated QA edit/archive diagnostic and all other job steps completed successfully.
+- No QA reset/recreation/replay and no Production modification.
+
+This dated addendum records the later successful verification; it does not erase earlier historical observations in this file (including the earlier QA provider-status incident). The current point-4 closure does not close the full APP-01–APP-15 matrix and does not change the release decision: **Production remains NO-GO** until all release gates are resolved and explicitly approved. The next roadmap activity is point 5, read-only Production migration-history/source/effect reconciliation.

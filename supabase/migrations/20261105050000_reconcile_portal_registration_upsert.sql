@@ -1,0 +1,566 @@
+-- Forward-only Production reconciliation for portal registration upsert behavior.
+-- Source: reviewed QA live payload 20261104235514, with explicit least-privilege helper ACL.
+-- The existing authenticated caller grants are retained from the preceding security migration.
+-- No existing portal_access rows are rewritten by this migration.
+
+-- Repair portal registration upserts. PostgreSQL requires an explicit
+-- conflict target for ON CONFLICT DO UPDATE; the old routines omitted it.
+-- Centralize matching across the workspace legacy key and the case-insensitive
+-- condominium/email key so registration and administrator approval behave alike.
+
+CREATE OR REPLACE FUNCTION private.upsert_portal_access_for_member(
+  p_workspace_id uuid,
+  p_member_id uuid,
+  p_email text,
+  p_permissions jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_member public.condominium_members%rowtype;
+  v_existing_id uuid;
+  v_match_count integer;
+  v_email text := lower(trim(coalesce(p_email,'')));
+  v_apartment text;
+BEGIN
+  IF v_email = '' THEN
+    RAISE EXCEPTION 'PORTAL_EMAIL_REQUIRED';
+  END IF;
+
+  SELECT * INTO v_member
+  FROM public.condominium_members
+  WHERE id = p_member_id AND active = true;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'PORTAL_MEMBER_NOT_ACTIVE';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.condominiums c
+    WHERE c.id = v_member.condominium_id
+      AND c.workspace_id = p_workspace_id
+      AND c.archived_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'PORTAL_CONDOMINIUM_WORKSPACE_MISMATCH';
+  END IF;
+
+  SELECT count(*), (array_agg(pa.id))[1]
+  INTO v_match_count, v_existing_id
+  FROM public.portal_access pa
+  WHERE pa.workspace_id = p_workspace_id
+    AND (
+      (v_member.legacy_id IS NOT NULL AND pa.legacy_id = v_member.legacy_id)
+      OR (
+        pa.condominium_id = v_member.condominium_id
+        AND lower(pa.email) = v_email
+      )
+    );
+
+  IF v_match_count > 1 THEN
+    RAISE EXCEPTION 'PORTAL_ACCESS_CONFLICTING_DUPLICATE_ROWS';
+  END IF;
+
+  v_apartment := coalesce(v_member.data->>'apartment','');
+
+  IF v_existing_id IS NOT NULL THEN
+    UPDATE public.portal_access
+    SET condominium_id = v_member.condominium_id,
+        member_id = v_member.id,
+        legacy_id = v_member.legacy_id,
+        name = v_member.name,
+        email = v_email,
+        role = 'resident',
+        apartment = v_apartment,
+        permissions = coalesce(p_permissions,'[]'::jsonb),
+        active = true,
+        user_id = v_member.user_id,
+        data = coalesce(v_member.data,'{}'::jsonb),
+        updated_at = now()
+    WHERE id = v_existing_id;
+  ELSE
+    INSERT INTO public.portal_access(
+      workspace_id, condominium_id, member_id, legacy_id, name, email,
+      role, apartment, permissions, active, user_id, data
+    )
+    VALUES(
+      p_workspace_id, v_member.condominium_id, v_member.id, v_member.legacy_id,
+      v_member.name, v_email, 'resident', v_apartment,
+      coalesce(p_permissions,'[]'::jsonb), true, v_member.user_id,
+      coalesce(v_member.data,'{}'::jsonb)
+    );
+  END IF;
+
+  RETURN coalesce(v_existing_id, (
+    SELECT pa.id FROM public.portal_access pa
+    WHERE pa.workspace_id = p_workspace_id
+      AND pa.condominium_id = v_member.condominium_id
+      AND lower(pa.email) = v_email
+    ORDER BY pa.updated_at DESC
+    LIMIT 1
+  ));
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION private.upsert_portal_access_for_member(uuid,uuid,text,jsonb) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION private.complete_portal_registration(
+  p_full_name text,
+  p_fiscal_code text DEFAULT NULL,
+  p_condominium_name text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_email text;
+  v_member public.condominium_members%rowtype;
+  v_candidate_count integer := 0;
+  v_workspace uuid;
+  v_condominium_name text;
+  v_request_id uuid;
+BEGIN
+  IF v_user_id IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+
+  SELECT lower(trim(u.email)) INTO v_email
+  FROM auth.users u
+  WHERE u.id = v_user_id AND u.email_confirmed_at IS NOT NULL;
+
+  IF v_email IS NULL THEN RAISE EXCEPTION 'E-mail non ancora verificata'; END IF;
+
+  SELECT count(*) INTO v_candidate_count
+  FROM public.condominium_members cm
+  WHERE cm.active = true
+    AND (
+      lower(trim(cm.name)) = lower(trim(p_full_name))
+      OR (
+        coalesce(nullif(regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g'),''),'') <> ''
+        AND regexp_replace(lower(coalesce(cm.data->>'fiscalCode','')),'[^a-z0-9]','','g')
+          = regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g')
+      )
+    );
+
+  IF v_candidate_count = 1 THEN
+    SELECT cm.* INTO v_member
+    FROM public.condominium_members cm
+    WHERE cm.active = true
+      AND (
+        lower(trim(cm.name)) = lower(trim(p_full_name))
+        OR (
+          coalesce(nullif(regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g'),''),'') <> ''
+          AND regexp_replace(lower(coalesce(cm.data->>'fiscalCode','')),'[^a-z0-9]','','g')
+            = regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g')
+        )
+      )
+    LIMIT 1
+    FOR UPDATE;
+
+    SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
+    FROM public.condominiums c
+    WHERE c.id = v_member.condominium_id;
+
+    -- A condominium name is not a unique identifier inside a workspace.
+    -- Even a unique person match must not auto-link when the selected name,
+    -- or the matched member's condominium name when omitted, resolves to
+    -- multiple active condominiums in that same workspace.
+    IF (
+         SELECT count(*)
+         FROM public.condominiums c
+         WHERE c.workspace_id=v_workspace
+           AND c.archived_at IS NULL
+           AND lower(trim(c.name)) = lower(trim(coalesce(nullif(trim(p_condominium_name),''), v_condominium_name)))
+       ) > 1 THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+    END IF;
+
+    -- A unique person match is not sufficient when the resident explicitly
+    -- selected a different condominium. Never auto-link across that choice.
+    IF nullif(trim(p_condominium_name),'') IS NOT NULL
+       AND lower(trim(p_condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_CONDOMINIUM_MISMATCH';
+    END IF;
+
+    IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_user_id THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+    END IF;
+
+    IF lower(trim(coalesce(v_member.email,''))) = v_email THEN
+      UPDATE public.condominium_members
+      SET user_id = v_user_id, updated_at = now()
+      WHERE id = v_member.id
+      RETURNING * INTO v_member;
+
+      PERFORM private.upsert_portal_access_for_member(
+        v_workspace,
+        v_member.id,
+        v_email,
+        '["documenti","verbali","regolamento","assemblee","comunicazioni"]'::jsonb
+      );
+
+      INSERT INTO public.workspace_members AS existing_member(
+        workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
+      )
+      VALUES(
+        v_workspace,v_user_id,'resident',true,'{}'::jsonb,
+        v_member.condominium_id,v_member.legacy_id
+      )
+      ON CONFLICT(workspace_id,user_id)
+      DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
+        condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
+
+      UPDATE public.profiles AS existing_profile
+      SET full_name=v_member.name,email=v_email,
+          role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                    THEN existing_profile.role ELSE 'resident' END,
+          active=true,updated_at=now()
+      WHERE id=v_user_id;
+
+      UPDATE public.portal_registration_requests
+      SET status='approved',matched_member_id=v_member.id,workspace_id=v_workspace,
+          requested_user_id=v_user_id,reviewed_at=coalesce(reviewed_at,now()),updated_at=now()
+      WHERE requested_user_id = v_user_id
+        AND lower(trim(email)) = v_email
+        AND status IN ('pending','email_mismatch')
+        AND (workspace_id IS NULL OR workspace_id = v_workspace)
+        AND (matched_member_id IS NULL OR matched_member_id = v_member.id)
+        AND (
+          nullif(trim(condominium_name),'') IS NULL
+          OR lower(trim(condominium_name)) = lower(trim(v_condominium_name))
+        );
+
+      RETURN jsonb_build_object(
+        'status','approved','workspace_id',v_workspace,
+        'condominium_id',v_member.condominium_id,'member_id',v_member.id
+      );
+    END IF;
+
+    INSERT INTO public.portal_registration_requests(
+      workspace_id,requested_user_id,email,full_name,fiscal_code,
+      condominium_name,status,matched_member_id,note
+    )
+    VALUES(
+      v_workspace,v_user_id,v_email,trim(p_full_name),nullif(trim(p_fiscal_code),''),
+      nullif(trim(p_condominium_name),''),'email_mismatch',v_member.id,
+      'Incongruenza e-mail: e-mail dell''account diversa da quella presente nell''anagrafica del condòmino.'
+    )
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_request_id;
+
+    RETURN jsonb_build_object('status','email_mismatch','request_id',v_request_id);
+  END IF;
+
+  -- Assign a workspace only when the condominium name identifies exactly
+  -- one condominium across the entire database. Grouping by workspace here
+  -- would incorrectly choose an arbitrary workspace when names collide.
+  SELECT (array_agg(c.workspace_id))[1] INTO v_workspace
+  FROM public.condominiums c
+  WHERE p_condominium_name IS NOT NULL
+    AND c.archived_at IS NULL
+    AND lower(trim(c.name))=lower(trim(p_condominium_name))
+  HAVING count(*)=1;
+
+  IF v_workspace IS NULL THEN
+    SELECT (array_agg(w.id))[1] INTO v_workspace
+    FROM public.workspaces w
+    HAVING count(*)=1;
+  END IF;
+
+  -- Never create an unassigned request that no workspace administrator can
+  -- discover. In a multi-workspace environment, require an exact active
+  -- condominium name; duplicate names remain unassigned for manual resolution.
+  IF v_workspace IS NULL THEN
+    IF nullif(trim(p_condominium_name),'') IS NULL THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NAME_REQUIRED';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.condominiums c
+      WHERE c.archived_at IS NULL
+        AND lower(trim(c.name))=lower(trim(p_condominium_name))
+    ) THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NOT_FOUND';
+    END IF;
+  END IF;
+
+  INSERT INTO public.portal_registration_requests(
+    workspace_id,requested_user_id,email,full_name,fiscal_code,
+    condominium_name,status,note
+  )
+  VALUES(
+    v_workspace,v_user_id,v_email,trim(p_full_name),nullif(trim(p_fiscal_code),''),
+    nullif(trim(p_condominium_name),''),'pending',
+    'Profilo condòmino non individuato automaticamente.'
+  )
+  ON CONFLICT DO NOTHING
+  RETURNING id INTO v_request_id;
+
+  UPDATE public.profiles AS existing_profile
+  SET full_name=trim(p_full_name),email=v_email,
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
+  WHERE id=v_user_id;
+
+  RETURN jsonb_build_object('status','pending','request_id',v_request_id);
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION private.admin_approve_portal_registration(
+  p_request_id uuid,
+  p_member_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_request public.portal_registration_requests%rowtype;
+  v_member public.condominium_members%rowtype;
+  v_workspace uuid;
+  v_condominium_name text;
+  v_account_email text;
+  v_email_confirmed_at timestamptz;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+
+  -- Lock the selected member before the request row. Self-registration
+  -- follows the same lock order, preventing concurrent account-link takeover
+  -- and avoiding a member/request lock inversion.
+  SELECT * INTO v_member
+  FROM public.condominium_members
+  WHERE id=p_member_id AND active=true
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Condòmino non trovato o non attivo'; END IF;
+
+  SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
+  FROM public.condominiums c
+  WHERE c.id=v_member.condominium_id;
+
+  IF v_workspace IS NULL THEN
+    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- Authorize the selected workspace before reading or revealing request state.
+  IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
+    RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
+  SELECT * INTO v_request
+  FROM public.portal_registration_requests
+  WHERE id=p_request_id AND status IN ('pending','email_mismatch')
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Richiesta non trovata o già gestita'; END IF;
+  IF v_request.requested_user_id IS NULL THEN
+    RAISE EXCEPTION 'La richiesta non è associata ad un account autenticato';
+  END IF;
+
+  -- A request left unassigned because condominium names collide across
+  -- workspaces may be resolved manually by an administrator in the selected
+  -- workspace. A previously assigned request must still match exactly.
+
+  IF v_request.workspace_id IS NOT NULL AND v_request.workspace_id<>v_workspace THEN
+    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- If the same name identifies multiple active condominiums inside this
+  -- workspace, the request does not identify a unique destination. Require a
+  -- corrected/qualified request instead of choosing a member arbitrarily.
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND (
+       SELECT count(*)
+       FROM public.condominiums c
+       WHERE c.workspace_id=v_workspace
+         AND c.archived_at IS NULL
+         AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+     ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
+  -- Bind approval to the condominium named in the resident's request. This
+  -- also prevents a manager from resolving an unassigned request against a
+  -- different condominium in the same workspace.
+  IF v_request.workspace_id IS NULL
+     AND nullif(trim(v_request.condominium_name),'') IS NULL THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_REQUIRED';
+  END IF;
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND lower(trim(v_request.condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_MISMATCH';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1 FROM public.condominiums c
+    WHERE c.id=v_member.condominium_id AND c.archived_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'Il condominio è archiviato: approvazione portale non consentita';
+  END IF;
+
+  SELECT lower(trim(coalesce(u.email,''))),u.email_confirmed_at
+  INTO v_account_email,v_email_confirmed_at
+  FROM auth.users u
+  WHERE u.id=v_request.requested_user_id;
+  IF NOT FOUND OR v_email_confirmed_at IS NULL
+     OR v_account_email<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
+  END IF;
+
+  IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
+    RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+  END IF;
+
+  IF v_request.status='email_mismatch'
+     AND v_request.matched_member_id IS NOT NULL
+     AND v_request.matched_member_id<>v_member.id THEN
+    RAISE EXCEPTION 'MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER';
+  END IF;
+  IF lower(trim(coalesce(v_member.email,'')))<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
+  END IF;
+
+  -- An unassigned request may be manually resolved only when its verified
+  -- account email identifies one active member across same-named condominiums
+  -- in the selected workspace. Same-name duplicates sharing an email remain
+  -- ambiguous and must fail closed rather than link to an arbitrary property.
+  IF v_request.workspace_id IS NULL AND (
+    SELECT count(*)
+    FROM public.condominium_members cm
+    JOIN public.condominiums c ON c.id=cm.condominium_id
+    WHERE cm.active=true
+      AND c.archived_at IS NULL
+      AND c.workspace_id=v_workspace
+      AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+      AND lower(trim(coalesce(cm.email,'')))=lower(trim(coalesce(v_request.email,'')))
+  ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
+  UPDATE public.condominium_members
+  SET user_id=v_request.requested_user_id,updated_at=now()
+  WHERE id=v_member.id
+  RETURNING * INTO v_member;
+
+  PERFORM private.upsert_portal_access_for_member(
+    v_workspace,
+    v_member.id,
+    lower(trim(v_request.email)),
+    '[]'::jsonb
+  );
+
+  INSERT INTO public.workspace_members AS existing_member(
+    workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
+  )
+  VALUES(
+    v_workspace,v_request.requested_user_id,'resident',true,'{}'::jsonb,
+    v_member.condominium_id,v_member.legacy_id
+  )
+  ON CONFLICT(workspace_id,user_id)
+  DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
+    condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
+
+  UPDATE public.profiles AS existing_profile
+  SET full_name=v_member.name,email=lower(trim(v_request.email)),
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
+  WHERE id=v_request.requested_user_id;
+
+  UPDATE public.portal_registration_requests
+  SET status='approved',matched_member_id=v_member.id,workspace_id=v_workspace,
+      reviewed_by=auth.uid(),reviewed_at=now(),updated_at=now()
+  WHERE id=v_request.id;
+
+  RETURN jsonb_build_object(
+    'status','approved','workspace_id',v_workspace,
+    'member_id',v_member.id,
+    'email_mismatch',lower(trim(v_request.email))<>lower(trim(coalesce(v_member.email,'')))
+  );
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION private.complete_portal_registration(text,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.admin_approve_portal_registration(uuid,uuid) FROM PUBLIC, anon;
+
+
+
+-- Unassigned requests are visible only to portal managers in a workspace
+-- containing a condominium with the requested name. This permits a deliberate
+-- manual resolution when identical condominium names exist in multiple
+-- workspaces, without exposing every unassigned request to every workspace.
+DROP POLICY IF EXISTS "managers read portal registration requests"
+  ON public.portal_registration_requests;
+
+CREATE POLICY "managers read portal registration requests"
+  ON public.portal_registration_requests
+  AS PERMISSIVE
+  FOR SELECT
+  TO authenticated
+  USING (
+    (
+      workspace_id IS NOT NULL
+      AND private.can_manage_workspace_module(workspace_id, 'portale')
+    )
+    OR (
+      workspace_id IS NULL
+      AND condominium_name IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.condominiums c
+        WHERE c.archived_at IS NULL
+          AND lower(trim(c.name)) = lower(trim(portal_registration_requests.condominium_name))
+          AND private.can_manage_workspace_module(c.workspace_id, 'portale')
+      )
+    )
+  );
+
+-- The helper is only an implementation detail of the two SECURITY DEFINER callers.
+-- It must not be directly callable by application roles or service_role.
+REVOKE EXECUTE ON FUNCTION private.upsert_portal_access_for_member(uuid, uuid, text, jsonb)
+  FROM PUBLIC, anon, authenticated, service_role;
+
+DO $verify$
+DECLARE
+  v_helper oid := 'private.upsert_portal_access_for_member(uuid,uuid,text,jsonb)'::regprocedure;
+  v_admin oid := 'private.admin_approve_portal_registration(uuid,uuid)'::regprocedure;
+  v_complete oid := 'private.complete_portal_registration(text,text,text)'::regprocedure;
+  v_admin_def text;
+  v_complete_def text;
+BEGIN
+  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = v_helper)
+     OR NOT (SELECT prosecdef FROM pg_proc WHERE oid = v_admin)
+     OR NOT (SELECT prosecdef FROM pg_proc WHERE oid = v_complete) THEN
+    RAISE EXCEPTION 'Portal registration implementation must remain SECURITY DEFINER';
+  END IF;
+
+  IF has_function_privilege('anon', v_helper, 'EXECUTE')
+     OR has_function_privilege('authenticated', v_helper, 'EXECUTE')
+     OR has_function_privilege('service_role', v_helper, 'EXECUTE') THEN
+    RAISE EXCEPTION 'Internal portal upsert helper is directly executable by an application role';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated', v_admin, 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', v_complete, 'EXECUTE') THEN
+    RAISE EXCEPTION 'Authenticated portal registration entry points lost their intended EXECUTE grant';
+  END IF;
+
+  SELECT pg_get_functiondef(v_admin) INTO v_admin_def;
+  SELECT pg_get_functiondef(v_complete) INTO v_complete_def;
+  IF position('private.upsert_portal_access_for_member' IN v_admin_def) = 0
+     OR position('private.upsert_portal_access_for_member' IN v_complete_def) = 0 THEN
+    RAISE EXCEPTION 'Portal registration callers are not wired to the centralized upsert helper';
+  END IF;
+END;
+$verify$;

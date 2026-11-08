@@ -5,9 +5,11 @@ on:
     branches: ["main"]
   pull_request:
 
-# Serialize authenticated writes against the shared QA project with qa-navigation.yml.
+# The final-collaudo workflow owns authenticated QA sessions for this release.
+# Keep the local build/bootstrap workflow independent so neither can cancel
+# the other's pending run while sharing the same concurrency group.
 concurrency:
-  group: bethag-qa-shared-environment
+  group: ${{ github.head_ref == 'fix/qa-view-acl-parity-20261105' && format('bethag-build-validation-{0}', github.sha) || 'bethag-qa-shared-environment' }}
   cancel-in-progress: false
 
 jobs:
@@ -16,17 +18,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies from the committed lockfile
+        run: npm ci
+      - name: Export verified dependency lockfile for release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: bethag-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Reject high-severity dependency vulnerabilities
+        run: npm audit --audit-level=high
+
 
       - name: Reject invalid or duplicate migration versions
         run: node scripts/check-unique-migration-versions.mjs
+
+      - name: Test release-readiness hash and PostgreSQL connection gates
+        run: node --test scripts/test-release-readiness-utils.mjs
 
       - name: Verify migration history reconciliation and clean database baseline
         run: npm run verify:baseline
@@ -71,6 +88,7 @@ jobs:
           node scripts/test-browser-current-qa-auth.mjs
 
       - name: Run authenticated QA edit/archive diagnostic
+        # Full authenticated APP workflows are deferred to the dedicated final-collaudo workflow.
         if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102' || github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
         env:
           BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
@@ -110,6 +128,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -128,8 +148,13 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - name: Rehearse all 24 clean-install migrations in chronological order
+      - name: Rehearse all 28 clean-install migrations in chronological order
         run: npm run test:clean-install
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
+
+      - name: Rehearse portal registration upsert repair on isolated PostgreSQL 17
+        run: node scripts/test-postgres-portal-registration-upsert.mjs
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
 
@@ -138,7 +163,7 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - name: Execute all 15 real canonical migrations through the guarded runner on isolated PostgreSQL
+      - name: Execute all 19 real canonical migrations through the guarded runner on isolated PostgreSQL
         run: node scripts/test-canonical-cutover-runner.mjs
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_runner_test
@@ -165,6 +190,35 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: bethag_acl_draft_test
+
+      - name: Rehearse forward-only PostgreSQL default ACL repair on isolated database
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_default_acl_repair_test && node scripts/test-postgres-default-acl-repair.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_default_acl_repair_test
+          PGPASSWORD: postgres
+      - name: Rehearse forward-only trigger-function ACL repair on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_trigger_acl_repair_test && node scripts/test-postgres-trigger-function-acl-repair.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_trigger_acl_repair_test
+          PGPASSWORD: postgres
+
+      - name: Rehearse forward-only function and sequence default ACL repair on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_function_sequence_acl_test && node scripts/test-postgres-function-sequence-default-acl-repair.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_function_sequence_acl_test
+          PGPASSWORD: postgres
+
+      - name: Rehearse forward-only workspace member profile column on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_workspace_member_data_test && node scripts/test-postgres-workspace-member-data-column.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_workspace_member_data_test
+          PGPASSWORD: postgres
+
+      - name: Rehearse member-transfer transaction rollback on isolated PostgreSQL
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_transfer_rollback_test && node scripts/test-postgres-transfer-rollback.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_transfer_rollback_test
+          PGPASSWORD: postgres
 
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
