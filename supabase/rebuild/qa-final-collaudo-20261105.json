@@ -1,22 +1,26 @@
 {
   "artifact": "BETHAG final QA evidence — refreshed after portal security review",
-  "captured_date": "2026-11-07",
+  "captured_date": "2026-11-08",
   "repository": "federico1bartolucci-ctrl/BETHAG",
-  "branch": "fix/qa-view-acl-parity-20261105",
-  "reviewed_head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+  "branch": "main",
+  "reviewed_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42419684025,
+      "run_id": 42430065044,
       "run_attempt": 1,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
+      "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42419684103,
-      "head_sha": "f5214533a1905fa16a8771631391ba53c2596884",
-      "conclusion": "success"
+      "run_id": 42428242253,
+      "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+      "conclusion": "success",
+      "jobs": {
+        "build": "success",
+        "postgres_bootstrap": "success"
+      }
     },
     "baseline_safety": {
       "run_id": 42419684071,
@@ -65,7 +69,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13565058466
+        "artifact_id": 13596314597
       }
     },
     "APP15": {
@@ -82,7 +86,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13565058466
+        "artifact_id": 13596314597
       }
     }
   },
@@ -121,11 +125,11 @@
       "wrong_condominium_self_registration": "PASS — selecting a condominium different from the unique matched member's condominium is rejected before any account or portal-access link.",
       "wrong_condominium_manual_approval": "PASS — selecting a member from a different condominium than the request is rejected; request remains pending."
     },
-    "github_actions_run_id": 42349948537,
-    "reviewed_head_sha": "e928370272e2102289d83703df1ab21427d5f9a0",
+    "github_actions_run_id": 42428242253,
+    "reviewed_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
     "portal_registration_postflight_rls_and_email_guards": "PASS — read-only Production postflight assertions exercised on isolated PostgreSQL 17",
     "test_harness_database_target_guards": "PASS — PostgreSQL bootstrap and ledger rehearsal scripts reject non-loopback database targets",
-    "conclusion": "PASS — PostgreSQL 17 clean install, 19 canonical guarded runner rehearsal, ACL/default ACL, RLS and rollback checks on exact application source SHA e928370272e2102289d83703df1ab21427d5f9a0; isolated database only."
+    "conclusion": "PASS — Build workflow run 42428242253 on exact main SHA d7f83c00233a52078b9e1ff61c45f0ea0b8263f0; PostgreSQL 17 bootstrap, 28 chronological clean-install migrations, all 19 canonical guarded-runner migrations and ACL/RLS/rollback rehearsals passed on isolated PostgreSQL only."
   },
   "cleanup": {
     "provider_test_marker_rows": {
@@ -140,7 +144,7 @@
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Final QA APP-01..APP-15, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on exact SHA f5214533a1905fa16a8771631391ba53c2596884 (runs 42417449538, 42417449514, 42417449521). This updates only the pinned evidence metadata; application tests and frozen SQL payload remain unchanged. APP-14 remains PARTIAL pending Production cutover/postflight. Production remains NO-GO.",
+  "conclusion": "Final QA APP-01..APP-13 and APP-15 SUCCESS on exact main SHA d7f83c00233a52078b9e1ff61c45f0ea0b8263f0 (run 42430065044); Build/PostgreSQL 17 clean-install and 19-migration guarded-runner rehearsal SUCCESS on the same SHA (run 42428242253); main build and Pages deployment SUCCESS (runs 42428242245 and 42428242354). APP-14 remains PARTIAL pending Production cutover/postflight. Production remains NO-GO. Baseline-safety workflow was not rerun on this exact SHA.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -283,5 +287,36 @@
     "app_acceptance": "APP-01..APP-15 PASS; QA fixture restored; preview stopped; cleanup completed.",
     "workflow_execution_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
     "note": "workflow_runs.*.head_sha records the QA-tested source SHA consumed by the guarded runner; current_head_validation.execution_head_sha records the GitHub Actions workflow checkout SHA. These are distinct by design."
+  },
+  "latest_main_head_validation": {
+    "execution_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+    "verified_at_utc": "2026-11-08T00:32:46Z",
+    "workflows": {
+      "final_qa_app01_app15": {
+        "run_id": 42430065044,
+        "run_attempt": 1,
+        "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+        "conclusion": "success"
+      },
+      "build_postgres17": {
+        "run_id": 42428242253,
+        "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+        "conclusion": "success"
+      },
+      "build_main": {
+        "run_id": 42428242245,
+        "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+        "conclusion": "success"
+      },
+      "pages_deploy": {
+        "run_id": 42428242354,
+        "head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
+        "conclusion": "success"
+      }
+    },
+    "app_acceptance": "APP-01..APP-13 and APP-15 PASS on existing QA; APP-14 remains Production post-cutover validation. QA preview stopped and reversible fixture restored; cleanup steps SUCCESS.",
+    "baseline_safety": "No new baseline-safety workflow run was triggered on this exact SHA; prior baseline-safety evidence retained separately and not represented as current-head certification.",
+    "production_modified": false,
+    "merge_or_deploy_performed": false
   }
 }
