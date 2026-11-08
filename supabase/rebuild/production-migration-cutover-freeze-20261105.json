@@ -558,10 +558,10 @@
   "user_authorization": {
     "status": "RECEIVED",
     "approved_commit_sha": "5d96342209be77e189012dec754bc764999e64e2",
-    "approved_execution_commit_sha": "bc5943b34b72b3b317ab4ac5cc01406b1757d201",
+    "approved_execution_commit_sha": "c4f1aced9ec8c27265c4c4ca8661410fba38faf0",
     "approved_by": "Federico Bartolucci",
     "approved_at_utc": "2026-11-08T18:50:10.000Z",
-    "approval_reference": "ChatGPT project conversation, 2026-11-08: after the explicit request to confirm scope, the project owner replied “procedi”, authorizing Production application of the exact nineteen frozen canonical migrations through the guarded sequential forward-only runner, including DDL/DML and canonical ledger writes, on Production project tctcgptrsmvgajqjgnev. The owner explicitly accepted the residual risk that provider-managed physical restore has not been independently tested. Execution checkout approved: c396c09a73d6e2f7463045b428629f5b32828281; QA source: 5d96342209be77e189012dec754bc764999e64e2; release fingerprint: e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a; exact ordered nineteen SQL blob hashes are the frozen approved_migration_hashes array. Approval is limited to this frozen scope; any hash, fingerprint, source, target, or scope mismatch is STOP. No authorization for ad hoc SQL, Supabase apply_migration, baseline replay, historical ledger rewriting, or non-forward-only recovery. Additional explicit owner reconfirmation, 2026-11-08T18:50:10Z: owner confirmed approval for execution commit bc5943b34b72b3b317ab4ac5cc01406b1757d201 and exact updated release fingerprint 71c69a974dc4c0d153328f27c1ed316fb4b9e46e436706c62fe73b4c59eb32d0, retaining the same exact nineteen ordered migration hashes, Production target tctcgptrsmvgajqjgnev, guarded sequential forward-only runner, preservation of 248 historical ledger rows, and accepted untested provider-managed physical-restore residual risk.",
+    "approval_reference": "ChatGPT project conversation, 2026-11-08: after the explicit request to confirm scope, the project owner replied “procedi”, authorizing Production application of the exact nineteen frozen canonical migrations through the guarded sequential forward-only runner, including DDL/DML and canonical ledger writes, on Production project tctcgptrsmvgajqjgnev. The owner explicitly accepted the residual risk that provider-managed physical restore has not been independently tested. Execution checkout approved: c396c09a73d6e2f7463045b428629f5b32828281; QA source: 5d96342209be77e189012dec754bc764999e64e2; release fingerprint: e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a; exact ordered nineteen SQL blob hashes are the frozen approved_migration_hashes array. Approval is limited to this frozen scope; any hash, fingerprint, source, target, or scope mismatch is STOP. No authorization for ad hoc SQL, Supabase apply_migration, baseline replay, historical ledger rewriting, or non-forward-only recovery. Additional explicit owner reconfirmation, 2026-11-08T18:50:10Z: owner confirmed approval for execution commit bc5943b34b72b3b317ab4ac5cc01406b1757d201 and exact updated release fingerprint 71c69a974dc4c0d153328f27c1ed316fb4b9e46e436706c62fe73b4c59eb32d0, retaining the same exact nineteen ordered migration hashes, Production target tctcgptrsmvgajqjgnev, guarded sequential forward-only runner, preservation of 248 historical ledger rows, and accepted untested provider-managed physical-restore residual risk.\nAdditional explicit owner reconfirmation, 2026-11-08: owner confirmed the same exact nineteen ordered migration hashes, Production target tctcgptrsmvgajqjgnev, guarded sequential forward-only runner, preservation of 248 historical ledger rows and accepted untested provider-managed physical-restore residual risk, with execution commit c4f1aced9ec8c27265c4c4ca8661410fba38faf0 and release fingerprint 35018277d9d27c25538f40c9392536645762747d65f1d38f8154d2bf773a52ab. Owner updated the approved maintenance window to 2026-11-08 20:30–22:30 Europe/Rome.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -640,15 +640,15 @@
         "git_blob_sha": "43029cf687106b22a1067c7205695ddf6677d145"
       }
     ],
-    "approved_maintenance_window": "2026-11-08 18:30–20:30 Europe/Rome",
+    "approved_maintenance_window": "2026-11-08 20:30–22:30 Europe/Rome",
     "approved_operator": "Federico Bartolucci",
     "approved_cutover_scope": "PRODUCTION_APPLY: apply exactly the nineteen ordered canonical migrations in manifest.sequence to Production project tctcgptrsmvgajqjgnev using only scripts/apply-reviewed-production-migrations.mjs; sequential transactions with matching canonical ledger insertions; forward-only; preserve all 248 historical rows; expected final ledger 267 rows. No baseline migrations, no Supabase apply_migration, no SQL Editor/manual SQL, no historical ledger rewrite, no ad hoc rollback. Stop on any mismatch or uncertain outcome.",
     "residual_backup_restore_risk_reconfirmed": true,
     "residual_backup_restore_risk": "Explicitly reconfirmed by the project owner in the 2026-11-08 ChatGPT project conversation (“procedi”) for this exact Production cutover: provider-managed physical restore was not independently tested. Do not represent it as tested; require the runner's per-cutover BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES attestation.",
-    "approved_release_fingerprint": "71c69a974dc4c0d153328f27c1ed316fb4b9e46e436706c62fe73b4c59eb32d0",
+    "approved_release_fingerprint": "35018277d9d27c25538f40c9392536645762747d65f1d38f8154d2bf773a52ab",
     "approval_scope": "PRODUCTION_APPLY",
     "production_apply_authorized": true,
-    "previously_approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
+    "previously_approved_execution_commit_sha": "bc5943b34b72b3b317ab4ac5cc01406b1757d201",
     "execution_approval_status": "APPROVED_PRODUCTION_APPLY"
   },
   "backup_restore_risk_acceptance": {
