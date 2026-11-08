@@ -83,6 +83,7 @@ function responseJson(body: unknown, status = 200) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return responseJson({ error: "Metodo non consentito." }, 405);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -91,6 +92,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+    if (!supabaseUrl || !supabaseKey) return responseJson({ error: "Configurazione Supabase non disponibile." }, 503);
     if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY nelle variabili segrete della funzione." }, 503);
 
     const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
@@ -171,7 +173,7 @@ Documenti: ${files.map((f: any) => f.filename).join(", ")}`
       method: "POST",
       headers: { Authorization: "Bearer " + openaiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-5.6-luna",
+        model: "gpt-6-luna",
         input: [{ role: "user", content }],
         text: {
           format: {
