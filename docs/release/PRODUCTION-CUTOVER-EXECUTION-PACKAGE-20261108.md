@@ -1,0 +1,121 @@
+# BETHAG — Production cutover execution package
+
+**Updated:** 2026-11-08  
+**Status:** PREPARED FOR OWNER REVIEW — NOT APPROVED FOR APPLY  
+**Production project:** `tctcgptrsmvgajqjgnev`  
+**Execution model:** guarded, sequential, forward-only; no automatic rollback.
+
+## 1. Verified starting point
+
+The following evidence is available as of 2026-11-08:
+
+- Production project status: `ACTIVE_HEALTHY`; PostgreSQL 17.
+- Guarded local read-only runner passed on execution commit `35f78a773f8517a36b052d5a4ba55905130193b6`.
+- The live migration ledger matched the frozen snapshot exactly: **248/248** historical version/name pairs; expected head `20261104222229_reconcile_production_acl_least_privilege`.
+- Exactly **19** canonical incremental SQL files and their frozen Git blob hashes were checked; all are pending, not applied.
+- Production Data API Dashboard evidence supplied by the owner on 2026-11-08: `public` and `graphql_public` exposed; `private` not exposed; 0/48 tables and 0/171 functions exposed; automatic exposure of new tables disabled; Extra search path `public, extensions`. `supabase_functions` is not among the available/exposed schema choices shown.
+- Scheduled physical backups visible daily from 2026-11-01 through 2026-11-08; latest visible point: 2026-11-08 03:05:03 UTC. Storage objects are excluded from database backups.
+- Provider-managed physical restore remains **NOT TESTED**. The project owner previously accepted this residual risk; this is not evidence of a successful physical restore.
+- QA evidence in the frozen release record reports APP-01..APP-13 and APP-15 PASS. APP-14 remains post-cutover. Provider delivery evidence is limited to the synthetic test recipient and is not a mass-deliverability certification.
+- Internal review was accepted by the project owner because an independent reviewer was unavailable. This is not a four-eyes review.
+
+No Production migration, DDL, DML, ledger write, merge or deployment has been performed by these checks.
+
+## 2. Exact migration scope
+
+Apply only the 19 ordered canonical increments enumerated in `supabase/rebuild/production-migration-cutover-freeze-20261105.json`, with their exact frozen Git blob hashes.
+
+Expected ledger transition:
+
+- Before: 248 rows, historical head `20261104222229`.
+- After: 267 rows total.
+- Preserve every one of the original 248 version/name pairs exactly.
+- Add the exact 19 canonical version/name pairs; expected sorted maximum version: `20261105050000`.
+- Never apply baseline migrations to this populated Production database.
+- Never use Supabase MCP `apply_migration`, SQL Editor, manual SQL, or a historical runner as a substitute for the guarded runner.
+
+## 3. Preconditions — all must be true immediately before apply
+
+1. Clean checkout of the exact execution commit approved in the manifest; `git status --porcelain` empty (except explicitly permitted untracked dependencies, if any).
+2. Final QA, Build/PostgreSQL 17 and Baseline Safety all SUCCESS on the exact QA source SHA recorded in the manifest, with the runner's permitted provenance relationship.
+3. Exact release fingerprint recalculated from the checkout and equal to the owner's final approved fingerprint.
+4. Guarded read-only preflight re-run locally on that exact execution SHA and returning `READ_ONLY_PRODUCTION_PREFLIGHT_PASS`.
+5. Production host, project ref, database and DB role verified by the runner; credentials remain local and are never pasted into chat, GitHub, screenshots or logs.
+6. Immediately re-check the latest scheduled backup in Dashboard and record its timestamp/status. Do not claim physical restore verification.
+7. Immediately re-check Data API settings: only `public` and `graphql_public` exposed; `private` not exposed; `supabase_functions` not exposed; automatic new-table exposure OFF; no overriding PostgREST configuration that exposes provider-managed schemas.
+8. Operator is physically present, has working database access, and can keep BETHAG in maintenance/unavailable state during the entire apply and postflight.
+9. User communication/maintenance notice is prepared and sent by the owner/operator before writes; do not claim that this has been done until it actually has.
+10. Owner has separately approved in writing the exact execution SHA, exact fingerprint, Production project, ordered 19 SQL hashes, operator, maintenance window, forward-only recovery model and residual physical-restore risk.
+11. Operator has explicitly set the runner's required local approval variables only after all above gates pass.
+
+**Current disposition:** items 1–4 were evidenced on commit `35f78a773f8517a36b052d5a4ba55905130193b6`; creating this document produces a new documentation commit, so the final execution SHA and its read-only preflight must be refreshed. The separate apply approval is still **NOT GRANTED**. The latest backup and Data API checks must be repeated immediately before apply, not inferred from earlier screenshots.
+
+## 4. Execution procedure
+
+1. Freeze application/schema changes and stop all other workflows or operators that could write to Production.
+2. Confirm maintenance notice and keep users out of BETHAG for the operation.
+3. On the exact approved clean checkout, verify the required environment variables locally. Do not display environment variables containing secrets.
+4. First run the guarded runner in read-only mode and capture its full sanitized output. If it does not return `READ_ONLY_PRODUCTION_PREFLIGHT_PASS`, STOP.
+5. Only after the separate final owner approval is recorded and all runner gates are satisfied, the operator may switch from preflight to apply mode and run `node scripts/apply-reviewed-production-migrations.mjs` once.
+6. The runner applies migrations sequentially, each migration and its canonical ledger insertion in a single transaction. After each migration it checks ledger count, historical preservation and exact canonical prefix.
+7. If the runner exits for any reason, STOP. Do not restart from the beginning or retry an uncertain migration until the live ledger and catalog have been inspected read-only and a new forward-only decision is approved.
+
+## 5. Immediate STOP criteria
+
+Stop on any mismatch or uncertainty, including:
+
+- wrong commit, dirty checkout, wrong Supabase project/host/database/user, unexpected ledger count/head or any version/name mismatch;
+- missing or changed SQL hash, sequence not exactly 19, release fingerprint mismatch, CI not green, or missing written final approval;
+- backup unavailable/current state unclear, Data API exposure drift, missing operator, maintenance/communications not ready;
+- SQL error, timeout, deadlock, lock contention, privilege error, connection loss, unexpected data/catalog change, or any runner postcondition failure;
+- any migration is already present unexpectedly, or a commit outcome is uncertain.
+
+On STOP: do not continue to the next migration, do not rerun the runner blindly, do not manually insert/delete ledger rows, and do not issue ad hoc corrective SQL. Keep the service unavailable/under maintenance. Record the last migration with a certain committed outcome and the first uncertain migration. Reconnect read-only, inspect ledger/catalog, preserve logs and escalate for a separately reviewed forward-only recovery plan.
+
+## 6. Postflight — read-only SQL
+
+After the guarded runner reports `CANONICAL_MIGRATION_LEDGER_PASS`, execute the reviewed read-only SQL file:
+
+`supabase/rebuild/production-cutover-postflight-20261105.sql`
+
+It must finish without exception. It verifies the 267-row ledger, 19 exact canonical identities, privilege and default-ACL targets, no unexpected PUBLIC EXECUTE, SECURITY INVOKER transfer wrapper, private helper grants, collaborator boolean permission checks, workspace member data column, archive lifecycle preservation, portal-registration RLS/helper behavior, trigger function permissions and the documented provider-managed `supabase_admin` exception.
+
+Also independently verify that the original 248 historical version/name pairs remain identical to the frozen snapshot. The guarded runner performs this check; preserve its output.
+
+## 7. Authenticated Production smoke tests and reopening
+
+Only after SQL postflight passes, perform non-destructive authenticated smoke tests with existing approved test identities:
+
+- Administrator: sign-in, workspace/condominium listing, read-only navigation and expected admin access.
+- Collaborator: sign-in and role/module boundary checks, including a denied action where permission is false or absent.
+- Resident: sign-in and portal access limited to the resident's own condominium/unit and permitted documents/communications.
+- Confirm no cross-workspace or foreign-resident access.
+- Do not create, edit, delete or transfer real condominium/business records as part of smoke tests. If a write-path test is essential, use a pre-approved synthetic fixture with a documented cleanup and explicit authorization.
+
+Reopen BETHAG only when all smoke tests pass, ledger is exactly 267 rows, historical rows are unchanged, all 19 canonical rows are present, and postflight has passed. APP-14 can then be closed with evidence. If any smoke test fails, keep the service unavailable and diagnose without altering real user data.
+
+## 8. Recovery model and known limitations
+
+- This is a **forward-only** cutover. There is no generic automatic rollback for the 19 DDL migrations.
+- Each migration is transactional with its ledger insertion, but a lost connection can make the client-side outcome uncertain; always inspect read-only before deciding whether to resume.
+- A completed migration followed by failed postcondition requires a separately reviewed forward correction, not an improvised rollback.
+- Provider-managed physical restore has not been tested. The owner's acceptance of that residual risk does not remove it.
+- Supabase database backups do not include Storage object bytes. Storage files and other external dependencies require separate recovery arrangements.
+- The review was internal, not independent. This limitation remains disclosed.
+
+## 9. Approval record — intentionally pending
+
+The following must be completed only after the final execution commit and fingerprint are fixed:
+
+- Owner approval of exact execution SHA:
+- Owner approval of exact release fingerprint:
+- Production project reference:
+- Ordered 19 SQL hash list: frozen manifest (must match exactly).
+- Operator:
+- Approved maintenance window:
+- Maintenance notice sent by:
+- Residual physical-restore risk explicitly reconfirmed:
+- Approval timestamp (UTC):
+- Approval evidence reference:
+
+**Status: NOT APPROVED FOR PRODUCTION APPLY.** The user's instruction to proceed with preparation is not interpreted as final authorization to execute Production DDL/DML or write migration ledger rows.
