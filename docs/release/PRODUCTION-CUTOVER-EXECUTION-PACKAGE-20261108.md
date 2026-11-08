@@ -1,7 +1,7 @@
 # BETHAG — Production cutover execution package
 
 **Updated:** 2026-11-08  
-**Status:** PREPARED FOR OWNER REVIEW — NOT APPROVED FOR APPLY  
+**Status:** OWNER APPLY APPROVAL RECORDED — FRESH LOCAL GATES REQUIRED  
 **Production project:** `tctcgptrsmvgajqjgnev`  
 **Execution model:** guarded, sequential, forward-only; no automatic rollback.
 
@@ -48,7 +48,7 @@ Expected ledger transition:
 10. Owner has separately approved in writing the exact execution SHA, exact fingerprint, Production project, ordered 19 SQL hashes, operator, maintenance window, forward-only recovery model and residual physical-restore risk.
 11. Operator has explicitly set the runner's required local approval variables only after all above gates pass.
 
-**Current disposition:** items 1–4 were evidenced on commit `35f78a773f8517a36b052d5a4ba55905130193b6`; creating this document produces a new documentation commit, so the final execution SHA and its read-only preflight must be refreshed. The separate apply approval is still **NOT GRANTED**. The latest backup and Data API checks must be repeated immediately before apply, not inferred from earlier screenshots.
+**Current disposition:** items 1–4 were evidenced on commit `35f78a773f8517a36b052d5a4ba55905130193b6`; creating this document produces a new documentation commit, so the final execution SHA and its read-only preflight must be refreshed. The owner recorded explicit Production APPLY approval on 2026-11-08 for the exact frozen nineteen-migration scope, Production project `tctcgptrsmvgajqjgnev`, QA source `5d96342209be77e189012dec754bc764999e64e2`, release fingerprint `e1c1609462901a8afe4cf69edaade94d398a04ba54fd0c1250c45c331232dc0a`, and execution checkout `c396c09a73d6e2f7463045b428629f5b32828281`. Approval metadata is recorded in the freeze manifest. This is not permission to bypass any runner gate. The current backup and Data API checks must be repeated immediately before apply.
 
 ## 4. Execution procedure
 
@@ -103,7 +103,7 @@ Reopen BETHAG only when all smoke tests pass, ledger is exactly 267 rows, histor
 - Supabase database backups do not include Storage object bytes. Storage files and other external dependencies require separate recovery arrangements.
 - The review was internal, not independent. This limitation remains disclosed.
 
-## 9. Approval record — intentionally pending
+## 9. Approval record — owner approval recorded; operational attestations remain
 
 The following must be completed only after the final execution commit and fingerprint are fixed:
 
@@ -118,7 +118,7 @@ The following must be completed only after the final execution commit and finger
 - Approval timestamp (UTC):
 - Approval evidence reference:
 
-**Status: NOT APPROVED FOR PRODUCTION APPLY.** The user's instruction to proceed with preparation is not interpreted as final authorization to execute Production DDL/DML or write migration ledger rows.
+**Owner approval: RECORDED for PRODUCTION_APPLY** in the freeze manifest on 2026-11-08. The approved scope is exactly the ordered nineteen SQL hashes, with sequential transactional ledger writes and forward-only recovery. The owner reconfirmed the residual physical-restore risk. This does not attest that the local runner gates, current backup/Data API checks, maintenance notice, or direct database connection are satisfied.
 
 ## 10. Traceability reconciliation — 2026-11-08
 
@@ -146,7 +146,7 @@ The earlier statement in section 3 that the preflight was evidenced on `35f78a77
 
 - Read-only preflight result: `PASS` as recorded in the operator-supplied output.
 - Exact approval-to-runner execution-SHA correspondence: `NOT FULLY ESTABLISHED`.
-- Production apply authorization: `NOT GRANTED`.
+- Production apply authorization: `RECORDED` in manifest at commit `54498bf100f10ae5f3eb015c6739b6dc52e2db29`, covering execution checkout `c396c09a73d6e2f7463045b428629f5b32828281` and the frozen fingerprint/hash list.
 - Production DDL/DML or ledger writes: `NOT PERFORMED` by the recorded preflight.
-- Resolution required before any future apply: issue a new, separate owner approval that explicitly names the final execution commit and exact release fingerprint; then satisfy all fresh cutover gates. This document-only reconciliation does not request or imply that approval.
+- Remaining before apply: synchronize the approval-record commit locally; run the guarded read-only preflight on the exact current checkout; repeat the live backup and Data API checks; confirm the maintenance notice and direct PostgreSQL connection; satisfy all local runner gates. Do not apply if any gate fails.
 
