@@ -129,7 +129,6 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
     if (!supabaseUrl || !supabaseKey) return responseJson({ error: "Configurazione Supabase non disponibile." }, 503);
-    if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY nelle variabili segrete della funzione." }, 503);
 
     const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -152,6 +151,8 @@ Deno.serve(async (req: Request) => {
     const allowed = membership.role === "admin" ||
       (membership.role === "collaborator" && Array.isArray(membership.permissions) && membership.permissions.includes("condomini"));
     if (!allowed) return responseJson({ error: "Non disponi dell'autorizzazione per la creazione dei condomini." }, 403);
+    if (Deno.env.get("BETHAG_AI_ENABLED") !== "true") return responseJson({ error: "Funzioni AI temporaneamente disattivate durante la fase di progettazione.", code: "AI_DISABLED" }, 503);
+    if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY." }, 503);
 
     const content = [{
       type: "input_text",
