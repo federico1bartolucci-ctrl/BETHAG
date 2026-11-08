@@ -6,12 +6,13 @@ const json=(body:any,status=200)=>new Response(JSON.stringify(body),{status,head
 async function deleteOpenAIFile(key:string,id:string){try{await fetch("https://api.openai.com/v1/files/"+encodeURIComponent(id),{method:"DELETE",headers:{Authorization:"Bearer "+key}})}catch(_){}}
 Deno.serve(async(req)=>{
 if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
+if(req.method!=="POST")return json({error:"Metodo non consentito."},405);
 try{
 const auth=req.headers.get("Authorization");if(!auth)return json({error:"Autenticazione richiesta."},401);
-const url=Deno.env.get("SUPABASE_URL")??"";const key=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY")??"";const openai=Deno.env.get("OPENAI_API_KEY")??"";if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
-const sb=createClient(url,key,{global:{headers:{Authorization:auth}}});const {data:{user}}=await sb.auth.getUser();if(!user)return json({error:"Sessione non valida."},401);
+const url=Deno.env.get("SUPABASE_URL")??"";const key=Deno.env.get("SUPABASE_PUBLISHABLE_KEY")??Deno.env.get("SUPABASE_ANON_KEY")??"";const openai=Deno.env.get("OPENAI_API_KEY")??"";if(!url||!key)return json({error:"Configurazione Supabase non disponibile."},503);if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
+const sb=createClient(url,key,{global:{headers:{Authorization:auth}}});const {data:{user},error:userError}=await sb.auth.getUser();if(userError||!user)return json({error:"Sessione non valida."},401);
 const p=await req.json();const workspaceId=String(p.workspaceId??"");const files=Array.isArray(p.files)?p.files:[];if(!workspaceId||!files.length)return json({error:"Workspace o documenti mancanti."},400);
-const {data:m}=await sb.from("workspace_members").select("role,active,permissions").eq("workspace_id",workspaceId).eq("user_id",user.id).eq("active",true).maybeSingle();
+const {data:m,error:membershipError}=await sb.from("workspace_members").select("role,active,permissions").eq("workspace_id",workspaceId).eq("user_id",user.id).eq("active",true).maybeSingle();if(membershipError)throw membershipError;
 const allowed=Boolean(m)&&(m.role==="admin"||(m.role==="collaborator"&&Array.isArray(m.permissions)&&m.permissions.includes("documenti")));if(!allowed)return json({error:"Non disponi dell'autorizzazione per i documenti."},403);
 const content:any[]=[{type:"input_text",text:"Analizza i documenti di amministrazione condominiale allegati per BETHAG. Estrai solo informazioni realmente presenti. Non inventare importi, nominativi, millesimi o riferimenti. Se un dato è incerto lascialo vuoto e inserisci una warning. I millesimi appartengono alle unità, mai alle persone. Per riparti conserva le righe rilevate; per fatture identifica fornitore, partita IVA se presente, numero fattura, importo, data e ogni riferimento a lavori/manutenzioni; per verbali e convocazioni identifica oggetto e riferimenti. L'output sarà sempre sottoposto a verifica dell'amministratore. Documenti: "+files.map((f:any)=>f.filename).join(", ")}];
 const openAIFileIds:string[]=[];
@@ -24,7 +25,7 @@ const mime=String(f.mimeType??blob.type??"application/octet-stream").toLowerCase
 const upload=await fetch("https://api.openai.com/v1/files",{method:"POST",headers:{Authorization:"Bearer "+openai},body:form});const uploaded=await upload.json();if(!upload.ok||!uploaded?.id)throw new Error(uploaded?.error?.message??"Upload AI non riuscito.");openAIFileIds.push(String(uploaded.id));
 content.push(mime.startsWith("image/")?{type:"input_image",file_id:String(uploaded.id),detail:"high"}:{type:"input_file",file_id:String(uploaded.id),detail:"high"});
 }
-const resp=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+openai,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-5.6-luna",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"bethag_document_analysis",strict:true,schema}}})});
+const resp=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+openai,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-6-luna",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"bethag_document_analysis",strict:true,schema}}})});
 const data=await resp.json();if(!resp.ok)return json({error:data?.error?.message??"Analisi AI non riuscita."},502);const out=data?.output_text??"";if(!out)return json({error:"L'AI non ha restituito dati."},502);return json({draft:JSON.parse(out)});
 }finally{await Promise.all(openAIFileIds.map(id=>deleteOpenAIFile(openai,id)));}
 }catch(e){console.error(e);return json({error:e instanceof Error?e.message:"Errore interno."},500);}
