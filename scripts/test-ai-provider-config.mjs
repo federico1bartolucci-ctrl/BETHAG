@@ -11,7 +11,7 @@ for (const path of paths) {
   assert.doesNotMatch(source, /gpt-5\.6-luna/, path + " contains an unverified model ID");
   const gate = source.indexOf("BETHAG_AI_ENABLED");
   const storage = source.indexOf(".storage.from(");
-  const upload = source.indexOf("https://api.openai.com/v1/files");
+  const upload = source.indexOf("fetch(\"https://api.openai.com/v1/files\"");
   const response = source.indexOf("https://api.openai.com/v1/responses");
   assert.ok(gate >= 0 && storage > gate && upload > gate && response > gate, path + " must gate storage and provider calls");
   assert.match(source, /BETHAG_AI_ENABLED.{0,180}!==\s*"true"/s, path + " must remain disabled unless explicitly enabled");
