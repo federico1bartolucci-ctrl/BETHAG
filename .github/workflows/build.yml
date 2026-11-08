@@ -26,6 +26,21 @@ jobs:
         with:
           node-version: 24
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check all Supabase Edge Functions
+        run: |
+          deno check supabase/functions/bethag-send-email/index.ts
+          deno check supabase/functions/bethag-invite-collaborator/index.ts
+          deno check supabase/functions/bethag-invite-resident/index.ts
+          deno check supabase/functions/delete-account/index.ts
+          deno check supabase/functions/bethag-ai-condominium/index.ts
+          deno check supabase/functions/bethag-ai-document/index.ts
+          deno check supabase/functions/bethag-resend-webhook/index.ts
+
       - name: Install dependencies from the committed lockfile
         run: npm ci
       - name: Export verified dependency lockfile for release evidence
