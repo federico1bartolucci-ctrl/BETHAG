@@ -79,6 +79,40 @@ Per la migrazione #17, il payload controlla che:
 
 Il workflow Build e il workflow Baseline Safety sono entrambi SUCCESS sullo stesso SHA. Il workflow Final QA APP-01..APP-15 è SKIPPED perché la PR è documentale; inoltre, nel Build, i due controlli che richiedono autenticazione QA reale sono SKIPPED. Non vanno conteggiati come test superati.
 
+## 3-ter. Riscontro read-only sul progetto Supabase BETHAG — 8 novembre 2026
+
+È stata eseguita una query esclusivamente `SELECT` sul progetto Supabase collegato `BETHAG` (PostgreSQL 17.6.1.166, regione eu-central-1). Nessuna scrittura è stata eseguita.
+
+### Due funzioni trigger pubbliche
+
+Per entrambe le funzioni, il catalogo live restituisce:
+- owner `postgres`;
+- return type `trigger`;
+- `SECURITY INVOKER`;
+- trigger associato attivo (`tgenabled = O`) sulla tabella `public.condominium_members`;
+- ACL diretta attuale: `PUBLIC EXECUTE`, `postgres EXECUTE`, `service_role EXECUTE`;
+- `has_function_privilege`: anon=true, authenticated=true, service_role=true, owner=true.
+
+Funzioni:
+- `public.normalize_zero_ownership_owner()`, trigger `trg_normalize_zero_ownership_owner`, `search_path=""`;
+- `public.preserve_closing_condominium_member_history()`, trigger `trg_preserve_closing_condominium_member_history`, `search_path=pg_catalog, public`.
+
+**Conclusione:** il gap ACL indicato dal manifest è confermato direttamente nel catalogo Production: entrambe le funzioni espongono ancora EXECUTE tramite PUBLIC. La migrazione #17 è quindi effettivamente necessaria per rimuovere il privilegio diretto a PUBLIC/anon/authenticated, preservando owner e service_role. Il rehearsal isolato è coerente con la correzione prevista. Non è stata applicata alcuna modifica al live.
+
+### Helper di chiusura subentro
+
+La stessa lettura read-only ha verificato:
+- `private.check_condominium_member_transfer_closure(uuid)`: SECURITY DEFINER, owner postgres, `search_path=""`; ACL attuale solo postgres EXECUTE; authenticated=false, service_role=false, anon=false.
+- `public.check_condominium_member_transfer_closure(uuid)`: SECURITY INVOKER, owner postgres, `search_path=public`; ACL postgres, authenticated e service_role EXECUTE; anon=false.
+
+La definizione del wrapper pubblico richiama direttamente l'implementazione privata. Quindi, nello stato live attuale, il percorso tramite wrapper non ha ancora EXECUTE sulla funzione privata per authenticated/service_role. La migrazione #10 del manifest concede esplicitamente EXECUTE sulla funzione privata a entrambi i ruoli e revoca PUBLIC/anon; è il passaggio che colma il gap. La migrazione #15 successiva revoca nuovamente solo PUBLIC/anon, lasciando intatti i grant espliciti concessi da #10.
+
+**Conclusione:** #10 è necessaria per completare il percorso invoker dei helper; #15 non la sostituisce e va mantenuta coerente con essa. Prima di qualsiasi futuro cutover, il rehearsal deve continuare a dimostrare che il wrapper pubblico resta INVOKER, authenticated/service_role possono raggiungere l'implementazione privata e anon/PUBLIC non possono invocarla direttamente. Nessun test funzionale è stato eseguito contro dati Production.
+
+### Limite della verifica
+
+Il risultato è una fotografia del catalogo del progetto collegato al momento della query. È una verifica live read-only, non un apply e non un'approvazione del cutover. La migrazione #17 e il grant della #10 restano pending fino a un processo separato, con gate e autorizzazione validi.
+
 ## 4. Migrazioni Production già registrate, da non confondere con le 19 candidate
 
 Il manifest registra già nel ledger Production tre migrazioni forward successive al freeze precedente:
