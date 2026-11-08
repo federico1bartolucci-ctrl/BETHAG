@@ -45,7 +45,24 @@ Deno.serve(async (req: Request) => {
     const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
     const key = keys ? JSON.parse(keys).default : (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
     if (!key) throw new Error("Chiave Supabase server non configurata.");
-    const supabase = createClient(url,key);
+    // Supabase secret API keys are API keys, not JWTs. supabase-js also
+    // places its apiKey in Authorization by default; the gateway then tries
+    // to parse sb_secret_* as a JWT and PostgREST rejects the request
+    // (PGRST303). Keep the key in apikey and strip only the invalid Bearer
+    // header for modern secret keys. Preserve legacy service_role behavior.
+    const clientOptions = key.startsWith("sb_secret_")
+      ? {
+          global: {
+            fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+              const request = new Request(input, init);
+              const requestHeaders = new Headers(request.headers);
+              requestHeaders.delete("Authorization");
+              return fetch(new Request(request, { headers: requestHeaders }));
+            },
+          },
+        }
+      : undefined;
+    const supabase = createClient(url,key,clientOptions);
     const {data:result,error} = await supabase.rpc("apply_resend_communication_event",{
       p_provider_message_id:messageId,
       p_event_id:id,
