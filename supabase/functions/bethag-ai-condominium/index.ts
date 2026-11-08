@@ -54,7 +54,43 @@ const schema = {
       additionalProperties: false,
       properties: {
         configured: { type: "boolean" },
-        civics: { type: "array", items: { type: "object", additionalProperties: true } },
+        civics: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              id: { type: "string" },
+              label: { type: "string" },
+              buildings: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: "string" },
+                    label: { type: "string" },
+                    scales: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        properties: {
+                          id: { type: "string" },
+                          label: { type: "string" },
+                          interiors: { type: "integer" }
+                        },
+                        required: ["id", "label", "interiors"]
+                      }
+                    }
+                  },
+                  required: ["id", "label", "scales"]
+                }
+              }
+            },
+            required: ["id", "label", "buildings"]
+          }
+        },
         autonomous: {
           type: "object",
           additionalProperties: false,
