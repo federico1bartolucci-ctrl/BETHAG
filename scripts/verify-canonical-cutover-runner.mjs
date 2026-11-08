@@ -66,6 +66,7 @@ assert.ok(manifest.user_authorization?.approved_by && manifest.user_authorizatio
 assert.deepEqual(manifest.user_authorization?.approved_migration_hashes, manifest.sequence.map(({ file, git_blob_sha }) => ({ file, git_blob_sha })), "Approval must cover all nineteen ordered SQL hashes.");
 assert.ok(!runner.includes("approval?.approved_execution_commit_sha"), "Runner approval must not depend on the Git commit that records approval.");
 assert.ok(runner.includes("approved_release_fingerprint"), "Runner must verify the approved release fingerprint.");
+assert.ok(runner.includes("assertProductionApplyApproval(manifest.user_authorization)"), "Production apply must require a distinct manifest authorization beyond read-only preflight.");
 assert.ok(runner.includes("BETHAG_APPROVED_RELEASE_FINGERPRINT"), "Operator must supply the approved release fingerprint explicitly.");
 assert.ok(runner.includes("calculateReleaseFingerprint"), "Runner must calculate the release fingerprint from the checked-out critical files.");
 assert.equal(manifest.live_ledger.forward_migrations_after_2026_11_02_freeze.length, 3);

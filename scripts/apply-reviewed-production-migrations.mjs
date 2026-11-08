@@ -35,7 +35,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { getApplicationTest, splitChangedPaths, frozenManifestPayload, releaseFingerprint } from "./lib/release-readiness-utils.mjs";
+import { getApplicationTest, splitChangedPaths, frozenManifestPayload, releaseFingerprint, assertProductionApplyApproval } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const projectRef = "tctcgptrsmvgajqjgnev";
@@ -303,6 +303,7 @@ async function main() {
       "Blocked: the exact cutover plan, maintenance window, communications and rollback procedure are not approved.");
     const calculatedFingerprint = await calculateReleaseFingerprint(manifest, approvedSourceCommitSha);
     assertFinalApprovalRecord(manifest, approvedSourceCommitSha, calculatedFingerprint);
+    assertProductionApplyApproval(manifest.user_authorization);
     assert.equal(process.env.BETHAG_QA_APP_ACCEPTANCE_COMPLETE, "YES",
       "Blocked: QA application acceptance is not complete.");
     assert.equal(process.env.BETHAG_QA_APP12_PROVIDER_VERIFIED, "YES",
