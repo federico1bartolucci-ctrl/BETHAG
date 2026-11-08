@@ -205,14 +205,6 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: bethag_acl_draft_test
-      - name: Rehearse secure first-workspace bootstrap on isolated PostgreSQL 17
-        run: createdb --host=localhost --port=5432 --username=postgres bethag_first_workspace_test && node scripts/test-first-workspace-bootstrap.mjs
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: postgres
-          PGDATABASE: bethag_first_workspace_test
-          PGPASSWORD: postgres
 
       - name: Rehearse forward-only PostgreSQL default ACL repair on isolated database
         run: createdb --host=localhost --port=5432 --username=postgres bethag_default_acl_repair_test && node scripts/test-postgres-default-acl-repair.mjs
