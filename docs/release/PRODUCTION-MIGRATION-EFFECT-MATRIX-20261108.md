@@ -61,6 +61,24 @@ Le evidenze aggregate non sostituiscono la lettura delle singole definizioni di 
 | 18 | `20261105030000_reconcile_postgres_public_function_sequence_default_acl` — `4702930eb40f85405053a0db10be70bc9987e3f9` | Rimuove i default EXECUTE/privilegi sequence per PUBLIC, anon, authenticated e service_role su funzioni e sequenze public create da postgres; non tocca oggetti esistenti o default supabase_admin. | L'inventario riassuntivo non riporta il dettaglio dei default ACL di funzioni e sequenze. | **Da verificare sui cataloghi pg_default_acl globali e public.** Il precheck del payload può arrestarsi se esistono default globali inattesi: non aggirare il gate. |
 | 19 | `20261105050000_reconcile_portal_registration_upsert` — `43029cf687106b22a1067c7205695ddf6677d145` | Centralizza l'upsert portal_access; lega la registrazione al condominio scelto; blocca mismatch, duplicati e ambiguità; serializza il collegamento con row lock; preserva i ruoli staff e nega EXECUTE diretto sull'helper interno. | L'addendum segnala differenze tra funzioni QA e Production. Il record QA-specifico `20261104235514_fix_portal_registration_upsert_conflict_target` è una possibile sorgente funzionale, ma non è prova che il payload completo sia già presente in Production. | **Da confrontare definizione per definizione e testare.** Verificare self-registration, approvazione admin, nomi duplicati nello stesso workspace, email verificata, account già collegati e assenza di side effect in caso di rifiuto. |
 
+## 3-bis. Esito rehearsal isolato PostgreSQL 17 — 8 novembre 2026
+
+La CI sul commit documentale `948e21ceee888de4314f9fbc0951ef5e43ae9bc9` è terminata con esito complessivo SUCCESS. Nel job `postgres-bootstrap` risultano completati con SUCCESS:
+- rehearsal delle 19 migrazioni canoniche attraverso il runner protetto su database PostgreSQL isolato;
+- verifica delle postcondizioni incrementali di hardening/cataloghi/ACL;
+- rehearsal isolato della correzione ACL delle due funzioni trigger pubbliche;
+- verifica delle migrazioni forward-only su default ACL, funzioni/sequenze e colonna workspace member;
+- test RLS del permesso collaboratore e rollback della transazione di subentro.
+
+Per la migrazione #17, il payload controlla che:
+- `public.normalize_zero_ownership_owner()` e `public.preserve_closing_condominium_member_history()` esistano con ritorno `trigger` e siano SECURITY INVOKER;
+- PUBLIC, anon e authenticated non conservino EXECUTE diretto;
+- EXECUTE resti disponibile a service_role e al proprietario.
+
+**Interpretazione corretta:** la correzione ha superato il rehearsal su PostgreSQL 17 isolato. Questo prova che il payload è eseguibile e che le asserzioni ACL previste sono soddisfatte nel database di prova; **non dimostra che Production sia già stata corretta** e non autorizza alcuna applicazione sul live.
+
+Il workflow Build e il workflow Baseline Safety sono entrambi SUCCESS sullo stesso SHA. Il workflow Final QA APP-01..APP-15 è SKIPPED perché la PR è documentale; inoltre, nel Build, i due controlli che richiedono autenticazione QA reale sono SKIPPED. Non vanno conteggiati come test superati.
+
 ## 4. Migrazioni Production già registrate, da non confondere con le 19 candidate
 
 Il manifest registra già nel ledger Production tre migrazioni forward successive al freeze precedente:
