@@ -86,8 +86,13 @@ for (const [name, run] of Object.entries(appEvidence.workflow_runs ?? {})) {
   }
 }
 if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)) {
+  let qaIsAncestor = true;
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedHeadSha], { stdio: "ignore" });
+  } catch {
+    qaIsAncestor = false;
+  }
+  try {
     const testedFreeze = JSON.parse(execFileSync("git", [
       "show", `${testedQaSha}:supabase/rebuild/production-migration-cutover-freeze-20261105.json`,
     ], { encoding: "utf8" }));
@@ -98,6 +103,7 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
       || path === "supabase/rebuild/production-ledger-20261105.json"
       || path === "supabase/rebuild/live-migration-ledgers-20261105.json"
+      || path === "supabase/rebuild/production-read-only-preflight-20261108.md"
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
@@ -109,8 +115,11 @@ if (/^[0-9a-f]{40}$/.test(testedQaSha) && /^[0-9a-f]{40}$/.test(expectedHeadSha)
       || path === ".github/workflows/build.yml";
     const unexpected = laterChanges.filter((path) => !allowedAfterTest(path));
     if (unexpected.length) preCutoverBlockers.push("Application/migration/workflow files changed after the tested SHA: " + unexpected.join(", "));
+    if (!qaIsAncestor) {
+      console.log("QA provenance fallback: squash merge accepted only after exact allowlisted tree-delta and frozen-manifest checks.");
+    }
   } catch {
-    preCutoverBlockers.push("The tested QA commit is not an ancestor of the exact approved release commit.");
+    preCutoverBlockers.push("The tested QA commit is not an ancestor of the exact approved release commit and the squash-merge fallback checks failed.");
   }
 } else {
   preCutoverBlockers.push("Cannot compare post-test changes until both BETHAG_QA_TESTED_COMMIT_SHA and BETHAG_EXPECTED_COMMIT_SHA are supplied.");
@@ -151,7 +160,7 @@ const exactSourceAndMigrationApprovalRecorded =
   && /^[0-9a-f]{40}$/.test(approvedSourceSha)
   && userApproval.approved_commit_sha === approvedSourceSha
   && Boolean(userApproval.approved_by)
-  && /^\\d{4}-\\d{2}-\\d{2}T.*Z$/.test(userApproval.approved_at_utc ?? "")
+  && /^\d{4}-\d{2}-\d{2}T.*Z$/.test(userApproval.approved_at_utc ?? "")
   && Boolean(userApproval.approval_reference)
   && JSON.stringify(userApproval.approved_migration_hashes) === JSON.stringify(expectedApprovalHashes);
 if (!exactSourceAndMigrationApprovalRecorded) {
