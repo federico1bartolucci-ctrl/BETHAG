@@ -254,6 +254,7 @@ async function main() {
       || path === "supabase/rebuild/qa-final-collaudo-20261105.json"
       || path === "supabase/rebuild/production-ledger-20261105.json"
       || path === "supabase/rebuild/live-migration-ledgers-20261105.json"
+      || path === "supabase/rebuild/production-read-only-preflight-20261108.md"
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/verify-release-readiness.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
