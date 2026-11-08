@@ -318,5 +318,15 @@
     "baseline_safety": "No new baseline-safety workflow run was triggered on this exact SHA; prior baseline-safety evidence retained separately and not represented as current-head certification.",
     "production_modified": false,
     "merge_or_deploy_performed": false
+  },
+  "recertification_20261108": {
+    "status": "REQUESTED",
+    "reason": "Re-run baseline safety, build/PostgreSQL 17 clean-install and APP-01..APP-15 on the documentation-reconciled branch head; previous QA acceptance is retained as historical evidence only.",
+    "baseline_sha": "0265ab2c16fa7b66b75636710beb522f7b9144be",
+    "required_workflows": [
+      "BETHAG baseline safety checks",
+      "BETHAG build",
+      "BETHAG final QA collaudo APP-01..APP-15"
+    ]
   }
 }
