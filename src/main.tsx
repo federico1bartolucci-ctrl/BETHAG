@@ -6655,6 +6655,16 @@ function App() {
         // server snapshot back to Supabase. That duplicate bulk upsert races the
         // first render and can overload PostgREST during session restoration.
         backendSyncSnapshot.current = selectBackendSyncState(backend);
+        const unitDiagnostics = (Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []).reduce((summary: Record<string, number>, unit: any) => {
+          const key = String(unit.condominiumId ?? "missing");
+          summary[key] = (summary[key] ?? 0) + 1;
+          return summary;
+        }, {});
+        console.info("[BETHAG][units:hydration]", {
+          workspaceId,
+          total: Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits.length : 0,
+          byCondominiumId: unitDiagnostics,
+        });
         skipNextBackendSync.current = true;
         skipNextNavigationRefresh.current = page === "condomini" || page === "archivio";
         setCondominiums(backend.condominiums);
@@ -10132,6 +10142,17 @@ function CondominiumDetails(
     onStatusActivity,
     isAdministrator = false,
   } = props;
+
+  useEffect(() => {
+    const units = Array.isArray(condominiumUnits) ? condominiumUnits : [];
+    console.info("[BETHAG][units:detail]", {
+      condominiumId: item?.id ?? null,
+      condominiumName: item?.name ?? null,
+      receivedUnits: units.length,
+      activeUnits: units.filter((unit: CondominiumUnit) => unit.active === true).length,
+      receivedCondominiumIds: Array.from(new Set(units.map((unit: CondominiumUnit) => String(unit.condominiumId ?? "missing")))),
+    });
+  }, [item?.id, item?.name, condominiumUnits]);
 
   const handleMemberTransfer = (member: CondominiumMember, unit: CondominiumUnit) => {
     if (typeof startMemberTransfer !== "function") {
