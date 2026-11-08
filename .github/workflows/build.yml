@@ -35,7 +35,7 @@ jobs:
         run: node scripts/test-ai-provider-config.mjs
 
       - name: Test positive owner and tenant invitation flows with mocked services
-        run: deno run --allow-env --allow-read scripts/test-edge-function-invite-positive.mjs
+        run: deno run --node-modules-dir=auto --allow-env --allow-read scripts/test-edge-function-invite-positive.mjs
 
       - name: Type-check all Supabase Edge Functions
         run: |
