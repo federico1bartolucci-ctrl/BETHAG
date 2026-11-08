@@ -12,7 +12,7 @@ assert.equal(user, "postgres", "Expected disposable postgres role.");
 assert.equal(database, "bethag_first_workspace_test", "Refusing to run outside the dedicated disposable test database.");
 
 function psql(sql) {
-  return execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-A", "-t", "-c", sql], {
+  return execFileSync("psql", ["-X", "-q", "-v", "ON_ERROR_STOP=1", "-A", "-t", "-c", sql], {
     encoding: "utf8",
     env: process.env,
   }).trim();
