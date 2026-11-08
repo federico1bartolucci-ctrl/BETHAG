@@ -233,7 +233,11 @@ async function main() {
       && app12.provider_delivery_observed.startsWith("PASS"),
     "Blocked: APP-12 provider delivery is not PASS in the pinned QA evidence.");
 
-    execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedCommitSha], { stdio: "ignore" });
+    try {
+      execFileSync("git", ["merge-base", "--is-ancestor", testedQaSha, expectedCommitSha], { stdio: "ignore" });
+    } catch {
+      throw new Error("Blocked: pinned QA source commit is not an ancestor of the execution commit.");
+    }
     const testedManifest = JSON.parse(execFileSync("git", [
       "show", `${testedQaSha}:supabase/rebuild/production-migration-cutover-freeze-20261105.json`,
     ], { encoding: "utf8" }));
