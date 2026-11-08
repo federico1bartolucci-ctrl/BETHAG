@@ -6,7 +6,8 @@ export default {
       return Response.json({ error: "Metodo non consentito." }, { status: 405 });
     }
 
-    const userId = ctx.userClaims?.sub;
+    const subject = ctx.userClaims?.id;
+    const userId = typeof subject === "string" && subject.length > 0 ? subject : null;
     if (!userId) {
       return Response.json({ error: "Sessione non autenticata." }, { status: 401 });
     }

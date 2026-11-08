@@ -9,7 +9,7 @@ on:
 # Keep the local build/bootstrap workflow independent so neither can cancel
 # the other's pending run while sharing the same concurrency group.
 concurrency:
-  group: ${{ github.head_ref == 'fix/qa-view-acl-parity-20261105' && format('bethag-build-validation-{0}', github.sha) || 'bethag-qa-shared-environment' }}
+  group: ${{ github.event_name == 'pull_request' && format('bethag-build-validation-pr-{0}', github.event.pull_request.number) || (github.head_ref == 'fix/qa-view-acl-parity-20261105' && format('bethag-build-validation-{0}', github.sha)) || 'bethag-qa-shared-environment' }}
   cancel-in-progress: false
 
 jobs:
@@ -25,6 +25,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Verify AI model identifiers and disabled cost gate
+        run: node scripts/test-ai-provider-config.mjs
+
+      - name: Test positive owner and tenant invitation flows with mocked services
+        run: deno run --node-modules-dir=auto --allow-env --allow-read scripts/test-edge-function-invite-positive.mjs
+
+      - name: Test positive collaborator invitation flow with mocked services
+        run: deno run --node-modules-dir=auto --allow-env --allow-read scripts/test-edge-function-collaborator-positive.mjs
+
+      - name: Type-check all Supabase Edge Functions
+        run: |
+          deno check --node-modules-dir=auto supabase/functions/bethag-send-email/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-invite-collaborator/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-invite-resident/index.ts
+          deno check --node-modules-dir=auto supabase/functions/delete-account/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-ai-condominium/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-ai-document/index.ts
+          deno check --node-modules-dir=auto supabase/functions/bethag-resend-webhook/index.ts
 
       - name: Install dependencies from the committed lockfile
         run: npm ci

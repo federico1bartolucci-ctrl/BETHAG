@@ -27,7 +27,7 @@ function getNamedKey(jsonName: string, legacyName: string) {
   return Deno.env.get(legacyName) || null;
 }
 
-const portalPermissions = [
+const ownerPortalPermissions = [
   "documenti",
   "verbali",
   "regolamento",
@@ -35,6 +35,12 @@ const portalPermissions = [
   "pagamenti_straordinari",
   "assemblee",
   "comunicazioni",
+];
+
+const tenantPortalPermissions = [
+  "pagamenti_ordinari",
+  "comunicazioni",
+  "regolamento",
 ];
 
 Deno.serve(async (req: Request) => {
@@ -113,6 +119,10 @@ Deno.serve(async (req: Request) => {
     if (memberError) throw memberError;
     if (!member) return json({ error: "Condòmino non trovato." }, 404);
     if (!member.active) return json({ error: "Il profilo condòmino è disattivato." }, 409);
+    const memberQualification = String(member.data?.role || "").trim();
+    if (memberQualification !== "Proprietario" && memberQualification !== "Inquilino") {
+      return json({ error: "Qualifica condominiale non valida: correggere il ruolo prima di inviare l'invito." }, 409);
+    }
 
     const { data: condominium, error: condominiumError } = await adminClient
       .from("condominiums")
@@ -173,10 +183,8 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (existingProfileError) throw existingProfileError;
 
-    const preservedRole =
-      existingProfile?.role === "admin" || existingProfile?.role === "collaborator"
-        ? existingProfile.role
-        : "resident";
+    const preserveElevatedRole =
+      existingProfile?.role === "admin" || existingProfile?.role === "collaborator";
 
     const { error: profileError } = await adminClient
       .from("profiles")
@@ -184,7 +192,7 @@ Deno.serve(async (req: Request) => {
         id: targetUserId,
         full_name: name,
         email,
-        role: preservedRole,
+        role: preserveElevatedRole ? existingProfile.role : "resident",
         active: true,
       }, { onConflict: "id" });
     if (profileError) throw profileError;
@@ -198,6 +206,11 @@ Deno.serve(async (req: Request) => {
     const apartment =
       String(member.data?.apartment || "").trim() ||
       String(member.data?.unitCode || "").trim();
+
+    const portalPermissions =
+      memberQualification === "Inquilino"
+        ? tenantPortalPermissions
+        : ownerPortalPermissions;
 
     const portalData = {
       name,

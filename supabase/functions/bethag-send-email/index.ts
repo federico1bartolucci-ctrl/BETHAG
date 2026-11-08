@@ -49,8 +49,8 @@ Deno.serve(async (req: Request) => {
       .select("role,active,permissions").eq("workspace_id", communication.workspace_id)
       .eq("user_id", user.id).eq("active", true).maybeSingle();
     if (membershipError) throw membershipError;
-    const canSend = Boolean(membership) &&
-      canSendCommunication(membership.role, (membership as any).permissions);
+    if (!membership) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
+    const canSend = canSendCommunication(membership.role, (membership as any).permissions);
     if (!canSend) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
 
     const { data: condominium, error: condoError } = await supabase.from("condominiums")

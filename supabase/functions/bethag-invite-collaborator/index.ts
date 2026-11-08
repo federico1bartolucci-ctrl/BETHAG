@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
       "portale",
     ]);
     const permissions = Array.isArray(body.permissions)
-      ? [...new Set(body.permissions.map((value) => String(value)).filter((value) => allowedPermissions.has(value)))]
+      ? [...new Set(body.permissions.map((value: unknown) => String(value)).filter((value: string) => allowedPermissions.has(value)))]
       : [];
 
     if (!workspaceId || !legacyId || !name || !email) {
