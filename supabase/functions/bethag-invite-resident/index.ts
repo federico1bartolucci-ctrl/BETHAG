@@ -119,6 +119,10 @@ Deno.serve(async (req: Request) => {
     if (memberError) throw memberError;
     if (!member) return json({ error: "Condòmino non trovato." }, 404);
     if (!member.active) return json({ error: "Il profilo condòmino è disattivato." }, 409);
+    const memberQualification = String(member.data?.role || "").trim();
+    if (memberQualification !== "Proprietario" && memberQualification !== "Inquilino") {
+      return json({ error: "Qualifica condominiale non valida: correggere il ruolo prima di inviare l'invito." }, 409);
+    }
 
     const { data: condominium, error: condominiumError } = await adminClient
       .from("condominiums")
@@ -203,7 +207,6 @@ Deno.serve(async (req: Request) => {
       String(member.data?.apartment || "").trim() ||
       String(member.data?.unitCode || "").trim();
 
-    const memberQualification = String(member.data?.role || "").trim();
     const portalPermissions =
       memberQualification === "Inquilino"
         ? tenantPortalPermissions
