@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105'
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
