@@ -112,10 +112,9 @@ Deno.serve(async (req: Request) => {
       .eq("active", true)
       .maybeSingle();
     if (membershipError) throw membershipError;
-    const allowed = Boolean(membership) && (
-      membership.role === "admin" ||
-      (membership.role === "collaborator" && Array.isArray(membership.permissions) && membership.permissions.includes("condomini"))
-    );
+    if (!membership) return responseJson({ error: "Non disponi dell'autorizzazione per la creazione dei condomini." }, 403);
+    const allowed = membership.role === "admin" ||
+      (membership.role === "collaborator" && Array.isArray(membership.permissions) && membership.permissions.includes("condomini"));
     if (!allowed) return responseJson({ error: "Non disponi dell'autorizzazione per la creazione dei condomini." }, 403);
 
     const content = [{
