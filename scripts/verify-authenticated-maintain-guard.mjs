@@ -79,13 +79,15 @@ assert.equal(postgresTablesMissingMaintain.length, 0, "Baseline must preserve MA
 assert.equal(authenticatedTablesWithMaintain.length, 0, "Baseline must not explicitly grant MAINTAIN to authenticated.");
 assert.equal(relationGrants.filter((grant) => grant.grantee === "service_role").length, 48, "Expected relation grants for service_role on 48 public relations.");
 assert.equal(relationGrants.filter((grant) => grant.grantee === "postgres").length, 48, "Expected relation grants for postgres on 48 public relations.");
-assert.match(runbook, /Concrete privilege discrepancy found on 2026-10-22/);
-assert.match(runbook, /34 public relations/);
-assert.match(runbook, /ACL parity gate blocked/);
-assert.match(runbook, /82 expanded default-ACL privilege entries/);
-assert.match(runbook, /Both live owners, `postgres` and `supabase_admin`, have table default ACLs granting `MAINTAIN` to `anon` and `authenticated`/);
-assert.match(runbook, /0 relation ACL entries with grant option/);
-assert.match(runbook, /0 explicit column ACL entries/);
+// Preserve the 2026-10-22/23 discrepancy as historical evidence, but require
+// the later read-only Production recheck to supersede its active status.
+assert.match(runbook, /Production ACL recheck — read-only, 2026-11-08/);
+assert.match(runbook, /direct relation-level `MAINTAIN` grants to `authenticated` on `public` relations returned \*\*zero rows\*\*/);
+assert.match(runbook, /`supabase_admin`-owned default ACL for `anon`, `authenticated`, and `service_role`/);
+assert.match(runbook, /zero\*\* tables, views, sequences, or functions in `public` owned by `supabase_admin`/);
+assert.match(runbook, /ACCEPTED PROVIDER-MANAGED BASELINE/);
+assert.match(runbook, /Production ACL disposition: \*\*PASS/);
+assert.match(runbook, /cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9/);
 
 // Pin the known Production exception set so future runbook edits cannot
 // silently drop an affected relation from the release-blocker record.
@@ -127,7 +129,7 @@ const productionAuthenticatedMaintainRelations = [
 ];
 assert.equal(productionAuthenticatedMaintainRelations.length, 34, "Expected the complete 34-relation Production exception register.");
 for (const relation of productionAuthenticatedMaintainRelations) {
-  assert.ok(runbook.includes(relation), `Runbook must keep the Production MAINTAIN exception for ${relation} documented.`);
+  assert.ok(runbook.includes(relation), `Runbook must retain the historical 2026-10-22 finding for ${relation}.`);
 }
 
 console.log(JSON.stringify({
@@ -140,6 +142,8 @@ console.log(JSON.stringify({
   authenticated_relation_maintain_grants_found: authenticatedTablesWithMaintain.length,
   baseline_column_acl_statements_found: columnGrantLines.length,
   baseline_relation_grant_options_found: relationGrantOptionLines.length,
-  production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
-  release_acl_parity: "BLOCKED_PENDING_RECONCILIATION",
+  historical_production_discrepancy_relations_documented: productionAuthenticatedMaintainRelations.length,
+  latest_live_authenticated_maintain_check: "ZERO_DIRECT_RELATION_GRANTS_2026-11-08",
+  platform_managed_supabase_admin_default_acl: "ACCEPTED_PROVIDER_MANAGED_BASELINE_NO_PUBLIC_OBJECTS",
+  production_acl_disposition: "PASS_FOR_CURRENT_APPLICATION_OWNED_OBJECTS_AND_DEFAULTS",
 }, null, 2));

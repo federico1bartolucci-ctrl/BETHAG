@@ -88,7 +88,10 @@ const productionFunctionGrants = accessCatalog.objects.functionGrants
   .filter((grant) => grant.grantee !== "postgres")
   .map((grant) => `${grant.schema}.${grant.function}|${grant.grantee}|${Boolean(grant.grantable)}`)
   .sort();
-const baselineGrantLines = grantSql.split("\n").filter((line) => /^GRANT EXECUTE ON FUNCTION /i.test(line));
+const baselineGrantLines = grantSql
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => /^GRANT EXECUTE ON FUNCTION /i.test(line));
 const parsedBaselineGrants = baselineGrantLines.map((line) => {
   const match = line.match(/^GRANT EXECUTE ON FUNCTION "?([^".]+)"?\."?([^"(]+)"?\([^)]*\) TO ([^;]+);$/i);
   assert.ok(match, `Cannot parse function grant: ${line}`);
