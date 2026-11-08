@@ -557,11 +557,11 @@
   },
   "user_authorization": {
     "status": "RECEIVED",
-    "approved_commit_sha": "decc0dfda68f573f13e386beaa22d259f7f8b619",
-    "approved_execution_commit_sha": null,
+    "approved_commit_sha": "5d96342209be77e189012dec754bc764999e64e2",
+    "approved_execution_commit_sha": "4a8a161a834f9ca707e71778e8770035326f953c",
     "approved_by": "Federico Bartolucci",
-    "approved_at_utc": "2026-11-07T21:00:00Z",
-    "approval_reference": "The owner previously approved execution SHA c2dbe15d100b133391d2ba7617fb6089c9734320 and fingerprint 033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301 for READ-ONLY PRODUCTION PREFLIGHT ONLY. Subsequent commits advanced the branch head; that exact execution-SHA approval is not extended to the current head. The QA source approval, fingerprint approval and nineteen ordered migration hashes remain recorded, but a fresh explicit approval of the final documentation-reconciled execution SHA is required before any Production preflight. This does NOT authorize Production apply, migration execution, merge or deploy.",
+    "approved_at_utc": "2026-11-08T16:34:00Z",
+    "approval_reference": "ChatGPT project conversation, 2026-11-08 17:34 Europe/Rome: project owner explicitly confirmed authorization for READ_ONLY_PRODUCTION_PREFLIGHT_ONLY on execution commit 4a8a161a834f9ca707e71778e8770035326f953c, QA source 5d96342209be77e189012dec754bc764999e64e2, release fingerprint 18d197d40f9b72681094b9a8f607efeca88675be6745baf32b64f3ad234338b4, maintenance window 2026-11-08 16:30–20:30 Europe/Rome. This approval does NOT authorize migration execution, DDL/DML, or Production apply.",
     "approved_migration_hashes": [
       {
         "file": "20261022210629_restrict_private_function_public_execute.sql",
@@ -640,16 +640,16 @@
         "git_blob_sha": "43029cf687106b22a1067c7205695ddf6677d145"
       }
     ],
-    "approved_maintenance_window": "2026-11-08 00:00–04:00 Europe/Rome",
+    "approved_maintenance_window": "2026-11-08 16:30–20:30 Europe/Rome",
     "approved_operator": "Federico Bartolucci",
-    "approved_cutover_scope": "Apply exactly the nineteen frozen canonical migrations in order; preserve all 248 historical Production ledger rows unchanged; stop on any preflight, migration, or postflight discrepancy.",
+    "approved_cutover_scope": "READ-ONLY PRODUCTION PREFLIGHT ONLY: verify the exact 248-row live ledger against the frozen snapshot and validate the nineteen migration file hashes. No DDL, DML, migration execution, ledger write, or Production apply is authorized.",
     "residual_backup_restore_risk_reconfirmed": true,
     "residual_backup_restore_risk": "Provider-managed physical restore was not independently tested; the previously accepted residual risk is reconfirmed for this cutover. No claim of a successful physical restore test.",
-    "approved_release_fingerprint": "033214414edcda89241bef0ed3807f70b24db944b9d23c179d305590227bc301",
+    "approved_release_fingerprint": "18d197d40f9b72681094b9a8f607efeca88675be6745baf32b64f3ad234338b4",
     "approval_scope": "READ_ONLY_PREFLIGHT_ONLY",
     "production_apply_authorized": false,
     "previously_approved_execution_commit_sha": "c2dbe15d100b133391d2ba7617fb6089c9734320",
-    "execution_approval_status": "PENDING_FINAL_DOCUMENTATION_HEAD_APPROVAL"
+    "execution_approval_status": "APPROVED_READ_ONLY_PREFLIGHT_ONLY"
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
