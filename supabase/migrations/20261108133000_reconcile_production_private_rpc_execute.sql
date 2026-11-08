@@ -114,7 +114,7 @@ BEGIN
     IF target_oid IS NULL
        OR NOT has_function_privilege('authenticated', target_oid, 'EXECUTE')
        OR has_function_privilege('anon', target_oid, 'EXECUTE')
-       OR has_function_privilege('public', target_oid, 'EXECUTE') THEN
+       OR EXISTS (\n         SELECT 1\n         FROM pg_proc p,\n              LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl\n         WHERE p.oid = target_oid\n           AND acl.grantee = 0\n           AND acl.privilege_type = 'EXECUTE'\n       ) THEN
       RAISE EXCEPTION 'Post-condition failed for private.%(%)',
         item.function_name, item.argument_types;
     END IF;
