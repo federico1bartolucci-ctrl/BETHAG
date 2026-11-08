@@ -25,7 +25,7 @@ const mime=String(f.mimeType??blob.type??"application/octet-stream").toLowerCase
 const upload=await fetch("https://api.openai.com/v1/files",{method:"POST",headers:{Authorization:"Bearer "+openai},body:form});const uploaded=await upload.json();if(!upload.ok||!uploaded?.id)throw new Error(uploaded?.error?.message??"Upload AI non riuscito.");openAIFileIds.push(String(uploaded.id));
 content.push(mime.startsWith("image/")?{type:"input_image",file_id:String(uploaded.id),detail:"high"}:{type:"input_file",file_id:String(uploaded.id),detail:"high"});
 }
-const resp=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+openai,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-6-luna",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"bethag_document_analysis",strict:true,schema}}})});
+const resp=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+openai,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-5.6-luna",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"bethag_document_analysis",strict:true,schema}}})});
 const data=await resp.json();if(!resp.ok)return json({error:data?.error?.message??"Analisi AI non riuscita."},502);const out=data?.output_text??"";if(!out)return json({error:"L'AI non ha restituito dati."},502);return json({draft:JSON.parse(out)});
 }finally{await Promise.all(openAIFileIds.map(id=>deleteOpenAIFile(openai,id)));}
 }catch(e){console.error(e);return json({error:e instanceof Error?e.message:"Errore interno."},500);}
