@@ -34,6 +34,9 @@ jobs:
       - name: Verify AI model identifiers and disabled cost gate
         run: node scripts/test-ai-provider-config.mjs
 
+      - name: Test positive owner and tenant invitation flows with mocked services
+        run: deno run --allow-env --allow-read scripts/test-edge-function-invite-positive.mjs
+
       - name: Type-check all Supabase Edge Functions
         run: |
           deno check --node-modules-dir=auto supabase/functions/bethag-send-email/index.ts
