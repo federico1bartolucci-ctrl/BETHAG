@@ -19,6 +19,8 @@ function psql(sql) {
 }
 
 const setup = `
+CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE anon NOLOGIN;
 CREATE SCHEMA auth;
 CREATE SCHEMA private;
 CREATE TABLE auth.users(id uuid PRIMARY KEY);
