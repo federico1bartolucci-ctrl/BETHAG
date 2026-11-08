@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, isFreshSnapshot } from "./lib/release-readiness-utils.mjs";
+import { gitBlobSha, hasPostgresConnectionConfig, splitChangedPaths, getApplicationTest, isFreshSnapshot, frozenManifestPayload } from "./lib/release-readiness-utils.mjs";
 
 const root = "supabase/rebuild";
 const [production, liveLedgers, freeze, appEvidence] = await Promise.all([
