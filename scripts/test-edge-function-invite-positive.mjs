@@ -18,7 +18,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.pathname === "/auth/v1/user" && method === "GET") return json({ id: "qa-admin-id", email: "admin@example.test", role: "authenticated" });
   if (url.pathname === "/auth/v1/invite" && method === "POST") {
     const body = JSON.parse(String(init.body ?? "{}")); invitedEmail = body.email;
-    return json({ id: "qa-invited-" + memberRole.toLowerCase(), email: body.email, app_metadata: {}, user_metadata: {} });
+    return json({ id: "11111111-1111-4111-8111-111111111111", email: body.email, app_metadata: {}, user_metadata: {} });
   }
   if (url.pathname.startsWith("/auth/v1/admin/users/") && method === "PUT") return json({ id: url.pathname.split("/").pop() });
   if (url.pathname === "/rest/v1/workspace_members" && method === "GET") return json({ workspace_id: "workspace-test", role: "admin", active: true });
