@@ -173,7 +173,7 @@ Documenti: ${files.map((f: any) => f.filename).join(", ")}`
       method: "POST",
       headers: { Authorization: "Bearer " + openaiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-6-luna",
+        model: "gpt-5.6-luna",
         input: [{ role: "user", content }],
         text: {
           format: {
