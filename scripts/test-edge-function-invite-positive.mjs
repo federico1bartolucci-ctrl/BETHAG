@@ -61,11 +61,28 @@ async function runScenario(role, expectedPermissions) {
   assert.equal(portalPayload.workspace_id, "workspace-test");
 }
 
+async function runRejectedScenario(role) {
+  memberRole = role;
+  portalPayload = undefined;
+  invitedEmail = undefined;
+  const response = await handler(new Request("https://mock.supabase.test/functions/v1/bethag-invite-resident", {
+    method: "POST",
+    headers: { Authorization: "Bearer mock-user-jwt", "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: "workspace-test", condominiumId: 77, legacyId: 12 }),
+  }));
+  const body = await response.json();
+  assert.equal(response.status, 409, "Unknown qualification must fail closed: " + JSON.stringify(body));
+  assert.equal(invitedEmail, undefined, "Unknown qualification must not create/invite an Auth user");
+  assert.equal(portalPayload, undefined, "Unknown qualification must not create portal access");
+}
+
 try {
   await runScenario("Proprietario", ["documenti", "verbali", "regolamento", "pagamenti_ordinari", "pagamenti_straordinari", "assemblee", "comunicazioni"]);
   console.log("PASS: positive owner invitation and portal permissions");
   await runScenario("Inquilino", ["pagamenti_ordinari", "comunicazioni", "regolamento"]);
   console.log("PASS: positive tenant invitation and restricted portal permissions");
+  await runRejectedScenario("resident");
+  console.log("PASS: unknown qualification rejected before invitation and portal writes");
 } finally {
   globalThis.fetch = originalFetch;
 }
