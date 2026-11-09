@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(22);
 
 -- Il RPC amministrativo del condominio deve essere eseguibile solo da utenti autenticati.
 select is(
@@ -276,6 +276,27 @@ select is(
      and indexname = 'condominium_work_documents_workspace_document_idx'),
   1,
   'La ricerca dei documenti collegati al lavoro deve avere l'indice di workspace'
+);
+
+-- Il vincolo di stato dei subentri deve ammettere Chiuso e non conservare
+-- il vecchio vincolo restrittivo *_status_ck.
+select is(
+  (select count(*)::integer
+   from pg_constraint
+   where conrelid = 'public.condominium_member_transfers'::regclass
+     and conname = 'condominium_member_transfers_status_ck'),
+  0,
+  'Il vincolo storico status_ck deve essere rimosso'
+);
+
+select is(
+  (select count(*)::integer
+   from pg_constraint
+   where conrelid = 'public.condominium_member_transfers'::regclass
+     and conname = 'condominium_member_transfers_status_check'
+     and pg_get_constraintdef(oid) like '%Chiuso%'),
+  1,
+  'Il vincolo canonico deve ammettere lo stato Chiuso'
 );
 
 select * from finish();
