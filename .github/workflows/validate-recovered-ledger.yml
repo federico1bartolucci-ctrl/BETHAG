@@ -1,0 +1,30 @@
+name: Recovered Production migration archive integrity
+
+on:
+  pull_request:
+    paths:
+      - "supabase/recovered-production-ledger/**"
+      - "supabase/replay-candidate/**"
+      - "scripts/validate-production-ledger-archive.mjs"
+      - ".github/workflows/validate-recovered-ledger.yml"
+  push:
+    branches: ["recovery/production-ledger-archive-20261103"]
+    paths:
+      - "supabase/recovered-production-ledger/**"
+      - "scripts/validate-production-ledger-archive.mjs"
+      - ".github/workflows/validate-recovered-ledger.yml"
+
+jobs:
+  validate-recovered-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate all recovered SQL payloads against the manifest
+        run: node scripts/validate-production-ledger-archive.mjs

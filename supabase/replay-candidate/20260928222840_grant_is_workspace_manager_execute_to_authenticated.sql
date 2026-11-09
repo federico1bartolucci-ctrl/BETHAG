@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION private.is_workspace_manager(uuid) TO authenticated;
