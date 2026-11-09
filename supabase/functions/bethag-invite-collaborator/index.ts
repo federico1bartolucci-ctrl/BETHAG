@@ -122,8 +122,8 @@ Deno.serve(async (req: Request) => {
     if (!targetUserId) {
       const { data: invitedUser, error: inviteError } =
         await adminClient.auth.admin.inviteUserByEmail(email, {
-          data: { full_name: name, bethag_role: "collaborator", workspace_id: workspaceId },
-          redirectTo: "https://federico1bartolucci-ctrl.github.io/BETHAG/",
+          data: { full_name: name, bethag_role: "collaborator", bethag_invited: true, bethag_password_set: false, workspace_id: workspaceId },
+          redirectTo: "https://federico1bartolucci-ctrl.github.io/BETHAG/invite-accept.html",
         });
 
       if (inviteError) {

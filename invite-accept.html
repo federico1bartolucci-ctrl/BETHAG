@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BETHAG — Attivazione collaboratore</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fc}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;box-sizing:border-box}
+main{width:min(440px,100%);background:#fff;border-radius:22px;padding:30px;box-sizing:border-box;box-shadow:0 16px 48px #17203318}
+.brand{font-size:28px;font-weight:850;letter-spacing:-1px;color:#3158d8;margin-bottom:24px}
+h1{font-size:25px;margin:0 0 12px}p{color:#64748b;line-height:1.55}
+label{display:block;font-weight:650;margin:18px 0 8px}
+input{width:100%;box-sizing:border-box;padding:14px;border:1px solid #cbd5e1;border-radius:12px;font-size:16px}
+button{width:100%;padding:15px;margin-top:22px;border:0;border-radius:12px;background:#3658dc;color:white;font-size:17px;font-weight:750}
+button:disabled{opacity:.6}.message{margin-top:16px;padding:12px;border-radius:10px;line-height:1.45}.error{background:#fee2e2;color:#991b1b}.ok{background:#dcfce7;color:#166534}
+</style>
+</head>
+<body>
+<main>
+<div class="brand">BETHAG</div>
+<h1>Attiva il tuo account collaboratore</h1>
+<p>Hai ricevuto un invito dall'amministratore. Imposta una password personale per completare l'attivazione. Al termine potrai accedere a BETHAG con il tuo indirizzo e-mail.</p>
+<form id="form" hidden>
+<label for="password">Nuova password</label>
+<input id="password" type="password" minlength="8" autocomplete="new-password" required>
+<label for="confirm">Conferma password</label>
+<input id="confirm" type="password" minlength="8" autocomplete="new-password" required>
+<button id="submit" type="submit">Attiva account</button>
+</form>
+<div id="message" class="message" hidden></div>
+</main>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.1";
+const supabase=createClient("https://tctcgptrsmvgajqjgnev.supabase.co","sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ",{
+ auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:"implicit",storageKey:"bethag-invite-activation"}
+});
+const form=document.getElementById("form"),message=document.getElementById("message"),submit=document.getElementById("submit");
+function show(text,type="error"){message.hidden=false;message.className="message "+type;message.textContent=text}
+async function init(){
+ const url=new URL(location.href),hash=new URLSearchParams(url.hash.slice(1));
+ const access_token=hash.get("access_token"),refresh_token=hash.get("refresh_token"),code=url.searchParams.get("code");
+ if(access_token&&refresh_token){
+  const {error}=await supabase.auth.setSession({access_token,refresh_token});
+  if(error) throw error;
+ }else if(code){
+  const {error}=await supabase.auth.exchangeCodeForSession(code);
+  if(error) throw error;
+ }
+ const {data,error}=await supabase.auth.getSession();
+ if(error) throw error;
+ if(!data.session) throw new Error("Il link non è valido o è scaduto. Chiedi all'amministratore di inviare un nuovo invito.");
+ const {data:userData}=await supabase.auth.getUser();
+ if(userData.user?.user_metadata?.bethag_role!=="collaborator"){
+  throw new Error("Il collegamento non corrisponde a un invito collaboratore BETHAG.");
+ }
+ form.hidden=false;
+}
+try{await init()}catch(e){show(e instanceof Error?e.message:"Impossibile verificare l'invito.")}
+form.addEventListener("submit",async e=>{
+ e.preventDefault();
+ const password=document.getElementById("password").value,confirm=document.getElementById("confirm").value;
+ if(password.length<8){show("La password deve contenere almeno 8 caratteri.");return}
+ if(password!==confirm){show("Le password non coincidono.");return}
+ submit.disabled=true;submit.textContent="Attivazione in corso…";
+ const {error}=await supabase.auth.updateUser({password,data:{bethag_password_set:true}});
+ if(error){show(error.message);submit.disabled=false;submit.textContent="Attiva account";return}
+ await supabase.auth.signOut({scope:"local"});
+ form.hidden=true;
+ show("Account collaboratore attivato. Ora puoi aprire BETHAG e accedere selezionando Collaboratore.", "ok");
+});
+</script>
+</body>
+</html>
