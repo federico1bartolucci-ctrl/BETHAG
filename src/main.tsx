@@ -1518,7 +1518,11 @@ function LoginPage({
           {recoveryMode
             ? "Inserisci l'e-mail del tuo account. Riceverai un link per impostare una nuova password."
             : registerMode
-              ? "Per i condòmini BETHAG verifica prima l'anagrafica inserita dall'amministratore."
+              ? role === "collaborator"
+                ? "I collaboratori non si registrano autonomamente: l'amministratore deve inviare un invito dalla sezione Collaboratori."
+                : role === "resident"
+                  ? "Per i condòmini BETHAG verifica prima l'anagrafica inserita dall'amministratore."
+                  : "Crea il tuo account amministratore per iniziare a usare BETHAG."
               : "Seleziona il profilo con cui vuoi entrare nella piattaforma."}
         </p>
 
@@ -1578,8 +1582,8 @@ function LoginPage({
 
           {recoverySent && !error && <div className="login-success" role="status">Se l'e-mail è associata a un account BETHAG, abbiamo inviato il link per reimpostare la password.</div>}
           {error && <div className="login-error" role="alert"><strong>{error}</strong></div>}
-          <button className="primary-button login-submit" type="submit" disabled={submitting} aria-busy={submitting}>
-            {submitting ? "Operazione in corso…" : recoveryMode ? "Invia link di recupero" : registerMode ? (role === "resident" ? "Registrati come condòmino" : "Crea account amministratore") : "Accedi"}
+          <button className="primary-button login-submit" type="submit" disabled={submitting || (registerMode && role === "collaborator")} aria-busy={submitting}>
+            {submitting ? "Operazione in corso…" : recoveryMode ? "Invia link di recupero" : registerMode ? (role === "resident" ? "Registrati come condòmino" : role === "collaborator" ? "Invito riservato all'amministratore" : "Crea account amministratore") : "Accedi"}
           </button>
         </form>
         {!recoveryMode && !registerMode && supabaseConfigured && (
