@@ -7,6 +7,7 @@ export default defineConfig({
       input: {
         main: "index.html",
         resetPassword: "reset-password.html",
+        inviteAccept: "invite-accept.html",
       },
     },
   },
