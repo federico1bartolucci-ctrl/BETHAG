@@ -93,6 +93,9 @@ jobs:
       - name: Run isolated public-login browser smoke test
         run: node scripts/test-browser-public-smoke.mjs
 
+      - name: Test isolated collaborator invite activation in browser
+        run: node scripts/test-browser-invite-activation.mjs
+
       - name: Certify real QA authentication and session persistence
         if: github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
         env:
