@@ -1437,7 +1437,7 @@ function LoginPage({
 
   const roles: Array<{ id: PublicRole; title: string; description: string }> = [
     { id: "admin", title: "Amministratore", description: "Accesso completo al gestionale." },
-    { id: "collaborator", title: "Collaboratore", description: "Accesso all'area gestionale del titolare." },
+    { id: "collaborator", title: "Collaboratore", description: "Accesso alle funzioni autorizzate dall'amministratore." },
     { id: "resident", title: "Condomino", description: "Accesso al portale del proprio condominio." },
   ];
 
