@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+const source = readFileSync(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function registerProgressPayment");
+const end = source.indexOf("async function auditWorkEvent", start);
+assert.ok(start >= 0, "registerProgressPayment handler must exist");
+const handler = source.slice(start, end > start ? end : start + 5000);
+assert.match(handler, /if\(p\.payment_entry_id\)/, "duplicate payment guard must use payment_entry_id");
+assert.doesNotMatch(handler, /if\(p\.ledger_entry_id\)/, "must not use the unrelated ledger_entry_id field");
+console.log("SAL duplicate-payment regression checks passed.");
