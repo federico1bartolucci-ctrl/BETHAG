@@ -1,5 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { certifyPostCutover } from "./lib/post-cutover-readiness.mjs";
 const sha="a".repeat(40);
 function fixtures(){
@@ -16,3 +20,16 @@ test("missing APP-14 blocks release",()=>{const f=fixtures();f.production.app14.
 test("missing physical restore blocks release even with risk-acceptance declaration",()=>{const f=fixtures();f.backupRestore={};assert.equal(certifyPostCutover(f).status,"NO_GO");f.backupRestore={provider_restore:"NOT_TESTED",residual_risk_accepted:true,risk_approval_reference:"risk-approval-1",approved_by:"owner",approved_at:"2026-11-20T00:00:00Z",approval_scope:"BETHAG_RELEASE_RISK_ACCEPTANCE"};assert.equal(certifyPostCutover(f).status,"NO_GO");});
 test("APP-12 requires exact provider evidence, not PASS-prefixed text",()=>{const f=fixtures();f.qa.application_tests["APP-12"].provider_delivery_observed="PASS but unverified";assert.equal(certifyPostCutover(f).status,"NO_GO");});
 test("missing CI or acceptance status blocks release",()=>{const f=fixtures();f.qa.workflow_runs.build.head_sha="c".repeat(40);f.qa.application_tests["APP-03"]="PARTIAL";const r=certifyPostCutover(f);assert.equal(r.status,"NO_GO");assert.ok(r.blockers.some(x=>x.includes("CI")));assert.ok(r.blockers.some(x=>x.includes("APP-03")));});
+
+test("CLI exits 2 for EVIDENCE_COMPLETE, not full-success 0",async()=>{
+ const dir=await mkdtemp(join(tmpdir(),"bethag-certifier-"));
+ try{
+  const f=fixtures();
+  const files=[f.qa,f.production,f.backupRestore];
+  const paths=[];
+  for(let i=0;i<files.length;i++){const p=join(dir,["qa.json","production.json","restore.json"][i]);await writeFile(p,JSON.stringify(files[i]));paths.push(p);}
+  const run=spawnSync(process.execPath,["scripts/verify-post-cutover-release-readiness.mjs",...paths],{encoding:"utf8"});
+  assert.equal(run.status,2,run.stderr);
+  assert.match(run.stdout,/EVIDENCE_COMPLETE/);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
