@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 const source = readFileSync(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 assert.match(source, /\.range\(offset, offset \+ 999\)/, "workspace loader must page in 1,000-row chunks");
-assert.match(source, /for \(let offset = 0;\s*;\s*;\s*offset \+= 1000\)/, "workspace loader must continue through pages");
+assert.match(source, /for\s*\(\s*let\s+offset\s*=\s*0\s*;\s*;\s*offset\s*\+=\s*1000\s*\)/, "workspace loader must continue through pages");
 
 const workspaceTables = [
   "condominium_units", "documents", "deadlines", "assemblies", "suppliers",
