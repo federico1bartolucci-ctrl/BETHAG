@@ -1,11 +1,5 @@
 name: BETHAG QA communication publication acceptance
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-app12.mjs"
-      - ".github/workflows/qa-app12.yml"
   workflow_dispatch:
     inputs:
       confirm_shared_qa_mutation:
@@ -22,7 +16,7 @@ concurrency:
 
 jobs:
   app12:
-    if: github.event_name != 'workflow_dispatch' || inputs.confirm_shared_qa_mutation == 'yes'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
