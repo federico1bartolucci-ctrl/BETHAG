@@ -11,7 +11,7 @@ function resolveAliasEvidence(primary, alias){
  }
  return primary;
 }
-export function certifyPostcutover({ qa, production, backupRestore }) {
+export function certifyPostCutover({ qa, production, backupRestore }) {
  const blockers=[]; const testedSha=qa?.tested_commit_sha; const releaseSha=production?.release_commit_sha;
  if(!SHA.test(testedSha??"")) blockers.push("QA tested_commit_sha is missing or invalid.");
  if(!SHA.test(releaseSha??"")) blockers.push("Production release_commit_sha is missing or invalid.");
