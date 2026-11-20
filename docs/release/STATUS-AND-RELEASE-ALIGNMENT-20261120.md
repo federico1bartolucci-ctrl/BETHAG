@@ -33,8 +33,8 @@ PR #80: [Add read-only post-cutover release certifier](https://github.com/federi
 
 - Branch: `audit/post-cutover-release-certifier-20261120`.
 - Stato: OPEN, DRAFT, non integrata.
-- CI sul commit `2b9c61ae57f1e97d2adca2850212b69485398375`: build SUCCESS, baseline safety SUCCESS, test del certifier SUCCESS; final QA APP-01..APP-15 SKIPPED intenzionalmente.
-- Il tool valuta file JSON forniti dall'operatore e non autentica autonomamente CI, collaudi, snapshot Production, provider delivery o restore. Il risultato positivo è `EVIDENCE_COMPLETE`, non GO; evidenza non autenticata viene esplicitamente indicata.
+- CI sul commit aggiornato `9c31b68728e07d8a97429bbfcb5213fb13429fad`: test del certifier SUCCESS (run 44795109077), baseline safety SUCCESS (run 44795108962); build run 44795108922 ancora PENDING al momento dell'ultimo controllo; final QA APP-01..APP-15 SKIPPED intenzionalmente.
+- Il tool valuta file JSON forniti dall'operatore e non autentica autonomamente CI, collaudi, snapshot Production, provider delivery o restore. Il risultato positivo è `EVIDENCE_COMPLETE`, non GO; evidenza non autenticata viene esplicitamente indicata. Il CLI ora restituisce exit code 2 per `EVIDENCE_COMPLETE` (non exit code 0), 1 per `NO_GO`, e il test di integrazione verifica questa distinzione.
 - Nessuna modifica QA o Production eseguita.
 
 ## QA applicativo
