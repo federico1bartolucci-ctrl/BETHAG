@@ -1,0 +1,11 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+const source = readFileSync(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveWorkDocuments");
+const end = source.indexOf("async function registerProgressPayment", start);
+assert.ok(start >= 0 && end > start, "saveWorkDocuments handler must exist");
+const handler = source.slice(start, end);
+const deleteCheck = handler.indexOf("if(deleteError)throw deleteError");
+const insert = handler.indexOf("const rows=");
+assert.ok(deleteCheck >= 0 && insert > deleteCheck, "failed link deletion must stop before rebuilding links");
+console.log("Document-link delete error regression checks passed.");
