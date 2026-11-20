@@ -13,15 +13,16 @@ concurrency:
 
 jobs:
   transfer:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run authenticated transfer acceptance on QA only
         env:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
