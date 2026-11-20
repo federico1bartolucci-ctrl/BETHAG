@@ -1,9 +1,6 @@
 name: BETHAG final QA collaudo APP-01..APP-15
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       confirm_shared_qa_mutation:
@@ -20,7 +17,7 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: (github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes') || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
