@@ -14,6 +14,6 @@ const workspaceTables = [
   "condominium_member_transfers",
 ];
 for (const table of workspaceTables) {
-  assert.match(source, new RegExp(`loadWorkspaceRows\\(\\s*"${table}"`), `${table} must use the paginated workspace loader`);
+  assert.match(source, new RegExp('loadWorkspaceRows\\\\(\\\\s*"'+table+'"'), `${table} must use the paginated workspace loader`);
 }
 console.log("Backend state pagination regression checks passed.");
