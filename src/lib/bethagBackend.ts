@@ -86,16 +86,21 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const loadWorkspaceRows = async (
     table: string,
     columns = "*",
-    orderBy = "created_at"
+    orderBy: string | null = "created_at",
+    filters: Array<[string, string]> = []
   ) => {
     const rows: any[] = [];
     for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
+      let query = client
         .from(table)
         .select(columns)
-        .eq("workspace_id", workspaceId)
-        .order(orderBy, { ascending: true })
-        .range(offset, offset + 999);
+        .eq("workspace_id", workspaceId);
+      for (const [column, value] of filters) query = query.eq(column, value);
+      // Stable ordering is mandatory for offset pagination: timestamps can tie,
+      // and unordered tables otherwise risk duplicates or skipped rows between pages.
+      if (orderBy) query = query.order(orderBy, { ascending: true });
+      query = query.order("id", { ascending: true });
+      const { data, error } = await query.range(offset, offset + 999);
       if (error) throw error;
       const batch = data ?? [];
       rows.push(...batch);
@@ -111,6 +116,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         .select("*, condominiums!inner(workspace_id)")
         .eq("condominiums.workspace_id", workspaceId)
         .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
       const batch = data ?? [];
@@ -143,22 +149,22 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   ] = await Promise.all([
     loadWorkspaceCondominiumMembers(),
     loadWorkspaceRows("condominium_units"),
-    supabase.from("documents").select("*").eq("workspace_id", workspaceId),
-    supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
-    supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
-    supabase.from("suppliers").select("*").eq("workspace_id", workspaceId),
-    supabase.from("activities").select("*").eq("workspace_id", workspaceId),
-    supabase.from("communications").select("*").eq("workspace_id", workspaceId),
-    supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
-    supabase.from("condominium_works").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date"),
-    supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date"),
-    supabase.from("condominium_funds").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_expense_allocations").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_tax_obligations").select("*").eq("workspace_id", workspaceId).order("due_date"),
-    supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
+    loadWorkspaceRows("documents", "*", null),
+    loadWorkspaceRows("deadlines", "*", null),
+    loadWorkspaceRows("assemblies", "*", null),
+    loadWorkspaceRows("suppliers", "*", null),
+    loadWorkspaceRows("activities", "*", null),
+    loadWorkspaceRows("communications", "*", null),
+    loadWorkspaceRows("condominium_requests", "*", null),
+    loadWorkspaceRows("condominium_works", "*", "created_at"),
+    loadWorkspaceRows("condominium_fiscal_years", "*", "start_date"),
+    loadWorkspaceRows("condominium_ledger_entries", "*", "entry_date"),
+    loadWorkspaceRows("condominium_funds", "*", "created_at"),
+    loadWorkspaceRows("condominium_expense_allocations", "*", "created_at"),
+    loadWorkspaceRows("condominium_tax_obligations", "*", "due_date"),
+    loadWorkspaceRows("condominium_legal_cases", "*", "created_at"),
+    loadWorkspaceRows("portal_access", "*", "created_at"),
+    loadWorkspaceRows("workspace_members", "*", "created_at", [["role", "collaborator"]]),
     loadWorkspaceRows(
       "condominium_member_transfers",
       "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
