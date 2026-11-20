@@ -13,6 +13,18 @@
       content="BETHAG - Gestione intelligente per amministratori di condominio"
     />
     <title>BETHAG</title>
+    <script>
+      (() => {
+        const url = new URL(window.location.href);
+        const hash = new URLSearchParams(url.hash.slice(1));
+        const isInvite = url.searchParams.get("type") === "invite" || hash.get("type") === "invite";
+        if (!isInvite) return;
+        const target = new URL("./invite-accept.html", url.href);
+        target.search = url.search;
+        target.hash = url.hash;
+        window.location.replace(target.toString());
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
