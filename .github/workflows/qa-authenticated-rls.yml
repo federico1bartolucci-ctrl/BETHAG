@@ -7,6 +7,9 @@ on:
       - "scripts/test-current-qa-authenticated-rls.mjs"
       - ".github/workflows/qa-authenticated-rls.yml"
   workflow_dispatch:
+permissions:
+  contents: read
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false

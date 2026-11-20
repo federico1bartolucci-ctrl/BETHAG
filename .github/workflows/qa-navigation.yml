@@ -20,6 +20,9 @@ on:
       - "src/lib/bethagBackend.ts"
       - ".github/workflows/qa-navigation.yml"
   workflow_dispatch:
+permissions:
+  contents: read
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false

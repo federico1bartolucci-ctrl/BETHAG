@@ -7,6 +7,9 @@ on:
       - "scripts/test-current-qa-transfer.mjs"
       - ".github/workflows/qa-transfer.yml"
   workflow_dispatch:
+permissions:
+  contents: read
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
