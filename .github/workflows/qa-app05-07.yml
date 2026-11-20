@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   app05-07:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
