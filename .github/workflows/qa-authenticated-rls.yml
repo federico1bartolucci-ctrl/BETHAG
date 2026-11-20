@@ -1,18 +1,23 @@
 name: BETHAG authenticated QA RLS and storage acceptance
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-authenticated-rls.mjs"
-      - ".github/workflows/qa-authenticated-rls.yml"
   workflow_dispatch:
+    inputs:
+      confirm_shared_qa_mutation:
+        description: "Confermo che questo workflow può modificare il QA condiviso"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
 
 jobs:
   authenticated-rls:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

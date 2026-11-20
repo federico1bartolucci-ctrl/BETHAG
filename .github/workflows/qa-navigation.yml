@@ -1,30 +1,23 @@
 name: BETHAG QA role navigation acceptance
 # Re-run after 2026-11-02 condominium sync and form diagnostics
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-navigation.mjs"
-      - "scripts/test-current-qa-browser-workflows.mjs"
-      - "src/main.tsx"
-      - "src/lib/bethagBackend.ts"
-      - ".github/workflows/qa-navigation.yml"
-  pull_request:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-navigation.mjs"
-      - "scripts/test-current-qa-browser-workflows.mjs"
-      - "src/main.tsx"
-      - "src/lib/bethagBackend.ts"
-      - ".github/workflows/qa-navigation.yml"
   workflow_dispatch:
+    inputs:
+      confirm_shared_qa_mutation:
+        description: "Confermo che questo workflow può modificare il QA condiviso"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
 jobs:
   navigation:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
