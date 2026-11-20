@@ -1,15 +1,5 @@
 name: BETHAG current QA authenticated smoke
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "src/**"
-      - "public/**"
-      - "scripts/test-browser-current-qa-auth.mjs"
-      - "package.json"
-      - "vite.config.ts"
-      - ".github/workflows/qa-current-auth-smoke.yml"
   workflow_dispatch:
     inputs:
       confirm_shared_qa_mutation:
@@ -31,7 +21,7 @@ concurrency:
 
 jobs:
   authenticated-smoke:
-    if: github.event_name != 'workflow_dispatch' || inputs.confirm_shared_qa_mutation == 'yes'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
