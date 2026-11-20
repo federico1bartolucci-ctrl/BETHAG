@@ -1,0 +1,9 @@
+revoke execute on function public.guard_confirmed_unit_transformation_immutable() from anon, authenticated;
+revoke execute on function public.guard_confirmed_unit_transformation_items_immutable() from anon, authenticated;
+revoke execute on function public.touch_documents_updated_at() from anon, authenticated;
+revoke execute on function public.validate_communication_recipient_scope() from anon, authenticated;
+revoke execute on function public.validate_condominium_allocation_intake_scope() from anon, authenticated;
+revoke execute on function public.validate_condominium_consumption_reading_scope() from anon, authenticated;
+revoke execute on function public.validate_condominium_request_status() from anon, authenticated;
+revoke execute on function public.validate_document_ai_transition() from anon, authenticated;
+revoke execute on function public.validate_document_metadata() from anon, authenticated;

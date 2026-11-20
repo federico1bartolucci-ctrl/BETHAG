@@ -1,0 +1,1 @@
+create unique index if not exists condominium_member_transfers_unit_date_confirmed_uidx on public.condominium_member_transfers (unit_id, transfer_date) where status in ('Confermato','Chiuso');

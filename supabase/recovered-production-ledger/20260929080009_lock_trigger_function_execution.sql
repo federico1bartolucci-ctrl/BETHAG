@@ -1,0 +1,1 @@
+revoke execute on function public.prevent_closed_condominium_accounting() from public; revoke execute on function public.prevent_closed_condominium_accounting() from anon; revoke execute on function public.prevent_closed_condominium_accounting() from authenticated;

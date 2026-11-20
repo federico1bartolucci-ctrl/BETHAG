@@ -1,0 +1,1 @@
+grant execute on function private.claim_first_workspace_admin(uuid) to authenticated;

@@ -1,0 +1,2 @@
+grant execute on function private.save_condominium(uuid, bigint, text, text, text, text, text, jsonb) to authenticated;
+revoke execute on function private.save_condominium(uuid, bigint, text, text, text, text, text, jsonb) from anon;
