@@ -1,6 +1,6 @@
 const SHA = /^[0-9a-f]{40}$/;
 function statusOf(value){return value==="PASS"?"PASS":value?.status;}
-function canonicalEvidence(value){\n if(Array.isArray(value))return value.map(canonicalEvidence);\n if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonicalEvidence(value[key])]));\n return value;\n}\nfunction canonicalEvidence(value){
+function canonicalEvidence(value){
  if(Array.isArray(value))return value.map(canonicalEvidence);
  if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonicalEvidence(value[key])]));
  return value;
