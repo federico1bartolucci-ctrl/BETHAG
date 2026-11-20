@@ -1,13 +1,13 @@
 const SHA = /^[0-9a-f]{40}$/;
 function statusOf(value){return value==="PASS"?"PASS":value?.status;}
-function resolveAliasEvidence(primary, alias){
+function canonicalEvidence(value){\n if(Array.isArray(value))return value.map(canonicalEvidence);\n if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonicalEvidence(value[key])]));\n return value;\n}\nfunction resolveAliasEvidence(primary, alias){
  if(primary===undefined)return alias;
  if(alias===undefined)return primary;
  const primaryStatus=statusOf(primary),aliasStatus=statusOf(alias);
  if(primaryStatus!==aliasStatus)return undefined;
  if(primaryStatus==="PASS"&&primary!== "PASS"&&alias!== "PASS"){
   // For structured acceptance evidence, conflicting duplicate payloads are ambiguous.
-  if(JSON.stringify(primary)!==JSON.stringify(alias))return undefined;
+  if(JSON.stringify(canonicalEvidence(primary))!==JSON.stringify(canonicalEvidence(alias)))return undefined;
  }
  return primary;
 }
