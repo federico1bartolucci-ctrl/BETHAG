@@ -36,3 +36,5 @@ test("CLI exits 2 for EVIDENCE_COMPLETE, not full-success 0",async()=>{
 
 test("conflicting canonical and legacy APP-01 aliases block release",()=>{const f=fixtures();f.qa.application_tests.APP01="FAIL";const r=certifyPostCutover(f);assert.equal(r.status,"NO_GO");assert.ok(r.blockers.some(x=>x.includes("APP-01")&&x.includes("conflicting")));});
 test("conflicting canonical and legacy APP-12 provider evidence blocks release",()=>{const f=fixtures();f.qa.application_tests.APP12={status:"PASS",provider_delivery:"FAIL",provider_delivery_observed:"PASS"};assert.equal(certifyPostCutover(f).status,"NO_GO");});
+
+test("equivalent structured alias evidence is accepted regardless of JSON key order",()=>{const f=fixtures();f.qa.application_tests.APP12={provider_delivery_observed:"PASS",status:"PASS",provider_delivery:"PASS"};assert.equal(certifyPostCutover(f).status,"EVIDENCE_COMPLETE");});
