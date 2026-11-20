@@ -96,7 +96,10 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         .select(columns)
         .eq("workspace_id", workspaceId);
       for (const [column, value] of filters) query = query.eq(column, value);
+      // Stable ordering is mandatory for offset pagination: timestamps can tie,
+      // and unordered tables otherwise risk duplicates or skipped rows between pages.
       if (orderBy) query = query.order(orderBy, { ascending: true });
+      query = query.order("id", { ascending: true });
       const { data, error } = await query.range(offset, offset + 999);
       if (error) throw error;
       const batch = data ?? [];
@@ -113,6 +116,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         .select("*, condominiums!inner(workspace_id)")
         .eq("condominiums.workspace_id", workspaceId)
         .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
       const batch = data ?? [];
