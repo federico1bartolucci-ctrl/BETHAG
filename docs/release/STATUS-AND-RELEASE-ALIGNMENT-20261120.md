@@ -27,7 +27,17 @@ PR #78: [Add explicit confirmation gates for manual QA workflows](https://github
 
 **Non descrivere queste protezioni come attive su `main` finché PR #78 non sarà integrata.**
 
-### QA applicativo
+#
+### Punto 8 — valutatore evidenze post-cutover: NON INTEGRATO
+PR #80: [Add read-only post-cutover release certifier](https://github.com/federico1bartolucci-ctrl/BETHAG/pull/80).
+
+- Branch: `audit/post-cutover-release-certifier-20261120`.
+- Stato: OPEN, DRAFT, non integrata.
+- CI sul commit `2b9c61ae57f1e97d2adca2850212b69485398375`: build SUCCESS, baseline safety SUCCESS, test del certifier SUCCESS; final QA APP-01..APP-15 SKIPPED intenzionalmente.
+- Il tool valuta file JSON forniti dall'operatore e non autentica autonomamente CI, collaudi, snapshot Production, provider delivery o restore. Il risultato positivo è `EVIDENCE_COMPLETE`, non GO; evidenza non autenticata viene esplicitamente indicata.
+- Nessuna modifica QA o Production eseguita.
+
+## QA applicativo
 I precedenti report registrano APP-01..APP-13 e APP-15 PASS. Questo è un risultato storico del collaudo; non equivale a una nuova certificazione completa del commit attuale. APP-14 rimane legato al post-cutover Production.
 
 ### Production / cutover
