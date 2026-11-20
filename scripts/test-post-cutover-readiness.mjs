@@ -10,7 +10,7 @@ function fixtures(){
  production:{status:"READ_ONLY_VERIFIED",release_commit_sha:sha,ledger:{unique:true,rows:267,missing:0,extra:0,name_divergences:0},catalog:{application_relation_count:47},security:{security_advisor_errors:0,health_advisor_errors:0,rls_enabled_count:47},app14:{status:"PASS"}},
  backupRestore:{provider_restore:"PASS"} };
 }
-test("certifier returns GO only for complete matching post-cutover evidence",()=>assert.equal(certifyPostCutover(fixtures()).status,"GO"));
+test("certifier reports evidence complete but does not claim authenticated release GO",()=>assert.equal(certifyPostCutover(fixtures()).status,"EVIDENCE_COMPLETE"));
 test("mismatched source SHA blocks release",()=>{const f=fixtures();f.production.release_commit_sha="b".repeat(40);assert.equal(certifyPostCutover(f).status,"NO_GO");});
 test("missing APP-14 blocks release",()=>{const f=fixtures();f.production.app14.status="PARTIAL";assert.equal(certifyPostCutover(f).status,"NO_GO");});
 test("missing physical restore blocks release even with risk-acceptance declaration",()=>{const f=fixtures();f.backupRestore={};assert.equal(certifyPostCutover(f).status,"NO_GO");f.backupRestore={provider_restore:"NOT_TESTED",residual_risk_accepted:true,risk_approval_reference:"risk-approval-1",approved_by:"owner",approved_at:"2026-11-20T00:00:00Z",approval_scope:"BETHAG_RELEASE_RISK_ACCEPTANCE"};assert.equal(certifyPostCutover(f).status,"NO_GO");});
