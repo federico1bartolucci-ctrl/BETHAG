@@ -11,6 +11,16 @@ on:
       - "vite.config.ts"
       - ".github/workflows/qa-current-auth-smoke.yml"
   workflow_dispatch:
+    inputs:
+      confirm_shared_qa_mutation:
+        description: "Confermo che questo workflow può modificare il QA condiviso"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+
 env:
   VITE_SUPABASE_ENABLE: "true"
   VITE_SUPABASE_URL: "https://jhuyhlzzydcgghrzeexn.supabase.co"
@@ -21,6 +31,7 @@ concurrency:
 
 jobs:
   authenticated-smoke:
+    if: github.event_name != 'workflow_dispatch' || inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
