@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     environment:
       name: bethag-pages
       url: ${{ steps.deployment.outputs.page_url }}
