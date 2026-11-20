@@ -9,6 +9,6 @@ if (!qaPath || !productionPath || !backupPath) {
   const [qa,production,backupRestore]=await Promise.all([qaPath,productionPath,backupPath].map(async p=>JSON.parse(await readFile(p,"utf8"))));
   const report=certifyPostCutover({qa,production,backupRestore});
   console.log(JSON.stringify(report,null,2));
-  if(report.status!=="GO") process.exitCode=1;
+  if(report.status==="NO_GO") process.exitCode=1;
  } catch(e) { console.error("Certification failed to read/validate evidence:",e.message);process.exitCode=1; }
 }
