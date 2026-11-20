@@ -34,6 +34,9 @@ async function getOrCreateUser(role, spec) {
     }), "create " + role);
     found = created.user;
   } else {
+    if (found.user_metadata?.bethag_qa_fixture !== marker) {
+      throw new Error(`Refusing to overwrite existing non-fixture QA account for ${role}: ${email}`);
+    }
     check(await db.auth.admin.updateUserById(found.id, {
       password: process.env[secret], email_confirm: true,
       user_metadata: { ...(found.user_metadata ?? {}), full_name: fullName, bethag_qa_fixture: marker, test_role: role }
