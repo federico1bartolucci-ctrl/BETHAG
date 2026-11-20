@@ -32,7 +32,7 @@ I precedenti report registrano APP-01..APP-13 e APP-15 PASS. Questo è un risult
 
 ### Production / cutover
 - Stato decisionale documentato: **NO-GO**.
-- Le 19 migrazioni incrementali restano da applicare tramite procedura guarded e approvazione riferita allo SHA esatto.
+- La precedente indicazione di “19 migrazioni incrementali da applicare” non è riconciliata con l'evidenza del ledger Production (267 migrazioni uniche, missing 0, extra 0, name divergences 0). Non va considerata un elenco di migrazioni pendenti né autorizzazione ad applicarle: occorre chiarire origine e ambito di quel conteggio prima di qualsiasi procedura.
 - Nessuna migrazione Production, DDL/DML, ledger write o preflight operativo aggiornato è stato eseguito nell'ambito di questo allineamento documentale.
 - Il restore fisico provider-managed resta **NON TESTATO**.
 - Nessuna autorizzazione di merge, deploy o cutover deriva da questo documento.
