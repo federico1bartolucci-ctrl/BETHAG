@@ -10,5 +10,6 @@ if (!qaPath || !productionPath || !backupPath) {
   const report=certifyPostCutover({qa,production,backupRestore});
   console.log(JSON.stringify(report,null,2));
   if(report.status==="NO_GO") process.exitCode=1;
+  else if(report.status==="EVIDENCE_COMPLETE") process.exitCode=2; // Evidence is complete but not independently authenticated; never signal full success.
  } catch(e) { console.error("Certification failed to read/validate evidence:",e.message);process.exitCode=1; }
 }
