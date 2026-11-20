@@ -580,7 +580,19 @@ function AccountingPage({
     setTimeout(() => window.print(), 100);
   }
 
-  async function load() {
+    async function loadAllPages(queryFactory: () => any) {
+    const rows: any[] = [];
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await queryFactory().range(offset, offset + pageSize - 1);
+      if (error) return { data: null, error };
+      const page = data ?? [];
+      rows.push(...page);
+      if (page.length < pageSize) return { data: rows, error: null };
+    }
+  }
+
+async function load() {
     if (!supabase) {
       setError("Supabase non configurato.");
       setLoading(false);
@@ -592,106 +604,26 @@ function AccountingPage({
       await resolveCondominium();
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
-          supabase
-            .from("condominium_fiscal_years")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("start_date", { ascending: false }),
-          supabase
-            .from("condominium_ledger_entries")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("entry_date", { ascending: false }),
-          supabase
-            .from("condominium_funds")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("name"),
-          supabase
-            .from("condominium_tax_obligations")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
-          supabase
-            .from("condominium_legal_cases")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("opened_date", { ascending: false }),
-          supabase
-            .from("condominium_expense_allocations")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
-          supabase
-            .from("condominium_allocation_intakes")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("condominium_units")
-            .select("id, condominium_id, unit_code, building_code, data")
-            .eq("workspace_id", workspaceId)
-            .order("unit_code"),
-          supabase
-            .from("condominium_members")
-            .select("id, condominium_id, unit_id, active, name, email, data")
-            .order("created_at"),
-          supabase
-            .from("condominium_millesimal_tables")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("name"),
-          supabase
-            .from("condominium_millesimal_values")
-            .select("*")
-            .eq("workspace_id", workspaceId),
-          supabase
-            .from("condominium_consumption_readings")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("period_end", { ascending:false }),
-          supabase
-            .from("condominium_allocation_rules")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("priority", { ascending:false }),
-          supabase
-            .from("condominium_installments")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
-          supabase
-            .from("condominium_budgets")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("category"),
-          supabase
-            .from("condominium_fiscal_carryovers")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("created_at"),
-          supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
-          supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
+          loadAllPages(() => supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_funds").select("*").eq("workspace_id", workspaceId).order("name").order("id")),
+          loadAllPages(() => supabase.from("condominium_tax_obligations").select("*").eq("workspace_id", workspaceId).order("due_date").order("id")),
+          loadAllPages(() => supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("opened_date", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_expense_allocations").select("*").eq("workspace_id", workspaceId).order("due_date").order("id")),
+          loadAllPages(() => supabase.from("condominium_allocation_intakes").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_units").select("id, condominium_id, unit_code, building_code, data").eq("workspace_id", workspaceId).order("unit_code").order("id")),
+          loadAllPages(() => supabase.from("condominium_members").select("id, condominium_id, unit_id, active, name, email, data").order("created_at").order("id")),
+          loadAllPages(() => supabase.from("condominium_millesimal_tables").select("*").eq("workspace_id", workspaceId).order("name").order("id")),
+          loadAllPages(() => supabase.from("condominium_millesimal_values").select("*").eq("workspace_id", workspaceId).order("id")),
+          loadAllPages(() => supabase.from("condominium_consumption_readings").select("*").eq("workspace_id", workspaceId).order("period_end", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_allocation_rules").select("*").eq("workspace_id", workspaceId).order("priority", { ascending: false }).order("id")),
+          loadAllPages(() => supabase.from("condominium_installments").select("*").eq("workspace_id", workspaceId).order("due_date").order("id")),
+          loadAllPages(() => supabase.from("condominium_budgets").select("*").eq("workspace_id", workspaceId).order("category").order("id")),
+          loadAllPages(() => supabase.from("condominium_fiscal_carryovers").select("*").eq("workspace_id", workspaceId).order("created_at").order("id")),
+          loadAllPages(() => supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId).order("id")),
+          loadAllPages(() => supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).order("id")),
         ]);
-      for (const result of [
-        yearsResult,
-        ledgerResult,
-        fundsResult,
-        taxResult,
-        caseResult,
-        allocationsResult,
-        unitsResult,
-        membersResult,
-        millesimalTablesResult,
-        millesimalValuesResult,
-        consumptionReadingsResult,
-        allocationRulesResult,
-        installmentsResult,
-        budgetsResult,
-        carryoversResult,
-        settingsResult,
-        carryoverCompensationsResult,
-      ]) {
+      for (const result of [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult]) {
         if (result.error) throw result.error;
       }
       setFiscalYears((yearsResult.data ?? []) as FiscalYear[]);
@@ -711,7 +643,7 @@ function AccountingPage({
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
       setCarryoverCompensations((carryoverCompensationsResult.data ?? []) as CarryoverCompensation[]);
-      const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
+      const settingsRow = (settingsResult.data ?? []).find((row: any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
       if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
@@ -719,7 +651,6 @@ function AccountingPage({
       setLoading(false);
     }
   }
-
   useEffect(() => {
     void load();
   }, [workspaceId, selectedCondominiumId]);
