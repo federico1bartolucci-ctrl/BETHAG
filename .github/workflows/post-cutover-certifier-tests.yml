@@ -1,0 +1,29 @@
+name: Post-cutover release certifier tests
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/lib/post-cutover-readiness.mjs
+      - scripts/test-post-cutover-readiness.mjs
+      - scripts/verify-post-cutover-release-readiness.mjs
+      - .github/workflows/post-cutover-certifier-tests.yml
+  push:
+    branches: [audit/post-cutover-release-certifier-20261120]
+    paths:
+      - scripts/lib/post-cutover-readiness.mjs
+      - scripts/test-post-cutover-readiness.mjs
+      - scripts/verify-post-cutover-release-readiness.mjs
+      - .github/workflows/post-cutover-certifier-tests.yml
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test scripts/test-post-cutover-readiness.mjs
+      - run: node --check scripts/verify-post-cutover-release-readiness.mjs
+      - run: node --check scripts/lib/post-cutover-readiness.mjs
