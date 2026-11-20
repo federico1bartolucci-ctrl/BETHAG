@@ -7,11 +7,21 @@ on:
       - "scripts/test-current-qa-app05-07.mjs"
       - ".github/workflows/qa-app05-07.yml"
   workflow_dispatch:
+    inputs:
+      confirm_shared_qa_mutation:
+        description: "Confermo che questo workflow può modificare il QA condiviso"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
 jobs:
   app05-07:
+    if: github.event_name != 'workflow_dispatch' || inputs.confirm_shared_qa_mutation == 'yes'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
