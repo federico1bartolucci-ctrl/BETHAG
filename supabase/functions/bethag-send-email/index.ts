@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
-          headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json`, "Idempotency-Key": `bethag-communication-recipient-${recipient.id}` },
           body: JSON.stringify({
             from: fromEmail, to: recipient.email,
             subject: communication.title.trim(), text: (communication.body ?? "").trim(),
