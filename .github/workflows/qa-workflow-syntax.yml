@@ -1,0 +1,22 @@
+name: BETHAG QA workflow syntax validation
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bethag-workflow-static-validation
+  cancel-in-progress: false
+jobs:
+  validate-workflow-yaml:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate YAML syntax of GitHub Actions workflows
+        run: |
+          ruby -e 'require "yaml"; Dir.glob(".github/workflows/**/*.{yml,yaml}").sort.each { |f| YAML.load_file(f, aliases: true); puts "YAML PASS: #{f}" }'
