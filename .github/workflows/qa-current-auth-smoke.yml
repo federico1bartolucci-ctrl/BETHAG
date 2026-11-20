@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   authenticated-smoke:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
