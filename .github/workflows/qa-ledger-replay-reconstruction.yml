@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   qa-ledger-replay:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -38,10 +38,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Install Node dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Replay exact QA ledger sequence on disposable PostgreSQL 17
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bethag_qa_replay
