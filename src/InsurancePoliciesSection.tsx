@@ -147,7 +147,7 @@ export default function InsurancePoliciesSection({
         notes: form.notes.trim(),
       };
       const query = editing
-        ? supabase.from("condominium_insurance_policies").update(payload).eq("id", editing.id)
+        ? supabase.from("condominium_insurance_policies").update(payload).eq("id", editing.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId)
         : supabase.from("condominium_insurance_policies").insert(payload);
       const { error: saveError } = await query;
       if (saveError) throw saveError;
@@ -167,7 +167,9 @@ export default function InsurancePoliciesSection({
       const { error: deleteError } = await supabase
         .from("condominium_insurance_policies")
         .delete()
-        .eq("id", policy.id);
+        .eq("id", policy.id)
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", dbCondominiumId);
       if (deleteError) throw deleteError;
       await load();
     } catch (e) {
