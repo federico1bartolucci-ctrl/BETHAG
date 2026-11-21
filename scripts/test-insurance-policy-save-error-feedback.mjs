@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
+const anchor = source.indexOf("const savePolicy = async");
+const end = source.indexOf("const editPolicy =", anchor);
+assert.ok(anchor >= 0 && end > anchor, "insurance save handler must exist");
+const section = source.slice(anchor, end);
+assert.match(section, /console\.error\("BETHAG insurance policy save error", result\.error\)/, "save error must be logged");
+assert.match(section, /Impossibile salvare la polizza assicurativa: \\${result\.error\.message \|\| "errore del database"\\}/, "user must receive a useful database error");
+assert.ok(section.indexOf("alert(") < section.indexOf("resetForm()"), "failure must not clear the form");
+console.log("Insurance policy save error feedback regression passed.");
