@@ -1,0 +1,10 @@
+import {readFileSync} from "node:fs";
+import assert from "node:assert/strict";
+const source=readFileSync(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function openWorkDocuments");
+const end=source.indexOf("async function saveWorkDocuments",start+20);
+assert.ok(start>=0&&end>start,"openWorkDocuments function found");
+const fn=source.slice(start,end);
+assert.ok(fn.includes('setError(error?.message||"Impossibile caricare i documenti collegati.")'),"backend error is exposed with fallback");
+assert.ok(!fn.includes('setError("ERRORE")'),"no generic error message");
+console.log("Work document load error feedback regression checks passed.");
