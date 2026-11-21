@@ -44,10 +44,11 @@ const noRowError = await updateWorkProgressPercentOrReport(noRow.client, "worksp
 assert.ok(noRowError instanceof Error);
 assert.match(noRowError.message, /Intervento non trovato o non aggiornabile/);
 
-const dbFailure = mockClient({ data: null, error: new Error("permission denied") });
+const permissionError = new Error("permission denied");
+const dbFailure = mockClient({ data: null, error: permissionError });
 assert.equal(
   await updateWorkProgressPercentOrReport(dbFailure.client, "workspace-1", "work-1", 60),
-  dbFailure.calls[0]?.error ?? null
+  permissionError
 );
 assert.equal(dbFailure.calls.length, 1);
 console.log("Work progress-percent update failure regression checks passed.");
