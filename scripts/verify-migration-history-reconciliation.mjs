@@ -39,7 +39,7 @@ const expectedForwardAclCandidates = [
   "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
   "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
 ];
-assert.equal(canonicalFiles.length, 28, "Canonical migration chain unexpectedly changed; re-review snapshot before continuing.");
+assert.equal(canonicalFiles.length, 29, "Canonical migration chain unexpectedly changed; re-review snapshot before continuing.");
 assert.deepEqual(
   canonicalFiles.filter((name) => expectedForwardAclCandidates.includes(name)),
   expectedForwardAclCandidates,
