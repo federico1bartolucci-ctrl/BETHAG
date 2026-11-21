@@ -5,7 +5,7 @@ import { loadPaginatedWorkspaceRows } from "../src/lib/paginatedWorkspaceRows.ts
 const source = await readFile("src/main.tsx", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const start = source.indexOf("const exportWorkspaceBackup = async () => {");
-const end = source.indexOf("/* =========================================================\n     CONDOMINI", start);
+const end = source.indexOf("/* =======================================================\n     CONDOMINI", start);
 assert.ok(start >= 0 && end > start, "workspace backup export must exist");
 const exportFn = source.slice(start, end);
 assert.match(exportFn, /const orderBy = table === "workspace_members" \? "user_id" : "id"/, "backup pagination must use workspace_members composite-key order");
