@@ -721,14 +721,14 @@ async function syncBackendStateNow(
   if (desiredUnits.length) {
     const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
 
-    const existingResult = await supabase
-      .from("condominium_units")
-      .select("id, condominium_id, unit_code")
-      .in("condominium_id", unitCondominiums);
-    if (existingResult.error) throw existingResult.error;
+    const existingUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      unitCondominiums,
+      "id, condominium_id, unit_code",
+    );
 
     const existingKeys = new Set(
-      (existingResult.data ?? []).map((unit: any) =>
+      (existingUnits ?? []).map((unit: any) =>
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
       )
     );
@@ -756,14 +756,14 @@ async function syncBackendStateNow(
       }
     }
 
-    const persistedResult = await supabase
-      .from("condominium_units")
-      .select("id, condominium_id, unit_code")
-      .in("condominium_id", unitCondominiums);
-    if (persistedResult.error) throw persistedResult.error;
+    const persistedUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      unitCondominiums,
+      "id, condominium_id, unit_code",
+    );
 
     const persistedKeys = new Set(
-      (persistedResult.data ?? []).map((unit: any) =>
+      (persistedUnits ?? []).map((unit: any) =>
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
       )
     );
@@ -775,7 +775,7 @@ async function syncBackendStateNow(
     if (stillMissing.length && missingUnitsInsertError) throw missingUnitsInsertError;
     if (stillMissing.length) throw new Error("Impossibile sincronizzare tutte le unità condominiali richieste.");
 
-    (persistedResult.data ?? []).forEach((unit: any) => {
+    (persistedUnits ?? []).forEach((unit: any) => {
       unitRowsByKey.set(
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
         unit
