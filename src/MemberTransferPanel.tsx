@@ -380,6 +380,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         }} required /></label>
         <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>        <label>Modalità trasferimento<select value={transferScope} onChange={e=>{
           const next = e.target.value as "whole_property" | "ownership_share";
+          // A scope change invalidates any preview started under the previous scope.
+          previewRequestId.current += 1;
           setTransferScope(next); setPreview(null); setSnapshot({}); setError("");
           if (next === "whole_property" && currentUnitOwners.length) setOutgoingId(currentUnitOwners[0].id);
           if (next === "ownership_share" && currentUnitOwners.length) {
