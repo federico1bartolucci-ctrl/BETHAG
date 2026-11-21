@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { parseBethagAmount } from "./lib/parseBethagAmount.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -4582,13 +4583,13 @@ function App() {
         const rows = rawRows.map((row: any) => {
           const unitCode = String(row.unitCode ?? "").trim();
           const matched = (dbUnits ?? []).find((unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase());
-          const amount = Number(String(row.amount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+          const amount = parseBethagAmount(row.amount);
           const millesimi = Number(String(row.millesimi ?? "").replace(",", "."));
           return { unit_id: matched?.id ?? "", unit_code: unitCode, description: row.description ?? "", amount: Number.isFinite(amount) ? amount : 0, millesimi: Number.isFinite(millesimi) ? millesimi : 0, owner: row.owner ?? "", matched: Boolean(matched) };
         });
 
         const validationErrors = rows.filter((row: any) => !row.unit_id).map((row: any) => "Unità non trovata in BETHAG: " + (row.unit_code || "senza codice"));
-        const expenseAmount = Number(String(extracted.expenseAmount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+        const expenseAmount = parseBethagAmount(extracted.expenseAmount);
 
         const { error } = await supabase.from("condominium_allocation_intakes").insert({
           workspace_id: workspaceId, condominium_id: condominium.id, source: "AI", status: "Da verificare",
@@ -4605,7 +4606,7 @@ function App() {
       }
 
       if (document.aiDocumentType === "Fattura" && extracted) {
-        const parseAmount = (value: any) => Number(String(value ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
+        const parseAmount = parseBethagAmount;
         const normalize = (value: any) => String(value ?? "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
         const supplierName = String(extracted.supplier ?? "").trim();
         const amount = parseAmount(extracted.expenseAmount ?? extracted.amount ?? extracted.totalAmount);
