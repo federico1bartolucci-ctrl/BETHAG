@@ -19,6 +19,13 @@ const unitSaveSection = source.slice(unitSaveStart, unitSaveEnd);
 assert.match(unitSaveSection, /loadCondominiumUnitsForLookup\(supabase, condominium\.id\)/, "unit save must use the paginated existing-unit lookup");
 assert.doesNotMatch(unitSaveSection, /\.from\("condominium_units"\)\s*\.select\("id, unit_code, building_code, lifecycle_status"\)\s*\.eq\("condominium_id", condominium\.id\)/, "unit save must not retain the capped existing-unit lookup");
 
+const deleteMemberStart = source.indexOf("export async function deleteCondominiumMember(");
+const deleteMemberEnd = source.indexOf("\nexport async function ", deleteMemberStart + 1);
+assert.ok(deleteMemberStart >= 0 && deleteMemberEnd > deleteMemberStart, "deleteCondominiumMember function must exist");
+const deleteMemberSection = source.slice(deleteMemberStart, deleteMemberEnd);
+assert.match(deleteMemberSection, /loadCondominiumUnitsForLookup\(supabase, condominium\.id, "id, data", workspaceId\)/, "member deletion must use the paginated owner-cleanup lookup");
+assert.doesNotMatch(deleteMemberSection, /\.from\("condominium_units"\)\s*\.select\("id, data"\)\s*\.eq\("workspace_id", workspaceId\)\s*\.eq\("condominium_id", condominium\.id\)/, "member deletion must not retain the capped owner-cleanup query");
+
 function mockClient(pages, errorOffset = null) {
   const requests = [];
   const client = {
@@ -63,6 +70,14 @@ assert.equal(requests[0].table, "condominium_units");
 assert.equal(requests[0].columns, "id, unit_code, building_code, lifecycle_status");
 assert.deepEqual(requests[0].filters, [["condominium_id", "condominium-1"]], "lookup must preserve condominium scope");
 assert.deepEqual(requests[0].orders, [["unit_code", { ascending: true }], ["id", { ascending: true }]], "pagination must use stable ordering");
+
+
+const ownerCleanup = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
+const ownerCleanupRows = await loadCondominiumUnitsForLookup(ownerCleanup.client, "condominium-1", "id, data", "workspace-1");
+assert.equal(ownerCleanupRows.length, 1002, "owner cleanup must visit units beyond the first 1,000");
+assert.equal(ownerCleanup.requests[0].columns, "id, data");
+assert.deepEqual(ownerCleanup.requests[0].filters, [["condominium_id", "condominium-1"], ["workspace_id", "workspace-1"]], "owner cleanup must preserve workspace and condominium scope");
+assert.deepEqual(ownerCleanup.requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999]]);
 
 const failing = mockClient(new Map([[0, firstPage]]), 1000);
 await assert.rejects(
