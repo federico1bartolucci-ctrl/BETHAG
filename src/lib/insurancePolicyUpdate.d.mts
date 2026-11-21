@@ -1,1 +1,1 @@
-export declare function requireInsurancePolicyUpdateResult(query: any): Promise<{ id: string }>;
+export declare function requireInsurancePolicyMutationResult(query: any, action: "aggiornata" | "cancellata"): Promise<{ id: string }>;
