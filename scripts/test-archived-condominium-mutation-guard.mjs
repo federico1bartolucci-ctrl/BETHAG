@@ -14,11 +14,6 @@ await db.exec(`
   INSERT INTO records VALUES (3, '00000000-0000-0000-0000-000000000002', 'archived seed');
 `);
 await db.exec(migrationSql);
-await db.exec(`
-  CREATE TRIGGER records_archive_guard BEFORE INSERT OR UPDATE OR DELETE ON records
-  FOR EACH ROW EXECUTE FUNCTION prevent_archived_condominium_mutation();
-`);
-
 const active = "00000000-0000-0000-0000-000000000001";
 const archived = "00000000-0000-0000-0000-000000000002";
 await db.query("INSERT INTO records VALUES (1, $1, 'active')", [active]);
