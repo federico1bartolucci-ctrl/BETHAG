@@ -17,3 +17,10 @@ export async function loadCondominiumUnitsForLookup(client: any, condominiumId: 
   }
   return rows;
 }
+
+export function removeOwnerMemberIdFromUnitData(unitData: any, legacyId: number) {
+  const currentData = unitData && typeof unitData === "object" ? unitData : {};
+  const currentOwners = Array.isArray(currentData.ownerMemberIds) ? currentData.ownerMemberIds : [];
+  const nextOwners = currentOwners.filter((ownerId: unknown) => String(ownerId) !== String(legacyId));
+  return { currentData, nextOwners, changed: nextOwners.length !== currentOwners.length };
+}
