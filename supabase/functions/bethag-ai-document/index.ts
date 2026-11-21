@@ -1,9 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { deleteTemporaryOpenAIFile } from "../_shared/openai-file-cleanup.js";
 const corsHeaders={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["Riparto spese","Fattura","Verbale","Convocazione","Regolamento","Altro"]},summary:{type:"string"},confidence:{type:"number"},expenseAmount:{type:"string"},supplier:{type:"string"},supplierVatNumber:{type:"string"},invoiceNumber:{type:"string"},documentDate:{type:"string"},workReference:{type:"string"},condominiumReferences:{type:"array",items:{type:"string"}},unitRows:{type:"array",items:{type:"object",additionalProperties:false,properties:{unitCode:{type:"string"},description:{type:"string"},amount:{type:"string"},millesimi:{type:"string"},owner:{type:"string"}},required:["unitCode","description","amount","millesimi","owner"]}},warnings:{type:"array",items:{type:"string"}}},required:["documentType","summary","confidence","expenseAmount","supplier","supplierVatNumber","invoiceNumber","documentDate","workReference","condominiumReferences","unitRows","warnings"]};
 const json=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,"Content-Type":"application/json"}});
-async function deleteOpenAIFile(key:string,id:string){try{await fetch("https://api.openai.com/v1/files/"+encodeURIComponent(id),{method:"DELETE",headers:{Authorization:"Bearer "+key}})}catch(_){}}
+
 Deno.serve(async(req)=>{
 if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
 if(req.method!=="POST")return json({error:"Metodo non consentito."},405);
@@ -28,6 +29,9 @@ content.push(mime.startsWith("image/")?{type:"input_image",file_id:String(upload
 }
 const resp=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+openai,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-6-luna",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"bethag_document_analysis",strict:true,schema}}})});
 const data=await resp.json();if(!resp.ok)return json({error:data?.error?.message??"Analisi AI non riuscita."},502);const out=data?.output_text??"";if(!out)return json({error:"L'AI non ha restituito dati."},502);return json({draft:JSON.parse(out)});
-}finally{await Promise.all(openAIFileIds.map(id=>deleteOpenAIFile(openai,id)));}
+}finally{await Promise.all(openAIFileIds.map(async (id) => {
+const cleanup = await deleteTemporaryOpenAIFile(fetch, openai, id);
+if (!cleanup.ok) console.error("BETHAG AI document temporary-file cleanup failed", {status:cleanup.status,attempts:cleanup.attempts,error:cleanup.error??null});
+}));}
 }catch(e){console.error(e);return json({error:e instanceof Error?e.message:"Errore interno."},500);}
 });
