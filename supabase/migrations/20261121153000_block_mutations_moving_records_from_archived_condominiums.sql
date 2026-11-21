@@ -59,9 +59,13 @@ BEGIN
   FOR target_table IN
     SELECT DISTINCT c.table_name
     FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema
+     AND t.table_name = c.table_name
     WHERE c.table_schema = 'public'
       AND c.column_name = 'condominium_id'
       AND c.table_name <> 'condominiums'
+      AND t.table_type = 'BASE TABLE'
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS archived_condominium_mutation_guard ON public.%I', target_table);
     EXECUTE format(
