@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/MemberTransferPanel.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function closeTransfer(");
+const end = source.indexOf("\n  }\n\n  if (!isAdministrator)", start);
+assert.ok(start >= 0 && end > start, "closeTransfer handler must exist");
+const section = source.slice(start, end);
+assert.match(section, /rawOpenTotal\s*=\s*financial\.open_total/, "closure must inspect the raw balance field");
+assert.match(section, /rawOpenTotal === null \|\| rawOpenTotal === undefined \|\| rawOpenTotal === "" \? NaN/, "missing or empty balance must be invalid");
+assert.match(section, /if \(!Number\.isFinite\(openTotal\)\)/, "invalid/non-numeric balance must fail closed");
+assert.match(section, /Ripeti la verifica prima di chiudere la posizione/, "invalid balance must show actionable error");
+const closeRpc=section.indexOf('rpc("close_condominium_member_transfer"');
+const guard=section.indexOf("if (!Number.isFinite(openTotal))");
+assert.ok(guard>=0 && closeRpc>guard, "invalid balance guard must run before closure RPC");
+console.log("Transfer closure invalid-balance guard regression passed.");
