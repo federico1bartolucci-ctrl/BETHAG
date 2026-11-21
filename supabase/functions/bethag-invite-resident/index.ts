@@ -238,14 +238,19 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "workspace_id,legacy_id" });
     if (portalError) throw portalError;
 
+    let metadataWarning: string | null = null;
     if (invited) {
-      await adminClient.auth.admin.updateUserById(targetUserId, {
+      const { error: metadataError } = await adminClient.auth.admin.updateUserById(targetUserId, {
         user_metadata: {
           full_name: name,
           bethag_role: "resident",
           workspace_id: workspaceId,
         },
       });
+      if (metadataError) {
+        metadataWarning = metadataError.message || "Metadati dell'account non aggiornati.";
+        console.error("bethag-invite-resident metadata update failed after portal access was saved", targetUserId, metadataError);
+      }
     }
 
     return json({
@@ -253,6 +258,7 @@ Deno.serve(async (req: Request) => {
       userId: targetUserId,
       invited,
       portalAccess: true,
+      metadataWarning,
     });
   } catch (error) {
     console.error("bethag-invite-resident", error);
