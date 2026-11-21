@@ -53,7 +53,7 @@ assert.equal(requests[0].table, "condominium_works");
 assert.deepEqual(requests[0].filters, [["workspace_id", "workspace-1"]]);
 assert.deepEqual(requests[0].orders, [["start_date", { ascending: true }], ["id", { ascending: true }]], "page ordering must be stable");
 
-const shortMock = mockClient(new Map([[0, [{ id: "only" }]]));
+const shortMock = mockClient(new Map([[0, [{ id: "only" }]]]));
 assert.deepEqual(await loadPaginatedWorkspaceRows(shortMock.client, "workspace-1", "documents", null), [{ id: "only" }]);
 assert.equal(shortMock.requests.length, 1, "short final page must stop pagination");
 
