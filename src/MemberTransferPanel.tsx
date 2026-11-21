@@ -328,6 +328,10 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         setError(`Chiusura non consentita: risultano ancora ${openTotal.toFixed(2)} € di posizioni contabili aperte (rate ${Number(financial.open_installments || 0).toFixed(2)} €, spese ${Number(financial.open_allocations || 0).toFixed(2)} €, riporti cedente ${Number(financial.open_member_carryovers || 0).toFixed(2)} €, riporti unità ${Number(financial.open_unit_carryovers || 0).toFixed(2)} €).`);
         return;
       }
+      if (openTotal < -0.005) {
+        setError(`Chiusura non consentita: il controllo contabile ha restituito un saldo negativo anomalo (${openTotal.toFixed(2)} €). Verifica la posizione prima di chiuderla.`);
+        return;
+      }
       const { error: e } = await supabase.rpc("close_condominium_member_transfer", { p_transfer_id: id });
       if (e) throw e;
       setMessage("Trasferimento chiuso e posizione del cedente archiviata.");

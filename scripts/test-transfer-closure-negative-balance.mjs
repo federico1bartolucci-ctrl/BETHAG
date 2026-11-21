@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/MemberTransferPanel.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function closeTransfer(");
+const end = source.indexOf("\n  }\n\n  if (!isAdministrator)", start);
+assert.ok(start >= 0 && end > start, "closeTransfer handler must exist");
+const section = source.slice(start, end);
+assert.match(section, /if \(openTotal > 0\.005\)/, "positive open balances must block closure");
+assert.match(section, /if \(openTotal < -0\.005\)/, "negative anomalous balances must also block closure");
+assert.match(section, /saldo negativo anomalo/, "negative anomaly must show clear feedback");
+const closeRpc=section.indexOf('rpc("close_condominium_member_transfer"');
+const negativeGuard=section.indexOf("if (openTotal < -0.005)");
+assert.ok(negativeGuard>=0 && closeRpc>negativeGuard, "negative-balance guard must run before closure RPC");
+console.log("Transfer closure negative-balance guard regression passed.");
