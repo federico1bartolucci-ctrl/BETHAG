@@ -1412,9 +1412,9 @@ function AccountingPage({
         amount: Number(r.amount ?? r.importo ?? 0)
       };
     }).filter((r:any) => r.unit_id && scopedUnits.some(u => u.id === r.unit_id)) : scopedUnits
+      .map(u => ({ unit_id:u.id, millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===table.id && v.unit_id===u.id)?.value || 0), amount:0 }));
     const duplicateAIUnitIds = sourceRows.filter((r:any) => r.unit_id).map((r:any) => r.unit_id).filter((id:any, index:number, ids:any[]) => ids.indexOf(id) !== index);
     if (duplicateAIUnitIds.length) { setError("Il documento contiene più righe per la stessa unità. Correggi o unifica le righe prima di generare la proposta."); return; }
-      .map(u => ({ unit_id:u.id, millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===table.id && v.unit_id===u.id)?.value || 0), amount:0 }));
 
     const totalMillesimi = sourceRows.reduce((sum:any,r:any)=>sum + Math.max(0, Number(r.millesimi || 0)), 0);
     const scopeMismatch = extractedTotalMillesimi > 0 && Math.abs(extractedTotalMillesimi - totalMillesimi) > 0.01;
