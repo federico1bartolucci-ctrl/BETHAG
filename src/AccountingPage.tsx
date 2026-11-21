@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 
@@ -213,6 +213,7 @@ function AccountingPage({
     status: "Da pagare",
     notes: "",
   });
+  const loadRequestRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -537,9 +538,9 @@ function AccountingPage({
     return { income, expenses, balance: income - expenses, due };
   }, [scopedLedger]);
 
-  async function resolveCondominium() {
+  async function resolveCondominium(requestId?: number) {
     if (!supabase || selectedCondominiumId === "all") {
-      setDbCondominiumId(null);
+      if (requestId === undefined || requestId === loadRequestRef.current) setDbCondominiumId(null);
       return;
     }
     const { data, error: readError } = await supabase
@@ -549,7 +550,7 @@ function AccountingPage({
       .eq("legacy_id", selectedCondominiumId)
       .maybeSingle();
     if (readError) throw readError;
-    setDbCondominiumId(data?.id ?? null);
+    if (requestId === undefined || requestId === loadRequestRef.current) setDbCondominiumId(data?.id ?? null);
   }
 
   const rendicontoPrintStyles = `
@@ -581,6 +582,7 @@ function AccountingPage({
   }
 
   async function load() {
+    const requestId = ++loadRequestRef.current;
     if (!supabase) {
       setError("Supabase non configurato.");
       setLoading(false);
@@ -589,7 +591,7 @@ function AccountingPage({
     setLoading(true);
     setError("");
     try {
-      await resolveCondominium();
+      await resolveCondominium(requestId);
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
@@ -673,6 +675,7 @@ function AccountingPage({
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
           supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
         ]);
+      if (requestId !== loadRequestRef.current) return;
       for (const result of [
         yearsResult,
         ledgerResult,
@@ -714,14 +717,15 @@ function AccountingPage({
       const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
       if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
-      setError(e?.message || "Errore nel caricamento della contabilità.");
+      if (requestId === loadRequestRef.current) setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     void load();
+    return () => { loadRequestRef.current += 1; };
   }, [workspaceId, selectedCondominiumId]);
 
   async function compensateCarryover() {
