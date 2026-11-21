@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("src/RegisterPage.tsx", "utf8");
+const start = source.indexOf("async function saveWorkExpense");
+assert.notEqual(start, -1, "saveWorkExpense handler must exist");
+const end = source.indexOf("async function openWorkHistory", start);
+assert.notEqual(end, -1, "handler boundary must exist");
+const handler = source.slice(start, end);
+assert.match(handler, /const expenseAmount=Number\(expenseForm\.amount\)/);
+assert.match(handler, /!Number\.isFinite\(expenseAmount\)\|\|expenseAmount<=0/);
+assert.match(handler, /setError\("L'importo della spesa deve essere maggiore di zero\."\);return;/);
+assert.ok(handler.indexOf("expenseAmount<=0") < handler.indexOf('from("condominium_ledger_entries").insert'), "validation must precede ledger insert");
+assert.match(handler, /amount:expenseAmount,payment_status:expenseForm\.payment_status/);
+console.log("Work expense positive-amount regression passed.");
