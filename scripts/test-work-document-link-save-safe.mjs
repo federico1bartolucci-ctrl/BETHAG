@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function saveWorkDocuments");
+const end=source.indexOf("async function registerProgressPayment",start);
+assert.ok(start>=0&&end>start,"work-document save handler exists");
+const section=source.slice(start,end);
+assert.match(section,/select\("document_id"\)/,"must read current links before applying changes");
+assert.match(section,/if\(readError\)throw readError/,"read failure must abort without destructive changes");
+assert.match(section,/const toAdd=selectedIds\.filter\(id=>!existingIds\.includes\(id\)\)/,"only missing links are inserted");
+assert.match(section,/if\(rows\.length\)[\s\S]*insert\(rows\)/,"insert new links before removing existing");
+assert.match(section,/const toRemove=existingIds\.filter\(id=>!selectedIds\.includes\(id\)\)/,"only deselected links are removed");
+assert.match(section,/if\(deleteError\)throw new Error\("Nuovi collegamenti salvati, ma non è stato possibile rimuovere/,"delete failure must surface partial-success state");
+assert.ok(section.indexOf("insert(rows)")<section.indexOf("delete()"),"inserts must happen before deleting old links");
+console.log("Work document link save safety regression passed.");
