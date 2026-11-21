@@ -9,7 +9,7 @@ const end = source.indexOf("\nexport async function ", start + 1);
 assert.ok(start >= 0 && end > start, "saveCondominiumMember function must exist");
 const section = source.slice(start, end);
 assert.match(section, /loadCondominiumUnitsForMember\(supabase, condominium\.id\)/, "member save must use the paginated unit lookup");
-assert.doesNotMatch(section, /\.from\("condominium_units"\)\s*\.select\("id, unit_code, data"\)\s*\.eq\("condominium_id", condominium\.id"\)/, "member save must not retain the capped unit lookup");
+assert.doesNotMatch(section, /\\.from\\("condominium_units"\\)\\s*\\.select\\("id, unit_code, data"\\)\\s*\\.eq\\("condominium_id", condominium\\.id\\)/, "member save must not retain the capped unit lookup");
 assert.ok(packageJson.scripts.test.includes("test-condominium-member-unit-lookup-pagination.mjs"), "regression test must be wired into npm test");
 
 function mockClient(pages, errorOffset = null) {
