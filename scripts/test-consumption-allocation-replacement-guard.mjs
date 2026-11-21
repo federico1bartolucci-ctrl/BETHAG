@@ -5,7 +5,7 @@ const migrationPath = "supabase/migrations/20261121120000_guard_consumption_allo
 const sql = readFileSync(migrationPath, "utf8");
 const functionBody = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.generate_consumption_allocations"));
 
-const guardIndex = functionBody.indexOf("coalesce(allocation_basis,'') not like 'Consumo - %'");
+const guardIndex = functionBody.indexOf("allocation_basis is distinct from ('Consumo - '||trim(p_service_type))");
 const deleteIndex = functionBody.indexOf("delete from public.condominium_expense_allocations");
 
 assert.notEqual(guardIndex, -1, "replacement guard must reject non-consumption allocation rows");
