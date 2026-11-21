@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { loadAllPages, loadActiveAllocationUnitMembers } from "./lib/accountingPagination";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -580,18 +581,6 @@ function AccountingPage({
     setTimeout(() => window.print(), 100);
   }
 
-    async function loadAllPages(queryFactory: () => any) {
-    const rows: any[] = [];
-    const pageSize = 1000;
-    for (let offset = 0; ; offset += pageSize) {
-      const { data, error } = await queryFactory().range(offset, offset + pageSize - 1);
-      if (error) return { data: null, error };
-      const page = data ?? [];
-      rows.push(...page);
-      if (page.length < pageSize) return { data: rows, error: null };
-    }
-  }
-
 async function load() {
     if (!supabase) {
       setError("Supabase non configurato.");
@@ -1148,12 +1137,11 @@ async function load() {
     if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
     if (allocationInstallmentForm.unifyByMember) {
       const unitIds = [...new Set(selectedAllocations.map(a => a.unit_id).filter(Boolean))];
-      const { data: unitMembers, error: unitMembersError } = await supabase
-        .from("condominium_members")
-        .select("id,unit_id,role,active,data")
-        .eq("condominium_id", dbCondominiumId)
-        .eq("active", true)
-        .in("unit_id", unitIds);
+      const { data: unitMembers, error: unitMembersError } = await loadActiveAllocationUnitMembers(
+        supabase,
+        dbCondominiumId,
+        unitIds,
+      );
       if (unitMembersError) throw unitMembersError;
       const byUnit = new Map<string, any[]>();
       for (const member of unitMembers || []) {
