@@ -6084,8 +6084,9 @@ function App() {
 
       const sentCount = Number(data.sent ?? data.recipientCount ?? data.recipients ?? 0);
       const failedCount = Number(data.failed ?? 0);
-      if (failedCount > 0) {
-        alert(`Invio parziale: ${sentCount} e-mail inviate, ${failedCount} non inviate. Controlla lo stato dei destinatari.`);
+      const remainingCount = Number(data.remaining ?? 0);
+      if (failedCount > 0 || remainingCount > 0 || data.status === "Parzialmente inviata") {
+        alert(`Invio parziale: ${sentCount} e-mail inviate, ${failedCount} non inviate e ${remainingCount} ancora da verificare. Controlla lo stato dei destinatari prima di ripetere l'invio.`);
       } else if (data.idempotent) {
         alert(`Nessun nuovo invio: ${sentCount} destinatari risultano già elaborati.`);
       } else {

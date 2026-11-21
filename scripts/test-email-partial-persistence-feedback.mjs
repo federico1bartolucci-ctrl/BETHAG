@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/main.tsx",import.meta.url),"utf8");
+const start=source.indexOf("const sentCount = Number(data.sent");
+const end=source.indexOf("\n    } catch (error) {",start);
+assert.ok(start>=0 && end>start,"email delivery result handler must exist");
+const section=source.slice(start,end);
+assert.match(section,/const remainingCount = Number\(data\.remaining \?\? 0\)/,"remaining queued recipients must be read");
+assert.match(section,/failedCount > 0 \|\| remainingCount > 0 \|\| data\.status === "Parzialmente inviata"/,"pending/queued recipient rows must cause partial-delivery notice");
+assert.match(section,/ancora da verificare/,"alert must explain recipients needing verification");
+assert.ok(section.indexOf("remainingCount > 0")<section.indexOf("E-mail inviata correttamente"),"partial status must be checked before success alert");
+console.log("Email partial-delivery persistence feedback regression passed.");
