@@ -11,7 +11,7 @@ assert.ok(start >= 0 && queryStart > start && queryEnd > queryStart, "loadBacken
 const querySection = source.slice(queryStart, queryEnd);
 assert.match(querySection, /loadWorkspaceRows\("condominium_works"\)/, "backend hydration must paginate condominium works");
 assert.doesNotMatch(querySection, /supabase\.from\("condominium_works"\)/, "backend hydration must not use a single capped works query");
-assert.match(source, /loadWorkspaceRowsForState\(client, workspaceId, table, columns, orderBy\)/, "local workspace loader must use the shared helper");
+assert.match(source, /loadWorkspaceRowsForState\(client, workspaceId, table, columns, orderBy, filters\)/, "local workspace loader must use the shared helper");
 assert.ok(packageJson.scripts.test.includes("test-backend-state-condominium-works-pagination.mjs"), "regression test must be wired into npm test");
 
 function mockClient(pages, failOffset = null) {

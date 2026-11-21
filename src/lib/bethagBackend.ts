@@ -87,8 +87,9 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const loadWorkspaceRows = (
     table: string,
     columns = "*",
-    orderBy = "created_at"
-  ) => loadWorkspaceRowsForState(client, workspaceId, table, columns, orderBy);
+    orderBy = "created_at",
+    filters: Array<[string, any]> = []
+  ) => loadWorkspaceRowsForState(client, workspaceId, table, columns, orderBy, filters);
   const loadWorkspaceCondominiumMembers = async () => {
     const rows: any[] = [];
     for (let offset = 0; ; offset += 1000) {
@@ -144,7 +145,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_tax_obligations").select("*").eq("workspace_id", workspaceId).order("due_date"),
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
     loadWorkspaceRows("portal_access"),
-    supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
+    loadWorkspaceRows("workspace_members", "*", "created_at", [["role", "collaborator"]]),
     loadWorkspaceRows(
       "condominium_member_transfers",
       "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
