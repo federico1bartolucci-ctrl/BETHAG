@@ -25,7 +25,7 @@ assert.deepEqual(updated, { id: "policy-1" });
 
 await assert.rejects(
   () => requireInsurancePolicyUpdateResult(fakeQuery({ data: null, error: null })),
-  /Polizza non è stata aggiornata/
+  /La polizza non è stata aggiornata/
 );
 
 const databaseError = new Error("permission denied");
