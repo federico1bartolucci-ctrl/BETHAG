@@ -7,7 +7,6 @@ const source = await readFile("src/RegisterPage.tsx", "utf8");
 assert.match(migration, /FOR UPDATE/);
 assert.match(migration, /SECURITY DEFINER/);
 assert.match(migration, /v_progress\.ledger_entry_id IS NOT NULL OR v_progress\.payment_entry_id IS NOT NULL/);
-assert.match(migration, /ledger_entry_id IS NOT NULL OR v_progress\.payment_entry_id IS NOT NULL/);
 assert.match(migration, /INSERT INTO public\.condominium_ledger_entries[\s\S]*UPDATE public\.condominium_work_progress/);
 assert.match(migration, /REVOKE EXECUTE[\s\S]*FROM PUBLIC, anon/);
 assert.match(migration, /GRANT EXECUTE[\s\S]*TO authenticated/);
