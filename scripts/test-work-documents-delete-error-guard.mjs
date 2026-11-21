@@ -1,0 +1,14 @@
+import {readFileSync} from "node:fs";
+import assert from "node:assert/strict";
+const source=readFileSync(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function saveWorkDocuments");
+const end=source.indexOf("async function ",start+30);
+assert.ok(start>=0&&end>start,"saveWorkDocuments function found");
+const fn=source.slice(start,end);
+const deletion=fn.indexOf(".delete()");
+const deleteErrorCheck=fn.indexOf("if(deleteError)throw deleteError");
+const rowsBuild=fn.indexOf("const rows=linkedDocumentIds.map");
+const insert=fn.indexOf(".insert(rows)");
+assert.ok(deletion>=0&&deleteErrorCheck>deletion,"delete error is checked");
+assert.ok(rowsBuild>deleteErrorCheck&&insert>rowsBuild,"reinsert is only attempted after successful delete");
+console.log("Work document delete-error guard regression checks passed.");
