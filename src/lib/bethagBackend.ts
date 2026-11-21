@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { requireCondominiumUnitDeleteResult } from "./condominiumUnitDeleteResult.mjs";
 import { loadCondominiumUnitsForLookup, removeOwnerMemberIdFromUnitData } from "./condominiumUnitLookupPagination";
 
 export type BackendState = Record<string, any[]>;
@@ -2047,14 +2048,13 @@ export async function deleteCondominiumUnit(
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-    const { error } = await supabase
-      .from("condominium_units")
-      .delete()
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id)
-      .eq("id", unitId);
-
-    if (error) throw error;
+    await requireCondominiumUnitDeleteResult(
+      supabase.from("condominium_units")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id)
+        .eq("id", unitId)
+    );
   });
 }
 
