@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { loadAccountingLedgerRows } from "./lib/accountingLedgerPagination";
 
 type Condominium = {
   id: number;
@@ -597,11 +598,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("start_date", { ascending: false }),
-          supabase
-            .from("condominium_ledger_entries")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("entry_date", { ascending: false }),
+          loadAccountingLedgerRows(supabase, workspaceId),
           supabase
             .from("condominium_funds")
             .select("*")
