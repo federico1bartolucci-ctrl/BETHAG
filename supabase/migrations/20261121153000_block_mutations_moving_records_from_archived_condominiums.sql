@@ -10,6 +10,15 @@ declare
   v_condominium_id uuid;
 begin
   if tg_op = 'DELETE' then
+    v_condominium_id := old.condominium_id;
+    if v_condominium_id is not null and exists (
+      select 1
+      from public.condominiums c
+      where c.id = v_condominium_id
+        and c.archived_at is not null
+    ) then
+      raise exception 'Il condominio è archiviato: eliminazione non consentita';
+    end if;
     return old;
   end if;
 
