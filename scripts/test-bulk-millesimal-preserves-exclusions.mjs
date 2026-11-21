@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveBulkMillesimalValues()");
+const end = source.indexOf("\n  async function saveMillesimalValue(", start);
+assert.ok(start >= 0 && end > start, "bulk millesimal save handler must exist");
+const handler = source.slice(start, end);
+assert.match(handler, /excluded:\s*existing\?\.excluded\s*\?\?\s*false/, "bulk editing must preserve exclusion state");
+assert.match(handler, /notes:\s*existing\?\.notes\s*\?\?\s*""/, "bulk editing must preserve existing notes");
+assert.doesNotMatch(handler, /excluded:\s*false\s*,\s*notes:\s*""/, "bulk save must not reset existing exclusion/notes");
+console.log("Bulk millesimal exclusion/notes regression checks passed.");
