@@ -24,7 +24,7 @@ export async function loadPortalRegistrationRequests(client: any, workspaceId: s
     .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
 }
 
-async function loadPages(queryFactory: () => any) {
+export async function loadPages(queryFactory: () => any) {
   const rows: any[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await queryFactory().range(offset, offset + 999);
