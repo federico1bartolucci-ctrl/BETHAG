@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source=readFileSync("src/AccountingPage.tsx","utf8");
+const start=source.indexOf("async function confirmAllocationIntake");
+assert.notEqual(start,-1);
+const end=source.indexOf("async function saveMillesimalTable",start);
+assert.notEqual(end,-1);
+const handler=source.slice(start,end);
+assert.match(handler,/intake\.expense_amount != null/);
+assert.ok(handler.indexOf("intake.expense_amount != null") < handler.indexOf("const candidates"),"amount-presence guard must be part of candidate selection");
+assert.match(handler,/Math\.abs\(Number\(entry\.amount \|\| 0\) - Number\(intake\.expense_amount\)\) <= 0\.005/);
+assert.match(handler,/candidates\.length === 1/);
+console.log("Allocation-intake auto-link requires explicit amount regression passed.");

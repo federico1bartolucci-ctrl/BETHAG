@@ -1488,8 +1488,9 @@ function AccountingPage({
 
     if (!intake.ledger_entry_id) {
       const candidates = scopedLedger.filter((entry) =>
+        intake.expense_amount != null &&
         entry.direction === "Uscita" &&
-        (intake.expense_amount == null || Math.abs(Number(entry.amount || 0) - Number(intake.expense_amount || 0)) <= 0.005)
+        Math.abs(Number(entry.amount || 0) - Number(intake.expense_amount)) <= 0.005
       );
 
       if (candidates.length === 1) {
