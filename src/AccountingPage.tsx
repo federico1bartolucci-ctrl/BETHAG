@@ -1643,7 +1643,7 @@ function AccountingPage({
         value:millesimalValue, excluded:millesimalValueForm.excluded,
         notes:millesimalValueForm.notes
       };
-      const { error: saveError } = await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"table_id,unit_id"});
+      const { error: saveError } = await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"workspace_id,table_id,unit_id"});
       if(saveError) throw saveError;
       setShowMillesimalValueForm(false);
       setMillesimalValueForm({table_id:"",unit_id:"",value:0,excluded:false,notes:""});
