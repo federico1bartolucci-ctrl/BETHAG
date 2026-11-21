@@ -680,6 +680,7 @@ function AccountingPage({
         taxResult,
         caseResult,
         allocationsResult,
+        allocationIntakesResult,
         unitsResult,
         membersResult,
         millesimalTablesResult,

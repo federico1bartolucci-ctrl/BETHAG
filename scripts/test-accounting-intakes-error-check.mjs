@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/AccountingPage.tsx", "utf8");
+const loadStart = source.indexOf("async function load()");
+const loadEnd = source.indexOf("useEffect(() => {", loadStart);
+assert.ok(loadStart >= 0 && loadEnd > loadStart, "Accounting load function must exist");
+const block = source.slice(loadStart, loadEnd);
+assert.match(block, /allocationIntakesResult,/, "Allocation-intake result must be included in the load-error validation list");
+assert.match(block, /if \(result\.error\) throw result\.error/, "Loader must fail on dataset errors instead of silently accepting partial state");
+console.log("Accounting allocation-intake error propagation regression checks passed.");
