@@ -293,7 +293,6 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     "id,condominium_id,business_name,data",
     null
   );
-  if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
 
   (condominiumSuppliersForWorks ?? []).forEach((supplier: any) => {
     const storedLegacyId = Number(supplier.data?.legacySupplierId ?? supplier.data?.supplierId);
