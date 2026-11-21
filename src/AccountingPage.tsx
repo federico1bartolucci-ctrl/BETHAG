@@ -836,9 +836,17 @@ function AccountingPage({
         ...yearForm,
         opening_balance: openingBalance,
       };
-      const { error: saveError } = await supabase
-        .from("condominium_fiscal_years")
-        .upsert(payload, { onConflict: "condominium_id,start_date,end_date" });
+      const yearQuery = editingYear
+        ? supabase
+            .from("condominium_fiscal_years")
+            .update(payload)
+            .eq("id", editingYear.id)
+            .eq("workspace_id", workspaceId)
+            .eq("condominium_id", dbCondominiumId)
+        : supabase
+            .from("condominium_fiscal_years")
+            .upsert(payload, { onConflict: "condominium_id,start_date,end_date" });
+      const { error: saveError } = await yearQuery;
       if (saveError) throw saveError;
       setShowYearForm(false);
       setYearForm({
