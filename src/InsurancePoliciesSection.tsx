@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
+import { requireInsurancePolicyMutationResult } from "./lib/insurancePolicyUpdate.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -146,11 +147,21 @@ export default function InsurancePoliciesSection({
         active: form.active,
         notes: form.notes.trim(),
       };
-      const query = editing
-        ? supabase.from("condominium_insurance_policies").update(payload).eq("id", editing.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId)
-        : supabase.from("condominium_insurance_policies").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editing) {
+        await requireInsurancePolicyMutationResult(
+          supabase.from("condominium_insurance_policies")
+            .update(payload)
+            .eq("id", editing.id)
+            .eq("workspace_id", workspaceId)
+            .eq("condominium_id", dbCondominiumId),
+          "aggiornata"
+        );
+      } else {
+        const { error: saveError } = await supabase
+          .from("condominium_insurance_policies")
+          .insert(payload);
+        if (saveError) throw saveError;
+      }
       closeForm();
       await load();
     } catch (e) {
@@ -161,16 +172,20 @@ export default function InsurancePoliciesSection({
   };
 
   const remove = async (policy: InsurancePolicy) => {
-    if (!supabase) return;
+    if (!supabase || !workspaceId || !dbCondominiumId) {
+      setError("Impossibile individuare il workspace o il condominio.");
+      return;
+    }
     if (!window.confirm(`Sei sicuro di voler cancellare la polizza "${policy.policy_number}"?`)) return;
     try {
-      const { error: deleteError } = await supabase
-        .from("condominium_insurance_policies")
-        .delete()
-        .eq("id", policy.id)
-        .eq("workspace_id", workspaceId)
-        .eq("condominium_id", dbCondominiumId);
-      if (deleteError) throw deleteError;
+      await requireInsurancePolicyMutationResult(
+        supabase.from("condominium_insurance_policies")
+          .delete()
+          .eq("id", policy.id)
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", dbCondominiumId),
+        "cancellata"
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Polizza non cancellata.");
