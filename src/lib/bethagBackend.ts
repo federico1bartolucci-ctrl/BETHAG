@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { fetchWorkspaceWorkProgress } from "./backend-work-progress-pagination.js";
 
 export type BackendState = Record<string, any[]>;
 
@@ -564,11 +565,11 @@ async function syncBackendStateNow(
   if (canSyncModule("attivita")) {
     const workIds = (state.condominiumWorks ?? []).map((item: any) => String(item.id)).filter(Boolean);
     if (workIds.length) {
-      const { data: progressRows, error: progressRowsError } = await supabase
-        .from("condominium_work_progress").select("work_id,amount").eq("workspace_id", workspaceId).in("work_id", workIds);
-      if (progressRowsError) throw progressRowsError;
-      for (const row of progressRows ?? []) {
+      const progressRows = await fetchWorkspaceWorkProgress(client, workspaceId);
+      const workIdsSet = new Set(workIds);
+      for (const row of progressRows) {
         const key = String(row.work_id);
+        if (!workIdsSet.has(key)) continue;
         cumulativeWorkActualAmountById.set(key, (cumulativeWorkActualAmountById.get(key) ?? 0) + Math.max(0, Number(row.amount) || 0));
       }
     }
