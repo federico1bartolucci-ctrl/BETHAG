@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { loadCondominiumUnitsForMember } from "../src/lib/condominiumMemberUnitLookupPagination.ts";
+import { loadCondominiumUnitsForLookup } from "../src/lib/condominiumUnitLookupPagination.ts";
 
 const source = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -11,6 +11,13 @@ const section = source.slice(start, end);
 assert.match(section, /loadCondominiumUnitsForMember\(supabase, condominium\.id\)/, "member save must use the paginated unit lookup");
 assert.doesNotMatch(section, /\.from\("condominium_units"\)\s*\.select\("id, unit_code, data"\)\s*\.eq\("condominium_id", condominium\.id\)/, "member save must not retain the capped unit lookup");
 assert.ok(packageJson.scripts.test.includes("test-condominium-member-unit-lookup-pagination.mjs"), "regression test must be wired into npm test");
+
+const unitSaveStart = source.indexOf("export async function saveCondominiumUnit(");
+const unitSaveEnd = source.indexOf("\nexport async function ", unitSaveStart + 1);
+assert.ok(unitSaveStart >= 0 && unitSaveEnd > unitSaveStart, "saveCondominiumUnit function must exist");
+const unitSaveSection = source.slice(unitSaveStart, unitSaveEnd);
+assert.match(unitSaveSection, /loadCondominiumUnitsForLookup\(supabase, condominium\.id\)/, "unit save must use the paginated existing-unit lookup");
+assert.doesNotMatch(unitSaveSection, /\.from\("condominium_units"\)\s*\.select\("id, unit_code, building_code, lifecycle_status"\)\s*\.eq\("condominium_id", condominium\.id\)/, "unit save must not retain the capped existing-unit lookup");
 
 function mockClient(pages, errorOffset = null) {
   const requests = [];
@@ -36,11 +43,12 @@ function mockClient(pages, errorOffset = null) {
 const firstPage = Array.from({ length: 1000 }, (_, index) => ({
   id: `unit-${index}`,
   unit_code: `Unit ${String(index + 1).padStart(4, "0")}`,
-  data: {},
+  building_code: "A",
+  lifecycle_status: "Attiva",
 }));
 const secondPage = [
-  { id: "unit-1000", unit_code: "Unit 1001", data: { millesimi: 75 } },
-  { id: "unit-1001", unit_code: "Unit 1002", data: {} },
+  { id: "unit-1000", unit_code: "Unit 1001", building_code: "A", lifecycle_status: "Attiva" },
+  { id: "unit-1001", unit_code: "Unit 1002", building_code: "A", lifecycle_status: "Attiva" },
 ];
 const { client, requests } = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
 const rows = await loadCondominiumUnitsForMember(client, "condominium-1");
@@ -52,7 +60,7 @@ assert.equal(
 );
 assert.deepEqual(requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999]], "unit lookup must request subsequent pages");
 assert.equal(requests[0].table, "condominium_units");
-assert.equal(requests[0].columns, "id, unit_code, data");
+assert.equal(requests[0].columns, "id, unit_code, building_code, lifecycle_status");
 assert.deepEqual(requests[0].filters, [["condominium_id", "condominium-1"]], "lookup must preserve condominium scope");
 assert.deepEqual(requests[0].orders, [["unit_code", { ascending: true }], ["id", { ascending: true }]], "pagination must use stable ordering");
 
