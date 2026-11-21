@@ -3320,12 +3320,12 @@ function App() {
       }
       const sourceReadErrorSummary = formatBackupReadErrors(backup.backendReadErrors);
       const sourceReadWarning = sourceReadErrorSummary
-        ? "ATTENZIONE: il backup sorgente è incompleto. Errori di esportazione: " + sourceReadErrorSummary + ".\\n\\n"
+        ? "ATTENZIONE: il backup sorgente è incompleto. Errori di esportazione: " + sourceReadErrorSummary + ".\n\n"
         : "";
       const state = backup.frontendState || {};
       const counts = Object.entries(backup.backend || {}).reduce((sum: number, [, value]: any) => sum + (Array.isArray(value) ? value.length : 0), 0);
       const firstConfirm = window.confirm(
-        "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\\n\\n" + sourceReadWarning + "Record backend inclusi: " + counts + ".\\n\\nVuoi procedere con il ripristino controllato?"
+        "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\n\n" + sourceReadWarning + "Record backend inclusi: " + counts + ".\n\nVuoi procedere con il ripristino controllato?"
       );
       if (!firstConfirm) return;
       if (!window.confirm("Conferma definitiva: i record presenti nel backup verranno aggiornati nel workspace corrente. I dati non presenti nel backup non verranno eliminati.")) return;
