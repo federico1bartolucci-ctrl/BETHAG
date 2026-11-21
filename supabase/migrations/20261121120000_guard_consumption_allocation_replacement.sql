@@ -80,7 +80,7 @@ begin
     where workspace_id=p_workspace_id
       and condominium_id=p_condominium_id
       and ledger_entry_id=p_ledger_entry_id
-      and coalesce(allocation_basis,'') not like 'Consumo - %'
+      and allocation_basis is distinct from ('Consumo - '||trim(p_service_type))
   ) then
     raise exception 'La spesa contiene ripartizioni non basate sui consumi: non possono essere sostituite automaticamente';
   end if;
