@@ -128,6 +128,17 @@ export default function InsurancePoliciesSection({
       setError("Compila compagnia assicurativa e numero polizza.");
       return;
     }
+    if (
+      (form.premium !== null && (!Number.isFinite(form.premium) || form.premium < 0)) ||
+      (form.deductible !== null && (!Number.isFinite(form.deductible) || form.deductible < 0))
+    ) {
+      setError("Premio e franchigia devono essere importi numerici validi e non negativi.");
+      return;
+    }
+    if (form.start_date && form.end_date && form.start_date > form.end_date) {
+      setError("La data di decorrenza non può essere successiva alla scadenza.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
