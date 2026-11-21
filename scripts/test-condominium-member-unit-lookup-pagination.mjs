@@ -8,7 +8,7 @@ const start = source.indexOf("export async function saveCondominiumMember(");
 const end = source.indexOf("\nexport async function ", start + 1);
 assert.ok(start >= 0 && end > start, "saveCondominiumMember function must exist");
 const section = source.slice(start, end);
-assert.match(section, /loadCondominiumUnitsForMember\(supabase, condominium\.id\)/, "member save must use the paginated unit lookup");
+assert.match(section, /loadCondominiumUnitsForLookup\(supabase, condominium\.id\)/, "member save must use the paginated unit lookup");
 assert.doesNotMatch(section, /\.from\("condominium_units"\)\s*\.select\("id, unit_code, data"\)\s*\.eq\("condominium_id", condominium\.id\)/, "member save must not retain the capped unit lookup");
 assert.ok(packageJson.scripts.test.includes("test-condominium-member-unit-lookup-pagination.mjs"), "regression test must be wired into npm test");
 
@@ -51,7 +51,7 @@ const secondPage = [
   { id: "unit-1001", unit_code: "Unit 1002", building_code: "A", lifecycle_status: "Attiva" },
 ];
 const { client, requests } = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
-const rows = await loadCondominiumUnitsForMember(client, "condominium-1");
+const rows = await loadCondominiumUnitsForLookup(client, "condominium-1");
 assert.equal(rows.length, 1002, "unit rows beyond the 1,000-row cap must be retained");
 assert.equal(
   rows.find((unit) => String(unit.unit_code).trim().toLowerCase() === "unit 1001")?.id,
@@ -66,11 +66,11 @@ assert.deepEqual(requests[0].orders, [["unit_code", { ascending: true }], ["id",
 
 const failing = mockClient(new Map([[0, firstPage]]), 1000);
 await assert.rejects(
-  loadCondominiumUnitsForMember(failing.client, "condominium-1"),
+  loadCondominiumUnitsForLookup(failing.client, "condominium-1"),
   /later page failed/,
   "failed later page must not silently return partial units",
 );
 const empty = mockClient(new Map());
-assert.deepEqual(await loadCondominiumUnitsForMember(empty.client, ""), [], "missing condominium must avoid queries");
+assert.deepEqual(await loadCondominiumUnitsForLookup(empty.client, ""), [], "missing condominium must avoid queries");
 assert.equal(empty.requests.length, 0);
 console.log("Condominium member unit lookup pagination regression checks passed.");
