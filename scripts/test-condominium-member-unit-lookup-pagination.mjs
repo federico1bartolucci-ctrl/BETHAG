@@ -26,6 +26,13 @@ const deleteMemberSection = source.slice(deleteMemberStart, deleteMemberEnd);
 assert.match(deleteMemberSection, /loadCondominiumUnitsForLookup\(\s*supabase,\s*condominium\.id,\s*"id, data",\s*workspaceId,\s*\)/, "member deletion must use the paginated owner-cleanup lookup");
 assert.doesNotMatch(deleteMemberSection, /\.from\("condominium_units"\)\s*\.select\("id, data"\)\s*\.eq\("workspace_id", workspaceId\)\s*\.eq\("condominium_id", condominium\.id\)/, "member deletion must not retain the capped owner-cleanup query");
 
+const syncStart = source.indexOf("export async function syncBackendStateNow(");
+const syncEnd = source.indexOf("\nexport async function ", syncStart + 1);
+assert.ok(syncStart >= 0 && syncEnd > syncStart, "syncBackendStateNow function must exist");
+const syncSection = source.slice(syncStart, syncEnd);
+assert.equal((syncSection.match(/loadCondominiumUnitsForLookup\(\s*supabase,\s*unitCondominiums,\s*"id, condominium_id, unit_code",\s*\)/g) ?? []).length, 2, "existing and persisted unit lookups must both paginate");
+assert.doesNotMatch(syncSection, /\.from\("condominium_units"\)\s*\.select\("id, condominium_id, unit_code"\)\s*\.in\("condominium_id", unitCondominiums\)/, "sync must not keep capped unit queries");
+
 function mockClient(pages, errorOffset = null) {
   const requests = [];
   const client = {
@@ -33,7 +40,8 @@ function mockClient(pages, errorOffset = null) {
       const state = { table, columns: null, filters: [], orders: [] };
       const query = {
         select(columns) { state.columns = columns; return query; },
-        eq(column, value) { state.filters.push([column, value]); return query; },
+        eq(column, value) { state.filters.push(["eq", column, value]); return query; },
+        in(column, value) { state.filters.push(["in", column, value]); return query; },
         order(column, options) { state.orders.push([column, options]); return query; },
         range(from, to) {
           requests.push({ table, columns: state.columns, filters: state.filters.slice(), orders: state.orders.slice(), from, to });
@@ -68,7 +76,7 @@ assert.equal(
 assert.deepEqual(requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999]], "unit lookup must request subsequent pages");
 assert.equal(requests[0].table, "condominium_units");
 assert.equal(requests[0].columns, "id, unit_code, building_code, lifecycle_status");
-assert.deepEqual(requests[0].filters, [["condominium_id", "condominium-1"]], "lookup must preserve condominium scope");
+assert.deepEqual(requests[0].filters, [["eq", "condominium_id", "condominium-1"]], "lookup must preserve condominium scope");
 assert.deepEqual(requests[0].orders, [["id", { ascending: true }]], "pagination must use stable ID ordering");
 
 
@@ -84,8 +92,18 @@ assert.deepEqual(cleanedOwners.nextOwners, [456], "owner cleanup must remove onl
 assert.deepEqual(cleanedOwners.currentData, lateOwnerUnit.data, "cleanup must preserve millesimal and other unit data");
 
 assert.equal(ownerCleanup.requests[0].columns, "id, data");
-assert.deepEqual(ownerCleanup.requests[0].filters, [["condominium_id", "condominium-1"], ["workspace_id", "workspace-1"]], "owner cleanup must preserve workspace and condominium scope");
+assert.deepEqual(ownerCleanup.requests[0].filters, [["eq", "condominium_id", "condominium-1"], ["eq", "workspace_id", "workspace-1"]], "owner cleanup must preserve workspace and condominium scope");
 assert.deepEqual(ownerCleanup.requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999]]);
+
+
+const syncLookup = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
+const condoIds = ["condominium-1", "condominium-2"];
+const existingForSync = await loadCondominiumUnitsForLookup(syncLookup.client, condoIds, "id, condominium_id, unit_code");
+const persistedForSync = await loadCondominiumUnitsForLookup(syncLookup.client, condoIds, "id, condominium_id, unit_code");
+assert.equal(existingForSync.length, 1002, "existing-unit detection must read beyond the API cap");
+assert.equal(persistedForSync.length, 1002, "persisted unit mapping must read beyond the API cap");
+assert.deepEqual(syncLookup.requests[0].filters, [["in", "condominium_id", condoIds]], "sync lookup must preserve the condominium list filter");
+assert.deepEqual(syncLookup.requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999], [0, 999], [1000, 1999]], "both sync queries must paginate in stable windows");
 
 const failing = mockClient(new Map([[0, firstPage]]), 1000);
 await assert.rejects(
@@ -96,4 +114,4 @@ await assert.rejects(
 const empty = mockClient(new Map());
 assert.deepEqual(await loadCondominiumUnitsForLookup(empty.client, ""), [], "missing condominium must avoid queries");
 assert.equal(empty.requests.length, 0);
-console.log("Condominium unit lookup pagination and owner cleanup regression checks passed.");
+console.log("Condominium unit lookup pagination, sync, and owner cleanup regression checks passed.");
