@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function remove(");
+const end=source.indexOf("\n return <section",start);
+assert.ok(start>=0&&end>start,"generic remove handler must exist");
+const handler=source.slice(start,end);
+assert.match(handler,/table==="condominium_works"/,"work deletion must have a guarded path");
+for(const table of ["condominium_work_progress","condominium_work_documents","condominium_work_events","condominium_ledger_entries"])assert.ok(handler.includes(table),`deletion guard must inspect ${table}`);
+assert.match(handler,/\.contains\("data",\{work_id:id\}\)/,"ledger rows linked by work_id metadata must be checked");
+assert.match(handler,/Impossibile eliminare l'intervento/,"linked-history deletion must be blocked with explanation");
+console.log("Linked-work deletion regression checks passed.");
