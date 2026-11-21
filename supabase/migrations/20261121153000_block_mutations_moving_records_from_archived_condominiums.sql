@@ -50,3 +50,24 @@ begin
   return new;
 end;
 $function$;
+
+-- Install the guard on every public table that carries a condominium_id.
+DO $install_triggers$
+DECLARE
+  target_table text;
+BEGIN
+  FOR target_table IN
+    SELECT DISTINCT c.table_name
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.column_name = 'condominium_id'
+      AND c.table_name <> 'condominiums'
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS archived_condominium_mutation_guard ON public.%I', target_table);
+    EXECUTE format(
+      'CREATE TRIGGER archived_condominium_mutation_guard BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.prevent_archived_condominium_mutation()',
+      target_table
+    );
+  END LOOP;
+END;
+$install_triggers$;
