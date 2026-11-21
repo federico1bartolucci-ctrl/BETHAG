@@ -1,6 +1,7 @@
 // Pages deployment trigger: transfer confirmation flow verified in source.
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { loadMemberTransferHistory } from "./lib/memberTransferHistoryPagination";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
 type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; name?: string; email?: string | null; data: any };
@@ -116,17 +117,17 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
 
   const loadRows = useCallback(async () => {
     if (!supabase || !condominiumId) { setRows([]); return; }
-    const { data, error: e } = await supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false });
-    if (e) throw e;
-    setRows((data || []) as TransferRow[]);
+    const data = await loadMemberTransferHistory(supabase, workspaceId, condominiumId);
+    setRows(data as TransferRow[]);
   }, [workspaceId, condominiumId]);
 
   useEffect(() => {
     let active = true;
     if (!supabase || !condominiumId) { setRows([]); return; }
-    supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false }).then(({data,error:e}) => {
-      if (!active) return;
-      if (e) setError(e.message); else setRows((data || []) as TransferRow[]);
+    loadMemberTransferHistory(supabase, workspaceId, condominiumId).then(data => {
+      if (active) setRows(data as TransferRow[]);
+    }).catch(e => {
+      if (active) setError(e instanceof Error ? e.message : "Impossibile caricare lo storico subentri.");
     });
     return () => { active = false; };
   }, [workspaceId, condominiumId]);
