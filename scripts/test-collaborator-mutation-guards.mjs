@@ -22,11 +22,13 @@ assert.ok(save.indexOf("requireCollaboratorMutationResult") < save.indexOf("setC
 assert.match(remove, /requireCollaboratorMutationResult/);
 assert.match(remove, /\.delete\(\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("user_id", target\.userId\)[\s\S]*\.eq\("role", "collaborator"\)/);
 assert.match(remove, /"rimosso"/);
-assert.ok(remove.indexOf("requireCollaboratorMutationResult") < remove.indexOf("setCollaborators((items) => items.filter("), "Local removal must follow a verified database deletion");
+const removeStateUpdate = remove.indexOf("setCollaborators(");
+assert.ok(remove.indexOf("requireCollaboratorMutationResult") < removeStateUpdate && removeStateUpdate < remove.indexOf("items.filter("), "Local removal must follow a verified database deletion");
 assert.match(toggle, /requireCollaboratorMutationResult/);
 assert.match(toggle, /\.update\(\{ active: nextActive \}\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("user_id", target\.userId\)[\s\S]*\.eq\("role", "collaborator"\)/);
 assert.match(toggle, /"aggiornato"/);
-assert.ok(toggle.indexOf("requireCollaboratorMutationResult") < toggle.indexOf("setCollaborators((items) => items.map("), "Local status must update only after a verified database mutation");
+const toggleStateUpdate = toggle.indexOf("setCollaborators(");
+assert.ok(toggle.indexOf("requireCollaboratorMutationResult") < toggleStateUpdate && toggleStateUpdate < toggle.indexOf("items.map("), "Local status must update only after a verified database mutation");
 
 const fakeQuery = (result) => ({
   select(columns) {
