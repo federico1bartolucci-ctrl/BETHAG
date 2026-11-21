@@ -64,3 +64,7 @@ await assert.rejects(
   "pagination errors must propagate rather than silently return partial data"
 );
 console.log("Register-page pagination regression checks passed.");
+
+const memberMock = mockClient(new Map([[0, [{ user_id: "member-1" }]]]));
+await loadPaginatedWorkspaceRows(memberMock.client, "workspace-1", "workspace_members", "user_id", null);
+assert.deepEqual(memberMock.requests[0].orders, [["user_id", { ascending: true }]], "workspace_members must paginate by its composite key without ordering by a nonexistent id column");
