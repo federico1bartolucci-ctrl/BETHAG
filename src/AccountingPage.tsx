@@ -722,6 +722,7 @@ function AccountingPage({
 
   useEffect(() => {
     void load();
+    return () => { loadRequestRef.current += 1; };
   }, [workspaceId, selectedCondominiumId]);
 
   async function compensateCarryover() {
