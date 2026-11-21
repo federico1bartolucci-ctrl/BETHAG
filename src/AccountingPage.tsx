@@ -1606,7 +1606,7 @@ function AccountingPage({
     if (Math.abs(total - Number(table.total_millesimi || 0)) > 0.001) { setError("La somma delle quote deve coincidere con il totale della tabella."); return; }
     setSaving(true); setError("");
     try {
-      const payload = condominiumUnits.map(u => ({workspace_id:workspaceId,condominium_id:dbCondominiumId,table_id:bulkMillesimalTableId,unit_id:u.id,value:Number(bulkMillesimalValues[u.id]||0),excluded:false,notes:""}));
+      const payload = condominiumUnits.map(u => { const existing = scopedMillesimalValues.find(v => v.table_id === bulkMillesimalTableId && v.unit_id === u.id); return {workspace_id:workspaceId,condominium_id:dbCondominiumId,table_id:bulkMillesimalTableId,unit_id:u.id,value:Number(bulkMillesimalValues[u.id]||0),excluded:existing?.excluded ?? false,notes:existing?.notes ?? ""}; });
       const {error:saveError}=await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"table_id,unit_id"});
       if(saveError) throw saveError;
       setShowBulkMillesimalForm(false); setBulkMillesimalTableId(""); setBulkMillesimalValues({});
