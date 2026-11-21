@@ -1,0 +1,9 @@
+import {readFileSync} from "node:fs";
+import assert from "node:assert/strict";
+const s=readFileSync(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const a=s.indexOf("async function saveWorkExpense"),b=s.indexOf("async function openWorkHistory",a);
+assert.ok(a>=0&&b>a,"saveWorkExpense function found");
+const fn=s.slice(a,b);
+assert.ok(fn.includes("setError(e?.message||\"Impossibile registrare la spesa del lavoro.\")"),"expense error exposes backend message and fallback");
+assert.ok(!fn.includes("setError(\"ERRORE\")"),"generic error removed from expense handler");
+console.log("Work-expense error-message regression checks passed.");
