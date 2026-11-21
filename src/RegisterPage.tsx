@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 
 type Condominium={id:number;name:string};
 type RegisterItem={id:string;condominium_id:string;item_type:string;category:string;title:string;location:string;responsible:string;expiry_date:string|null;status:string;notes:string;supplier_id:string|null;estimated_amount:number};
@@ -15,8 +16,14 @@ export default function RegisterPage({workspaceId,condominiums,isAdministrator=f
  const [editing,setEditing]=useState<string|null>(null); const [editingSupplier,setEditingSupplier]=useState<string|null>(null); const [showWorkForm,setShowWorkForm]=useState(false); const [editingWork,setEditingWork]=useState<string|null>(null); const [workForm,setWorkForm]=useState({title:"",category:"Manutenzione",description:"",status:"Da programmare",priority:"Media",supplier_id:"",register_item_id:"",fund_id:"",start_date:"",expected_end_date:"",actual_end_date:"",estimated_amount:0,approved_amount:0,actual_amount:0,progress_percent:0,notes:""}); const [showItemForm,setShowItemForm]=useState(false); const [showSupplierForm,setShowSupplierForm]=useState(false);
 
  async function resolve(){if(!supabase||selected==="all"){setDbId(null);return;}const {data,error}=await supabase.from("condominiums").select("id").eq("workspace_id",workspaceId).eq("legacy_id",selected).maybeSingle();if(error)throw error;setDbId(data?.id??null);}
- const loadRequestRef=useRef(0); async function load(){const requestId=++loadRequestRef.current;if(!supabase){if(requestId===loadRequestRef.current)setLoading(false);return;}setLoading(true);setError("");try{await resolve();if(requestId!==loadRequestRef.current)return;let q= supabase.from("condominium_register_items").select("*").eq("workspace_id",workspaceId).order("expiry_date");let s=supabase.from("condominium_suppliers").select("*").eq("workspace_id",workspaceId).order("business_name");let w=supabase.from("condominium_works").select("*").eq("workspace_id",workspaceId).order("start_date");let docs=supabase.from("documents").select("*").eq("workspace_id",workspaceId);let fundsQ=supabase.from("condominium_funds").select("*").eq("workspace_id",workspaceId).order("name");let progQ=supabase.from("condominium_work_progress").select("*").eq("workspace_id",workspaceId).order("progress_date");const [a,b,d,e,fnd,pq]=await Promise.all([q,s,w,docs,fundsQ,progQ]);if(a.error)throw a.error;if(b.error)throw b.error;if(d.error)throw d.error;if(e.error)throw e.error;if(fnd.error)throw fnd.error;if(pq.error)throw pq.error;if(requestId!==loadRequestRef.current)return;setItems(a.data??[]);setSuppliers(b.data??[]);setWorks(d.data??[]);setDocuments(e.data??[]);setFunds(fnd.data??[]);setProgress(pq.data??[]);}catch(e:any){if(requestId===loadRequestRef.current)setError(e?.message||"Impossibile caricare il registro.");}finally{if(requestId===loadRequestRef.current)setLoading(false);}}
- useEffect(()=>{void load();return()=>{loadRequestRef.current+=1;};},[workspaceId,selected]);
+ const loadRequestRef=useRef(0); async function load(){const requestId=++loadRequestRef.current;if(!supabase){if(requestId===loadRequestRef.current)setLoading(false);return;}setLoading(true);setError("");try{await resolve();if(requestId!==loadRequestRef.current)return;const [a,b,d,e,fnd,pq]=await Promise.all([
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"condominium_register_items","expiry_date"),
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"condominium_suppliers","business_name"),
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"condominium_works","start_date"),
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"documents",null),
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"condominium_funds","name"),
+  loadPaginatedWorkspaceRows(supabase,workspaceId,"condominium_work_progress","progress_date")
+]);if(requestId!==loadRequestRef.current)return;setItems(a);setSuppliers(b);setWorks(d);setDocuments(e);setFunds(fnd);setProgress(pq);}catch(e:any){if(requestId===loadRequestRef.current)setError(e?.message||"Impossibile caricare il registro.");}finally{if(requestId===loadRequestRef.current)setLoading(false);}} useEffect(()=>{void load();return()=>{loadRequestRef.current+=1;};},[workspaceId,selected]);
 
  const scopedItems=useMemo(()=>dbId?items.filter(x=>x.condominium_id===dbId):[],[items,dbId]); const scopedSuppliers=useMemo(()=>dbId?suppliers.filter(x=>x.condominium_id===dbId):[],[suppliers,dbId]); const scopedWorks=useMemo(()=>dbId?works.filter(x=>x.condominium_id===dbId):[],[works,dbId]);
  const today=new Date().toISOString().slice(0,10);
