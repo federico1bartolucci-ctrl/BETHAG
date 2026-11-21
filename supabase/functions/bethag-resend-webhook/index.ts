@@ -10,6 +10,8 @@ const headers = {
 };
 
 Deno.serve(async (req: Request) => {
+  let verificationFailed = false;
+  let payloadParseFailed = false;
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers });
   try {
@@ -22,8 +24,19 @@ Deno.serve(async (req: Request) => {
     if (!id || !timestamp || !signature) return new Response(JSON.stringify({error:"Firma webhook mancante."}), {status:401,headers});
 
     // Verify the exact raw bytes first, then parse those same bytes as JSON.
-    new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    try {
+      new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
+    } catch (error) {
+      verificationFailed = true;
+      throw error;
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch (error) {
+      payloadParseFailed = true;
+      throw error;
+    }
     const data = parsed.data && typeof parsed.data === "object"
       ? parsed.data as Record<string, unknown>
       : {};
@@ -74,6 +87,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
   } catch (error) {
     console.error("BETHAG resend-webhook error",error);
-    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Evento non autorizzato."}),{status:401,headers});
+    const status = verificationFailed ? 401 : payloadParseFailed ? 400 : 500;
+    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Errore elaborazione webhook."}),{status,headers});
   }
 });
