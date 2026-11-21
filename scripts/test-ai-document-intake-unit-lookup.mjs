@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/main.tsx", "utf8");
+const anchor = "const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];";
+const start = source.indexOf(anchor);
+const end = source.indexOf("const rows = rawRows.map", start);
+assert.ok(start >= 0 && end > start, "AI document allocation intake unit lookup block must exist");
+const block = source.slice(start, end);
+assert.match(block, /for \(let offset = 0; ; offset \+= 1000\)/, "unit lookup must paginate");
+assert.match(block, /\.range\(offset, offset \+ 999\)/, "unit lookup must fetch bounded pages");
+assert.match(block, /\.order\("unit_code", \{ ascending: true \}\)/, "pagination must be stable by unit code");
+assert.match(block, /\.order\("id", \{ ascending: true \}\)/, "pagination must have stable ID tie-break");
+assert.match(block, /if \(unitsLookupError\)/, "lookup errors must abort AI intake");
+assert.match(block, /return;/, "lookup error branch must stop before saving intake");
+assert.match(block, /dbUnits\.push\(...batch\)/, "all unit pages must be accumulated");
+assert.match(block, /if \(batch\.length < 1000\) break/, "pagination must terminate on final short page");
+console.log("AI document intake unit lookup regression checks passed.");
