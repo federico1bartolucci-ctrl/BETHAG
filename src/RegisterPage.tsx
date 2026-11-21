@@ -54,18 +54,16 @@ async function createDeadlineActivity(w:Work){if(!supabase||!dbId)return;const d
       paid_amount:Number(progressForm.paid_amount)||0,
       notes:progressForm.notes.trim()
     };
-    const {data:insertedProgress,error}=await supabase.from("condominium_work_progress").insert(payload).select("*").single();
+    const {error}=await supabase.from("condominium_work_progress").insert(payload);
     if(error)throw error;
-    if(!insertedProgress?.id)throw new Error("Il SAL è stato inserito ma non è stato restituito il suo identificativo.");
     const cumulative=Math.min(100,current.reduce((s,x)=>s+Number(x.percentage||0),0)+Number(progressForm.percentage||0));
     const progressUpdateError=await updateWorkProgressPercentOrReport(supabase,workspaceId,progressWork.id,cumulative);
     setShowProgress(false);
+    await load();
     if(progressUpdateError){
-      setProgress(current=>[...current,insertedProgress]);
-      setError("SAL registrato, ma l'avanzamento complessivo dell'intervento non è stato aggiornato. Ricarica la scheda e verifica: "+progressUpdateError.message);
+      setError("SAL registrato, ma l'avanzamento complessivo dell'intervento non è stato aggiornato. Verifica la scheda e ricaricala se necessario: "+progressUpdateError.message);
       return;
     }
-    await load();
   }catch(e:any){
     setError(e?.message||"Impossibile salvare il SAL.");
   }finally{
