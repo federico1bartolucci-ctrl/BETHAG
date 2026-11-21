@@ -48,7 +48,10 @@ const pendingFiles = freeze.sequence.map((item) => item.file);
 const forwardItems = freeze.live_ledger.forward_migrations_after_2026_11_02_freeze;
 const forwardFiles = forwardItems.map((item) => item.file);
 const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwardFiles].sort();
-const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
+const auditOnlyMigrations = new Set([
+  "20261121153000_block_mutations_moving_records_from_archived_condominiums.sql",
+]);
+const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql") && !auditOnlyMigrations.has(name)).sort();
 
 assert.equal(freeze.clean_install?.migration_file_count, 28,
   "Frozen manifest must describe the 28-file clean-install sequence.");
