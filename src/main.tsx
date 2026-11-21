@@ -4573,15 +4573,29 @@ function App() {
         }
 
         const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];
-        const { data: dbUnits } = await supabase
-          .from("condominium_units")
-          .select("id,unit_code,data")
-          .eq("workspace_id", workspaceId)
-          .eq("condominium_id", condominium.id);
+        const dbUnits: any[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data, error: unitsLookupError } = await supabase
+            .from("condominium_units")
+            .select("id,unit_code,data")
+            .eq("workspace_id", workspaceId)
+            .eq("condominium_id", condominium.id)
+            .order("unit_code", { ascending: true })
+            .order("id", { ascending: true })
+            .range(offset, offset + 999);
+          if (unitsLookupError) {
+            console.error("BETHAG AI allocation intake unit lookup error", unitsLookupError);
+            alert("Impossibile verificare le unità del condominio. La proposta AI non è stata salvata; riprova.");
+            return;
+          }
+          const batch = data ?? [];
+          dbUnits.push(...batch);
+          if (batch.length < 1000) break;
+        }
 
         const rows = rawRows.map((row: any) => {
           const unitCode = String(row.unitCode ?? "").trim();
-          const matched = (dbUnits ?? []).find((unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase());
+          const matched = dbUnits.find((unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase());
           const amount = Number(String(row.amount ?? "").replace(/[^0-9,.-]/g, "").replace(",", "."));
           const millesimi = Number(String(row.millesimi ?? "").replace(",", "."));
           return { unit_id: matched?.id ?? "", unit_code: unitCode, description: row.description ?? "", amount: Number.isFinite(amount) ? amount : 0, millesimi: Number.isFinite(millesimi) ? millesimi : 0, owner: row.owner ?? "", matched: Boolean(matched) };
