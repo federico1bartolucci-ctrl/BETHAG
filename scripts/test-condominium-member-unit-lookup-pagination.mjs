@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { loadCondominiumUnitsForLookup } from "../src/lib/condominiumUnitLookupPagination.ts";
+import { loadCondominiumUnitsForLookup, removeOwnerMemberIdFromUnitData } from "../src/lib/condominiumUnitLookupPagination.ts";
 
 const source = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -54,8 +54,8 @@ const firstPage = Array.from({ length: 1000 }, (_, index) => ({
   lifecycle_status: "Attiva",
 }));
 const secondPage = [
-  { id: "unit-1000", unit_code: "Unit 1001", building_code: "A", lifecycle_status: "Attiva" },
-  { id: "unit-1001", unit_code: "Unit 1002", building_code: "A", lifecycle_status: "Attiva" },
+  { id: "unit-1000", unit_code: "Unit 1001", building_code: "A", lifecycle_status: "Attiva", data: { ownerMemberIds: [123, 456], millesimi: 75 } },
+  { id: "unit-1001", unit_code: "Unit 1002", building_code: "A", lifecycle_status: "Attiva", data: { ownerMemberIds: [789] } },
 ];
 const { client, requests } = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
 const rows = await loadCondominiumUnitsForLookup(client, "condominium-1");
@@ -69,12 +69,20 @@ assert.deepEqual(requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1
 assert.equal(requests[0].table, "condominium_units");
 assert.equal(requests[0].columns, "id, unit_code, building_code, lifecycle_status");
 assert.deepEqual(requests[0].filters, [["condominium_id", "condominium-1"]], "lookup must preserve condominium scope");
-assert.deepEqual(requests[0].orders, [["unit_code", { ascending: true }], ["id", { ascending: true }]], "pagination must use stable ordering");
+assert.deepEqual(requests[0].orders, [["id", { ascending: true }]], "pagination must use stable ID ordering");
 
 
 const ownerCleanup = mockClient(new Map([[0, firstPage], [1000, secondPage]]));
 const ownerCleanupRows = await loadCondominiumUnitsForLookup(ownerCleanup.client, "condominium-1", "id, data", "workspace-1");
 assert.equal(ownerCleanupRows.length, 1002, "owner cleanup must visit units beyond the first 1,000");
+
+const lateOwnerUnit = ownerCleanupRows.find((unit) => unit.id === "unit-1000");
+assert.deepEqual(lateOwnerUnit?.data?.ownerMemberIds, [123, 456], "late-page unit data must be available to owner cleanup");
+const cleanedOwners = removeOwnerMemberIdFromUnitData(lateOwnerUnit.data, 123);
+assert.equal(cleanedOwners.changed, true, "owner cleanup must detect a legacy owner ID on a later-page unit");
+assert.deepEqual(cleanedOwners.nextOwners, [456], "owner cleanup must remove only the deleted member and preserve other owners");
+assert.deepEqual(cleanedOwners.currentData, lateOwnerUnit.data, "cleanup must preserve millesimal and other unit data");
+
 assert.equal(ownerCleanup.requests[0].columns, "id, data");
 assert.deepEqual(ownerCleanup.requests[0].filters, [["condominium_id", "condominium-1"], ["workspace_id", "workspace-1"]], "owner cleanup must preserve workspace and condominium scope");
 assert.deepEqual(ownerCleanup.requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1999]]);
@@ -88,4 +96,4 @@ await assert.rejects(
 const empty = mockClient(new Map());
 assert.deepEqual(await loadCondominiumUnitsForLookup(empty.client, ""), [], "missing condominium must avoid queries");
 assert.equal(empty.requests.length, 0);
-console.log("Condominium member unit lookup pagination regression checks passed.");
+console.log("Condominium unit lookup pagination and owner cleanup regression checks passed.");
