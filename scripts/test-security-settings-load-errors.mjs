@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/main.tsx", "utf8");
+const start = source.indexOf("function SecuritySettingsCard()");
+const end = source.indexOf("\nfunction ", start + 20);
+const component = source.slice(start, end);
+assert.ok(component.includes("const securityRequestRef = useRef(0);"), "security refresh tracks request generations");
+assert.ok(component.includes("if (settingsError) throw settingsError;"), "settings read errors are not silently interpreted as disabled");
+assert.ok(component.includes("if (factorsError) throw factorsError;"), "MFA list errors are not silently interpreted as disabled");
+assert.ok(component.includes("if (requestId !== securityRequestRef.current) return;"), "stale security refresh results are ignored");
+assert.ok(component.includes("if (requestId === securityRequestRef.current) setSecurityError"), "current refresh errors are visible");
+assert.ok(component.includes("if (requestId === securityRequestRef.current) setSecurityLoading(false);"), "only current request clears loading");
+assert.ok(component.includes("Verifica delle impostazioni di sicurezza in corso"), "security state has an explicit loading label");
+assert.ok(component.includes("Impossibile verificare lo stato delle protezioni"), "security read failure has a visible retry path");
+console.log("Security settings load-error regression checks passed");
