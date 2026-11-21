@@ -6567,6 +6567,7 @@ function App() {
 
 
   const backendHydrated = useRef(false);
+  const backendRefreshRequestRef = useRef(0);
   const skipNextBackendSync = useRef(false);
   const skipNextNavigationRefresh = useRef(false);
   const backendSyncSnapshot = useRef<Record<string, any[]> | null>(null);
@@ -6714,6 +6715,7 @@ function App() {
 
     let cancelled = false;
     const refreshBackendState = async () => {
+      const requestId = ++backendRefreshRequestRef.current;
       try {
         const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
           .from("workspaces")
@@ -6727,7 +6729,7 @@ function App() {
         }
 
         const backend = await loadBackendState(profile.workspaceId);
-        if (cancelled) return;
+        if (cancelled || requestId !== backendRefreshRequestRef.current) return;
         backendSyncSnapshot.current = selectBackendSyncState(backend);
         // Applying server state must not trigger a second full-workspace write.
         skipNextBackendSync.current = true;
@@ -6745,7 +6747,7 @@ function App() {
         setPortalMembers(Array.isArray(backend.portalMembers) ? backend.portalMembers : []);
         setCollaborators(Array.isArray(backend.collaborators) ? backend.collaborators : []);
       } catch (error) {
-        console.error("BETHAG navigation refresh failed", error);
+        if (!cancelled && requestId === backendRefreshRequestRef.current) console.error("BETHAG navigation refresh failed", error);
       }
     };
 
@@ -6769,6 +6771,7 @@ function App() {
 
     return () => {
       cancelled = true;
+      backendRefreshRequestRef.current += 1;
       window.removeEventListener("bethag-backend-refresh", handleBackendRefresh);
     };
   }, [page, profile.workspaceId, sessionRole]);
