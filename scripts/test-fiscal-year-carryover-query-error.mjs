@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+const source=readFileSync(new URL("../src/AccountingPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function saveYear(e: React.FormEvent)");
+const end=source.indexOf("async function ",start+20);
+assert.ok(start>=0&&end>start,"saveYear handler must exist");
+const handler=source.slice(start,end);
+assert.ok(handler.includes("error:savedYearError"),"fiscal-year lookup error must be captured");
+assert.ok(handler.includes("if(savedYearError)throw savedYearError;"),"lookup error must stop carryover generation");
+console.log("Fiscal-year lookup error regression checks passed.");
