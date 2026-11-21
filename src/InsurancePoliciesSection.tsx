@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
+import { requireInsurancePolicyUpdateResult } from "./lib/insurancePolicyUpdate.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -146,11 +147,20 @@ export default function InsurancePoliciesSection({
         active: form.active,
         notes: form.notes.trim(),
       };
-      const query = editing
-        ? supabase.from("condominium_insurance_policies").update(payload).eq("id", editing.id).eq("workspace_id", workspaceId).eq("condominium_id", dbCondominiumId)
-        : supabase.from("condominium_insurance_policies").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editing) {
+        await requireInsurancePolicyUpdateResult(
+          supabase.from("condominium_insurance_policies")
+            .update(payload)
+            .eq("id", editing.id)
+            .eq("workspace_id", workspaceId)
+            .eq("condominium_id", dbCondominiumId)
+        );
+      } else {
+        const { error: saveError } = await supabase
+          .from("condominium_insurance_policies")
+          .insert(payload);
+        if (saveError) throw saveError;
+      }
       closeForm();
       await load();
     } catch (e) {
