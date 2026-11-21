@@ -22,9 +22,10 @@ await db.exec(`
 const active = "00000000-0000-0000-0000-000000000001";
 const archived = "00000000-0000-0000-0000-000000000002";
 await db.query("INSERT INTO records VALUES (1, $1, 'active')", [active]);
-await assert.rejects(db.query("INSERT INTO records VALUES (2, $1, 'archived')", [archived]), /archived condominium destination blocked/);
-await assert.rejects(db.query("UPDATE records SET condominium_id=$1 WHERE id=3", [active]), /archived condominium source update blocked/);
-await assert.rejects(db.query("DELETE FROM records WHERE id=3"), /archived condominium delete blocked/);
+await assert.rejects(db.query("INSERT INTO records VALUES (2, $1, 'archived')", [archived]), /Il condominio è archiviato: modifica non consentita/);
+await assert.rejects(db.query("UPDATE records SET condominium_id=$1 WHERE id=1", [archived]), /Il condominio è archiviato: modifica non consentita/);
+await assert.rejects(db.query("UPDATE records SET condominium_id=$1 WHERE id=3", [active]), /Il condominio di origine è archiviato: modifica non consentita/);
+await assert.rejects(db.query("DELETE FROM records WHERE id=3"), /Il condominio è archiviato: eliminazione non consentita/);
 await db.query("INSERT INTO records VALUES (4, $1, 'active deletion')", [active]);
 await db.query("DELETE FROM records WHERE id=4");
 await db.query("INSERT INTO records VALUES (5, $1, 'active update')", [active]);
