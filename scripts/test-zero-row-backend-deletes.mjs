@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/lib/bethagBackend.ts","utf8");
+const workspaceStart=source.indexOf("export async function deleteWorkspaceRecord");
+const workspaceEnd=source.indexOf("export async function deletePortalMember",workspaceStart);
+const portalStart=workspaceEnd;
+const portalEnd=source.indexOf("export async function deleteCondominium",portalStart);
+const workspace=source.slice(workspaceStart,workspaceEnd);
+const portal=source.slice(portalStart,portalEnd);
+assert.match(workspace,/\.delete\(\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("legacy_id", legacyId\)[\s\S]*\.select\("id"\)/,"workspace deletion must return deleted IDs");
+assert.match(workspace,/if \(!deletedRows\?\.length\)[\s\S]*throw new Error/,"workspace deletion must reject zero-row success");
+assert.match(portal,/\.delete\(\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("legacy_id", legacyId\)[\s\S]*\.select\("id"\)/,"portal deletion must return deleted IDs");
+assert.match(portal,/if \(!deletedRows\?\.length\)[\s\S]*throw new Error/,"portal deletion must reject zero-row success");
+console.log("Zero-row backend delete regression checks passed.");
