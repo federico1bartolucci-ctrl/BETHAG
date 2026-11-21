@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 
 const db = new PGlite();
+const migrationSql = await readFile("supabase/migrations/20261121153000_block_mutations_moving_records_from_archived_condominiums.sql", "utf8");
 await db.exec(`
   CREATE TABLE condominiums (id uuid PRIMARY KEY, archived_at timestamptz);
   CREATE TABLE records (id integer PRIMARY KEY, condominium_id uuid NOT NULL, value text);
@@ -10,30 +12,9 @@ await db.exec(`
     ('00000000-0000-0000-0000-000000000001', NULL),
     ('00000000-0000-0000-0000-000000000002', now());
   INSERT INTO records VALUES (3, '00000000-0000-0000-0000-000000000002', 'archived seed');
-  CREATE OR REPLACE FUNCTION prevent_archived_condominium_mutation()
-  RETURNS trigger LANGUAGE plpgsql AS $function$
-  DECLARE v_condominium_id uuid;
-  BEGIN
-    IF TG_OP = 'DELETE' THEN
-      v_condominium_id := OLD.condominium_id;
-      IF v_condominium_id IS NOT NULL AND EXISTS (
-        SELECT 1 FROM condominiums c WHERE c.id = v_condominium_id AND c.archived_at IS NOT NULL
-      ) THEN RAISE EXCEPTION 'archived condominium delete blocked'; END IF;
-      RETURN OLD;
-    END IF;
-    IF TG_OP = 'UPDATE' THEN
-      v_condominium_id := OLD.condominium_id;
-      IF v_condominium_id IS NOT NULL AND EXISTS (
-        SELECT 1 FROM condominiums c WHERE c.id = v_condominium_id AND c.archived_at IS NOT NULL
-      ) THEN RAISE EXCEPTION 'archived condominium source update blocked'; END IF;
-    END IF;
-    v_condominium_id := NEW.condominium_id;
-    IF v_condominium_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM condominiums c WHERE c.id = v_condominium_id AND c.archived_at IS NOT NULL
-    ) THEN RAISE EXCEPTION 'archived condominium destination blocked'; END IF;
-    RETURN NEW;
-  END;
-  $function$;
+`);
+await db.exec(migrationSql);
+await db.exec(`
   CREATE TRIGGER records_archive_guard BEFORE INSERT OR UPDATE OR DELETE ON records
   FOR EACH ROW EXECUTE FUNCTION prevent_archived_condominium_mutation();
 `);
