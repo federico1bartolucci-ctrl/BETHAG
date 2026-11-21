@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { loadCondominiumUnitsForMember } from "./condominiumMemberUnitLookupPagination";
+import { loadCondominiumUnitsForLookup } from "./condominiumUnitLookupPagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -950,12 +950,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // Il vincolo di unicità dell'unità è normalizzato su lower(trim(unit_code)).
     // Non usiamo quindi un upsert con conflict target testuale: Postgres non
     // può inferire un indice espresso da (condominium_id, unit_code).
-    const { data: existingUnits, error: existingUnitError } = await supabase
-      .from("condominium_units")
-      .select("id, unit_code, building_code, lifecycle_status")
-      .eq("condominium_id", condominium.id);
-
-    if (existingUnitError) throw existingUnitError;
+    const existingUnits = await loadCondominiumUnitsForLookup(supabase, condominium.id);
 
     const normalizedUnitCode = unitCode.toLowerCase();
     // In modifica l'ID DB dell'unità è la fonte di verità: il codice può
@@ -1085,7 +1080,7 @@ export async function saveCondominiumMember(
       // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
       // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
       // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const existingUnits = await loadCondominiumUnitsForMember(supabase, condominium.id);
+      const existingUnits = await loadCondominiumUnitsForLookup(supabase, condominium.id);
 
       const normalizedApartment = apartment.toLowerCase();
       const existingUnit = (existingUnits ?? []).find(
