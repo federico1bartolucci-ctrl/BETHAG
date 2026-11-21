@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+assert.ok(source.includes("const loadRequestRef=useRef(0);"),"register loads track request generation");
+assert.ok(source.includes("const requestId=++loadRequestRef.current;"),"each register load receives an ID");
+assert.ok(source.includes("if(requestId!==loadRequestRef.current)return;"),"stale register response cannot replace current state");
+assert.ok(source.includes("if(requestId===loadRequestRef.current)setError("),"stale register load cannot overwrite current error");
+assert.ok(source.includes("if(requestId===loadRequestRef.current)setLoading(false);"),"stale register load cannot change loading state");
+assert.ok(source.includes("return()=>{loadRequestRef.current+=1;}"),"effect cleanup invalidates outstanding loads");
+console.log("Register page load-race regression checks passed");
