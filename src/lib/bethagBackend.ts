@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadCondominiumUnitsForMember } from "./condominiumMemberUnitLookupPagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -1084,12 +1085,7 @@ export async function saveCondominiumMember(
       // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
       // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
       // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const { data: existingUnits, error: existingUnitError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominium.id);
-
-      if (existingUnitError) throw existingUnitError;
+      const existingUnits = await loadCondominiumUnitsForMember(supabase, condominium.id);
 
       const normalizedApartment = apartment.toLowerCase();
       const existingUnit = (existingUnits ?? []).find(
