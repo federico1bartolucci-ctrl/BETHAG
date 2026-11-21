@@ -1,11 +1,12 @@
-export async function loadCondominiumUnitsForLookup(client: any, condominiumId: string, columns = "id, unit_code, building_code, lifecycle_status", workspaceId?: string) {
-  if (!condominiumId) return [];
+export async function loadCondominiumUnitsForLookup(client: any, condominiumId: string | string[], columns = "id, unit_code, building_code, lifecycle_status", workspaceId?: string) {
+  if (!condominiumId || (Array.isArray(condominiumId) && !condominiumId.length)) return [];
   const rows: any[] = [];
   for (let offset = 0; ; offset += 1000) {
     let query = client
       .from("condominium_units")
-      .select(columns)
-      .eq("condominium_id", condominiumId);
+      .select(columns);
+    if (Array.isArray(condominiumId)) query = query.in("condominium_id", condominiumId);
+    else query = query.eq("condominium_id", condominiumId);
     if (workspaceId) query = query.eq("workspace_id", workspaceId);
     const { data, error } = await query
       .order("id", { ascending: true })
