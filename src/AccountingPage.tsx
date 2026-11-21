@@ -1413,6 +1413,8 @@ function AccountingPage({
       };
     }).filter((r:any) => r.unit_id && scopedUnits.some(u => u.id === r.unit_id)) : scopedUnits
       .map(u => ({ unit_id:u.id, millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===table.id && v.unit_id===u.id)?.value || 0), amount:0 }));
+    const duplicateAIUnitIds = sourceRows.filter((r:any) => r.unit_id).map((r:any) => r.unit_id).filter((id:any, index:number, ids:any[]) => ids.indexOf(id) !== index);
+    if (duplicateAIUnitIds.length) { setError("Il documento contiene più righe per la stessa unità. Correggi o unifica le righe prima di generare la proposta."); return; }
 
     const totalMillesimi = sourceRows.reduce((sum:any,r:any)=>sum + Math.max(0, Number(r.millesimi || 0)), 0);
     const scopeMismatch = extractedTotalMillesimi > 0 && Math.abs(extractedTotalMillesimi - totalMillesimi) > 0.01;
@@ -1446,6 +1448,8 @@ function AccountingPage({
     if (!allocationIntakeForm.title.trim()) { setError("Inserisci un titolo per l'acquisizione."); return; }
     if (!allocationIntakeForm.ledger_entry_id) { setError("Collega una spesa del registro contabile."); return; }
     if (allocationIntakeForm.source === "Manuale" && allocationIntakeForm.rows.length === 0) { setError("Inserisci almeno una quota."); return; }
+    const duplicateIntakeUnitIds = allocationIntakeForm.rows.filter(r => r.unit_id).map(r => r.unit_id).filter((id, index, ids) => ids.indexOf(id) !== index);
+    if (duplicateIntakeUnitIds.length) { setError("Il riparto contiene più righe per la stessa unità. Unisci le quote in un’unica riga per unità."); return; }
     const total = allocationIntakeForm.rows.reduce((s,r)=>s+Number(r.amount||0),0);
     if (allocationIntakeForm.source === "Manuale" && Math.abs(total-Number(allocationIntakeForm.expense_amount||0))>0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
     setSaving(true); setError("");
