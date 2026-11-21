@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadWorkspaceRowsForState } from "./backendStatePagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -83,27 +84,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const condominiums = { data: condominiumRows, error: null };
 
   const client = supabase;
-  const loadWorkspaceRows = async (
+  const loadWorkspaceRows = (
     table: string,
     columns = "*",
     orderBy = "created_at"
-  ) => {
-    const rows: any[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from(table)
-        .select(columns)
-        .eq("workspace_id", workspaceId)
-        .order(orderBy, { ascending: true })
-        .order("id", { ascending: true })
-        .range(offset, offset + 999);
-      if (error) throw error;
-      const batch = data ?? [];
-      rows.push(...batch);
-      if (batch.length < 1000) break;
-    }
-    return { data: rows, error: null };
-  };
+  ) => loadWorkspaceRowsForState(client, workspaceId, table, columns, orderBy);
   const loadWorkspaceCondominiumMembers = async () => {
     const rows: any[] = [];
     for (let offset = 0; ; offset += 1000) {
@@ -151,7 +136,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     loadWorkspaceRows("activities"),
     loadWorkspaceRows("communications"),
     loadWorkspaceRows("condominium_requests"),
-    supabase.from("condominium_works").select("*").eq("workspace_id", workspaceId).order("created_at"),
+    loadWorkspaceRows("condominium_works"),
     supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date"),
     supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date"),
     supabase.from("condominium_funds").select("*").eq("workspace_id", workspaceId).order("created_at"),

@@ -11,6 +11,7 @@ const paginatedTables = [
   "communications",
   "condominium_requests",
   "portal_access",
+  "condominium_works",
 ];
 for (const table of paginatedTables) {
   assert.match(
@@ -24,6 +25,7 @@ for (const table of paginatedTables) {
     "loadBackendState must not keep a single-page query for " + table
   );
 }
-assert.match(source, /\.range\(offset, offset \+ 999\)/, "Workspace pagination must request bounded pages");
-assert.match(source, /\.order\("id", \{ ascending: true \}\)/, "Pagination must use deterministic ID tie-breaking");
+const paginationHelper = await readFile("src/lib/backendStatePagination.ts", "utf8");
+assert.match(paginationHelper, /\.range\(offset, offset \+ 999\)/, "Workspace pagination must request bounded pages");
+assert.match(paginationHelper, /\.order\("id", \{ ascending: true \}\)/, "Pagination must use deterministic ID tie-breaking");
 console.log("Backend-state pagination regression checks passed.");
