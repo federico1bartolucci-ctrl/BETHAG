@@ -44,7 +44,11 @@ export default {
         { p_code: code }
       );
 
-      if (verifyError || valid !== true) {
+      if (verifyError) {
+        console.error("delete-account personal security code verification failed", verifyError);
+        return Response.json({ error: "Errore durante la verifica del codice di sicurezza." }, { status: 500 });
+      }
+      if (valid !== true) {
         return Response.json({ error: "Codice personale di sicurezza non valido." }, { status: 403 });
       }
     }
