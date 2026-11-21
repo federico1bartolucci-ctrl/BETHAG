@@ -1956,13 +1956,17 @@ export async function deleteWorkspaceRecord(
       throw new Error("Tabella non autorizzata.");
     }
 
-    const { error } = await supabase
+    const { data: deletedRows, error } = await supabase
       .from(table)
       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", legacyId);
+      .eq("legacy_id", legacyId)
+      .select("id");
 
     if (error) throw error;
+    if (!deletedRows?.length) {
+      throw new Error("Nessun record eliminato: il record potrebbe essere già stato rimosso o non appartenere al workspace.");
+    }
   });
 }
 
@@ -1971,13 +1975,17 @@ export async function deletePortalMember(workspaceId: string, legacyId: number) 
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data: deletedRows, error } = await supabase
       .from("portal_access")
       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", legacyId);
+      .eq("legacy_id", legacyId)
+      .select("id");
 
     if (error) throw error;
+    if (!deletedRows?.length) {
+      throw new Error("Nessun accesso al portale eliminato: il record potrebbe essere già stato rimosso o non appartenere al workspace.");
+    }
   });
 }
 
