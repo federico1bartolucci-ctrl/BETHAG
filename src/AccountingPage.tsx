@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { loadWorkspaceExpenseAllocations } from "./lib/accountingExpenseAllocationPagination";
 import { loadWorkspaceInstallments } from "./lib/accountingInstallmentPagination";
+import { loadWorkspaceConsumptionReadings } from "./lib/accountingConsumptionReadingPagination";
 
 type Condominium = {
   id: number;
@@ -643,11 +644,7 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
-          supabase
-            .from("condominium_consumption_readings")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("period_end", { ascending:false }),
+          loadWorkspaceConsumptionReadings(supabase, workspaceId),
           supabase
             .from("condominium_allocation_rules")
             .select("*")
