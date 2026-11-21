@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "./lib/supabase";\nimport { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
+import { supabase } from "./lib/supabase";
+import { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 
 type Condominium={id:number;name:string};
 type RegisterItem={id:string;condominium_id:string;item_type:string;category:string;title:string;location:string;responsible:string;expiry_date:string|null;status:string;notes:string;supplier_id:string|null;estimated_amount:number};
