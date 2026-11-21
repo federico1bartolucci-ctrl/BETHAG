@@ -11,7 +11,6 @@ if (!/^[a-z0-9]{20}$/.test(projectRef)) {
   console.error("Invalid project ref.");
   process.exit(2);
 }
-
 const endpoint = `https://api.supabase.com/v1/projects/${projectRef}/database/backups`;
 const response = await fetch(endpoint, {
   method: "GET",
@@ -21,11 +20,9 @@ const body = await response.text();
 
 if (!response.ok) {
   console.error(`Supabase backup inventory request failed (HTTP ${response.status}).`);
-  // Do not print request headers, access token, or full response bodies that may contain account metadata.
-  console.error(body.slice(0, 1200));
+  // Provider error bodies may contain account or operational metadata; do not print them.
   process.exit(1);
 }
-
 let payload;
 try {
   payload = JSON.parse(body);
@@ -33,13 +30,13 @@ try {
   console.error("Supabase returned a non-JSON backup inventory response.");
   process.exit(1);
 }
-
-const backups = Array.isArray(payload) ? payload : (payload.backups ?? payload.data ?? null);
+const backups = Array.isArray(payload) ? payload : (payload?.backups ?? payload?.data ?? null);
 if (!Array.isArray(backups)) {
-  console.log(JSON.stringify({ project_ref: projectRef, response_shape: Object.keys(payload ?? {}), raw: payload }, null, 2));
-  process.exit(0);
+  // Fail closed and emit only schema keys, never the unexpected provider payload.
+  const responseShape = payload && typeof payload === "object" ? Object.keys(payload) : [];
+  console.error(JSON.stringify({ project_ref: projectRef, error: "Unexpected backup inventory response shape", response_shape: responseShape }, null, 2));
+  process.exit(1);
 }
-
 console.log(JSON.stringify({
   project_ref: projectRef,
   backup_count: backups.length,
