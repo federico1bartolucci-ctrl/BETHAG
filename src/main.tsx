@@ -1984,9 +1984,19 @@ function bethagIsNumericField(meta: string, input: HTMLInputElement): boolean {
 }
 
 function bethagInstallGlobalFieldRules() {
-  const timers = new WeakMap<HTMLInputElement, number>();
+  const capLookups = new WeakMap<HTMLInputElement, { timer: number; controller: AbortController }>();
+  const activeCapLookups = new Set<HTMLInputElement>();
+  const cancelCapLookup = (input: HTMLInputElement) => {
+    const previous = capLookups.get(input);
+    if (!previous) return;
+    window.clearTimeout(previous.timer);
+    previous.controller.abort();
+    capLookups.delete(input);
+    activeCapLookups.delete(input);
+  };
 
   const normalize = (input: HTMLInputElement | HTMLTextAreaElement) => {
+    if (input instanceof HTMLInputElement) cancelCapLookup(input);
     const meta = bethagFieldMeta(input);
     if (!meta || input.type === "password" || input.type === "file" || input.type === "url" || input.type === "date" || input.type === "time" || input.type === "datetime-local") return;
 
@@ -2037,16 +2047,17 @@ function bethagInstallGlobalFieldRules() {
 
     if (value !== input.value) bethagSetNativeInputValue(input, value);
 
-    if (isCap && value.length === 5) {
-      const previous = timers.get(input);
-      if (previous) window.clearTimeout(previous);
+    if (isCap && input instanceof HTMLInputElement && value.length === 5) {
+      const controller = new AbortController();
       const timer = window.setTimeout(async () => {
         try {
-          const response = await fetch("https://api.zippopotam.us/IT/" + encodeURIComponent(value));
+          const response = await fetch("https://api.zippopotam.us/IT/" + encodeURIComponent(value), {
+            signal: controller.signal,
+          });
           if (!response.ok) return;
           const data = await response.json();
           const place = Array.isArray(data.places) ? data.places[0] : null;
-          if (!place) return;
+          if (controller.signal.aborted || !input.isConnected || input.value !== value || !place) return;
           const scope = input.closest("form") || input.closest(".modal") || input.closest(".modal-content") || document.body;
           const fields = Array.from(scope.querySelectorAll<HTMLInputElement>("input, textarea"));
           const city = fields.find((el) => /(comune|città|citta|city)/i.test(bethagFieldMeta(el)));
@@ -2055,9 +2066,16 @@ function bethagInstallGlobalFieldRules() {
           if (province && place["state abbreviation"]) bethagSetNativeInputValue(province, String(place["state abbreviation"]).toLocaleUpperCase("it-IT").slice(0, 2));
         } catch {
           // Il CAP resta comunque utilizzabile anche se il servizio di lookup non risponde.
+        } finally {
+          const current = capLookups.get(input);
+          if (current?.controller === controller) {
+            capLookups.delete(input);
+            activeCapLookups.delete(input);
+          }
         }
       }, 250);
-      timers.set(input, timer);
+      capLookups.set(input, { timer, controller });
+      activeCapLookups.add(input);
     }
   };
 
@@ -2094,6 +2112,8 @@ function bethagInstallGlobalFieldRules() {
     document.removeEventListener("blur", onBlur, true);
     document.removeEventListener("keydown", onKeyDown, true);
     document.removeEventListener("invalid", onInvalid, true);
+    for (const input of activeCapLookups) cancelCapLookup(input);
+    activeCapLookups.clear();
   };
 }
 
