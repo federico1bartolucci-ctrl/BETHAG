@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 
 type InsurancePolicy = {
@@ -69,8 +69,10 @@ export default function InsurancePoliciesSection({
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<InsurancePolicy | null>(null);
   const [form, setForm] = useState<Omit<InsurancePolicy, "id">>(emptyPolicy);
+  const loadRequestRef = useRef(0);
 
   const load = async () => {
+    const requestId = ++loadRequestRef.current;
     if (!supabaseConfigured || !supabase) {
       setLoading(false);
       return;
@@ -83,6 +85,7 @@ export default function InsurancePoliciesSection({
         .select("id, workspace_id")
         .eq("legacy_id", condominiumId)
         .maybeSingle();
+      if (requestId !== loadRequestRef.current) return;
       if (condominiumError) throw condominiumError;
       if (!condominium?.id) {
         setPolicies([]);
@@ -96,6 +99,7 @@ export default function InsurancePoliciesSection({
         .select("*")
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
+      if (requestId !== loadRequestRef.current) return;
       if (policyError) throw policyError;
       setPolicies((data ?? []).map((row: any) => ({
         ...row,
@@ -105,14 +109,15 @@ export default function InsurancePoliciesSection({
         notes: row.notes || "",
       })));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
+      if (requestId === loadRequestRef.current) setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     void load();
+    return () => { loadRequestRef.current += 1; };
   }, [condominiumId]);
 
   const closeForm = () => {
