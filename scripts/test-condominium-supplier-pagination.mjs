@@ -22,4 +22,9 @@ assert.match(lookup, /for\s*\(\s*let\s+offset\s*=\s*0\s*;\s*;\s*offset\s*\+=\s*1
 assert.match(lookup, /\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/, "supplier pagination must use stable ordering");
 assert.match(lookup, /\.range\(offset,\s*offset\s*\+\s*999\s*\)/, "supplier lookup must request 1,000-row pages");
 assert.match(lookup, /condominiumSuppliers\.push\(\.\.\.batch\)/, "supplier lookup must retain every page");
+assert.doesNotMatch(
+  source,
+  /condominiumSuppliersForWorksError/,
+  "supplier mapping must not reference an obsolete error variable after using the throwing paginated loader"
+);
 console.log("Condominium supplier pagination regression checks passed.");
