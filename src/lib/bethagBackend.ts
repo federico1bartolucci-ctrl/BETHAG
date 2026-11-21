@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { loadCondominiumUnitsForLookup } from "./condominiumUnitLookupPagination";
+import { loadCondominiumUnitsForLookup, removeOwnerMemberIdFromUnitData } from "./condominiumUnitLookupPagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -2132,16 +2132,9 @@ export async function deleteCondominiumMember(
     );
 
     for (const unit of condominiumUnits ?? []) {
-      const currentData =
-        unit.data && typeof unit.data === "object" ? unit.data : {};
-      const currentOwners = Array.isArray((currentData as any).ownerMemberIds)
-        ? (currentData as any).ownerMemberIds
-        : [];
-      const nextOwners = currentOwners.filter(
-        (ownerId: unknown) => String(ownerId) !== String(legacyId)
-      );
+      const { currentData, nextOwners, changed } = removeOwnerMemberIdFromUnitData(unit.data, legacyId);
 
-      if (nextOwners.length !== currentOwners.length) {
+      if (changed) {
         const nextData = {
           ...currentData,
           ownerMemberIds: nextOwners,
