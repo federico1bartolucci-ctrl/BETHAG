@@ -10,7 +10,7 @@ assert.ok(start >= 0 && end > start, "workspace backup export must exist");
 const exportFn = source.slice(start, end);
 assert.match(exportFn, /const orderBy = table === "workspace_members" \? "user_id" : "id"/, "backup pagination must use workspace_members composite-key order");
 assert.match(exportFn, /loadPaginatedWorkspaceRows\(supabase, profile\.workspaceId, table, orderBy, null\)/, "backup export must paginate all tables");
-assert.doesNotMatch(exportFn, /\.from\(table\)\.select\("\*")\.eq("workspace_id", profile\.workspaceId)/, "backup must not use a single unpaginated query");
+assert.doesNotMatch(exportFn, /\.from\(table\)\.select\("\*"\)\.eq("workspace_id", profile\.workspaceId)/, "backup must not use a single unpaginated query");
 assert.ok(packageJson.scripts.test.includes("test-workspace-backup-pagination.mjs"), "backup pagination regression test must run via npm test");
 
 function mockClient(pages, errorOffset = null) {
