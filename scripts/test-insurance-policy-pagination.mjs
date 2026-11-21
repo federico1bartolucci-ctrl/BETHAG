@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/main.tsx", "utf8");
+const start = source.indexOf("const loadPolicies = async () =>");
+const end = source.indexOf("const resetForm = () =>", start);
+assert.ok(start >= 0 && end > start, "Insurance loadPolicies block must exist");
+const block = source.slice(start, end);
+assert.match(block, /condominium_insurance_policies/);
+assert.match(block, /\.range\(offset, offset \+ 999\)/, "Policies must load in bounded pages");
+assert.match(block, /\.order\("end_date", \{ ascending: true \}\)/, "End-date ordering must be retained");
+assert.match(block, /\.order\("id", \{ ascending: true \}\)/, "Stable pagination tie-break must be present");
+assert.match(block, /policyRows\.push\(...batch\)/, "All pages must be accumulated");
+assert.match(block, /if \(batch\.length < 1000\) break/, "Pagination must stop after final short page");
+console.log("Insurance policy pagination regression checks passed.");

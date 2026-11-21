@@ -17089,14 +17089,22 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         .eq("legacy_id", condominiumId)
         .maybeSingle();
       if (!condominium?.id) return;
-      const { data, error } = await supabase
-        .from("condominium_insurance_policies")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("condominium_id", condominium.id)
-        .order("end_date", { ascending: true });
-      if (error) throw error;
-      setPolicies((data || []) as CondominiumInsurancePolicy[]);
+      const policyRows: CondominiumInsurancePolicy[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase
+          .from("condominium_insurance_policies")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", condominium.id)
+          .order("end_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        const batch = (data ?? []) as CondominiumInsurancePolicy[];
+        policyRows.push(...batch);
+        if (batch.length < 1000) break;
+      }
+      setPolicies(policyRows);
     } catch (error) {
       console.error("BETHAG insurance load error", error);
     } finally {
