@@ -21,9 +21,21 @@ Deno.serve(async (req: Request) => {
     const signature = req.headers.get("svix-signature");
     if (!id || !timestamp || !signature) return new Response(JSON.stringify({error:"Firma webhook mancante."}), {status:401,headers});
 
-    // Verify the exact raw bytes first, then parse those same bytes as JSON.
-    new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    // Verify the exact raw bytes first. Invalid signatures are client/auth failures.
+    try {
+      new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
+    } catch (verificationError) {
+      console.error("Resend webhook signature verification failed", verificationError);
+      return new Response(JSON.stringify({error:"Firma webhook non valida."}), {status:401,headers});
+    }
+    // Parse the verified payload separately so malformed JSON is not reported as an auth failure.
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>;
+    } catch (parseError) {
+      console.error("Resend webhook payload JSON invalid", parseError);
+      return new Response(JSON.stringify({error:"Payload webhook non valido."}), {status:400,headers});
+    }
     const data = parsed.data && typeof parsed.data === "object"
       ? parsed.data as Record<string, unknown>
       : {};
@@ -73,7 +85,8 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
   } catch (error) {
-    console.error("BETHAG resend-webhook error",error);
-    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Evento non autorizzato."}),{status:401,headers});
+    console.error("BETHAG resend-webhook processing error",error);
+    // Provider retries on server errors. Do not acknowledge transient DB/RPC failures.
+    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Errore interno nella gestione del webhook."}),{status:500,headers});
   }
 });
