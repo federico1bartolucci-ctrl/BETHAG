@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function saveProgress(");
+const end=source.indexOf("\n async function ",start+1);
+const fn=source.slice(start,end<0?undefined:end);
+assert.ok(start>=0,"saveProgress handler must exist");
+const validation=fn.indexOf("if(approved>0&&cumulativeAmount>approved+0.005)");
+const insert=fn.indexOf(".insert({workspace_id:workspaceId,condominium_id:dbId,work_id:progressWork.id");
+assert.ok(validation>=0&&insert>=0,"SAL cumulative validation and insert must exist");
+assert.ok(validation<insert,"cumulative SAL amount must be validated before database insert");
+assert.match(fn,/const \{error:ue\}=await supabase\.from\("condominium_works"\)\.update\(\{progress_percent:cumulative\}\)/);
+assert.match(fn,/if\(ue\)throw ue/);
+assert.match(fn,/setError\(e\?\.message\|\|"Impossibile salvare il SAL\."/);
+console.log("SAL validate-before-insert regression checks passed");
