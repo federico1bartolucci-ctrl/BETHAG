@@ -1,5 +1,5 @@
 // Pages deployment trigger: transfer confirmation flow verified in source.
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
@@ -114,22 +114,23 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   };
   const memberLabel = (id: string) => memberName(scopedMembers.find(m => m.id === id));
 
+  const rowsLoadRequestRef = useRef(0);
   const loadRows = useCallback(async () => {
+    const requestId = ++rowsLoadRequestRef.current;
     if (!supabase || !condominiumId) { setRows([]); return; }
     const { data, error: e } = await supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false });
+    if (requestId !== rowsLoadRequestRef.current) return;
     if (e) throw e;
     setRows((data || []) as TransferRow[]);
   }, [workspaceId, condominiumId]);
 
+
   useEffect(() => {
-    let active = true;
-    if (!supabase || !condominiumId) { setRows([]); return; }
-    supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false }).then(({data,error:e}) => {
-      if (!active) return;
-      if (e) setError(e.message); else setRows((data || []) as TransferRow[]);
+    void loadRows().catch((e: any) => {
+      if (e) setError(e?.message || "Impossibile caricare i trasferimenti.");
     });
-    return () => { active = false; };
-  }, [workspaceId, condominiumId]);
+    return () => { rowsLoadRequestRef.current += 1; };
+  }, [loadRows]);
 
   async function makePreviewFor(nextUnitId: string, nextOutgoingId: string, nextTransferDate: string) {
     if (!supabase || !condominiumId || !nextUnitId || !nextOutgoingId || !nextTransferDate) {
