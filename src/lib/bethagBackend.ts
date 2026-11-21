@@ -288,11 +288,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const condominiumSupplierLegacyByDbId = new Map<string, number>();
-  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } = await supabase
-    .from("condominium_suppliers")
-    .select("id,condominium_id,business_name,data")
-    .eq("workspace_id", workspaceId);
-  if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
+  const condominiumSuppliersForWorks = await loadWorkspaceRows(
+    "condominium_suppliers",
+    "id,condominium_id,business_name,data",
+    null
+  );
 
   (condominiumSuppliersForWorks ?? []).forEach((supplier: any) => {
     const storedLegacyId = Number(supplier.data?.legacySupplierId ?? supplier.data?.supplierId);
@@ -507,11 +507,22 @@ async function syncBackendStateNow(
         .filter((id: number) => Number.isFinite(id) && id > 0)
     ));
     if (selectedSupplierIds.length) {
-      const { data: condominiumSuppliers, error: condominiumSuppliersError } = await supabase
-        .from("condominium_suppliers")
-        .select("id,condominium_id,business_name,data")
-        .eq("workspace_id", workspaceId);
-      if (condominiumSuppliersError) throw condominiumSuppliersError;
+      // Paginate this workspace-wide lookup: PostgREST's default row cap can
+      // otherwise hide suppliers beyond the first 1,000 and cause duplicate
+      // condominium_suppliers rows to be inserted on every unrelated sync.
+      const condominiumSuppliers: any[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase
+          .from("condominium_suppliers")
+          .select("id,condominium_id,business_name,data")
+          .eq("workspace_id", workspaceId)
+          .order("id", { ascending: true })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        const batch = data ?? [];
+        condominiumSuppliers.push(...batch);
+        if (batch.length < 1000) break;
+      }
 
       const normalizeSupplierName = (value: unknown) =>
         String(value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
