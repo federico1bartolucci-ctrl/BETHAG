@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadWorkReconciliationLedger } from "./condominiumWorkReconciliationPagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -1569,8 +1570,7 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
     }).filter(Boolean);
     const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").select("progress_no,title,amount,paid_amount,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).order("progress_no");
     if (progressError) throw progressError;
-    const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").select("id,amount,payment_status,description,data,document_id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("direction", "Uscita");
-    if (ledgerError) throw ledgerError;
+    const ledger = await loadWorkReconciliationLedger(supabase, workspaceId, work.condominium_id);
     const invoiceDocumentIds = new Set((docs ?? []).filter((doc: any) => (invoices as any[]).some((invoice: any) => invoice.id === doc.id)).map((doc: any) => doc.id));
     const invoiceLedger = (ledger ?? []).filter((entry: any) => entry.document_id && invoiceDocumentIds.has(entry.document_id));
     const salLedger = (ledger ?? []).filter((entry: any) =>
