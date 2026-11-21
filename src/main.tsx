@@ -17156,7 +17156,8 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
       : await supabase.from("condominium_insurance_policies").insert(payload);
     if (result.error) {
-      alert("ERRORE");
+      console.error("BETHAG insurance policy save error", result.error);
+      alert(`Impossibile salvare la polizza assicurativa: ${result.error.message || "errore del database"}`);
       return;
     }
     resetForm();
