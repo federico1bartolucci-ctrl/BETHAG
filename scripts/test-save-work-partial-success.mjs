@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function saveWork(");
+const end=source.indexOf("\n async function ",start+1);
+const fn=source.slice(start,end<0?undefined:end);
+assert.ok(start>=0,"saveWork handler must exist");
+assert.match(fn,/\.insert\(payload\)/);
+assert.match(fn,/let eventError:string\|null=null/);
+assert.match(fn,/let auditError:string\|null=null/);
+assert.match(fn,/catch\(e:any\)\{eventError=e\?\.message\|\|"errore non specificato"\;\}/);
+assert.match(fn,/catch\(e:any\)\{auditError=e\?\.message\|\|"errore non specificato"\;\}/);
+assert.match(fn,/setShowWorkForm\(false\);await load\(\);if\(eventError\|\|auditError\)setError\("Intervento salvato correttamente/);
+console.log("saveWork partial-success regression checks passed");
