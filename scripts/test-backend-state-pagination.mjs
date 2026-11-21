@@ -15,7 +15,7 @@ const paginatedTables = [
 for (const table of paginatedTables) {
   assert.match(
     source,
-    new RegExp('loadWorkspaceRows\\("' + table + '"\\)'),
+    new RegExp('loadWorkspaceRows\\("' + table + '"'),
     "loadBackendState must paginate " + table
   );
   assert.doesNotMatch(
