@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function recordProgressPayment");
+const end=source.indexOf("async function saveProgress",start);
+assert.ok(start>=0&&end>start,"recordProgressPayment handler must exist");
+const handler=source.slice(start,end);
+assert.match(handler,/if\(ue\)\{const \{error:rollbackError\}=await supabase\.from\("condominium_ledger_entries"\)\.delete\(\)/,"failed SAL update must compensate by deleting the newly inserted ledger row");
+assert.match(handler,/rollbackError.*Verifica la scrittura contabile/,"failed compensation must expose ledger ID for manual reconciliation");
+assert.match(handler,/Pagamento non collegato al SAL: scrittura contabile annullata/,"successful compensation must report the ledger write was rolled back");
+console.log("recordProgressPayment compensation regression checks passed.");
