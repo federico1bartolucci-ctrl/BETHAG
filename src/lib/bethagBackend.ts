@@ -2124,13 +2124,12 @@ export async function deleteCondominiumMember(
     // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
     // di tutte le unità del medesimo condominio. I millesimi restano
     // esclusivamente nell'oggetto unità e non vengono mai modificati.
-    const { data: condominiumUnits, error: unitsError } = await supabase
-      .from("condominium_units")
-      .select("id, data")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id);
-
-    if (unitsError) throw unitsError;
+    const condominiumUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      condominium.id,
+      "id, data",
+      workspaceId,
+    );
 
     for (const unit of condominiumUnits ?? []) {
       const currentData =
