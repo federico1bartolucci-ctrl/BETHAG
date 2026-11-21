@@ -3047,6 +3047,10 @@ function App() {
 
   const approvePortalRegistration = async (requestId: string, memberId: string) => {
     if (!supabase) return;
+    if (!profile.workspaceId) {
+      alert("Workspace non disponibile. Aggiorna la pagina e riprova.");
+      return;
+    }
     const localMemberId = Number(memberId);
     const member = condominiumMembers.find((item) => item.id === localMemberId);
     if (!member) {
@@ -3056,6 +3060,7 @@ function App() {
     const { data: dbMember, error: dbMemberError } = await supabase
       .from("condominium_members")
       .select("id")
+      .eq("workspace_id", profile.workspaceId)
       .eq("legacy_id", localMemberId)
       .maybeSingle();
     if (dbMemberError || !dbMember?.id) {

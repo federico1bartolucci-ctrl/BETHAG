@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("src/main.tsx", "utf8");
+const start = source.indexOf("const approvePortalRegistration = async (requestId: string, memberId: string) =>");
+assert.notEqual(start, -1, "approval handler exists");
+const end = source.indexOf("/* =======================================================", start);
+const handler = source.slice(start, end);
+assert.match(handler, /if \(!profile\.workspaceId\)\s*\{[\s\S]*?return;\s*\}/, "approval requires a workspace");
+assert.match(handler, /\.from\("condominium_members"\)[\s\S]*?\.eq\("workspace_id", profile\.workspaceId\)[\s\S]*?\.eq\("legacy_id", localMemberId\)/, "member lookup is workspace-scoped before resolving legacy ID");
+console.log("Portal approval workspace-scope regression checks passed.");
