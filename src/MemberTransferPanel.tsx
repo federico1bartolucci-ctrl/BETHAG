@@ -1,5 +1,5 @@
 // Pages deployment trigger: transfer confirmation flow verified in source.
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
@@ -69,6 +69,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [incomingOwners, setIncomingOwners] = useState<Array<{ name: string; email: string; share: string }>>([{ name: "", email: "", share: "100" }]);
   const [notes, setNotes] = useState("");
   const [preview, setPreview] = useState<any>(null);
+  const previewRequestId = useRef(0);
   const [snapshot, setSnapshot] = useState<Record<string, any>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -132,6 +133,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   }, [workspaceId, condominiumId]);
 
   async function makePreviewFor(nextUnitId: string, nextOutgoingId: string, nextTransferDate: string) {
+    const requestId = ++previewRequestId.current;
     if (!supabase || !condominiumId || !nextUnitId || !nextOutgoingId || !nextTransferDate) {
       setPreview(null);
       return;
@@ -164,6 +166,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
         if (e) throw e;
         return data || {};
       }));
+
+      if (requestId !== previewRequestId.current) return;
 
       const byId = new Map<string, any>();
       const mergeArray = (key: string) => {
@@ -213,9 +217,11 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       };
       setPreview(merged);
     } catch (e: any) {
-      setPreview(null);
-      setError(e?.message || "Impossibile calcolare la situazione contabile.");
-    } finally { setBusy(false); }
+      if (requestId === previewRequestId.current) {
+        setPreview(null);
+        setError(e?.message || "Impossibile calcolare la situazione contabile.");
+      }
+    } finally { if (requestId === previewRequestId.current) setBusy(false); }
   }
 
   async function makePreview() {
