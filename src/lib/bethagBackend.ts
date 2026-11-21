@@ -282,13 +282,21 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const condominiumSupplierLegacyByDbId = new Map<string, number>();
-  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } = await supabase
-    .from("condominium_suppliers")
-    .select("id,condominium_id,business_name,data")
-    .eq("workspace_id", workspaceId);
-  if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
+  const condominiumSuppliersForWorks: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("condominium_suppliers")
+      .select("id,condominium_id,business_name,data")
+      .eq("workspace_id", workspaceId)
+      .order("id", { ascending: true })
+      .range(offset, offset + 999);
+    if (error) throw error;
+    const batch = data ?? [];
+    condominiumSuppliersForWorks.push(...batch);
+    if (batch.length < 1000) break;
+  }
 
-  (condominiumSuppliersForWorks ?? []).forEach((supplier: any) => {
+  condominiumSuppliersForWorks.forEach((supplier: any) => {
     const storedLegacyId = Number(supplier.data?.legacySupplierId ?? supplier.data?.supplierId);
     if (Number.isFinite(storedLegacyId) && storedLegacyId > 0) {
       condominiumSupplierLegacyByDbId.set(String(supplier.id), storedLegacyId);
