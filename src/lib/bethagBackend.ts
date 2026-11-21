@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadCondominiumUnitsForLookup, removeOwnerMemberIdFromUnitData } from "./condominiumUnitLookupPagination";
 
 export type BackendState = Record<string, any[]>;
 
@@ -720,14 +721,14 @@ async function syncBackendStateNow(
   if (desiredUnits.length) {
     const unitCondominiums = Array.from(new Set(desiredUnits.map((row: any) => row.condominium_id)));
 
-    const existingResult = await supabase
-      .from("condominium_units")
-      .select("id, condominium_id, unit_code")
-      .in("condominium_id", unitCondominiums);
-    if (existingResult.error) throw existingResult.error;
+    const existingUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      unitCondominiums,
+      "id, condominium_id, unit_code",
+    );
 
     const existingKeys = new Set(
-      (existingResult.data ?? []).map((unit: any) =>
+      (existingUnits ?? []).map((unit: any) =>
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
       )
     );
@@ -755,14 +756,14 @@ async function syncBackendStateNow(
       }
     }
 
-    const persistedResult = await supabase
-      .from("condominium_units")
-      .select("id, condominium_id, unit_code")
-      .in("condominium_id", unitCondominiums);
-    if (persistedResult.error) throw persistedResult.error;
+    const persistedUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      unitCondominiums,
+      "id, condominium_id, unit_code",
+    );
 
     const persistedKeys = new Set(
-      (persistedResult.data ?? []).map((unit: any) =>
+      (persistedUnits ?? []).map((unit: any) =>
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase()
       )
     );
@@ -774,7 +775,7 @@ async function syncBackendStateNow(
     if (stillMissing.length && missingUnitsInsertError) throw missingUnitsInsertError;
     if (stillMissing.length) throw new Error("Impossibile sincronizzare tutte le unità condominiali richieste.");
 
-    (persistedResult.data ?? []).forEach((unit: any) => {
+    (persistedUnits ?? []).forEach((unit: any) => {
       unitRowsByKey.set(
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
         unit
@@ -949,12 +950,7 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // Il vincolo di unicità dell'unità è normalizzato su lower(trim(unit_code)).
     // Non usiamo quindi un upsert con conflict target testuale: Postgres non
     // può inferire un indice espresso da (condominium_id, unit_code).
-    const { data: existingUnits, error: existingUnitError } = await supabase
-      .from("condominium_units")
-      .select("id, unit_code, building_code, lifecycle_status")
-      .eq("condominium_id", condominium.id);
-
-    if (existingUnitError) throw existingUnitError;
+    const existingUnits = await loadCondominiumUnitsForLookup(supabase, condominium.id);
 
     const normalizedUnitCode = unitCode.toLowerCase();
     // In modifica l'ID DB dell'unità è la fonte di verità: il codice può
@@ -1084,12 +1080,7 @@ export async function saveCondominiumMember(
       // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
       // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
       // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const { data: existingUnits, error: existingUnitError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominium.id);
-
-      if (existingUnitError) throw existingUnitError;
+      const existingUnits = await loadCondominiumUnitsForLookup(supabase, condominium.id);
 
       const normalizedApartment = apartment.toLowerCase();
       const existingUnit = (existingUnits ?? []).find(
@@ -2133,25 +2124,17 @@ export async function deleteCondominiumMember(
     // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
     // di tutte le unità del medesimo condominio. I millesimi restano
     // esclusivamente nell'oggetto unità e non vengono mai modificati.
-    const { data: condominiumUnits, error: unitsError } = await supabase
-      .from("condominium_units")
-      .select("id, data")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id);
-
-    if (unitsError) throw unitsError;
+    const condominiumUnits = await loadCondominiumUnitsForLookup(
+      supabase,
+      condominium.id,
+      "id, data",
+      workspaceId,
+    );
 
     for (const unit of condominiumUnits ?? []) {
-      const currentData =
-        unit.data && typeof unit.data === "object" ? unit.data : {};
-      const currentOwners = Array.isArray((currentData as any).ownerMemberIds)
-        ? (currentData as any).ownerMemberIds
-        : [];
-      const nextOwners = currentOwners.filter(
-        (ownerId: unknown) => String(ownerId) !== String(legacyId)
-      );
+      const { currentData, nextOwners, changed } = removeOwnerMemberIdFromUnitData(unit.data, legacyId);
 
-      if (nextOwners.length !== currentOwners.length) {
+      if (changed) {
         const nextData = {
           ...currentData,
           ownerMemberIds: nextOwners,
