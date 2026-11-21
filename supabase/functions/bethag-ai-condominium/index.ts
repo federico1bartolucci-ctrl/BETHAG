@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { deleteTemporaryOpenAIFile } from "../_shared/openai-file-cleanup.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -248,12 +249,14 @@ Documenti: ${files.map((f: any) => f.filename).join(", ")}`
     return responseJson({ draft });
     } finally {
       await Promise.all(openAIFileIds.map(async (id) => {
-        try {
-          await fetch("https://api.openai.com/v1/files/" + encodeURIComponent(id), {
-            method: "DELETE",
-            headers: { Authorization: "Bearer " + openaiKey },
+        const cleanup = await deleteTemporaryOpenAIFile(fetch, openaiKey, id);
+        if (!cleanup.ok) {
+          console.error("BETHAG AI condominium temporary-file cleanup failed", {
+            status: cleanup.status,
+            attempts: cleanup.attempts,
+            error: cleanup.error ?? null,
           });
-        } catch (_) {}
+        }
       }));
     }
   } catch (error) {
