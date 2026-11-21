@@ -35,7 +35,7 @@ async function createDeadlineActivity(w:Work){if(!supabase||!dbId)return;const d
   try{
     const maxNo=Math.max(0,...progress.filter(x=>x.work_id===progressWork.id).map(x=>x.progress_no));
     const no=Math.max(1,Number(progressForm.progress_no)||maxNo+1);
-    if(progress.some(x=>x.work_id===progressWork.id&&x.progress_no===no)throw new Error("Esiste già un SAL con questo numero per l'intervento.");
+    if(progress.some(x=>x.work_id===progressWork.id&&x.progress_no===no))throw new Error("Esiste già un SAL con questo numero per l'intervento.");
     const current=progress.filter(x=>x.work_id===progressWork.id);
     const approved=Number(progressWork.approved_amount||0);
     const newAmount=Number(progressForm.amount)||0;
