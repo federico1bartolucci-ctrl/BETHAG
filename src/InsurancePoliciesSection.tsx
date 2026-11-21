@@ -77,6 +77,9 @@ export default function InsurancePoliciesSection({
     }
     setLoading(true);
     setError("");
+    setPolicies([]);
+    setWorkspaceId(null);
+    setDbCondominiumId(null);
     try {
       const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
@@ -86,6 +89,8 @@ export default function InsurancePoliciesSection({
       if (condominiumError) throw condominiumError;
       if (!condominium?.id) {
         setPolicies([]);
+        setWorkspaceId(null);
+        setDbCondominiumId(null);
         setLoading(false);
         return;
       }
