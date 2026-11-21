@@ -3014,6 +3014,8 @@ function App() {
       setRegistrationRequests([]);
       return;
     }
+    // Clear workspace-scoped rows immediately so previous workspace requests cannot remain visible.
+    setRegistrationRequests([]);
     let cancelled = false;
     const loadRegistrationRequests = async () => {
       const [assigned, unassigned] = await Promise.all([
@@ -3034,6 +3036,7 @@ function App() {
           .order("created_at", { ascending: false }),
       ]);
       if (assigned.error || unassigned.error) {
+        if (!cancelled) setRegistrationRequests([]);
         console.error("BETHAG portal registration requests load error", assigned.error || unassigned.error);
         return;
       }
