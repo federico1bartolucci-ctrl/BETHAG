@@ -1447,7 +1447,7 @@ function AccountingPage({
     if (!allocationIntakeForm.ledger_entry_id) { setError("Collega una spesa del registro contabile."); return; }
     if (allocationIntakeForm.source === "Manuale" && allocationIntakeForm.rows.length === 0) { setError("Inserisci almeno una quota."); return; }
     const total = allocationIntakeForm.rows.reduce((s,r)=>s+Number(r.amount||0),0);
-    if (allocationIntakeForm.source === "Manuale" && Math.abs(total-Number(allocationIntakeForm.expense_amount||0))>0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
+    if (allocationIntakeForm.source === "Manuale" && Math.abs(total - Number(allocationIntakeForm.expense_amount || 0)) > 0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
     setSaving(true); setError("");
     try {
       let backendDocumentId: string | null = null;
