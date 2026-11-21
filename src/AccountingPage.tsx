@@ -1607,7 +1607,7 @@ function AccountingPage({
     setSaving(true); setError("");
     try {
       const payload = condominiumUnits.map(u => ({workspace_id:workspaceId,condominium_id:dbCondominiumId,table_id:bulkMillesimalTableId,unit_id:u.id,value:Number(bulkMillesimalValues[u.id]||0),excluded:false,notes:""}));
-      const {error:saveError}=await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"table_id,unit_id"});
+      const {error:saveError}=await supabase.from("condominium_millesimal_values").upsert(payload,{onConflict:"workspace_id,table_id,unit_id"});
       if(saveError) throw saveError;
       setShowBulkMillesimalForm(false); setBulkMillesimalTableId(""); setBulkMillesimalValues({});
       flash("Quote millesimali salvate e quadrate."); await load();
