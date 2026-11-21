@@ -14,11 +14,10 @@ const tables = [
 ];
 for (const [table, orderBy] of tables) {
   const orderArg = orderBy === null ? "null" : `"${orderBy}"`;
-  assert.ok(
-    source.includes(`loadPaginatedWorkspaceRows(supabase,workspaceId,"${table}",${orderArg})`) ||
-      source.includes(`loadPaginatedWorkspaceRows(supabase,workspaceId,"${table}", ${orderArg})`),
-    `RegisterPage must paginate ${table}`
+  const pattern = new RegExp(
+    `loadPaginatedWorkspaceRows\\(supabase,\\s*workspaceId,\\s*"${table}",\\s*${orderArg}\\s*\\)`
   );
+  assert.match(source, pattern, `RegisterPage must paginate ${table}`);
 }
 assert.ok(packageJson.scripts.test.includes("test-register-page-pagination.mjs"), "pagination regression test must be included in npm test");
 
