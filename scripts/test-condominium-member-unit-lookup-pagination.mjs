@@ -26,7 +26,7 @@ const deleteMemberSection = source.slice(deleteMemberStart, deleteMemberEnd);
 assert.match(deleteMemberSection, /loadCondominiumUnitsForLookup\(\s*supabase,\s*condominium\.id,\s*"id, data",\s*workspaceId,\s*\)/, "member deletion must use the paginated owner-cleanup lookup");
 assert.doesNotMatch(deleteMemberSection, /\.from\("condominium_units"\)\s*\.select\("id, data"\)\s*\.eq\("workspace_id", workspaceId\)\s*\.eq\("condominium_id", condominium\.id\)/, "member deletion must not retain the capped owner-cleanup query");
 
-const syncStart = source.indexOf("export async function syncBackendStateNow(");
+const syncStart = source.indexOf("async function syncBackendStateNow(");
 const syncEnd = source.indexOf("\nexport async function ", syncStart + 1);
 assert.ok(syncStart >= 0 && syncEnd > syncStart, "syncBackendStateNow function must exist");
 const syncSection = source.slice(syncStart, syncEnd);
