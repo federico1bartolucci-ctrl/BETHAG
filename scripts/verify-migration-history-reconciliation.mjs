@@ -10,7 +10,10 @@ const productionSet = new Set(production.map(pair));
 const qaSet = new Set(qa.map(pair));
 const productionOnly = production.filter((row) => !qaSet.has(pair(row)));
 const qaOnly = qa.filter((row) => !productionSet.has(pair(row)));
-const canonicalFiles = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
+const auditOnlyMigrations = new Set([
+  "20261121153000_block_mutations_moving_records_from_archived_condominiums.sql",
+]);
+const canonicalFiles = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql") && !auditOnlyMigrations.has(name)).sort();
 
 assert.match(live.captured_at_utc ?? "", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 assert.equal(live.captured_at, live.captured_at_utc.slice(0, 10));

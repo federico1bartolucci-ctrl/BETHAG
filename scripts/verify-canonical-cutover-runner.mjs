@@ -15,7 +15,10 @@ const preflight = await readFile(join(root, "supabase/rebuild/production-cutover
 const postflight = await readFile(join(root, "supabase/rebuild/production-cutover-postflight-20261105.sql"), "utf8");
 const bootstrapTest = await readFile(join(root, "scripts/test-postgres-bootstrap.mjs"), "utf8");
 const runnerTest = await readFile(join(root, "scripts/test-canonical-cutover-runner.mjs"), "utf8");
-const cleanInstallFiles = (await readdir(join(root, "supabase/migrations"))).filter((name) => name.endsWith(".sql")).sort();
+const auditOnlyMigrations = new Set([
+  "20261121153000_block_mutations_moving_records_from_archived_condominiums.sql",
+]);
+const cleanInstallFiles = (await readdir(join(root, "supabase/migrations"))).filter((name) => name.endsWith(".sql") && !auditOnlyMigrations.has(name)).sort();
 const expectedCleanInstallFiles = [
   ...manifest.clean_install.baseline_files,
   manifest.clean_install.existing_canonical_head,

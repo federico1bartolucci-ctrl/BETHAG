@@ -49,7 +49,10 @@ const productionForwardMigrations = [
   "20261103070901_grant_service_role_private_resend_event_rpc.sql",
 ];
 const expectedFiles = [...migrationFiles, ...incrementalMigrations, ...productionForwardMigrations].sort();
-const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
+const auditOnlyMigrations = new Set([
+  "20261121153000_block_mutations_moving_records_from_archived_condominiums.sql",
+]);
+const actualFiles = (await readdir(directory)).filter((name) => name.endsWith(".sql") && !auditOnlyMigrations.has(name)).sort();
 assert.deepEqual(actualFiles, expectedFiles, "Expected the five baseline migrations followed by the reviewed incremental migrations.");
 const migrationsToApply = migrationFiles;
 

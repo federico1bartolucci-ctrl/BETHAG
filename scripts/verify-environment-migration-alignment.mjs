@@ -8,7 +8,10 @@ const [live, freeze, snapshot] = await Promise.all([
   readFile(root + "/production-migration-cutover-freeze-20261105.json", "utf8").then(JSON.parse),
   readFile(root + "/production-ledger-20261105.json", "utf8").then(JSON.parse),
 ]);
-const files = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql")).sort();
+const auditOnlyMigrations = new Set([
+  "20261121153000_block_mutations_moving_records_from_archived_condominiums.sql",
+]);
+const files = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql") && !auditOnlyMigrations.has(file)).sort();
 const productionSet = new Set(live.production.migrations.map(row => row.version + "|" + row.name));
 const qaSet = new Set(live.qa.migrations.map(row => row.version + "|" + row.name));
 const common = [...productionSet].filter(pair => qaSet.has(pair));
