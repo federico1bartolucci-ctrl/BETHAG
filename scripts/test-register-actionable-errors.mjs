@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+assert.match(source,/BETHAG register activity creation error/,"register activity creation error is logged");
+assert.match(source,/Impossibile creare l’attività dalla voce del registro/,"register activity failure must be actionable");
+assert.match(source,/BETHAG work activity creation error/,"work activity creation error is logged");
+assert.match(source,/Impossibile creare l’attività dall’intervento/,"work activity failure must be actionable");
+assert.match(source,/BETHAG register deletion error/,"register delete failure is logged");
+assert.match(source,/Impossibile eliminare \+label/,"delete failure must include item label");
+assert.doesNotMatch(source,/setError\("ERRORE"\)/,"register page must not hide these operation errors behind generic ERRORE");
+console.log("Register actionable operation errors regression passed.");
