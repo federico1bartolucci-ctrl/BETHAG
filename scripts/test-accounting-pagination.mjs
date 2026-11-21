@@ -9,7 +9,7 @@ assert.match(paginationSource, /const pageSize = 1000/, "Accounting loader must 
 assert.match(paginationSource, /queryFactory\(\)\.range\(offset, offset \+ pageSize - 1\)/, "Accounting loader must use Supabase range pagination");
 assert.match(paginationSource, /if \(page\.length < pageSize\) return \{ data: rows, error: null \}/, "Pagination must terminate after the final partial page");
 assert.match(paginationSource, /\.order\("id", \{ ascending: true \}\)/, "Paginated member lookup must have stable id ordering");
-assert.match(source, /loadActiveAllocationUnitMembers\(supabase, dbCondominiumId, unitIds\)/, "installment unification must use the paginated active-member lookup");
+assert.match(source, /loadActiveAllocationUnitMembers\(\s*supabase,\s*dbCondominiumId,\s*unitIds,?\s*\)/, "installment unification must use the paginated active-member lookup");
 
 const tables = [
   "condominium_fiscal_years", "condominium_ledger_entries", "condominium_funds",
