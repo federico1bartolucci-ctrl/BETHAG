@@ -1,0 +1,15 @@
+import fs from "node:fs";
+import assert from "node:assert/strict";
+const source=fs.readFileSync(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function saveProgress(");
+const end=source.indexOf(" async function saveWorkExpense(",start);
+assert(start>=0&&end>start,"saveProgress handler must exist");
+const handler=source.slice(start,end);
+const validation=handler.indexOf("cumulativeAmount>approved+0.005");
+const insert=handler.indexOf(".from(\"condominium_work_progress\").insert(");
+assert(validation>=0&&insert>=0,"cumulative approved-amount validation and SAL insert must exist");
+assert(validation<insert,"approved amount must be validated before inserting SAL");
+assert(handler.includes("workUpdateError"),"progress-percent update errors must be surfaced");
+assert(handler.includes("SAL salvato, ma l'aggiornamento dell'avanzamento del lavoro è fallito"),"partial success must be communicated");
+assert(handler.includes("e?.message||\"Impossibile salvare il SAL.\"),"validation error detail must be preserved");
+console.log("SAL validation regression checks passed.");
