@@ -538,9 +538,9 @@ function AccountingPage({
     return { income, expenses, balance: income - expenses, due };
   }, [scopedLedger]);
 
-  async function resolveCondominium() {
+  async function resolveCondominium(requestId?: number) {
     if (!supabase || selectedCondominiumId === "all") {
-      setDbCondominiumId(null);
+      if (requestId === undefined || requestId === loadRequestRef.current) setDbCondominiumId(null);
       return;
     }
     const { data, error: readError } = await supabase
@@ -550,7 +550,7 @@ function AccountingPage({
       .eq("legacy_id", selectedCondominiumId)
       .maybeSingle();
     if (readError) throw readError;
-    setDbCondominiumId(data?.id ?? null);
+    if (requestId === undefined || requestId === loadRequestRef.current) setDbCondominiumId(data?.id ?? null);
   }
 
   const rendicontoPrintStyles = `
@@ -591,7 +591,7 @@ function AccountingPage({
     setLoading(true);
     setError("");
     try {
-      await resolveCondominium();
+      await resolveCondominium(requestId);
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
