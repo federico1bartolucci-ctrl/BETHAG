@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { requireCollaboratorMutationResult } from "./lib/collaboratorMutationGuard.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -14087,10 +14088,12 @@ function CollaboratorsPage({
           alert("Per cambiare l'e-mail di accesso è necessario rimuovere il collaboratore e invitarlo nuovamente.");
           return;
         }
-        const { error } = await supabase.from("workspace_members").update({
-          active: form.status !== "Disattivato", permissions: form.permissions,
-        }).eq("workspace_id", workspaceId).eq("user_id", current.userId);
-        if (error) throw error;
+        await requireCollaboratorMutationResult(
+          supabase.from("workspace_members").update({
+            active: form.status !== "Disattivato", permissions: form.permissions,
+          }).eq("workspace_id", workspaceId).eq("user_id", current.userId).eq("role", "collaborator"),
+          "aggiornato"
+        );
         setCollaborators((items) => items.map((item) =>
           item.id === form.id ? { ...form, userId: current.userId, name, email, workspaceId } : item
         ));
@@ -14135,14 +14138,14 @@ function CollaboratorsPage({
         throw new Error("Il collaboratore non è collegato a un account Auth.");
       }
 
-      const { error } = await supabase
-        .from("workspace_members")
-        .delete()
-        .eq("workspace_id", workspaceId)
-        .eq("user_id", target.userId)
-        .eq("role", "collaborator");
-
-      if (error) throw error;
+      await requireCollaboratorMutationResult(
+        supabase.from("workspace_members")
+          .delete()
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", target.userId)
+          .eq("role", "collaborator"),
+        "rimosso"
+      );
 
       setCollaborators((items) =>
         items.filter((item) => item.id !== id)
@@ -14172,14 +14175,14 @@ function CollaboratorsPage({
       }
 
       const nextActive = target.status !== "Attivo";
-      const { error } = await supabase
-        .from("workspace_members")
-        .update({ active: nextActive })
-        .eq("workspace_id", workspaceId)
-        .eq("user_id", target.userId)
-        .eq("role", "collaborator");
-
-      if (error) throw error;
+      await requireCollaboratorMutationResult(
+        supabase.from("workspace_members")
+          .update({ active: nextActive })
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", target.userId)
+          .eq("role", "collaborator"),
+        "aggiornato"
+      );
 
       setCollaborators((items) =>
         items.map((item) =>
