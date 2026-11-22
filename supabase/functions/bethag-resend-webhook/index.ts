@@ -10,6 +10,7 @@ const headers = {
 };
 
 Deno.serve(async (req: Request) => {
+  let signatureVerified = false;
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers });
   try {
@@ -23,6 +24,7 @@ Deno.serve(async (req: Request) => {
 
     // Verify the exact raw bytes first, then parse those same bytes as JSON.
     new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
+    signatureVerified = true;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const data = parsed.data && typeof parsed.data === "object"
       ? parsed.data as Record<string, unknown>
@@ -74,6 +76,6 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
   } catch (error) {
     console.error("BETHAG resend-webhook error",error);
-    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Evento non autorizzato."}),{status:401,headers});
+    return new Response(JSON.stringify({error:signatureVerified ? "Errore interno durante la registrazione dell’evento." : "Evento non autorizzato."}),{status:signatureVerified ? 500 : 401,headers});
   }
 });
