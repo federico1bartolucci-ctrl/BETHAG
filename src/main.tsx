@@ -6511,8 +6511,9 @@ function App() {
   const upcoming = [...activeDeadlines]
     .filter(
       (d) =>
-        d.status !==
-        "Completata"
+        d.status !== "Completata" &&
+        d.dueDate &&
+        d.dueDate >= localISODate()
     )
     .sort((a, b) =>
       a.dueDate.localeCompare(
