@@ -91,21 +91,13 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     return { data: rows, error: null };
   };
   const loadWorkspaceCondominiumMembers = async () => {
-    const rows: any[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from("condominium_members")
-        .select("*, condominiums!inner(workspace_id)")
-        .eq("condominiums.workspace_id", workspaceId)
-        .order("created_at", { ascending: true })
-        .range(offset, offset + 999);
-      if (error) throw error;
-      const batch = data ?? [];
-      rows.push(...batch);
-      if (batch.length < 1000) break;
-    }
-    return { data: rows, error: null };
+    return loadWorkspacePaginatedRows(supabase, "condominium_members", workspaceId, {
+      select: "*, condominiums!inner(workspace_id)",
+      orderBy: "created_at",
+      workspaceColumn: "condominiums.workspace_id",
+    });
   };
+
 
   const [
     condominiumMembers,
