@@ -6531,9 +6531,7 @@ function App() {
 
   const urgentDeadlines =
     activeDeadlines.filter(
-      (d) =>
-        d.status ===
-        "In scadenza"
+      (d) => getDeadlineEffectiveStatus(d, localISODate()) === "In scadenza"
     ).length;
 
   const completedDeadlines =
