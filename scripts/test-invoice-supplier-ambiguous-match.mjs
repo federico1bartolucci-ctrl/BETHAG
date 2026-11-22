@@ -5,7 +5,7 @@ const start=source.indexOf("export async function confirmCondominiumInvoice");
 const end=source.indexOf("export async function ",start+1);
 const block=source.slice(start,end>start?end:undefined);
 const snippetStart=block.indexOf("const containedMatches");
-const snippetEnd=block.indexOf("\\n        supplierId = containedMatches",snippetStart);
+const snippetEnd=block.indexOf("\n        supplierId = containedMatches",snippetStart);
 const snippet=block.slice(snippetStart,snippetEnd >= 0 ? snippetEnd + 80 : undefined);
 assert.ok(snippet.includes(".filter("),"fallback gathers all candidates, not first match");
 assert.ok(snippet.includes("containedMatches.length > 1"),"ambiguous candidates rejected");
