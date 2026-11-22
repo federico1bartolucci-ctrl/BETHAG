@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("src/AccountingPage.tsx", "utf8");
+assert.match(source, /useRef, useState/);
+assert.match(source, /const accountingLoadGeneration = useRef\(0\)/);
+assert.match(source, /const generation = \+\+accountingLoadGeneration\.current/);
+assert.equal((source.match(/generation !== accountingLoadGeneration\.current/g) || []).length, 2, "stale loads must be stopped after resolve and after queries");
+assert.match(source, /if \(generation === accountingLoadGeneration\.current\) setLoading\(false\)/);
+assert.match(source, /return \(\) => \{ accountingLoadGeneration\.current \+= 1; \}/);
+console.log("Accounting stale-load generation guard: PASS");
