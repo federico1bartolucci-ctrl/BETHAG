@@ -1973,11 +1973,13 @@ export async function deletePortalMember(workspaceId: string, legacyId: number) 
   return enqueueBackendSync(async () => {
     const { error } = await supabase
       .from("portal_access")
-      .delete()
+       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", legacyId);
+      .eq("legacy_id", legacyId)
+      .select("id");
 
     if (error) throw error;
+    if (!data?.length) throw new Error("Accesso al Portale non trovato o già eliminato.");
   });
 }
 
