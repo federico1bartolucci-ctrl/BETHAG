@@ -66,14 +66,25 @@ export default {
       );
     }
 
-    const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
-    const { error: releaseError } = await ctx.supabaseAdmin.rpc(
-      "release_account_deletion_admin_reservations",
-      { p_user_id: userId }
-    );
+    let deleteError: { message: string } | null = null;
+    try {
+      const result = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
+      deleteError = result.error;
+    } catch (error) {
+      deleteError = { message: error instanceof Error ? error.message : String(error) };
+    } finally {
+      try {
+        const { error: releaseError } = await ctx.supabaseAdmin.rpc(
+          "release_account_deletion_admin_reservations",
+          { p_user_id: userId }
+        );
 
-    if (releaseError) {
-      console.error("Account deletion reservation cleanup failed", releaseError);
+        if (releaseError) {
+          console.error("Account deletion reservation cleanup failed", releaseError);
+        }
+      } catch (releaseException) {
+        console.error("Account deletion reservation cleanup threw", releaseException);
+      }
     }
 
     if (deleteError) {
