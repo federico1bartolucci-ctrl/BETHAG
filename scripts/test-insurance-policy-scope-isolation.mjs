@@ -21,6 +21,7 @@ const source = await readFile(new URL("../src/InsurancePoliciesSection.tsx", imp
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 assert.match(source, /getScopedInsurancePolicyContext\(policyScope, workspaceId, condominiumId\)/, "Policy rows must be derived from a scope-tagged context.");
+assert.match(source, /InsurancePoliciesSection\(\{\s*workspaceId,\s*condominiumId,/s, "Component must receive the active workspace prop.");
 assert.match(source, /const activeWorkspaceId = activePolicyScope\?\.workspaceId \?\? null;/, "Mutation workspace must be scoped to the current selection.");
 assert.match(source, /const activeDbCondominiumId = activePolicyScope\?\.dbCondominiumId \?\? null;/, "Mutation condominium ID must be scoped to the current selection.");
 assert.match(source, /setPolicyScope\(\{workspaceId, condominiumId, dbCondominiumId: condominium\.id, policies:/, "Loaded policy rows must be tagged with the context that produced them.");
