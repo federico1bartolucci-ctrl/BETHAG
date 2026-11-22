@@ -20,10 +20,10 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
   let pageNumber = 0;
   const client = {
     from(table) {
-      const state = { table, workspaceId: null, select: null, orders: [], cursorFilter: null, nullCursor: false, idGt: null };
+      const state = { table, workspaceId: null, workspaceColumn: null, select: null, orders: [], cursorFilter: null, nullCursor: false, idGt: null };
       const query = {
         select(columns) { state.select = columns; return query; },
-        eq(column, value) { if (column === "workspace_id" || column === "condominiums.workspace_id") state.workspaceId = value; return query; },
+        eq(column, value) { if (column === "workspace_id" || column === "condominiums.workspace_id") { state.workspaceColumn = column; state.workspaceId = value; } return query; },
         order(column, options) { state.orders.push([column, options]); return query; },
         or(filter) { state.cursorFilter = filter; return query; },
         is(column, value) { if (column === state.orders[0]?.[0] && value === null) state.nullCursor = true; return query; },
@@ -162,7 +162,9 @@ const memberResult = await loadWorkspacePaginatedRows(memberClient.client, "cond
 assert.equal(memberResult.data.length, 1001);
 assert.deepEqual(memberClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999]]);
 assert.ok(memberClient.requests.every((request) => request.workspaceId === "workspace-1"));
+assert.ok(memberClient.requests.every((request) => request.workspaceColumn === "condominiums.workspace_id"), "joined member pagination must filter workspace through condominium relation");
 assert.equal(memberClient.requests[0].table, "condominium_members");
+assert.match(backend, /workspaceColumn:\\s*["\\]condominiums\\.workspace_id["\\]/, "member bootstrap must preserve workspace isolation through the joined condominium relation");
 
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const paginatedTables = [
