@@ -143,7 +143,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     condominiumMemberTransfers,
   ] = await Promise.all([
     loadWorkspaceCondominiumMembers(),
-    loadWorkspaceRows("condominium_units"),
+    loadWorkspacePaginatedRows(supabase, "condominium_units", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "documents", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "deadlines", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "assemblies", workspaceId, { orderBy: "created_at" }),
@@ -160,9 +160,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "portal_access", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "workspace_members", workspaceId, { orderBy: "created_at" }).then(({ data, error }) => ({ data: (data ?? []).filter((row) => row.role === "collaborator"), error })),
-    loadWorkspaceRows(
+    loadWorkspacePaginatedRows(
+      supabase,
       "condominium_member_transfers",
-      "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
+      workspaceId,
+      { select: "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at", orderBy: "created_at" }
     ),
   ]);
 
