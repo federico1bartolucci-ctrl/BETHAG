@@ -40,6 +40,7 @@ const ledger = "44444444-4444-4444-8444-444444444444";
 const userId = "55555555-5555-4555-8555-555555555555";
 const unitA = "66666666-6666-4666-8666-666666666666";
 const unitB = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const unitC = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const installment = "77777777-7777-4777-8777-777777777777";
 const p1 = "88888888-8888-4888-8888-888888888888";
 const p2 = "99999999-9999-4999-8999-999999999999";
@@ -52,6 +53,7 @@ const groupPayment1 = "15151515-1515-4151-8151-151515151515";
 const groupPayment2 = "16161616-1616-4161-8161-161616161616";
 const allocationA = "17171717-1717-4171-8171-171717171717";
 const allocationB = "18181818-1818-4181-8181-181818181818";
+const allocationC = "30303030-3030-4303-8303-303030303030";
 const closedInstallment = "19191919-1919-4191-8191-191919191919";
 const closedPayment = "20202020-2020-4202-8202-202020202020";
 
@@ -124,6 +126,10 @@ try {
     "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,100)",
     [allocation, workspace, condo, ledger, unitA]
   );
+  await db.query(
+    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,20)",
+    [allocationC, workspace, condo, groupLedger, unitC]
+  );
   await insertPayment(p1, installment, 70);
   await insertPayment(p2, installment, 30);
   await checkInstallment(installment, 100, "Pagato");
@@ -178,23 +184,27 @@ try {
     [groupMember, condo, ownerEmail, "21212121-2121-4212-8212-212121212121", unitA, "23232323-2323-4232-8232-232323232323", unitB]
   );
   await db.query(
+    "INSERT INTO public.condominium_members(id,condominium_id,unit_id,user_id,email,active,data) VALUES($1,$2,$3,null,$4,true,$5::jsonb)",
+    [memberC, condo, unitC, ownerEmail, JSON.stringify({ role: "Proprietario" })]
+  );
+  await db.query(
     "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,fiscal_year_id,member_id,unit_id,title,due_date,amount,paid_amount,status,ledger_entry_id) VALUES($1,$2,$3,$4,$5,null,'Rata consolidata','2099-12-31',100,0,'Da pagare',$6)",
     [groupInstallment, workspace, condo, openYear, groupMember, groupLedger]
   );
   await db.query(
-    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,60),($6,$2,$3,$4,$7,40)",
+    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,50),($6,$2,$3,$4,$7,30)",
     [allocationA, workspace, condo, groupLedger, unitA, allocationB, unitB]
   );
   await insertPayment(groupPayment1, groupInstallment, 70);
   await insertPayment(groupPayment2, groupInstallment, 30);
   await checkInstallment(groupInstallment, 100, "Pagato");
-  await checkAllocations(groupLedger, [{ paid: 60, status: "Pagato" }, { paid: 40, status: "Pagato" }]);
+  await checkAllocations(groupLedger, [{ paid: 50, status: "Pagato" }, { paid: 30, status: "Pagato" }, { paid: 20, status: "Pagato" }]);
   await reverse(groupPayment2);
   await checkInstallment(groupInstallment, 70, "Parzialmente pagato");
-  await checkAllocations(groupLedger, [{ paid: 60, status: "Pagato" }, { paid: 10, status: "Parzialmente pagato" }]);
+  await checkAllocations(groupLedger, [{ paid: 50, status: "Pagato" }, { paid: 20, status: "Parzialmente pagato" }, { paid: 0, status: "Da pagare" }]);
   await reverse(groupPayment1);
   await checkInstallment(groupInstallment, 0, "Da pagare");
-  await checkAllocations(groupLedger, [{ paid: 0, status: "Da pagare" }, { paid: 0, status: "Da pagare" }]);
+  await checkAllocations(groupLedger, [{ paid: 0, status: "Da pagare" }, { paid: 0, status: "Da pagare" }, { paid: 0, status: "Da pagare" }]);
   assert.equal(await auditCount(), 5);
 
   const inactiveOwnerMember = "24242424-2424-4242-8242-242424242424";
