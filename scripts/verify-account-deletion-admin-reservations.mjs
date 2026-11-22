@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const migration = await readFile("supabase/migrations/supabase/migrations/20261122150000_guard_concurrent_account_deletions_by_admin_reservation.sql", "utf8");
+const migration = await readFile("supabase/migrations/20261122150000_guard_concurrent_account_deletions_by_admin_reservation.sql", "utf8");
 const edge = await readFile("supabase/functions/delete-account/index.ts", "utf8");
 
 assert.match(migration, /account_deletion_admin_reservations/);
