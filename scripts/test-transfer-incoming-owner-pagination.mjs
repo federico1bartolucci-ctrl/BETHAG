@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("const incomingRows: any[] = [];", source.indexOf("export async function confirmCondominiumMemberTransfer"));
+const end = source.indexOf("if (!incoming?.legacy_id)", start);
+assert.ok(start >= 0 && end > start, "incoming-owner lookup block exists");
+const block = source.slice(start, end);
+assert.ok(block.includes("offset += 1000"), "owner rows are paginated");
+assert.ok(block.includes(".range(offset, offset + 999)"), "range pagination is used");
+assert.ok(block.includes('.order("created_at", { ascending: false })'), "newest members remain prioritized");
+assert.ok(block.includes('.order("legacy_id", { ascending: true })'), "stable secondary ordering exists");
+assert.ok(!block.includes(".limit(20)"), "no arbitrary 20-member cap");
+assert.ok(block.includes("incomingRows.find((row: any) =>"), "owner selection still runs across fetched rows");
+console.log("Incoming-owner pagination regression guard passed.");

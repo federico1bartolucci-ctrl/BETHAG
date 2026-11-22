@@ -2719,17 +2719,22 @@ export async function confirmCondominiumMemberTransfer(
 
     if (transferError) throw transferError;
 
-    const { data: incomingRows, error: incomingError } = await supabase
-      .from("condominium_members")
-      .select("legacy_id,name,email,user_id,active,unit_id,data")
-      .eq("unit_id", unitId)
-      .eq("active", true)
-      .order("created_at", { ascending: false })
-      .limit(20);
+    const incomingRows: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error: incomingError } = await supabase
+        .from("condominium_members")
+        .select("legacy_id,name,email,user_id,active,unit_id,data")
+        .eq("unit_id", unitId)
+        .eq("active", true)
+        .order("created_at", { ascending: false })
+        .order("legacy_id", { ascending: true })
+        .range(offset, offset + 999);
+      if (incomingError) throw incomingError;
+      incomingRows.push(...(page ?? []));
+      if (!page || page.length < 1000) break;
+    }
 
-    if (incomingError) throw incomingError;
-
-    const incoming = (incomingRows ?? []).find((row: any) => {
+    const incoming = incomingRows.find((row: any) => {
       const role = String(row.data?.role ?? "").trim();
       const currentOwner = row.data?.current_owner;
       const status = String(row.data?.position_status ?? "Attivo").trim();
