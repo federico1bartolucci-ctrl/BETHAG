@@ -11,4 +11,12 @@ assert.ok(snippet.includes(".filter("),"fallback gathers all candidates, not fir
 assert.ok(snippet.includes("containedMatches.length > 1"),"ambiguous candidates rejected");
 assert.ok(snippet.includes("throw new Error"),"manual selection required for ambiguous names");
 assert.ok(snippet.includes("containedMatches[0]?.id"),"only single candidate can auto-link");
-console.log("Ambiguous supplier matching guard passed.");
+const vatStart=block.indexOf("const byVatMatches");
+const vatEnd=block.indexOf("} else if (supplierName)",vatStart);
+const vatSnippet=block.slice(vatStart,vatEnd>vatStart?vatEnd:undefined);
+assert.ok(vatSnippet.includes(".filter("),"VAT matching gathers all candidates");
+assert.ok(vatSnippet.includes("byVatMatches.length > 1"),"duplicate VAT candidates are rejected");
+assert.ok(vatSnippet.includes("throw new Error"),"duplicate VAT requires manual supplier selection");
+assert.ok(vatSnippet.includes("byVatMatches.length === 1"),"VAT match auto-links only when unique");
+assert.ok(vatSnippet.includes("byVatMatches[0].id"),"single VAT candidate ID is used");
+console.log("Supplier ambiguity guards passed.");
