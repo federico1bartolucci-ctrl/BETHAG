@@ -5869,7 +5869,7 @@ function App() {
       // Restore only the deleted row; preserve unrelated concurrent state changes.
       setCondominiumRequests((current) => {
         const restored = current.some((request) => request.id === id)
-          ? current.map((request) => request.id === id ? previousRequest : request)
+          ? current
           : [...current, previousRequest];
         return restored;
       });
