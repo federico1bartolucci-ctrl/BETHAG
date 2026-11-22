@@ -86,7 +86,7 @@ const largerOriginal = Array.from({ length: 2001 }, (_, i) => ({
   workspace_id: "workspace-1",
   opened_date: new Date(Date.UTC(2024, 0, 1 + i)).toISOString().slice(0, 10),
 }));
-const deletedAhead = ["case-1998", "case-1999"];
+const deletedAhead = ["case-1002", "case-1001"];
 const legacyDelete = mockClient(largerOriginal, { deleteBeforePage: 2, deleteIds: deletedAhead });
 const legacyDeleteRows = [];
 let deleteOffset = 0;
