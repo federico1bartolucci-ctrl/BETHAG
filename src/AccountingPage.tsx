@@ -1107,7 +1107,7 @@ function AccountingPage({
       return { unit:item.unit, millesimi:Number(item.value?.value || 0), baseCents, remainder:exactCents-baseCents };
     });
     let remaining = totalCents - rows.reduce((sum,row) => sum + row.baseCents, 0);
-    rows.sort((a,b) => b.remainder-a.remainder || a.unit.unit_code.localeCompare(b.unit.unit_code));
+    rows.sort((a,b) => b.remainder-a.remainder || (String(a.unit.id).toLowerCase() < String(b.unit.id).toLowerCase() ? -1 : String(a.unit.id).toLowerCase() > String(b.unit.id).toLowerCase() ? 1 : 0));
     for (let i=0; i<rows.length && remaining>0; i++) rows[i].baseCents += 1;
     setAutoPreview(rows.map(row => ({
       unit_id:row.unit.id,
