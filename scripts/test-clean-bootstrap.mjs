@@ -37,7 +37,7 @@ assert.match(unifiedPaymentSync, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id
 const registerPaymentStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment");
 const registerPaymentNext = functionSql.indexOf("CREATE OR REPLACE FUNCTION", registerPaymentStart + 1);
 const registerPaymentFunction = functionSql.slice(registerPaymentStart, registerPaymentNext === -1 ? undefined : registerPaymentNext).replace(/--[^\n]*/g, "");
-assert.match(registerPaymentFunction, /p_workspace_id::text[\\s\\S]*p_condominium_id::text[\\s\\S]*v_ledger_entry_id::text[\\s\\S]*pg_advisory_xact_lock/, "Payment reconciliation must serialize concurrent payments across installments of the same ledger entry.");
+assert.match(registerPaymentFunction, /pg_advisory_xact_lock[\\s\\S]*p_workspace_id::text[\\s\\S]*p_condominium_id::text[\\s\\S]*v_ledger_entry_id::text/, "Payment reconciliation must serialize concurrent payments across installments of the same ledger entry.");
 const unifiedRegisterPayment = registerPaymentFunction.slice(registerPaymentFunction.indexOf("if v_installment.unit_id is null and v_installment.member_id is not null"), registerPaymentFunction.indexOf("else\n      /*"));
 assert.match(unifiedRegisterPayment, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=v_installment\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Manual unified installment payment registration must reconcile cumulative totals across installments.");
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
