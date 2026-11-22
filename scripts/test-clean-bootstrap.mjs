@@ -27,7 +27,7 @@ function extractBaselineFunction(sql, signature) {
   const opening = sql.indexOf("$function$", start);
   const closing = sql.indexOf("$function$", opening + "$function$".length);
   if (opening === -1 || closing === -1) return "";
-  return sql.slice(start, closing + "$function$".length).replace(/--[^\\n]*/g, "");
+  return sql.slice(start, closing + "$function$".length).replace(/--[^\n]*/g, "");
 }
 const paymentSyncFunction = extractBaselineFunction(functionSql, "CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments");
 assert.match(paymentSyncFunction, /select sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=a\.ledger_entry_id[\s\S]*i\.unit_id=a\.unit_id/, "Payment trigger must reconcile allocation paid totals across all installments for the same ledger entry, unit and owner.");
