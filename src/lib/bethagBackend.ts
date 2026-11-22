@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadWorkspaceSuppliers } from "./workspaceSupplierHydration.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -146,7 +147,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
-    supabase.from("suppliers").select("*").eq("workspace_id", workspaceId),
+    loadWorkspaceSuppliers(supabase, workspaceId),
     supabase.from("activities").select("*").eq("workspace_id", workspaceId),
     supabase.from("communications").select("*").eq("workspace_id", workspaceId),
     supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
