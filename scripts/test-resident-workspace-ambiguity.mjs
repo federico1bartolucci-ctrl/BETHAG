@@ -37,7 +37,7 @@ assert.match(resolver, /resolveUniqueWorkspaceId\(membershipRows\)/, "membership
 assert.doesNotMatch(resolver, /\.rpc\("get_my_workspace_access"\)/, "resolver must not use the RPC that returns only one membership");
 assert.match(resolver, /\.from\("portal_access"\)[\s\S]*?\.select\("id, workspace_id, role"\)/, "resident and council access roles are fetched");
 assert.match(resolver, /\.eq\("active", true\)[\s\S]*?\.in\("role", \["resident", "council"\]\)[\s\S]*?\.ilike\("email", email\.trim\(\)\)/, "council access is included in the resident login fallback");
-assert.match(resolver, /\.eq\("active", true\)[\s\S]*?\.eq\("role", "resident"\)[\s\S]*?\.ilike\("email", email\.trim\(\)\)/);
+assert.match(resolver, /\.eq\("active", true\)[\s\S]*?\.in\("role", \["resident", "council"\]\)[\s\S]*?\.ilike\("email", email\.trim\(\)\)/, "council access is included in the resident login fallback");
 assert.match(resolver, /\.order\("workspace_id", \{ ascending: true \}\)[\s\S]*?\.order\("id", \{ ascending: true \}\)[\s\S]*?\.range\(offset, offset \+ 999\)/);
 assert.match(resolver, /resolveUniqueWorkspaceId\(portalRows\)/);
 assert.doesNotMatch(resolver, /\.limit\(1\)/, "resident fallback must not select an arbitrary portal row");
