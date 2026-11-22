@@ -6,6 +6,10 @@ export async function updateRegisterSupplierWithinScope({ client, currentWorkspa
     || String(currentCondominiumId) !== String(originalCondominiumId)) {
     throw new Error("Il workspace o il condominio è cambiato. Aggiornamento del fornitore interrotto.");
   }
+  if (String(payload?.workspace_id) !== String(originalWorkspaceId)
+    || String(payload?.condominium_id) !== String(originalCondominiumId)) {
+    throw new Error("Payload fuori ambito: aggiornamento del fornitore interrotto.");
+  }
   const { data, error } = await client
     .from("condominium_suppliers")
     .update(payload)
