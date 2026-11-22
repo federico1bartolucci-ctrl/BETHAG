@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { getCondominiumWorkReconciliationStatus } from "./lib/workReconciliationStatus.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -5101,9 +5102,7 @@ function App() {
       const result = await reconcileCondominiumWorkBackend(profile.workspaceId, work.id);
       const fmt = (n:number) => "€ " + Number(n || 0).toLocaleString("it-IT",{minimumFractionDigits:2});
       const invoiceAccountingAmount = Number(result.invoiceAccountingAmount ?? result.accountingAmount ?? 0);
-      const status = Math.abs(Number(result.residualToInvoices || 0)) < 0.01 &&
-        (Number(result.invoiceCount || 0) === 0 || Math.abs(invoiceAccountingAmount - Number(result.invoiceAmount || 0)) < 0.01)
-        ? "RICONCILIATO" : "DA VERIFICARE";
+      const status = getCondominiumWorkReconciliationStatus(result);
       alert("Riconciliazione " + status + "\n\n" + work.title + "\n\nDocumenti/fatture: " + result.invoiceCount + " · " + fmt(result.invoiceAmount) +
         "\nSAL: " + fmt(result.salAmount) +
         "\nContabilità fatture: " + fmt(invoiceAccountingAmount) +
