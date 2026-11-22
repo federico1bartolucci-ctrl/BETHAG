@@ -148,10 +148,26 @@ const failing = makeClient(originals, { failPage: 2 });
 await assert.rejects(loadWorkspacePaginatedRows(failing.client, "documents", "workspace-1"), /workspace page failure/);
 assert.equal(failing.requests.length, 2);
 
+// Joined condominium-member hydration must use keyset pagination while retaining the workspace relation filter.
+const memberRows = Array.from({ length: 1001 }, (_, i) => ({
+  id: `member-${String(i).padStart(4, "0")}`,
+  workspace_id: "workspace-1",
+  created_at: "2026-01-01",
+}));
+const memberClient = makeClient(memberRows);
+const memberResult = await loadWorkspacePaginatedRows(memberClient.client, "condominium_members", "workspace-1", {
+  select: "*, condominiums!inner(workspace_id)",
+  workspaceColumn: "condominiums.workspace_id",
+});
+assert.equal(memberResult.data.length, 1001);
+assert.deepEqual(memberClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999]]);
+assert.ok(memberClient.requests.every((request) => request.workspaceId === "workspace-1"));
+assert.equal(memberClient.requests[0].table, "condominium_members");
+
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const paginatedTables = [
   "condominiums", "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
-  "condominium_requests", "condominium_suppliers", "condominium_units", "condominium_member_transfers", "condominium_works", "condominium_fiscal_years",
+  "condominium_requests", "condominium_suppliers", "condominium_units", "condominium_members", "condominium_member_transfers", "condominium_works", "condominium_fiscal_years",
   "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
   "condominium_tax_obligations", "condominium_legal_cases", "portal_access", "workspace_members",
 ];
