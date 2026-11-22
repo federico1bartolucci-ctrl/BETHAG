@@ -41,6 +41,7 @@ const userId = "55555555-5555-4555-8555-555555555555";
 const unitA = "66666666-6666-4666-8666-666666666666";
 const unitB = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const unitC = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const memberC = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const installment = "77777777-7777-4777-8777-777777777777";
 const p1 = "88888888-8888-4888-8888-888888888888";
 const p2 = "99999999-9999-4999-8999-999999999999";
