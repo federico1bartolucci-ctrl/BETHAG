@@ -19,10 +19,10 @@ const expectedLoaders = [
 ];
 for (const [table, column] of expectedLoaders) {
   const loaderLine = source.split("\n").find((line) => line.includes(`loadWorkspacePaginatedRows(supabase, "${table}", workspaceId`));
-  assert.ok(loaderLine, `missing shared pagination loader for ${table`);
+  assert.ok(loaderLine, `missing shared pagination loader for ${table}`);
   assert.ok(
     loaderLine.includes(`"column":"${column}"`) || loaderLine.includes(`"column": "${column}"`),
-    `incorrect ordering mapping for ${table}: expected ${column`
+    `incorrect ordering mapping for ${table}: expected ${column}`
   );
 }
 
