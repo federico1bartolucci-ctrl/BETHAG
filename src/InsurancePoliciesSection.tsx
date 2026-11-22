@@ -37,11 +37,12 @@ function localDate(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function effectiveStatus(endDate: string, active: boolean) {
+function effectiveStatus(startDate: string, endDate: string, active: boolean) {
   if (!active) return "Sospesa";
-  if (!endDate) return "Attiva";
   const today = localDate();
-  if (endDate < today) return "Scaduta";
+  if (startDate && startDate > today) return "Non ancora attiva";
+  if (endDate && endDate < today) return "Scaduta";
+  if (!endDate) return "Attiva";
   const soon = new Date();
   soon.setDate(soon.getDate() + 60);
   if (endDate <= localDate(soon)) return "In scadenza";
@@ -187,9 +188,9 @@ export default function InsurancePoliciesSection({
   };
 
   const summary = useMemo(() => ({
-    active: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Attiva").length,
-    expiring: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "In scadenza").length,
-    expired: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Scaduta").length,
+    active: policies.filter((p) => effectiveStatus(p.start_date || "", p.end_date || "", p.active) === "Attiva").length,
+    expiring: policies.filter((p) => effectiveStatus(p.start_date || "", p.end_date || "", p.active) === "In scadenza").length,
+    expired: policies.filter((p) => effectiveStatus(p.start_date || "", p.end_date || "", p.active) === "Scaduta").length,
   }), [policies]);
 
   return (
@@ -232,7 +233,7 @@ export default function InsurancePoliciesSection({
                 {policy.notes && <small>{policy.notes}</small>}
               </div>
               <div className="request-actions">
-                <span className="badge">{effectiveStatus(policy.end_date || "", policy.active)}</span>
+                <span className="badge">{effectiveStatus(policy.start_date || "", policy.end_date || "", policy.active)}</span>
                 {isAdministrator && <>
                   <button className="secondary-button small" type="button" onClick={() => {
                     setEditing(policy);
