@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function remove(table:string,id:string,label:string)");
+const end=source.indexOf("return <section className=\"page-section\">",start);
+assert.notEqual(start,-1,"Generic register delete helper exists.");
+assert.notEqual(end,-1,"Delete helper boundary found.");
+const handler=source.slice(start,end);
+assert.match(handler,/\.delete\(\)[\s\S]*\.eq\("id",id\)[\s\S]*\.eq\("workspace_id",workspaceId\)[\s\S]*\.select\("id"\)/,"Delete must return affected IDs and remain workspace-scoped.");
+assert.match(handler,/if\(!deletedRows\?\.length\)/,"Zero-row delete must not be reported as success.");
+assert.match(handler,/await load\(\)/,"Reload occurs only after confirmed deletion.");
+console.log("Register zero-row delete guard: PASS");
