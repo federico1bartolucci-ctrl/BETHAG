@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 
@@ -580,7 +580,10 @@ function AccountingPage({
     setTimeout(() => window.print(), 100);
   }
 
+  const accountingLoadGeneration = useRef(0);
+
   async function load() {
+    const generation = ++accountingLoadGeneration.current;
     if (!supabase) {
       setError("Supabase non configurato.");
       setLoading(false);
@@ -590,6 +593,7 @@ function AccountingPage({
     setError("");
     try {
       await resolveCondominium();
+      if (generation !== accountingLoadGeneration.current) return;
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
@@ -673,6 +677,7 @@ function AccountingPage({
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
           supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
         ]);
+      if (generation !== accountingLoadGeneration.current) return;
       for (const result of [
         yearsResult,
         ledgerResult,
@@ -716,12 +721,14 @@ function AccountingPage({
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
-      setLoading(false);
+      if (generation === accountingLoadGeneration.current) setLoading(false);
     }
   }
 
+
   useEffect(() => {
     void load();
+    return () => { accountingLoadGeneration.current += 1; };
   }, [workspaceId, selectedCondominiumId]);
 
   async function compensateCarryover() {
