@@ -89,4 +89,9 @@ assert.deepEqual(await fetchWorkDocumentPickerRows(empty, "workspace-uuid"), [])
 assert.equal(empty.calls.length, 1);
 await assert.rejects(() => fetchWorkDocumentPickerRows(mockClient([]), "workspace-uuid", 0), RangeError);
 
+const registerSource = await (await import("node:fs/promises")).readFile("src/RegisterPage.tsx", "utf8");
+assert.match(registerSource, /fetchWorkDocumentPickerRows\(supabase,workspaceId\)/, "Register must use the paginated picker loader.");
+assert.match(registerSource, /setDocuments\(documentRows\)/, "Register must store the mapped document picker rows.");
+assert.match(registerSource, /documents\.filter\(d=>d\.condominiumId===Number\(selected\)\)/, "Picker must filter mapped rows by legacy condominium ID.");
+
 console.log("PASS: work-document picker maps UUID rows to legacy link IDs, scopes by condominium legacy ID, paginates, and fails closed.");
