@@ -18,7 +18,7 @@ export async function loadAccountingLegalCases(client, workspaceId, pageSize = 1
       .from(TABLE)
       .select("*")
       .eq("workspace_id", workspaceId)
-      .order("opened_date", { ascending: false, nullsFirst: true })
+      .order("opened_date", { ascending: false, nullsFirst: false })
       .order("id", { ascending: true });
 
     if (cursor) {
@@ -26,7 +26,7 @@ export async function loadAccountingLegalCases(client, workspaceId, pageSize = 1
         query = query.is("opened_date", null).gt("id", cursor.id);
       } else {
         query = query.or(
-          `opened_date.lt.${cursor.openedDate},and(opened_date.eq.${cursor.openedDate},id.gt.${cursor.id})`,
+          `opened_date.lt.${cursor.openedDate},and(opened_date.eq.${cursor.openedDate},id.gt.${cursor.id}),opened_date.is.null`,
         );
       }
     }
