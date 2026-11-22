@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/RegisterPage.tsx", "utf8");
+const start = source.indexOf("async function saveProgress");
+const end = source.indexOf("async function saveWorkExpense", start);
+assert.ok(start >= 0 && end > start, "SAL save handler must exist");
+const handler = source.slice(start, end);
+const validation = handler.indexOf("cumulativeAmount");
+const insert = handler.indexOf('.from("condominium_work_progress").insert');
+assert.ok(validation >= 0 && insert >= 0 && validation < insert, "approved amount validation must happen before persistence");
+assert.match(handler, /cumulativeAmount>approved\+0\.005/, "approved SAL total guard must remain");
+console.log("PASS: SAL amount validation precedes database insert.");
