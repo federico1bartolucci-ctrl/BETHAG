@@ -1793,14 +1793,15 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
           throw new Error("L'esercizio contabile del SAL è chiuso: la scrittura non può essere modificata.");
         }
         ledgerEntryId = existingProgress.ledger_entry_id;
-        const { error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({
+        const { data: updatedLedger, error: ledgerUpdateError } = await supabase.from("condominium_ledger_entries").update({
           amount,
           entry_date: input.progressDate,
           payment_status: paidAmount >= amount ? "Pagato" : paidAmount > 0 ? "Parzialmente pagato" : "Da pagare",
           description: (work.title || "Lavoro condominiale") + " — " + (input.title || "SAL " + input.progressNo),
           notes: input.notes || null
-        }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId);
+        }).eq("workspace_id", workspaceId).eq("id", ledgerEntryId).select("id");
         if (ledgerUpdateError) throw ledgerUpdateError;
+        if (!updatedLedger?.length) throw new Error("La scrittura contabile del SAL non è stata aggiornata: nessun movimento corrispondente trovato.");
       } else {
         const { data: fiscalYear, error: fiscalYearError } = await supabase
           .from("condominium_fiscal_years")
