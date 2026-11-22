@@ -2568,7 +2568,7 @@ export async function confirmCondominiumInvoice(
 
     const dataPayload = { source: "ai_invoice_confirmation", invoiceNumber, invoiceDate, supplierName, workId, confirmedAt: new Date().toISOString(), aiExtractedData: payload.extractedData };
     const { data: existingEntry, error: existingEntryError } = await supabase.from("condominium_ledger_entries")
-      .select("id,fiscal_year_id").eq("workspace_id", workspaceId).eq("document_id", document.id).eq("direction", "Uscita").limit(1).maybeSingle();
+      .select("id,fiscal_year_id").eq("workspace_id", workspaceId).eq("document_id", document.id).eq("direction", "Uscita").maybeSingle();
     if (existingEntryError) throw existingEntryError;
 
     const { data: fiscalYear, error: fiscalYearError } = await supabase.from("condominium_fiscal_years")
