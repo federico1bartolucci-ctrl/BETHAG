@@ -42,10 +42,23 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
           const orderColumn = state.orders[0]?.[0] ?? "created_at";
           let filtered = records.filter((row) => row.workspace_id === state.workspaceId);
           if (state.cursorFilter) {
-            const escapedColumn = orderColumn.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&");
-            const match = state.cursorFilter.match(new RegExp("^" + escapedColumn + "\\\\.gt\\\\.([^,]+),and\\\\(" + escapedColumn + "\\\\\.eq\\\\.([^,]+),id\\\\.gt\\\\.([^)]+)\\\\),"+escapedColumn+"\\\\.is\\\\.null$"));
-            assert.ok(match, "keyset OR filter must encode the order column, date, and ID");
-            const [, greaterThanValue, equalValue, greaterThanId] = match;
+            const gtPrefix = `${orderColumn}.gt.`;
+            const eqPrefix = `,and(${orderColumn}.eq.`;
+            const idPrefix = ",id.gt.";
+            const nullSuffix = `),${orderColumn}.is.null`;
+            assert.ok(state.cursorFilter.startsWith(gtPrefix), "cursor must start with order-column greater-than");
+            const tail = state.cursorFilter.slice(gtPrefix.length);
+            const eqIndex = tail.indexOf(eqPrefix);
+            assert.ok(eqIndex > 0, "cursor must include an equal-value branch");
+            const greaterThanValue = tail.slice(0, eqIndex);
+            const equalTail = tail.slice(eqIndex + eqPrefix.length);
+            const idIndex = equalTail.indexOf(idPrefix);
+            assert.ok(idIndex > 0, "cursor must include the ID tie-break");
+            const equalValue = equalTail.slice(0, idIndex);
+            const idTail = equalTail.slice(idIndex + idPrefix.length);
+            assert.ok(idTail.endsWith(nullSuffix), "cursor must include trailing NULL values");
+            const greaterThanId = idTail.slice(0, -nullSuffix.length);
+            assert.ok(greaterThanId.length, "cursor ID must not be empty");
             filtered = filtered.filter((row) => row[orderColumn] === null || String(row[orderColumn]) > greaterThanValue || (String(row[orderColumn]) === equalValue && String(row.id) > greaterThanId));
           } else if (state.nullCursor) {
             filtered = filtered.filter((row) => row[orderColumn] === null && String(row.id) > String(state.idGt));
@@ -90,14 +103,14 @@ assert.deepEqual(staticClient.requests[0].orders, [["created_at", { ascending: t
 assert.equal(staticClient.requests[0].table, "documents");
 assert.equal(new Set(staticResult.data.map((row) => row.id)).size, 1001);
 
-// Null sort values are kept after dated rows and are reachable from a dated cursor.
+// Null sort values remain after dated rows and are reachable from a dated cursor.
 const nullRows = [...Array.from({ length: 1000 }, (_, i) => ({ id: `date-${String(i).padStart(4, "0")}`, workspace_id: "workspace-1", created_at: "2026-01-01" })), { id: "null-0001", workspace_id: "workspace-1", created_at: null }, { id: "null-0002", workspace_id: "workspace-1", created_at: null }];
 const nullClient = makeClient(nullRows);
 const nullResult = await loadWorkspacePaginatedRows(nullClient.client, "documents", "workspace-1");
 assert.equal(nullResult.data.length, 1002);
 assert.deepEqual(nullResult.data.slice(-2).map((row) => row.id), ["null-0001", "null-0002"]);
 
-// Reproduce the offset drift caused by two concurrent inserts before page two.
+// Reproduce legacy offset drift caused by concurrent inserts before page two.
 const inserts = [
   { id: "new-0001", workspace_id: "workspace-1", created_at: "2025-12-30" },
   { id: "new-0002", workspace_id: "workspace-1", created_at: "2025-12-31" },
@@ -108,16 +121,16 @@ const legacyInsertIds = legacyInsertRows.map((row) => row.id);
 assert.ok(legacyInsertIds.length > new Set(legacyInsertIds).size, "legacy offset paging must reproduce duplicates after concurrent inserts");
 const keysetInsert = makeClient(originals, { insertBeforePage: 2, inserts });
 const keysetInsertRows = await loadWorkspacePaginatedRows(keysetInsert.client, "documents", "workspace-1");
-assert.deepEqual(keysetInsertRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must retain the original rows once when inserts shift the prefix");
+assert.deepEqual(keysetInsertRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must preserve the original rows exactly once when inserts shift the prefix");
 
-// Reproduce the offset drift caused by deletes before page two.
+// Reproduce legacy offset drift caused by deletes before page two.
 const deleteIds = ["row-0000", "row-0001"];
 const legacyDelete = makeClient(originals, { deleteBeforePage: 2, deleteIds });
 const legacyDeleteRows = await loadLegacyOffsetRows(legacyDelete.client, "workspace-1");
 assert.ok(!legacyDeleteRows.some((row) => row.id === "row-1000"), "legacy offset paging must reproduce an omitted row after concurrent deletes");
 const keysetDelete = makeClient(originals, { deleteBeforePage: 2, deleteIds });
 const keysetDeleteRows = await loadWorkspacePaginatedRows(keysetDelete.client, "documents", "workspace-1");
-assert.deepEqual(keysetDeleteRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must preserve the already-read first page and reach the remaining rows after deletes");
+assert.deepEqual(keysetDeleteRows.data.map((row) => row.id), originals.map((row) => row.id), "keyset paging must preserve the rows already fetched and reach the remaining rows after deletes");
 
 // Input validation and fail-closed page handling.
 await assert.rejects(loadWorkspacePaginatedRows(staticClient.client, "documents", "", {}), /Workspace non disponibile/);
