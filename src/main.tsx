@@ -17121,6 +17121,21 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       alert("Inserisci il numero di polizza.");
       return;
     }
+    const isValidPolicyDate = (value: string) => {
+      if (!value) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const [year, month, day] = value.split("-").map(Number);
+      const parsed = new Date(Date.UTC(year, month - 1, day));
+      return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+    };
+    if (!isValidPolicyDate(form.start_date) || !isValidPolicyDate(form.end_date)) {
+      alert("Inserisci date di decorrenza e scadenza valide.");
+      return;
+    }
+    if (form.start_date && form.end_date && form.end_date < form.start_date) {
+      alert("La scadenza della polizza non può precedere la decorrenza.");
+      return;
+    }
     const workspaceId = await getActiveWorkspaceId();
     if (!workspaceId) return;
     const { data: condominium } = await supabase
