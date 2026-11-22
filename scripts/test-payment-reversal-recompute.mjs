@@ -205,8 +205,8 @@ try {
   const inactiveAllocation = "28282828-2828-4282-8282-282828282828";
   const inactiveEmail = "inactive-consolidated-owner@example.test";
   await db.query(
-    "INSERT INTO public.condominium_members(id,condominium_id,unit_id,user_id,email,active,data) VALUES($1,$2,null,null,$3,true,'{\\\"role\\\":\\\"Proprietario\\\\"}'::jsonb),($4,$2,$5,null,$3,true,'{\\\\"role\\\\":\\\\"Proprietario\\\\"}'::jsonb)",
-    [inactiveOwnerMember, condo, inactiveEmail, inactiveUnitOwner, unitA]
+    "INSERT INTO public.condominium_members(id,condominium_id,unit_id,user_id,email,active,data) VALUES($1,$2,null,null,$3,true,$4::jsonb),($5,$2,$6,null,$3,true,$4::jsonb)",
+    [inactiveOwnerMember, condo, inactiveEmail, JSON.stringify({ role: "Proprietario" }), inactiveUnitOwner, unitA]
   );
   await db.query(
     "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,fiscal_year_id,member_id,unit_id,title,due_date,amount,paid_amount,status,ledger_entry_id) VALUES($1,$2,$3,$4,$5,null,'Rata proprietario inattivo','2099-12-31',50,0,'Da pagare',$6)",
