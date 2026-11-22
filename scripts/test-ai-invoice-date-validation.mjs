@@ -1,19 +1,20 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-const source = await readFile("src/lib/bethagBackend.ts", "utf8");
-const start = source.indexOf("function parseBethagDate(value: unknown): string {");
-const end = source.indexOf("\n}\n\nfunction extractBethagDocumentData", start);
-assert.ok(start >= 0 && end > start, "Invoice date parser must exist.");
-const parser = source.slice(start, end + 2);
-assert.ok(parser.includes("^(" + String.fromCharCode(92) + "d{1,2})"), "Italian date parsing must use digit matching.");
-assert.ok(parser.includes("toValidIsoDate"), "Calendar date validation must be present.");
-assert.ok(parser.includes("Number.isFinite(parsed.getTime())"), "Invalid fallback dates must be rejected safely.");
-function validateCalendarDate(year, month, day) {
-  const d = new Date(Date.UTC(year, month - 1, day));
-  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
-}
-assert.equal(validateCalendarDate(2026, 12, 31), true);
-assert.equal(validateCalendarDate(2026, 2, 29), false);
-assert.equal(validateCalendarDate(2024, 2, 29), true);
-assert.equal(validateCalendarDate(2026, 13, 1), false);
-console.log("AI invoice date parsing guards passed.");
+import { parseBethagDate } from "../src/lib/bethagDateParser.mjs";
+
+const source = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
+assert.match(source, /import \{ parseBethagDate \} from "\.\/bethagDateParser\.mjs"/, "Backend must use the tested date parser module");
+assert.match(source, /const invoiceDate = parseBethagDate\(payload\.extractedData\?\.documentDate \?\? payload\.extractedData\?\.invoiceDate\)/, "Invoice extraction must use the shared parser");
+assert.match(source, /if \(!invoiceDate\)/, "Missing invoice dates must be rejected before confirmation");
+
+assert.equal(parseBethagDate(null), "", "Absent date must not be silently replaced with today");
+assert.equal(parseBethagDate(undefined), "", "Undefined date must not be silently replaced with today");
+assert.equal(parseBethagDate("  "), "", "Whitespace date must be rejected");
+assert.equal(parseBethagDate("31/02/2026"), "", "Invalid calendar date must be rejected");
+assert.equal(parseBethagDate("29/02/2024"), "2024-02-29", "Leap date must be accepted");
+assert.equal(parseBethagDate("01/12/2026"), "2026-12-01", "Italian date must be normalized");
+assert.equal(parseBethagDate("2026-12-01"), "2026-12-01", "ISO date must be accepted");
+assert.equal(parseBethagDate("2026-12-01T00:00:00Z"), "2026-12-01", "ISO timestamp must be normalized");
+assert.equal(parseBethagDate("not a date"), "", "Unparseable date must be rejected");
+
+console.log("AI invoice date validation regression checks: PASS");
