@@ -1734,7 +1734,14 @@ begin
         raise exception 'Proprietario della rata unificata non valido';
       end if;
 
-      v_remaining:=v_new_paid;
+      select round(coalesce(sum(i.paid_amount),0)::numeric,2)
+      into v_remaining
+      from public.condominium_installments i
+      where i.workspace_id=p_workspace_id
+        and i.condominium_id=p_condominium_id
+        and i.ledger_entry_id=v_installment.ledger_entry_id
+        and i.unit_id is null
+        and i.member_id=v_member_id;
 
       for v_allocation in
         select a.*
@@ -4197,7 +4204,18 @@ begin
       and trim(coalesce(cm.data->>'role',''))='Proprietario';
 
     if found then
-      v_remaining := v_paid;
+      select round(coalesce(sum(i.paid_amount),0)::numeric,2)
+        into v_remaining
+      from public.condominium_installments i
+      where i.workspace_id=v_workspace_id
+        and i.condominium_id=v_condominium_id
+        and i.ledger_entry_id=(
+          select current_installment.ledger_entry_id
+          from public.condominium_installments current_installment
+          where current_installment.id=v_installment_id
+        )
+        and i.unit_id is null
+        and i.member_id=v_member_id;
 
       for v_allocation in
         select a.*
