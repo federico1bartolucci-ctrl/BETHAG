@@ -2398,6 +2398,7 @@ export async function confirmCondominiumCreationIntake(
       })
       .eq("workspace_id", workspaceId)
       .eq("id", intakeId)
+      .eq("status", "Da verificare")
       .select("id, status")
       .single();
 
@@ -2420,9 +2421,13 @@ export async function cancelCondominiumCreationIntake(
         updated_at: new Date().toISOString(),
       })
       .eq("workspace_id", workspaceId)
-      .eq("id", intakeId);
+      .eq("id", intakeId)
+      .eq("status", "Da verificare")
+      .select("id")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data?.id) throw new Error("Pratica già elaborata, annullata o non trovata.");
   });
 }
 
