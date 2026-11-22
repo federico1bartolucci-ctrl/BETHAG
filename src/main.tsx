@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
+import { getDeadlineEffectiveStatus } from "./deadlineStatus.mjs";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
@@ -11611,7 +11612,7 @@ function DeadlinesPage({
   const filtered = deadlines
       .filter((d: Deadline) => {
         const textMatch = `${d.title} ${d.category} ${condominiumName(d.condominiumId)} ${d.notes}`.toLowerCase().includes(search.toLowerCase());
-        const effectiveStatus = d.status !== "Completata" && d.dueDate && d.dueDate < todayISO ? "Scaduta" : d.status;
+        const effectiveStatus = getDeadlineEffectiveStatus(d, todayISO);
         return textMatch && (statusFilter === "Tutti" || effectiveStatus === statusFilter) && (categoryFilter === "Tutte" || d.category === categoryFilter);
       })
       .sort(
@@ -11642,8 +11643,8 @@ function DeadlinesPage({
       <div className="quick-stats">
         <div className="quick-stat"><b>{deadlines.length}</b><span>Totali</span></div>
         <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status === "Completata").length}</b><span>Completate</span></div>
-        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status !== "Completata" && d.dueDate < todayISO).length}</b><span>Scadute</span></div>
-        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => d.status === "In scadenza").length}</b><span>In scadenza</span></div>
+        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => getDeadlineEffectiveStatus(d, todayISO) === "Scaduta").length}</b><span>Scadute</span></div>
+        <div className="quick-stat"><b>{deadlines.filter((d: Deadline) => getDeadlineEffectiveStatus(d, todayISO) === "In scadenza").length}</b><span>In scadenza</span></div>
       </div>
 
       <div className="filter-bar">
