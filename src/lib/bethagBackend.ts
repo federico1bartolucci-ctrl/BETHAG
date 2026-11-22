@@ -1265,18 +1265,21 @@ export async function getMemberTransferAccountingSnapshot(
   outgoingMemberLegacyId: number
 ) {
   if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId) throw new Error("Workspace non disponibile.");
   const { data: member, error: memberError } = await supabase
     .from("condominium_members")
-    .select("id")
+    .select("id, condominium_id, condominiums!inner(workspace_id)")
+    .eq("condominiums.workspace_id", workspaceId)
     .eq("legacy_id", outgoingMemberLegacyId)
     .maybeSingle();
   if (memberError) throw memberError;
-  if (!member?.id) throw new Error("Proprietario uscente non trovato sul server.");
+  if (!member?.id || !member?.condominium_id) throw new Error("Proprietario uscente non trovato nel workspace.");
 
   const { data: transfer, error: transferError } = await supabase
     .from("condominium_member_transfers")
     .select("id, status, transfer_date")
     .eq("outgoing_member_id", member.id)
+    .eq("condominium_id", member.condominium_id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
