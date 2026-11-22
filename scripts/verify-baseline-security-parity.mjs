@@ -78,6 +78,7 @@ const extractProductionBody = (definition) => {
 // The captured Production snapshot remains immutable; these divergences must be reviewed in PRs.
 const intentionalBodyChanges = new Map([
   ["public.sync_condominium_installment_from_payments", "Accounting audit PR #333: cumulative allocation paid totals are recalculated across installments instead of overwriting with the current installment."],
+  ["private.register_condominium_installment_payment", "Accounting audit PR #333: unified owner allocations are recalculated from cumulative installment payments."],
 ]);
 assert.deepEqual(
   [...intentionalBodyChanges.keys()].filter((name) => !expectedByKey.has(name)),
