@@ -2744,9 +2744,9 @@ function App() {
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await supabase
         .from("portal_access")
-        .select("id, workspace_id")
+        .select("id, workspace_id, role")
         .eq("active", true)
-        .eq("role", "resident")
+        .in("role", ["resident", "council"])
         .ilike("email", email.trim())
         .order("workspace_id", { ascending: true })
         .order("id", { ascending: true })
