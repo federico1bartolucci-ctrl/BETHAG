@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-const source=await readFile("src/AccountingPage.tsx","utf8");
-const pkg=JSON.parse(await readFile("package.json","utf8"));
-assert.match(source,/async function loadAccountingLegalCases\(workspaceId: string\)/);
-assert.match(source,/\.from\("condominium_legal_cases"\)[\s\S]*?\.range\(offset, offset \+ pageSize - 1\)/);
-assert.match(source,/\.order\("opened_date", \{ ascending: false \}\)[\s\S]*?\.order\("id", \{ ascending: true \}\)/);
-assert.match(source,/loadAccountingLegalCases\(workspaceId\)/);
-assert.match(source,/if \(result\.error\) return \{ data: null, error: result\.error \}/);
-assert.match(pkg.scripts.test,/test-accounting-legal-cases-pagination\.mjs/);
-console.log("Accounting legal cases pagination regression checks passed.");
+
+const source = await readFile("src/AccountingPage.tsx", "utf8");
+const helper = await readFile("src/lib/accountingLegalCasesPagination.mjs", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+
+assert.match(source, /import \{ loadAccountingLegalCases \} from ["']\.\/lib\/accountingLegalCasesPagination\.mjs["']/);
+assert.match(source, /loadAccountingLegalCases\(supabase, workspaceId\)/);
+assert.match(helper, /\.from\("condominium_legal_cases"\)[\s\S]*?\.range\(0, pageSize - 1\)/);
+assert.match(helper, /\.eq\("workspace_id", workspaceId\)/);
+assert.match(helper, /\.order\("opened_date", \{ ascending: false, nullsFirst: true \}\)/);
+assert.match(helper, /\.order\("id", \{ ascending: true \}\)/);
+assert.match(helper, /opened_date\.lt\.[\s\S]*?id\.gt/);
+assert.match(helper, /\.is\("opened_date", null\)\.gt\("id", cursor\.id\)/);
+assert.match(helper, /if \(error\) return \{ data: null, error \}/);
+assert.match(packageJson.scripts.test, /test-accounting-legal-cases-keyset-pagination-runtime\.mjs/);
+
+console.log("Accounting legal case keyset pagination wiring regression checks passed.");
