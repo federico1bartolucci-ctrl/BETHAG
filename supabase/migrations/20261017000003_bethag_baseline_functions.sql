@@ -1803,7 +1803,7 @@ begin
         where id=v_allocation.id;
 
         v_remaining:=round(v_remaining-v_allocation_target,2);
-        exit when v_remaining<=0.005;
+
       end loop;
 
       if v_remaining>0.005 then
@@ -4299,7 +4299,7 @@ begin
         where id=v_allocation.id;
 
         v_remaining := round(v_remaining-v_target,2);
-        exit when v_remaining<=0.005;
+
       end loop;
     end if;
   else
