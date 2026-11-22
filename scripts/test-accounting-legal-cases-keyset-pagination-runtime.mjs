@@ -4,8 +4,8 @@ import { loadAccountingLegalCases } from "../src/lib/accountingLegalCasesPaginat
 
 function sortRows(rows) {
   return rows.sort((a, b) => {
-    if (a.opened_date === null && b.opened_date !== null) return -1;
-    if (a.opened_date !== null && b.opened_date === null) return 1;
+    if (a.opened_date === null && b.opened_date !== null) return 1;
+    if (a.opened_date !== null && b.opened_date === null) return -1;
     if (a.opened_date !== null && b.opened_date !== null) {
       const dateCompare = b.opened_date.localeCompare(a.opened_date);
       if (dateCompare) return dateCompare;
@@ -39,10 +39,10 @@ function mockClient(initialRows, { injectBeforePage = 2, inserts = [], deleteBef
           let filtered = records.filter(row => row.workspace_id === workspaceId);
           if (state.nullDate) filtered = filtered.filter(row => row.opened_date === null && row.id > state.gtId);
           if (state.cursorOr) {
-            const match = state.cursorOr.match(/^opened_date\.lt\.(\d{4}-\d{2}-\d{2}),and\(opened_date\.eq\.(\d{4}-\d{2}-\d{2}),id\.gt\.(.+)\)$/);
+            const match = state.cursorOr.match(/^opened_date\.lt\.(\d{4}-\d{2}-\d{2}),and\(opened_date\.eq\.(\d{4}-\d{2}-\d{2}),id\.gt\.(.+)\),opened_date\.is\.null$/);
             assert.ok(match, "PostgREST cursor filter should use opened_date and id");
             const [, lessThanDate, equalDate, greaterId] = match;
-            filtered = filtered.filter(row => row.opened_date !== null && (row.opened_date < lessThanDate || (row.opened_date === equalDate && row.id > greaterId)));
+            filtered = filtered.filter(row => row.opened_date === null || row.opened_date < lessThanDate || (row.opened_date === equalDate && row.id > greaterId));
           }
           const sorted = sortRows(filtered);
           return Promise.resolve({ data: sorted.slice(from, to + 1), error: null });
@@ -118,10 +118,10 @@ assert.equal(new Set(result.data.map(row => row.id)).size, result.data.length, "
 assert.deepEqual(new Set(result.data.map(row => row.id)), new Set(original.map(row => row.id)), "all original rows must be returned exactly once");
 assert.ok(keyset.requests.every(request => request.from === 0 && request.to === 999), "cursor pagination must request fixed page ranges");
 assert.deepEqual(keyset.requests.map(request => request.filters), [[["workspace_id", "workspace-1"]], [[ "workspace_id", "workspace-1" ]]], "workspace scope must remain on every page");
-assert.deepEqual(keyset.requests[0].orders, [["opened_date", { ascending: false, nullsFirst: true }], ["id", { ascending: true }]], "cursor order must be explicit and deterministic");
+assert.deepEqual(keyset.requests[0].orders, [["opened_date", { ascending: false, nullsFirst: false }], ["id", { ascending: true }]], "cursor order must be explicit and deterministic");
 assert.ok(keyset.requests[1].cursorOr, "subsequent date pages must use a cursor filter");
 
-// Null dates are paginated by ID with explicit nulls-first ordering.
+// NULL dates sort last; an all-NULL dataset continues by ID.
 const nullRows = Array.from({ length: 1001 }, (_, i) => ({ id: `null-${String(i).padStart(4, "0")}`, workspace_id: "workspace-1", opened_date: null }));
 const nullClient = mockClient(nullRows, { injectBeforePage: 2, inserts: [{ id: "null-0500-new", workspace_id: "workspace-1", opened_date: null }] });
 const nullResult = await loadAccountingLegalCases(nullClient.client, "workspace-1", 1000);
@@ -129,6 +129,15 @@ assert.equal(nullResult.error, null);
 assert.equal(nullResult.data.length, nullRows.length);
 assert.equal(new Set(nullResult.data.map(row => row.id)).size, nullRows.length);
 assert.ok(nullClient.requests[1].nullDate && nullClient.requests[1].gtId, "null-date cursor must use opened_date IS NULL and ID > last ID");
+
+// A full non-null page must transition into trailing NULL-date records.
+const mixedRows = Array.from({ length: 1000 }, (_, i) => ({ id: "dated-" + String(i).padStart(4, "0"), workspace_id: "workspace-1", opened_date: new Date(Date.UTC(2024, 0, 1 + i)).toISOString().slice(0, 10) })).concat(Array.from({ length: 5 }, (_, i) => ({ id: "null-tail-" + i, workspace_id: "workspace-1", opened_date: null })));
+const mixedClient = mockClient(mixedRows);
+const mixedResult = await loadAccountingLegalCases(mixedClient.client, "workspace-1", 1000);
+assert.equal(mixedResult.error, null);
+assert.equal(mixedResult.data.length, mixedRows.length, "non-null pages must transition to trailing NULL dates");
+assert.deepEqual(new Set(mixedResult.data.map(row => row.id)), new Set(mixedRows.map(row => row.id)), "all trailing NULL rows must be included exactly once");
+assert.ok(mixedClient.requests[1].cursorOr.includes("opened_date.is.null"), "date cursor must include the trailing NULL group");
 
 // Any later-page error aborts and discards partial results.
 const failing = mockClient(original, { failPage: 2 });
