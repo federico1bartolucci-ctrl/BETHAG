@@ -5898,7 +5898,9 @@ function App() {
       console.error("BETHAG request status persistence failed", error);
       setCondominiumRequests((current) =>
         current.map((request) =>
-          request.id === id ? currentRequest : request
+          request.id === id && request.status === status
+            ? { ...request, status: currentRequest.status }
+            : request
         )
       );
       alert(
