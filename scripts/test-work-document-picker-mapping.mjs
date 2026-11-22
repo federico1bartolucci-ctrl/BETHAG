@@ -72,6 +72,7 @@ assert.equal(documents.find((document) => document.id === 1003)?.condominiumId, 
 assert.deepEqual(client.calls.map((call) => call.range), [[0, 999], [1000, 1999]]);
 for (const call of client.calls) {
   assert.equal(call.table, "documents");
+  assert.match(call.columns, /legacy_id[\s\S]*condominiums!inner\(legacy_id\)/, "Picker query must fetch linkable legacy IDs and the condominium legacy ID.");
   assert.equal(call.filters[0][0], "workspace_id");
   assert.equal(call.filters[0][1], "workspace-uuid");
   assert.deepEqual(call.orders.map((order) => order[0]), ["created_at", "id"]);
