@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/AccountingPage.tsx","utf8");
+const start=source.indexOf("if (candidates.length === 1)");
+const end=source.indexOf("if (!window.confirm(\"Confermi l'acquisizione?",start);
+assert.notEqual(start,-1,"Unique candidate linking flow exists.");
+assert.notEqual(end,-1,"Candidate link flow boundary exists.");
+const handler=source.slice(start,end);
+assert.match(handler,/\.update\([\s\S]*\.eq\("id", intake\.id\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.select\("id"\)/,"Update must return affected rows and stay workspace scoped.");
+assert.match(handler,/if\s*\(!updatedRows\?\.length\)/,"Zero-row intake link must be rejected.");
+assert.match(handler,/intake\s*=\s*\{\s*\.\.\.intake,\s*ledger_entry_id:/,"Local intake is updated only after the verified DB write.");
+console.log("Allocation intake link zero-row guard: PASS");
