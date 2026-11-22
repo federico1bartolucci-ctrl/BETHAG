@@ -239,13 +239,14 @@ Deno.serve(async (req: Request) => {
     if (portalError) throw portalError;
 
     if (invited) {
-      await adminClient.auth.admin.updateUserById(targetUserId, {
+      const { error: invitedUserMetadataError } = await adminClient.auth.admin.updateUserById(targetUserId, {
         user_metadata: {
           full_name: name,
           bethag_role: "resident",
           workspace_id: workspaceId,
         },
       });
+      if (invitedUserMetadataError) throw invitedUserMetadataError;
     }
 
     return json({
