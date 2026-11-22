@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
       return json({ success: true, idempotent: true, recipientCount: count ?? 0, prepared });
     }
 
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, statusPersistenceFailures = 0;
     for (const recipient of recipients) {
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -98,34 +98,37 @@ Deno.serve(async (req: Request) => {
         const resendData = await resendResponse.json();
         if (!resendResponse.ok) {
           failed++;
-          await supabase.from("communication_recipients").update({
+          const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
             status: "failed", queued_at: null,
             error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
           }).eq("id", recipient.id);
+          if (recipientStatusError) statusPersistenceFailures++;
           continue;
         }
         sent++;
-        await supabase.from("communication_recipients").update({
+        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
           status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
           sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }).eq("id", recipient.id);
+        if (recipientStatusError) statusPersistenceFailures++;
       } catch (error) {
         failed++;
-        await supabase.from("communication_recipients").update({
+        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
           status: "failed", queued_at: null,
           error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
         }).eq("id", recipient.id);
+        if (recipientStatusError) statusPersistenceFailures++;
       }
     }
 
     const { count: remaining } = await supabase.from("communication_recipients")
       .select("id", { count: "exact", head: true }).eq("communication_id", communication.id).in("status", ["pending","queued"]);
-    const status = failed === 0 && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
-    await supabase.from("communications").update({
+    const status = failed === 0 && statusPersistenceFailures === 0 && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
+    const { error: communicationStatusError } = await supabase.from("communications").update({
       email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq("id", communication.id);
 
-    return json({ success: true, sent, failed, remaining: remaining ?? 0, status });
+    return json({ success: true, sent, failed, remaining: remaining ?? 0, status, statusPersistenceFailures, communicationStatusPersistenceFailed: Boolean(communicationStatusError) });
   } catch (error) {
     console.error("BETHAG send-email error", error);
     return json({ error: error instanceof Error ? error.message : "Errore interno." }, 500);
