@@ -7,7 +7,7 @@ const end = source.indexOf("export async function deleteCondominiumUnit(", start
 assert.ok(start >= 0 && end > start, "deleteCondominium function must be present");
 const body = source.slice(start, end);
 
-assert.match(body, /for\s*\(let offset = 0;\s*;\s*;\s*offset \+= 1000\)/, "document paths must be fetched in pages");
+assert.ok(body.includes("for (let offset = 0; ; offset += 1000)"), "document paths must be fetched in pages");
 assert.match(body, /\.range\(offset, offset \+ 999\)/, "pagination must use explicit 1,000-row ranges");
 assert.match(body, /\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/, "pagination must use stable ordering");
 assert.match(body, /documents\.push\(\.\.\.batch\)/, "all pages must be accumulated before deletion");
