@@ -1462,6 +1462,8 @@ function AccountingPage({
       if (invalidRows) { setError("Le quote manuali devono riferirsi a unità del condominio e contenere importi in centesimi e millesimi numerici non negativi."); return; }
       if (new Set(unitIds).size !== unitIds.length) { setError("Non puoi inserire più quote per la stessa unità."); return; }
       if (!Number.isFinite(total)) { setError("La somma delle quote manuali non è valida."); return; }
+      const expenseAmount = Number(allocationIntakeForm.expense_amount);
+      if (!Number.isFinite(expenseAmount) || expenseAmount < 0 || Math.abs(expenseAmount * 100 - Math.round(expenseAmount * 100)) >= 1e-7) { setError("L’importo della spesa deve essere valido, non negativo e in centesimi."); return; }
       if (Math.abs(total-Number(allocationIntakeForm.expense_amount||0))>0.005) { setError("La somma delle quote manuali deve coincidere con l'importo della spesa."); return; }
     }
     setSaving(true); setError("");
