@@ -12,10 +12,10 @@ assert.match(migration, /interval '1 hour'/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.reserve_account_deletion_admins\(uuid\) TO service_role/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.release_account_deletion_admin_reservations\(uuid\) TO service_role/);
 
-assert.match(edge, /rpc\("reserve_account_deletion_admins"/);
-assert.match(edge, /rpc\("release_account_deletion_admin_reservations"/);
+assert.match(edge, /rpc\(\s*"reserve_account_deletion_admins"/);
+assert.match(edge, /rpc\(\s*"release_account_deletion_admin_reservations"/);
 assert.match(edge, /deleteUser\(userId, false\)/);
-assert.ok(edge.indexOf('rpc("reserve_account_deletion_admins"') < edge.indexOf("deleteUser(userId, false)"), "reservation must precede Auth deletion");
-assert.ok(edge.indexOf("deleteUser(userId, false)") < edge.lastIndexOf('rpc("release_account_deletion_admin_reservations"'), "release must follow deletion attempt");
+assert.ok(edge.indexOf('reserve_account_deletion_admins') < edge.indexOf("deleteUser(userId, false)"), "reservation must precede Auth deletion");
+assert.ok(edge.indexOf("deleteUser(userId, false)") < edge.lastIndexOf('release_account_deletion_admin_reservations'), "release must follow deletion attempt");
 
 console.log("Account deletion admin reservation static verification passed.");
