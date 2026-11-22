@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("function parseBethagDate(value: unknown): string {");
+const end = source.indexOf("\n}\n\nfunction extractBethagDocumentData", start);
+assert.ok(start >= 0 && end > start, "date parser function is present");
+const parserSource = source.slice(start, end + 2).replace("value: unknown", "value");
+const parseBethagDate = new Function(`return (${parserSource.replace(/^function /, "function ")})`)();
+assert.equal(parseBethagDate(""), "", "missing date is rejected");
+assert.equal(parseBethagDate(null), "", "null date is rejected");
+assert.equal(parseBethagDate("31/02/2026"), "", "invalid calendar day is rejected");
+assert.equal(parseBethagDate("29/02/2024"), "2024-02-29", "leap day accepted");
+assert.equal(parseBethagDate("2026-11-22"), "2026-11-22", "valid ISO date accepted");
+assert.equal(parseBethagDate("2026-02-31T10:30:00"), "", "invalid ISO date rejected");
+assert.equal(parseBethagDate("not a date"), "", "unparseable date rejected");
+console.log("Invoice date validation regression tests passed.");
