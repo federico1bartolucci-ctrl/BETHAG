@@ -1688,14 +1688,24 @@ function AccountingPage({
     const headers=parseCsvLine(lines[0]).map(h=>h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""));
     const find=(row:string[],names:string[])=>{const idx=headers.findIndex(h=>names.includes(h));return idx>=0?row[idx]||"":"";};
     const rows:any[]=[];
-    for(const line of lines.slice(1)){
+    const invalidRows:string[]=[];
+    const validISODate=(value:string)=>{if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))return false;const [year,month,day]=value.split("-").map(Number);const date=new Date(Date.UTC(year,month-1,day));return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day;};
+    const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\\./g,"").replace(",", ".")):Number(s);};
+    for(const [lineIndex,line] of lines.slice(1).entries()){
+      const csvLine=lineIndex+2;
       const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
       const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit) continue;
-      const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\\./g,"").replace(",", ".")):Number(s);};
       const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy) continue;
-      const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"]));
-      rows.push({workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:fy.id,unit_id:unit.id,service_type:find(row,["servizio","service_type"]).trim()||"Riscaldamento",meter_code:find(row,["matricola","meter_code"]).trim(),period_start:find(row,["periodo_inizio","period_start"]).trim()||null,period_end:find(row,["periodo_fine","period_end"]).trim()||null,previous_reading:previous,current_reading:current,consumption:toNum(find(row,["consumo","consumption"]))??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh:toNum(find(row,["kwh"])),allocation_value:toNum(find(row,["valore_riparto","allocation_value","valore"])),charge_amount:toNum(find(row,["importo","charge_amount","quota"])),source:"Importazione CSV",notes:find(row,["note","notes"]),data:{}});
+      const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"])), consumption=toNum(find(row,["consumo","consumption"])), kwh=toNum(find(row,["kwh"])), allocationValue=toNum(find(row,["valore_riparto","allocation_value","valore"])), chargeAmount=toNum(find(row,["importo","charge_amount","quota"]));
+      const periodStart=find(row,["periodo_inizio","period_start"]).trim(), periodEnd=find(row,["periodo_fine","period_end"]).trim();
+      const numericValues=[previous,current,consumption,kwh,allocationValue,chargeAmount];
+      if(numericValues.some(v=>v!==null&&(!Number.isFinite(v)||v<0))){invalidRows.push(`riga ${csvLine}: valori numerici non validi o negativi`);continue;}
+      if(previous!==null&&current!==null&&current<previous){invalidRows.push(`riga ${csvLine}: lettura attuale inferiore alla precedente`);continue;}
+      if(periodStart&&!validISODate(periodStart)||periodEnd&&!validISODate(periodEnd)||periodStart&&periodEnd&&periodStart>periodEnd){invalidRows.push(`riga ${csvLine}: periodo/date non valide`);continue;}
+      if(consumption!==null&&previous!==null&&current!==null&&Math.abs(consumption-(current-previous))>0.001){invalidRows.push(`riga ${csvLine}: consumo non coerente con le letture`);continue;}
+      rows.push({workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:fy.id,unit_id:unit.id,service_type:find(row,["servizio","service_type"]).trim()||"Riscaldamento",meter_code:find(row,["matricola","meter_code"]).trim(),period_start:periodStart||null,period_end:periodEnd||null,previous_reading:previous,current_reading:current,consumption:consumption??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh,allocation_value:allocationValue,charge_amount:chargeAmount,source:"Importazione CSV",notes:find(row,["note","notes"]),data:{}});
     }
+    if(invalidRows.length){setError("Importazione annullata: \\n"+invalidRows.slice(0,10).join("\\n")+(invalidRows.length>10?\\n+"\\n... e altre "+(invalidRows.length-10)+" righe non valide":""));return;}
     if(!rows.length){setError("Nessuna riga CSV riconosciuta. Verifica il codice unità e l'esercizio.");return;}
     setSaving(true);setError("");
     try{const {error:saveError}=await supabase.from("condominium_consumption_readings").upsert(rows,{onConflict:"workspace_id,condominium_id,fiscal_year_id,unit_id,service_type,meter_code,period_start,period_end"});if(saveError)throw saveError;flash("Importazione consumi completata: "+rows.length+" righe.");await load();}catch(e:any){setError(e?.message||"Impossibile importare il CSV.");}finally{setSaving(false);event.target.value="";}
