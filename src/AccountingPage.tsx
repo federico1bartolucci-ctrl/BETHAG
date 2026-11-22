@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary";
 
 type Condominium = {
   id: number;
@@ -428,8 +429,7 @@ function AccountingPage({
   const rendicontoSummary = useMemo(() => {
     const income = rendicontoLedger.filter((e) => e.direction === "Entrata").reduce((s,e) => s + Number(e.amount || 0), 0);
     const expenses = rendicontoLedger.filter((e) => e.direction === "Uscita").reduce((s,e) => s + Number(e.amount || 0), 0);
-    const paidExpenses = rendicontoLedger.filter((e) => e.direction === "Uscita" && e.payment_status === "Pagato").reduce((s,e) => s + Number(e.amount || 0), 0);
-    const unpaidExpenses = Math.max(0, expenses - paidExpenses);
+    const { paidExpenses, unpaidExpenses } = calculateLedgerExpensePaid(rendicontoLedger, rendicontoInstallments);
     const allocated = rendicontoAllocations.reduce((s,a) => s + Number(a.amount || 0), 0);
     const allocatedPaid = rendicontoAllocations.reduce((s,a) => s + Number(a.paid_amount || 0), 0);
     const installmentsAmount = rendicontoInstallments.reduce((s,i) => s + Number(i.amount || 0), 0);
