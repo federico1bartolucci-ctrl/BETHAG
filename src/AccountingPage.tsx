@@ -809,7 +809,7 @@ function AccountingPage({
       return;
     }
     if (!supabase || !dbCondominiumId) return;
-    if (!yearForm.name.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
+    if (!yearForm.name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
       setError("Inserisci un nome e date di esercizio valide.");
       return;
     }
