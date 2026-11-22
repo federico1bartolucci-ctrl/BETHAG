@@ -55,6 +55,7 @@ function money(value: number | null) {
 }
 
 export default function InsurancePoliciesSection({
+  workspaceId,
   condominiumId,
   isAdministrator = false,
 }: {
