@@ -2621,11 +2621,12 @@ export async function confirmCondominiumInvoice(
     }
 
     const currentDocumentData = document.data && typeof document.data === "object" ? document.data : {};
-    const { error: documentUpdateError } = await supabase.from("documents").update({
+    const { data: updatedDocument, error: documentUpdateError } = await supabase.from("documents").update({
       data: { ...currentDocumentData, invoiceConfirmation: { status: "Confermato", invoiceNumber, invoiceDate, amount, supplierId, supplierName, workId, ledgerEntryId, confirmedAt: new Date().toISOString() } },
       updated_at: new Date().toISOString(),
-    }).eq("workspace_id", workspaceId).eq("id", document.id);
+    }).eq("workspace_id", workspaceId).eq("id", document.id).select("id").single();
     if (documentUpdateError) throw documentUpdateError;
+    if (!updatedDocument?.id) throw new Error("La conferma contabile è stata registrata, ma il documento non è stato aggiornato. Verifica lo stato prima di ripetere l'operazione.");
 
     return { ledgerEntryId, supplierId, workId, amount, invoiceNumber, invoiceDate };
   });
