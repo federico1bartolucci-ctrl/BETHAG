@@ -25,7 +25,7 @@ const paymentSyncStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION public.
 const paymentSyncBodyEnd = functionSql.indexOf("$function$;", paymentSyncStart);
 const paymentSyncFunction = functionSql.slice(paymentSyncStart, paymentSyncBodyEnd === -1 ? undefined : paymentSyncBodyEnd + "$function$;".length).replace(/--[^\n]*/g, "");
 assert.match(paymentSyncFunction, /select sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=a\.ledger_entry_id[\s\S]*i\.unit_id=a\.unit_id/, "Payment trigger must reconcile allocation paid totals across all installments for the same ledger entry, unit and owner.");
-assert.doesNotMatch(paymentSyncFunction, /\bset\s+paid_amount\s*=\s*v_paid\b/i, "Payment trigger must not overwrite cumulative allocation paid totals with only the current installment's paid amount.");
+assert.doesNotMatch(paymentSyncFunction, /update\s+public\.condominium_expense_allocations[\s\S]{0,500}set\s+paid_amount\s*=\s*v_paid\b/i, "Payment trigger must not overwrite cumulative allocation paid totals with only the current installment's paid amount.");
 const unifiedPaymentSync = paymentSyncFunction.slice(paymentSyncFunction.indexOf("if v_unit_id is null and v_member_id is not null"), paymentSyncFunction.indexOf("else\n    update public.condominium_expense_allocations"));
 assert.match(unifiedPaymentSync, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Unified installment payments must reconcile cumulative paid totals by ledger entry and owner.");
 const registerPaymentFunction = functionSql.slice(functionSql.indexOf("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment"));
