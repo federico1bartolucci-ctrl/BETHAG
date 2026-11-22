@@ -164,9 +164,9 @@ assert.deepEqual(memberClient.requests.map(({ from, to }) => [from, to]), [[0, 9
 assert.ok(memberClient.requests.every((request) => request.workspaceId === "workspace-1"));
 assert.ok(memberClient.requests.every((request) => request.workspaceColumn === "condominiums.workspace_id"), "joined member pagination must filter workspace through condominium relation");
 assert.equal(memberClient.requests[0].table, "condominium_members");
+const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 assert.ok(backend.includes('workspaceColumn: "condominiums.workspace_id"'), "member bootstrap must preserve workspace isolation through the joined condominium relation");
 
-const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const paginatedTables = [
   "condominiums", "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
   "condominium_requests", "condominium_suppliers", "condominium_units", "condominium_members", "condominium_member_transfers", "condominium_works", "condominium_fiscal_years",
