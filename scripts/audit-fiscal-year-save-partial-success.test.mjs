@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveYear(e: React.FormEvent)");
+const end = source.indexOf("\n  async function saveLedger", start);
+assert.notEqual(start, -1);
+const saveYear = source.slice(start, end);
+assert.match(saveYear, /let fiscalYearSaved = false/);
+assert.match(saveYear, /fiscalYearSaved = true/);
+assert.match(saveYear, /Esercizio salvato, ma il riporto delle partite non è riuscito/);
+assert.ok(saveYear.indexOf("fiscalYearSaved = true") < saveYear.indexOf("generate_fiscal_year_carryovers"), "save flag must precede carryover generation");
+console.log("Fiscal-year save partial-success guard: static checks passed");
