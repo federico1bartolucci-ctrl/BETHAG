@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const startConfirm = source.indexOf("export async function confirmCondominiumCreationIntake(");
+const endConfirm = source.indexOf("export async function cancelCondominiumCreationIntake(", startConfirm);
+const startCancel = endConfirm;
+const endCancel = source.indexOf("export async function confirmCondominiumInvoice(", startCancel);
+assert.ok(startConfirm >= 0 && endConfirm > startConfirm && endCancel > startCancel);
+const confirmBody = source.slice(startConfirm, endConfirm);
+const cancelBody = source.slice(startCancel, endCancel);
+assert.match(confirmBody, /\.eq\("status", "Da verificare"\)/, "confirmation is only allowed for pending intakes");
+assert.match(cancelBody, /\.eq\("status", "Da verificare"\)/, "cancellation is only allowed for pending intakes");
+assert.match(cancelBody, /\.select\("id"\)[\s\S]*\.maybeSingle\(\)/, "cancellation detects missing/terminal rows");
+assert.match(cancelBody, /if \(!data\?\.id\)/, "cancellation fails explicitly when no row is updated");
+console.log("Creation intake status-transition guards passed.");
