@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import assert from "node:assert/strict";\nimport { readFile } from "node:fs/promises";
 import { loadWorkspacePaginatedRows } from "../src/lib/workspacePagination.mjs";
 
 function makeClient(rowsByOffset, { failOffset = null } = {}) {
@@ -36,4 +36,15 @@ await assert.rejects(loadWorkspacePaginatedRows(client, "documents", "workspace-
 const failing = makeClient(new Map([[0, first], [1000, second]]), { failOffset: 1000 });
 await assert.rejects(loadWorkspacePaginatedRows(failing.client, "documents", "workspace-1"), /page failure/);
 assert.equal(failing.requests.length, 2);
-console.log("Workspace pagination regression checks: PASS");
+const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
+
+const paginatedTables = [
+  "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
+  "condominium_requests", "condominium_works", "condominium_fiscal_years",
+  "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
+  "condominium_tax_obligations", "condominium_legal_cases", "portal_access", "workspace_members",
+];
+for (const table of paginatedTables) {
+  assert.match(backend, new RegExp(`loadWorkspacePaginatedRows\\(supabase, ["']${table}["']`), `Bootstrap query for ${table} must be paginated`);
+}
+console.log(`Workspace pagination regression checks: PASS (${paginatedTables.length} bootstrap collections)`);
