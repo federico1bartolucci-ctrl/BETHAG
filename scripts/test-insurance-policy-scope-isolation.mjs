@@ -24,7 +24,7 @@ assert.match(source, /getScopedInsurancePolicyContext\(policyScope, workspaceId,
 assert.match(source, /InsurancePoliciesSection\(\{\s*workspaceId,\s*condominiumId,/s, "Component must receive the active workspace prop.");
 assert.match(source, /const activeWorkspaceId = activePolicyScope\?\.workspaceId \?\? null;/, "Mutation workspace must be scoped to the current selection.");
 assert.match(source, /const activeDbCondominiumId = activePolicyScope\?\.dbCondominiumId \?\? null;/, "Mutation condominium ID must be scoped to the current selection.");
-assert.match(source, /setPolicyScope\(\{workspaceId, condominiumId, dbCondominiumId: condominium\.id, policies:/, "Loaded policy rows must be tagged with the context that produced them.");
+assert.match(source, /setPolicyScope\(\{\s*workspaceId,\s*condominiumId,\s*dbCondominiumId: condominium\.id,\s*policies:/, "Loaded policy rows must be tagged with the context that produced them.");
 assert.match(source, /\.eq\("workspace_id", workspaceId\)\s*\.eq\("legacy_id", condominiumId\)/, "Condominium lookup must be workspace scoped.");
 assert.match(source, /if \(!supabase \|\| !activeWorkspaceId \|\| !activeDbCondominiumId\) return;/, "Policy save must fail closed while context is unresolved.");
 assert.match(main, /workspaceId=\{profile\.workspaceId\}/, "Current workspace must be passed to the condominium page.");
