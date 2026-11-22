@@ -49,41 +49,33 @@ export default {
       }
     }
 
-    const { data: adminMemberships, error: membershipError } = await ctx.supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .eq("active", true);
+    const { error: reservationError } = await ctx.supabaseAdmin.rpc(
+      "reserve_account_deletion_admins",
+      { p_user_id: userId }
+    );
 
-    if (membershipError) {
-      return Response.json({ error: membershipError.message }, { status: 500 });
-    }
-
-    for (const membership of adminMemberships ?? []) {
-      const { count, error: countError } = await ctx.supabase
-        .from("workspace_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("workspace_id", membership.workspace_id)
-        .eq("role", "admin")
-        .eq("active", true);
-
-      if (countError) {
-        return Response.json({ error: countError.message }, { status: 500 });
-      }
-
-      if ((count ?? 0) <= 1) {
-        return Response.json(
-          {
-            error:
-              "Non puoi eliminare il profilo perché sei l'unico amministratore attivo di un workspace. Prima nomina un altro amministratore o trasferisci la gestione.",
-          },
-          { status: 409 }
-        );
-      }
+    if (reservationError) {
+      const isLastAdmin = reservationError.message?.includes("ACCOUNT_DELETION_LAST_ADMIN");
+      return Response.json(
+        {
+          error: isLastAdmin
+            ? "Non puoi eliminare il profilo perché la richiesta lascerebbe un workspace senza amministratori attivi. Nomina un altro amministratore o trasferisci la gestione."
+            : reservationError.message,
+        },
+        { status: isLastAdmin ? 409 : 500 }
+      );
     }
 
     const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
+    const { error: releaseError } = await ctx.supabaseAdmin.rpc(
+      "release_account_deletion_admin_reservations",
+      { p_user_id: userId }
+    );
+
+    if (releaseError) {
+      console.error("Account deletion reservation cleanup failed", releaseError);
+    }
+
     if (deleteError) {
       return Response.json({ error: deleteError.message }, { status: 500 });
     }
