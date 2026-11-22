@@ -156,6 +156,6 @@ const paginatedTables = [
   "condominium_tax_obligations", "condominium_legal_cases", "portal_access", "workspace_members",
 ];
 for (const table of paginatedTables) {
-  assert.match(backend, new RegExp(`loadWorkspacePaginatedRows\\(supabase, ["']${table}["']`), `Bootstrap query for ${table} must be paginated`);
+  assert.match(backend, new RegExp(`loadWorkspacePaginatedRows\\(\\s*supabase\\s*,\\s*["']${table}["']`), `Bootstrap query for ${table} must be paginated`);
 }
 console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections)`);
