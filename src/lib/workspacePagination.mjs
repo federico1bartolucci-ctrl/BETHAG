@@ -16,7 +16,7 @@ function validateCursor(row, orderBy) {
   return { value: value ?? null, id: String(id) };
 }
 
-export async function loadWorkspacePaginatedRows(client, table, workspaceId, { select = "*", orderBy = "created_at", pageSize = 1000 } = {}) {
+export async function loadWorkspacePaginatedRows(client, table, workspaceId, { select = "*", orderBy = "created_at", pageSize = 1000, workspaceColumn = "workspace_id" } = {}) {
   if (!client || typeof client.from !== "function") throw new Error("Client Supabase non disponibile.");
   if (typeof workspaceId !== "string" || !workspaceId.trim()) throw new Error("Workspace non disponibile.");
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) throw new Error("Dimensione pagina non valida.");
@@ -28,7 +28,7 @@ export async function loadWorkspacePaginatedRows(client, table, workspaceId, { s
     let query = client
       .from(table)
       .select(select)
-      .eq("workspace_id", workspaceId)
+      .eq(workspaceColumn, workspaceId)
       .order(orderBy, { ascending: true, nullsFirst: false })
       .order("id", { ascending: true });
     if (cursor) {
