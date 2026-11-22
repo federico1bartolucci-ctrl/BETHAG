@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("const existingWorkLinks: Array<{ id: string; work_id: string }>");
+const end = source.indexOf("const dataPayload = { source: \"ai_invoice_confirmation\"", start);
+assert.ok(start >= 0 && end > start, "invoice work-link guard block exists");
+const block = source.slice(start, end);
+assert.ok(block.includes("for (let offset = 0; ; offset += 1000)"), "links are paginated");
+assert.ok(block.includes(".range(offset, offset + 999)"), "query uses range pagination");
+assert.ok(block.includes(".order(\"id\", { ascending: true })"), "pages have stable ordering");
+assert.ok(!block.includes(".limit(10)"), "no arbitrary ten-link limit");
+assert.ok(block.includes("existingWorkIds.some((existingId: string) => existingId !== String(workId))"), "conflicting work link detection retained");
+console.log("Invoice work-link pagination regression guard passed.");

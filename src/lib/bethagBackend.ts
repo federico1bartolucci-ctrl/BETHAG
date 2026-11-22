@@ -2554,11 +2554,17 @@ export async function confirmCondominiumInvoice(
       }
     }
 
-    const { data: existingWorkLinks, error: existingWorkLinksError } = await supabase
-      .from("condominium_work_documents").select("id,work_id")
-      .eq("workspace_id", workspaceId).eq("document_id", payload.documentLegacyId).limit(10);
-    if (existingWorkLinksError) throw existingWorkLinksError;
-    const existingWorkIds = (existingWorkLinks ?? []).map((row: any) => String(row.work_id));
+    const existingWorkLinks: Array<{ id: string; work_id: string }> = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data: page, error: existingWorkLinksError } = await supabase
+        .from("condominium_work_documents").select("id,work_id")
+        .eq("workspace_id", workspaceId).eq("document_id", payload.documentLegacyId)
+        .order("id", { ascending: true }).range(offset, offset + 999);
+      if (existingWorkLinksError) throw existingWorkLinksError;
+      existingWorkLinks.push(...(page ?? []));
+      if (!page || page.length < 1000) break;
+    }
+    const existingWorkIds = existingWorkLinks.map((row: any) => String(row.work_id));
     if (existingWorkIds.length && !workId) {
       throw new Error("La fattura è già collegata a un lavoro. Per confermarla senza lavoro occorre prima rimuovere esplicitamente il collegamento esistente.");
     }
