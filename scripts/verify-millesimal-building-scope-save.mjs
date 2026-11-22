@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("src/AccountingPage.tsx", "utf8");
+assert.match(source, /function getUnitBuildingCode\(unit: UnitOption\)/);
+assert.match(source, /data\?\.building_code/);
+assert.match(source, /data\?\.civic_code/);
+assert.match(source, /data\?\.fabbricato/);
+assert.equal((source.match(/getUnitBuildingCode\(u\)/g) || []).length, 1, "bulk save must use fallback resolver");
+assert.equal((source.match(/getUnitBuildingCode\(selectedUnit\)/g) || []).length, 1, "single save must use fallback resolver");
+assert.match(source, /const scopedUnits = allUnits\.filter/);
+console.log("Accounting millesimal building-scope fallback guard: PASS");
