@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function saveProgress");
+const end=source.indexOf("async function saveWorkExpense",start);
+assert.ok(start>=0&&end>start,"saveProgress handler must exist");
+const handler=source.slice(start,end);
+assert.match(handler,/const \{error:progressUpdateError\}=await supabase\.from\("condominium_works"\)\.update\(\{progress_percent:cumulative\}\)/,"work progress update error must be captured");
+assert.match(handler,/if\(progressUpdateError\)throw progressUpdateError;/,"work progress update error must be surfaced");
+console.log("PASS: progress-percent update errors are not silently ignored.");
