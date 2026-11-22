@@ -540,7 +540,7 @@ function AccountingPage({
   async function resolveCondominium() {
     if (!supabase || selectedCondominiumId === "all") {
       setDbCondominiumId(null);
-      return;
+      return null;
     }
     const { data, error: readError } = await supabase
       .from("condominiums")
@@ -549,7 +549,12 @@ function AccountingPage({
       .eq("legacy_id", selectedCondominiumId)
       .maybeSingle();
     if (readError) throw readError;
-    setDbCondominiumId(data?.id ?? null);
+    if (!data?.id) {
+      setDbCondominiumId(null);
+      throw new Error("Condominio selezionato non trovato nel database.");
+    }
+    setDbCondominiumId(data.id);
+    return data.id;
   }
 
   const rendicontoPrintStyles = `
@@ -589,7 +594,7 @@ function AccountingPage({
     setLoading(true);
     setError("");
     try {
-      await resolveCondominium();
+      const resolvedDbCondominiumId = await resolveCondominium();
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
           supabase
@@ -711,7 +716,7 @@ function AccountingPage({
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
       setCarryoverCompensations((carryoverCompensationsResult.data ?? []) as CarryoverCompensation[]);
-      const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
+      const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === resolvedDbCondominiumId) as AccountingSettings | undefined;
       if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
       setError(e?.message || "Errore nel caricamento della contabilità.");
