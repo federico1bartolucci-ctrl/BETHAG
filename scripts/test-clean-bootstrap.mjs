@@ -21,7 +21,9 @@ assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, actualF
 
 const migrations = await Promise.all(migrationFiles.map((name) => readFile(`${directory}/${name}`, "utf8")));
 const [schemaSql, indexSql, functionSql, securitySql, grantSql] = migrations;
-const paymentSyncFunction = functionSql.slice(functionSql.indexOf("CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments")).replace(/--[^\n]*/g, "");
+const paymentSyncStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments");
+const paymentSyncEnd = functionSql.indexOf("CREATE OR REPLACE FUNCTION", paymentSyncStart + 1);
+const paymentSyncFunction = functionSql.slice(paymentSyncStart, paymentSyncEnd === -1 ? undefined : paymentSyncEnd).replace(/--[^\n]*/g, "");
 assert.match(paymentSyncFunction, /select sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=a\.ledger_entry_id[\s\S]*i\.unit_id=a\.unit_id/, "Payment trigger must reconcile allocation paid totals across all installments for the same ledger entry, unit and owner.");
 assert.doesNotMatch(paymentSyncFunction, /\bset\s+paid_amount\s*=\s*v_paid\b/i, "Payment trigger must not overwrite cumulative allocation paid totals with only the current installment's paid amount.");
 const unifiedPaymentSync = paymentSyncFunction.slice(paymentSyncFunction.indexOf("if v_unit_id is null and v_member_id is not null"), paymentSyncFunction.indexOf("else\n    update public.condominium_expense_allocations"));
