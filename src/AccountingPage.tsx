@@ -1666,6 +1666,7 @@ function AccountingPage({
     if (consumptionForm.period_start && consumptionForm.period_end && consumptionForm.period_start > consumptionForm.period_end) { setError("La data iniziale del periodo di consumo non può superare quella finale."); return; }
     if (chargeAmount !== null && !hasCentPrecision(chargeAmount)) { setError("L'importo addebitato deve essere espresso in centesimi."); return; }
     if (previous!==null&&current!==null&&current<previous) { setError("La lettura attuale non può essere inferiore alla precedente."); return; }
+    if (previous!==null&&current!==null&&consumption!==null&&Math.abs(consumption-(current-previous))>0.001) { setError("Il consumo indicato non coincide con la differenza tra lettura attuale e precedente."); return; }
     setSaving(true); setError("");
     try {
       const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:consumptionForm.fiscal_year_id,unit_id:consumptionForm.unit_id,service_type:consumptionForm.service_type.trim()||"Riscaldamento",period_start:consumptionForm.period_start||null,period_end:consumptionForm.period_end||null,meter_code:consumptionForm.meter_code.trim(),previous_reading:previous,current_reading:current,consumption:consumption??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh,allocation_value:allocationValue,charge_amount:chargeAmount,source:consumptionForm.source.trim()||"Manuale",notes:consumptionForm.notes.trim(),data:{}};
