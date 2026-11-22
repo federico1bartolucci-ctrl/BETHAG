@@ -2471,10 +2471,18 @@ export async function confirmCondominiumInvoice(
 
     let supplierId = payload.supplierId ?? null;
     if (!supplierId) {
-      const { data: supplierRows, error: suppliersError } = await supabase
-        .from("suppliers").select("id,name,data,condominium_id").eq("workspace_id", workspaceId)
-        .or(`condominium_id.eq.${condominium.id},condominium_id.is.null`);
-      if (suppliersError) throw suppliersError;
+      const supplierRows: any[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data: supplierBatch, error: suppliersError } = await supabase
+          .from("suppliers").select("id,name,data,condominium_id").eq("workspace_id", workspaceId)
+          .or(`condominium_id.eq.${condominium.id},condominium_id.is.null`)
+          .order("name", { ascending: true }).order("id", { ascending: true })
+          .range(offset, offset + 999);
+        if (suppliersError) throw suppliersError;
+        const batch = supplierBatch ?? [];
+        supplierRows.push(...batch);
+        if (batch.length < 1000) break;
+      }
       const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
       const normalizeTaxId = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const target = normalize(supplierName);
