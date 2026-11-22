@@ -8,7 +8,7 @@ const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl, "DATABASE_URL must point to a disposable local PostgreSQL 17 database.");
 const target = new URL(databaseUrl);
 assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname), "Refusing non-local DATABASE_URL.");
-assert.equal(target.pathname.replace(/^\\//, ""), "bethag_payment_reversal_test", "This test only runs against its dedicated disposable database.");
+assert.equal(target.pathname.replace(/^\//, ""), "bethag_payment_reversal_test", "This test only runs against its dedicated disposable database.");
 
 function psql(args = []) {
   return execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", databaseUrl, "-v", "ON_ERROR_STOP=1", ...args], {
@@ -35,8 +35,8 @@ const syncSql = extractProductionFunction(functionsSource, "public.sync_condomin
 const triggerSql = securitySource.split("\n").find((line) => line.includes("CREATE TRIGGER trg_sync_installment_from_payments"));
 const proposedSql = await readFile("supabase/rebuild/proposed-forward-migrations/20261122200000_reset_all_consolidated_allocations_after_payment_reversal.sql", "utf8");
 assert.ok(triggerSql, "The production trigger declaration must exist.");
-assert.match(proposedSql, /CREATE OR REPLACE FUNCTION public\\.sync_condominium_installment_from_payments/);
-assert.doesNotMatch(proposedSql, /exit when v_remaining<=0\\.005;/);
+assert.match(proposedSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_installment_from_payments/);
+assert.doesNotMatch(proposedSql, /exit when v_remaining<=0\.005;/);
 
 const tableCount = psql(["-At", "-c", "SELECT count(*) FROM pg_tables WHERE schemaname='public'"]).trim();
 assert.equal(tableCount, "0", "Refusing to reuse a database that is not empty.");
