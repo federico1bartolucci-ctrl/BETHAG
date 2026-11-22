@@ -2478,15 +2478,18 @@ export async function confirmCondominiumInvoice(
       const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
       const normalizeTaxId = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const target = normalize(supplierName);
-      const byVat = supplierVatNumber
-        ? (supplierRows ?? []).find((item: any) => {
+      const byVatMatches = supplierVatNumber
+        ? (supplierRows ?? []).filter((item: any) => {
             const data = item.data && typeof item.data === "object" ? item.data : {};
             const candidateVat = normalizeTaxId(data.vatNumber ?? data.partitaIva ?? data.vat ?? data.supplierVatNumber ?? data.piva);
             return candidateVat && candidateVat === supplierVatNumber;
           })
-        : null;
-      if (byVat) {
-        supplierId = byVat.id;
+        : [];
+      if (byVatMatches.length > 1) {
+        throw new Error(`La partita IVA ${supplierVatNumber} risulta associata a più fornitori. Seleziona manualmente il fornitore prima di confermare la fattura.`);
+      }
+      if (byVatMatches.length === 1) {
+        supplierId = byVatMatches[0].id;
       } else if (supplierName) {
         const exact = (supplierRows ?? []).find((item: any) => normalize(String(item.name ?? "")) === target);
         const exactNameHasConflictingVat = Boolean(exact && supplierVatNumber && (() => {
@@ -2497,11 +2500,14 @@ export async function confirmCondominiumInvoice(
         if (exactNameHasConflictingVat) {
           throw new Error(`La partita IVA rilevata (${supplierVatNumber}) non coincide con quella del fornitore "${exact.name}". Verifica il fornitore prima di confermare la fattura.`);
         }
-        const contained = exact ?? (supplierRows ?? []).find((item: any) => {
+        const containedMatches = exact ? [exact] : (supplierRows ?? []).filter((item: any) => {
           const candidate = normalize(String(item.name ?? ""));
           return candidate && target && (candidate.includes(target) || target.includes(candidate));
         });
-        supplierId = contained?.id ?? null;
+        if (!exact && containedMatches.length > 1) {
+          throw new Error(`Il nome del fornitore "${supplierName}" corrisponde a più anagrafiche. Seleziona manualmente il fornitore corretto prima di confermare la fattura.`);
+        }
+        supplierId = containedMatches[0]?.id ?? null;
       }
     }
     if (!supplierId) throw new Error(supplierName ? `Il fornitore "${supplierName}" non è stato associato automaticamente. Seleziona/crea il fornitore in Anagrafica prima di confermare la fattura.` : "Il fornitore della fattura non è stato riconosciuto. Verificalo prima della conferma.");
