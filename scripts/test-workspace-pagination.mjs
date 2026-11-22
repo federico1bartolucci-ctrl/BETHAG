@@ -110,6 +110,14 @@ const nullResult = await loadWorkspacePaginatedRows(nullClient.client, "document
 assert.equal(nullResult.data.length, 1002);
 assert.deepEqual(nullResult.data.slice(-2).map((row) => row.id), ["null-0001", "null-0002"]);
 
+// When NULL dates themselves exceed one page, the NULL-ID cursor must reach the tail.
+const nullPagedRows = [...Array.from({ length: 1000 }, (_, i) => ({ id: `dated-${String(i).padStart(4, "0")}`, workspace_id: "workspace-1", created_at: "2026-01-01" })), ...Array.from({ length: 1001 }, (_, i) => ({ id: `null-${String(i).padStart(4, "0")}`, workspace_id: "workspace-1", created_at: null }))];
+const nullPagedClient = makeClient(nullPagedRows);
+const nullPagedResult = await loadWorkspacePaginatedRows(nullPagedClient.client, "documents", "workspace-1");
+assert.equal(nullPagedResult.data.length, 2001);
+assert.equal(nullPagedResult.data.at(-1).id, "null-1000");
+assert.deepEqual(nullPagedClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999], [0, 999]]);
+
 // Reproduce legacy offset drift caused by concurrent inserts before page two.
 const inserts = [
   { id: "new-0001", workspace_id: "workspace-1", created_at: "2025-12-30" },
