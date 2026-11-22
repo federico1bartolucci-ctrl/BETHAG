@@ -728,6 +728,7 @@ function AccountingPage({
     if (!supabase || !compensationCarryover || !dbCondominiumId) return;
     const amount = Number(compensationForm.amount || 0);
     if (!Number.isFinite(amount) || Math.round(amount * 100) <= 0) { setError("Inserisci un importo di compensazione finito e pari ad almeno un centesimo."); return; }
+    if (!hasCentPrecision(amount)) { setError("L’importo della compensazione deve essere espresso in centesimi."); return; }
     const residual = Math.abs(Number(compensationCarryover.balance || 0));
     if (amount > residual + 0.005) { setError("L'importo supera il residuo della partita riportata."); return; }
     if (compensationCarryover.kind === "Credito" && compensationForm.target_installment_id) {
