@@ -71,6 +71,10 @@ export default function InsurancePoliciesSection({
   const [form, setForm] = useState<Omit<InsurancePolicy, "id">>(emptyPolicy);
 
   const load = async () => {
+    // Clear the previous condominium context before loading the new one; never retain stale IDs.
+    setWorkspaceId(null);
+    setDbCondominiumId(null);
+    setPolicies([]);
     if (!supabaseConfigured || !supabase) {
       setLoading(false);
       return;
