@@ -27,6 +27,22 @@ function getNamedKey(jsonName: string, legacyName: string) {
   return Deno.env.get(legacyName) || null;
 }
 
+async function findAuthUserByEmail(adminClient: any, email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  let page = 1;
+  const perPage = 1000;
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const existingUser = data.users.find(
+      (candidate: any) => candidate.email?.trim().toLowerCase() === normalizedEmail
+    );
+    if (existingUser) return existingUser;
+    if (data.users.length < perPage) return null;
+    page += 1;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
@@ -129,12 +145,7 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          const existingUser = await findAuthUserByEmail(adminClient, email);
           if (!existingUser) throw inviteError;
           targetUserId = existingUser.id;
         } else {
