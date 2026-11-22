@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveProgress(");
+const end = source.indexOf(" async function saveWorkExpense", start);
+assert.ok(start >= 0 && end > start, "SAL save handler must exist");
+const handler = source.slice(start, end);
+const validation = handler.indexOf("cumulativeAmount");
+const insert = handler.indexOf(".insert({");
+assert.ok(validation >= 0 && insert > validation, "Approved SAL total must be checked before inserting the SAL");
+assert.ok(handler.includes("approved>0&&cumulativeAmount>approved+0.005"), "Approved SAL limit must be enforced");
+assert.ok(handler.includes("Number.isFinite(amount)") && handler.includes("amount<0"), "SAL amount must be finite and non-negative");
+assert.ok(handler.includes("if(updateError)throw updateError"), "Progress update errors must not be ignored");
+assert.ok(handler.includes("e?.message||\"Impossibile salvare il SAL.\""), "SAL failures must expose a meaningful error");
+console.log("SAL approved-amount validation guard passed.");
