@@ -9,7 +9,7 @@ CREATE TABLE public.condominium_installments(id uuid primary key,workspace_id uu
 CREATE TABLE public.condominium_payment_movements(id uuid primary key,workspace_id uuid,condominium_id uuid,installment_id uuid,payment_date date not null,amount numeric not null,method text not null default 'Bonifico',reference text default '',notes text default '');
 CREATE TABLE public.condominium_payment_reversal_audit(id uuid primary key default gen_random_uuid(),original_payment_id uuid unique,workspace_id uuid,condominium_id uuid,installment_id uuid,amount numeric,payment_date date,method text,reference text,notes text,reversal_reason text,reversed_by uuid);
 CREATE TABLE public.condominium_expense_allocations(id uuid primary key,workspace_id uuid,condominium_id uuid,ledger_entry_id uuid,unit_id uuid,member_id uuid,amount numeric not null,paid_amount numeric not null default 0,status text not null default 'Da pagare');
-CREATE TABLE public.condominium_members(id uuid primary key,condominium_id uuid,user_id uuid,email text,active boolean,data jsonb);
+CREATE TABLE public.condominium_members(id uuid primary key,condominium_id uuid,unit_id uuid,user_id uuid,email text,active boolean,data jsonb);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS 'SELECT NULLIF(current_setting(''request.jwt.claim.sub'',true), '''')::uuid';
 CREATE FUNCTION private.can_manage_workspace_module(uuid,text) RETURNS boolean LANGUAGE sql STABLE AS 'SELECT true';`);
 await db.exec(migration);
