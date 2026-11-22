@@ -164,7 +164,7 @@ assert.deepEqual(memberClient.requests.map(({ from, to }) => [from, to]), [[0, 9
 assert.ok(memberClient.requests.every((request) => request.workspaceId === "workspace-1"));
 assert.ok(memberClient.requests.every((request) => request.workspaceColumn === "condominiums.workspace_id"), "joined member pagination must filter workspace through condominium relation");
 assert.equal(memberClient.requests[0].table, "condominium_members");
-assert.match(backend, /workspaceColumn:\\s*["\\]condominiums\\.workspace_id["\\]/, "member bootstrap must preserve workspace isolation through the joined condominium relation");
+assert.ok(backend.includes('workspaceColumn: "condominiums.workspace_id"'), "member bootstrap must preserve workspace isolation through the joined condominium relation");
 
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const paginatedTables = [
