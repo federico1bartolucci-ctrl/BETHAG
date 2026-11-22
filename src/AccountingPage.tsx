@@ -123,6 +123,24 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   notes: "",
 };
 
+async function loadAccountingLegalCases(workspaceId: string) {
+  const pageSize = 1000;
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await supabase
+      .from("condominium_legal_cases")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("opened_date", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return { data: rows, error: null };
+  }
+}
+
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
@@ -612,11 +630,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("due_date"),
-          supabase
-            .from("condominium_legal_cases")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("opened_date", { ascending: false }),
+          loadAccountingLegalCases(workspaceId),
           supabase
             .from("condominium_expense_allocations")
             .select("*")
