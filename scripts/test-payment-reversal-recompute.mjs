@@ -4,8 +4,10 @@ import { PGlite } from "@electric-sql/pglite";
 
 const functionsPath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const securityPath = "supabase/migrations/20261017000004_bethag_baseline_security.sql";
+const proposedMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261122200000_reset_all_consolidated_allocations_after_payment_reversal.sql";
 const functionsSource = await readFile(functionsPath, "utf8");
 const securitySource = await readFile(securityPath, "utf8");
+const proposedMigrationSql = await readFile(proposedMigrationPath, "utf8");
 
 function extractProductionFunction(source, signature) {
   const start = source.indexOf("CREATE OR REPLACE FUNCTION " + signature + "(");
@@ -25,6 +27,8 @@ const triggerSql = securitySource.split("\n").find((line) =>
   line.includes("CREATE TRIGGER trg_sync_installment_from_payments")
 );
 assert.ok(triggerSql, "Production baseline must wire payment movements to installment/allocation synchronization.");
+assert.match(proposedMigrationSql, /CREATE OR REPLACE FUNCTION public\\.sync_condominium_installment_from_payments/);
+assert.doesNotMatch(proposedMigrationSql, /exit when v_remaining<=0\\.005;/, "Proposed migration must clear every matching allocation, including later rows.");
 
 const db = new PGlite();
 const workspace = "11111111-1111-4111-8111-111111111111";
@@ -107,6 +111,7 @@ try {
   await db.exec(reverseSql);
   await db.exec(syncSql);
   await db.exec(triggerSql);
+  await db.exec(proposedMigrationSql);
   await setAuth(userId);
   await setManage(true);
 
@@ -192,7 +197,36 @@ try {
   await checkAllocations(groupLedger, [{ paid: 0, status: "Da pagare" }, { paid: 0, status: "Da pagare" }]);
   assert.equal(await auditCount(), 5);
 
-  console.log("PASS: production baseline payment-reversal runtime regression — payment, installment, allocation triggers, auth/scope, audit, closed-year and consolidated-owner cases.");
+  const inactiveOwnerMember = "24242424-2424-4242-8242-242424242424";
+  const inactiveUnitOwner = "29292929-2929-4292-8292-292929292929";
+  const inactiveInstallment = "25252525-2525-4252-8252-252525252525";
+  const inactiveLedger = "26262626-2626-4262-8262-262626262626";
+  const inactivePayment = "27272727-2727-4272-8272-272727272727";
+  const inactiveAllocation = "28282828-2828-4282-8282-282828282828";
+  const inactiveEmail = "inactive-consolidated-owner@example.test";
+  await db.query(
+    "INSERT INTO public.condominium_members(id,condominium_id,unit_id,user_id,email,active,data) VALUES($1,$2,null,null,$3,true,'{\\\"role\\\":\\\"Proprietario\\\\"}'::jsonb),($4,$2,$5,null,$3,true,'{\\\\"role\\\\":\\\\"Proprietario\\\\"}'::jsonb)",
+    [inactiveOwnerMember, condo, inactiveEmail, inactiveUnitOwner, unitA]
+  );
+  await db.query(
+    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,fiscal_year_id,member_id,unit_id,title,due_date,amount,paid_amount,status,ledger_entry_id) VALUES($1,$2,$3,$4,$5,null,'Rata proprietario inattivo','2099-12-31',50,0,'Da pagare',$6)",
+    [inactiveInstallment, workspace, condo, openYear, inactiveOwnerMember, inactiveLedger]
+  );
+  await db.query(
+    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,50)",
+    [inactiveAllocation, workspace, condo, inactiveLedger, unitA]
+  );
+  await insertPayment(inactivePayment, inactiveInstallment, 50);
+  await checkInstallment(inactiveInstallment, 50, "Pagato");
+  await checkAllocations(inactiveLedger, [{ paid: 50, status: "Pagato" }]);
+  await db.query("UPDATE public.condominium_members SET active=false WHERE id=$1", [inactiveOwnerMember]);
+  await assert.rejects(() => reverse(inactivePayment), /Proprietario della rata unificata non valido/);
+  assert.equal(await paymentCount(inactivePayment), 1, "Failed reversal must retain the original payment.");
+  await checkInstallment(inactiveInstallment, 50, "Pagato");
+  await checkAllocations(inactiveLedger, [{ paid: 50, status: "Pagato" }]);
+  assert.equal(await auditCount(), 5, "Failed reversal must roll back its audit row.");
+
+  console.log("PASS: production baseline payment-reversal runtime regression — payment, installment, allocation triggers, auth/scope, audit, closed-year, consolidated-owner reset and inactive-owner fail-closed cases.");
 } finally {
   await db.close();
 }
