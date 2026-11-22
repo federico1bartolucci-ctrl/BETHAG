@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { loadWorkspaceExpenseAllocations } from "./lib/accountingExpenseAllocationPagination";
+import { loadWorkspaceMillesimalValues } from "./lib/accountingMillesimalValuePagination.mjs";
 
 type Condominium = {
   id: number;
@@ -638,10 +639,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("name"),
-          supabase
-            .from("condominium_millesimal_values")
-            .select("*")
-            .eq("workspace_id", workspaceId),
+          loadWorkspaceMillesimalValues(supabase, workspaceId),
           supabase
             .from("condominium_consumption_readings")
             .select("*")
