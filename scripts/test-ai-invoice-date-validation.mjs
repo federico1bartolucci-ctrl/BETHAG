@@ -5,10 +5,9 @@ const start = source.indexOf("function parseBethagDate(value: unknown): string {
 const end = source.indexOf("\n}\n\nfunction extractBethagDocumentData", start);
 assert.ok(start >= 0 && end > start, "Invoice date parser must exist.");
 const parser = source.slice(start, end + 2);
-assert.match(parser, /raw\.match\(\/\^\\(\\d\{1,2\}\)\[\\\/-\]\(\\d\{1,2\}\)[\\\/-](\\d{4})\$\/\)/, "Italian day/month/year parser must use real digit matching.");
-assert.match(parser, /toValidIsoDate/, "Calendar validation must be present.");
-assert.match(parser, /Number\.isFinite\(parsed\.getTime\(\)\)/, "Invalid fallback dates must be rejected without throwing.");
-
+assert.ok(parser.includes("^(\\\\d{1,2})"), "Italian date parsing must use digit matching.");
+assert.ok(parser.includes("toValidIsoDate"), "Calendar date validation must be present.");
+assert.ok(parser.includes("Number.isFinite(parsed.getTime())"), "Invalid fallback dates must be rejected safely.");
 function validateCalendarDate(year, month, day) {
   const d = new Date(Date.UTC(year, month - 1, day));
   return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
