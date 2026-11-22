@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { shouldCreateInvoiceLinkedEvent } from "./invoiceWorkEventRecovery.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -2610,14 +2611,26 @@ export async function confirmCondominiumInvoice(
       if (error) throw error;
     }
 
-    if (workId && !existingWorkIds.includes(String(workId))) {
-      const { error: eventError } = await supabase.from("condominium_work_events").insert({
-        workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, event_type: "invoice_linked",
-        event_date: invoiceDate, title: invoiceNumber ? `Fattura ${invoiceNumber} collegata` : "Fattura collegata",
-        description: `Fattura ${supplierName || "fornitore"} registrata in Contabilità per ${amount.toFixed(2)} €.`,
-        amount, data: { documentId: document.id, ledgerEntryId, supplierId },
-      });
-      if (eventError) throw eventError;
+    if (workId) {
+      const { data: existingInvoiceEvent, error: existingInvoiceEventError } = await supabase
+        .from("condominium_work_events")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("work_id", workId)
+        .eq("event_type", "invoice_linked")
+        .contains("data", { documentId: document.id, ledgerEntryId })
+        .maybeSingle();
+      if (existingInvoiceEventError) throw existingInvoiceEventError;
+
+      if (shouldCreateInvoiceLinkedEvent(existingInvoiceEvent)) {
+        const { error: eventError } = await supabase.from("condominium_work_events").insert({
+          workspace_id: workspaceId, condominium_id: condominium.id, work_id: workId, event_type: "invoice_linked",
+          event_date: invoiceDate, title: invoiceNumber ? `Fattura ${invoiceNumber} collegata` : "Fattura collegata",
+          description: `Fattura ${supplierName || "fornitore"} registrata in Contabilità per ${amount.toFixed(2)} €.`,
+          amount, data: { documentId: document.id, ledgerEntryId, supplierId },
+        });
+        if (eventError) throw eventError;
+      }
     }
 
     const currentDocumentData = document.data && typeof document.data === "object" ? document.data : {};
