@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("export async function saveCondominium(");
+const end = source.indexOf("export async function archiveCondominium(", start);
+assert.ok(start >= 0 && end > start);
+const body = source.slice(start, end);
+assert.match(body, /const existingUnits: any\[\] = \[\]/, "existing unit rows are accumulated");
+assert.match(body, /unitPageSize = 1000/, "unit reads use explicit page size");
+assert.match(body, /\.order\("id", \{ ascending: true \}\)/, "page order is stable");
+assert.match(body, /\.range\(unitOffset, unitOffset \+ unitPageSize - 1\)/, "unit read is paginated");
+assert.match(body, /existingUnits\.push\(\.\.\.\(unitPage \?\? \[\]\)\)/, "every page is accumulated");
+assert.match(body, /if \(\(unitPage \?\? \[\]\)\.length < unitPageSize\) break/, "paging stops after short page");
+console.log("Condominium save unit pagination guard passed.");
