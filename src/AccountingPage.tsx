@@ -1108,7 +1108,7 @@ function AccountingPage({
     });
     let remaining = totalCents - rows.reduce((sum,row) => sum + row.baseCents, 0);
     rows.sort((a,b) => b.remainder-a.remainder || a.unit.unit_code.localeCompare(b.unit.unit_code));
-    for (let i=0; i<rows.length && remaining>0; i++) rows[i].baseCents += 1;
+    for (let i=0; i<rows.length && remaining>0; i++) { rows[i].baseCents += 1; remaining -= 1; }
     setAutoPreview(rows.map(row => ({
       unit_id:row.unit.id,
       unit_code:row.unit.unit_code,
