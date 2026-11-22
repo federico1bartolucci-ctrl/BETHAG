@@ -4247,10 +4247,55 @@ begin
     end if;
   else
     update public.condominium_expense_allocations a
-    set paid_amount=v_paid,
+    set paid_amount=least(
+          round(coalesce(a.amount,0)::numeric,2),
+          round(coalesce((
+            select sum(i.paid_amount)
+            from public.condominium_installments i
+            where i.workspace_id=v_workspace_id
+              and i.condominium_id=v_condominium_id
+              and i.ledger_entry_id=a.ledger_entry_id
+              and i.unit_id=a.unit_id
+              and (
+                (v_member_id is not null and i.member_id=v_member_id)
+                or
+                (v_member_id is null and i.member_id is null)
+              )
+          ),0)::numeric,2)
+        ),
         status=case
-          when v_paid>=a.amount-0.005 then 'Pagato'
-          when v_paid>0 then 'Parzialmente pagato'
+          when least(
+            round(coalesce(a.amount,0)::numeric,2),
+            round(coalesce((
+              select sum(i.paid_amount)
+              from public.condominium_installments i
+              where i.workspace_id=v_workspace_id
+                and i.condominium_id=v_condominium_id
+                and i.ledger_entry_id=a.ledger_entry_id
+                and i.unit_id=a.unit_id
+                and (
+                  (v_member_id is not null and i.member_id=v_member_id)
+                  or
+                  (v_member_id is null and i.member_id is null)
+                )
+            ),0)::numeric,2)
+          )>=a.amount-0.005 then 'Pagato'
+          when least(
+            round(coalesce(a.amount,0)::numeric,2),
+            round(coalesce((
+              select sum(i.paid_amount)
+              from public.condominium_installments i
+              where i.workspace_id=v_workspace_id
+                and i.condominium_id=v_condominium_id
+                and i.ledger_entry_id=a.ledger_entry_id
+                and i.unit_id=a.unit_id
+                and (
+                  (v_member_id is not null and i.member_id=v_member_id)
+                  or
+                  (v_member_id is null and i.member_id is null)
+                )
+            ),0)::numeric,2)
+          )>0 then 'Parzialmente pagato'
           else 'Da pagare'
         end
     where a.workspace_id=v_workspace_id
