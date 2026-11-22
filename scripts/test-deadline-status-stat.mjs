@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { getDeadlineEffectiveStatus } from "../src/deadlineStatus.ts";
+import { getDeadlineEffectiveStatus } from "../src/deadlineStatus.mjs";
 
 const today = "2026-11-22";
 const deadline = (status, dueDate) => ({ status, dueDate });
