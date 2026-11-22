@@ -8,7 +8,7 @@ assert.notEqual(loadStart, -1, "Insurance policy loading must collect paginated 
 assert.notEqual(loadEnd, -1, "Paginated rows must be mapped into state.");
 const loader = source.slice(loadStart, loadEnd);
 
-assert.match(loader, /for\s*\(let offset = 0;\s*;\s*;\s*offset \+= 1000\)/, "Policy loading must use 1,000-row pages.");
+assert.match(loader, /for\s*\(let offset = 0;\s*;\s*offset \+= 1000\)/, "Policy loading must use 1,000-row pages.");
 assert.match(loader, /\.range\(offset, offset \+ 999\)/, "Every page must request a bounded 1,000-row range.");
 assert.match(loader, /\.eq\("workspace_id", condominium\.workspace_id\)/, "Policy loading must be workspace scoped.");
 assert.match(loader, /\.eq\("condominium_id", condominium\.id\)/, "Policy loading must be condominium scoped.");
