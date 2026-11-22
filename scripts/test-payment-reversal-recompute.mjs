@@ -126,10 +126,6 @@ try {
     "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,100)",
     [allocation, workspace, condo, ledger, unitA]
   );
-  await db.query(
-    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,20)",
-    [allocationC, workspace, condo, groupLedger, unitC]
-  );
   await insertPayment(p1, installment, 70);
   await insertPayment(p2, installment, 30);
   await checkInstallment(installment, 100, "Pagato");
@@ -194,6 +190,10 @@ try {
   await db.query(
     "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,50),($6,$2,$3,$4,$7,30)",
     [allocationA, workspace, condo, groupLedger, unitA, allocationB, unitB]
+  );
+  await db.query(
+    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,amount) VALUES($1,$2,$3,$4,$5,20)",
+    [allocationC, workspace, condo, groupLedger, unitC]
   );
   await insertPayment(groupPayment1, groupInstallment, 70);
   await insertPayment(groupPayment2, groupInstallment, 30);
