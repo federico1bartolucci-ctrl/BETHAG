@@ -9,5 +9,6 @@ assert.ok(importer.includes("invalidRows.length"), "CSV import must reject inval
 assert.ok(importer.includes("Number.isFinite(v)") && importer.includes("v<0"), "CSV import must reject negative and non-finite numeric values");
 assert.ok(importer.includes("current<previous"), "CSV import must reject decreasing meter readings");
 assert.ok(importer.includes("validISODate") && importer.includes("Date.UTC"), "CSV import must validate real calendar dates");
+assert.ok(importer.includes(String.raw`/^\d{4}-\d{2}-\d{2}$/`), "CSV date regex must use single-digit escapes");
 assert.ok(importer.includes("Math.abs(consumption-(current-previous))>0.001"), "CSV import must reject consumption inconsistent with readings");
 console.log("Consumption CSV validation guard passed.");
