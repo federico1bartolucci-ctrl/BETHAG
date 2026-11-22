@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveWorkDocuments()");
+assert.notEqual(start, -1, "saveWorkDocuments must exist");
+const end = source.indexOf("async function registerProgressPayment", start);
+assert.notEqual(end, -1, "next function boundary must exist");
+const fn = source.slice(start, end);
+assert.match(fn, /const \{error:deleteError\}=await supabase\.from\("condominium_work_documents"\)\.delete\(\)[\s\S]*?if\(deleteError\)throw deleteError;[\s\S]*?\.insert\(rows\)/, "must abort before inserting replacement links when delete fails");
+console.log("PASS work-document replacement aborts when existing-link deletion fails");
