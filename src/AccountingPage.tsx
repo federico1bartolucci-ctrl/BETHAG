@@ -123,6 +123,23 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   notes: "",
 };
 
+async function loadWorkspaceRows(table: string, workspaceId: string, orderColumn: string, ascending = true) {
+  const pageSize = 1000;
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await supabase
+      .from(table)
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order(orderColumn, { ascending })
+      .range(offset, offset + pageSize - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return { data: rows, error: null };
+  }
+}
+
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
