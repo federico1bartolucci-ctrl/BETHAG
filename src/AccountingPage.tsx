@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { loadWorkspacePaginatedRows } from "./lib/accountingPagination.mjs";
+import { loadAccountingLegalCases } from "./lib/accountingLegalCasesPagination.mjs";
 
 type Condominium = {
   id: number;
@@ -605,7 +606,7 @@ function AccountingPage({
             .order("entry_date", { ascending: false }),
           loadWorkspacePaginatedRows(supabase, "condominium_funds", workspaceId, { select: "*", orderBy: [{"column":"name"}] }),
           loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
-          loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { select: "*", orderBy: [{"column":"opened_date","ascending":false,"nullsFirst":false}] }),
+          loadAccountingLegalCases(supabase, workspaceId),
           loadWorkspacePaginatedRows(supabase, "condominium_expense_allocations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
           supabase
             .from("condominium_allocation_intakes")
