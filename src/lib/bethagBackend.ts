@@ -153,7 +153,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     supabase.from("condominium_works").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date"),
     supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date"),
-    loadWorkspaceRows("condominium_funds").order("created_at"),
+    loadWorkspaceRows("condominium_funds"),
     supabase.from("condominium_expense_allocations").select("*").eq("workspace_id", workspaceId).order("created_at"),
     supabase.from("condominium_tax_obligations").select("*").eq("workspace_id", workspaceId).order("due_date"),
     supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
