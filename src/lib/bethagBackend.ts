@@ -143,7 +143,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   ] = await Promise.all([
     loadWorkspaceCondominiumMembers(),
     loadWorkspaceRows("condominium_units"),
-    supabase.from("documents").select("*").eq("workspace_id", workspaceId),
+    loadWorkspaceRows("documents"),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
     supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
     supabase.from("suppliers").select("*").eq("workspace_id", workspaceId),
