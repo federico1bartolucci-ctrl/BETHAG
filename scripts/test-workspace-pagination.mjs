@@ -150,7 +150,7 @@ assert.equal(failing.requests.length, 2);
 
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const paginatedTables = [
-  "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
+  "condominiums", "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
   "condominium_requests", "condominium_suppliers", "condominium_units", "condominium_member_transfers", "condominium_works", "condominium_fiscal_years",
   "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
   "condominium_tax_obligations", "condominium_legal_cases", "portal_access", "workspace_members",
