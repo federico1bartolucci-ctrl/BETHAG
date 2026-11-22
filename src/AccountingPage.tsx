@@ -123,6 +123,9 @@ const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   notes: "",
 };
 
+function getUnitBuildingCode(unit: UnitOption) {
+  return String((unit as any).building_code || (unit as any).data?.building_code || (unit as any).data?.civic_code || (unit as any).data?.fabbricato || "").trim().toLowerCase();
+}
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
@@ -1090,7 +1093,7 @@ function AccountingPage({
     }
     const eligible = units
       .filter(u => u.condominium_id === dbCondominiumId)
-      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))
+      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === getUnitBuildingCode(u))))
       .map(unit => ({ unit, value: scopedMillesimalValues.find(v => v.table_id === table.id && v.unit_id === unit.id) }))
       .filter(item => item.value && !item.value.excluded && Number(item.value.value) > 0);
     const totalMillesimi = eligible.reduce((sum, item) => sum + Number(item.value?.value || 0), 0);
@@ -1366,7 +1369,7 @@ function AccountingPage({
     if (!dbCondominiumId) { setError("Seleziona prima un condominio."); return; }
     const firstExpense = scopedLedger.find(e => e.direction === "Uscita");
     const firstTable = scopedMillesimalTables.find(t => t.active);
-    const rows = firstTable ? units.filter(u => u.condominium_id === dbCondominiumId && (firstTable.scope_mode === "all" || (firstTable.scope_mode === "units" && firstTable.scope_unit_ids.includes(u.id)) || (firstTable.scope_mode === "buildings" && firstTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))).map(u => ({unit_id:u.id,millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===firstTable.id&&v.unit_id===u.id)?.value||0),amount:0})) : [];
+    const rows = firstTable ? units.filter(u => u.condominium_id === dbCondominiumId && (firstTable.scope_mode === "all" || (firstTable.scope_mode === "units" && firstTable.scope_unit_ids.includes(u.id)) || (firstTable.scope_mode === "buildings" && firstTable.scope_building_codes.some(code => code.trim().toLowerCase() === getUnitBuildingCode(u))))).map(u => ({unit_id:u.id,millesimi:Number(scopedMillesimalValues.find(v=>v.table_id===firstTable.id&&v.unit_id===u.id)?.value||0),amount:0})) : [];
     setEditingAllocationIntakeId(null);
     setAllocationIntakeForm({source:"Manuale",title:"",description:"",document_id:"",ledger_entry_id:firstExpense?.id||"",allocation_table_id:firstTable?.id||"",expense_amount:Number(firstExpense?.amount||0),rows,notes:""});
     setShowAllocationIntakeForm(true);
@@ -1402,7 +1405,7 @@ function AccountingPage({
     const extractedTotalMillesimi = Number(extracted?.total_millesimi ?? extracted?.totalMillesimi ?? 0);
     const scopedUnits = units
       .filter(u => u.condominium_id === dbCondominiumId)
-      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())));
+      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === getUnitBuildingCode(u))));
     const sourceRows = extractedRows.length ? extractedRows.map((r:any) => {
       const byId = units.find(u => u.id === String(r.unit_id || r.unitId || ""));
       const byCode = units.find(u => u.condominium_id === dbCondominiumId && String(u.unit_code).trim().toLowerCase() === String(r.unit_code || r.unitCode || "").trim().toLowerCase());
@@ -1592,7 +1595,7 @@ function AccountingPage({
     if (!supabase || !dbCondominiumId || !bulkMillesimalTableId) { setError("Seleziona una tabella millesimale."); return; }
     const table = scopedMillesimalTables.find(t => t.id === bulkMillesimalTableId);
     const allCondominiumUnits = units.filter(u => u.condominium_id === dbCondominiumId);
-    const condominiumUnits = allCondominiumUnits.filter(u => table && (table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase()))));
+    const condominiumUnits = allCondominiumUnits.filter(u => table && (table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === getUnitBuildingCode(u)))));
     if (!table || condominiumUnits.length === 0) { setError("Tabella o unità non disponibili per il criterio selezionato."); return; }
     const invalidValue = condominiumUnits.some(u => {
       const value = Number(bulkMillesimalValues[u.id]);
@@ -1633,7 +1636,7 @@ function AccountingPage({
     }
     const unitInTableScope = selectedTable.scope_mode === "all"
       || (selectedTable.scope_mode === "units" && selectedTable.scope_unit_ids.includes(selectedUnit.id))
-      || (selectedTable.scope_mode === "buildings" && selectedTable.scope_building_codes.some(code => code.trim().toLowerCase() === String((selectedUnit as any).building_code || "").trim().toLowerCase()));
+      || (selectedTable.scope_mode === "buildings" && selectedTable.scope_building_codes.some(code => code.trim().toLowerCase() === getUnitBuildingCode(selectedUnit)));
     if (!unitInTableScope) { setError("L'unità selezionata non rientra nell'ambito della tabella millesimale."); return; }
     setSaving(true); setError("");
     try {
