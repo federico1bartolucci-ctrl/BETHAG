@@ -19,15 +19,15 @@ assert.equal(resendWebhookErrorStatus("body"), 500, "request body read failures 
 const signatureResponse = resendWebhookErrorResponse("signature", new Error("invalid signature"), headers);
 assert.equal(signatureResponse.status, 401);
 assert.equal(signatureResponse.headers.get("content-type"), "application/json");
-assert.deepEqual(await signatureResponse.json(), { error: "invalid signature" });
+assert.deepEqual(await signatureResponse.json(), { error: "Firma webhook non valida." });
 
 const payloadResponse = resendWebhookErrorResponse("payload", new SyntaxError("Unexpected token"), headers);
 assert.equal(payloadResponse.status, 400);
-assert.deepEqual(await payloadResponse.json(), { error: "Unexpected token" });
+assert.deepEqual(await payloadResponse.json(), { error: "Payload webhook non valido." });
 
 const databaseResponse = resendWebhookErrorResponse("processing", new Error("PGRST transient failure"), headers);
 assert.equal(databaseResponse.status, 500);
-assert.deepEqual(await databaseResponse.json(), { error: "PGRST transient failure" });
+assert.deepEqual(await databaseResponse.json(), { error: "Errore elaborazione webhook." });
 
 const unknownResponse = resendWebhookErrorResponse("unknown", "non-error rejection", headers);
 assert.equal(unknownResponse.status, 500);
