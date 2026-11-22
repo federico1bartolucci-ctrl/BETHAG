@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("export async function confirmCondominiumInvoice");
+const end = source.indexOf("export async function ", start + 1);
+const block = source.slice(start, end > start ? end : undefined);
+const query = block.indexOf('.from("condominium_ledger_entries")');
+assert.ok(query >= 0, "invoice confirmation ledger query exists");
+const queryEnd = block.indexOf(";", query);
+const ledgerQuery = block.slice(query, queryEnd + 1);
+assert.ok(ledgerQuery.includes(".maybeSingle()"), "query expects at most one entry and will surface duplicates");
+assert.ok(!ledgerQuery.includes(".limit(1)"), "no silent truncation of duplicate ledger entries");
+console.log("Duplicate-ledger detection guard passed.");
