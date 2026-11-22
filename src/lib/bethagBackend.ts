@@ -145,7 +145,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     loadWorkspaceRows("condominium_units"),
     supabase.from("documents").select("*").eq("workspace_id", workspaceId),
     supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
-    supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
+    loadWorkspaceRows("assemblies"),
     supabase.from("suppliers").select("*").eq("workspace_id", workspaceId),
     supabase.from("activities").select("*").eq("workspace_id", workspaceId),
     supabase.from("communications").select("*").eq("workspace_id", workspaceId),
