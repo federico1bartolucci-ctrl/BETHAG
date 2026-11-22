@@ -1735,6 +1735,10 @@ function AccountingPage({
       setError("Inserisci descrizione e importo del preventivo.");
       return;
     }
+    if (!hasCentPrecision(Number(budgetForm.amount))) {
+      setError("L'importo del preventivo deve essere espresso in centesimi.");
+      return;
+    }
     setSaving(true); setError("");
     try {
       const payload = {
