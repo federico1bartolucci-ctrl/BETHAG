@@ -797,7 +797,7 @@ function AccountingPage({
     if(accountingSettingsForm.accounting_start_date>accountingSettingsForm.accounting_end_date){setError("La data di inizio contabilità non può essere successiva alla data di fine.");return;}
     if(!Number.isInteger(count)||count<1||count>12){setError("Il numero di rate ordinarie deve essere compreso tra 1 e 12.");return;}
     if(dates.length&&dates.length!==count){setError("Le scadenze ordinarie devono corrispondere al numero di rate.");return;}
-    if(dates.some((d,i,a)=>!/^\\d{4}-\\d{2}-\\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
+    if(dates.some((d,i,a)=>!/^\d{4}-\d{2}-\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
     if(dates.some(d=>d<accountingSettingsForm.accounting_start_date||d>accountingSettingsForm.accounting_end_date)){setError("Le scadenze ordinarie devono ricadere nell'esercizio configurato.");return;}
     setSaving(true);setError(""); try{const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,accounting_start_date:accountingSettingsForm.accounting_start_date,accounting_end_date:accountingSettingsForm.accounting_end_date,ordinary_installment_count:count,ordinary_due_dates:dates,extraordinary_mode:accountingSettingsForm.extraordinary_mode,extraordinary_allow_multi_year:accountingSettingsForm.extraordinary_allow_multi_year}; const {data,error}=await supabase.from("condominium_accounting_settings").upsert(payload,{onConflict:"workspace_id,condominium_id"}).select("*").single(); if(error)throw error; setAccountingSettings(data as AccountingSettings);flash("Impostazioni contabilità salvate.");await load();}catch(e:any){setError(e?.message||"Impossibile salvare le impostazioni.");}finally{setSaving(false);}
   }
@@ -1690,7 +1690,7 @@ function AccountingPage({
     const rows:any[]=[];
     const invalidRows:string[]=[];
     const validISODate=(value:string)=>{if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))return false;const [year,month,day]=value.split("-").map(Number);const date=new Date(Date.UTC(year,month-1,day));return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day;};
-    const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\\./g,"").replace(",", ".")):Number(s);};
+    const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\./g,"").replace(",", ".")):Number(s);};
     for(const [lineIndex,line] of lines.slice(1).entries()){
       const csvLine=lineIndex+2;
       const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
