@@ -21,7 +21,7 @@ assert.match(migration, /Da pagare/);
 assert.match(migration, /condominium_expense_allocations/);
 assert.match(migration, /v_installment\.unit_id IS NULL AND v_installment\.member_id IS NOT NULL/);
 assert.match(migration, /Il pagamento è già stato stornato|Il pagamento è già stato stornato/);
-assert.match(migration, /L'esercizio contabile è chiuso: storno non consentito/);
+assert.match(migration, /L''esercizio contabile è chiuso: storno non consentito/);
 assert.match(original, /insert into public\.condominium_payment_reversal_audit/);
 assert.match(original, /delete from public\.condominium_payment_movements/);
 assert.ok(!original.includes("UPDATE public.condominium_installments"), "baseline function should be confirmed defective (historical file untouched)");
