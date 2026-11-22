@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const migrationPath = "supabase/migrations/20261122190000_recompute_installment_after_payment_reversal.sql";
+const migration = await readFile(migrationPath, "utf8");
+const baseline = await readFile("supabase/migrations/20261017000003_bethag_baseline_functions.sql", "utf8");
+const start = baseline.indexOf("CREATE OR REPLACE FUNCTION private.reverse_condominium_installment_payment");
+const end = baseline.indexOf("$function$;", start);
+assert.ok(start >= 0 && end > start, "baseline reversal function must be present");
+const original = baseline.slice(start, end + "$function$;".length);
+assert.match(migration, /CREATE OR REPLACE FUNCTION private\.reverse_condominium_installment_payment/);
+assert.match(migration, /FOR UPDATE/);
+assert.match(migration, /condominium_payment_reversal_audit/);
+assert.match(migration, /DELETE FROM public\.condominium_payment_movements/);
+assert.match(migration, /sum\(pm\.amount\)/i, "remaining payment movements must be summed");
+assert.match(migration, /allow_installment_paid_update/);
+assert.match(migration, /allow_allocation_paid_update/);
+assert.match(migration, /Pagato/);
+assert.match(migration, /Parzialmente pagato/);
+assert.match(migration, /Da pagare/);
+assert.match(migration, /condominium_expense_allocations/);
+assert.match(migration, /v_installment\.unit_id IS NULL AND v_installment\.member_id IS NOT NULL/);
+assert.match(migration, /Il pagamento è già stato stornato|Il pagamento è già stato stornato/);
+assert.match(migration, /L'esercizio contabile è chiuso: storno non consentito/);
+assert.match(original, /insert into public\.condominium_payment_reversal_audit/);
+assert.match(original, /delete from public\.condominium_payment_movements/);
+assert.ok(!original.includes("UPDATE public.condominium_installments"), "baseline function should be confirmed defective (historical file untouched)");
+console.log("payment-reversal regression guard: PASS");
