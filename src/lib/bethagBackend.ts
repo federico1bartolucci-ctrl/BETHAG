@@ -1529,15 +1529,25 @@ function parseBethagAmount(value: unknown): number {
 
 function parseBethagDate(value: unknown): string {
   const raw = String(value ?? "").trim();
-  if (!raw) return new Date().toISOString().slice(0, 10);
+  if (!raw) return "";
   const match = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})$/);
-  if (match) {
-    const day = match[1].padStart(2, "0");
-    const month = match[2].padStart(2, "0");
-    return `${match[3]}-${month}-${day}`;
+  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})(?:$|[T\\s])/);
+  const parts = match
+    ? { year: Number(match[3]), month: Number(match[2]), day: Number(match[1]) }
+    : iso
+      ? { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]) }
+      : null;
+  if (parts) {
+    const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+    if (
+      date.getUTCFullYear() !== parts.year ||
+      date.getUTCMonth() !== parts.month - 1 ||
+      date.getUTCDate() !== parts.day
+    ) return "";
+    return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
   }
-  const iso = raw.match(/^(\\d{4}-\\d{2}-\\d{2})/);
-  return iso ? iso[1] : new Date(raw).toISOString().slice(0, 10);
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }
 
 function extractBethagDocumentData(data: unknown): Record<string, any> {
