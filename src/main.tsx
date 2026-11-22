@@ -3783,8 +3783,11 @@ function App() {
           throw new Error("Workspace amministratore non trovato.");
         }
 
+        let condominiumServerSaveCompleted = false;
+        let generatedUnitServerSavesCompleted = 0;
         console.info("BETHAG_SAVE_CONDOMINIUM_RPC_START", { workspaceId, id: savedItem.id, name: savedItem.name });
         await saveCondominiumBackend(workspaceId, savedItem);
+        condominiumServerSaveCompleted = true;
         console.info("BETHAG_SAVE_CONDOMINIUM_RPC_DONE", { id: savedItem.id, name: savedItem.name });
 
         // Alla prima creazione, la struttura configurata dal wizard genera
@@ -3880,6 +3883,7 @@ function App() {
 
           for (const generatedUnit of generatedUnits) {
             const savedUnit = await saveCondominiumUnitBackend(workspaceId, generatedUnit);
+            generatedUnitServerSavesCompleted += 1;
             generatedUnit.id = String(savedUnit?.id || generatedUnit.id || ("local-" + makeId()));
           }
 
@@ -3958,11 +3962,13 @@ function App() {
         backendHydrated.current = true;
       } catch (error) {
         console.error("BETHAG condominium save failed", error);
-        alert(
-          error instanceof Error
-            ? "Il condominio non è stato salvato sul server.\n\n" + error.message
-            : "Il condominio non è stato salvato sul server. Riprova."
-        );
+        const failureDetail = error instanceof Error ? error.message : "Errore non dettagliato.";
+        const partialSaveMessage = condominiumServerSaveCompleted
+          ? "Il condominio è stato salvato sul server, ma la configurazione delle unità potrebbe essere incompleta. " +
+            `Unità anagrafiche salvate prima dell'errore: ${generatedUnitServerSavesCompleted}.` +
+            (hasConfirmedAiUnits ? " Anche l'elaborazione dei proprietari confermati potrebbe essere incompleta." : "")
+          : "Il condominio non è stato salvato sul server.";
+        alert(partialSaveMessage + "\n\n" + failureDetail);
         return;
       }
     }
