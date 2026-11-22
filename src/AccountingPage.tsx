@@ -127,6 +127,12 @@ function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
 
+function isValidISODate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + "T00:00:00Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
@@ -794,10 +800,11 @@ function AccountingPage({
   async function saveAccountingSettings(e: React.FormEvent) {
     e.preventDefault(); if(!supabase||!dbCondominiumId)return;
     const count=Number(accountingSettingsForm.ordinary_installment_count); const dates=accountingSettingsForm.ordinary_due_dates.split(/[,;\\n]+/).map(s=>s.trim()).filter(Boolean);
+    if(!isValidISODate(accountingSettingsForm.accounting_start_date)||!isValidISODate(accountingSettingsForm.accounting_end_date)){setError("Inserisci date di inizio e fine contabilità valide.");return;}
     if(accountingSettingsForm.accounting_start_date>accountingSettingsForm.accounting_end_date){setError("La data di inizio contabilità non può essere successiva alla data di fine.");return;}
     if(!Number.isInteger(count)||count<1||count>12){setError("Il numero di rate ordinarie deve essere compreso tra 1 e 12.");return;}
     if(dates.length&&dates.length!==count){setError("Le scadenze ordinarie devono corrispondere al numero di rate.");return;}
-    if(dates.some((d,i,a)=>!/^\\d{4}-\\d{2}-\\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
+    if(dates.some((d,i,a)=>!isValidISODate(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere date valide, crescenti e non duplicate.");return;}
     if(dates.some(d=>d<accountingSettingsForm.accounting_start_date||d>accountingSettingsForm.accounting_end_date)){setError("Le scadenze ordinarie devono ricadere nell'esercizio configurato.");return;}
     setSaving(true);setError(""); try{const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,accounting_start_date:accountingSettingsForm.accounting_start_date,accounting_end_date:accountingSettingsForm.accounting_end_date,ordinary_installment_count:count,ordinary_due_dates:dates,extraordinary_mode:accountingSettingsForm.extraordinary_mode,extraordinary_allow_multi_year:accountingSettingsForm.extraordinary_allow_multi_year}; const {data,error}=await supabase.from("condominium_accounting_settings").upsert(payload,{onConflict:"workspace_id,condominium_id"}).select("*").single(); if(error)throw error; setAccountingSettings(data as AccountingSettings);flash("Impostazioni contabilità salvate.");await load();}catch(e:any){setError(e?.message||"Impossibile salvare le impostazioni.");}finally{setSaving(false);}
   }
