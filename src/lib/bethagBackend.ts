@@ -2497,11 +2497,14 @@ export async function confirmCondominiumInvoice(
         if (exactNameHasConflictingVat) {
           throw new Error(`La partita IVA rilevata (${supplierVatNumber}) non coincide con quella del fornitore "${exact.name}". Verifica il fornitore prima di confermare la fattura.`);
         }
-        const contained = exact ?? (supplierRows ?? []).find((item: any) => {
+        const containedMatches = exact ? [exact] : (supplierRows ?? []).filter((item: any) => {
           const candidate = normalize(String(item.name ?? ""));
           return candidate && target && (candidate.includes(target) || target.includes(candidate));
         });
-        supplierId = contained?.id ?? null;
+        if (!exact && containedMatches.length > 1) {
+          throw new Error(`Il nome del fornitore "${supplierName}" corrisponde a più anagrafiche. Seleziona manualmente il fornitore corretto prima di confermare la fattura.`);
+        }
+        supplierId = containedMatches[0]?.id ?? null;
       }
     }
     if (!supplierId) throw new Error(supplierName ? `Il fornitore "${supplierName}" non è stato associato automaticamente. Seleziona/crea il fornitore in Anagrafica prima di confermare la fattura.` : "Il fornitore della fattura non è stato riconosciuto. Verificalo prima della conferma.");
