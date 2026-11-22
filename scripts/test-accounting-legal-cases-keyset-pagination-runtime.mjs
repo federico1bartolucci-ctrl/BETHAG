@@ -100,6 +100,15 @@ for (;;) {
 const legacyDeleteIds = new Set(legacyDeleteRows.map(row => row.id));
 assert.ok(["case-1000", "case-0999"].some(id => !legacyDeleteIds.has(id)), "legacy offset pagination omits rows after concurrent deletes ahead of the offset");
 
+// Keyset pagination retains the already-fetched first page and continues without skipping later rows after deletes.
+const keysetDelete = mockClient(largerOriginal, { deleteBeforePage: 2, deleteIds: deletedAhead });
+const deleteResult = await loadAccountingLegalCases(keysetDelete.client, "workspace-1", 1000);
+assert.equal(deleteResult.error, null);
+assert.equal(deleteResult.data.length, largerOriginal.length, "keyset pagination must not skip rows after concurrent deletes");
+assert.equal(new Set(deleteResult.data.map(row => row.id)).size, largerOriginal.length, "keyset pagination must not duplicate rows after concurrent deletes");
+assert.deepEqual(new Set(deleteResult.data.map(row => row.id)), new Set(largerOriginal.map(row => row.id)), "keyset paging must preserve the fetched first page and all remaining rows");
+
+
 // Keyset paging excludes rows inserted before the cursor and preserves all originals.
 const keyset = mockClient([...original, ...foreign], { injectBeforePage: 2, inserts: concurrentInserts });
 const result = await loadAccountingLegalCases(keyset.client, "workspace-1", 1000);
