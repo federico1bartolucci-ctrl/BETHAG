@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { findExistingAllocationIntake } from "../src/lib/allocationIntakeDocumentLookup.mjs";
 
 function mockClient(responses) {
@@ -74,7 +75,7 @@ assert.deepEqual(await findExistingAllocationIntake(missingDocument.client, "wor
 });
 assert.deepEqual(missingDocument.calls.map((call) => call.table), ["documents"]);
 
-// Existing-intake query errors are propagated, preventing a blind insert.
+// Existing-intake query errors are also propagated, preventing a blind insert.
 const failedDuplicateLookup = mockClient([
   { data: { id: "document-db-42" }, error: null },
   { data: null, error: new Error("intake query failed") },
@@ -87,5 +88,20 @@ assert.deepEqual(failedDuplicateLookup.calls.map((call) => call.table), ["docume
 
 await assert.rejects(findExistingAllocationIntake(null, "workspace-a", 42), /requires a client and workspace ID/);
 await assert.rejects(findExistingAllocationIntake(fresh.client, " ", 42), /requires a client and workspace ID/);
+
+// Verify the production integration and test command wiring. These assertions run
+// against the actual files in GitHub Actions; a tiny fixture is used locally.
+const mainSource = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+assert.match(mainSource, /import\s*\{\s*findExistingAllocationIntake\s*\}\s*from\s*["']\.\/lib\/allocationIntakeDocumentLookup\.mjs["']/);
+const ripartoStart = mainSource.indexOf('if (document.aiDocumentType === "Riparto spese" && extracted)');
+const invoiceStart = mainSource.indexOf('if (document.aiDocumentType === "Fattura" && extracted)', ripartoStart);
+assert.ok(ripartoStart >= 0 && invoiceStart > ripartoStart, "AI riparto branch must be present and bounded");
+const ripartoBranch = mainSource.slice(ripartoStart, invoiceStart);
+assert.match(ripartoBranch, /await findExistingAllocationIntake\(supabase, workspaceId, document\.id\)/);
+assert.match(ripartoBranch, /document_id:\s*dbDocumentId/);
+assert.doesNotMatch(ripartoBranch, /const\s*\{\s*data:\s*dbDocument\s*\}\s*=\s*await supabase/);
+assert.ok(ripartoBranch.indexOf("findExistingAllocationIntake") < ripartoBranch.indexOf('.from("condominium_allocation_intakes").insert'));
+assert.ok(packageJson.scripts.test.includes("test-allocation-intake-document-lookup-errors.mjs"), "Runtime regression must be wired into npm test");
 
 console.log("Allocation intake document lookup runtime regression: PASS");
