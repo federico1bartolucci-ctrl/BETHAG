@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/lib/bethagBackend.ts","utf8");
+const start=source.indexOf("export async function confirmCondominiumInvoice");
+const end=source.indexOf("export async function ",start+1);
+const block=source.slice(start,end>start?end:undefined);
+const supplier=block.slice(block.indexOf("const supplierRows: any[]"),block.indexOf("const normalize =",block.indexOf("const supplierRows: any[]")));
+assert.ok(supplier.includes(".range(offset, offset + 999)"),"supplier lookup paginates 1000-row ranges");
+assert.ok(supplier.includes(".order(\"name\""),"stable name ordering");
+assert.ok(supplier.includes(".order(\"id\""),"stable ID tie-break");
+assert.ok(supplier.includes("if (batch.length < 1000) break"),"loop ends on final partial page");
+console.log("Supplier lookup pagination guard passed.");
