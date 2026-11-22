@@ -2413,16 +2413,19 @@ export async function cancelCondominiumCreationIntake(
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("condominium_creation_intakes")
       .update({
         status: "Annullato",
         updated_at: new Date().toISOString(),
       })
       .eq("workspace_id", workspaceId)
-      .eq("id", intakeId);
+      .eq("id", intakeId)
+      .select("id")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data?.id) throw new Error("Richiesta di creazione condominio non trovata o non annullata.");
   });
 }
 
@@ -2639,7 +2642,7 @@ export async function updateCondominiumRequestStatus(
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("condominium_requests")
       .update({
         title: request.category,
@@ -2649,9 +2652,12 @@ export async function updateCondominiumRequestStatus(
         updated_at: new Date().toISOString(),
       })
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", request.id);
+      .eq("legacy_id", request.id)
+      .select("id")
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data?.id) throw new Error("Richiesta condominiale non trovata o non aggiornata.");
   });
 }
 
