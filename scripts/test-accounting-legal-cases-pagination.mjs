@@ -7,7 +7,7 @@ const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 
 assert.match(source, /import \{ loadAccountingLegalCases \} from ["']\.\/lib\/accountingLegalCasesPagination\.mjs["']/);
 assert.match(source, /loadAccountingLegalCases\(supabase, workspaceId\)/);
-assert.match(helper, /\.from\("condominium_legal_cases"\)[\s\S]*?\.range\(0, pageSize - 1\)/);
+assert.match(helper, /const TABLE = "condominium_legal_cases"/);\nassert.match(helper, /\.from\(TABLE\)[\s\S]*?\.range\(0, pageSize - 1\)/);
 assert.match(helper, /\.eq\("workspace_id", workspaceId\)/);
 assert.match(helper, /\.order\("opened_date", \{ ascending: false, nullsFirst: true \}\)/);
 assert.match(helper, /\.order\("id", \{ ascending: true \}\)/);
