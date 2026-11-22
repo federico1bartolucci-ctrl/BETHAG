@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { isValidISODate } from "./lib/accountingDateValidation.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -127,11 +128,6 @@ function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
 
-function isValidISODate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(value + "T00:00:00Z");
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
 
 function money(value: number) {
   return new Intl.NumberFormat("it-IT", {
@@ -816,7 +812,7 @@ function AccountingPage({
       return;
     }
     if (!supabase || !dbCondominiumId) return;
-    if (!yearForm.name.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
+    if (!yearForm.name.trim() || !isValidISODate(yearForm.start_date) || !isValidISODate(yearForm.end_date)) {
       setError("Inserisci un nome e date di esercizio valide.");
       return;
     }
