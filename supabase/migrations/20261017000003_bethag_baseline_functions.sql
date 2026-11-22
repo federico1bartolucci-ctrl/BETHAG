@@ -1600,6 +1600,7 @@ declare
   v_member_id uuid;
   v_owner_user_id uuid;
   v_owner_email text;
+  v_ledger_entry_id uuid;
 begin
   if not private.can_manage_workspace_module(p_workspace_id,'contabilita') then
     raise exception 'Autorizzazione gestione contabilità richiesta';
@@ -1622,6 +1623,26 @@ begin
 
   if p_payment_date is null then
     raise exception 'La data del pagamento è obbligatoria';
+  end if;
+
+  -- Serialize payment reconciliation across installments of the same ledger entry.
+  select ledger_entry_id into v_ledger_entry_id
+  from public.condominium_installments
+  where id=p_installment_id
+    and workspace_id=p_workspace_id
+    and condominium_id=p_condominium_id;
+
+  if not found then
+    raise exception 'Rata non trovata o non appartenente al condominio';
+  end if;
+
+  if v_ledger_entry_id is not null then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(
+        p_workspace_id::text||':'||p_condominium_id::text||':'||v_ledger_entry_id::text,
+        0
+      )
+    );
   end if;
 
   select * into v_installment
