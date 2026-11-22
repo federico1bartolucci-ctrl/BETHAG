@@ -27,8 +27,8 @@ const triggerSql = securitySource.split("\n").find((line) =>
   line.includes("CREATE TRIGGER trg_sync_installment_from_payments")
 );
 assert.ok(triggerSql, "Production baseline must wire payment movements to installment/allocation synchronization.");
-assert.match(proposedMigrationSql, /CREATE OR REPLACE FUNCTION public\\.sync_condominium_installment_from_payments/);
-assert.doesNotMatch(proposedMigrationSql, /exit when v_remaining<=0\\.005;/, "Proposed migration must clear every matching allocation, including later rows.");
+assert.match(proposedMigrationSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_installment_from_payments/);
+assert.doesNotMatch(proposedMigrationSql, /exit when v_remaining<=0\.005;/, "Proposed migration must clear every matching allocation, including later rows.");
 
 const db = new PGlite();
 const workspace = "11111111-1111-4111-8111-111111111111";
