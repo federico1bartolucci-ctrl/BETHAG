@@ -283,7 +283,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const condominiumSupplierLegacyByDbId = new Map<string, number>();
-  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } = await supabase
+  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } =
     await loadWorkspacePaginatedRows(supabase, "condominium_suppliers", workspaceId, {
       select: "id,condominium_id,business_name,data",
       orderBy: "created_at",
