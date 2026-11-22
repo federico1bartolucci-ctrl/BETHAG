@@ -31,8 +31,8 @@ assert.deepEqual(requests.map(({ from, to }) => [from, to]), [[0, 999], [1000, 1
 assert.ok(requests.every(request => request.workspaceId === "workspace-1"));
 assert.deepEqual(requests[0].orders, [["created_at", { ascending: true }], ["id", { ascending: true }]]);
 assert.equal(requests[0].table, "documents");
-assert.throws(() => loadWorkspacePaginatedRows(client, "documents", "", {}), /Workspace non disponibile/);
-assert.throws(() => loadWorkspacePaginatedRows(client, "documents", "workspace-1", { pageSize: 1001 }), /Dimensione pagina non valida/);
+await assert.rejects(loadWorkspacePaginatedRows(client, "documents", "", {}), /Workspace non disponibile/);
+await assert.rejects(loadWorkspacePaginatedRows(client, "documents", "workspace-1", { pageSize: 1001 }), /Dimensione pagina non valida/);
 const failing = makeClient(new Map([[0, first], [1000, second]]), { failOffset: 1000 });
 await assert.rejects(loadWorkspacePaginatedRows(failing.client, "documents", "workspace-1"), /page failure/);
 assert.equal(failing.requests.length, 2);
