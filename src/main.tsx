@@ -1681,7 +1681,7 @@ function ResidentPortalView({
   communications: Communication[];
   requests: CondominiumRequest[];
   onLogout: () => void;
-  onCreateRequest: (request: CondominiumRequest) => void;
+  onCreateRequest: (request: CondominiumRequest) => Promise<void>;
 }) {
   const member =
     portalMembers.find(
@@ -1752,18 +1752,21 @@ function ResidentPortalView({
   const [requestCategory, setRequestCategory] = useState("Informazioni");
   const [requestPriority, setRequestPriority] = useState<RequestPriority>("Media");
   const [requestDescription, setRequestDescription] = useState("");
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
 
   const ownRequests = member
     ? requests.filter((request) => request.memberId === member.id).sort((a, b) => b.date.localeCompare(a.date))
     : [];
 
-  const submitRequest = () => {
-    if (!member) return;
+  const submitRequest = async () => {
+    if (!member || requestSubmitting) return;
     if (!requestDescription.trim()) {
       alert("Inserisci la descrizione della richiesta.");
       return;
     }
-    onCreateRequest({
+    setRequestSubmitting(true);
+    try {
+      await onCreateRequest({
       ...emptyCondominiumRequest,
       id: makeId(),
       condominiumId: member.condominiumId,
@@ -1773,10 +1776,15 @@ function ResidentPortalView({
       priority: requestPriority,
       date: localISODate(),
       status: "Nuova",
-    });
-    setRequestDescription("");
-    setRequestCategory("Informazioni");
-    setRequestPriority("Media");
+      });
+      setRequestDescription("");
+      setRequestCategory("Informazioni");
+      setRequestPriority("Media");
+    } catch {
+      // Conserva i campi compilati se il salvataggio fallisce.
+    } finally {
+      setRequestSubmitting(false);
+    }
   };
 
   return (
@@ -1922,7 +1930,7 @@ function ResidentPortalView({
                 <option>Alta</option>
               </select>
               <textarea value={requestDescription} onChange={(e) => setRequestDescription(e.target.value)} placeholder="Descrivi la richiesta o il problema..." rows={4} />
-              <button className="primary-button" onClick={submitRequest}>Invia richiesta</button>
+              <button className="primary-button" onClick={submitRequest} disabled={requestSubmitting}>{requestSubmitting ? "Invio in corso…" : "Invia richiesta"}</button>
             </div>
             {ownRequests.length > 0 && (
               <div className="resident-request-history">
@@ -7374,7 +7382,7 @@ function App() {
                     ? requestError.message
                     : "Impossibile inviare la richiesta all'amministratore."
                 );
-                return;
+                throw requestError;
               }
             }
 
