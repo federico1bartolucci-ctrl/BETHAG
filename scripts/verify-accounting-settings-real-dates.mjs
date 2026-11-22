@@ -5,6 +5,7 @@ const source = await readFile(new URL("../src/AccountingPage.tsx", import.meta.u
 assert.match(source, /function isValidISODate\(value: string\)/);
 assert.match(source, /!isValidISODate\(accountingSettingsForm\.accounting_start_date\)/);
 assert.match(source, /dates\.some\(\(d,i,a\)=>!isValidISODate\(d\)/);
+assert.match(source, /installmentForm\.due_date && \(!isValidISODate\(installmentForm\.due_date\)/, "Manual installment due dates must reject impossible calendar dates.");
 
 function isValidISODate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
