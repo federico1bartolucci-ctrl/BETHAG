@@ -91,13 +91,22 @@ export default function InsurancePoliciesSection({
       }
       setDbCondominiumId(condominium.id);
       setWorkspaceId(condominium.workspace_id);
-      const { data, error: policyError } = await supabase
-        .from("condominium_insurance_policies")
-        .select("*")
-        .eq("condominium_id", condominium.id)
-        .order("end_date", { ascending: true });
-      if (policyError) throw policyError;
-      setPolicies((data ?? []).map((row: any) => ({
+      const policyRows: any[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error: policyError } = await supabase
+          .from("condominium_insurance_policies")
+          .select("*")
+          .eq("workspace_id", condominium.workspace_id)
+          .eq("condominium_id", condominium.id)
+          .order("end_date", { ascending: true, nullsFirst: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + 999);
+        if (policyError) throw policyError;
+        const batch = data ?? [];
+        policyRows.push(...batch);
+        if (batch.length < 1000) break;
+      }
+      setPolicies(policyRows.map((row: any) => ({
         ...row,
         premium: row.premium === null ? null : Number(row.premium),
         deductible: row.deductible === null ? null : Number(row.deductible),
