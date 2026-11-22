@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { requireUpdatedLedgerEntry } from "./lib/ledgerUpdateResult.mjs";
 
 type Condominium = {
   id: number;
@@ -927,15 +928,21 @@ function AccountingPage({
         expense_type: ledgerForm.direction === "Uscita" ? ledgerForm.expense_type : "Ordinaria",
         notes: ledgerForm.notes,
       };
-      const query = editingLedger
-        ? supabase
-            .from("condominium_ledger_entries")
-            .update(payload)
-            .eq("id", editingLedger.id)
-            .eq("workspace_id", workspaceId)
-        : supabase.from("condominium_ledger_entries").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingLedger) {
+        const result = await supabase
+          .from("condominium_ledger_entries")
+          .update(payload)
+          .eq("id", editingLedger.id)
+          .eq("workspace_id", workspaceId)
+          .select("id")
+          .maybeSingle();
+        requireUpdatedLedgerEntry(result);
+      } else {
+        const { error: saveError } = await supabase
+          .from("condominium_ledger_entries")
+          .insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingLedger(null);
       setShowLedgerForm(false);
       setLedgerForm({ ...emptyLedger });
