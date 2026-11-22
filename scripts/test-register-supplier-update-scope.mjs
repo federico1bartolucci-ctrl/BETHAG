@@ -51,6 +51,17 @@ await assert.rejects(
 );
 assert.deepEqual(workspaceSwitch.calls, [], "Workspace mismatch must stop before any database query.");
 
+const crossScopePayload = { ...payload, condominium_id: "condominium-b" };
+const crossScopePayloadClient = mockClient();
+await assert.rejects(
+  updateRegisterSupplierWithinScope({
+    client: crossScopePayloadClient.client, currentWorkspaceId: "workspace-a", currentCondominiumId: "condominium-a",
+    originalWorkspaceId: "workspace-a", originalCondominiumId: "condominium-a", supplierId: "supplier-1", payload: crossScopePayload,
+  }),
+  /Payload fuori ambito/,
+);
+assert.deepEqual(crossScopePayloadClient.calls, [], "A cross-scope update payload must be rejected before querying.");
+
 const zeroRows = mockClient({ data: null });
 await assert.rejects(
   updateRegisterSupplierWithinScope({
