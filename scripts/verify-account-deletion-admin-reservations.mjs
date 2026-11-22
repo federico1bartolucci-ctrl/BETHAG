@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const migration = await readFile("supabase/migrations/20261122150000_guard_concurrent_account_deletions_by_admin_reservation.sql", "utf8");
+const edge = await readFile("supabase/functions/delete-account/index.ts", "utf8");
+
+assert.match(migration, /account_deletion_admin_reservations/);
+assert.match(migration, /pg_advisory_xact_lock/);
+assert.match(migration, /count\(DISTINCT r\.user_id\)/);
+assert.match(migration, /v_admin_count - v_other_reservations <= 1/);
+assert.match(migration, /interval '1 hour'/);
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.reserve_account_deletion_admins\(uuid\) TO service_role/);
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.release_account_deletion_admin_reservations\(uuid\) TO service_role/);
+
+assert.match(edge, /rpc\(\s*"reserve_account_deletion_admins"/);
+assert.match(edge, /rpc\(\s*"release_account_deletion_admin_reservations"/);
+assert.match(edge, /deleteUser\(userId, false\)/);
+assert.match(edge, /finally\s*\{/);
+assert.match(edge, /catch\s*\(error\)/);
+assert.match(edge, /release_account_deletion_admin_reservations/);
+assert.match(edge, /catch\s*\(releaseException\)/);
+assert.match(edge, /if \(deleteError\)\s*\{\s*return Response\.json\(\{ error: deleteError\.message \}/);
+
+assert.ok(edge.indexOf('reserve_account_deletion_admins') < edge.indexOf("deleteUser(userId, false)"), "reservation must precede Auth deletion");
+assert.ok(edge.indexOf("deleteUser(userId, false)") < edge.lastIndexOf('release_account_deletion_admin_reservations'), "release must follow deletion attempt");
+
+console.log("Account deletion admin reservation static verification passed.");
