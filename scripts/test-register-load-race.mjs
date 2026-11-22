@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+assert.match(source,/useRef\(0\)/,"Register load generation counter is missing");
+assert.match(source,/const generation=\+\+loadGeneration\.current/,"Each load must receive a unique generation");
+assert.match(source,/if\(!isCurrent\(\)\)return;/,"Stale load results must be discarded");
+assert.match(source,/if\(isCurrent\(\)\)setError/,"Stale load failures must not overwrite current error state");
+assert.match(source,/if\(isCurrent\(\)\)setLoading\(false\)/,"Stale load completion must not clear current loading state");
+assert.match(source,/loadGeneration\.current\+\+;/,"Effect cleanup must invalidate in-flight loads");
+assert.match(source,/async function resolve\(\):Promise<string\|null/,"Condominium resolver must return id rather than update state independently");
+console.log("RegisterPage stale-load guards: PASS");
