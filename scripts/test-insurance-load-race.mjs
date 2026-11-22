@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/InsurancePoliciesSection.tsx", "utf8");
+assert.match(source, /useRef/);
+assert.match(source, /const requestId = \+\+loadSequence\.current/);
+assert.match(source, /if \(requestId !== loadSequence\.current\) return;/g);
+assert.match(source, /if \(requestId === loadSequence\.current\) setError/);
+assert.match(source, /if \(requestId === loadSequence\.current\) setLoading\(false\)/);
+assert.match(source, /return \(\) => \{ loadSequence\.current \+= 1; \}/);
+console.log("Insurance stale async load regression guard: PASS");
