@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/AccountingPage.tsx","utf8");
+const pkg=JSON.parse(await readFile("package.json","utf8"));
+assert.match(source,/async function loadAccountingLegalCases\(workspaceId: string\)/);
+assert.match(source,/\.from\("condominium_legal_cases"\)[\s\S]*?\.range\(offset, offset \+ pageSize - 1\)/);
+assert.match(source,/\.order\("opened_date", \{ ascending: false \}\)[\s\S]*?\.order\("id", \{ ascending: true \}\)/);
+assert.match(source,/loadAccountingLegalCases\(workspaceId\)/);
+assert.match(source,/if \(result\.error\) return \{ data: null, error: result\.error \}/);
+assert.match(pkg.scripts.test,/test-accounting-legal-cases-pagination\.mjs/);
+console.log("Accounting legal cases pagination regression checks passed.");
