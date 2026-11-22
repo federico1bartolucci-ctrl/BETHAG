@@ -1168,7 +1168,7 @@ function AccountingPage({
     }
     const installmentCount = Math.max(1, Math.min(12, Math.floor(Number(allocationInstallmentForm.installment_count) || 0)));
     const dueDates = allocationInstallmentForm.due_dates.map(v => v.trim()).filter(Boolean);
-    if (dueDates.length !== installmentCount || dueDates.some((d, i, arr) => !/^\\d{4}-\\d{2}-\\d{2}$/.test(d) || (i > 0 && d < arr[i - 1]))) {
+    const isValidCalendarDate = (date:string) => { const match = date.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/); if (!match) return false; const year=Number(match[1]), month=Number(match[2]), day=Number(match[3]); const parsed=new Date(Date.UTC(year,month-1,day)); return parsed.getUTCFullYear()===year && parsed.getUTCMonth()===month-1 && parsed.getUTCDate()===day; };\n    if (dueDates.length !== installmentCount || dueDates.some((d, i, arr) => !isValidCalendarDate(d) || (i > 0 && d < arr[i - 1]))) {
       setError("Indica esattamente una scadenza YYYY-MM-DD per ciascuna rata, in ordine cronologico.");
       return;
     }
