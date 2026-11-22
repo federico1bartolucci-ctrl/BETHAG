@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
+import { getScopedInsurancePolicyContext } from "./lib/insurance-policy-scope.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -57,12 +58,20 @@ export default function InsurancePoliciesSection({
   condominiumId,
   isAdministrator = false,
 }: {
+  workspaceId: string;
   condominiumId: number;
   isAdministrator?: boolean;
 }) {
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [dbCondominiumId, setDbCondominiumId] = useState<string | null>(null);
-  const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
+  const [policyScope, setPolicyScope] = useState<{
+    workspaceId: string;
+    condominiumId: number;
+    dbCondominiumId: string;
+    policies: InsurancePolicy[];
+  } | null>(null);
+  const activePolicyScope = getScopedInsurancePolicyContext(policyScope, workspaceId, condominiumId);
+  const activeWorkspaceId = activePolicyScope?.workspaceId ?? null;
+  const activeDbCondominiumId = activePolicyScope?.dbCondominiumId ?? null;
+  const policies = activePolicyScope?.policies ?? [];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -73,9 +82,7 @@ export default function InsurancePoliciesSection({
 
   const load = async () => {
     const requestId = ++loadSequence.current;
-    setWorkspaceId(null);
-    setDbCondominiumId(null);
-    setPolicies([]);
+    setPolicyScope(null);
     if (!supabaseConfigured || !supabase) {
       setLoading(false);
       return;
@@ -85,32 +92,32 @@ export default function InsurancePoliciesSection({
     try {
       const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
-        .select("id, workspace_id")
+        .select("id")
+        .eq("workspace_id", workspaceId)
         .eq("legacy_id", condominiumId)
         .maybeSingle();
       if (requestId !== loadSequence.current) return;
       if (condominiumError) throw condominiumError;
       if (!condominium?.id) {
-        setPolicies([]);
+        setPolicyScope(null);
         setLoading(false);
         return;
       }
-      setDbCondominiumId(condominium.id);
-      setWorkspaceId(condominium.workspace_id);
       const { data, error: policyError } = await supabase
         .from("condominium_insurance_policies")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
       if (requestId !== loadSequence.current) return;
       if (policyError) throw policyError;
-      setPolicies((data ?? []).map((row: any) => ({
+      setPolicyScope({ workspaceId, condominiumId, dbCondominiumId: condominium.id, policies: (data ?? []).map((row: any) => ({
         ...row,
         premium: row.premium === null ? null : Number(row.premium),
         deductible: row.deductible === null ? null : Number(row.deductible),
         active: row.active !== false,
         notes: row.notes || "",
-      })));
+      })) });
     } catch (e) {
       if (requestId === loadSequence.current) setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
     } finally {
@@ -121,7 +128,7 @@ export default function InsurancePoliciesSection({
   useEffect(() => {
     void load();
     return () => { loadSequence.current += 1; };
-  }, [condominiumId]);
+  }, [workspaceId, condominiumId]);
 
   const closeForm = () => {
     setOpenForm(false);
@@ -131,7 +138,7 @@ export default function InsurancePoliciesSection({
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!supabase || !workspaceId || !dbCondominiumId) return;
+    if (!supabase || !activeWorkspaceId || !activeDbCondominiumId) return;
     if (!form.company_name.trim() || !form.policy_number.trim()) {
       setError("Compila compagnia assicurativa e numero polizza.");
       return;
@@ -140,8 +147,8 @@ export default function InsurancePoliciesSection({
     setError("");
     try {
       const payload = {
-        workspace_id: workspaceId,
-        condominium_id: dbCondominiumId,
+        workspace_id: activeWorkspaceId,
+        condominium_id: activeDbCondominiumId,
         policy_number: form.policy_number.trim(),
         company_name: form.company_name.trim(),
         policy_type: form.policy_type.trim(),
