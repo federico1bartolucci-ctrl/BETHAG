@@ -885,6 +885,14 @@ function AccountingPage({
       return;
     }
     if (editingLedger) {
+      const existingAllocations = allocations.filter(a => a.ledger_entry_id === editingLedger.id && a.condominium_id === dbCondominiumId);
+      const allocatedAmount = existingAllocations.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      if (existingAllocations.length > 0 && (ledgerForm.direction !== "Uscita" || Number(ledgerForm.amount) + 0.005 < allocatedAmount)) {
+        setError("La spesa non può essere ridotta sotto il totale delle ripartizioni già registrate né trasformata in entrata finché esistono ripartizioni. Riduci o elimina prima le quote.");
+        return;
+      }
+    }
+    if (editingLedger) {
       const { count: linkedInstallments, error: linkedInstallmentsError } = await supabase
         .from("condominium_installments")
         .select("id", { count: "exact", head: true })
