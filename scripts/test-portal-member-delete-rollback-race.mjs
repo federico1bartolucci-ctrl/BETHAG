@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
+const start = source.indexOf("const deletePortalMember = async");
+const end = source.indexOf("/* =======================================================\\n     NUOVI ELEMENTI", start);
+assert.ok(start >= 0 && end > start, "portal member delete handler boundaries exist");
+const handler = source.slice(start, end);
+assert.match(handler, /const deletedPortalMember = portalMembers\.find/);
+assert.match(handler, current => current.includes("current.some((member) => member.id === id)") && current.includes("[...current, deletedPortalMember]"));
+assert.doesNotMatch(handler, /setPortalMembers\(previousPortalMembers\)/, "must not restore a stale full-list snapshot");
+console.log("Portal member deletion rollback concurrency regression checks passed.");
