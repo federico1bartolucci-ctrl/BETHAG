@@ -1,6 +1,7 @@
 // Pages deployment trigger: transfer confirmation flow verified in source.
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { createTransferHistoryScopeState, getVisibleTransferHistoryRows } from "./lib/memberTransferHistoryScope.mjs";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
 type MemberOption = { id: string; condominium_id: string; unit_id: string | null; active: boolean; name?: string; email?: string | null; data: any };
@@ -79,7 +80,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   selectedCondominiumId?: number | "all";
   onCondominiumChange?: (id: number | "all") => void;
 }) {
-  const [rows, setRows] = useState<TransferRow[]>([]);
+  const transferHistoryScopeKey = `${workspaceId}:${condominiumId ?? "all"}`;
+  const [transferHistoryState, setTransferHistoryState] = useState(() => createTransferHistoryScopeState("", []));
+  const rows = getVisibleTransferHistoryRows(transferHistoryState, transferHistoryScopeKey);
   const [unitId, setUnitId] = useState("");
   const [outgoingId, setOutgoingId] = useState("");
   const [transferDate, setTransferDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
@@ -135,20 +138,26 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const memberLabel = (id: string) => memberName(scopedMembers.find(m => m.id === id));
 
   const loadRows = useCallback(async () => {
-    if (!supabase || !condominiumId) { setRows([]); return; }
+    setTransferHistoryState(createTransferHistoryScopeState(transferHistoryScopeKey));
+    if (!supabase || !condominiumId) return;
     const data = await loadCondominiumTransferRows(workspaceId, condominiumId);
-    setRows(data);
+    setTransferHistoryState(createTransferHistoryScopeState(transferHistoryScopeKey, data));
   }, [workspaceId, condominiumId]);
 
   useEffect(() => {
     let active = true;
-    if (!supabase || !condominiumId) { setRows([]); return; }
+    setTransferHistoryState(createTransferHistoryScopeState(transferHistoryScopeKey));
+    setError("");
+    if (!supabase || !condominiumId) return;
     loadCondominiumTransferRows(workspaceId, condominiumId).then((data) => {
       if (!active) return;
-      setRows(data);
+      setTransferHistoryState(createTransferHistoryScopeState(transferHistoryScopeKey, data));
       setError("");
     }).catch((e: any) => {
-      if (active) setError(e?.message || "Impossibile caricare i subentri.");
+      if (active) {
+        setTransferHistoryState(createTransferHistoryScopeState(transferHistoryScopeKey));
+        setError(e?.message || "Impossibile caricare i subentri.");
+      }
     });
     return () => { active = false; };
   }, [workspaceId, condominiumId]);
