@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { resolveUniqueWorkspaceId } from "./lib/resolveUniquePortalWorkspace.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2726,21 +2727,29 @@ function App() {
       };
     }
 
-    const portalResult = await supabase
-      .from("portal_access")
-      .select("workspace_id, role, active, email")
-      .eq("active", true)
-      .eq("role", "resident")
-      .ilike("email", email.trim())
-      .limit(1)
-      .maybeSingle();
+    const portalRows: { id: string; workspace_id: string }[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase
+        .from("portal_access")
+        .select("id, workspace_id")
+        .eq("active", true)
+        .eq("role", "resident")
+        .ilike("email", email.trim())
+        .order("workspace_id", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + 999);
 
-    if (portalResult.error) throw portalResult.error;
+      if (error) throw error;
+      const batch = data ?? [];
+      portalRows.push(...batch);
+      if (batch.length < 1000) break;
+    }
 
-    if (portalResult.data) {
+    const portalWorkspaceId = resolveUniqueWorkspaceId(portalRows);
+    if (portalWorkspaceId) {
       return {
         role: "resident" as const,
-        workspaceId: portalResult.data.workspace_id as string,
+        workspaceId: portalWorkspaceId,
         permissions: [] as CollaboratorPermission[],
       };
     }
@@ -2960,16 +2969,22 @@ function App() {
     });
     if (error) throw new Error(error.message || "Impossibile impostare la password.");
 
-    setRequiresPasswordSetup(false);
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
     if (!user) throw new Error("Sessione BETHAG non disponibile.");
 
-    const access = await resolveSupabaseAccess(user.id, user.email || "");
+    let access;
+    try {
+      access = await resolveSupabaseAccess(user.id, user.email || "");
+    } catch (accessError) {
+      await supabase.auth.signOut();
+      throw accessError;
+    }
     if (!access) {
       await supabase.auth.signOut();
       throw new Error("Account attivato, ma l'associazione al portale non è disponibile.");
     }
+    setRequiresPasswordSetup(false);
 
     setSessionRole(access.role);
     setSessionEmail(user.email || "");
