@@ -10,7 +10,7 @@ function validateCursor(row, orderBy) {
     throw new Error("Cursor workspace non valido.");
   }
   const value = row[orderBy];
-  if (value !== null && (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value))) {
+  if (value !== null && (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value))) {
     throw new Error("Valore cursor workspace non valido.");
   }
   return { value: value ?? null, id: String(id) };
