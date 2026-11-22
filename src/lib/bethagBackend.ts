@@ -1971,9 +1971,9 @@ export async function deletePortalMember(workspaceId: string, legacyId: number) 
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("portal_access")
-       .delete()
+      .delete()
       .eq("workspace_id", workspaceId)
       .eq("legacy_id", legacyId)
       .select("id");
