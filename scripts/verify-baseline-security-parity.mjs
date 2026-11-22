@@ -74,15 +74,28 @@ const extractProductionBody = (definition) => {
   if (end < 0) return null;
   return definition.slice(start + "AS $function$".length, end).replace(/\r\n/g, "\n").trim();
 };
+// Explicit, documented allowlist for audited baseline-only function changes.
+// The captured Production snapshot remains immutable; these divergences must be reviewed in PRs.
+const intentionalBodyChanges = new Map([
+  ["public.sync_condominium_installment_from_payments", "Accounting audit PR #333: cumulative allocation paid totals are recalculated across installments instead of overwriting with the current installment."],
+]);
+assert.deepEqual(
+  [...intentionalBodyChanges.keys()].filter((name) => !expectedByKey.has(name)),
+  [],
+  "Intentional body-change allowlist references functions absent from the Production snapshot.",
+);
 const bodyMismatches = [];
 for (const [name, expected] of expectedByKey) {
   const actual = actualByKey.get(name);
   const expectedBody = extractProductionBody(expected.definition);
   if (expectedBody === null || actual.body !== expectedBody) {
-    bodyMismatches.push({ function: name, productionBodyCaptured: expectedBody !== null, baselineBodyMatches: actual.body === expectedBody });
+    const allowedReason = intentionalBodyChanges.get(name);
+    if (!allowedReason) {
+      bodyMismatches.push({ function: name, productionBodyCaptured: expectedBody !== null, baselineBodyMatches: actual.body === expectedBody });
+    }
   }
 }
-assert.deepEqual(bodyMismatches, [], "Function bodies differ from the captured Production definitions.");
+assert.deepEqual(bodyMismatches, [], "Function bodies differ from captured Production definitions without an explicit audited exception.");
 
 const productionFunctionGrants = accessCatalog.objects.functionGrants
   .filter((grant) => grant.grantee !== "postgres")
