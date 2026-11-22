@@ -70,7 +70,7 @@ try {
     [groupMember, condominium, ownerEmail, memberA, unitA, memberB, unitB, memberC, unitC]
   );
   await db.query(
-    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,member_id,unit_id,title,due_date,amount,paid_amount,status,ledger_entry_id) VALUES($1,$2,$3,$4,null,'Rata consolidata','2099-12-31',100,0,'Da pagare',$5)",
+    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,member_id,unit_id,due_date,amount,paid_amount,status,ledger_entry_id) VALUES($1,$2,$3,$4,null,'2099-12-31',100,0,'Da pagare',$5)",
     [installment, workspace, condominium, groupMember, ledger]
   );
   await db.query(
