@@ -15,4 +15,5 @@ assert.equal(getDeadlineEffectiveStatus(deadline("Da fare", ""), today), "Da far
 const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 assert.match(source, /getDeadlineEffectiveStatus\(d, todayISO\) === "In scadenza"/, "Upcoming statistic must use effective status, not stored status.");
 assert.match(source, /getDeadlineEffectiveStatus\(d, todayISO\) === "Scaduta"/, "Expired statistic must use the same effective status helper.");
+assert.match(source, /d\.dueDate >= localISODate\(\)/, "Dashboard upcoming list must exclude past due dates.");
 console.log("Deadline effective-status statistics regression checks: PASS");
