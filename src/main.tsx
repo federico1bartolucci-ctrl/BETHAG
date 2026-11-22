@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
+import { canCollaboratorAccessPage } from "./lib/collaboratorPageAccess.mjs";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { analyzeCondominiumDocumentsWithAI,
@@ -6986,21 +6987,6 @@ function App() {
     portale: "portale",
   };
 
-  const pagePermission: Partial<
-    Record<Page, CollaboratorPermission>
-  > = {
-    condomini: "condomini",
-    documenti: "documenti",
-    scadenze: "scadenze",
-    assemblee: "assemblee",
-    fornitori: "fornitori",
-    attivita: "attivita",
-    lavori: "attivita",
-    comunicazioni: "comunicazioni",
-    ai: "ai",
-    portale: "portale",
-  };
-
   const canAccessPage = (target: Page) => {
     if (isAdministrator) {
       const addon = pageAddon[target];
@@ -7012,19 +6998,7 @@ function App() {
     }
 
     if (isCollaborator) {
-      if (
-        target === "abbonamento" ||
-        target === "amministratore" ||
-        target === "collaboratori" ||
-        target === "contabilita"
-      ) {
-        return false;
-      }
-
-      const requiredPermission = pagePermission[target];
-      const hasRolePermission =
-        !requiredPermission ||
-        collaboratorPermissions.includes(requiredPermission);
+      const hasRolePermission = canCollaboratorAccessPage(target, collaboratorPermissions);
 
       const addon = pageAddon[target];
       const hasPlanAccess =
@@ -7040,6 +7014,12 @@ function App() {
 
     return false;
   };
+
+  useEffect(() => {
+    if (authHydrated && sessionRole && page === "registro" && !isAdministrator) {
+      setPage("homepage");
+    }
+  }, [authHydrated, sessionRole, page, isAdministrator]);
 
   const requireModulePermission = (
     permission: CollaboratorPermission,
@@ -7480,13 +7460,15 @@ function App() {
             </NavButton>
             )}
 
-            <NavButton
-              active={page === "registro"}
-              onClick={() => navigate("registro")}
-            >
-              <span className="nav-icon"><AppIcon name="wrench" size={18} /></span>
-              <span>Registro e sicurezza</span>
-            </NavButton>
+            {isAdministrator && (
+              <NavButton
+                active={page === "registro"}
+                onClick={() => navigate("registro")}
+              >
+                <span className="nav-icon"><AppIcon name="wrench" size={18} /></span>
+                <span>Registro e sicurezza</span>
+              </NavButton>
+            )}
 
             <NavButton
               active={
@@ -7895,7 +7877,7 @@ function App() {
           )}
 
 
-          {page === "registro" && (
+          {page === "registro" && isAdministrator && (
             <RegisterPage
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
