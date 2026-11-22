@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Webhook } from "npm:svix";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { resendWebhookErrorResponse } from "../_shared/resend-webhook-error-status.js";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +11,6 @@ const headers = {
 };
 
 Deno.serve(async (req: Request) => {
-  let verificationFailed = false;
-  let payloadParseFailed = false;
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers });
   try {
@@ -27,15 +26,15 @@ Deno.serve(async (req: Request) => {
     try {
       new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
     } catch (error) {
-      verificationFailed = true;
-      throw error;
+      console.error("Resend webhook signature verification failed", error);
+      return resendWebhookErrorResponse("signature", error, headers);
     }
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>;
     } catch (error) {
-      payloadParseFailed = true;
-      throw error;
+      console.error("Resend webhook payload JSON invalid", error);
+      return resendWebhookErrorResponse("payload", error, headers);
     }
     const data = parsed.data && typeof parsed.data === "object"
       ? parsed.data as Record<string, unknown>
@@ -86,8 +85,8 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
   } catch (error) {
-    console.error("BETHAG resend-webhook error",error);
-    const status = verificationFailed ? 401 : payloadParseFailed ? 400 : 500;
-    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Errore elaborazione webhook."}),{status,headers});
+    console.error("BETHAG resend-webhook processing error", error);
+    // HTTP 5xx makes transient RPC/database failures retryable by the provider.
+    return resendWebhookErrorResponse("processing", error, headers);
   }
 });
