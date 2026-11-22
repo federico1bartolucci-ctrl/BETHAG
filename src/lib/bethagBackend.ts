@@ -1341,12 +1341,20 @@ export async function saveCondominium(
     const requestedUnits = Math.max(0, Number(item.units) || 0);
 
     if (requestedUnits > 0 && !item.structure?.configured) {
-      const { data: existingUnits, error: existingUnitsError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominiumDbId);
+      const existingUnits: any[] = [];
+      const unitPageSize = 1000;
+      for (let unitOffset = 0; ; unitOffset += unitPageSize) {
+        const { data: unitPage, error: existingUnitsError } = await supabase
+          .from("condominium_units")
+          .select("id, unit_code, data")
+          .eq("condominium_id", condominiumDbId)
+          .order("id", { ascending: true })
+          .range(unitOffset, unitOffset + unitPageSize - 1);
 
-      if (existingUnitsError) throw existingUnitsError;
+        if (existingUnitsError) throw existingUnitsError;
+        existingUnits.push(...(unitPage ?? []));
+        if ((unitPage ?? []).length < unitPageSize) break;
+      }
 
       // Le unità residenziali iniziali hanno come codice l'interno numerico
       // (1, 2, 3, ...). Non usiamo più "Interno 1", perché il codice deve
