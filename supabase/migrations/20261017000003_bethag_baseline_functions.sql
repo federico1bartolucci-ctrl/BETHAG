@@ -4148,6 +4148,7 @@ AS $function$
 declare
   v_installment_id uuid;
   v_workspace_id uuid;
+  v_ledger_entry_id uuid;
   v_condominium_id uuid;
   v_amount numeric;
   v_paid numeric;
@@ -4164,6 +4165,23 @@ begin
   v_installment_id := coalesce(new.installment_id, old.installment_id);
   v_workspace_id := coalesce(new.workspace_id, old.workspace_id);
   v_condominium_id := coalesce(new.condominium_id, old.condominium_id);
+
+  -- Serialize trigger-driven allocation reconciliation by ledger entry before locking installments.
+  select ledger_entry_id into v_ledger_entry_id
+  from public.condominium_installments
+  where id=v_installment_id
+    and workspace_id=v_workspace_id
+    and condominium_id=v_condominium_id;
+
+  if found and v_ledger_entry_id is not null then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(
+        v_workspace_id::text||':'||v_condominium_id::text||':'||v_ledger_entry_id::text,
+        0
+      )
+    );
+  end if;
+
 
   select amount, due_date, unit_id, member_id
     into v_amount, v_due_date, v_unit_id, v_member_id
