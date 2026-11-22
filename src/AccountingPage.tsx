@@ -1505,7 +1505,7 @@ function AccountingPage({
 
         setSaving(true); setError("");
         try {
-          const { error: updateError } = await supabase
+          const { data: updatedRows, error: updateError } = await supabase
             .from("condominium_allocation_intakes")
             .update({
               ledger_entry_id: candidate.id,
@@ -1513,8 +1513,10 @@ function AccountingPage({
               updated_at: new Date().toISOString(),
             })
             .eq("id", intake.id)
-            .eq("workspace_id", workspaceId);
+            .eq("workspace_id", workspaceId)
+            .select("id");
           if (updateError) throw updateError;
+          if (!updatedRows?.length) throw new Error("L'acquisizione non è stata aggiornata: verifica che esista ancora nel workspace.");
           intake = { ...intake, ledger_entry_id: candidate.id, expense_amount: Number(candidate.amount || 0) };
         } catch(e:any) {
           setError(e?.message || "Impossibile collegare la spesa contabile.");
