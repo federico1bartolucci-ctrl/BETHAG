@@ -5,6 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { resolveUniqueWorkspaceId } from "./lib/resolveUniquePortalWorkspace.mjs";
+import { escapePostgrestIlikeLiteral } from "./lib/escapePostgrestIlikeLiteral.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2740,14 +2741,14 @@ function App() {
       };
     }
 
-    const portalRows: { id: string; workspace_id: string }[] = [];
+    const portalRows: { id: string; workspace_id: string; role: "resident" | "council" }[] = [];
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await supabase
         .from("portal_access")
         .select("id, workspace_id, role")
         .eq("active", true)
         .in("role", ["resident", "council"])
-        .ilike("email", email.trim())
+        .ilike("email", escapePostgrestIlikeLiteral(email.trim()))
         .order("workspace_id", { ascending: true })
         .order("id", { ascending: true })
         .range(offset, offset + 999);
@@ -6651,16 +6652,24 @@ function App() {
             profile.workspaceId
           );
         } else if (!workspaceId) {
-          const { data: portalAccess, error: portalAccessError } = await supabase
-            .from("portal_access")
-            .select("workspace_id")
-            .eq("active", true)
-            .ilike("email", session.user.email || "")
-            .limit(1)
-            .maybeSingle();
+          const portalRows: { id: string; workspace_id: string }[] = [];
+          for (let offset = 0; ; offset += 1000) {
+            const { data, error } = await supabase
+              .from("portal_access")
+              .select("id, workspace_id")
+              .eq("active", true)
+              .in("role", ["resident", "council"])
+              .ilike("email", escapePostgrestIlikeLiteral(session.user.email || ""))
+              .order("workspace_id", { ascending: true })
+              .order("id", { ascending: true })
+              .range(offset, offset + 999);
 
-          if (portalAccessError) throw portalAccessError;
-          workspaceId = portalAccess?.workspace_id ?? null;
+            if (error) throw error;
+            const batch = data ?? [];
+            portalRows.push(...batch);
+            if (batch.length < 1000) break;
+          }
+          workspaceId = resolveUniqueWorkspaceId(portalRows);
         }
 
         if (!workspaceId || cancelled) return;
