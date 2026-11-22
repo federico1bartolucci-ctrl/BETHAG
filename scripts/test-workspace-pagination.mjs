@@ -23,7 +23,7 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
       const state = { table, workspaceId: null, select: null, orders: [], cursorFilter: null, nullCursor: false, idGt: null };
       const query = {
         select(columns) { state.select = columns; return query; },
-        eq(column, value) { if (column === "workspace_id") state.workspaceId = value; return query; },
+        eq(column, value) { if (column === "workspace_id" || column === "condominiums.workspace_id") state.workspaceId = value; return query; },
         order(column, options) { state.orders.push([column, options]); return query; },
         or(filter) { state.cursorFilter = filter; return query; },
         is(column, value) { if (column === state.orders[0]?.[0] && value === null) state.nullCursor = true; return query; },
