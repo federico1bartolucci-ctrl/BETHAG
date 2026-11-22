@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("export async function confirmCondominiumInvoice");
+const end = source.indexOf("export async function ", start + 1);
+const block = source.slice(start, end > start ? end : undefined);
+const update = block.indexOf('from("documents").update(');
+assert.ok(update >= 0, "document confirmation update exists");
+const updateEnd = block.indexOf(";", update);
+const updateQuery = block.slice(update, updateEnd + 1);
+assert.ok(updateQuery.includes('.select("id").single()'), "document write checks returned row");
+assert.ok(block.includes("if (!updatedDocument?.id)"), "zero-row update cannot be reported as success");
+console.log("Invoice confirmation document-write guard passed.");
