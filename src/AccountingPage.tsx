@@ -1090,7 +1090,7 @@ function AccountingPage({
     }
     const eligible = units
       .filter(u => u.condominium_id === dbCondominiumId)
-      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || "").trim().toLowerCase())))
+      .filter(u => table.scope_mode === "all" || (table.scope_mode === "units" && table.scope_unit_ids.includes(u.id)) || (table.scope_mode === "buildings" && table.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || (u as any).data?.building_code || (u as any).data?.civic_code || (u as any).data?.fabbricato || "").trim().toLowerCase())))
       .map(unit => ({ unit, value: scopedMillesimalValues.find(v => v.table_id === table.id && v.unit_id === unit.id) }))
       .filter(item => item.value && !item.value.excluded && Number(item.value.value) > 0);
     const totalMillesimi = eligible.reduce((sum, item) => sum + Number(item.value?.value || 0), 0);
