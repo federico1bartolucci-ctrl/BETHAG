@@ -11,11 +11,12 @@ function extractProductionFunction(source, signature) {
   const start = source.indexOf("CREATE OR REPLACE FUNCTION " + signature + "(");
   assert.notEqual(start, -1, "Production baseline is missing function " + signature);
   const marker = "AS $function$";
+  const delimiter = "$function$";
   const bodyStart = source.indexOf(marker, start);
   assert.notEqual(bodyStart, -1, "Production function has no dollar-quoted body: " + signature);
-  const bodyEnd = source.indexOf("$function$", bodyStart + marker.length);
+  const bodyEnd = source.indexOf(delimiter, bodyStart + marker.length);
   assert.notEqual(bodyEnd, -1, "Production function body is not closed: " + signature);
-  return source.slice(start, bodyEnd + marker.length) + ";";
+  return source.slice(start, bodyEnd + delimiter.length).trimEnd() + ";";
 }
 
 const reverseSql = extractProductionFunction(functionsSource, "private.reverse_condominium_installment_payment");
