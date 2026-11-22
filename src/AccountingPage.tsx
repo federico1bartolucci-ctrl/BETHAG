@@ -603,16 +603,16 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("entry_date", { ascending: false }),
-          loadWorkspacePaginatedRows(supabase, "condominium_funds", workspaceId, { select: "*", orderBy: [{"column":"name"}] })
-          loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] })
-          loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { select: "*", orderBy: [{"column":"opened_date","ascending":false,"nullsFirst":false}] })
-          loadWorkspacePaginatedRows(supabase, "condominium_expense_allocations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] })
+          loadWorkspacePaginatedRows(supabase, "condominium_funds", workspaceId, { select: "*", orderBy: [{"column":"name"}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { select: "*", orderBy: [{"column":"opened_date","ascending":false,"nullsFirst":false}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_expense_allocations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
           supabase
             .from("condominium_allocation_intakes")
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("created_at", { ascending: false }),
-          loadWorkspacePaginatedRows(supabase, "condominium_units", workspaceId, { select: "id, condominium_id, unit_code, building_code, data", orderBy: [{"column":"unit_code"}] })
+          loadWorkspacePaginatedRows(supabase, "condominium_units", workspaceId, { select: "id, condominium_id, unit_code, building_code, data", orderBy: [{"column":"unit_code"}] }),
           supabase.from("condominium_members").select("id, condominium_id, unit_id, active, name, email, data").eq("workspace_id", workspaceId).order("created_at"),
           supabase
             .from("condominium_millesimal_tables")
@@ -623,17 +623,17 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
-          loadWorkspacePaginatedRows(supabase, "condominium_consumption_readings", workspaceId, { select: "*", orderBy: [{"column":"period_end","ascending":false}] })
-          loadWorkspacePaginatedRows(supabase, "condominium_allocation_rules", workspaceId, { select: "*", orderBy: [{"column":"priority","ascending":false}] })
-          loadWorkspacePaginatedRows(supabase, "condominium_installments", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] })
+          loadWorkspacePaginatedRows(supabase, "condominium_consumption_readings", workspaceId, { select: "*", orderBy: [{"column":"period_end","ascending":false}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_allocation_rules", workspaceId, { select: "*", orderBy: [{"column":"priority","ascending":false}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_installments", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
           supabase
             .from("condominium_budgets")
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("category"),
-          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryovers", workspaceId, { select: "*", orderBy: [{"column":"created_at"}] })
+          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryovers", workspaceId, { select: "*", orderBy: [{"column":"created_at"}] }),
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
-          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryover_compensations", workspaceId, { select: "*", orderBy: [{"column":"created_at","ascending":false}] })
+          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryover_compensations", workspaceId, { select: "*", orderBy: [{"column":"created_at","ascending":false}] }),
         ]);
       for (const result of [
         yearsResult,
