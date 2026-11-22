@@ -40,6 +40,7 @@ assert.match(paymentSyncFunction, /select sum\(i\.paid_amount\)[\s\S]*i\.ledger_
 assert.doesNotMatch(paymentSyncFunction, /update\s+public\.condominium_expense_allocations[\s\S]{0,500}set\s+paid_amount\s*=\s*v_paid\b/i, "Payment trigger must not overwrite cumulative allocation paid totals with only the current installment's paid amount.");
 const unifiedPaymentSync = paymentSyncFunction.slice(paymentSyncFunction.indexOf("if v_unit_id is null and v_member_id is not null"), paymentSyncFunction.indexOf("else\n    update public.condominium_expense_allocations"));
 assert.match(unifiedPaymentSync, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Unified installment payments must reconcile cumulative paid totals by ledger entry and owner.");
+assert.doesNotMatch(unifiedPaymentSync, /exit\s+when\s+v_remaining\s*<=\s*0\.005\s*;/i, "Payment trigger must clear every later allocation when the cumulative paid total decreases.");
 const registerPaymentStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment");
 const registerPaymentNext = functionSql.indexOf("CREATE OR REPLACE FUNCTION", registerPaymentStart + 1);
 const registerPaymentFunction = functionSql.slice(registerPaymentStart, registerPaymentNext === -1 ? undefined : registerPaymentNext).replace(/--[^\n]*/g, "");
@@ -49,6 +50,7 @@ assert.match(registerPaymentFunction, /p_condominium_id::text/, "Payment reconci
 assert.match(registerPaymentFunction, /v_ledger_entry_id::text/, "Payment reconciliation lock must include ledger entry.");
 const unifiedRegisterPayment = registerPaymentFunction.slice(registerPaymentFunction.indexOf("if v_installment.unit_id is null and v_installment.member_id is not null"), registerPaymentFunction.indexOf("else\n      /*"));
 assert.match(unifiedRegisterPayment, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=v_installment\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Manual unified installment payment registration must reconcile cumulative totals across installments.");
+assert.doesNotMatch(unifiedRegisterPayment, /exit\s+when\s+v_remaining\s*<=\s*0\.005\s*;/i, "Manual payment registration must update all allocation rows after the paid remainder is exhausted.");
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
 const inventory = {
   migration_files: migrationFiles.length,
