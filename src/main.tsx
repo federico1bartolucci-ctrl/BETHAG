@@ -6498,6 +6498,7 @@ function App() {
     activeCondominiumIds.has(activity.condominiumId)
   );
   const activeCommunications = communications.filter((communication) =>
+    communication.condominiumId === null ||
     activeCondominiumIds.has(communication.condominiumId)
   );
   const activeRequests = condominiumRequests.filter((request) =>
