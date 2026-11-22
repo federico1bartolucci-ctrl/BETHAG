@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/lib/bethagBackend.ts","utf8");
+const start=source.indexOf("export async function confirmCondominiumInvoice");
+const end=source.indexOf("export async function ",start+1);
+const block=source.slice(start,end>start?end:undefined);
+const snippet=block.slice(block.indexOf("const containedMatches"),block.indexOf("supplierId = containedMatches"));
+assert.ok(snippet.includes(".filter("),"fallback gathers all candidates, not first match");
+assert.ok(snippet.includes("containedMatches.length > 1"),"ambiguous candidates rejected");
+assert.ok(snippet.includes("throw new Error"),"manual selection required for ambiguous names");
+assert.ok(snippet.includes("containedMatches[0]?.id"),"only single candidate can auto-link");
+console.log("Ambiguous supplier matching guard passed.");
