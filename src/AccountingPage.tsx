@@ -635,6 +635,7 @@ function AccountingPage({
           supabase
             .from("condominium_members")
             .select("id, condominium_id, unit_id, active, name, email, data")
+            .eq("workspace_id", workspaceId)
             .order("created_at"),
           supabase
             .from("condominium_millesimal_tables")
@@ -680,6 +681,7 @@ function AccountingPage({
         taxResult,
         caseResult,
         allocationsResult,
+        allocationIntakesResult,
         unitsResult,
         membersResult,
         millesimalTablesResult,
