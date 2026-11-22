@@ -5851,7 +5851,8 @@ function App() {
     if (!requireModulePermission("condomini", "L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
 
-    const previousRequests = condominiumRequests;
+    const previousRequest = condominiumRequests.find((request) => request.id === id);
+    if (!previousRequest) return;
     setCondominiumRequests((current) => current.filter((request) => request.id !== id));
 
     if (!supabaseConfigured || !supabase) return;
@@ -5865,7 +5866,13 @@ function App() {
       if (error) throw error;
     } catch (error) {
       console.error("BETHAG request deletion persistence failed", error);
-      setCondominiumRequests(previousRequests);
+      // Restore only the deleted row; preserve unrelated concurrent state changes.
+      setCondominiumRequests((current) => {
+        const restored = current.some((request) => request.id === id)
+          ? current.map((request) => request.id === id ? previousRequest : request)
+          : [...current, previousRequest];
+        return restored;
+      });
       alert(
         error instanceof Error
           ? `Impossibile eliminare la richiesta: ${error.message}`
