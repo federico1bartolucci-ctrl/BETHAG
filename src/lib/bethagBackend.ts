@@ -1956,13 +1956,15 @@ export async function deleteWorkspaceRecord(
       throw new Error("Tabella non autorizzata.");
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(table)
       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", legacyId);
+      .eq("legacy_id", legacyId)
+      .select("legacy_id");
 
     if (error) throw error;
+    if (!data?.length) throw new Error("Record non trovato o già eliminato.");
   });
 }
 
