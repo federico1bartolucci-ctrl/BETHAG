@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { findExistingAllocationIntake } from "./lib/allocationIntakeDocumentLookup.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -4547,29 +4548,13 @@ function App() {
 
         if (!condominium?.id) throw new Error("Condominio associato al documento non trovato.");
 
-        const { data: dbDocument } = await supabase
-          .from("documents")
-          .select("id")
-          .eq("workspace_id", workspaceId)
-          .eq("legacy_id", document.id)
-          .maybeSingle();
+        const { documentId: dbDocumentId, existingIntake } = await findExistingAllocationIntake(supabase, workspaceId, document.id);
 
-        if (dbDocument?.id) {
-          const { data: existingIntake, error: existingIntakeError } = await supabase
-            .from("condominium_allocation_intakes")
-            .select("id,status")
-            .eq("workspace_id", workspaceId)
-            .eq("document_id", dbDocument.id)
-            .neq("status", "Annullato")
-            .limit(1)
-            .maybeSingle();
-          if (existingIntakeError) throw existingIntakeError;
-          if (existingIntake?.id) {
-            operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
-            setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
-            alert(operationalMessage);
-            return;
-          }
+        if (existingIntake?.id) {
+          operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
+          setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
+          alert(operationalMessage);
+          return;
         }
 
         const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];
@@ -4592,7 +4577,7 @@ function App() {
 
         const { error } = await supabase.from("condominium_allocation_intakes").insert({
           workspace_id: workspaceId, condominium_id: condominium.id, source: "AI", status: "Da verificare",
-          document_id: dbDocument?.id ?? null, title: document.name,
+          document_id: dbDocumentId, title: document.name,
           description: extracted.summary ?? "Riparto spese estratto automaticamente.",
           expense_amount: Number.isFinite(expenseAmount) ? expenseAmount : null,
           extracted_data: extracted, rows, validation_errors: validationErrors,
