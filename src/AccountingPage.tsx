@@ -719,7 +719,7 @@ function AccountingPage({
       const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
       if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
     } catch (e: any) {
-      setError(e?.message || "Errore nel caricamento della contabilità.");
+      if (generation === accountingLoadGeneration.current) setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
       if (generation === accountingLoadGeneration.current) setLoading(false);
     }
