@@ -73,6 +73,9 @@ export default function InsurancePoliciesSection({
 
   const load = async () => {
     const requestId = ++loadSequence.current;
+    setWorkspaceId(null);
+    setDbCondominiumId(null);
+    setPolicies([]);
     if (!supabaseConfigured || !supabase) {
       setLoading(false);
       return;
