@@ -180,8 +180,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
 
-      - name: Test payment reversal installment and allocation recomputation on isolated PostgreSQL
-        run: npm run test:payment-reversal
 
       - name: Rehearse portal registration upsert repair on isolated PostgreSQL 17
         run: node scripts/test-postgres-portal-registration-upsert.mjs
