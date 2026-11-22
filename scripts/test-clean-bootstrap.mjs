@@ -21,16 +21,20 @@ assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, actualF
 
 const migrations = await Promise.all(migrationFiles.map((name) => readFile(`${directory}/${name}`, "utf8")));
 const [schemaSql, indexSql, functionSql, securitySql, grantSql] = migrations;
-const paymentSyncStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments");
-const paymentSyncBodyEnd = functionSql.indexOf("$function$;", paymentSyncStart);
-const paymentSyncFunction = functionSql.slice(paymentSyncStart, paymentSyncBodyEnd === -1 ? undefined : paymentSyncBodyEnd + "$function$;".length).replace(/--[^\n]*/g, "");
+function extractBaselineFunction(sql, signature) {
+  const start = sql.indexOf(signature);
+  if (start === -1) return "";
+  const opening = sql.indexOf("$function$", start);
+  const closing = sql.indexOf("$function$", opening + "$function$".length);
+  if (opening === -1 || closing === -1) return "";
+  return sql.slice(start, closing + "$function$".length).replace(/--[^\\n]*/g, "");
+}
+const paymentSyncFunction = extractBaselineFunction(functionSql, "CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments");
 assert.match(paymentSyncFunction, /select sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=a\.ledger_entry_id[\s\S]*i\.unit_id=a\.unit_id/, "Payment trigger must reconcile allocation paid totals across all installments for the same ledger entry, unit and owner.");
 assert.doesNotMatch(paymentSyncFunction, /update\s+public\.condominium_expense_allocations[\s\S]{0,500}set\s+paid_amount\s*=\s*v_paid\b/i, "Payment trigger must not overwrite cumulative allocation paid totals with only the current installment's paid amount.");
 const unifiedPaymentSync = paymentSyncFunction.slice(paymentSyncFunction.indexOf("if v_unit_id is null and v_member_id is not null"), paymentSyncFunction.indexOf("else\n    update public.condominium_expense_allocations"));
 assert.match(unifiedPaymentSync, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Unified installment payments must reconcile cumulative paid totals by ledger entry and owner.");
-const registerPaymentStart = functionSql.indexOf("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment");
-const registerPaymentEnd = functionSql.indexOf("$function$;", registerPaymentStart);
-const registerPaymentFunction = functionSql.slice(registerPaymentStart, registerPaymentEnd === -1 ? undefined : registerPaymentEnd + "$function$;".length).replace(/--[^\\n]*/g, "");
+const registerPaymentFunction = extractBaselineFunction(functionSql, "CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment");
 assert.match(registerPaymentFunction, /pg_advisory_xact_lock[\\s\\S]*p_workspace_id::text[\\s\\S]*p_condominium_id::text[\\s\\S]*v_ledger_entry_id::text/, "Payment reconciliation must serialize concurrent payments across installments of the same ledger entry.");
 const unifiedRegisterPayment = registerPaymentFunction.slice(registerPaymentFunction.indexOf("if v_installment.unit_id is null and v_installment.member_id is not null"), registerPaymentFunction.indexOf("else\n      /*"));
 assert.match(unifiedRegisterPayment, /sum\(i\.paid_amount\)[\s\S]*i\.ledger_entry_id=v_installment\.ledger_entry_id[\s\S]*i\.unit_id is null[\s\S]*i\.member_id=v_member_id/, "Manual unified installment payment registration must reconcile cumulative totals across installments.");
