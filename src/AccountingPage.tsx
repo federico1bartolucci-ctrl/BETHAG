@@ -316,9 +316,10 @@ function AccountingPage({
     const scopedUnits = allUnits.filter(u => t.scope_mode === "all" || (t.scope_mode === "units" && t.scope_unit_ids.includes(u.id)) || (t.scope_mode === "buildings" && t.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || (u as any).data?.building_code || (u as any).data?.civic_code || (u as any).data?.fabbricato || "").trim().toLowerCase())));
     const values = scopedUnits.map(u => scopedMillesimalValues.find(v => v.table_id === t.id && v.unit_id === u.id)).filter(Boolean) as MillesimalValue[];
     const eligible = values.filter(v => !v.excluded);
+    const invalidEligibleValues = eligible.some(v => !Number.isFinite(Number(v.value)) || Number(v.value) < 0);
     const sum = eligible.reduce((s,v) => s + Number(v.value || 0), 0);
     const missing = scopedUnits.filter(u => !scopedMillesimalValues.some(v => v.table_id === t.id && v.unit_id === u.id));
-    return { id:t.id, total:Number(t.total_millesimi||0), sum, count:values.length, missingCount:missing.length, complete:scopedUnits.length>0 && missing.length===0 && Math.abs(sum-Number(t.total_millesimi||0))<0.001 };
+    return { id:t.id, total:Number(t.total_millesimi||0), sum, count:values.length, missingCount:missing.length, complete:scopedUnits.length>0 && missing.length===0 && !invalidEligibleValues && Number.isFinite(sum) && Math.abs(sum-Number(t.total_millesimi||0))<0.001 };
   }), [scopedMillesimalTables, scopedMillesimalValues, units, dbCondominiumId]);
   const scopedInstallments = useMemo(() => dbCondominiumId ? installments.filter(i=>i.condominium_id===dbCondominiumId) : installments,[dbCondominiumId,installments]);
   const scopedConsumptionReadings = useMemo(() => dbCondominiumId ? consumptionReadings.filter(r=>r.condominium_id===dbCondominiumId) : consumptionReadings,[dbCondominiumId,consumptionReadings]);
