@@ -2478,15 +2478,18 @@ export async function confirmCondominiumInvoice(
       const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
       const normalizeTaxId = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const target = normalize(supplierName);
-      const byVat = supplierVatNumber
-        ? (supplierRows ?? []).find((item: any) => {
+      const byVatMatches = supplierVatNumber
+        ? (supplierRows ?? []).filter((item: any) => {
             const data = item.data && typeof item.data === "object" ? item.data : {};
             const candidateVat = normalizeTaxId(data.vatNumber ?? data.partitaIva ?? data.vat ?? data.supplierVatNumber ?? data.piva);
             return candidateVat && candidateVat === supplierVatNumber;
           })
-        : null;
-      if (byVat) {
-        supplierId = byVat.id;
+        : [];
+      if (byVatMatches.length > 1) {
+        throw new Error(`La partita IVA ${supplierVatNumber} risulta associata a più fornitori. Seleziona manualmente il fornitore prima di confermare la fattura.`);
+      }
+      if (byVatMatches.length === 1) {
+        supplierId = byVatMatches[0].id;
       } else if (supplierName) {
         const exact = (supplierRows ?? []).find((item: any) => normalize(String(item.name ?? "")) === target);
         const exactNameHasConflictingVat = Boolean(exact && supplierVatNumber && (() => {
