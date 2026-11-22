@@ -6346,7 +6346,8 @@ function App() {
     if (!requireModulePermission("portale", "L'eliminazione dell'accesso al Portale condomini")) return;
     if (!confirm("Eliminare l'accesso del condomino?")) return;
 
-    const previousPortalMembers = portalMembers;
+    const deletedPortalMember = portalMembers.find((member) => member.id === id);
+    if (!deletedPortalMember) return;
     setPortalMembers((current) => current.filter((member) => member.id !== id));
 
     if (!supabaseConfigured || !supabase || !profile.workspaceId) return;
@@ -6355,7 +6356,11 @@ function App() {
       await deletePortalMemberBackend(profile.workspaceId, id);
     } catch (error) {
       console.error("BETHAG portal member deletion failed", error);
-      setPortalMembers(previousPortalMembers);
+      setPortalMembers((current) =>
+        current.some((member) => member.id === id)
+          ? current
+          : [...current, deletedPortalMember]
+      );
       alert(error instanceof Error ? "L'accesso al Portale non è stato eliminato dal server.\\n\\n" + error.message : "L'accesso al Portale non è stato eliminato dal server.");
     }
   };
