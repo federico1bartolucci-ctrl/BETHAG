@@ -3899,6 +3899,7 @@ function App() {
               for (const owner of draftUnit.owners ?? []) {
                 const legacyId = makeId();
                 const existingMember = condominiumMembers.find((member) => {
+                  if (member.condominiumId !== savedItem.id) return false;
                   const sameFiscalCode = owner.fiscalCode && member.fiscalCode &&
                     owner.fiscalCode.replace(/\\s/g, "").toUpperCase() === member.fiscalCode.replace(/\\s/g, "").toUpperCase();
                   const sameEmail = owner.email && member.email &&
