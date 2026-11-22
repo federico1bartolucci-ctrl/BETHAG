@@ -80,6 +80,8 @@ jobs:
 
       - name: Test communication send authorization and publication guards
         run: npm run test:communication-guards
+      - name: Test payment reversal installment and allocation recomputation
+        run: npm run test:payment-reversal
 
       - name: Build
         env:
