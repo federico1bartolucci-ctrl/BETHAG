@@ -31,7 +31,7 @@ function extractBaselineFunction(sql, signature) {
 }
 const paymentSyncFunction = extractBaselineFunction(functionSql, "CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments");
 const paymentTriggerFunction = paymentSyncFunction;
-assert.match(paymentTriggerFunction, /pg_advisory_xact_lock[\\s\\S]*hashtextextended/, "Payment trigger reconciliation must acquire an advisory transaction lock.");
+assert.match(paymentTriggerFunction, /pg_advisory_xact_lock[\s\S]*hashtextextended/, "Payment trigger reconciliation must acquire an advisory transaction lock.");
 assert.match(paymentTriggerFunction, /v_workspace_id::text/);
 assert.match(paymentTriggerFunction, /v_condominium_id::text/);
 assert.match(paymentTriggerFunction, /v_ledger_entry_id::text/);
