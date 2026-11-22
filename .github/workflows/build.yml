@@ -170,6 +170,16 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: bethag_test
 
+      - name: Create isolated database for payment reversal runtime regression
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_payment_reversal_test
+        env:
+          PGPASSWORD: postgres
+
+      - name: Test proposed payment reversal migration on real PostgreSQL 17
+        run: npm run test:payment-reversal-postgres
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_payment_reversal_test
+
       - name: Create a separate database for chronological clean-install rehearsal
         run: createdb --host=localhost --port=5432 --username=postgres bethag_clean_install_test
         env:
