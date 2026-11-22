@@ -146,6 +146,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     loadCondominiumTransferRows(workspaceId, condominiumId).then((data) => {
       if (!active) return;
       setRows(data);
+      setError("");
     }).catch((e: any) => {
       if (active) setError(e?.message || "Impossibile caricare i subentri.");
     });
