@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
+const effectStart = source.indexOf('if (!supabaseConfigured || !supabase || sessionRole !== "admin" || !profile.workspaceId)');
+assert.notEqual(effectStart, -1, "registration-request effect guard must exist");
+const effectEnd = source.indexOf("const loadRegistrationRequests = async () => {", effectStart);
+assert.notEqual(effectEnd, -1, "registration-request loader must exist");
+const effect = source.slice(effectStart, effectEnd);
+assert.match(effect, /setRegistrationRequests\(\[\]\);\s*let cancelled = false;/, "requests must be cleared before loading the next workspace scope");
+console.log("PASS portal registration requests are cleared before workspace-scoped reload");
