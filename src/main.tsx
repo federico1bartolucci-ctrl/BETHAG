@@ -7755,6 +7755,7 @@ function App() {
           {page === "condomini" && (
             <CondominiumsErrorBoundary>
               <CondominiumsPage
+              workspaceId={profile.workspaceId}
               condominiums={
                 filteredCondominiums
               }
@@ -9702,6 +9703,7 @@ function CondominiumsPage(
   props: any
 ) {
   const {
+    workspaceId,
     condominiums,
     allCount,
     search,
@@ -10344,7 +10346,7 @@ function CondominiumDetails(
       </div>
 
 
-      <InsurancePoliciesSection condominiumId={item.id} isAdministrator={isAdministrator} />
+      <InsurancePoliciesSection condominiumId={item.id} workspaceId={workspaceId} isAdministrator={isAdministrator} />
 
       <div className="detail-grid">
 
