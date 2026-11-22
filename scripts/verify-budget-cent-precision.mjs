@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+const source = readFileSync("src/AccountingPage.tsx", "utf8");
+const start = source.indexOf("async function saveBudget");
+const end = source.indexOf("async function savePayment", start);
+assert.ok(start >= 0 && end > start, "Budget save function must exist");
+const fn = source.slice(start, end);
+assert.ok(fn.includes("hasCentPrecision(Number(budgetForm.amount))"), "Budget amounts must reject sub-cent precision");
+assert.ok(fn.includes("L'importo del preventivo deve essere espresso in centesimi"), "Budget precision validation must explain rejection");
+console.log("Budget cent-precision regression guard passed.");
