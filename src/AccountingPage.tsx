@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
-import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary";
+import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
 
 type Condominium = {
   id: number;
