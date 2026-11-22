@@ -9,6 +9,24 @@ type TransferRow = {
   transfer_date: string; transfer_type: string; status: string; notes: string; data: any;
 };
 
+async function fetchTransferHistory(workspaceId: string, condominiumId: string): Promise<TransferRow[]> {
+  const pageSize = 1000;
+  const allRows: TransferRow[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("condominium_member_transfers")
+      .select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data")
+      .eq("workspace_id", workspaceId)
+      .eq("condominium_id", condominiumId)
+      .order("transfer_date", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data || []) as TransferRow[];
+    allRows.push(...page);
+    if (page.length < pageSize) return allRows;
+  }
+}
+
 function memberRole(member?: MemberOption | null) {
   if (!member) return "";
   const d = member.data || {};
@@ -116,17 +134,17 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
 
   const loadRows = useCallback(async () => {
     if (!supabase || !condominiumId) { setRows([]); return; }
-    const { data, error: e } = await supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false });
-    if (e) throw e;
-    setRows((data || []) as TransferRow[]);
+    const data = await fetchTransferHistory(workspaceId, condominiumId);
+    setRows(data);
   }, [workspaceId, condominiumId]);
 
   useEffect(() => {
     let active = true;
     if (!supabase || !condominiumId) { setRows([]); return; }
-    supabase.from("condominium_member_transfers").select("id,unit_id,outgoing_member_id,incoming_member_id,transfer_date,transfer_type,status,notes,data").eq("workspace_id", workspaceId).eq("condominium_id", condominiumId).order("transfer_date", { ascending: false }).then(({data,error:e}) => {
-      if (!active) return;
-      if (e) setError(e.message); else setRows((data || []) as TransferRow[]);
+    fetchTransferHistory(workspaceId, condominiumId).then(data => {
+      if (active) setRows(data);
+    }).catch(e => {
+      if (active) setError(e?.message || "Impossibile caricare lo storico dei trasferimenti.");
     });
     return () => { active = false; };
   }, [workspaceId, condominiumId]);
