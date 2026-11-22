@@ -95,6 +95,8 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
         .select(columns)
         .eq("workspace_id", workspaceId)
         .order(orderBy, { ascending: true })
+        // Add a unique tie-breaker so equal primary sort values paginate deterministically.
+        .order("id", { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
       const batch = data ?? [];
