@@ -6,8 +6,10 @@ export function resendWebhookErrorStatus(phase) {
 
 export function resendWebhookErrorResponse(phase, error, headers) {
   const status = resendWebhookErrorStatus(phase);
-  const message = error instanceof Error
-    ? error.message
-    : "Errore elaborazione webhook.";
+  const message = phase === "signature"
+    ? "Firma webhook non valida."
+    : phase === "payload"
+      ? "Payload webhook non valido."
+      : "Errore elaborazione webhook.";
   return new Response(JSON.stringify({ error: message }), { status, headers });
 }
