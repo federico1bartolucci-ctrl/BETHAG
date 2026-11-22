@@ -5,7 +5,7 @@ const start = source.indexOf("const updateCondominiumRequestStatus = async (id: 
 const end = source.indexOf("const prepareCondominiumEmail =", start);
 assert.ok(start >= 0 && end > start, "request status handler boundaries exist");
 const handler = source.slice(start, end);
-assert.match(handler, /request\\.id === id && request\\.status === status/, "rollback must only target the failed optimistic status");
-assert.match(handler, /\\{ \.\.\.request, status: currentRequest\\.status \\}/, "rollback must preserve other current request fields");
-assert.doesNotMatch(handler, /request\\.id === id \\? currentRequest : request/, "rollback must not overwrite newer status changes blindly");
+assert.match(handler, /request\.id === id && request\.status === status/, "rollback must only target the failed optimistic status");
+assert.match(handler, /\{ \.\.\.request, status: currentRequest\.status \}/, "rollback must preserve other current request fields");
+assert.doesNotMatch(handler, /request\.id === id \? currentRequest : request/, "rollback must not overwrite newer status changes blindly");
 console.log("Request status rollback race regression checks passed.");
