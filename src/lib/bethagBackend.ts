@@ -67,21 +67,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   // PostgREST applies a default maximum row count (commonly 1,000).
   // Load every condominium explicitly: otherwise older workspaces with more
   // than one page silently lose later records on navigation/refresh.
-  const condominiumRows: any[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase
-      .from("condominiums")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + 999);
-    if (error) throw error;
-    const batch = data ?? [];
-    condominiumRows.push(...batch);
-    if (batch.length < 1000) break;
-  }
-  const condominiums = { data: condominiumRows, error: null };
+  const condominiums = await loadWorkspacePaginatedRows(supabase, "condominiums", workspaceId, { orderBy: "created_at" });
 
   const client = supabase;
   const loadWorkspaceRows = async (
