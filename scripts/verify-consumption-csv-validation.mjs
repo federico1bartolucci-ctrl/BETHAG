@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function importConsumptionCsv");
+const end = source.indexOf("async function generateConsumptionAllocation", start);
+assert.ok(start >= 0 && end > start, "CSV import function must be present");
+const importer = source.slice(start, end);
+assert.match(importer, /invalidRows\.length/, "CSV import must reject invalid rows before saving");
+assert.match(importer, /Number\.isFinite\(v\)\|\|v<0/, "CSV import must reject negative or non-finite numeric values");
+assert.match(importer, /current<previous/, "CSV import must reject decreasing meter readings");
+assert.match(importer, /validISODate/, "CSV import must validate calendar dates");
+assert.match(importer, /consumption-(?:!==|!=|\?\?)/, "Consumption derivation is expected");
+console.log("Consumption CSV validation guard passed.");
