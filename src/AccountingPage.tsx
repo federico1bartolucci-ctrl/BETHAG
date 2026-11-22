@@ -829,6 +829,7 @@ function AccountingPage({
     }
     setSaving(true);
     setError("");
+    let fiscalYearSaved = false;
     try {
       const payload = {
         workspace_id: workspaceId,
@@ -840,6 +841,7 @@ function AccountingPage({
         .from("condominium_fiscal_years")
         .upsert(payload, { onConflict: "condominium_id,start_date,end_date" });
       if (saveError) throw saveError;
+      fiscalYearSaved = true;
       setShowYearForm(false);
       setYearForm({
         name: "",
@@ -858,7 +860,9 @@ function AccountingPage({
       flash("Esercizio salvato.");
       await load();
     } catch (e: any) {
-      setError(e?.message || "Impossibile salvare l'esercizio.");
+      setError(fiscalYearSaved
+        ? "Esercizio salvato, ma il riporto delle partite non è riuscito: " + (e?.message || "errore non specificato") + ". Verifica i riporti prima di proseguire."
+        : (e?.message || "Impossibile salvare l'esercizio."));
     } finally {
       setSaving(false);
     }
