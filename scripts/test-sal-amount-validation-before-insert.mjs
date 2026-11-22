@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveProgress(e:React.FormEvent)");
+const end = source.indexOf(" async function saveWorkExpense", start);
+assert.ok(start >= 0 && end > start, "SAL save handler must exist");
+const handler = source.slice(start, end);
+const validation = handler.indexOf("cumulativeAmount");
+const insert = handler.indexOf(".insert({workspace_id:workspaceId,condominium_id:dbId,work_id:progressWork.id,progress_no:no");
+assert.ok(validation >= 0 && insert > validation, "Approved amount must be validated before inserting SAL.");
+assert.match(handler, /if\(approved>0&&cumulativeAmount>approved\+0\.005\)throw/, "Cumulative SAL amount over approved must be rejected before write.");
+assert.match(handler, /if\(updateError\)throw updateError/, "Work progress update errors must not be silently ignored.");
+assert.match(handler, /setError\(e\?\.message\|\|"Impossibile salvare il SAL\."\)/, "User should receive the validation error message.");
+console.log("SAL pre-insert amount validation regression checks: PASS");
