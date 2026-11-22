@@ -3014,6 +3014,8 @@ function App() {
       setRegistrationRequests([]);
       return;
     }
+    // Clear requests from the previous workspace before loading the new scope.
+    setRegistrationRequests([]);
     let cancelled = false;
     const loadRegistrationRequests = async () => {
       const [assigned, unassigned] = await Promise.all([
