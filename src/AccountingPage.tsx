@@ -1694,8 +1694,8 @@ function AccountingPage({
     for(const [lineIndex,line] of lines.slice(1).entries()){
       const csvLine=lineIndex+2;
       const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
-      const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit) continue;
-      const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy) continue;
+      const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit){invalidRows.push(`riga ${csvLine}: unità "${unitCode||"(vuota)"}" non riconosciuta nel condominio selezionato`);continue;}
+      const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy){invalidRows.push(`riga ${csvLine}: esercizio "${fiscal||"(vuoto)"}" non riconosciuto`);continue;}
       const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"])), consumption=toNum(find(row,["consumo","consumption"])), kwh=toNum(find(row,["kwh"])), allocationValue=toNum(find(row,["valore_riparto","allocation_value","valore"])), chargeAmount=toNum(find(row,["importo","charge_amount","quota"]));
       const periodStart=find(row,["periodo_inizio","period_start"]).trim(), periodEnd=find(row,["periodo_fine","period_end"]).trim();
       const numericValues=[previous,current,consumption,kwh,allocationValue,chargeAmount];
