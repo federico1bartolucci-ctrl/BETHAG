@@ -1998,18 +1998,28 @@ export async function deleteCondominium(workspaceId: string, legacyId: number, s
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-    const { data: documents, error: documentsError } = await supabase
-      .from("documents")
-      .select("file_path")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id)
-      .not("file_path", "is", null);
+    // PostgREST caps each result page; collect every file path before the
+    // atomic DB deletion so Storage cleanup does not silently omit older files.
+    const documents: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error: documentsError } = await supabase
+        .from("documents")
+        .select("file_path")
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id)
+        .not("file_path", "is", null)
+        .order("id", { ascending: true })
+        .range(offset, offset + 999);
 
-    if (documentsError) throw documentsError;
+      if (documentsError) throw documentsError;
+      const batch = data ?? [];
+      documents.push(...batch);
+      if (batch.length < 1000) break;
+    }
 
     const storagePaths = Array.from(
       new Set(
-        (documents ?? [])
+        documents
           .map((row: any) => String(row.file_path ?? "").trim())
           .filter(Boolean)
       )
