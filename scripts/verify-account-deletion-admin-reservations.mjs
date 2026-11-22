@@ -15,6 +15,12 @@ assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.release_account_delet
 assert.match(edge, /rpc\(\s*"reserve_account_deletion_admins"/);
 assert.match(edge, /rpc\(\s*"release_account_deletion_admin_reservations"/);
 assert.match(edge, /deleteUser\(userId, false\)/);
+assert.match(edge, /finally\s*\{/);
+assert.match(edge, /catch\s*\(error\)/);
+assert.match(edge, /release_account_deletion_admin_reservations/);
+assert.match(edge, /catch\s*\(releaseException\)/);
+assert.match(edge, /if \(deleteError\)\s*\{\s*return Response\.json\(\{ error: deleteError\.message \}/);
+
 assert.ok(edge.indexOf('reserve_account_deletion_admins') < edge.indexOf("deleteUser(userId, false)"), "reservation must precede Auth deletion");
 assert.ok(edge.indexOf("deleteUser(userId, false)") < edge.lastIndexOf('release_account_deletion_admin_reservations'), "release must follow deletion attempt");
 
