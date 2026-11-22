@@ -157,12 +157,19 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          const perPage = 1000;
+          let page = 1;
+          let existingUser = null;
+          while (!existingUser) {
+            const { data: users, error: usersError } =
+              await adminClient.auth.admin.listUsers({ page, perPage });
+            if (usersError) throw usersError;
+            existingUser = users.users.find(
+              (candidate) => candidate.email?.trim().toLowerCase() === email
+            ) ?? null;
+            if (existingUser || users.users.length < perPage) break;
+            page += 1;
+          }
           if (!existingUser) throw inviteError;
           targetUserId = existingUser.id;
         } else {
