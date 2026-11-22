@@ -159,7 +159,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { orderBy: "due_date" }),
     loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { orderBy: "created_at" }),
     loadWorkspacePaginatedRows(supabase, "portal_access", workspaceId, { orderBy: "created_at" }),
-    loadWorkspacePaginatedRows(supabase, "workspace_members", workspaceId, { orderBy: "created_at" }).then(({ data, error }) => ({ data: (data ?? []).filter((row) => row.role === "collaborator"), error }),
+    loadWorkspacePaginatedRows(supabase, "workspace_members", workspaceId, { orderBy: "created_at" }).then(({ data, error }) => ({ data: (data ?? []).filter((row) => row.role === "collaborator"), error })),
     loadWorkspaceRows(
       "condominium_member_transfers",
       "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
