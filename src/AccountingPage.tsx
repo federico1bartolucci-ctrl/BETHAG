@@ -1838,11 +1838,13 @@ function AccountingPage({
       }
     }
     if (!window.confirm("Sei sicuro di voler cancellare " + label + "?")) return;
-    const { error: deleteError } = await supabase
+    const { data: deletedRow, error: deleteError } = await supabase
       .from(table)
       .delete()
       .eq("id", id)
-      .eq("workspace_id", workspaceId);
+      .eq("workspace_id", workspaceId)
+      .select("id")
+      .maybeSingle();
     if (deleteError) {
       const errorCode = (deleteError as any).code;
       if (errorCode === "23503" || errorCode === "P0001") {
@@ -1860,6 +1862,10 @@ function AccountingPage({
       } else {
         setError(deleteError.message);
       }
+      return;
+    }
+    if (!deletedRow) {
+      setError("Nessun elemento eliminato: il record potrebbe essere già stato rimosso o non appartenere al workspace corrente.");
       return;
     }
     flash("Elemento eliminato.");
