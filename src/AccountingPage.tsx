@@ -665,11 +665,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("category"),
-          supabase
-            .from("condominium_fiscal_carryovers")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("created_at"),
+          loadWorkspaceRows("condominium_fiscal_carryovers", workspaceId, "created_at"),
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
           supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
         ]);
