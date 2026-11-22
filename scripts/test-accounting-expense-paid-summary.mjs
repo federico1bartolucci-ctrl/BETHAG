@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { calculateLedgerExpensePaid } from "../src/lib/accountingExpensePaidSummary.ts";
+import { calculateLedgerExpensePaid } from "../src/lib/accountingExpensePaidSummary.js";
 
 const ledger = [
   { id:"partial", direction:"Uscita", amount:1000, payment_status:"Parzialmente pagato" },
