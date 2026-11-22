@@ -5857,12 +5857,14 @@ function App() {
     if (!supabaseConfigured || !supabase) return;
 
     try {
-      const { error } = await supabase
+      const { data: deletedRows, error } = await supabase
         .from("condominium_requests")
         .delete()
         .eq("workspace_id", profile.workspaceId)
-        .eq("legacy_id", id);
+        .eq("legacy_id", id)
+        .select("id");
       if (error) throw error;
+      if (!deletedRows?.length) throw new Error("La richiesta non è stata trovata nel workspace o non è stata eliminata.");
     } catch (error) {
       console.error("BETHAG request deletion persistence failed", error);
       setCondominiumRequests(previousRequests);
