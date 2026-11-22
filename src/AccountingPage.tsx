@@ -1824,6 +1824,19 @@ function AccountingPage({
 
   async function remove(table: string, id: string, label: string) {
     if (!supabase) return;
+    if (table === "condominium_fiscal_years") {
+      const { data: fiscalYearRow, error: fiscalYearLookupError } = await supabase
+        .from("condominium_fiscal_years")
+        .select("id,status")
+        .eq("id", id)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+      if (fiscalYearLookupError) { setError(fiscalYearLookupError.message); return; }
+      if (fiscalYearRow?.status === "Chiuso") {
+        setError("Un esercizio contabile chiuso non può essere eliminato. Riaprilo prima di procedere.");
+        return;
+      }
+    }
     if (table === "condominium_installments") {
       const { data: installmentRow, error: installmentLookupError } = await supabase
         .from("condominium_installments")
