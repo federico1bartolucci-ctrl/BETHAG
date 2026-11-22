@@ -14,7 +14,7 @@ export function resolveUniqueWorkspaceId(rows) {
     workspaceIds.add(workspaceId);
     if (workspaceIds.size > 1) {
       throw new Error(
-        "Questo account condòmino è associato a più workspace. Contatta l'amministratore per scegliere il workspace corretto."
+        "Questo account è associato a più workspace. Contatta l'amministratore per scegliere il workspace corretto."
       );
     }
   }
