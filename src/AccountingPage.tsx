@@ -1808,7 +1808,7 @@ function AccountingPage({
     const installmentYear = scopedYears.find(y => y.id === installmentForm.fiscal_year_id && y.condominium_id === dbCondominiumId);
     if (!installmentUnit || !installmentYear) { setError("L'unità e l'esercizio della rata devono appartenere al condominio selezionato."); return; }
     if (!hasCentPrecision(amount)) { setError("L'importo della rata deve essere espresso in centesimi."); return; }
-    if (installmentForm.due_date && (installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
+    if (installmentForm.due_date && (!isValidISODate(installmentForm.due_date) || installmentForm.due_date < installmentYear.start_date || installmentForm.due_date > installmentYear.end_date)) {
       setError("La scadenza della rata non rientra nell'esercizio contabile selezionato."); return;
     }
     setSaving(true); setError("");
