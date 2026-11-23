@@ -119,6 +119,10 @@ BEGIN
   where id=p_progress_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and work_id=p_work_id;
   get diagnostics v_updated=row_count;
   if v_updated<>1 then raise exception 'SAL non aggiornato; pagamento annullato'; end if;
+  insert into public.condominium_work_events(workspace_id,condominium_id,work_id,event_type,event_date,title,description,amount,data)
+  values(p_workspace_id,p_condominium_id,p_work_id,'Pagamento SAL',p_entry_date,
+    'Pagamento SAL '||v_progress.progress_no,'Pagamento parziale registrato in Contabilità.',v_amount,
+    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,'source','SAL pagamento'));
   return v_payment_entry_id;
 END;
 $function$;
@@ -184,6 +188,10 @@ BEGIN
   where id=p_progress_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and work_id=p_work_id;
   get diagnostics v_updated=row_count;
   if v_updated<>1 then raise exception 'SAL non aggiornato; pagamento annullato'; end if;
+  insert into public.condominium_work_events(workspace_id,condominium_id,work_id,event_type,event_date,title,description,amount,data)
+  values(p_workspace_id,p_condominium_id,p_work_id,'Pagamento SAL',p_entry_date,
+    'Pagamento SAL '||v_progress.progress_no,'SAL contabilizzato e pagamento collegato alla Contabilità.',v_amount,
+    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,'source','SAL'));
   return v_payment_entry_id;
 END;
 $function$;
