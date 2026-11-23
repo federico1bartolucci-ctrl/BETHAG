@@ -25,7 +25,7 @@ rows.push({id:"foreign",created_at:"2026-01-01",condominiums:{workspace_id:"ws-b
 const scoped=mockClient(rows);
 const result=await loadAccountingCondominiumMembers(scoped.client,"ws-a");
 assert.equal(result.data.length,1001);
-assert.ok(result.data.every(row=>row.condominiums.workspace_id==="ws-a");
+assert.ok(result.data.every(row=>row.condominiums.workspace_id==="ws-a"));
 assert.deepEqual(scoped.requests.map(r=>[r.from,r.to]),[[0,999],[1000,1999]]);
 assert.ok(scoped.requests.every(r=>r.filters.some(([k,v])=>k==="condominiums.workspace_id"&&v==="ws-a")));
 assert.deepEqual(scoped.requests[0].orders,[["created_at",{ascending:true}],["id",{ascending:true}]]);
