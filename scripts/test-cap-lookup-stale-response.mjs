@@ -14,6 +14,7 @@ assert.match(helper, /capLookupSequence\.set\(input, lookupSequence\)/, "lookup 
 assert.match(helper, /input\.value !== requestedCap/, "response must match current CAP");
 assert.match(helper, /capLookupSequence\.get\(input\) !== lookupSequence/, "older lookup responses are rejected");
 assert.match(helper, /input\.isConnected/, "detached inputs cannot receive stale updates");
+assert.match(helper, /if \(numeric && !isCap\) input\.inputMode = "decimal";/, "CAP numeric mode is not overridden by decimal fields");
 
 // Manual edits to Comune/Provincia made while the request is pending must survive.
 assert.match(helper, /cityValueAtRequest/, "Comune value is captured before request");
@@ -30,8 +31,8 @@ assert.match(helper, /place\["place name"\]/, "Comune is sourced from lookup res
 assert.match(helper, /place\["state abbreviation"\]/, "Provincia is sourced from lookup result");
 console.log("CAP async stale-response regression guard: PASS");
 
-import vm from "node:vm";
-import ts from "typescript";
+
+
 
 // Execute the actual global field-rules function extracted from main.tsx in a
 // lightweight DOM harness. The fetch responses are controlled to exercise races.
