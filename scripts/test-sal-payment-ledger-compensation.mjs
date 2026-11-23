@@ -5,7 +5,7 @@ import { compensateSalPaymentAfterEventFailure } from "../src/lib/salPaymentComp
 const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
 const registerPayment = source.slice(source.indexOf("async function registerProgressPayment"), source.indexOf("async function auditWork"));
 const recordPayment = source.slice(source.indexOf("async function recordProgressPayment"), source.indexOf("async function saveProgress"));
-assert.match(source, /import\\s*\\{\\s*compensateSalPaymentAfterEventFailure\\s*\\}\\s*from\\s*["']\\.\\/lib\\/salPaymentCompensation\\.mjs["']/);
+assert.ok(source.includes('import { compensateSalPaymentAfterEventFailure } from "./lib/salPaymentCompensation.mjs";'), "RegisterPage must import the compensation helper");
 assert.ok(registerPayment.includes("compensateSalPaymentAfterEventFailure"), "event failure must use the concurrency-safe compensation helper");
 assert.ok(registerPayment.includes("paymentEntryIdBefore:paymentProgress.payment_entry_id"), "compensation must preserve the previous payment-entry reference");
 assert.ok(registerPayment.includes("paymentAmount:amount"), "compensation must receive the payment amount");
