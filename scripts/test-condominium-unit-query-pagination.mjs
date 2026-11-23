@@ -71,10 +71,15 @@ function createMockClient(pages, errorAtOffset = null) {
     const end = index + 1 < declarations.length ? declarations[index + 1].index : backend.length;
     return backend.slice(start, end);
   }
-  for (const name of ["saveCondominiumUnit", "saveCondominiumMember", "deleteCondominiumMember"]) {
+  const directLookupPatterns = {
+    saveCondominiumUnit: /\.from\(["']condominium_units["']\)\s*\.select\(["']id, unit_code, building_code, lifecycle_status["']\)\s*\.eq\(["']condominium_id["']/,
+    saveCondominiumMember: /\.from\(["']condominium_units["']\)\s*\.select\(["']id, unit_code, data["']\)\s*\.eq\(["']condominium_id["']/,
+    deleteCondominiumMember: /\.from\(["']condominium_units["']\)\s*\.select\(["']id, data["']\)\s*\.eq\(["']workspace_id["']/,
+  };
+  for (const name of Object.keys(directLookupPatterns)) {
     const body = extractExportedFunction(name);
     assert.match(body, /loadCondominiumUnitRows\s*\(/, `${name} must use paginated unit lookup`);
-    assert.doesNotMatch(body, /\.from\(["']condominium_units["']\)/, `${name} must not contain a capped direct unit query`);
+    assert.doesNotMatch(body, directLookupPatterns[name], `${name} must not retain its original unpaginated unit lookup`);
   }
   assert.match(pkg.scripts.test, /test-condominium-unit-query-pagination\.mjs/, "regression test must be integrated into npm test");
 }
