@@ -1221,6 +1221,7 @@ function AccountingPage({
       const { data: unitMembers, error: unitMembersError } = await supabase
         .from("condominium_members")
         .select("id,unit_id,role,active,data")
+        .eq("workspace_id", workspaceId)
         .eq("condominium_id", dbCondominiumId)
         .eq("active", true)
         .in("unit_id", unitIds);
