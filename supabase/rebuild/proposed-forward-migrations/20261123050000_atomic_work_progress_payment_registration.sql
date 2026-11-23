@@ -224,6 +224,9 @@ BEGIN
   if v_amount<0 or v_paid<0 or v_paid>v_amount+0.005 then
     raise exception 'Importi SAL non validi';
   end if;
+  if v_paid>0 then
+    raise exception 'Il pagamento iniziale deve essere registrato dalla funzione Registra pagamento dopo la creazione del SAL';
+  end if;
   select id,approved_amount into v_work
   from public.condominium_works
   where id=p_work_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id
