@@ -16,5 +16,8 @@ The global CAP auto-lookup is asynchronous. A delayed response could overwrite C
 ## Verification
 The PR's GitHub Actions build run #4248 completed successfully. Its `npm test` step (“Test fresh PostgreSQL bootstrap”) passed; `package.json` includes the CAP regression test in the `test` script. Baseline safety checks also passed. Authenticated APP-01..APP-15 QA was skipped and is not claimed.
 
+## Duplicate PR reconciliation
+PR #140 addresses the same stale CAP-response defect but uses source-level regression assertions. PR #386 supersedes it in test depth by extracting the production response-application helper and exercising stale/current responses, manual edits, detached inputs, and invalid responses. Both remain draft and unmerged; do not merge #140 independently. Consolidation should retain #386's implementation and runtime test, then close #140 only after the consolidated correction is merged and verified.
+
 ## Scope
 Isolated branch and draft PR only. No QA/Production database writes, deployment, or merge performed.
