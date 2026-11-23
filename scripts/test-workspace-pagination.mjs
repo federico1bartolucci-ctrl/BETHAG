@@ -20,10 +20,11 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
   let pageNumber = 0;
   const client = {
     from(table) {
-      const state = { table, workspaceId: null, workspaceColumn: null, select: null, orders: [], cursorFilter: null, nullCursor: false, idGt: null };
+      const state = { table, workspaceId: null, workspaceColumn: null, select: null, orders: [], cursorFilter: null, nullCursor: false, idGt: null, inColumn: null, inValues: null };
       const query = {
         select(columns) { state.select = columns; return query; },
         eq(column, value) { if (column === "workspace_id" || column === "condominiums.workspace_id") { state.workspaceColumn = column; state.workspaceId = value; } return query; },
+        in(column, values) { state.inColumn = column; state.inValues = values; return query; },
         order(column, options) { state.orders.push([column, options]); return query; },
         or(filter) { state.cursorFilter = filter; return query; },
         is(column, value) { if (column === state.orders[0]?.[0] && value === null) state.nullCursor = true; return query; },
@@ -40,7 +41,8 @@ function makeClient(initialRows, { insertBeforePage = null, inserts = [], delete
           }
           if (pageNumber === failPage) return Promise.resolve({ data: null, error: new Error("workspace page failure") });
           const orderColumn = state.orders[0]?.[0] ?? "created_at";
-          let filtered = records.filter((row) => row.workspace_id === state.workspaceId);
+          let filtered = state.workspaceId === null ? records.slice() : records.filter((row) => row.workspace_id === state.workspaceId);
+          if (state.inColumn) filtered = filtered.filter((row) => state.inValues.includes(row[state.inColumn]));
           if (state.cursorFilter) {
             const gtPrefix = `${orderColumn}.gt.`;
             const eqPrefix = `,and(${orderColumn}.eq.`;
@@ -165,7 +167,60 @@ assert.ok(memberClient.requests.every((request) => request.workspaceId === "work
 assert.ok(memberClient.requests.every((request) => request.workspaceColumn === "condominiums.workspace_id"), "joined member pagination must filter workspace through condominium relation");
 assert.equal(memberClient.requests[0].table, "condominium_members");
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
-assert.ok(backend.includes('workspaceColumn: "condominiums.workspace_id"'), "member bootstrap must preserve workspace isolation through the joined condominium relation");
+assert.ok(backend.includes('workspaceColumn: "condominiums.workspace_id"'), "member bootstrap and sync must preserve workspace isolation through the joined condominium relation");
+const existingLinksStart = backend.indexOf("const { data: existingMemberLinks");
+const existingLinksEnd = backend.indexOf("const existingUserByLegacyKey", existingLinksStart);
+assert.ok(existingLinksStart >= 0 && existingLinksEnd > existingLinksStart, "existing member links query must exist");
+const existingLinksQuery = backend.slice(existingLinksStart, existingLinksEnd);
+assert.match(existingLinksQuery, /loadWorkspacePaginatedRows/, "sync must paginate existing user-link lookup");
+assert.doesNotMatch(existingLinksQuery, /\.from\(["']condominium_members["']\)/, "sync must not use the capped one-shot member-link query");
+const persistedStart = backend.indexOf("const { data: persistedMembers");
+const persistedEnd = backend.indexOf("(persistedMembers ?? []).forEach", persistedStart);
+assert.ok(persistedStart >= 0 && persistedEnd > persistedStart, "persisted member lookup must exist");
+const persistedQuery = backend.slice(persistedStart, persistedEnd);
+assert.match(persistedQuery, /loadWorkspacePaginatedRows/, "sync must paginate persisted member lookup");
+assert.doesNotMatch(persistedQuery, /\.from\(["']condominium_members["']\)/, "sync must not use the capped one-shot persisted-member query");
+
+// Reproduce the old unpaginated condominium-member lookup hitting the default 1,000-row cap.
+const syncMemberRows = Array.from({ length: 1001 }, (_, i) => ({
+  id: `member-${String(i).padStart(4, "0")}`,
+  workspace_id: "workspace-1",
+  created_at: "2026-01-01",
+  condominium_id: "condo-1",
+  legacy_id: i,
+  user_id: `user-${i}`,
+}));
+const legacyMemberClient = makeClient(syncMemberRows);
+const { data: legacyMemberLinks } = await legacyMemberClient.client
+  .from("condominium_members")
+  .select("condominium_id,legacy_id,user_id")
+  .in("condominium_id", ["condo-1"])
+  .range(0, 999);
+assert.equal(legacyMemberLinks.length, 1000, "baseline member-link lookup must reproduce the 1,000-row cap");
+const legacyUserMap = new Map(legacyMemberLinks.map((row) => [`${row.condominium_id}::${row.legacy_id}`, row.user_id]));
+assert.equal(legacyUserMap.has("condo-1::1000"), false, "baseline lookup must reproduce the omitted portal-linked member");
+
+const memberSyncLinkClient = makeClient(syncMemberRows);
+const memberSyncLinks = await loadWorkspacePaginatedRows(memberSyncLinkClient.client, "condominium_members", "workspace-1", {
+  select: "id,condominium_id,legacy_id,user_id,created_at,condominiums!inner(workspace_id)",
+  orderBy: "created_at",
+  workspaceColumn: "condominiums.workspace_id",
+});
+assert.equal(memberSyncLinks.data.length, 1001, "paginated member-link lookup must preserve all 1,001 rows");
+const memberSyncUserMap = new Map(memberSyncLinks.data.map((row) => [`${row.condominium_id}::${row.legacy_id}`, row.user_id]));
+assert.equal(memberSyncUserMap.get("condo-1::1000"), "user-1000", "member link after the API cap must be preserved");
+assert.deepEqual(memberSyncLinkClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999]]);
+assert.ok(memberSyncLinkClient.requests.every((request) => request.workspaceColumn === "condominiums.workspace_id"));
+
+const persistedMemberClient = makeClient(syncMemberRows);
+const persistedMemberSync = await loadWorkspacePaginatedRows(persistedMemberClient.client, "condominium_members", "workspace-1", {
+  select: "id,condominium_id,legacy_id,created_at,condominiums!inner(workspace_id)",
+  orderBy: "created_at",
+  workspaceColumn: "condominiums.workspace_id",
+});
+assert.equal(persistedMemberSync.data.length, 1001, "paginated persisted-member lookup must return the full workspace member set");
+assert.equal(persistedMemberSync.data.at(-1).legacy_id, 1000);
+assert.deepEqual(persistedMemberClient.requests.map(({ from, to }) => [from, to]), [[0, 999], [0, 999]]);
 
 const paginatedTables = [
   "condominiums", "documents", "deadlines", "assemblies", "suppliers", "activities", "communications",
@@ -190,4 +245,4 @@ assert.match(backend, /loadWorkspacePaginatedRows\(supabase,\s*["']condominium_s
   "supplier reconciliation must load the workspace supplier set with pagination");
 assert.doesNotMatch(backend, /\.from\(["']condominium_suppliers["']\)\s*\.select\(["']id,condominium_id,business_name,data["']\)\s*\.eq\(["']workspace_id["']\s*,\s*workspaceId\)/,
   "supplier reconciliation must not use a capped one-shot workspace query");
-console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections + work-progress sync pagination wiring)`);
+console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections + work-progress, supplier and member-link sync pagination)`);
