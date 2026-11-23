@@ -1860,8 +1860,6 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       : null;
 
     const { error: workUpdateError } = await supabase.from("condominium_works").update({
-      progress_percent: Math.max(0, Math.min(100, percentage)),
-      actual_amount: cumulativeActualAmount,
       status: Number(percentage) >= 100
         ? "Completato"
         : Number(percentage) > 0
