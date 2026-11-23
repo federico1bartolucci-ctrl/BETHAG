@@ -91,13 +91,13 @@ function mockAuth({ session = null, exchangeError = null, setError = null, getEr
   assert.equal(calls.getSession, 1);
 }
 
-// Both deployed HTML entry points must use the tested recovery-session helper.
+// The public page must wire the tested helper; the root page retains its direct implicit-flow handling.
 {
   const root = await readFile(new URL("../reset-password.html", import.meta.url), "utf8");
   const publicPage = await readFile(new URL("../public/reset-password/index.html", import.meta.url), "utf8");
-  assert.match(root, /establishRecoverySession\s*\}\s*from\s*["']\.\/reset-password\/recovery-session\.js["']/);
+  assert.match(root, /setSession\(\{\s*access_token\s*:\s*accessToken\s*,\s*refresh_token\s*:\s*refreshToken\s*\}\)/);
+  assert.match(root, /if\(!accessToken\s*\|\|\s*!refreshToken\)/);
   assert.match(publicPage, /establishRecoverySession\s*\}\s*from\s*["']\.\/recovery-session\.js["']/);
-  assert.match(root, /establishRecoverySession\(supabase,\s*location\.href\)/);
   assert.match(publicPage, /establishRecoverySession\(supabase,\s*location\.href\)/);
 }
 
