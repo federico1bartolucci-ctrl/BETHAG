@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
+import { sendEmailMethodResponse } from "../_shared/send-email-method-response.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,8 @@ function json(data: unknown, status = 200) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const methodResponse = sendEmailMethodResponse(req.method, corsHeaders);
+  if (methodResponse) return methodResponse;
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Autenticazione richiesta." }, 401);
