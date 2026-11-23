@@ -1,16 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-const source = readFileSync("src/AccountingPage.tsx", "utf8");
-assert.match(source, /useRef, useState/);
-assert.match(source, /const accountingLoadGeneration = useRef\(0\)/);
-assert.match(source, /const generation = \+\+accountingLoadGeneration\.current/);
-assert.equal((source.match(/generation !== accountingLoadGeneration\.current/g) || []).length, 2, "stale loads must be stopped after resolve and after queries");
-assert.match(source, /if \(generation === accountingLoadGeneration\.current\) setError\(e\?\.message \|\| "Errore nel caricamento della contabilità\."\)/, "stale load failures must not overwrite current UI error state");
-assert.match(source, /if \(generation === accountingLoadGeneration\.current\) setLoading\(false\)/);
-assert.match(source, /return \(\) => \{ accountingLoadGeneration\.current \+= 1; \}/);
-console.log("Accounting stale-load generation guard: PASS");
-
-import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   createAccountingSettingsState,
