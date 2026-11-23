@@ -24,13 +24,19 @@ function validateFilters(filters, workspaceColumn) {
   return entries;
 }
 
+function encodeCursorValue(value) {
+  if (typeof value !== "string") return String(value);
+  if (/^\d{4}-\d{2}-\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value)) return value;
+  return "\"" + value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"";
+}
+
 function validateCursor(row, orderBy) {
   const id = row?.id;
   if ((typeof id !== "string" && typeof id !== "number") || !String(id).trim() || !/^[A-Za-z0-9_-]+$/.test(String(id))) {
     throw new Error("Cursor workspace non valido.");
   }
   const value = row[orderBy];
-  if (value !== null && (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value))) {
+  if (value !== null && (typeof value === "undefined" || !["string", "number", "boolean"].includes(typeof value) || (typeof value === "number" && !Number.isFinite(value)))) {
     throw new Error("Valore cursor workspace non valido.");
   }
   return { value: value ?? null, id: String(id) };
@@ -58,7 +64,8 @@ export async function loadWorkspacePaginatedRows(client, table, workspaceId, { s
       if (cursor.value === null) {
         query = query.is(orderBy, null).gt("id", cursor.id);
       } else {
-        query = query.or(`${orderBy}.gt.${cursor.value},and(${orderBy}.eq.${cursor.value},id.gt.${cursor.id}),${orderBy}.is.null`);
+        const encodedCursor = encodeCursorValue(cursor.value);
+        query = query.or(`${orderBy}.gt.${encodedCursor},and(${orderBy}.eq.${encodedCursor},id.gt.${cursor.id}),${orderBy}.is.null`);
       }
     }
     const { data, error } = await query.range(0, pageSize - 1);
