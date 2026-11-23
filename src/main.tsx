@@ -4584,7 +4584,7 @@ function App() {
           const unitCode = String(row.unitCode ?? "").trim();
           const matched = (dbUnits ?? []).find((unit: any) => String(unit.unit_code ?? "").trim().toLowerCase() === unitCode.toLowerCase());
           const amount = parseBethagAmount(row.amount);
-          const millesimi = Number(String(row.millesimi ?? "").replace(",", "."));
+          const millesimi = parseBethagAmount(row.millesimi, 0);
           return { unit_id: matched?.id ?? "", unit_code: unitCode, description: row.description ?? "", amount: Number.isFinite(amount) ? amount : 0, millesimi: Number.isFinite(millesimi) ? millesimi : 0, owner: row.owner ?? "", matched: Boolean(matched) };
         });
 
