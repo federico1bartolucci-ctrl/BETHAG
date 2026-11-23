@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
+import { calculateRendicontoUnitBalances } from "./lib/accountingRendicontoUnitBalance.js";
 
 type Condominium = {
   id: number;
@@ -99,7 +100,7 @@ type ConsumptionReading = { id:string; condominium_id:string; fiscal_year_id:str
 type AllocationRule = { id:string; condominium_id:string; name:string; expense_type:string|null; category:string|null; allocation_table_id:string; priority:number; active:boolean; notes:string };
 type AllocationPreviewRow = { unit_id:string; unit_code:string; millesimi:number; amount:number };
 type AllocationIntake = { id:string; condominium_id:string; source:"Manuale"|"AI"|"Importazione"; status:"Bozza"|"Da verificare"|"Confermato"|"Annullato"; document_id:string|null; ledger_entry_id:string|null; allocation_table_id:string|null; title:string; description:string; expense_amount:number|null; extracted_data:any; rows:any[]; validation_errors:any[]; notes:string; created_by:string|null; confirmed_by:string|null; confirmed_at:string|null; created_at:string; };
-type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
+type Installment = { id:string; condominium_id:string; fiscal_year_id:string|null; ledger_entry_id?:string|null; member_id:string|null; unit_id:string|null; title:string; due_date:string; amount:number; paid_amount:number; status:string; notes:string };
 type BudgetItem = { id:string; condominium_id:string; fiscal_year_id:string|null; category:string; description:string; amount:number; notes:string };
 type FiscalCarryover = { id:string; condominium_id:string; source_fiscal_year_id:string; target_fiscal_year_id:string; unit_id:string|null; member_id:string|null; balance:number; kind:"Debito"|"Credito"; status:"Da riportare"|"Parzialmente compensato"|"Compensato"; notes:string };
 type CarryoverCompensation = { id:string; condominium_id:string; carryover_id:string; target_installment_id:string|null; amount:number; notes:string; created_at:string };
@@ -442,87 +443,14 @@ function AccountingPage({
     return { income, expenses, paidExpenses, unpaidExpenses, allocated, allocatedPaid, installmentsAmount, installmentsPaid, installmentsResidual, opening, closing, fundsAllocated, fundsUsed };
   }, [rendicontoLedger, rendicontoAllocations, rendicontoInstallments, rendicontoYear, scopedFunds]);
 
-  const rendicontoByUnit = useMemo(() => {
-    const map = new Map<string, { unitId:string; unitCode:string; allocated:number; installments:number; allocatedPaid:number; installmentPaid:number; paid:number; residual:number; carryover:number; balance:number }>();
-    for (const a of rendicontoAllocations) {
-      const unit = units.find((u) => u.id === a.unit_id);
-      const row = map.get(a.unit_id) ?? { unitId:a.unit_id, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, allocatedPaid:0, installmentPaid:0, paid:0, residual:0, carryover:0, balance:0 };
-      row.allocated += Number(a.amount || 0);
-      row.allocatedPaid += Number(a.paid_amount || 0);
-      map.set(a.unit_id, row);
-    }
-    const installmentUnits = new Set<string>();
-    const addInstallmentToUnit = (unitId:string, amount:number, paid:number) => {
-      installmentUnits.add(unitId);
-      const unit = units.find((u) => u.id === unitId);
-      const row = map.get(unitId) ?? { unitId, unitCode:unit?.unit_code || "Unità non trovata", allocated:0, installments:0, allocatedPaid:0, installmentPaid:0, paid:0, residual:0, carryover:0, balance:0 };
-      row.installments += amount;
-      row.installmentPaid += paid;
-      map.set(unitId, row);
-    };
-    for (const i of rendicontoInstallments) {
-      if (i.unit_id) {
-        addInstallmentToUnit(i.unit_id, Number(i.amount || 0), Number(i.paid_amount || 0));
-        continue;
-      }
-      if (!i.member_id || !i.ledger_entry_id) continue;
-      const ownerUnitIds = members
-        .filter((m) => m.id === i.member_id && m.active && m.unit_id)
-        .map((m) => m.unit_id as string);
-      if (!ownerUnitIds.length) continue;
-      const ownerAllocations = rendicontoAllocations
-        .filter((a) => a.ledger_entry_id === i.ledger_entry_id && ownerUnitIds.includes(a.unit_id))
-        .sort((a,b) => a.id.localeCompare(b.id));
-      const allocationTotal = ownerAllocations.reduce((s,a) => s + Number(a.amount || 0), 0);
-      if (allocationTotal <= 0) continue;
-      let allocatedInstallments = 0;
-      let allocatedPaid = 0;
-      ownerAllocations.forEach((a,index) => {
-        const isLast = index === ownerAllocations.length - 1;
-        const amount = isLast
-          ? Math.round((Number(i.amount || 0) - allocatedInstallments) * 100) / 100
-          : Math.round((Number(i.amount || 0) * Number(a.amount || 0) / allocationTotal) * 100) / 100;
-        const paid = isLast
-          ? Math.round((Number(i.paid_amount || 0) - allocatedPaid) * 100) / 100
-          : Math.round((Number(i.paid_amount || 0) * Number(a.amount || 0) / allocationTotal) * 100) / 100;
-        allocatedInstallments += amount;
-        allocatedPaid += paid;
-        addInstallmentToUnit(a.unit_id, amount, paid);
-      });
-    }
-    // Ensure units with only opening carryovers are still represented in the statement.
-    for (const carryover of rendicontoYearId === "all" ? [] : rendicontoCarryovers) {
-      if (!carryover.unit_id || map.has(carryover.unit_id)) continue;
-      const unit = units.find(u => u.id === carryover.unit_id);
-      map.set(carryover.unit_id, {
-        unitId: carryover.unit_id,
-        unitCode: unit?.unit_code || "Unità non trovata",
-        allocated: 0,
-        installments: 0,
-        allocatedPaid: 0,
-        installmentPaid: 0,
-        paid: 0,
-        residual: 0,
-        carryover: 0,
-        balance: 0
-      });
-    }
-    return Array.from(map.values()).map((row) => {
-      const paid = installmentUnits.has(row.unitId) ? row.installmentPaid : row.allocatedPaid;
-      const unitCarryovers = rendicontoYearId === "all" ? [] : rendicontoCarryovers.filter(c => c.unit_id === row.unitId);
-      const carryover = unitCarryovers.reduce((sum,c) => sum + (c.kind === "Debito" ? Math.abs(Number(c.balance || 0)) : -Math.abs(Number(c.balance || 0))), 0);
-      const residual = installmentUnits.has(row.unitId)
-        ? Math.max(0,row.installments-paid)
-        : Math.max(0,row.allocated-paid);
-      return {
-        ...row,
-        paid,
-        residual,
-        carryover,
-        balance: Math.round((residual + carryover) * 100) / 100
-      };
-    }).sort((a,b) => a.unitCode.localeCompare(b.unitCode,"it"));
-  }, [rendicontoAllocations, rendicontoInstallments, units, members, rendicontoCarryovers, rendicontoYearId]);
+  const rendicontoByUnit = useMemo(() => calculateRendicontoUnitBalances({
+    allocations: rendicontoAllocations,
+    installments: rendicontoInstallments,
+    units,
+    members,
+    carryovers: rendicontoCarryovers,
+    yearId: rendicontoYearId,
+  }), [rendicontoAllocations, rendicontoInstallments, units, members, rendicontoCarryovers, rendicontoYearId]);
 
   const totals = useMemo(() => {
     const income = scopedLedger
