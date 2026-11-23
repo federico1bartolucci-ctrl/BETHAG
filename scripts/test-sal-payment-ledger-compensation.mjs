@@ -5,6 +5,7 @@ const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url
 const registerPayment = source.slice(source.indexOf("async function registerProgressPayment"), source.indexOf("async function auditWork"));
 const recordPayment = source.slice(source.indexOf("async function recordProgressPayment"), source.indexOf("async function saveProgress"));
 assert.ok(registerPayment.includes("rollbackLedgerError"), "register payment must compensate ledger when progress update fails");
+assert.ok(registerPayment.includes("progressUpdate.select(\"id\").maybeSingle()") && registerPayment.includes("eq(\"paid_amount\",Number(paymentProgress.paid_amount)"), "register payment must use optimistic concurrency for cumulative paid amount");
 assert.ok(registerPayment.includes("rollbackProgressError"), "register payment must compensate progress if event insertion fails");
 assert.ok(registerPayment.includes("rollbackLedgerError"), "register payment must delete inserted ledger on event failure");
 assert.ok(registerPayment.includes(".eq(\"workspace_id\",workspaceId)"), "compensating delete must be workspace scoped");
