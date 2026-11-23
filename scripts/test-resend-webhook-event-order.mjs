@@ -136,6 +136,10 @@ try {
   const staleDelivered = await apply("msg-1", "evt-delivered", "email.delivered", "resident1@example.it", "2026-11-23T08:02:00Z");
   assert.deepEqual(staleDelivered, { status: "ignored", reason: "stale_status_event", current_status: "failed" });
 
+  // Equal-timestamp delivered must not downgrade a complaint (timestamp granularity can collide).
+  const sameTimestampDelivered = await apply("msg-1", "evt-delivered-same-time", "email.delivered", "resident1@example.it", "2026-11-23T08:10:00Z");
+  assert.deepEqual(sameTimestampDelivered, { status: "ignored", reason: "stale_status_event", current_status: "failed" });
+
   const duplicateComplaint = await apply("msg-1", "evt-complaint", "email.complained", "resident1@example.it", "2026-11-23T08:10:00Z");
   assert.deepEqual(duplicateComplaint, { status: "ignored", reason: "duplicate_status_event", current_status: "failed" });
 
