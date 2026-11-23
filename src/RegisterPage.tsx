@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { fetchWorkDocumentPickerRows } from "./lib/work-document-picker.js";
-import { fetchRegisterItems } from "./lib/register-items-pagination.js";
+import { fetchRegisterItems } from "./lib/register-items-pagination.mjs";
 
 type Condominium={id:number;name:string};
 type RegisterItem={id:string;condominium_id:string;item_type:string;category:string;title:string;location:string;responsible:string;expiry_date:string|null;status:string;notes:string;supplier_id:string|null;estimated_amount:number};
