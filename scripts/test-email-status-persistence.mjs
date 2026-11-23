@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const source = await readFile("supabase/functions/bethag-send-email/index.ts", "utf8");
+const helper = await readFile("supabase/functions/_shared/communication-send-summary.mjs", "utf8");
 assert.match(source, /statusPersistenceFailures/);
 assert.match(source, /const \{ error: recipientStatusError \}/);
 assert.match(source, /if \(recipientStatusError\) statusPersistenceFailures\+\+/);
 assert.match(source, /communicationStatusPersistenceFailed: Boolean\(communicationStatusError\)/);
-assert.match(source, /statusPersistenceFailures === 0/);
+assert.match(source, /summarizeCommunicationSendStatus\(/);
+assert.match(helper, /statusPersistenceFailures === 0/);
+assert.match(helper, /remainingCountQueryFailed/);
 console.log("Email send-status persistence regression guard: PASS");
