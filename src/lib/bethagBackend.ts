@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";\nimport { parseInvoiceAmount } from "./invoiceAmount.mjs";
+import { supabase } from "./supabase";\nimport { parseInvoiceAmount } from "./invoiceAmount.mjs";\nimport { parseInvoiceAmount } from "./invoiceAmount.mjs";
 
 export type BackendState = Record<string, any[]>;
 
