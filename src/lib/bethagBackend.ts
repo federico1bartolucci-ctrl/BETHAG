@@ -786,7 +786,7 @@ async function syncBackendStateNow(
     if (stillMissing.length && missingUnitsInsertError) throw missingUnitsInsertError;
     if (stillMissing.length) throw new Error("Impossibile sincronizzare tutte le unità condominiali richieste.");
 
-    (persistedResult.data ?? []).forEach((unit: any) => {
+    persistedUnitRows.forEach((unit: any) => {
       unitRowsByKey.set(
         String(unit.condominium_id) + "::" + String(unit.unit_code).trim().toLowerCase(),
         unit
