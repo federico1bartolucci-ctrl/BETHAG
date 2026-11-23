@@ -82,7 +82,7 @@ const context = {
   bethagSetNativeInputValue: (element, value) => { element.value = value; },
   bethagSentenceCase: (value) => { const text = String(value).trim(); return text ? text[0].toLocaleUpperCase("it-IT") + text.slice(1) : text; },
   bethagTitleCase: (value) => String(value),
-  fetch: (url) => new Promise((resolve) => fetchRequests.push({ url, resolve }),
+  fetch: (url) => new Promise((resolve) => { fetchRequests.push({ url, resolve }); }),
 };
 vm.createContext(context);
 vm.runInContext(compiledHelper, context);
