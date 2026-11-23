@@ -38,12 +38,14 @@ Document a dependency-aware integration path for the currently reviewed audit PR
 - No marking any PR closed/complete without evidence.
 
 
-## Critical finding — PR #344 SAL payment is not yet proven atomic
+## PR #344 SAL payment — review status corrected
 
-Review of the exact `src/RegisterPage.tsx` patch shows `registerProgressPayment` still performs a direct insert into `condominium_ledger_entries`, followed by a separate update to `condominium_work_progress`. If the second request fails, the first ledger row can remain without the corresponding SAL update. The PR adds a proposed SQL RPC `register_condominium_work_progress_payment`, but the inspected frontend patch does not call that RPC. Therefore the new function alone does not close the client-side partial-write path.
+A subsequent inspection of the current PR #344 patch confirms that `src/RegisterPage.tsx` calls the proposed RPCs:
+- `register_condominium_work_progress_payment` for registering a payment amount;
+- `record_condominium_work_progress_payment` for accounting a SAL whose paid amount is already recorded.
 
+The earlier statement that the frontend still performs a direct insert followed by a separate update was stale and is withdrawn. The patch includes a PGlite regression that checks partial-payment accumulation, overpayment rejection, full-payment linking, and rollback after forced update failures.
 
-**Required remediation before accepting #344:** wire the frontend payment action to the atomic RPC (or another server-side transaction), verify the RPC grants/permissions and all validations, and add regression tests for both success and forced failure/rollback. Do not execute the proposed migration in Production during this audit.
+**Remaining gate:** the migration is still proposed outside the canonical migration chain; CI/runtime evidence for the current commit must be confirmed and the migration/permissions reviewed before integration. No Production migration or QA data was touched.
 
-
-**Verification status:** patch-level review confirmed; runtime reproduction not performed because the local repository clone was blocked by DNS/network resolution. This is a concrete code-path risk, not a runtime-reproduced incident.
+**Verification status:** source-level RPC wiring and regression-test coverage confirmed from the current PR patch. This corrects the previous false-positive critical finding; it does not certify the feature for release.
