@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -1887,14 +1888,14 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
     if (workError) throw workError;
     if (!work) return;
 
-    const { data: progressRows, error: progressError } = await supabase
-      .from("condominium_work_progress")
-      .select("progress_no,ledger_entry_id,payment_entry_id")
-      .eq("workspace_id", workspaceId)
-      .eq("work_id", id);
-    if (progressError) throw progressError;
-
-    const hasAccountingProgress = (progressRows ?? []).some((row: any) => Boolean(row.ledger_entry_id) || Boolean(row.payment_entry_id));
+    const progressRows = await loadCondominiumWorkDeletionRows(
+      supabase,
+      "condominium_work_progress",
+      workspaceId,
+      id,
+      { select: "id,progress_no,ledger_entry_id,payment_entry_id" }
+    );
+    const hasAccountingProgress = progressRows.some((row: any) => Boolean(row.ledger_entry_id) || Boolean(row.payment_entry_id));
     const { data: linkedLedger, error: ledgerError } = await supabase
       .from("condominium_ledger_entries")
       .select("id")
@@ -1904,28 +1905,28 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       .limit(1);
     if (ledgerError) throw ledgerError;
 
-    const { data: linkedDocuments, error: linkedDocumentsError } = await supabase
-      .from("condominium_work_documents")
-      .select("document_id")
-      .eq("workspace_id", workspaceId)
-      .eq("work_id", id);
-    if (linkedDocumentsError) throw linkedDocumentsError;
-
-    const linkedLegacyIds = (linkedDocuments ?? []).map((row: any) => Number(row.document_id)).filter((value: number) => Number.isFinite(value));
-    let linkedInvoiceCount = 0;
-    if (linkedLegacyIds.length) {
-      const { data: documents, error: documentsError } = await supabase
-        .from("documents")
-        .select("legacy_id,category,data")
-        .eq("workspace_id", workspaceId)
-        .in("legacy_id", linkedLegacyIds);
-      if (documentsError) throw documentsError;
-      linkedInvoiceCount = (documents ?? []).filter((doc: any) => {
-        const data = doc.data && typeof doc.data === "object" ? doc.data : {};
-        return String(doc.category ?? "").toLowerCase().includes("fattur") ||
-          String(data.invoiceConfirmation?.status ?? "").toLowerCase() === "confermato";
-      }).length;
-    }
+    const linkedDocuments = await loadCondominiumWorkDeletionRows(
+      supabase,
+      "condominium_work_documents",
+      workspaceId,
+      id,
+      { select: "id,document_id" }
+    );
+    const linkedLegacyIds = Array.from(new Set(linkedDocuments.map((row: any) => Number(row.document_id)).filter((value: number) => Number.isFinite(value))));
+    const documents = linkedLegacyIds.length
+      ? await loadCondominiumWorkDeletionRows(
+        supabase,
+        "documents",
+        workspaceId,
+        id,
+        { legacyIds: linkedLegacyIds, select: "id,legacy_id,category,data" }
+      )
+      : [];
+    const linkedInvoiceCount = documents.filter((doc: any) => {
+      const data = doc.data && typeof doc.data === "object" ? doc.data : {};
+      return String(doc.category ?? "").toLowerCase().includes("fattur") ||
+        String(data.invoiceConfirmation?.status ?? "").toLowerCase() === "confermato";
+    }).length;
 
     if (hasAccountingProgress || (linkedLedger ?? []).length > 0) {
       throw new Error("Il lavoro non può essere eliminato perché presenta registrazioni contabili collegate. Prima occorre gestire o stornare le scritture contabili; in questo modo BETHAG evita di lasciare movimenti finanziari senza il relativo lavoro.");
@@ -1942,7 +1943,6 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
     if (error) throw error;
   });
 }
-
 export async function deleteWorkspaceRecord(
   workspaceId: string,
   table: "documents" | "deadlines" | "assemblies" | "suppliers" | "activities" | "communications",
