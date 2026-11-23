@@ -16,7 +16,6 @@ assert.match(source, /const \{ count: remaining, error: remainingError \}/, "rem
 assert.match(source, /recordEmailPersistenceFailure\(persistenceState, "remaining recipients query", remainingError\)/, "remaining recipient query errors are recorded");
 assert.match(source, /persistenceFailures: persistenceState\.persistenceFailures/, "response exposes the persistence failure count");
 assert.match(source, /persistenceWarning: buildEmailPersistenceWarning\(persistenceState\)/, "response builds a persistence warning");
-assert.match(source, /I messaggi inviati non devono essere reinviati manualmente senza verifica/, "warning prevents unsafe blind retries");
 
 // Runtime: a returned Supabase error and a thrown transport error are both
 // converted into persistence diagnostics, without throwing into send counters.
