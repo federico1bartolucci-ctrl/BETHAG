@@ -24,7 +24,7 @@ const fiscalYearId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 async function ledgerCount(){return (await db.query("SELECT count(*)::int AS n FROM public.condominium_ledger_entries")).rows[0].n;}
 async function progressRow(id){const r=await db.query("SELECT paid_amount,ledger_entry_id,payment_entry_id,status FROM public.condominium_work_progress WHERE id=$1",[id]);assert.equal(r.rows.length,1);return r.rows[0];}
 async function directPayment(id,amount,progressId){
- await db.query("INSERT INTO public.condominium_ledger_entries(id,workspace_id,condominium_id,fiscal_year_id,entry_date,direction,category,description,amount,payment_status,due_date,notes,data) VALUES($1,$2,$3,$4,$5,'Uscita','Pagamento SAL','Test pagamento SAL',$6,'Pagato',$5,'',pg_catalog.jsonb_build_object('work_id',$7,'progress_id',$8,'source','SAL pagamento'))",[id,workspace,condominium,fiscalYearId,today,amount,workA,progressId]);
+ await db.query("INSERT INTO public.condominium_ledger_entries(id,workspace_id,condominium_id,fiscal_year_id,entry_date,direction,category,description,amount,payment_status,due_date,notes,data) VALUES($1,$2,$3,$4,$5,'Uscita','Pagamento SAL','Test pagamento SAL',$6,'Pagato',$5,'',pg_catalog.jsonb_build_object('work_id',$7::uuid,'progress_id',$8::uuid,'source','SAL pagamento'))",[id,workspace,condominium,fiscalYearId,today,amount,workA,progressId]);
 }
 try{
  await db.exec("CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;");
