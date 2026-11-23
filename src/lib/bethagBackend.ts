@@ -1528,7 +1528,9 @@ function parseBethagAmount(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function parseBethagDate(value: unknown): string {\n  return parseInvoiceDate(value);\n}
+function parseBethagDate(value: unknown): string {
+  return parseInvoiceDate(value);
+}
 
 function extractBethagDocumentData(data: unknown): Record<string, any> {
   const root = data && typeof data === "object" ? data as Record<string, any> : {};
