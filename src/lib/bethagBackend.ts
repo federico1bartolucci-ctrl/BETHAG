@@ -1717,7 +1717,8 @@ if (!Number.isInteger(Number(input.progressNo)) || Number(input.progressNo) < 1)
       ledgerSupplierId = supplier?.id ?? null;
     }
 
-    const { data: existingProgress } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id,amount,paid_amount,progress_date,title,notes").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+    const { data: existingProgress, error: existingProgressError } = await supabase.from("condominium_work_progress").select("id,ledger_entry_id,amount,paid_amount,progress_date,title,notes").eq("workspace_id", workspaceId).eq("work_id", workId).eq("progress_no", input.progressNo).maybeSingle();
+    if (existingProgressError) throw existingProgressError;
 
     const { data: neighbouringProgress, error: neighbouringProgressError } = await supabase
       .from("condominium_work_progress")
