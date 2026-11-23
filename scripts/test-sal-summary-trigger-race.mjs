@@ -17,8 +17,8 @@ const workUpdate = helper.slice(workUpdateStart, workUpdateEnd);
 assert.doesNotMatch(workUpdate, /progress_percent\s*:/, "SAL helper must not overwrite trigger-owned progress_percent");
 assert.doesNotMatch(workUpdate, /actual_amount\s*:/, "SAL helper must not overwrite trigger-owned actual_amount");
 
-assert.match(functionsSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_work_financial_summary\([\s\S]*?FOR UPDATE[\s\S]*?UPDATE public\.condominium_works SET actual_amount/);
-assert.match(functionsSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_work_financial_summary_trigger\([\s\S]*?PERFORM public\.sync_condominium_work_financial_summary\(new\.work_id\)/);
-assert.match(triggersSql, /CREATE TRIGGER sync_condominium_work_financial_summary AFTER INSERT OR DELETE OR UPDATE ON "public"\."condominium_work_progress" FOR EACH ROW EXECUTE FUNCTION sync_condominium_work_financial_summary_trigger\(\)/);
+assert.match(functionsSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_work_financial_summary\([\s\S]*?FOR UPDATE[\s\S]*?UPDATE public\.condominium_works SET actual_amount/i);
+assert.match(functionsSql, /CREATE OR REPLACE FUNCTION public\.sync_condominium_work_financial_summary_trigger\([\s\S]*?PERFORM public\.sync_condominium_work_financial_summary\(new\.work_id\)/i);
+assert.match(triggersSql, /CREATE TRIGGER sync_condominium_work_financial_summary AFTER INSERT OR DELETE OR UPDATE ON "public"\."condominium_work_progress" FOR EACH ROW EXECUTE FUNCTION sync_condominium_work_financial_summary_trigger\(\)/i);
 
 console.log("SAL financial summary trigger ownership / stale overwrite regression: PASS");
