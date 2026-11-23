@@ -4,15 +4,21 @@ export async function uploadFilesWithRollback(storage, bucketName, files, create
   if (!files.length) return [];
 
   const stored = [];
+  let ambiguousUploadPath = null;
   try {
     for (const file of files) {
       const path = createPath(file);
+      ambiguousUploadPath = path;
       const { error } = await storage.from(bucketName).upload(path, file, {
         upsert: false,
         contentType: file.type || "application/octet-stream",
         cacheControl: "3600",
       });
-      if (error) throw new Error("Impossibile memorizzare \"" + file.name + "\": " + error.message);
+      if (error) {
+        ambiguousUploadPath = null;
+        throw new Error("Impossibile memorizzare \"" + file.name + "\": " + error.message);
+      }
+      ambiguousUploadPath = null;
 
       stored.push({
         name: file.name,
@@ -24,7 +30,9 @@ export async function uploadFilesWithRollback(storage, bucketName, files, create
     }
     return stored;
   } catch (uploadFailure) {
+    // A thrown transport error is ambiguous: Storage may have committed the object before the response was lost.
     const uploadedPaths = stored.map((item) => item.path);
+    if (ambiguousUploadPath && !uploadedPaths.includes(ambiguousUploadPath)) uploadedPaths.push(ambiguousUploadPath);
     const rollbackFailures = [];
     for (let offset = 0; offset < uploadedPaths.length; offset += STORAGE_REMOVE_BATCH_SIZE) {
       const batch = uploadedPaths.slice(offset, offset + STORAGE_REMOVE_BATCH_SIZE);
