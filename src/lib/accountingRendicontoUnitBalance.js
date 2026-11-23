@@ -1,11 +1,146 @@
-function cents(v){return Math.round(Number(v||0)*100)/100}
-function allocationKey(ledgerEntryId,unitId){return ledgerEntryId&&unitId?String(ledgerEntryId)+"::"+String(unitId):null}
-export function calculateRendicontoUnitBalances({allocations=[],installments=[],units=[],members=[],carryovers=[],yearId="all"}){
- const map=new Map(),unitById=new Map(units.map(u=>[u.id,u])),allocationByKey=new Map(),coverage=new Map();
- const createRow=(unitId)=>({unitId,unitCode:unitById.get(unitId)?.unit_code||"Unità non trovata",allocated:0,installments:0,allocatedPaid:0,installmentPaid:0,paid:0,residual:0,carryover:0,balance:0});
- for(const a of allocations){if(!a.unit_id)continue;const r=map.get(a.unit_id)||createRow(a.unit_id);r.allocated+=Number(a.amount||0);r.allocatedPaid+=Number(a.paid_amount||0);map.set(a.unit_id,r);const k=allocationKey(a.ledger_entry_id,a.unit_id);if(k){const arr=allocationByKey.get(k)||[];arr.push(a);allocationByKey.set(k,arr)}}
- const add=(unitId,amount,paid,ledgerId)=>{if(!unitId)return;const r=map.get(unitId)||createRow(unitId);r.installments+=Number(amount||0);r.installmentPaid+=Number(paid||0);map.set(unitId,r);const k=allocationKey(ledgerId,unitId);if(k&&allocationByKey.has(k)){const c=coverage.get(k)||{amount:0,paid:0};c.amount+=Number(amount||0);c.paid+=Number(paid||0);coverage.set(k,c)}};
- for(const i of installments){if(i.unit_id){add(i.unit_id,i.amount,i.paid_amount,i.ledger_entry_id);continue}if(!i.member_id||!i.ledger_entry_id)continue;const ownerIds=[...new Set(members.filter(m=>m.id===i.member_id&&m.active&&m.unit_id).map(m=>m.unit_id))];if(!ownerIds.length)continue;const owner=allocations.filter(a=>a.ledger_entry_id===i.ledger_entry_id&&ownerIds.includes(a.unit_id)).sort((a,b)=>String(a.id).localeCompare(String(b.id)));const total=owner.reduce((s,a)=>s+Number(a.amount||0),0);if(total<=0)continue;let sum=0,paidSum=0;owner.forEach((a,index)=>{const last=index===owner.length-1;const amount=last?cents(Number(i.amount||0)-sum):cents(Number(i.amount||0)*Number(a.amount||0)/total);const paid=last?cents(Number(i.paid_amount||0)-paidSum):cents(Number(i.paid_amount||0)*Number(a.amount||0)/total);sum+=amount;paidSum+=paid;add(a.unit_id,amount,paid,i.ledger_entry_id)})}
- for(const c of (yearId==="all"?[]:carryovers)){if(c.unit_id&&!map.has(c.unit_id))map.set(c.unit_id,createRow(c.unit_id))}
- return Array.from(map.values()).map(r=>{const groups=new Map();for(const a of allocations.filter(a=>a.unit_id===r.unitId)){const k=allocationKey(a.ledger_entry_id,a.unit_id)||("unlinked::"+a.id);const g=groups.get(k)||{amount:0,paid:0,key:allocationKey(a.ledger_entry_id,a.unit_id)};g.amount+=Number(a.amount||0);g.paid+=Number(a.paid_amount||0);groups.set(k,g)}let extraPaid=0,extraResidual=0;for(const g of groups.values()){const c=g.key?coverage.get(g.key)||{amount:0,paid:0}:{amount:0,paid:0};const covered=Math.min(Math.max(g.amount,0),Math.max(c.amount,0));const uncovered=Math.max(0,g.amount-covered);const uncoveredPaid=Math.min(uncovered,Math.max(0,g.paid-Math.min(g.paid,c.paid)));extraPaid+=uncoveredPaid;extraResidual+=Math.max(0,uncovered-uncoveredPaid)}const installmentResidual=Math.max(0,r.installments-r.installmentPaid);const paid=r.installmentPaid+extraPaid;const residual=installmentResidual+extraResidual;const carryRows=yearId==="all"?[]:carryovers.filter(c=>c.unit_id===r.unitId);const carryover=carryRows.reduce((s,c)=>s+(c.kind==="Debito"?Math.abs(Number(c.balance||0)):-Math.abs(Number(c.balance||0))),0);return {...r,paid,residual,carryover,balance:cents(residual+carryover)}}).sort((a,b)=>a.unitCode.localeCompare(b.unitCode,"it"))
+function cents(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function allocationKey(ledgerEntryId, unitId) {
+  return ledgerEntryId && unitId ? String(ledgerEntryId) + "::" + String(unitId) : null;
+}
+
+export function calculateRendicontoUnitBalances({
+  allocations = [],
+  installments = [],
+  units = [],
+  members = [],
+  carryovers = [],
+  yearId = "all",
+}) {
+  const rowsByUnit = new Map();
+  const unitsById = new Map(units.map((unit) => [unit.id, unit]));
+  const allocationGroupsByUnit = new Map();
+  const allocationGroupsByKey = new Map();
+  const installmentCoverageByKey = new Map();
+  const standaloneInstallmentsByUnit = new Map();
+
+  const createRow = (unitId) => ({
+    unitId,
+    unitCode: unitsById.get(unitId)?.unit_code || "Unità non trovata",
+    allocated: 0,
+    installments: 0,
+    allocatedPaid: 0,
+    installmentPaid: 0,
+    paid: 0,
+    residual: 0,
+    carryover: 0,
+    balance: 0,
+  });
+  const getRow = (unitId) => {
+    if (!rowsByUnit.has(unitId)) rowsByUnit.set(unitId, createRow(unitId));
+    return rowsByUnit.get(unitId);
+  };
+
+  allocations.forEach((allocation, index) => {
+    if (!allocation.unit_id) return;
+    const row = getRow(allocation.unit_id);
+    const amount = Number(allocation.amount || 0);
+    const paidAmount = Number(allocation.paid_amount || 0);
+    row.allocated += amount;
+    row.allocatedPaid += paidAmount;
+
+    const linkedKey = allocationKey(allocation.ledger_entry_id, allocation.unit_id);
+    const groupKey = linkedKey || "unlinked:" + allocation.unit_id + ":" + (allocation.id ?? index);
+    const groups = allocationGroupsByUnit.get(allocation.unit_id) || new Map();
+    const group = groups.get(groupKey) || { key: linkedKey, amount: 0, paid: 0 };
+    group.amount += amount;
+    group.paid += paidAmount;
+    groups.set(groupKey, group);
+    allocationGroupsByUnit.set(allocation.unit_id, groups);
+    if (linkedKey) allocationGroupsByKey.set(linkedKey, group);
+  });
+
+  const addInstallment = (unitId, amount, paidAmount, ledgerEntryId) => {
+    if (!unitId) return;
+    const row = getRow(unitId);
+    const installmentAmount = Number(amount || 0);
+    const installmentPaid = Number(paidAmount || 0);
+    row.installments += installmentAmount;
+    row.installmentPaid += installmentPaid;
+    const key = allocationKey(ledgerEntryId, unitId);
+    if (key && allocationGroupsByKey.has(key)) {
+      const coverage = installmentCoverageByKey.get(key) || { amount: 0, paid: 0 };
+      coverage.amount += installmentAmount;
+      coverage.paid += installmentPaid;
+      installmentCoverageByKey.set(key, coverage);
+    } else {
+      const standalone = standaloneInstallmentsByUnit.get(unitId) || { amount: 0, paid: 0 };
+      standalone.amount += installmentAmount;
+      standalone.paid += installmentPaid;
+      standaloneInstallmentsByUnit.set(unitId, standalone);
+    }
+  };
+
+  for (const installment of installments) {
+    if (installment.unit_id) {
+      addInstallment(installment.unit_id, installment.amount, installment.paid_amount, installment.ledger_entry_id);
+      continue;
+    }
+    if (!installment.member_id || !installment.ledger_entry_id) continue;
+    const ownerUnitIds = [...new Set(members
+      .filter((member) => member.id === installment.member_id && member.active && member.unit_id)
+      .map((member) => member.unit_id))];
+    if (!ownerUnitIds.length) continue;
+    const ownerAllocations = allocations
+      .filter((allocation) => allocation.ledger_entry_id === installment.ledger_entry_id && ownerUnitIds.includes(allocation.unit_id))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const allocationTotal = ownerAllocations.reduce((sum, allocation) => sum + Number(allocation.amount || 0), 0);
+    if (allocationTotal <= 0) continue;
+    let allocatedAmount = 0;
+    let allocatedPaid = 0;
+    ownerAllocations.forEach((allocation, index) => {
+      const isLast = index === ownerAllocations.length - 1;
+      const amount = isLast
+        ? cents(Number(installment.amount || 0) - allocatedAmount)
+        : cents(Number(installment.amount || 0) * Number(allocation.amount || 0) / allocationTotal);
+      const paid = isLast
+        ? cents(Number(installment.paid_amount || 0) - allocatedPaid)
+        : cents(Number(installment.paid_amount || 0) * Number(allocation.amount || 0) / allocationTotal);
+      allocatedAmount += amount;
+      allocatedPaid += paid;
+      addInstallment(allocation.unit_id, amount, paid, installment.ledger_entry_id);
+    });
+  }
+
+  for (const carryover of (yearId === "all" ? [] : carryovers)) {
+    if (carryover.unit_id) getRow(carryover.unit_id);
+  }
+
+  return Array.from(rowsByUnit.values()).map((row) => {
+    let paid = 0;
+    let residual = 0;
+    for (const group of allocationGroupsByUnit.get(row.unitId)?.values() || []) {
+      const coverage = group.key ? installmentCoverageByKey.get(group.key) || { amount: 0, paid: 0 } : { amount: 0, paid: 0 };
+      const allocationAmount = Math.max(0, group.amount);
+      const coveredAmount = Math.min(allocationAmount, Math.max(0, coverage.amount));
+      const coveredPaid = Math.min(coveredAmount, Math.max(0, coverage.paid));
+      const uncoveredAmount = Math.max(0, allocationAmount - coveredAmount);
+      const uncoveredPaid = Math.min(uncoveredAmount, Math.max(0, group.paid - coveredPaid));
+      paid += coveredPaid + uncoveredPaid;
+      residual += Math.max(0, allocationAmount - coveredPaid - uncoveredPaid);
+    }
+    const standalone = standaloneInstallmentsByUnit.get(row.unitId) || { amount: 0, paid: 0 };
+    const standaloneAmount = Math.max(0, standalone.amount);
+    const standalonePaid = Math.min(standaloneAmount, Math.max(0, standalone.paid));
+    paid += standalonePaid;
+    residual += Math.max(0, standaloneAmount - standalonePaid);
+    const unitCarryovers = yearId === "all" ? [] : carryovers.filter((carryover) => carryover.unit_id === row.unitId);
+    const carryover = unitCarryovers.reduce((sum, item) => sum + (item.kind === "Debito"
+      ? Math.abs(Number(item.balance || 0))
+      : -Math.abs(Number(item.balance || 0))), 0);
+    return {
+      ...row,
+      paid,
+      residual,
+      carryover,
+      balance: cents(residual + carryover),
+    };
+  }).sort((a, b) => a.unitCode.localeCompare(b.unitCode, "it"));
 }

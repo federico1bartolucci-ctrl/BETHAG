@@ -98,3 +98,28 @@ const multiplePartialCoverage = calculateRendicontoUnitBalances({
 });
 assert.equal(multiplePartialCoverage[0].paid, 25);
 assert.equal(multiplePartialCoverage[0].residual, 75);
+
+// Regression: linked installments must not exceed the unit allocation in the unit report.
+// An over-scheduled linked plan previously reported residual 90 (120 scheduled - 30 paid)
+// for a 100 allocation; correct unpaid amount is 70.
+const overScheduled = calculateRendicontoUnitBalances({
+  allocations: [{ id: "a-over", ledger_entry_id: "over-ledger", unit_id: "u1", amount: 100, paid_amount: 30 }],
+  installments: [{ id: "i-over", ledger_entry_id: "over-ledger", unit_id: "u1", member_id: null, amount: 120, paid_amount: 30 }],
+  units: [{ id: "u1", unit_code: "A-1" }],
+});
+assert.equal(overScheduled[0].installments, 120, "raw scheduled total remains visible");
+assert.equal(overScheduled[0].paid, 30);
+assert.equal(overScheduled[0].residual, 70, "linked residual must be capped at the allocation residual");
+
+// A separate manual installment remains additive and must not be absorbed by the linked-plan cap.
+const overScheduledPlusManual = calculateRendicontoUnitBalances({
+  allocations: [{ id: "a-over", ledger_entry_id: "over-ledger", unit_id: "u1", amount: 100, paid_amount: 30 }],
+  installments: [
+    { id: "i-over", ledger_entry_id: "over-ledger", unit_id: "u1", member_id: null, amount: 120, paid_amount: 30 },
+    { id: "i-manual", ledger_entry_id: null, unit_id: "u1", member_id: null, amount: 20, paid_amount: 0 },
+  ],
+  units: [{ id: "u1", unit_code: "A-1" }],
+});
+assert.equal(overScheduledPlusManual[0].paid, 30);
+assert.equal(overScheduledPlusManual[0].residual, 90, "standalone manual installment must remain separate");
+console.log("Accounting rendiconto over-scheduled installment guard: PASS");
