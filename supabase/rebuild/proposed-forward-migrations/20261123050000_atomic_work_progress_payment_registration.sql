@@ -192,3 +192,73 @@ REVOKE ALL ON FUNCTION public.register_condominium_work_progress_payment(uuid,uu
 GRANT EXECUTE ON FUNCTION public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text) TO authenticated, service_role;
+
+-- Atomically create a SAL and synchronize the work progress percentage.
+-- Locks the parent work so concurrent SAL creation cannot exceed approved totals.
+CREATE OR REPLACE FUNCTION public.create_condominium_work_progress_atomic(
+  p_workspace_id uuid, p_condominium_id uuid, p_work_id uuid,
+  p_progress_no integer, p_progress_date date, p_title text, p_status text,
+  p_percentage numeric, p_amount numeric, p_paid_amount numeric, p_notes text DEFAULT ''
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_work record; v_total_amount numeric; v_total_percentage numeric;
+  v_progress_id uuid; v_updated integer;
+  v_amount numeric; v_paid numeric; v_percentage numeric;
+BEGIN
+  if p_workspace_id is null or p_condominium_id is null or p_work_id is null then
+    raise exception 'Workspace, condominio e intervento sono obbligatori';
+  end if;
+  if p_progress_no is null or p_progress_no<1 then raise exception 'Numero SAL non valido'; end if;
+  if p_progress_date is null then raise exception 'Data SAL obbligatoria'; end if;
+  v_amount:=pg_catalog.round(coalesce(p_amount,0)::numeric,2);
+  v_paid:=pg_catalog.round(coalesce(p_paid_amount,0)::numeric,2);
+  v_percentage:=pg_catalog.least(100,pg_catalog.greatest(0,coalesce(p_percentage,0)));
+  if coalesce(p_amount,0)<>v_amount or coalesce(p_paid_amount,0)<>v_paid then
+    raise exception 'Gli importi devono essere espressi in centesimi';
+  end if;
+  if v_amount<0 or v_paid<0 or v_paid>v_amount+0.005 then
+    raise exception 'Importi SAL non validi';
+  end if;
+  select id,approved_amount into v_work
+  from public.condominium_works
+  where id=p_work_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id
+  for update;
+  if not found then raise exception 'Intervento non trovato nel workspace/condominio indicato'; end if;
+  if exists(select 1 from public.condominium_work_progress
+    where workspace_id=p_workspace_id and condominium_id=p_condominium_id
+      and work_id=p_work_id and progress_no=p_progress_no) then
+    raise exception 'Esiste già un SAL con questo numero per l''intervento';
+  end if;
+  select pg_catalog.round(coalesce(sum(amount),0)::numeric,2),
+         pg_catalog.least(100,pg_catalog.round(coalesce(sum(percentage),0)::numeric,2))
+    into v_total_amount,v_total_percentage
+  from public.condominium_work_progress
+  where workspace_id=p_workspace_id and condominium_id=p_condominium_id and work_id=p_work_id;
+  v_total_amount:=v_total_amount+v_amount;
+  if v_work.approved_amount>0 and v_total_amount>v_work.approved_amount+0.005 then
+    raise exception 'Il totale dei SAL supera l''importo approvato del lavoro';
+  end if;
+  v_total_percentage:=pg_catalog.least(100,v_total_percentage+v_percentage);
+  insert into public.condominium_work_progress(
+    workspace_id,condominium_id,work_id,progress_no,progress_date,title,status,
+    percentage,amount,paid_amount,notes
+  ) values (
+    p_workspace_id,p_condominium_id,p_work_id,p_progress_no,p_progress_date,
+    coalesce(nullif(pg_catalog.btrim(p_title),''),'SAL '||p_progress_no),
+    p_status,v_percentage,v_amount,v_paid,coalesce(p_notes,'')
+  ) returning id into v_progress_id;
+  update public.condominium_works
+  set progress_percent=v_total_percentage
+  where id=p_work_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id;
+  get diagnostics v_updated=row_count;
+  if v_updated<>1 then raise exception 'Intervento non aggiornato; creazione SAL annullata'; end if;
+  return v_progress_id;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.create_condominium_work_progress_atomic(uuid,uuid,uuid,integer,date,text,text,numeric,numeric,numeric,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_condominium_work_progress_atomic(uuid,uuid,uuid,integer,date,text,text,numeric,numeric,numeric,text) TO authenticated, service_role;
