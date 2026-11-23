@@ -485,7 +485,7 @@ async function syncBackendStateNow(
     if (selectedSupplierIds.length) {
       const { data: condominiumSuppliers, error: condominiumSuppliersError } =
         await loadWorkspacePaginatedRows(supabase, "condominium_suppliers", workspaceId, {
-          select: "id,condominium_id,business_name,data",
+          select: "id,condominium_id,business_name,data,created_at",
           orderBy: "created_at",
         });
       if (condominiumSuppliersError) throw condominiumSuppliersError;
