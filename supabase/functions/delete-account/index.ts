@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@^1";
+import { loadActiveAdminMemberships } from "./admin-membership-pagination.mjs";
 
 export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
@@ -49,15 +50,11 @@ export default {
       }
     }
 
-    const { data: adminMemberships, error: membershipError } = await ctx.supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .eq("active", true);
+    const { data: adminMemberships, error: adminMembershipsError } =
+      await loadActiveAdminMemberships(ctx.supabase, userId);
 
-    if (membershipError) {
-      return Response.json({ error: membershipError.message }, { status: 500 });
+    if (adminMembershipsError) {
+      return Response.json({ error: adminMembershipsError.message }, { status: 500 });
     }
 
     for (const membership of adminMemberships ?? []) {
