@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import ts from "typescript";
+import * as ts from "typescript";
 const source = fs.readFileSync("src/main.tsx", "utf8");
 const start = source.indexOf("function bethagInstallGlobalFieldRules()");
 assert.notEqual(start, -1, "global field rules helper exists");
