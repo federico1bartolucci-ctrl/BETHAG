@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
 import { sendEmailMethodResponse } from "../_shared/send-email-method-response.mjs";
+import { buildEmailPersistenceWarning, persistEmailStatusUpdate, recordEmailPersistenceFailure } from "../_shared/email-status-persistence.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,8 +87,8 @@ Deno.serve(async (req: Request) => {
       return json({ success: true, idempotent: true, recipientCount: count ?? 0, prepared });
     }
 
-    let sent = 0, failed = 0, persistenceFailures = 0;
-    const persistenceFailureDetails: string[] = [];
+    let sent = 0, failed = 0;
+    const persistenceState = { persistenceFailures: 0, persistenceFailureDetails: [] as string[] };
     for (const recipient of recipients) {
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -101,65 +102,62 @@ Deno.serve(async (req: Request) => {
         const resendData = await resendResponse.json();
         if (!resendResponse.ok) {
           failed++;
-          const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
-            status: "failed", queued_at: null,
-            error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
-          }).eq("id", recipient.id);
-          if (recipientStatusError) {
-            persistenceFailures++;
-            persistenceFailureDetails.push(`recipient ${recipient.id}: ${recipientStatusError.message}`);
-            console.error("BETHAG recipient failure status persistence error", recipient.id, recipientStatusError);
-          }
+          const statusWrite = await persistEmailStatusUpdate(
+            persistenceState,
+            `recipient ${recipient.id} failure status`,
+            () => supabase.from("communication_recipients").update({
+              status: "failed", queued_at: null,
+              error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
+            }).eq("id", recipient.id),
+          );
+          if (statusWrite.error) console.error("BETHAG recipient failure status persistence error", recipient.id, statusWrite.error);
           continue;
         }
         sent++;
-        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
-          status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
-          sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq("id", recipient.id);
-        if (recipientStatusError) {
-          persistenceFailures++;
-          persistenceFailureDetails.push(`recipient ${recipient.id}: ${recipientStatusError.message}`);
-          console.error("BETHAG recipient sent status persistence error", recipient.id, recipientStatusError);
-        }
+        const statusWrite = await persistEmailStatusUpdate(
+          persistenceState,
+          `recipient ${recipient.id} sent status`,
+          () => supabase.from("communication_recipients").update({
+            status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
+            sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq("id", recipient.id),
+        );
+        if (statusWrite.error) console.error("BETHAG recipient sent status persistence error", recipient.id, statusWrite.error);
       } catch (error) {
         failed++;
-        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
-          status: "failed", queued_at: null,
-          error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
-        }).eq("id", recipient.id);
-        if (recipientStatusError) {
-          persistenceFailures++;
-          persistenceFailureDetails.push(`recipient ${recipient.id}: ${recipientStatusError.message}`);
-          console.error("BETHAG recipient network-failure status persistence error", recipient.id, recipientStatusError);
-        }
+        const statusWrite = await persistEmailStatusUpdate(
+          persistenceState,
+          `recipient ${recipient.id} network failure status`,
+          () => supabase.from("communication_recipients").update({
+            status: "failed", queued_at: null,
+            error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
+          }).eq("id", recipient.id),
+        );
+        if (statusWrite.error) console.error("BETHAG recipient network-failure status persistence error", recipient.id, statusWrite.error);
       }
     }
 
     const { count: remaining, error: remainingError } = await supabase.from("communication_recipients")
       .select("id", { count: "exact", head: true }).eq("communication_id", communication.id).in("status", ["pending","queued"]);
     if (remainingError) {
-      persistenceFailures++;
-      persistenceFailureDetails.push(`remaining recipients query: ${remainingError.message}`);
+      recordEmailPersistenceFailure(persistenceState, "remaining recipients query", remainingError);
       console.error("BETHAG remaining recipient query error", remainingError);
     }
     const status = failed === 0 && !remainingError && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
-    const { error: communicationStatusError } = await supabase.from("communications").update({
-      email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    }).eq("id", communication.id);
-    if (communicationStatusError) {
-      persistenceFailures++;
-      persistenceFailureDetails.push(`communication status: ${communicationStatusError.message}`);
-      console.error("BETHAG communication status persistence error", communicationStatusError);
-    }
+    const communicationStatusWrite = await persistEmailStatusUpdate(
+      persistenceState,
+      "communication status",
+      () => supabase.from("communications").update({
+        email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("id", communication.id),
+    );
+    if (communicationStatusWrite.error) console.error("BETHAG communication status persistence error", communicationStatusWrite.error);
 
     return json({
       success: true, sent, failed, remaining: remaining ?? 0, status,
-      persistenceFailures,
-      persistenceWarning: persistenceFailures > 0
-        ? "L'invio è stato elaborato, ma alcuni stati non sono stati salvati. I messaggi inviati non devono essere reinviati manualmente senza verifica."
-        : null,
-      persistenceFailureDetails: persistenceFailureDetails.length ? persistenceFailureDetails : undefined,
+      persistenceFailures: persistenceState.persistenceFailures,
+      persistenceWarning: buildEmailPersistenceWarning(persistenceState),
+      persistenceFailureDetails: persistenceState.persistenceFailureDetails.length ? persistenceState.persistenceFailureDetails : undefined,
     });
   } catch (error) {
     console.error("BETHAG send-email error", error);
