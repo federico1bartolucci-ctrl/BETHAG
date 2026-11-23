@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadCondominiumUnitRows } from "./condominiumUnitRows";
 import { uploadFilesWithRollback } from "./documentStorageUpload";
 
 export type BackendState = Record<string, any[]>;
@@ -950,12 +951,11 @@ export async function saveCondominiumUnit(workspaceId: string, item: any) {
     // Il vincolo di unicità dell'unità è normalizzato su lower(trim(unit_code)).
     // Non usiamo quindi un upsert con conflict target testuale: Postgres non
     // può inferire un indice espresso da (condominium_id, unit_code).
-    const { data: existingUnits, error: existingUnitError } = await supabase
-      .from("condominium_units")
-      .select("id, unit_code, building_code, lifecycle_status")
-      .eq("condominium_id", condominium.id);
-
-    if (existingUnitError) throw existingUnitError;
+    const existingUnits = await loadCondominiumUnitRows(
+      supabase,
+      condominium.id,
+      "id, unit_code, building_code, lifecycle_status"
+    );
 
     const normalizedUnitCode = unitCode.toLowerCase();
     // In modifica l'ID DB dell'unità è la fonte di verità: il codice può
@@ -1085,12 +1085,11 @@ export async function saveCondominiumMember(
       // Quando associamo una persona non dobbiamo mai sovrascrivere il JSON
       // dell'unità con il solo unitCode: altrimenti un semplice salvataggio
       // anagrafico potrebbe cancellare millesimi, proprietari e pertinenze.
-      const { data: existingUnits, error: existingUnitError } = await supabase
-        .from("condominium_units")
-        .select("id, unit_code, data")
-        .eq("condominium_id", condominium.id);
-
-      if (existingUnitError) throw existingUnitError;
+      const existingUnits = await loadCondominiumUnitRows(
+        supabase,
+        condominium.id,
+        "id, unit_code, data"
+      );
 
       const normalizedApartment = apartment.toLowerCase();
       const existingUnit = (existingUnits ?? []).find(
@@ -2134,13 +2133,12 @@ export async function deleteCondominiumMember(
     // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
     // di tutte le unità del medesimo condominio. I millesimi restano
     // esclusivamente nell'oggetto unità e non vengono mai modificati.
-    const { data: condominiumUnits, error: unitsError } = await supabase
-      .from("condominium_units")
-      .select("id, data")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id);
-
-    if (unitsError) throw unitsError;
+    const condominiumUnits = await loadCondominiumUnitRows(
+      supabase,
+      condominium.id,
+      "id, data",
+      workspaceId
+    );
 
     for (const unit of condominiumUnits ?? []) {
       const currentData =
