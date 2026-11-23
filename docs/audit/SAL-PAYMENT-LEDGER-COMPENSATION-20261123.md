@@ -7,6 +7,7 @@ Both SAL payment flows inserted a paid ledger entry and then updated the SAL rec
 - When the SAL update/link fails, delete the just-created ledger entry as compensation.
 - In the payment form flow, when work-event logging fails, restore the SAL's prior paid amount/payment-entry reference and delete the inserted ledger entry.
 - Every compensating write is workspace scoped.
+- Apply optimistic concurrency checks to the SAL before changing cumulative paid amount or linking a ledger entry, preventing concurrent payment attempts from silently overwriting each other.
 - If rollback itself fails, report both the original error and rollback failure explicitly.
 
 ## Regression
