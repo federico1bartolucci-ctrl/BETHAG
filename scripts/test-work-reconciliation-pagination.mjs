@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { loadCondominiumWorkReconciliationRows } from "../src/lib/workReconciliationPagination.mjs";
 
 const DEFAULT_LIMIT = 1000;
-function createMockClient(rowsByTable, { failTable = null, failRangeStart = null } = {}) {
+function createMockClient(rowsByTable, { failTable = null, failPage = null } = {}) {
   const calls = [];
+  const requestCounts = new Map();
   const client = {
     from(table) {
       const state = { table, columns: null, eqFilters: [], inFilters: [], orders: [], cursor: null, range: null };
@@ -14,7 +15,7 @@ function createMockClient(rowsByTable, { failTable = null, failRangeStart = null
         in(column, values) { state.inFilters.push([column, values.slice()]); return query; },
         order(column, options) { state.orders.push([column, options]); return query; },
         gt(column, value) { state.cursor = [column, value]; return query; },
-        range(from, to) { state.range = [from, to]; calls.push({ ...state, eqFilters: state.eqFilters.slice(), inFilters: state.inFilters.slice(), orders: state.orders.slice() }); return query; },
+        range(from, to) { state.range = [from, to]; state.pageNumber = (requestCounts.get(table) ?? 0) + 1; requestCounts.set(table, state.pageNumber); calls.push({ ...state, eqFilters: state.eqFilters.slice(), inFilters: state.inFilters.slice(), orders: state.orders.slice() }); return query; },
         then(resolve, reject) {
           let filtered = (rowsByTable[table] ?? []).filter((row) =>
             state.eqFilters.every(([column, value]) => row[column] === value) &&
@@ -32,7 +33,7 @@ function createMockClient(rowsByTable, { failTable = null, failRangeStart = null
           });
           const [from, to] = state.range ?? [0, DEFAULT_LIMIT - 1];
           const page = filtered.slice(from, to + 1);
-          const error = state.range && table === failTable && state.range[0] === failRangeStart
+          const error = state.range && table === failTable && state.pageNumber === failPage
             ? new Error("simulated later-page failure")
             : null;
           return Promise.resolve({ data: error ? null : page, error }).then(resolve, reject);
@@ -134,7 +135,7 @@ ledgerRows.push({ id: "ledger-incoming-0001", workspace_id: workspaceId, condomi
 
 // A later-page failure must abort instead of returning a truncated reconciliation result.
 {
-  const { client, calls } = createMockClient({ condominium_work_progress: Array.from({ length: 1001 }, (_, i) => ({ id: id("progress-", i), workspace_id: workspaceId, work_id: workId, progress_no: i + 1, amount: 1 })) }, { failTable: "condominium_work_progress", failRangeStart: 200 });
+  const { client, calls } = createMockClient({ condominium_work_progress: Array.from({ length: 1001 }, (_, i) => ({ id: id("progress-", i), workspace_id: workspaceId, work_id: workId, progress_no: i + 1, amount: 1 })) }, { failTable: "condominium_work_progress", failPage: 2 });
   await assert.rejects(loadCondominiumWorkReconciliationRows(client, "condominium_work_progress", workspaceId, { workId, pageSize: 200 }), /simulated later-page failure/);
   assert.equal(calls.filter((call) => call.table === "condominium_work_progress").length, 2);
 }
