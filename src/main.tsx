@@ -2034,7 +2034,7 @@ function bethagInstallGlobalFieldRules() {
     }
     if (isCap) { input.maxLength = 5; input.inputMode = "numeric"; }
 
-    if (numeric) input.inputMode = "decimal";
+    if (numeric && !isCap) input.inputMode = "decimal";
 
     if (value !== input.value) bethagSetNativeInputValue(input, value);
 
