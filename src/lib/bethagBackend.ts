@@ -803,11 +803,12 @@ async function syncBackendStateNow(
   // portal_access and workspace_members. Preserve the server identity unless
   // the local model explicitly supplies a replacement.
   if (memberRows.length) {
-    const memberCondominiumIds = Array.from(new Set(memberRows.map((row: any) => row.condominium_id)));
-    const { data: existingMemberLinks, error: existingMemberLinksError } = await supabase
-      .from("condominium_members")
-      .select("condominium_id,legacy_id,user_id")
-      .in("condominium_id", memberCondominiumIds);
+    const { data: existingMemberLinks, error: existingMemberLinksError } =
+      await loadWorkspacePaginatedRows(supabase, "condominium_members", workspaceId, {
+        select: "id,condominium_id,legacy_id,user_id,created_at,condominiums!inner(workspace_id)",
+        orderBy: "created_at",
+        workspaceColumn: "condominiums.workspace_id",
+      });
     if (existingMemberLinksError) throw existingMemberLinksError;
     const existingUserByLegacyKey = new Map(
       (existingMemberLinks ?? []).map((row: any) => [
@@ -827,11 +828,12 @@ async function syncBackendStateNow(
 
   const memberRowsByLegacyKey = new Map<string, any>();
   if (memberRows.length) {
-    const memberCondominiumIds = Array.from(new Set(memberRows.map((row: any) => row.condominium_id)));
-    const { data: persistedMembers, error: persistedMembersError } = await supabase
-      .from("condominium_members")
-      .select("id, condominium_id, legacy_id")
-      .in("condominium_id", memberCondominiumIds);
+    const { data: persistedMembers, error: persistedMembersError } =
+      await loadWorkspacePaginatedRows(supabase, "condominium_members", workspaceId, {
+        select: "id,condominium_id,legacy_id,created_at,condominiums!inner(workspace_id)",
+        orderBy: "created_at",
+        workspaceColumn: "condominiums.workspace_id",
+      });
     if (persistedMembersError) throw persistedMembersError;
     (persistedMembers ?? []).forEach((member: any) => {
       memberRowsByLegacyKey.set(`${member.condominium_id}::${member.legacy_id}`, member);
