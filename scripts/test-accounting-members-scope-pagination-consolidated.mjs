@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { loadAccountingCondominiumMembers } from "../src/lib/accountingCondominiumMembers.mjs";
+const accountingSource = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
+const errorCheckStart = accountingSource.indexOf("for (const result of [");
+const errorCheckEnd = accountingSource.indexOf("]) {", errorCheckStart);
+assert.ok(errorCheckStart >= 0 && errorCheckEnd > errorCheckStart, "Accounting load results error guard must exist");
+assert.ok(accountingSource.slice(errorCheckStart, errorCheckEnd).includes("allocationIntakesResult"), "allocation intake hydration errors must be propagated");
 function mockClient(records, failOffset = null) {
   const requests = [];
   const client = { from(table) {
