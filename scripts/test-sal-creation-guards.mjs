@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const start = source.indexOf("async function saveProgress(");
+assert.notEqual(start, -1, "saveProgress handler must exist");
+const end = source.indexOf("async function saveWorkExpense(", start);
+assert.notEqual(end, -1, "saveWorkExpense must delimit saveProgress");
+const handler = source.slice(start, end);
+const validation = handler.indexOf("cumulativeAmount>approved+0.005");
+const insert = handler.indexOf('.from("condominium_work_progress").insert(');
+assert.ok(validation >= 0 && insert >= 0 && validation < insert, "approved SAL cumulative amount must be validated before insert to avoid orphan invalid SAL rows");
+assert.match(handler, /const \{error:workUpdateError\}=await supabase\.from\("condominium_works"\)\.update\(/, "work progress update error must be checked");
+assert.match(handler, /if\(workUpdateError\)throw workUpdateError/, "failed work progress update must surface as an error");
+console.log("PASS SAL creation guard: cumulative validation precedes insert and work progress update errors are checked.");
