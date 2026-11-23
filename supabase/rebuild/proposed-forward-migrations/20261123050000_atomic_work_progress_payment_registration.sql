@@ -215,6 +215,9 @@ BEGIN
   end if;
   if p_progress_no is null or p_progress_no<1 then raise exception 'Numero SAL non valido'; end if;
   if p_progress_date is null then raise exception 'Data SAL obbligatoria'; end if;
+  if p_status not in ('Presentato','Verificato','Approvato','Contestato') then
+    raise exception 'Stato SAL non valido: il pagamento deve essere registrato dalla procedura contabile';
+  end if;
   v_amount:=pg_catalog.round(coalesce(p_amount,0)::numeric,2);
   v_paid:=pg_catalog.round(coalesce(p_paid_amount,0)::numeric,2);
   v_percentage:=pg_catalog.least(100,pg_catalog.greatest(0,coalesce(p_percentage,0)));
