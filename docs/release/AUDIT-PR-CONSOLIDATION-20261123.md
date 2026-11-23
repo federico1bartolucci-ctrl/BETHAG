@@ -36,3 +36,14 @@ Document a dependency-aware integration path for the currently reviewed audit PR
 - No Production migration execution.
 - No QA reset or destructive test-data operation.
 - No marking any PR closed/complete without evidence.
+
+
+## Critical finding — PR #344 SAL payment is not yet proven atomic
+
+Review of the exact `src/RegisterPage.tsx` patch shows `registerProgressPayment` still performs a direct insert into `condominium_ledger_entries`, followed by a separate update to `condominium_work_progress`. If the second request fails, the first ledger row can remain without the corresponding SAL update. The PR adds a proposed SQL RPC `register_condominium_work_progress_payment`, but the inspected frontend patch does not call that RPC. Therefore the new function alone does not close the client-side partial-write path.
+
+
+**Required remediation before accepting #344:** wire the frontend payment action to the atomic RPC (or another server-side transaction), verify the RPC grants/permissions and all validations, and add regression tests for both success and forced failure/rollback. Do not execute the proposed migration in Production during this audit.
+
+
+**Verification status:** patch-level review confirmed; runtime reproduction not performed because the local repository clone was blocked by DNS/network resolution. This is a concrete code-path risk, not a runtime-reproduced incident.
