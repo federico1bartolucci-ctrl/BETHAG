@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
+const start=source.indexOf("async function saveWorkDocuments()");
+assert.notEqual(start,-1,"saveWorkDocuments must exist");
+const end=source.indexOf("async function registerProgressPayment",start);
+assert.notEqual(end,-1,"next function boundary must exist");
+const fn=source.slice(start,end);
+assert.match(fn,/select\("workspace_id,condominium_id,work_id,document_id,title,notes"\)[\s\S]*?if\(previousLinksError\)throw previousLinksError;/,"must capture existing links before destructive replacement");
+assert.match(fn,/if\(insertError\)\{[\s\S]*?if\(previousLinks\?\.length\)\{[\s\S]*?\.insert\(previousLinks\)[\s\S]*?if\(restoreError\)throw new Error[\s\S]*?\}throw insertError;\}/,"must attempt to restore previous links if replacement insertion fails and surface rollback failure");
+assert.match(fn,/delete\(\)[\s\S]*?if\(deleteError\)throw deleteError[\s\S]*?\.insert\(rows\)/,"must abort if deleting existing links fails");
+console.log("PASS work-document replacement preserves and restores prior links after insert failure");
