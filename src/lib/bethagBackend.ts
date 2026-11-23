@@ -265,7 +265,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   const condominiumSupplierLegacyByDbId = new Map<string, number>();
   const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } =
     await loadWorkspacePaginatedRows(supabase, "condominium_suppliers", workspaceId, {
-      select: "id,condominium_id,business_name,data",
+      select: "id,condominium_id,business_name,data,created_at",
       orderBy: "created_at",
     });
   if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
@@ -483,10 +483,11 @@ async function syncBackendStateNow(
         .filter((id: number) => Number.isFinite(id) && id > 0)
     ));
     if (selectedSupplierIds.length) {
-      const { data: condominiumSuppliers, error: condominiumSuppliersError } = await supabase
-        .from("condominium_suppliers")
-        .select("id,condominium_id,business_name,data")
-        .eq("workspace_id", workspaceId);
+      const { data: condominiumSuppliers, error: condominiumSuppliersError } =
+        await loadWorkspacePaginatedRows(supabase, "condominium_suppliers", workspaceId, {
+          select: "id,condominium_id,business_name,data,created_at",
+          orderBy: "created_at",
+        });
       if (condominiumSuppliersError) throw condominiumSuppliersError;
 
       const normalizeSupplierName = (value: unknown) =>
