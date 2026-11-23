@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2053,18 +2054,19 @@ function bethagInstallGlobalFieldRules() {
         const requestedCap = value;
         const timer = window.setTimeout(async () => {
           try {
-            const response = await fetch("https://api.zippopotam.us/IT/" + encodeURIComponent(requestedCap));
-            if (!response.ok) return;
-            const data = await response.json();
-            const place = Array.isArray(data.places) ? data.places[0] : null;
-            if (!place) return;
-            if (!input.isConnected || input.value !== requestedCap || capLookupSequence.get(input) !== lookupSequence) return;
-            if (city && city.isConnected && city.value === cityValueAtRequest && place["place name"]) {
-              bethagSetNativeInputValue(city, bethagSentenceCase(String(place["place name"])));
-            }
-            if (province && province.isConnected && province.value === provinceValueAtRequest && place["state abbreviation"]) {
-              bethagSetNativeInputValue(province, String(place["state abbreviation"]).toLocaleUpperCase("it-IT").slice(0, 2));
-            }
+            await applyCapLookupResponse({
+              input,
+              city,
+              province,
+              requestedCap,
+              cityValueAtRequest,
+              provinceValueAtRequest,
+              lookupSequence,
+              getCurrentLookupSequence: () => capLookupSequence.get(input),
+              fetcher: fetch,
+              setNativeInputValue: bethagSetNativeInputValue,
+              sentenceCase: bethagSentenceCase,
+            });
           } catch {
             // Il CAP resta comunque utilizzabile anche se il servizio di lookup non risponde.
           }
