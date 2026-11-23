@@ -182,7 +182,9 @@ for (const table of paginatedTables) {
    "work progress reconciliation must use paginated workspace loading");
  assert.doesNotMatch(backend, /\.from\(["']condominium_work_progress["']\)\s*\.select\(["']work_id,amount["']\)\s*\.eq\(["']workspace_id["']\s*,\s*workspaceId\)\s*\.in\(["']work_id["']\s*,\s*workIds\)/,
    "work progress must not retain the capped one-shot .in query");
- assert.match(backend, /select:\s*["']id,condominium_id,business_name,data,created_at["']/,
+ assert.equal((backend.match(/select:\s*["']id,condominium_id,business_name,data,created_at["']/g) ?? []).length, 2,
+  "both supplier loaders must select the created_at pagination cursor");
+assert.match(backend, /select:\s*["']id,condominium_id,business_name,data,created_at["']/,
   "supplier pagination cursor column must be selected so cursor values are available");
 assert.match(backend, /loadWorkspacePaginatedRows\(supabase,\s*["']condominium_suppliers["']/,
   "supplier reconciliation must load the workspace supplier set with pagination");
