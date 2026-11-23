@@ -4,6 +4,26 @@ function validateOrderBy(orderBy) {
   }
 }
 
+function validateFilters(filters, workspaceColumn) {
+  if (filters == null) return [];
+  if (typeof filters !== "object" || Array.isArray(filters)) {
+    throw new Error("Filtri workspace non validi.");
+  }
+  const entries = Object.entries(filters);
+  for (const [column, value] of entries) {
+    validateOrderBy(column);
+    if (column === workspaceColumn) throw new Error("Filtro workspace duplicato.");
+    if (
+      value === null ||
+      (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") ||
+      (typeof value === "number" && !Number.isFinite(value))
+    ) {
+      throw new Error("Valore filtro workspace non valido.");
+    }
+  }
+  return entries;
+}
+
 function validateCursor(row, orderBy) {
   const id = row?.id;
   if ((typeof id !== "string" && typeof id !== "number") || !String(id).trim() || !/^[A-Za-z0-9_-]+$/.test(String(id))) {
@@ -16,11 +36,12 @@ function validateCursor(row, orderBy) {
   return { value: value ?? null, id: String(id) };
 }
 
-export async function loadWorkspacePaginatedRows(client, table, workspaceId, { select = "*", orderBy = "created_at", pageSize = 1000, workspaceColumn = "workspace_id" } = {}) {
+export async function loadWorkspacePaginatedRows(client, table, workspaceId, { select = "*", orderBy = "created_at", pageSize = 1000, workspaceColumn = "workspace_id", filters = {} } = {}) {
   if (!client || typeof client.from !== "function") throw new Error("Client Supabase non disponibile.");
   if (typeof workspaceId !== "string" || !workspaceId.trim()) throw new Error("Workspace non disponibile.");
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) throw new Error("Dimensione pagina non valida.");
   validateOrderBy(orderBy);
+  const filterEntries = validateFilters(filters, workspaceColumn);
 
   const rows = [];
   let cursor = null;
@@ -28,7 +49,9 @@ export async function loadWorkspacePaginatedRows(client, table, workspaceId, { s
     let query = client
       .from(table)
       .select(select)
-      .eq(workspaceColumn, workspaceId)
+      .eq(workspaceColumn, workspaceId);
+    for (const [column, value] of filterEntries) query = query.eq(column, value);
+    query = query
       .order(orderBy, { ascending: true, nullsFirst: false })
       .order("id", { ascending: true });
     if (cursor) {
