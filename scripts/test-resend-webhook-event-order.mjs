@@ -4,8 +4,15 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261123090000_guard_resend_webhook_status_event_order.sql";
 const migration = await readFile(migrationPath, "utf8");
+const baselineFunctionsPath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
+const baselineFunctions = await readFile(baselineFunctionsPath, "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 assert.match(packageJson.scripts.test, /test-resend-webhook-event-order\.mjs/, "Runtime regression must be wired into npm test.");
+
+const baselineFunctionStart = baselineFunctions.indexOf("CREATE OR REPLACE FUNCTION private.apply_resend_communication_event(");
+const baselineFunctionEnd = baselineFunctions.indexOf("$function$\n;", baselineFunctionStart);
+assert.ok(baselineFunctionStart >= 0 && baselineFunctionEnd > baselineFunctionStart, "Baseline webhook SQL function must be extracted for reproduction.");
+const baselineFunctionSql = baselineFunctions.slice(baselineFunctionStart, baselineFunctionEnd + 11);
 
 const db = new PGlite();
 try {
@@ -43,7 +50,46 @@ try {
       '00000000-0000-0000-0000-000000000001',
       'resident1@example.it', 'queued', 'msg-1', now()
     );
-    -- Existing delivery state must be backfilled before replay protection is enabled.
+  `);
+
+  // Run the actual baseline function first and prove that a delayed delivered event regresses a complaint.
+  await db.exec(baselineFunctionSql);
+  async function apply(messageId, eventId, eventType, email, eventAt) {
+    const result = await db.query(
+      "SELECT private.apply_resend_communication_event($1, $2, $3, $4, $5) AS result",
+      [messageId, eventId, eventType, email, eventAt],
+    );
+    return result.rows[0].result;
+  }
+  const baselineSent = await apply("msg-1", "evt-sent", "email.sent", "resident1@example.it", "2026-11-23T08:00:00Z");
+  assert.equal(baselineSent.status, "updated");
+  await apply("msg-1", "evt-delivered", "email.delivered", "resident1@example.it", "2026-11-23T08:02:00Z");
+  await apply("msg-1", "evt-complaint", "email.complained", "resident1@example.it", "2026-11-23T08:10:00Z");
+  await apply("msg-1", "evt-delivered", "email.delivered", "resident1@example.it", "2026-11-23T08:02:00Z");
+  const baselineRecipient = await db.query(
+    "SELECT status, error_message, provider_event_id FROM public.communication_recipients WHERE id = $1",
+    ["00000000-0000-0000-0000-000000000002"],
+  );
+  assert.equal(baselineRecipient.rows[0].status, "delivered", "Baseline defect reproduced: older delivered event overwrites the newer complaint.");
+  assert.equal(baselineRecipient.rows[0].error_message, "email.complained", "Baseline leaves contradictory complaint text behind.");
+  assert.equal(baselineRecipient.rows[0].provider_event_id, "evt-delivered");
+  const baselineCommunication = await db.query(
+    "SELECT email_status FROM public.communications WHERE id = $1",
+    ["00000000-0000-0000-0000-000000000001"],
+  );
+  assert.equal(baselineCommunication.rows[0].email_status, "Consegnata", "Baseline incorrectly reports delivery after replay.");
+  console.log("PASS baseline SQL reproduction: stale delivered replay overwrites complaint status and communication aggregate.");
+
+  // Reset the first recipient, add a pre-migration delivered row, then apply the proposed-forward fix.
+  await db.exec(`
+    UPDATE public.communication_recipients
+    SET status = 'queued', error_message = NULL, sent_at = NULL, delivered_at = NULL,
+        bounced_at = NULL, complained_at = NULL, updated_at = now(), event_type = NULL,
+        provider_event_id = NULL
+    WHERE id = '00000000-0000-0000-0000-000000000002';
+    UPDATE public.communications
+    SET email_status = 'In elaborazione', updated_at = now()
+    WHERE id = '00000000-0000-0000-0000-000000000001';
     INSERT INTO public.communication_recipients(
       id, communication_id, email, status, provider_message_id, delivered_at,
       event_type, provider_event_id, updated_at
@@ -56,13 +102,6 @@ try {
   `);
   await db.exec(migration);
 
-  async function apply(messageId, eventId, eventType, email, eventAt) {
-    const result = await db.query(
-      "SELECT private.apply_resend_communication_event($1, $2, $3, $4, $5) AS result",
-      [messageId, eventId, eventType, email, eventAt],
-    );
-    return result.rows[0].result;
-  }
   async function recipient(id) {
     const result = await db.query(
       "SELECT status, error_message, delivered_at, bounced_at, complained_at, provider_event_id, event_type, provider_status_event_at, provider_status_event_id FROM public.communication_recipients WHERE id = $1",
@@ -123,7 +162,7 @@ try {
   );
   assert.equal(communication.rows[0].email_status, "Parzialmente inviata");
 
-  console.log("PASS resend webhook status event order runtime: older delivered/bounced replays ignored after complaint; duplicates ignored; informational events do not advance status cursor; legacy outcome backfill verified.");
+  console.log("PASS proposed-forward SQL runtime: stale/duplicate status events ignored, informational events do not advance the status cursor, existing outcomes backfilled.");
 } finally {
   await db.close();
 }
