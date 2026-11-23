@@ -33,8 +33,10 @@ function makeClient(rows) {
               const compare = String(av ?? "").localeCompare(String(bv ?? ""));
               return compare || String(a.id).localeCompare(String(b.id));
             });
-            requests.push({ table, filters: state.filters.slice(), orderBy, from, to });
-            return Promise.resolve({ data: filtered.slice(from, to + 1), error: null });
+            requests.push({ table, filters: state.filters.slice(), orderBy, from, to, select: state.select });
+            const page = filtered.slice(from, to + 1);
+            const projected = state.select === "*" ? page : page.map(row => Object.fromEntries(state.select.split(",").map(column => [column, row[column]])));
+            return Promise.resolve({ data: projected, error: null });
           },
         };
         return query;
@@ -62,7 +64,7 @@ const manyRows = [
 const pagedClient = makeClient(manyRows);
 const result = await loadWorkspacePaginatedRows(pagedClient.client, "condominium_work_documents", workspace, { filters: { work_id: work }, select: "id,created_at", pageSize: 1000 });
 assert.equal(result.data.length, 1001, "all links for the selected work must be recovered over multiple pages");
-assert.ok(result.data.every(row => row.work_id === work), "no other work’s links may be included");
+assert.deepEqual(result.data.map(row => row.id), Array.from({ length: 1001 }, (_, i) => `link-${String(i).padStart(4, "0")}`), "only selected work links must be returned without duplicates");
 assert.equal(new Set(result.data.map(row => row.id)).size, 1001, "pagination must not duplicate links");
 assert.deepEqual(pagedClient.requests.map(r => [r.from, r.to]), [[0, 999], [0, 999]], "filtered work documents must paginate");
 assert.ok(pagedClient.requests.every(r => r.filters.some(([column, value]) => column === "work_id" && value === work)), "work filter must persist across every page");
