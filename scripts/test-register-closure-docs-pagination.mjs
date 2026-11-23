@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
 const start = source.indexOf("async function closeWork(");
-const end = source.indexOf("async function saveWork(e)", start);
+const end = source.indexOf("async function saveWork(", start);
 assert.ok(start >= 0 && end > start, "closeWork boundary must identify the actual function");
 const closeWork = source.slice(start, end);
 assert.ok(
