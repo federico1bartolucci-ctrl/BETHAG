@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const source = fs.readFileSync("src/main.tsx", "utf8");
+const start = source.indexOf("function bethagInstallGlobalFieldRules()");
+assert.notEqual(start, -1, "global field rules helper exists");
+const end = source.indexOf("\nfunction ", start + 10);
+const helper = source.slice(start, end > -1 ? end : undefined);
+assert.match(helper, /capLookupSequence\.get\(input\)/);
+assert.match(helper, /capLookupSequence\.set\(input, lookupSequence\)/);
+assert.match(helper, /input\.value !== requestedCap/);
+assert.match(helper, /capLookupSequence\.get\(input\) !== lookupSequence/);
+assert.match(helper, /city\.value === cityValueAtRequest/);
+assert.match(helper, /province\.value === provinceValueAtRequest/);
+assert.match(helper, /input\.isConnected/);
+console.log("CAP async stale-response regression guard: PASS");
