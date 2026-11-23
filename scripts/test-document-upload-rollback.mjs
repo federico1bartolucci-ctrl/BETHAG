@@ -65,14 +65,14 @@ const files = [
   assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf"]);
 }
 
-// Thrown upload/transport errors also trigger compensating cleanup.
+// A thrown transport error is ambiguous: the server may have stored the attempted file before the response was lost.
 {
   const { storage, calls } = createMockStorage({ throwAt: 2 });
   await assert.rejects(
     uploadFilesWithRollback(storage, "bethag-documents", files, (file) => "workspace/" + file.name),
     /network failure 2/
   );
-  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf"]);
+  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf", "workspace/second.bin"]);
 }
 
 // Storage remove accepts up to 1,000 paths per request; rollback batches larger upload sets.
@@ -120,4 +120,4 @@ const files = [
   assert.match(condominiumUpload, /const pathPrefix = workspaceId/);
 }
 
-console.log("PASS document upload rollback runtime: successful metadata, partial-failure cleanup, cleanup error paths, thrown upload errors, 1000-path batching, empty input, and production wrapper wiring.");
+console.log("PASS document upload rollback runtime: successful metadata, partial-failure cleanup, cleanup error paths, ambiguous transport failures with attempted-path cleanup, 1000-path batching, empty input, and production wrapper wiring.");
