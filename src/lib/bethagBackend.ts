@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";\nimport { parseInvoiceAmount } from "./invoiceAmount.mjs";
+import { supabase } from "./supabase";
+import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -1505,7 +1506,11 @@ export function syncBackendState(
   });
 }
 
-function parseBethagAmount(value: unknown): number {\n  return parseInvoiceAmount(value);\n}\n\nfunction parseBethagDate(value: unknown): string {
+function parseBethagAmount(value: unknown): number {
+  return parseInvoiceAmount(value);
+}
+
+function parseBethagDate(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (!raw) return new Date().toISOString().slice(0, 10);
   const match = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})$/);
