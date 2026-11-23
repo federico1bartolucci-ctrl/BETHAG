@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import * as ts from "typescript";
+import { createRequire } from "node:module";
+const ts = createRequire(import.meta.url)("typescript");
 const source = fs.readFileSync("src/main.tsx", "utf8");
 const start = source.indexOf("function bethagInstallGlobalFieldRules()");
 assert.notEqual(start, -1, "global field rules helper exists");
@@ -36,11 +37,11 @@ console.log("CAP async stale-response regression guard: PASS");
 
 // Execute the actual global field-rules function extracted from main.tsx in a
 // lightweight DOM harness. The fetch responses are controlled to exercise races.
-const sourceFile = ts.createSourceFile("src/main.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const sourceFile = ts.createSourceFile("src/main.tsx", source, 99, true, 4);
 const actualHelperNode = sourceFile.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "bethagInstallGlobalFieldRules");
 assert.ok(actualHelperNode, "actual global field-rules function is extractable");
 const compiledHelper = ts.transpileModule(actualHelperNode.getText(sourceFile), {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+  compilerOptions: { target: 9, module: 0 },
 }).outputText;
 
 class MockInput {
