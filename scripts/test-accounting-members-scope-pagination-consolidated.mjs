@@ -40,3 +40,42 @@ await assert.rejects(loadAccountingCondominiumMembers(failed.client,"ws-a"),/pag
 await assert.rejects(loadAccountingCondominiumMembers(scoped.client,""),/Workspace non disponibile/);
 await assert.rejects(loadAccountingCondominiumMembers(null,"ws-a"),/Client Supabase non disponibile/);
 console.log("Accounting condominium member workspace scope + pagination: PASS");
+
+// Fail closed when a successful query returns malformed pagination data.
+// The old loader silently converted data:null/error:null into an empty member list
+// and threw an opaque TypeError for non-array objects; oversized/duplicate/foreign
+// rows could also be accepted without validation.
+function malformedPageClient(data) {
+  const calls = [];
+  const client = { from(table) {
+    const query = {
+      select() { return query; },
+      eq() { return query; },
+      order() { return query; },
+      range(from, to) {
+        calls.push({ table, from, to });
+        return Promise.resolve({ data, error: null });
+      },
+    };
+    return query;
+  }};
+  return { client, calls };
+}
+const validMalformedTestRow = { id: "member-1", created_at: "2026-01-01", condominiums: { workspace_id: "ws-a" } };
+const malformedPages = [
+  ["null-data", null],
+  ["object-data", { id: "member-1" }],
+  ["oversized-page", Array.from({ length: 1001 }, (_, i) => ({ id: "member-" + i, condominiums: { workspace_id: "ws-a" } }))],
+  ["duplicate-id", [validMalformedTestRow, { ...validMalformedTestRow }]],
+  ["foreign-workspace", [{ ...validMalformedTestRow, condominiums: { workspace_id: "ws-b" } }]],
+];
+for (const [scenario, page] of malformedPages) {
+  const malformed = malformedPageClient(page);
+  await assert.rejects(
+    loadAccountingCondominiumMembers(malformed.client, "ws-a"),
+    /invalid page/i,
+    scenario + " must be rejected",
+  );
+  assert.equal(malformed.calls.length, 1, scenario + " must fail before requesting another page");
+}
+console.log("Accounting member pagination malformed-response runtime guard: PASS");
