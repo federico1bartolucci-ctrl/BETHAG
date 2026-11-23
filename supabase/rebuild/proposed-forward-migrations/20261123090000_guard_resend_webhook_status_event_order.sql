@@ -66,7 +66,24 @@ BEGIN
     END IF;
 
     IF v_row.provider_status_event_at IS NOT NULL
-       AND v_event_at < v_row.provider_status_event_at THEN
+       AND (
+         v_event_at < v_row.provider_status_event_at
+         OR (
+           v_event_at = v_row.provider_status_event_at
+           AND CASE v_row.status
+             WHEN 'failed' THEN 3
+             WHEN 'delivered' THEN 2
+             WHEN 'sent' THEN 1
+             ELSE 0
+           END >= CASE p_event_type
+             WHEN 'email.complained' THEN 3
+             WHEN 'email.bounced' THEN 3
+             WHEN 'email.delivered' THEN 2
+             WHEN 'email.sent' THEN 1
+             ELSE 0
+           END
+         )
+       ) THEN
       RETURN jsonb_build_object(
         'status', 'ignored',
         'reason', 'stale_status_event',
