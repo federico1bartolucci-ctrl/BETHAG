@@ -8,7 +8,7 @@ assert.notEqual(end, -1, "saveProgress boundary exists");
 const fn = source.slice(start, end);
 const insertAt = fn.indexOf(".from(\"condominium_work_progress\").insert(");
 assert.notEqual(insertAt, -1, "SAL insert exists");
-assert.ok(fn.indexOf("cumulativeAmount") < 0, "post-insert cumulative validation removed");
+assert.ok(fn.indexOf("cumulativeAmount") >= 0, "cumulative SAL budget validation must exist");
 assert.ok(fn.indexOf("cumulativeAmount") < 0 || fn.indexOf("cumulativeAmount") < insertAt, "budget validation must precede insert");
 assert.ok(fn.indexOf("paidAmount>amount+0.005") < insertAt, "paid amount validation must precede insert");
 assert.ok(fn.indexOf("const {error:ue}") > insertAt, "work progress update error must be checked after insert");
