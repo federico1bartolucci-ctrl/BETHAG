@@ -159,6 +159,24 @@ async function loadAccountingAllocationIntakes(workspaceId: string) {
   }
 }
 
+async function loadAccountingBudgets(workspaceId: string) {
+  const pageSize = 1000;
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await supabase
+      .from("condominium_budgets")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("category", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) return { data: rows, error: null };
+  }
+}
+
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
@@ -688,11 +706,7 @@ function AccountingPage({
             .eq("workspace_id", workspaceId)
             .order("priority", { ascending:false }),
           loadAccountingInstallments(workspaceId),
-          supabase
-            .from("condominium_budgets")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("category"),
+          loadAccountingBudgets(workspaceId),
           supabase
             .from("condominium_fiscal_carryovers")
             .select("*")

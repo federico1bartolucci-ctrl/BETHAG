@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/AccountingPage.tsx","utf8");
+const packageJson=JSON.parse(await readFile("package.json","utf8"));
+assert.match(source,/async function loadAccountingBudgets\(workspaceId: string\)/,"must define budget pagination loader");
+const start=source.indexOf("async function loadAccountingBudgets");
+const end=source.indexOf("function hasCentPrecision",start);
+assert.notEqual(end,-1,"loader should end before next helper");
+const loader=source.slice(start,end);
+assert.match(loader,/\.from\("condominium_budgets"\)[\s\S]*?\.eq\("workspace_id", workspaceId\)[\s\S]*?\.order\("category", \{ ascending: true \}\)[\s\S]*?\.order\("id", \{ ascending: true \}\)[\s\S]*?\.range\(offset, offset \+ pageSize - 1\)/,"must use scoped paged query with stable category/id ordering");
+assert.match(loader,/if \(result\.error\) return \{ data: null, error: result\.error \}/,"page failures must propagate");
+assert.match(loader,/if \(page\.length < pageSize\) return \{ data: rows, error: null \}/,"must fetch until last short page");
+assert.match(source,/loadAccountingBudgets\(workspaceId\)/,"hydration must call loader");
+assert.match(source,/budgetsResult,[\s\S]*?if \(result\.error\) throw result\.error/,"budget loader result must be checked");
+assert.match(packageJson.scripts.test,/test-accounting-budget-hydration-pagination\.mjs/,"regression must be in npm test");
+console.log("Accounting budget hydration pagination regression passed.");
