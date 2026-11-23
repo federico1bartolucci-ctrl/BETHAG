@@ -1,3 +1,4 @@
+import { fetchAllocationUnitsByCondominium } from "./lib/allocation-unit-lookup-pagination.mjs";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
@@ -4573,11 +4574,7 @@ function App() {
         }
 
         const rawRows = Array.isArray(extracted.unitRows) ? extracted.unitRows : [];
-        const { data: dbUnits } = await supabase
-          .from("condominium_units")
-          .select("id,unit_code,data")
-          .eq("workspace_id", workspaceId)
-          .eq("condominium_id", condominium.id);
+        const dbUnits = await fetchAllocationUnitsByCondominium(supabase, workspaceId, condominium.id);
 
         const rows = rawRows.map((row: any) => {
           const unitCode = String(row.unitCode ?? "").trim();
