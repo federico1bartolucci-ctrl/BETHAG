@@ -2122,13 +2122,17 @@ export async function deleteCondominiumMember(
       }
     }
 
-    const { error } = await supabase
+    const { data: deletedMemberRows, error } = await supabase
       .from("condominium_members")
       .delete()
       .eq("condominium_id", condominium.id)
-      .eq("legacy_id", legacyId);
+      .eq("legacy_id", legacyId)
+      .select("id");
 
     if (error) throw error;
+    if (!deletedMemberRows?.length) {
+      throw new Error("Il condòmino non è stato eliminato: nessun record corrispondente trovato.");
+    }
 
     // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
     // di tutte le unità del medesimo condominio. I millesimi restano
