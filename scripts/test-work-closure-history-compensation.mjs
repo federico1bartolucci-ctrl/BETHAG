@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function closeWork(");
+const end=source.indexOf("async function saveWork(",start);
+assert(start>=0&&end>start,"closeWork function boundaries");
+const fn=source.slice(start,end);
+const historyInsert=fn.indexOf('from("condominium_work_events").insert(');
+const workUpdate=fn.indexOf('from("condominium_works").update(');
+assert(historyInsert>=0&&workUpdate>historyInsert,"history entry must be inserted before closure status update");
+assert(fn.includes('if(error){const {error:rollbackError}')&&fn.includes('from("condominium_work_events").delete()'),"history compensation exists on status update failure");
+assert(fn.includes("if(rollbackError)throw new Error"),"rollback failure is surfaced");
+assert(fn.includes('eq("workspace_id",workspaceId)'),"writes remain workspace scoped");
+console.log("PASS: work closure history compensation guard.");
