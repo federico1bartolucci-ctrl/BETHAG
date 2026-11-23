@@ -17,7 +17,7 @@ const summaryTriggerFunction=extractFunction(baselineSource,"public.sync_condomi
 const db=new PGlite();
 const workspace="11111111-1111-4111-8111-111111111111",condominium="22222222-2222-4222-8222-222222222222";
 const workA="33333333-3333-4333-8333-333333333333",progressA="44444444-4444-4444-8444-444444444444",progressB="55555555-5555-4555-8555-555555555555";
-const workB="66666666-6666-4666-8666-666666666666",progressC="77777777-7777-4777-8777-777777777777",progressD="88888888-8888-4888-888888888888";
+const workB="66666666-6666-4666-8666-666666666666",progressC="77777777-7777-4777-8777-777777777777",progressD="88888888-8888-4888-8888-888888888888";
 const oldPayment1="99999999-9999-4999-8999-999999999991",oldPayment2="99999999-9999-4999-8999-999999999992";
 const today=new Date().toISOString().slice(0,10),year=Number(today.slice(0,4)),yearStart=year+"-01-01",yearEnd=year+"-12-31",nextYearDate=(year+1)+"-01-01";
 const fiscalYearId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
