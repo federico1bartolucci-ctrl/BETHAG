@@ -22,11 +22,26 @@ export async function loadActiveAdminMemberships(client, userId, pageSize = ADMI
 
     const { data, error } = await query;
     if (error) return { data: null, error };
-    const page = Array.isArray(data) ? data : [];
-    rows.push(...page);
+    if (!Array.isArray(data)) {
+      return { data: null, error: new Error("Admin membership query returned an invalid page: expected an array.") };
+    }
+    const page = data;
+    if (page.length > pageSize) {
+      return { data: null, error: new Error("Admin membership query returned an invalid page: page exceeds limit.") };
+    }
+
+    let lastSeen = cursor;
+    for (const row of page) {
+      const workspaceId = typeof row?.workspace_id === "string" ? row.workspace_id.trim() : "";
+      if (!workspaceId || (lastSeen !== null && workspaceId <= lastSeen)) {
+        return { data: null, error: new Error("Admin membership query returned an invalid page: workspace IDs are missing or not strictly ordered.") };
+      }
+      rows.push({ workspace_id: workspaceId });
+      lastSeen = workspaceId;
+    }
     if (page.length < pageSize) break;
 
-    const nextCursor = String(page[page.length - 1]?.workspace_id ?? "").trim();
+    const nextCursor = lastSeen;
     if (!nextCursor || (cursor !== null && nextCursor <= cursor)) {
       return { data: null, error: new Error("Admin membership pagination cursor did not advance.") };
     }

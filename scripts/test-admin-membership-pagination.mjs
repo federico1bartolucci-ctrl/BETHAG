@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { loadActiveAdminMemberships, ADMIN_MEMBERSHIP_PAGE_SIZE } from "../supabase/functions/delete-account/admin-membership-pagination.mjs";
 
-function mockClient(rows, failAfterCursor = null) {
+function mockClient(rows, { failAfterCursor = null, malformedResponse = null } = {}) {
   const calls = [];
   const client = {
     from(table) {
@@ -16,13 +16,24 @@ function mockClient(rows, failAfterCursor = null) {
         then(resolve, reject) {
           calls.push({ ...state, filters: [...state.filters], orders: [...state.orders] });
           const cursorValue = state.cursor?.[1] ?? null;
+          if (malformedResponse === "non-array" && cursorValue === null) {
+            return Promise.resolve({ data: { workspace_id: "workspace-0000" }, error: null }).then(resolve, reject);
+          }
           if (failAfterCursor !== null && cursorValue === failAfterCursor) {
             return Promise.resolve({ data: null, error: new Error("second-page failure") }).then(resolve, reject);
           }
           let filtered = rows.filter(row => state.filters.every(([column, value]) => row[column] === value));
           if (cursorValue !== null) filtered = filtered.filter(row => row.workspace_id > cursorValue);
           filtered.sort((a, b) => a.workspace_id.localeCompare(b.workspace_id));
-          return Promise.resolve({ data: filtered.slice(0, state.pageSize), error: null }).then(resolve, reject);
+          let page = filtered.slice(0, state.pageSize);
+          if (malformedResponse === "missing-workspace-id" && cursorValue === null && page.length) {
+            page[0] = { ...page[0], workspace_id: "" };
+          }
+          if (malformedResponse === "oversized" && cursorValue === null && filtered.length > state.pageSize) {
+            page.push(filtered[state.pageSize]);
+          }
+          if (malformedResponse === "out-of-order" && cursorValue === null && page.length > 1) page.reverse();
+          return Promise.resolve({ data: page, error: null }).then(resolve, reject);
         },
       };
       return query;
@@ -51,7 +62,7 @@ for (const call of calls) {
   assert.deepEqual(call.orders, [["workspace_id", { ascending: true }]]);
 }
 
-const failed = mockClient(rows, "workspace-0999");
+const failed = mockClient(rows, { failAfterCursor: "workspace-0999" });
 const failedResult = await loadActiveAdminMemberships(failed.client, "user-1");
 assert.equal(failedResult.data, null);
 assert.match(failedResult.error.message, /second-page failure/);
@@ -61,8 +72,19 @@ const missingUser = mockClient(rows);
 assert.deepEqual(await loadActiveAdminMemberships(missingUser.client, ""), { data: [], error: null });
 assert.equal(missingUser.calls.length, 0);
 
+for (const malformedResponse of ["non-array", "missing-workspace-id", "oversized", "out-of-order"]) {
+  const malformed = mockClient(rows, { malformedResponse });
+  const malformedResult = await loadActiveAdminMemberships(malformed.client, "user-1");
+  assert.equal(malformedResult.data, null, `${malformedResponse} page must fail closed`);
+  assert.match(malformedResult.error.message, /invalid page/i, `${malformedResponse} must report a validation error`);
+  assert.equal(malformed.calls.length, 1, `${malformedResponse} must abort before reading another page`);
+}
+
 const edgeFunction = await readFile(new URL("../supabase/functions/delete-account/index.ts", import.meta.url), "utf8");
 assert.match(edgeFunction, /loadActiveAdminMemberships\(ctx\.supabase,\s*userId\)/);
 assert.doesNotMatch(edgeFunction, /\.from\("workspace_members"\)\s*\.select\("workspace_id"\)\s*\.eq\("user_id",\s*userId\)\s*\.eq\("role",\s*"admin"\)\s*\.eq\("active",\s*true\)/);
+const errorGate = edgeFunction.indexOf("if (adminMembershipsError)");
+const deleteUserCall = edgeFunction.indexOf("ctx.supabaseAdmin.auth.admin.deleteUser(userId, false)");
+assert.ok(errorGate >= 0 && deleteUserCall > errorGate, "membership validation errors must be checked before account deletion");
 
-console.log("Active admin membership pagination runtime regression passed: baseline cap reproduced; 1,001 workspaces recovered; later-page failure fail-closed; delete-account wiring verified.");
+console.log("Active admin membership pagination runtime regression passed: 1,001 workspaces recovered; later-page failures and malformed pages fail-closed; delete-account wiring verified.");
