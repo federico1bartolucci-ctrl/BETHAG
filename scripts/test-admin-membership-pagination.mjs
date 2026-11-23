@@ -33,12 +33,8 @@ function mockClient(rows, failAfterCursor = null) {
 
 const rows = Array.from({ length: 1001 }, (_, i) => ({
   workspace_id: `workspace-${String(i).padStart(4, "0")}`,
-  user_id: "user-1",
-  role: "admin",
-  active: true,
+  user_id: "user-1", role: "admin", active: true,
 }));
-
-// Reproduce the API cap: a single default-cap read cannot see the last workspace.
 assert.equal(rows.slice(0, 1000).some(row => row.workspace_id === "workspace-1000"), false);
 
 const { client, calls } = mockClient(rows);
