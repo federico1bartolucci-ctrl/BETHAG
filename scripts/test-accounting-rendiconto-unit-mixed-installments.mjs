@@ -74,3 +74,27 @@ assert.equal(carryoverResult[0].carryover, 12);
 assert.equal(carryoverResult[0].balance, 27);
 
 console.log("Accounting rendiconto per-unit mixed installments runtime regression: PASS");
+
+// Regression: a linked installment plan that covers only part of its allocation
+// must not mark the entire allocation as covered.
+const partialCoverage = calculateRendicontoUnitBalances({
+  allocations: [{ id:"partial-a", ledger_entry_id:"partial-ledger", unit_id:"u1", amount:100, paid_amount:10 }],
+  installments: [{ id:"partial-i", ledger_entry_id:"partial-ledger", unit_id:"u1", member_id:null, amount:40, paid_amount:10 }],
+  units: [{ id:"u1", unit_code:"A-1" }],
+});
+assert.equal(partialCoverage[0].installments, 40);
+assert.equal(partialCoverage[0].installmentPaid, 10);
+assert.equal(partialCoverage[0].paid, 10);
+assert.equal(partialCoverage[0].residual, 90, "40 scheduled (10 paid) plus 60 uncovered must leave 90 outstanding");
+
+// Multiple installment rows accumulate coverage instead of boolean coverage.
+const multiplePartialCoverage = calculateRendicontoUnitBalances({
+  allocations: [{ id:"multi-a", ledger_entry_id:"multi-ledger", unit_id:"u1", amount:100, paid_amount:25 }],
+  installments: [
+    { id:"multi-i1", ledger_entry_id:"multi-ledger", unit_id:"u1", member_id:null, amount:30, paid_amount:10 },
+    { id:"multi-i2", ledger_entry_id:"multi-ledger", unit_id:"u1", member_id:null, amount:20, paid_amount:15 },
+  ],
+  units: [{ id:"u1", unit_code:"A-1" }],
+});
+assert.equal(multiplePartialCoverage[0].paid, 25);
+assert.equal(multiplePartialCoverage[0].residual, 75);
