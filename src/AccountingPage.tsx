@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { millesimalTableScopeMatchesUnit } from "./lib/millesimalTableScope.mjs";
 
 type Condominium = {
   id: number;
@@ -313,7 +314,7 @@ function AccountingPage({
   const scopedMillesimalValues = useMemo(() => dbCondominiumId ? millesimalValues.filter(v=>v.condominium_id===dbCondominiumId) : millesimalValues,[dbCondominiumId,millesimalValues]);
   const millesimalTableChecks = useMemo(() => scopedMillesimalTables.map(t => {
     const allUnits = units.filter(u => !dbCondominiumId || u.condominium_id === dbCondominiumId);
-    const scopedUnits = allUnits.filter(u => t.scope_mode === "all" || (t.scope_mode === "units" && t.scope_unit_ids.includes(u.id)) || (t.scope_mode === "buildings" && t.scope_building_codes.some(code => code.trim().toLowerCase() === String((u as any).building_code || (u as any).data?.building_code || (u as any).data?.civic_code || (u as any).data?.fabbricato || "").trim().toLowerCase())));
+    const scopedUnits = allUnits.filter(u => millesimalTableScopeMatchesUnit(t, u));
     const values = scopedUnits.map(u => scopedMillesimalValues.find(v => v.table_id === t.id && v.unit_id === u.id)).filter(Boolean) as MillesimalValue[];
     const eligible = values.filter(v => !v.excluded);
     const sum = eligible.reduce((s,v) => s + Number(v.value || 0), 0);
