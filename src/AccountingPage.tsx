@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
 
 type Condominium = {
   id: number;
@@ -632,11 +633,7 @@ function AccountingPage({
             .select("id, condominium_id, unit_code, building_code, data")
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
-          supabase
-            .from("condominium_members")
-            .select("id, condominium_id, unit_id, active, name, email, data")
-            .eq("workspace_id", workspaceId)
-            .order("created_at"),
+          loadAccountingCondominiumMembers(supabase, workspaceId),
           supabase
             .from("condominium_millesimal_tables")
             .select("*")
