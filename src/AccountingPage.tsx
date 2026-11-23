@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
+import {
+  createAccountingSettingsState,
+  resolveAccountingCondominiumId,
+  selectAccountingSettingsRow,
+} from "./lib/accountingSettingsState.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -179,6 +184,7 @@ function AccountingPage({
   const [compensationCarryover, setCompensationCarryover] = useState<FiscalCarryover | null>(null);
   const [compensationForm, setCompensationForm] = useState({ amount:0, target_installment_id:"", notes:"" });
   const [accountingSettings, setAccountingSettings] = useState<AccountingSettings | null>(null);
+  const [accountingSettingsReady, setAccountingSettingsReady] = useState(false);
   const [accountingSettingsForm, setAccountingSettingsForm] = useState({ accounting_start_date:new Date().getFullYear()+"-01-01", accounting_end_date:new Date().getFullYear()+"-12-31", ordinary_installment_count:12, ordinary_due_dates:"", extraordinary_mode:"separata" as "integrata"|"separata", extraordinary_allow_multi_year:true });
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
@@ -538,18 +544,14 @@ function AccountingPage({
   }, [scopedLedger]);
 
   async function resolveCondominium(generation?: number) {
-    if (!supabase || selectedCondominiumId === "all") {
+    try {
+      const resolvedId = await resolveAccountingCondominiumId({ supabase, workspaceId, selectedCondominiumId });
+      if (generation === undefined || generation === accountingLoadGeneration.current) setDbCondominiumId(resolvedId);
+      return resolvedId;
+    } catch (error) {
       if (generation === undefined || generation === accountingLoadGeneration.current) setDbCondominiumId(null);
-      return;
+      throw error;
     }
-    const { data, error: readError } = await supabase
-      .from("condominiums")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("legacy_id", selectedCondominiumId)
-      .maybeSingle();
-    if (readError) throw readError;
-    if (generation === undefined || generation === accountingLoadGeneration.current) setDbCondominiumId(data?.id ?? null);
   }
 
   const rendicontoPrintStyles = `
@@ -584,6 +586,28 @@ function AccountingPage({
 
   async function load() {
     const generation = ++accountingLoadGeneration.current;
+    const resetSettingsState = createAccountingSettingsState(null);
+    setDbCondominiumId(null);
+    setAccountingSettings(resetSettingsState.settings as AccountingSettings | null);
+    setAccountingSettingsForm(resetSettingsState.form as typeof accountingSettingsForm);
+    setAccountingSettingsReady(false);
+    setFiscalYears([]);
+    setLedger([]);
+    setFunds([]);
+    setTaxes([]);
+    setLegalCases([]);
+    setAllocations([]);
+    setAllocationIntakes([]);
+    setUnits([]);
+    setMembers([]);
+    setMillesimalTables([]);
+    setMillesimalValues([]);
+    setConsumptionReadings([]);
+    setAllocationRules([]);
+    setInstallments([]);
+    setBudgets([]);
+    setCarryovers([]);
+    setCarryoverCompensations([]);
     if (!supabase) {
       setError("Supabase non configurato.");
       setLoading(false);
@@ -592,7 +616,7 @@ function AccountingPage({
     setLoading(true);
     setError("");
     try {
-      await resolveCondominium(generation);
+      const resolvedDbCondominiumId = await resolveCondominium(generation);
       if (generation !== accountingLoadGeneration.current) return;
       const [yearsResult, ledgerResult, fundsResult, taxResult, caseResult, allocationsResult, allocationIntakesResult, unitsResult, membersResult, millesimalTablesResult, millesimalValuesResult, consumptionReadingsResult, allocationRulesResult, installmentsResult, budgetsResult, carryoversResult, settingsResult, carryoverCompensationsResult] =
         await Promise.all([
@@ -716,8 +740,11 @@ function AccountingPage({
       setBudgets((budgetsResult.data ?? []) as BudgetItem[]);
       setCarryovers((carryoversResult.data ?? []) as FiscalCarryover[]);
       setCarryoverCompensations((carryoverCompensationsResult.data ?? []) as CarryoverCompensation[]);
-      const settingsRow = (settingsResult.data ?? []).find((row:any) => row.condominium_id === dbCondominiumId) as AccountingSettings | undefined;
-      if (settingsRow) { setAccountingSettings(settingsRow); setAccountingSettingsForm({accounting_start_date:settingsRow.accounting_start_date,accounting_end_date:settingsRow.accounting_end_date,ordinary_installment_count:Number(settingsRow.ordinary_installment_count||12),ordinary_due_dates:Array.isArray(settingsRow.ordinary_due_dates)?settingsRow.ordinary_due_dates.join(", "):"",extraordinary_mode:settingsRow.extraordinary_mode==="integrata"?"integrata":"separata",extraordinary_allow_multi_year:settingsRow.extraordinary_allow_multi_year!==false}); }
+      const settingsRow = selectAccountingSettingsRow(settingsResult.data ?? [], resolvedDbCondominiumId);
+      const settingsState = createAccountingSettingsState(settingsRow);
+      setAccountingSettings(settingsState.settings as AccountingSettings | null);
+      setAccountingSettingsForm(settingsState.form as typeof accountingSettingsForm);
+      setAccountingSettingsReady(true);
     } catch (e: any) {
       if (generation === accountingLoadGeneration.current) setError(e?.message || "Errore nel caricamento della contabilità.");
     } finally {
@@ -799,7 +826,7 @@ function AccountingPage({
   }
 
   async function saveAccountingSettings(e: React.FormEvent) {
-    e.preventDefault(); if(!supabase||!dbCondominiumId)return;
+    e.preventDefault(); if(!supabase||!dbCondominiumId)return; if(!accountingSettingsReady){setError("Impostazioni contabilità non caricate. Ripeti il caricamento prima di salvare.");return;}
     const count=Number(accountingSettingsForm.ordinary_installment_count); const dates=accountingSettingsForm.ordinary_due_dates.split(/[,;\\n]+/).map(s=>s.trim()).filter(Boolean);
     if(accountingSettingsForm.accounting_start_date>accountingSettingsForm.accounting_end_date){setError("La data di inizio contabilità non può essere successiva alla data di fine.");return;}
     if(!Number.isInteger(count)||count<1||count>12){setError("Il numero di rate ordinarie deve essere compreso tra 1 e 12.");return;}
@@ -2257,7 +2284,7 @@ function AccountingPage({
           <form onSubmit={saveAccountingSettings}><h3>Esercizio contabile</h3><div className="form-grid"><label>Data inizio<input type="date" value={accountingSettingsForm.accounting_start_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_start_date:e.target.value})}/></label><label>Data fine<input type="date" value={accountingSettingsForm.accounting_end_date} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,accounting_end_date:e.target.value})}/></label></div>
           <h3>Spese ordinarie</h3><div className="form-grid"><label>Numero rate<input type="number" min="1" max="12" value={accountingSettingsForm.ordinary_installment_count} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_installment_count:Math.max(1,Math.min(12,Number(e.target.value)||1))})}/></label><label>Scadenze<textarea placeholder="2026-01-31, 2026-02-28, ..." value={accountingSettingsForm.ordinary_due_dates} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,ordinary_due_dates:e.target.value})}/></label></div>
           <h3>Spese straordinarie</h3><label>Modalità<select value={accountingSettingsForm.extraordinary_mode} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_mode:e.target.value as "integrata"|"separata"})}><option value="separata">Gestione separata dalle ordinarie</option><option value="integrata">Integrare nelle rate ordinarie</option></select></label><label className="check-row"><input type="checkbox" checked={accountingSettingsForm.extraordinary_allow_multi_year} onChange={e=>setAccountingSettingsForm({...accountingSettingsForm,extraordinary_allow_multi_year:e.target.checked})}/> Consentire rate straordinarie su più esercizi</label>
-          <div className="permission-box"><b>Regola</b><span>Massimo 12 rate per esercizio; i piani straordinari separati possono attraversare più annualità.</span></div><div className="form-actions"><button className="primary-button" disabled={saving}>Salva impostazioni</button></div></form>
+          <div className="permission-box"><b>Regola</b><span>Massimo 12 rate per esercizio; i piani straordinari separati possono attraversare più annualità.</span></div><div className="form-actions"><button className="primary-button" disabled={saving || !accountingSettingsReady || !dbCondominiumId}>Salva impostazioni</button></div></form>
         </article><article className="card"><h2>Regole automatiche di riparto</h2><p>Associa una categoria o un tipo di spesa a una tabella. Se nel riparto automatico non viene scelta una tabella, BETHAG utilizzerà la regola attiva con priorità più alta.</p>
 <form onSubmit={saveAllocationRule}><div className="form-grid"><label>Nome<input required value={allocationRuleForm.name} onChange={e=>setAllocationRuleForm({...allocationRuleForm,name:e.target.value})} placeholder="Riscaldamento"/></label><label>Priorità<input type="number" min="0" value={allocationRuleForm.priority} onChange={e=>setAllocationRuleForm({...allocationRuleForm,priority:Number(e.target.value)})}/></label><label>Tipo spesa<select value={allocationRuleForm.expense_type} onChange={e=>setAllocationRuleForm({...allocationRuleForm,expense_type:e.target.value})}><option value="">Qualsiasi</option><option>Ordinaria</option><option>Straordinaria</option></select></label><label>Categoria<input value={allocationRuleForm.category} onChange={e=>setAllocationRuleForm({...allocationRuleForm,category:e.target.value})} placeholder="Ascensore"/></label><label>Tabella<select required value={allocationRuleForm.allocation_table_id} onChange={e=>setAllocationRuleForm({...allocationRuleForm,allocation_table_id:e.target.value})}><option value="">Seleziona</option>{scopedMillesimalTables.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label></div><label>Note<textarea value={allocationRuleForm.notes} onChange={e=>setAllocationRuleForm({...allocationRuleForm,notes:e.target.value})}/></label><div className="form-actions"><button className="primary-button" disabled={saving}>Salva regola</button></div></form>
 {allocationRules.filter(r=>!dbCondominiumId||r.condominium_id===dbCondominiumId).map(r=><article className="row-card" key={r.id}><div><b>{r.name}</b><small>{r.expense_type||"Qualsiasi tipo"} · {r.category||"Qualsiasi categoria"} · priorità {r.priority}</small><span>{scopedMillesimalTables.find(t=>t.id===r.allocation_table_id)?.name||"Tabella non trovata"} · {r.active?"Attiva":"Disattivata"}</span></div>{isAdministrator&&<button className="mini-danger" onClick={()=>remove("condominium_allocation_rules",r.id,"la regola di riparto")}>×</button>}</article>)}</article></section>
