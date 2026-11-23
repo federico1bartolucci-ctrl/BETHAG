@@ -1,17 +1,27 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-const src=await readFile(new URL("../src/RegisterPage.tsx",import.meta.url),"utf8");
-const migration=await readFile(new URL("../supabase/rebuild/proposed-forward-migrations/20261123050000_atomic_work_progress_payment_registration.sql",import.meta.url),"utf8");
-const start=src.indexOf("async function saveProgress("),end=src.indexOf("async function saveWorkExpense(",start);
-assert.ok(start>=0&&end>start,"SAL handler must exist");
-const handler=src.slice(start,end);
-assert.match(handler,/rpc\("create_condominium_work_progress_atomic"/,"SAL creation must use transactional RPC");
-assert.doesNotMatch(handler,/\.from\("condominium_work_progress"\)\.insert\(/,"frontend must not directly insert SAL");
-const fnStart=migration.indexOf("CREATE OR REPLACE FUNCTION public.create_condominium_work_progress_atomic(");
-assert.ok(fnStart>=0,"atomic SAL creation RPC must exist");
-const fn=migration.slice(fnStart);
-assert.match(fn,/from public\.condominium_works[\s\S]*for update/,"parent work row must be locked to serialize SAL creation");
-assert.match(fn,/approved_amount[\s\S]*v_total_amount[\s\S]*raise exception/,"approved amount guard must be enforced server-side");\nassert.match(fn,/p_status not in \(\x27Presentato\x27,\x27Verificato\x27,\x27Approvato\x27,\x27Contestato\x27\)[\s\S]*Stato SAL non valido/,"paid or unsupported status must be rejected at database level");\nassert.doesNotMatch(src,/<option>Pagato<\\/option>/,"SAL creation form must not allow setting Pagato directly");
-assert.match(fn,/insert into public\.condominium_work_progress[\s\S]*update public\.condominium_works[\s\S]*get diagnostics v_updated=row_count[\s\S]*if v_updated<>1/,"SAL insert and progress synchronization must be inside one transactional function with affected-row guard");
-assert.match(migration,/GRANT EXECUTE ON FUNCTION public\.create_condominium_work_progress_atomic[\s\S]*TO authenticated, service_role/,"RPC execution grants must be explicitly defined");\nassert.match(handler,/Number\(progressForm\.paid_amount\|\|0\)>0[\s\S]*Registra pagamento/,"frontend must prevent an unlinked initial payment");\nassert.doesNotMatch(src,/label>Importo pagato<input[^>]*value=\{progressForm\.paid_amount\}/,"SAL form must not expose editable initial paid amount");\nassert.match(src,/Importo pagato[\s\S]*i pagamenti si registrano dopo la creazione del SAL/,"SAL UI must explain payment registration workflow");\nassert.match(fn,/if v_paid>0 then[\s\S]*Registra pagamento[\s\S]*end if;/,"database must reject initial paid amounts without ledger registration");
+
+const src = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
+const migration = await readFile(new URL("../supabase/rebuild/proposed-forward-migrations/20261123050000_atomic_work_progress_payment_registration.sql", import.meta.url), "utf8");
+const start = src.indexOf("async function saveProgress(");
+const end = src.indexOf("async function saveWorkExpense(", start);
+assert.ok(start >= 0 && end > start, "SAL handler must exist");
+const handler = src.slice(start, end);
+assert.match(handler, /rpc\("create_condominium_work_progress_atomic"/, "SAL creation must use transactional RPC");
+assert.doesNotMatch(handler, /\.from\("condominium_work_progress"\)\.insert\(/, "frontend must not directly insert SAL");
+
+const fnStart = migration.indexOf("CREATE OR REPLACE FUNCTION public.create_condominium_work_progress_atomic(");
+assert.ok(fnStart >= 0, "atomic SAL creation RPC must exist");
+const fn = migration.slice(fnStart);
+assert.match(fn, /from public\.condominium_works[\s\S]*for update/, "parent work row must be locked to serialize SAL creation");
+assert.match(fn, /approved_amount[\s\S]*v_total_amount[\s\S]*raise exception/, "approved amount guard must be enforced server-side");
+assert.match(fn, /p_status not in \('Presentato','Verificato','Approvato','Contestato'\)[\s\S]*Stato SAL non valido/, "paid or unsupported status must be rejected at database level");
+assert.doesNotMatch(src, /<option>Pagato<\/option>/, "SAL creation form must not allow setting Pagato directly");
+assert.match(fn, /insert into public\.condominium_work_progress[\s\S]*update public\.condominium_works[\s\S]*get diagnostics v_updated=row_count[\s\S]*if v_updated<>1/, "SAL insert and progress synchronization must be inside one transactional function with affected-row guard");
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.create_condominium_work_progress_atomic[\s\S]*TO authenticated, service_role/, "RPC execution grants must be explicitly defined");
+assert.match(handler, /Number\(progressForm\.paid_amount\|\|0\)>0[\s\S]*Registra pagamento/, "frontend must prevent an unlinked initial payment");
+assert.doesNotMatch(src, /label>Importo pagato<input[^>]*value=\{progressForm\.paid_amount\}/, "SAL form must not expose editable initial paid amount");
+assert.match(src, /Importo pagato[\s\S]*i pagamenti si registrano dopo la creazione del SAL/, "SAL UI must explain payment registration workflow");
+assert.match(fn, /if v_paid>0 then[\s\S]*Registra pagamento[\s\S]*end if;/, "database must reject initial paid amounts without ledger registration");
+
 console.log("PASS SAL creation atomicity: client RPC, parent lock, cumulative budget validation, insert+progress update and row-count guard.");
