@@ -84,4 +84,12 @@ function createMockClient(pages, errorAtOffset = null) {
   assert.match(pkg.scripts.test, /test-condominium-unit-query-pagination\.mjs/, "regression test must be integrated into npm test");
 }
 
-console.log("PASS condominium-unit query pagination: row 1001 is retrieved, stable page ordering, workspace scope, later-page errors, and three production callers wired.");
+// Workspace synchronization must paginate both the pre-insert and post-insert
+// unit reads; a multi-condominium .in() query can still be truncated at 1,000.
+assert.match(backend, /for\s*\(const condominiumId of unitCondominiums\)/);
+assert.ok((backend.match(/loadCondominiumUnitRows\s*\(\s*supabase\s*,\s*condominiumId\s*,\s*["']id, condominium_id, unit_code["']/g) ?? []).length >= 2,
+  "syncBackendStateNow must paginate both existing and persisted unit reads");
+assert.doesNotMatch(backend, /\.in\(["']condominium_id["']\s*,\s*unitCondominiums\s*\)/,
+  "workspace synchronization must not use a single capped multi-condominium query");
+
+console.log("PASS condominium-unit query pagination: row 1001 retrieval, stable paging, workspace scope, later-page errors, three callers, and sync reads wired.");
