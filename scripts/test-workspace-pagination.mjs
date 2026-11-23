@@ -182,4 +182,8 @@ for (const table of paginatedTables) {
    "work progress reconciliation must use paginated workspace loading");
  assert.doesNotMatch(backend, /\.from\(["']condominium_work_progress["']\)\s*\.select\(["']work_id,amount["']\)\s*\.eq\(["']workspace_id["']\s*,\s*workspaceId\)\s*\.in\(["']work_id["']\s*,\s*workIds\)/,
    "work progress must not retain the capped one-shot .in query");
- console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections + work-progress sync pagination wiring)`);
+ assert.match(backend, /loadWorkspacePaginatedRows\(supabase,\s*["']condominium_suppliers["']/,
+  "supplier reconciliation must load the workspace supplier set with pagination");
+assert.doesNotMatch(backend, /\.from\(["']condominium_suppliers["']\)\s*\.select\(["']id,condominium_id,business_name,data["']\)\s*\.eq\(["']workspace_id["']\s*,\s*workspaceId\)/,
+  "supplier reconciliation must not use a capped one-shot workspace query");
+console.log(`Workspace keyset pagination runtime regression: PASS (${paginatedTables.length} bootstrap collections + work-progress sync pagination wiring)`);
