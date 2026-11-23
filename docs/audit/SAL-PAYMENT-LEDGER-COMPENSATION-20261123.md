@@ -18,3 +18,24 @@ Source, test, package and documentation are re-fetched and statically inspected.
 
 ## Safety
 Draft only; no merge, deployment, QA/Production changes or resets.
+
+
+## Follow-up concurrency audit — 2026-11-23
+
+### Finding
+The event-log failure compensation in `registerProgressPayment()` used an unconditional SAL update followed by ledger deletion. If another payment updated the SAL after the first payment was committed but before compensation, the rollback could overwrite the concurrent paid amount/reference and delete the first payment's ledger row.
+
+### Fix
+- Extract the rollback to `src/lib/salPaymentCompensation.mjs`.
+- Compare the current SAL paid amount and `payment_entry_id` with the exact state written by this payment before reverting.
+- If a concurrent change is detected, do not delete the ledger entry; preserve the current SAL and both ledger entries and report that history reconciliation is required.
+- If ledger deletion fails after SAL rollback, restore the SAL to the committed payment state using a second compare-and-set. Report incomplete compensation explicitly if this restoration also fails.
+
+### Runtime regression
+The test now executes the compensation helper against a Supabase mock. It covers normal rollback, the old concurrent-payment clobbering scenario, ledger-delete failure restoration, and rollback update failure. Static integration checks verify the active payment flow calls the helper and that the legacy flow's guard remains intact. The test remains wired into `npm test`.
+
+### Local verification
+Isolated Node runtime regression: PASS. Full repository clone and `npm test` unavailable in this execution environment because GitHub DNS resolution failed. Exact-head CI is required to certify the updated branch.
+
+### Safety
+Draft branch only; no QA/Production changes, merge, deployment, reset, or manually dispatched workflow.
