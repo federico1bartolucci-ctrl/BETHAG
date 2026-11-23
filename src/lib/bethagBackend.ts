@@ -1522,6 +1522,10 @@ function parseBethagAmount(value: unknown): number {
     normalized = cleaned.replace(/\./g, "").replace(",", ".");
   } else if ((cleaned.match(/\./g) ?? []).length > 1) {
     normalized = cleaned.replace(/\./g, "");
+  } else if (/^-?\d{1,3}\.\d{3}$/.test(cleaned)) {
+    // In Italian invoice notation a single dot with three trailing digits is
+    // typically a thousands separator (e.g. 1.234 = 1234), not decimal cents.
+    normalized = cleaned.replace(".", "");
   }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
