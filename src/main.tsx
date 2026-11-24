@@ -4705,7 +4705,7 @@ function App() {
       return;
     }
 
-    const assemblyForSave = reconcileAssemblyMinutesAfterEdit(assemblyForm);
+    const assemblyForSave = reconcileAssemblyMinutesAfterEdit(assemblyForm, selectedAssembly);
 
     if (selectedAssembly) {
       setAssemblies((current) =>
