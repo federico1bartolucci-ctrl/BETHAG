@@ -24,10 +24,9 @@ begin
   IF tg_table_name = 'condominium_ledger_entries'
      AND tg_op = 'UPDATE'
      AND pg_catalog.pg_trigger_depth() > 1 THEN
-    IF old.payment_status IS DISTINCT FROM new.payment_status
-       AND (pg_catalog.to_jsonb(new) - 'payment_status')
-             IS NOT DISTINCT FROM
-           (pg_catalog.to_jsonb(old) - 'payment_status') THEN
+    IF (pg_catalog.to_jsonb(new) - 'payment_status')
+         IS NOT DISTINCT FROM
+       (pg_catalog.to_jsonb(old) - 'payment_status') THEN
       RETURN new;
     END IF;
   END IF;
