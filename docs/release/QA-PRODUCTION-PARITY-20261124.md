@@ -296,3 +296,10 @@ La correzione riguarda esclusivamente gli harness di test, non i corpi SQL delle
 La CI sul commit `7e9168e134cbb4a764aed04dbb29bd70e834161a` ha superato `work-delete-sal-guard` e la catena cronologica. Il job supporting regressions si è fermato in `scripts/ledger-work-progress-reference-guard-regression.sql` perché includeva il vecchio percorso `20261124240200_guard_ledger_entries_linked_to_work_progress.sql`. Aggiornato a `20261124233300_guard_ledger_entries_linked_to_work_progress.sql`.
 
 Commit fix: `85564372c374151a44e995104c75bab88f728c09`. Restano in esecuzione al momento della verifica i job fiscal-year-parent-row-locks e payment-allocation; la nuova CI sul nuovo head dovrà confermare tutto. Punto 1 ancora RIAPERTO. Nessuna modifica QA/Production.
+
+
+### Supporting regressions — secondo path fix (24 novembre 2026)
+
+La CI sul commit `fde8a3e26bce1c220d80c0e6bebff0382518aac8` ha superato `chronological-candidate-chain`, `work-progress-payment-allocation` e `work-delete-sal-guard`. Il job `supporting-regressions` ha individuato un ulteriore percorso obsoleto in `scripts/work-change-audit-regression.sql`: il riferimento `20261124240000_audit_work_details_and_references.sql` è stato aggiornato a `20261124233100_audit_work_details_and_references.sql`.
+
+Commit fix: `66d79c6e463ccddbaf691bbd4fc0e6ae5173b973`. La CI sul nuovo head deve confermare tutte le regressioni, Build e baseline. Punto 1 resta RIAPERTO; nessuna modifica QA/Production.
