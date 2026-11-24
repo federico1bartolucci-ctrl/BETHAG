@@ -65,3 +65,32 @@ Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiorna
 Il readiness checker continua correttamente a bloccare il cutover per APP-12 provider delivery NOT_RUN e per gli altri gate operativi non riconfermati sul candidato corrente: approvazione source/execution SHA e fingerprint, attestazione QA acceptance, Data API exposure, preflight Production read-only, piano/finestra e rollback approvati. APP-14 resta successiva al cutover e non è un test da simulare in QA.
 
 Production: **NO-GO**. PR #389: **Draft, non merged**. Nessuna migrazione, deploy, cutover o modifica Production è stata eseguita.
+
+
+## Riconciliazione successiva — CAP head c6ea5fb4 (24 novembre 2026)
+
+Head PR dichiarato dai metadati GitHub: `c6ea5fb4ca68976eb310502f45730cc0f44ee39c`.
+
+Workflow sul medesimo `head_sha`:
+- Baseline Safety run 45390958503 — SUCCESS.
+- Build/PostgreSQL 17 run 45390959049 — SUCCESS; job `build` e `postgres-bootstrap` SUCCESS. Rehearsal isolata PostgreSQL 17: bootstrap baseline, 28 migrazioni clean-install, 19 migrazioni canoniche tramite guarded runner, ACL, RLS e rollback: PASS.
+- Final QA run 45390958541 — SUCCESS. Tutti gli step applicativi e di cleanup risultano SUCCESS.
+
+### Risultati APP
+
+- APP-01..APP-13: PASS per i gruppi di test eseguiti nel workflow.
+- APP-15: PASS; navigazione, autenticazione e persistenza sessione per amministratore, collaboratore e condomino.
+- APP-12 provider live-send: NOT RUN, esplicitamente escluso dall'autorizzazione. Nessuna email esterna inviata.
+- Ripristino del piano QA: step SUCCESS.
+- Stop preview QA: step SUCCESS.
+- Diagnostica APP-15 caricata: artifact `14919216319`, SHA-256 `c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351`.
+
+### Limite di provenienza del checkout
+
+Nel workflow `qa-final-collaudo.yml`, lo step “Verify checked-out revision” è condizionato a `workflow_dispatch`; nell'esecuzione `pull_request` risulta SKIPPED. I metadati del run riportano il PR head `c6ea5fb4...`, ma non abbiamo acquisito una prova indipendente dello SHA/tree effettivamente estratto da checkout. Pertanto l'esito del workflow è SUCCESS, ma la certificazione dell'identità esatta del checkout resta incompleta. Non viene dichiarata equivalenza di tree non verificata.
+
+### Gate release
+
+APP-12 provider delivery NOT_RUN, APP-14 PARTIAL e checkout SHA/tree non verificato. Restano inoltre da riconfermare approvazione owner per source/execution SHA e fingerprint correnti, Data API exposure, preflight read-only dal checkout finale, backup/restore o accettazione rischio aggiornata, operatore, finestra e rollback. Il manifest congelato contiene approvazioni storiche non trasferibili al candidato corrente.
+
+Production: **NO-GO**. PR #389: **Draft, non merged**. Nessuna migrazione, deploy, cutover, merge, invio email o modifica Production eseguita.
