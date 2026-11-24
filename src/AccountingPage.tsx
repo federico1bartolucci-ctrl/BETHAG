@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { loadWorkspaceExpenseAllocations } from "./lib/accountingExpenseAllocationPagination";
+import { loadWorkspaceInstallments } from "./lib/accountingInstallmentPagination";
+import { loadWorkspaceConsumptionReadings } from "./lib/accountingConsumptionReadingPagination";
 
 type Condominium = {
   id: number;
@@ -617,11 +620,7 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("opened_date", { ascending: false }),
-          supabase
-            .from("condominium_expense_allocations")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
+          loadWorkspaceExpenseAllocations(supabase, workspaceId),
           supabase
             .from("condominium_allocation_intakes")
             .select("*")
@@ -645,21 +644,13 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
-          supabase
-            .from("condominium_consumption_readings")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("period_end", { ascending:false }),
+          loadWorkspaceConsumptionReadings(supabase, workspaceId),
           supabase
             .from("condominium_allocation_rules")
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("priority", { ascending:false }),
-          supabase
-            .from("condominium_installments")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
+          loadWorkspaceInstallments(supabase, workspaceId),
           supabase
             .from("condominium_budgets")
             .select("*")
