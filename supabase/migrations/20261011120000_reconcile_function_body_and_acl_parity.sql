@@ -836,6 +836,10 @@ begin
     raise exception 'Il movimento selezionato non è una spesa valida';
   end if;
 
+  if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then
+    raise exception 'La spesa e i dati di consumo devono appartenere allo stesso esercizio contabile';
+  end if;
+
   if exists(
     select 1 from public.condominium_fiscal_years
     where id=p_fiscal_year_id
