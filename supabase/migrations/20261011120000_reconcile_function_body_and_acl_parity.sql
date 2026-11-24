@@ -1469,6 +1469,8 @@ grant execute on function private.check_condominium_member_transfer_closure(p_tr
 
 revoke all on function private.close_condominium_member_transfer(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
+grant execute on function private.close_condominium_member_transfer(p_transfer_id uuid) to "authenticated";
+
 revoke all on function private.confirm_condominium_member_transfer(p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb) from public, anon, authenticated, service_role;
 
 grant execute on function private.confirm_condominium_member_transfer(p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb) to "authenticated";
@@ -1685,7 +1687,7 @@ grant execute on function public.validate_unit_owner_member_refs() to "service_r
 
 revoke all on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) from public, anon, authenticated, service_role;
 
-grant execute on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) to "service_role";
+grant execute on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) to "authenticated", "service_role";
 
 revoke all on function private.can_access_workspace_module(target_workspace uuid, required_permission text) from public, anon, authenticated, service_role;
 
@@ -1697,27 +1699,27 @@ grant execute on function private.can_manage_workspace_module(target_workspace u
 
 revoke all on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) to "service_role";
+grant execute on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) to "service_role";
+grant execute on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) from public, anon, authenticated, service_role;
 
-grant execute on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) to "service_role";
+grant execute on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) to "authenticated", "service_role";
 
 revoke all on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) from public, anon, authenticated, service_role;
 
-grant execute on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) to "service_role";
+grant execute on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) to "authenticated", "service_role";
 
 revoke all on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) to "service_role";
+grant execute on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) from public, anon, authenticated, service_role;
 
-grant execute on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) to "service_role";
+grant execute on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) to "authenticated", "service_role";
 
 revoke all on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
@@ -1725,11 +1727,11 @@ grant execute on function private.generate_fiscal_year_carryovers(p_workspace_id
 
 revoke all on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) to "service_role";
+grant execute on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) to "service_role";
+grant execute on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) to "authenticated", "service_role";
 
 revoke all on function private.handle_new_user() from public, anon, authenticated, service_role;
 
@@ -1747,15 +1749,15 @@ grant execute on function private.is_workspace_staff(target_workspace uuid) to "
 
 revoke all on function private.list_archived_condominiums(p_workspace_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.list_archived_condominiums(p_workspace_id uuid) to "service_role";
+grant execute on function private.list_archived_condominiums(p_workspace_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) from public, anon, authenticated, service_role;
 
-grant execute on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) to "service_role";
+grant execute on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) to "authenticated", "service_role";
 
 revoke all on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) to "service_role";
+grant execute on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.save_condominium(p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb) from public, anon, authenticated, service_role;
 
@@ -1765,11 +1767,11 @@ grant execute on function private.save_condominium(p_workspace_id uuid, p_legacy
 
 revoke all on function private.set_personal_security_code(p_code text, p_enabled boolean) from public, anon, authenticated, service_role;
 
-grant execute on function private.set_personal_security_code(p_code text, p_enabled boolean) to "service_role";
+grant execute on function private.set_personal_security_code(p_code text, p_enabled boolean) to "authenticated", "service_role";
 
 revoke all on function private.verify_personal_security_code(p_code text) from public, anon, authenticated, service_role;
 
-grant execute on function private.verify_personal_security_code(p_code text) to "service_role";
+grant execute on function private.verify_personal_security_code(p_code text) to "authenticated", "service_role";
 
 revoke all on function public.touch_documents_updated_at() from public, anon, authenticated, service_role;
 
