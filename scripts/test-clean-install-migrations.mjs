@@ -65,7 +65,7 @@ assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFil
 assert.deepEqual(actualFiles, expectedFiles,
   "Deployable migration directory differs from the frozen 28-file chronological clean-install sequence.");
 assert.equal(actualFiles.length, 29, "Expected 28 frozen historical files plus the single live-ledger proposal.");
-assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 28,
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 29,
   "Clean-install migration versions must be unique.");
 
 for (const item of freeze.sequence) {
