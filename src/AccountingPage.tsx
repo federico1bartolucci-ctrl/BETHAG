@@ -1,3 +1,4 @@
+import { localISODate } from "./lib/local-date";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
@@ -107,7 +108,7 @@ type AccountingSettings = { id:string; condominium_id:string; accounting_start_d
 
 const emptyLedger: Omit<LedgerEntry, "id" | "condominium_id"> = {
   fiscal_year_id: null,
-  entry_date: new Date().toISOString().slice(0, 10),
+  entry_date: localISODate(),
   direction: "Uscita",
   expense_type: "Ordinaria",
   category: "Manutenzione",
@@ -187,7 +188,7 @@ function AccountingPage({
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentInstallment, setPaymentInstallment] = useState<Installment | null>(null);
-  const [paymentForm, setPaymentForm] = useState({ payment_date:new Date().toISOString().slice(0,10), amount:0, method:"Bonifico", reference:"", notes:"" });
+  const [paymentForm, setPaymentForm] = useState({ payment_date:localISODate(), amount:0, method:"Bonifico", reference:"", notes:"" });
   const [showMillesimalValueForm, setShowMillesimalValueForm] = useState(false);
   const [showBulkMillesimalForm, setShowBulkMillesimalForm] = useState(false);
   const [bulkMillesimalTableId, setBulkMillesimalTableId] = useState("");
@@ -257,7 +258,7 @@ function AccountingPage({
     title: "",
     counterpart: "",
     status: "Aperto",
-    opened_date: new Date().toISOString().slice(0, 10),
+    opened_date: localISODate(),
     closed_date: "",
     notes: "",
   });
@@ -1785,7 +1786,7 @@ function AccountingPage({
       });
       if(paymentError) throw paymentError;
       setShowPaymentForm(false); setPaymentInstallment(null);
-      setPaymentForm({payment_date:new Date().toISOString().slice(0,10),amount:0,method:"Bonifico",reference:"",notes:""});
+      setPaymentForm({payment_date:localISODate(),amount:0,method:"Bonifico",reference:"",notes:""});
       flash("Pagamento registrato. Nuovo totale pagato: " + money(Number(data || 0)) + ".");
       await load();
     } catch(e:any){setError(e?.message || "Impossibile registrare il pagamento.");}
