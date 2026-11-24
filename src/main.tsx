@@ -9,6 +9,7 @@ import { getPortalRegistrationRequestWorkspaceView } from "./lib/portalRegistrat
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { updateDocumentAiStateForWorkspace } from "./lib/documentAiWorkspaceGuard.mjs";
 
 /* =========================================================
    BETHAG
@@ -2342,6 +2343,10 @@ function App() {
       };
     });
 
+  const activeDocumentWorkspaceIdRef = useRef(profile.workspaceId);
+  activeDocumentWorkspaceIdRef.current = profile.workspaceId;
+  const documentsWorkspaceIdRef = useRef<string | null>(null);
+
   const registrationRequestView = getPortalRegistrationRequestWorkspaceView(registrationRequestState, profile.workspaceId);
   const registrationRequests = registrationRequestView.requests;
   const registrationRequestsError = registrationRequestView.error;
@@ -4477,15 +4482,45 @@ function App() {
       return;
     }
 
+    const requestWorkspaceId = activeDocumentWorkspaceIdRef.current;
+    if (!requestWorkspaceId) {
+      alert("Workspace attivo non disponibile.");
+      return;
+    }
+    if (documentsWorkspaceIdRef.current !== requestWorkspaceId) {
+      alert("L'elenco documenti non è ancora sincronizzato con il workspace attivo. Aggiorna la pagina e riprova.");
+      return;
+    }
+
+    const requestDocument = {
+      id: item.id,
+      condominiumId: item.condominiumId,
+      storagePath: item.storagePath,
+    };
+    const updateCurrentDocument = (
+      current: DocumentItem[],
+      patch: Partial<DocumentItem>
+    ) => updateDocumentAiStateForWorkspace(
+      current,
+      {
+        currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        documentsWorkspaceId: documentsWorkspaceIdRef.current,
+        requestWorkspaceId,
+        requestDocument,
+      },
+      patch
+    );
+
     setDocuments((current) =>
-      current.map((doc) =>
-        doc.id === item.id ? { ...doc, aiStatus: "In elaborazione" } : doc
-      )
+      updateCurrentDocument(current, { aiStatus: "In elaborazione" })
     );
 
     try {
-      const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+      const workspaceId = await getActiveWorkspaceId(undefined, requestWorkspaceId);
+      if (!workspaceId || workspaceId !== requestWorkspaceId) {
+        throw new Error("Il workspace del documento non è più disponibile.");
+      }
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
 
       if (!item.storagePath) {
         throw new Error("Questo documento non dispone del file originale memorizzato. Ricaricalo dal modulo Documenti prima di avviare l'analisi AI.");
@@ -4498,25 +4533,19 @@ function App() {
       }]);
 
       setDocuments((current) =>
-        current.map((doc) =>
-          doc.id === item.id
-            ? {
-                ...doc,
-                aiStatus: "Da verificare",
-                aiSummary: draft.summary || "Analisi AI completata: verifica richiesta.",
-                extractedData: JSON.stringify(draft),
-                aiDocumentType: draft.documentType || "Altro",
-                aiConfidence: Number.isFinite(Number(draft.confidence)) ? Number(draft.confidence) : 0,
-              }
-            : doc
-        )
+        updateCurrentDocument(current, {
+          aiStatus: "Da verificare",
+          aiSummary: draft.summary || "Analisi AI completata: verifica richiesta.",
+          extractedData: JSON.stringify(draft),
+          aiDocumentType: draft.documentType || "Altro",
+          aiConfidence: Number.isFinite(Number(draft.confidence)) ? Number(draft.confidence) : 0,
+        })
       );
     } catch (error: any) {
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
       console.error("BETHAG general document AI error", error);
       setDocuments((current) =>
-        current.map((doc) =>
-          doc.id === item.id ? { ...doc, aiStatus: "Non elaborato" } : doc
-        )
+        updateCurrentDocument(current, { aiStatus: "Non elaborato" })
       );
       alert(error?.message || "Impossibile analizzare il documento con l'AI.");
     }
@@ -4533,9 +4562,40 @@ function App() {
     const document = documents.find((item) => item.id === id);
     if (!document) return;
 
+    const requestWorkspaceId = activeDocumentWorkspaceIdRef.current;
+    if (!requestWorkspaceId) {
+      alert("Workspace o Supabase non disponibili.");
+      return;
+    }
+    if (documentsWorkspaceIdRef.current !== requestWorkspaceId) {
+      alert("L'elenco documenti non è ancora sincronizzato con il workspace attivo. Aggiorna la pagina e riprova.");
+      return;
+    }
+    const requestDocument = {
+      id: document.id,
+      condominiumId: document.condominiumId,
+      storagePath: document.storagePath,
+    };
+    const updateCurrentDocument = (
+      current: DocumentItem[],
+      patch: Partial<DocumentItem>
+    ) => updateDocumentAiStateForWorkspace(
+      current,
+      {
+        currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        documentsWorkspaceId: documentsWorkspaceIdRef.current,
+        requestWorkspaceId,
+        requestDocument,
+      },
+      patch
+    );
+
     try {
-      const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId || !supabase) throw new Error("Workspace o Supabase non disponibili.");
+      const workspaceId = await getActiveWorkspaceId(undefined, requestWorkspaceId);
+      if (!workspaceId || workspaceId !== requestWorkspaceId || !supabase) {
+        throw new Error("Workspace o Supabase non disponibili.");
+      }
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
 
       let operationalMessage = "Dati AI confermati.";
       const extracted = document.extractedData ? JSON.parse(document.extractedData) : null;
@@ -4569,8 +4629,12 @@ function App() {
           if (existingIntakeError) throw existingIntakeError;
           if (existingIntake?.id) {
             operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
-            setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
-            alert(operationalMessage);
+            if (activeDocumentWorkspaceIdRef.current === requestWorkspaceId) {
+              setDocuments((current) =>
+                updateCurrentDocument(current, { aiStatus: "Confermato" })
+              );
+              alert(operationalMessage);
+            }
             return;
           }
         }
@@ -4653,23 +4717,28 @@ function App() {
           ? `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità e collegati al lavoro "${selectedWork.title}".`
           : `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità. Nessun lavoro è stato collegato automaticamente.`;
 
-        if (result.workId) {
+        if (result.workId && activeDocumentWorkspaceIdRef.current === requestWorkspaceId) {
           setCondominiumWorks((current) => current.map((work) => work.id === result.workId ? { ...work, documentIds: Array.from(new Set([...(work.documentIds ?? []), document.id])) } : work));
         }
 
         if (invoiceDate) {
-          setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, date: invoiceDate } : doc));
+          setDocuments((current) =>
+            updateCurrentDocument(current, { date: invoiceDate })
+          );
         }
       }
 
-      setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
+      setDocuments((current) =>
+        updateCurrentDocument(current, { aiStatus: "Confermato" })
+      );
       alert(operationalMessage);
     } catch (error: any) {
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
       console.error("BETHAG AI confirmation failed", error);
       alert(error?.message || "Impossibile confermare e trasferire i dati AI.");
     }
   };
-
 
   /* =======================================================
      ASSEMBLEE
@@ -6674,6 +6743,7 @@ function App() {
 
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        documentsWorkspaceIdRef.current = workspaceId;
         setDocuments(backend.documents);
         setDeadlines(backend.deadlines);
         setAssemblies(backend.assemblies);
@@ -6737,6 +6807,7 @@ function App() {
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        documentsWorkspaceIdRef.current = profile.workspaceId;
         setDocuments(backend.documents);
         setDeadlines(backend.deadlines);
         setAssemblies(backend.assemblies);
