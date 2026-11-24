@@ -44,3 +44,14 @@ Il difetto riguarda le funzioni future create da postgres; non dimostra un'espos
 Nessun merge, deploy, migrazione o modifica a Production/QA. Nessun reset, nuovo ambiente a pagamento o riscrittura delle 267 righe storiche. L'autorizzazione storica per 19 migrazioni non è riutilizzabile.
 
 **Esito:** proposta riallineata ai ledger live; non ancora eseguibile. Punto 3 aperto.
+
+## Rehearsal runner e snapshot live — 24 novembre 2026
+
+- Snapshot completo read-only delle 267 coppie versione/nome Production: `supabase/rebuild/drafts/production-ledger-live-20261124.json`.
+- Preflight e postflight SQL dedicati: `production-cutover-preflight-live-20261124.sql` e `production-cutover-postflight-live-20261124.sql`.
+- Runner `scripts/apply-live-ledger-acl-rehearsal.mjs`: deliberatamente **solo rehearsal locale**; rifiuta ogni target non loopback e non implementa un percorso Production.
+- Test `scripts/test-live-ledger-acl-rehearsal.mjs`: ricostruisce in PostgreSQL 17 isolato le 267 coppie esatte, esegue la candidata in transazione e verifica 268 righe, preservazione delle 267 coppie e revoca dei default globali.
+- Il workflow build crea un database CI dedicato per questo test. La rehearsal CI è ancora da eseguire sul nuovo SHA.
+- La candidata resta in `supabase/rebuild/drafts`; non è stata aggiunta alla catena `supabase/migrations`. Il runner storico e il freeze 19/248/267 restano intatti.
+
+**Limite esplicito:** il runner appena aggiunto non è un runner di cutover Production. Serve a validare localmente la transazione/ledger e impedire un'esecuzione remota accidentale. Per un eventuale cutover serviranno ancora integrazione controllata clean-install, verifica completa delle catene, un runner Production distinto sottoposto a revisione e nuova approvazione esplicita.
