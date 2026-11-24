@@ -126,7 +126,7 @@ END $$;
 
 -- The caller cannot see SAL rows, but the trigger must still enforce their links.
 SET ROLE authenticated;
-DO $rls_test$$
+DO $rls_test$
 BEGIN
   IF (SELECT count(*) FROM public.condominium_work_progress) <> 0 THEN
     RAISE EXCEPTION 'Regression: authenticated accounting user unexpectedly sees activity SAL rows';
