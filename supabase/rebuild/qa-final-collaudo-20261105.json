@@ -1,20 +1,20 @@
 {
-  "artifact": "BETHAG final QA evidence — CAP candidate c684cc74 exact-head",
+  "artifact": "BETHAG final QA evidence — CAP candidate 78d9ec6c exact-head",
   "captured_date": "2026-11-24",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "cap-consolidation-20261123",
-  "reviewed_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+  "reviewed_head_sha": "78d9ec6c19ac9b7f5833609fff57fc522938af76",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "baseline_safety": {
-      "run_id": 45401046100,
-      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+      "run_id": 45426236122,
+      "head_sha": "78d9ec6c19ac9b7f5833609fff57fc522938af76",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 45401046061,
-      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+      "run_id": 45426235950,
+      "head_sha": "78d9ec6c19ac9b7f5833609fff57fc522938af76",
       "conclusion": "success",
       "jobs": {
         "build": "success",
@@ -22,11 +22,11 @@
       }
     },
     "final_qa_collaudo": {
-      "run_id": 45401046145,
+      "run_id": 45426236232,
       "run_attempt": 1,
-      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+      "head_sha": "78d9ec6c19ac9b7f5833609fff57fc522938af76",
       "conclusion": "success",
-      "checked_out_revision_verification": "PASS — Checkout requested CAP revision and Verify checked-out revision both SUCCESS"
+      "checked_out_revision_verification": "Workflow run metadata identifies this exact PR head; no separate step named Verify checked-out revision appears in the retrieved job log."
     }
   },
   "application_tests": {
@@ -68,7 +68,8 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 14922918775
+        "artifact_id": 14936747962,
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45426236232/artifacts/14936747962"
       }
     }
   },
@@ -123,14 +124,14 @@
     },
     "temporary_provider_fixture_removed": true,
     "preexisting_qa_fixtures_preserved": true,
-    "portal_plan_fixture": "RESTORED — original QA workspace plan free; explicit restore step SUCCESS",
+    "portal_plan_fixture": "RESTORED — original QA workspace plan free; explicit restore log SUCCESS",
     "qa_preview": "STOPPED — cleanup step SUCCESS",
-    "diagnostics_artifact": "bethag-app15-diagnostics / 14922918775",
-    "diagnostics_digest": "sha256:c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351"
+    "diagnostics_artifact": "bethag-app15-diagnostics / 14936747962",
+    "diagnostics_digest": "sha256:936120ef1c3fe6d05532a896f99705b93432d13f75e98a8a81b39f4f0d386c3a"
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Build, PostgreSQL 17 bootstrap, Baseline Safety and authenticated Final QA completed SUCCESS on exact CAP SHA c684cc74d8dbac072239eef3aab4d4bab80b45dd. APP-01..APP-13 and APP-15 PASS. APP-12 live provider delivery NOT_RUN. APP-14 PARTIAL and reserved for Production post-cutover. QA reversible plan fixture restored to free; preview stopped. Production NO-GO.",
+  "conclusion": "Build, PostgreSQL 17 bootstrap, Baseline Safety and authenticated Final QA workflows completed SUCCESS on PR head 78d9ec6c19ac9b7f5833609fff57fc522938af76. APP-01..APP-13 and APP-15 PASS. APP-12 live provider delivery NOT_RUN; APP-14 PARTIAL and reserved for Production post-cutover. QA Portal plan fixture restored to free; preview stopped. Production NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -176,7 +177,7 @@
       "limitation": "Connector read-only checks only; not the guarded runner exact-checkout PostgreSQL direct/Session Pooler preflight."
     }
   },
-  "captured_at_utc": "2026-11-07T21:48:44Z",
+  "captured_at_utc": "2026-11-24T15:34:00Z",
   "storage_regression": {
     "status": "PASS",
     "defect": "Backend-mode browser rendering attempted to persist the complete condominium-member collection to localStorage and exceeded browser quota after successful Supabase insert.",
@@ -250,13 +251,14 @@
   },
   "execution_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
   "current_head_validation": {
-    "status": "EXACT_HEAD_CHECKOUT_VERIFIED",
-    "candidate_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
-    "final_qa_workflow_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
-    "final_qa_run_id": 45401046145,
-    "checkout_revision_verification": "SUCCESS",
-    "tree_identity_verified": true,
-    "note": "Workflow explicitly checked out requested CAP revision and verified checked-out revision; Build, Baseline Safety and Final QA all report this exact SHA."
+    "status": "EXACT_PR_HEAD_WORKFLOW_RUNS_VERIFIED",
+    "candidate_head_sha": "78d9ec6c19ac9b7f5833609fff57fc522938af76",
+    "build_run_id": 45426235950,
+    "baseline_safety_run_id": 45426236122,
+    "final_qa_run_id": 45426236232,
+    "workflow_conclusions": "SUCCESS for all three workflows on the same PR head",
+    "checkout_identity_note": "GitHub workflow metadata records this PR head; a distinct checkout-revision assertion step was not found in retrieved QA job log.",
+    "app_acceptance": "APP-01..APP-13 and APP-15 PASS; APP-12 provider delivery NOT_RUN; APP-14 PARTIAL and reserved for Production post-cutover."
   },
   "latest_main_head_validation": {
     "execution_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
