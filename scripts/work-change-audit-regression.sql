@@ -14,6 +14,14 @@ CREATE TABLE IF NOT EXISTS public.condominium_works (
   actual_end_date date
 );
 
+ALTER TABLE public.condominium_works
+  ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS priority text NOT NULL DEFAULT 'Normale',
+  ADD COLUMN IF NOT EXISTS notes text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS fund_id uuid,
+  ADD COLUMN IF NOT EXISTS register_item_id uuid;
+
 \i supabase/migrations/20261124240000_audit_work_details_and_references.sql
 
 DROP TRIGGER IF EXISTS audit_condominium_work_change_test
