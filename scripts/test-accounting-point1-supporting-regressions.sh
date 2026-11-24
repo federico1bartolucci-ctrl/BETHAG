@@ -69,3 +69,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # changing storage schema-specific grants or Supabase-managed owner defaults.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/private-function-default-acl-repair-regression.sql
+
+
+# Reproduce and fix stale ledger status under concurrent installment updates.
+bash scripts/test-installment-payment-status-concurrency.sh
