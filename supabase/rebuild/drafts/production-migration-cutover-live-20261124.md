@@ -98,3 +98,23 @@ Le schermate erano già state inviate dall'owner e vengono ora registrate senza 
 - **QA, branch `bethag-launch-qa`, 24 novembre 2026, schermata delle 22:36:** `graphql_public` e `public` esposti; `private` non esposto. Questa evidenza è conservata separatamente e non viene usata come prova dell'impostazione Production.
 
 **Disposizione corretta:** la verifica Dashboard Production non è più classificata come del tutto mancante: è riconfermata al 24 novembre per conteggio e impostazioni accessorie. I nomi esatti Production restano supportati dalla schermata Production dell'8 novembre, non da quella Production del 24 novembre. Il runner resta fail-closed se richiede una verifica name-level Production entro 24 ore. Nessuna modifica alle impostazioni Supabase è stata eseguita.
+
+
+## CI exact-head e aggiornamento evidenze — 25 novembre 2026
+
+Questa sezione supersede le note CI precedenti contenute sopra, che si riferivano a SHA più vecchi.
+
+Commit esaminato: `cb8b3b110349add442711a4e864a58ee35c6bc9e`.
+
+- Build #4693 — **SUCCESS**: include PostgreSQL bootstrap, clean-install delle 28 migrazioni canoniche, rehearsal separata della candidata draft-only, guarded runner 267→268, regressione ACL, test applicativi, compilazione e browser smoke pubblico isolato.
+- Baseline Safety #1536 — **SUCCESS**.
+- PostgreSQL 17 job `postgres-bootstrap` — **SUCCESS** nello stesso Build.
+- Browser smoke pubblico isolato — **SUCCESS**.
+- Autenticazione reale QA e diagnostica edit/archive nel Build — **SKIPPED** per condizioni di branch; nessuna scrittura QA eseguita da questi step.
+- Final QA APP-01..APP-15 #1373 — **SKIPPED**. Non è un esito PASS e non costituisce accettazione applicativa.
+
+I riferimenti sono registrati nel campo `rehearsal_evidence.exact_head_ci_evidence` del manifest. La CI tecnica exact-head è quindi PASS per Build, Baseline, PostgreSQL 17 e browser smoke isolato; la certificazione APP-01..APP-15 resta distinta e non superata.
+
+La verifica Data API è aggiornata dalla sezione “Rettifica evidenze Data API già fornite”: screenshot Production del 24 novembre riconferma 2/3 schemi esposti e le altre impostazioni visibili; i nomi Production restano documentati dalla schermata Production dell'8 novembre. La schermata QA del 24 novembre resta prova esclusivamente QA. Non si deve chiedere nuovamente all'owner materiale già fornito né trasferire evidenze tra ambienti.
+
+**Stato complessivo invariato:** manifest `DRAFT_NOT_APPROVED`; nessuna revisione tecnica indipendente registrata; nessuna approvazione owner; APP-01..APP-15 non accettati; runner Production non eseguito. Nessuna scrittura su Production o QA.
