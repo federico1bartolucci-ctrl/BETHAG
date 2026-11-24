@@ -57,7 +57,14 @@ Verifica aggiuntiva dei payload SQL live:
   - QA `20261103072843` = Production `20261022202747` (search_path wrapper trasferimento).
   - QA `20261104122833` = Production `20261103070901` (RPC evento Resend).
 - Le mappature QA `20261102054253` / Production `20261102100200` e QA `20261102054409` / Production `20261102100100` sono semanticamente documentate come equivalenti, ma i payload non hanno hash identico; richiedono mantenimento della relativa evidenza.
-- Le otto versioni Production-only elencate sopra non hanno un payload QA identico sotto un'altra versione. La migrazione aggregata Production `20261104130000` e le migrazioni ACL `20261104222229`, `20261105010000`, `20261105020000`, `20261105030000`, `20261105050000` richiedono mappatura semantica verso gli interventi QA, senza replay automatico.
+- Mappatura semantica delle otto versioni Production-only:
+- `20261102100100` ↔ QA `20261102054409`: stesso `ALTER TABLE ... ADD COLUMN IF NOT EXISTS data jsonb NOT NULL DEFAULT '{}'`; il payload QA è più corto perché non contiene i due commenti introduttivi.
+- `20261102100200` ↔ QA `20261102054253`: stessa funzione `private.save_condominium`; differiscono i commenti, non il corpo SQL.
+- `20261104130000`: migrazione aggregata Production che ridefinisce `private.archive_condominium`, `private.restore_condominium` e `private.apply_incoming_transfer_member_metadata`. Le definizioni live di queste tre funzioni risultano semanticamente allineate fra QA e Production; la migrazione è rappresentata da interventi QA precedenti/branch-specifici, non da un singolo payload identico.
+- `20261104222229`, `20261105010000`, `20261105020000`, `20261105030000`: interventi ACL/default privileges. La loro equivalenza effettiva va verificata nell'audit ACL del Punto 3; non dedurre la parità dal solo conteggio di tabelle o dal ledger.
+- `20261105050000`: Production aggiorna `private.upsert_portal_access_for_member`, `private.complete_portal_registration` e `private.admin_approve_portal_registration`. La funzione upsert è semanticamente allineata a QA; le due funzioni di registrazione hanno invece divergenze logiche residue: Production contiene controlli aggiuntivi su ambiguità del condominio, selezione esplicita e lock/ordine di lock.
+
+Queste mappature descrivono lo stato effettivo osservato; non autorizzano replay automatico né scritture remote.
 
 Le altre divergenze includono baseline e interventi branch-specifici; la corrispondenza semantica va verificata per singolo payload. Non eseguire replay, inserimenti nel ledger o migrazioni di riallineamento senza una matrice versioni/payload approvata.
 
