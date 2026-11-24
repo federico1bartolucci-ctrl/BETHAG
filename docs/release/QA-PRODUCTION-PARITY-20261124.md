@@ -48,6 +48,15 @@ Mappature già documentate e da mantenere esplicite, non da risolvere con replay
 - QA `20261102200820` / Production `20261102200855`: ripristino EXECUTE RPC destinatari comunicazioni.
 - QA `20261104122833` / Production `20261103070901`: EXECUTE alla RPC privata evento Resend.
 
+Verifica aggiuntiva dei payload SQL live:
+- Per tutte le 259 versioni condivise, gli hash dei payload coincidono dopo la sola normalizzazione CRLF/LF. Gli 11 hash grezzi diversi erano dovuti esclusivamente ai terminatori di riga.
+- Tre migrazioni QA hanno payload esattamente identico a una versione Production differente:
+  - QA `20261102200820` = Production `20261102200855` (RPC destinatari comunicazioni).
+  - QA `20261103072843` = Production `20261022202747` (search_path wrapper trasferimento).
+  - QA `20261104122833` = Production `20261103070901` (RPC evento Resend).
+- Le mappature QA `20261102054253` / Production `20261102100200` e QA `20261102054409` / Production `20261102100100` sono semanticamente documentate come equivalenti, ma i payload non hanno hash identico; richiedono mantenimento della relativa evidenza.
+- Le otto versioni Production-only elencate sopra non hanno un payload QA identico sotto un'altra versione. La migrazione aggregata Production `20261104130000` e le migrazioni ACL `20261104222229`, `20261105010000`, `20261105020000`, `20261105030000`, `20261105050000` richiedono mappatura semantica verso gli interventi QA, senza replay automatico.
+
 Le altre divergenze includono baseline e interventi branch-specifici; la corrispondenza semantica va verificata per singolo payload. Non eseguire replay, inserimenti nel ledger o migrazioni di riallineamento senza una matrice versioni/payload approvata.
 
 ## Parità catalogo strutturale
