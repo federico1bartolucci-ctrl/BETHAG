@@ -129,7 +129,9 @@ const prepared = prepareCondominiumMembersForBackupRestore(
   existingMembers,
 );
 assert.equal(prepared.skipped, 2);
-assert.equal(prepared.rows.length, 2);\nassert.deepEqual(prepared.updateRows.map((row) => row.id), ["member-existing"]);\nassert.deepEqual(prepared.insertRows.map((row) => row.id), ["member-new"]);
+assert.equal(prepared.rows.length, 2);
+assert.deepEqual(prepared.updateRows.map((row) => row.id), ["member-existing"]);
+assert.deepEqual(prepared.insertRows.map((row) => row.id), ["member-new"]);
 
 const existing = prepared.rows.find((row) => row.id === "member-existing");
 assert.equal(existing.condominium_id, "condo-a");
