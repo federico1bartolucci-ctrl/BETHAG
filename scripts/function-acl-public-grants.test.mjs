@@ -163,12 +163,12 @@ test('consumption allocation RPC rejects an expense from a different fiscal year
 
 test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
   const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences('IF NOT '), 6);
-  assert.equal(occurrences(' THEN'), 6);
-  assert.equal(occurrences('RAISE EXCEPTION'), 6);
-  assert.equal(occurrences("has_function_privilege('anon'"), 20);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 20);
+  assert.equal(occurrences('IF NOT '), 7);
+  assert.equal(occurrences(' THEN'), 7);
+  assert.equal(occurrences('RAISE EXCEPTION'), 7);
+  assert.equal(occurrences("has_function_privilege('anon'"), 21);
+  assert.equal(occurrences("has_function_privilege('authenticated'"), 21);
+  assert.equal(occurrences("has_function_privilege('service_role'"), 21);
   assert.equal(occurrences("has_function_privilege('public'"), 0,
     'PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup');
 });
