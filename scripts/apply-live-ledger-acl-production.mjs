@@ -91,11 +91,20 @@ async function main(){
   exact(approval?.qa_app_01_to_15_status,"PASS","STOP: APP-01..APP-15 are not freshly accepted as PASS.");
   assert.match(approval?.qa_tested_commit_sha??"",/^[0-9a-f]{40}$/,"STOP: QA acceptance must identify the exact tested commit SHA.");
   assertLiveLedgerAclEvidenceMatchesSource(approval,approvedSource);
+  assert.ok(approval?.qa_evidence_reference,"STOP: QA APP-01..APP-15 evidence reference is missing.");
   exact(approval?.data_api_exposure_verified,true,"STOP: fresh Production Data API exposure verification is missing.");
   assert.ok(approval?.data_api_exposure_evidence_reference,"STOP: Data API exposure verification evidence is missing.");
+  const exposureAt=Date.parse(approval?.data_api_exposure_verified_at_utc??"");
+  assert.ok(Number.isFinite(exposureAt)&&Date.now()>=exposureAt&&Date.now()-exposureAt<=24*60*60*1000,
+    "STOP: Production Data API exposure evidence must be timestamped within the last 24 hours.");
   exact(approval?.residual_backup_risk_reconfirmed,true,"STOP: residual physical-restore risk has not been explicitly reconfirmed.");
+  assert.ok(approval?.residual_backup_risk_evidence_reference,"STOP: residual backup-risk reconfirmation evidence is missing.");
+  assert.notEqual(approval?.independent_technical_review?.reviewer,approval?.approved_by,
+    "STOP: independent technical reviewer must be distinct from the owner approver.");
   assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
-  const start=Date.parse(approval?.approved_window_start_utc??""),end=Date.parse(approval?.approved_window_end_utc??"");
+  assert.match(approval?.approved_window_start_utc??"",/^\\d{4}-\\d{2}-\\d{2}T.*Z$/,"STOP: execution window start must be an explicit UTC timestamp.");
+  assert.match(approval?.approved_window_end_utc??"",/^\\d{4}-\\d{2}-\\d{2}T.*Z$/,"STOP: execution window end must be an explicit UTC timestamp.");
+  const start=Date.parse(approval.approved_window_start_utc),end=Date.parse(approval.approved_window_end_utc);
   assert.ok(Number.isFinite(start)&&Number.isFinite(end)&&end>start,"STOP: approval must specify a valid UTC execution window.");
   assert.ok(Date.now()>=start&&Date.now()<=end,"STOP: current time is outside the approved UTC execution window.");
 
@@ -140,6 +149,7 @@ $ledger_guard$;`;
       const pass=join(passDir,"pgpass");
       await writeFile(pass,[env.PGHOST,env.PGPORT,env.PGDATABASE,env.PGUSER,password].map(passEscape).join(":")+"\n",{mode:0o600});
       await chmod(pass,0o600);env.PGPASSFILE=pass;}
+    assert.ok(password||env.PGPASSFILE,"STOP: provide a password-bearing DATABASE_URL or a protected PGPASSFILE; PGPASSWORD is not forwarded.");
     delete env.DATABASE_URL;delete env.PGPASSWORD;
     tmpDir=await mkdtemp(join(tmpdir(),"bethag-live-production-cutover-"));
     const file=join(tmpDir,"forward-only.sql");await writeFile(file,transaction,{mode:0o600});
