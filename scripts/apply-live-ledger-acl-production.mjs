@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+/**
+ * Dedicated forward-only runner for the single 267 -> 268 live-ledger ACL proposal.
+ * It is separate from both the historical 248 -> 267 runner and the local-only rehearsal.
+ * No Production connection is attempted unless a fresh, exact owner approval is present.
+ */
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile, mkdtemp, writeFile, chmod, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { execFileSync, spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const root=resolve(fileURLToPath(new URL("..",import.meta.url)));
+const projectRef="tctcgptrsmvgajqjgnev";
+const candidate="20261124234000_revoke_postgres_global_public_function_execute.sql";
+const snapshotPath=join(root,"supabase/rebuild/drafts/production-ledger-live-20261124.json");
+const manifestPath=join(root,"supabase/rebuild/drafts/production-migration-cutover-live-20261124.json");
+const candidatePath=join(root,"supabase/migrations",candidate);
+const preflightPath=join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql");
+const postflightPath=join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql");
+const runnerPath=join(root,"scripts/apply-live-ledger-acl-production.mjs");
+const blobSha=s=>{const t=s.replace(/\r\n/g,"\n"),b=Buffer.from(t);return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\0"),b])).digest("hex");};
+const fingerprintSha=s=>createHash("sha256").update(s).digest("hex");
+const lit=s=>"'"+String(s).replaceAll("'","''")+"'";
+const passEscape=s=>String(s??"").replaceAll("\\","\\\\").replaceAll(":","\\:");
+
+function targetUrl(value){
+  let u; try{u=new URL(value);}catch{throw new Error("STOP: DATABASE_URL must identify the approved Production PostgreSQL target.");}
+  assert.ok(["postgres:","postgresql:"].includes(u.protocol),"STOP: PostgreSQL protocol required.");
+  const direct=u.hostname===`db.${projectRef}.supabase.co`&&decodeURIComponent(u.username)==="postgres";
+  const pooler=u.hostname.endsWith(".pooler.supabase.com")&&decodeURIComponent(u.username)===`postgres.${projectRef}`;
+  assert.ok((direct||pooler)&&decodeURIComponent(u.pathname.slice(1))==="postgres","STOP: target is not the exact approved BETHAG Production database.");
+  return u;
+}
+function exact(a,b,m){assert.equal(a,b,m);}
+async function main(){
+  exact(process.env.BETHAG_LIVE_LEDGER_PRODUCTION_APPLY,"YES","STOP: explicit live-ledger Production apply opt-in is missing.");
+  exact(process.env.BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION,"YES","STOP: second Production apply authorization is missing.");
+  exact(process.env.BETHAG_PRODUCTION_PROJECT_REF,projectRef,"STOP: wrong Production project ref.");
+  const expected=process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim()||"";
+  exact(process.env.BETHAG_APPROVED_SOURCE_COMMIT_SHA?.trim(),expected,"STOP: approved source SHA and checkout SHA differ.");
+  assert.match(expected,/^[0-9a-f]{40}$/,"STOP: full 40-character source SHA required.");
+  exact(execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim(),expected,"STOP: checkout differs from approved source SHA.");
+  exact(execFileSync("git",["status","--porcelain"],{cwd:root,encoding:"utf8"}).trim(),"","STOP: Production runner requires a clean checkout.");
+
+  const [manifest,snapshot,sql,preflight,postflight]=await Promise.all([
+    readFile(manifestPath,"utf8").then(JSON.parse),readFile(snapshotPath,"utf8").then(JSON.parse),
+    readFile(candidatePath,"utf8"),readFile(preflightPath,"utf8"),readFile(postflightPath,"utf8")
+  ]);
+  exact(manifest.status,"APPROVED_FOR_PRODUCTION_CUTOVER","STOP: manifest is not explicitly approved for Production cutover.");
+  exact(manifest.approval_scope,"LIVE_LEDGER_ACL_267_TO_268","STOP: approval scope is not the single 267-to-268 live-ledger ACL migration.");
+  exact(manifest.production_apply_authorized,true,"STOP: manifest does not authorize Production apply.");
+  exact(manifest.sequence?.length,1,"STOP: runner accepts exactly one candidate migration.");
+  const item=manifest.sequence[0];
+  exact(item.file,candidate,"STOP: candidate migration filename differs.");
+  exact(item.git_blob_sha,"499ea493e828243309ee2f4bb9c3242d2fbeb862","STOP: candidate SQL hash differs.");
+  exact(blobSha(sql),item.git_blob_sha,"STOP: deployable candidate SQL hash mismatch.");
+  exact(blobSha(await readFile(join(root,"supabase/rebuild/drafts",candidate),"utf8")),item.git_blob_sha,"STOP: archived candidate SQL hash mismatch.");
+  exact(snapshot.project_ref,projectRef,"STOP: snapshot project ref differs.");
+  exact(snapshot.count,267,"STOP: pinned ledger must contain 267 rows.");
+  exact(snapshot.migrations?.length,267,"STOP: all 267 historical version/name pairs are required.");
+  exact(snapshot.head?.version,"20261105050000","STOP: pinned ledger head differs.");
+  exact(manifest.live_ledger?.rows,267,"STOP: manifest live ledger row count differs.");
+  exact(manifest.live_ledger?.head_version,"20261105050000","STOP: manifest live ledger head differs.");
+
+  const paths=["scripts/apply-live-ledger-acl-production.mjs","supabase/migrations/"+candidate,
+    "supabase/rebuild/drafts/production-ledger-live-20261124.json",
+    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json",
+    "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
+    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
+  const pieces=[];
+  for(const path of paths.sort()) pieces.push(path+"\0"+(await readFile(join(root,path),"utf8")).replace(/\r\n/g,"\n")+"\0");
+  const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+expected+"\0"+pieces.join(""));
+  const approval=manifest.owner_authorization;
+  exact(approval?.status,"RECEIVED","STOP: explicit owner authorization record is missing.");
+  exact(approval?.approved_commit_sha,expected,"STOP: approval does not bind this exact source SHA.");
+  exact(approval?.approved_release_fingerprint,fingerprint,"STOP: approval does not bind this exact release fingerprint.");
+  exact(approval?.approved_target_project_ref,projectRef,"STOP: approval does not bind the exact Production project.");
+  assert.ok(approval?.approved_by&&approval?.approval_reference,"STOP: approval must identify approver and evidence reference.");
+  assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
+  const start=Date.parse(approval?.approved_window_start_utc??""),end=Date.parse(approval?.approved_window_end_utc??"");
+  assert.ok(Number.isFinite(start)&&Number.isFinite(end)&&end>start,"STOP: approval must specify a valid UTC execution window.");
+  assert.ok(Date.now()>=start&&Date.now()<=end,"STOP: current time is outside the approved UTC execution window.");
+
+  const db=targetUrl(process.env.DATABASE_URL||"");
+  const vals=snapshot.migrations.map(({version,name})=>{
+    assert.match(version,/^\d{14}$/);assert.match(name,/^[a-z0-9][a-z0-9_-]*$/);
+    return "("+lit(version)+","+lit(name)+")";
+  }).join(",\n");
+  const exactLedgerGuard=`DO $ledger_guard$
+BEGIN
+ IF (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 267 THEN
+  RAISE EXCEPTION 'STOP: expected exactly 267 historical ledger rows';
+ END IF;
+ IF EXISTS (WITH expected(version,name) AS (VALUES
+${vals}
+ ) SELECT 1 FROM (
+  (SELECT version,name FROM expected EXCEPT SELECT version,name FROM supabase_migrations.schema_migrations)
+  UNION ALL
+  (SELECT version,name FROM supabase_migrations.schema_migrations EXCEPT SELECT version,name FROM expected)
+ ) delta) THEN
+  RAISE EXCEPTION 'STOP: one or more historical version/name pairs differs from the pinned Production snapshot';
+ END IF;
+END
+$ledger_guard$;`;
+  const transaction=["BEGIN;","SELECT pg_advisory_xact_lock(hashtext('bethag-live-ledger-acl-267-to-268'));",
+    exactLedgerGuard,preflight,sql,
+    "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key) VALUES ("+
+    lit("20261124234000")+","+lit("revoke_postgres_global_public_function_execute")+
+    ",ARRAY[$bethag_live_acl_candidate$"+sql+"$bethag_live_acl_candidate$],"+
+    lit("bethag-live-ledger-acl-production-runner")+",NULL);",
+    postflight,"COMMIT;",""].join("\n");
+
+  const env={...process.env,PGHOST:db.hostname,PGPORT:db.port||"5432",
+    PGDATABASE:decodeURIComponent(db.pathname.slice(1)),PGUSER:decodeURIComponent(db.username)};
+  for(const [param,key] of [["sslmode","PGSSLMODE"],["application_name","PGAPPNAME"],
+    ["connect_timeout","PGCONNECT_TIMEOUT"],["options","PGOPTIONS"],["target_session_attrs","PGTARGETSESSIONATTRS"]]){
+    if(db.searchParams.has(param))env[key]=db.searchParams.get(param);
+  }
+  const password=decodeURIComponent(db.password);let passDir=null,tmpDir=null;
+  try{
+    if(password){passDir=await mkdtemp(join(tmpdir(),"bethag-live-production-pgpass-"));
+      const pass=join(passDir,"pgpass");
+      await writeFile(pass,[env.PGHOST,env.PGPORT,env.PGDATABASE,env.PGUSER,password].map(passEscape).join(":")+"\n",{mode:0o600});
+      await chmod(pass,0o600);env.PGPASSFILE=pass;}
+    delete env.DATABASE_URL;delete env.PGPASSWORD;
+    tmpDir=await mkdtemp(join(tmpdir(),"bethag-live-production-cutover-"));
+    const file=join(tmpDir,"forward-only.sql");await writeFile(file,transaction,{mode:0o600});
+    const child=spawn(process.env.BETHAG_PSQL_BIN||"psql",["-X","--no-psqlrc","-v","ON_ERROR_STOP=1","-f",file],{env,stdio:["ignore","pipe","pipe"]});
+    let out="",err="";
+    await new Promise((resolve,reject)=>{
+      child.stdout.setEncoding("utf8").on("data",x=>out+=x);
+      child.stderr.setEncoding("utf8").on("data",x=>err+=x);
+      child.on("error",reject);child.on("close",code=>code===0?resolve():reject(new Error("Production transaction failed: "+(err||out))));
+    });
+    console.log(JSON.stringify({status:"PASS",mode:"OWNER_APPROVED_PRODUCTION_FORWARD_ONLY",
+      project_ref:projectRef,source_commit_sha:expected,release_fingerprint:fingerprint,
+      historical_rows_preserved:267,canonical_rows_added:1,final_ledger_rows:268,
+      final_ledger_head:"20261124234000",candidate_git_blob_sha:item.git_blob_sha,
+      postflight_notice_observed:/POSTFLIGHT PASS/.test(err+out)},null,2));
+  }finally{
+    if(tmpDir)await rm(tmpDir,{recursive:true,force:true});
+    if(passDir)await rm(passDir,{recursive:true,force:true});
+  }
+}
+main().catch(e=>{console.error(e?.message||String(e));process.exitCode=1;});
