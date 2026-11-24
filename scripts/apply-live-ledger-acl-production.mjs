@@ -75,7 +75,7 @@ async function main(){
     "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
   const pieces=[];
   for(const path of paths.sort()) pieces.push(path+"\0"+(await readFile(join(root,path),"utf8")).replace(/\r\n/g,"\n")+"\0");
-  const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+expected+"\0"+pieces.join(""));
+  const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+approvedSource+"\0"+pieces.join(""));
   const approval=manifest.owner_authorization;
   exact(approval?.status,"RECEIVED","STOP: explicit owner authorization record is missing.");
   exact(approval?.approved_commit_sha,approvedSource,"STOP: approval does not bind this exact owner-approved source SHA.");
