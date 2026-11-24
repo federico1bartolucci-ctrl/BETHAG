@@ -412,5 +412,32 @@
     },
     "portal_plan_fixture": "RESTORE_NOT_REQUIRED; prepare step did not run",
     "final_acceptance": "NOT ACCEPTED — APP-01..APP-15 final workflow remains skipped on the current branch"
+  },
+  "production_readonly_recheck": {
+    "checked_at_utc": "2026-11-24T23:18:35.001858Z",
+    "project_status": "ACTIVE_HEALTHY",
+    "postgres_version": "17.6",
+    "ledger": {
+      "rows": 267,
+      "head_version": "20261105050000",
+      "exact_match_to_pinned_267_version_name_pairs": true,
+      "candidate_version_or_name_matches": 0
+    },
+    "effective_acl": {
+      "postgres_global_function_default": "{=X/postgres,postgres=X/postgres}",
+      "explicit_global_pg_default_acl_rows": 0,
+      "interpretation": "The built-in implicit PostgreSQL default still grants EXECUTE to PUBLIC; no explicit global pg_default_acl override row exists. The preflight's acldefault fallback correctly detects this effective privilege.",
+      "public_schema_function_default": "{postgres=X/postgres}",
+      "storage_schema_function_default": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "current_public_functions_with_public_execute": 0
+    },
+    "security_advisor": {
+      "security_lints": 0
+    },
+    "data_api_exposure": {
+      "status": "NOT_RECONFIRMED",
+      "reason": "The SQL connector does not expose the effective Supabase Dashboard Data API exposed-schema setting; no pgrst.db_schemas database/role override was found. Prior owner Dashboard evidence is dated 2026-11-07 and must be rechecked before cutover."
+    },
+    "scope": "Read-only Production verification only; no DDL, migration, ledger, or application-data writes."
   }
 }
