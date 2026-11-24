@@ -289,3 +289,10 @@ La CI sul commit `4e1a5517b2dda2240fa64eea789cddb03dd7e1e5` ha superato i test `
 - `scripts/test-fiscal-year-close-write-lock.sh`: aggiornato il percorso da timestamp `24240600` a `24233500`.
 
 La correzione riguarda esclusivamente gli harness di test, non i corpi SQL delle migrazioni. Commit: `3922b9124980f7b5d4108864fd7176adf35b4751` e `7f6a5e8b892e05d8f4994cbaa806f9398eeaf502`. Punto 1 resta RIAPERTO fino al completamento integrale della nuova CI sul nuovo head. Nessuna modifica a QA/Production.
+
+
+### Ulteriore riferimento obsoleto nel supporting regression — 24 novembre 2026
+
+La CI sul commit `7e9168e134cbb4a764aed04dbb29bd70e834161a` ha superato `work-delete-sal-guard` e la catena cronologica. Il job supporting regressions si è fermato in `scripts/ledger-work-progress-reference-guard-regression.sql` perché includeva il vecchio percorso `20261124240200_guard_ledger_entries_linked_to_work_progress.sql`. Aggiornato a `20261124233300_guard_ledger_entries_linked_to_work_progress.sql`.
+
+Commit fix: `85564372c374151a44e995104c75bab88f728c09`. Restano in esecuzione al momento della verifica i job fiscal-year-parent-row-locks e payment-allocation; la nuova CI sul nuovo head dovrà confermare tutto. Punto 1 ancora RIAPERTO. Nessuna modifica QA/Production.
