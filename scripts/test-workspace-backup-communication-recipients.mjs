@@ -206,8 +206,8 @@ assert.equal(missingCommunication.skipped, 1);
 
 const duplicateEvent = prepareCommunicationRecipientsForBackupRestore(
   [
-    sentRecipient,
-    { ...sentRecipient, id: replacementRecipientId, email: "another@example.it" },
+    { ...sentRecipient, provider_event_id: providerEventId },
+    { ...sentRecipient, id: replacementRecipientId, email: "another@example.it", provider_event_id: providerEventId },
   ],
   workspaceId,
   [],
@@ -217,6 +217,16 @@ const duplicateEvent = prepareCommunicationRecipientsForBackupRestore(
 );
 assert.equal(duplicateEvent.insertRows.length, 1);
 assert.equal(duplicateEvent.skipped, 1, "Duplicate provider event IDs must not violate the unique provider-event index.");
+
+const existingEventConflict = prepareCommunicationRecipientsForBackupRestore(
+  [sentRecipient],
+  workspaceId,
+  [{ ...sentRecipient, id: replacementRecipientId, communication_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", provider_event_id: providerEventId }],
+  [communication],
+  [condominiumId],
+  [member]
+);
+assert.equal(existingEventConflict.skipped, 1, "A provider event ID already owned by another communication must not be replayed.");
 
 const invalidSent = prepareCommunicationRecipientsForBackupRestore(
   [{ ...sentRecipient, provider_message_id: null }],
