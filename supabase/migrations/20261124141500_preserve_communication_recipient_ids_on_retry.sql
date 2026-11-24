@@ -12,6 +12,7 @@ DECLARE
   v_count integer;
   v_retry_count integer := 0;
   v_manual_review integer := 0;
+  v_step_count integer := 0;
   v_inactive_count integer := 0;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -142,7 +143,8 @@ BEGIN
       OR r.bounced_at IS NOT NULL
       OR r.complained_at IS NOT NULL
     );
-  GET DIAGNOSTICS v_manual_review = v_manual_review + ROW_COUNT;
+  GET DIAGNOSTICS v_step_count = ROW_COUNT;
+  v_manual_review := v_manual_review + v_step_count;
 
   -- Keep the historical row, but do not send to a pending address that is no
   -- longer represented by an active member of this condominium.
