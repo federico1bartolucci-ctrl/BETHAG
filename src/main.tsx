@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { buildManualAssemblyMinutesDraft, canConfirmAssemblyMinutes } from "./lib/assemblyAudioWorkflow.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -377,6 +378,7 @@ type Assembly = {
   notes: string;
   audioName: string;
   transcriptionStatus: AIStatus;
+  transcriptionText?: string;
   minutesStatus: AIStatus;
   minutesDraft: string;
   publishedToPortal: boolean;
@@ -1033,6 +1035,7 @@ const emptyAssembly: Assembly = {
   notes: "",
   audioName: "",
   transcriptionStatus: "Non elaborato",
+  transcriptionText: "",
   minutesStatus: "Non elaborato",
   minutesDraft: "",
   publishedToPortal: false,
@@ -4790,34 +4793,11 @@ function App() {
     )
       return;
 
-    setAssemblies((current) =>
-      current.map((item) =>
-        item.id === assembly.id
-          ? {
-              ...item,
-              audioName: file.name,
-              transcriptionStatus:
-                "In elaborazione",
-              minutesStatus:
-                "Non elaborato",
-            }
-          : item
-      )
+    alert(
+      "L'audio non viene caricato né trascritto automaticamente. Il file " +
+      file.name +
+      " non è stato salvato. Inserisci o incolla la trascrizione manuale nel campo dedicato dell'assemblea per preparare una bozza."
     );
-
-    setTimeout(() => {
-      setAssemblies((current) =>
-        current.map((item) =>
-          item.id === assembly.id
-            ? {
-                ...item,
-                transcriptionStatus:
-                  "Da verificare",
-              }
-            : item
-        )
-      );
-    }, 1300);
   };
 
   const generateMinutes = (
@@ -4836,13 +4816,9 @@ function App() {
     )
       return;
 
-    if (
-      assembly.transcriptionStatus ===
-      "Non elaborato"
-    ) {
-      alert(
-        "Prima devi acquisire e trascrivere l'audio dell'assemblea."
-      );
+    const draft = buildManualAssemblyMinutesDraft(assembly);
+    if (!draft) {
+      alert("Inserisci prima una trascrizione manuale da verificare. L'audio non viene trascritto automaticamente.");
       return;
     }
 
@@ -4851,36 +4827,12 @@ function App() {
         item.id === assembly.id
           ? {
               ...item,
-              minutesStatus:
-                "In elaborazione",
+              minutesStatus: "Da verificare",
+              minutesDraft: draft,
             }
           : item
       )
     );
-
-    setTimeout(() => {
-      setAssemblies((current) =>
-        current.map((item) =>
-          item.id === assembly.id
-            ? {
-                ...item,
-                minutesStatus:
-                  "Da verificare",
-                minutesDraft:
-                  `BOZZA DI VERBALE\n\n${item.title}\nData: ${formatDate(
-                    item.date
-                  )}\nOra: ${
-                    item.time ||
-                    "da definire"
-                  }\nLuogo: ${
-                    item.place ||
-                    "da definire"
-                  }\n\nLa presente bozza è stata predisposta a partire dalla trascrizione dell'audio. Deve essere verificata e approvata dall'amministratore prima della pubblicazione.`,
-              }
-            : item
-        )
-      );
-    }, 1300);
   };
 
   const confirmMinutes = (
@@ -4890,13 +4842,17 @@ function App() {
       alert("La conferma del verbale è riservata all'Amministratore.");
       return;
     }
+    const assembly = assemblies.find((item) => item.id === id);
+    if (!assembly || !canConfirmAssemblyMinutes(assembly)) {
+      alert("Non è possibile confermare il verbale senza una trascrizione manuale e una bozza da verificare.");
+      return;
+    }
     setAssemblies((current) =>
       current.map((item) =>
         item.id === id
           ? {
               ...item,
-              minutesStatus:
-                "Confermato",
+              minutesStatus: "Confermato",
             }
           : item
       )
@@ -11833,7 +11789,7 @@ function AssembliesPage({
           </b>
 
           <span>
-            Audio → trascrizione → bozza
+            Trascrizione manuale → bozza
             verbale → verifica → pubblicazione
           </span>
 
@@ -11923,7 +11879,7 @@ function AssembliesPage({
                   <div className="minutes-preview">
 
                     <b>
-                      Bozza verbale
+                      Bozza da trascrizione manuale
                     </b>
 
                     <p>
@@ -11967,7 +11923,7 @@ function AssembliesPage({
 
                 <label className="file-button">
 
-                  🎙️ Acquisisci audio
+                  🎙️ Audio (non trascritto)
 
                   <input
                     type="file"
@@ -12002,7 +11958,7 @@ function AssembliesPage({
                     )
                   }
                 >
-                  ✨ Genera verbale
+                  ✨ Prepara bozza
                 </button>
 
 
@@ -16172,6 +16128,24 @@ function AssemblyForm({
             ]
           )}
         />
+
+        <Field
+          full
+          label="Trascrizione manuale (necessaria per la bozza)"
+          value={value.transcriptionText ?? ""}
+          onChange={(v: string) =>
+            setValue({
+              ...value,
+              transcriptionText: v,
+              transcriptionStatus: v.trim() ? "Da verificare" : "Non elaborato",
+            })
+          }
+          textarea
+        />
+
+        <small>
+          La trascrizione deve essere inserita o verificata manualmente. L'audio selezionato non viene caricato né trascritto automaticamente.
+        </small>
 
         <Field
           full
