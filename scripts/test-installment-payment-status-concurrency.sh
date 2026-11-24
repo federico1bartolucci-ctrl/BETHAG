@@ -32,6 +32,34 @@ CREATE TABLE IF NOT EXISTS public.condominium_installments (
   paid_amount numeric NOT NULL DEFAULT 0,
   due_date date NOT NULL
 );
+ALTER TABLE public.condominium_installments
+  ADD COLUMN IF NOT EXISTS workspace_id uuid,
+  ADD COLUMN IF NOT EXISTS condominium_id uuid,
+  ADD COLUMN IF NOT EXISTS fiscal_year_id uuid,
+  ADD COLUMN IF NOT EXISTS unit_id uuid,
+  ADD COLUMN IF NOT EXISTS member_id uuid;
+
+CREATE TABLE IF NOT EXISTS public.condominium_fiscal_years (
+  id uuid PRIMARY KEY,
+  workspace_id uuid NOT NULL,
+  condominium_id uuid NOT NULL,
+  start_date date,
+  end_date date,
+  status text NOT NULL DEFAULT 'Aperto'
+);
+INSERT INTO public.condominium_fiscal_years
+  (id, workspace_id, condominium_id, start_date, end_date, status)
+VALUES
+  ('00000000-0000-0000-0000-000000000081',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   current_date - 365, current_date + 365, 'Aperto')
+ON CONFLICT (id) DO UPDATE
+SET workspace_id=EXCLUDED.workspace_id,
+    condominium_id=EXCLUDED.condominium_id,
+    start_date=EXCLUDED.start_date,
+    end_date=EXCLUDED.end_date,
+    status='Aperto';
 SQL
 
 # Reinstall the previous implementation to prove the race before applying
@@ -152,15 +180,24 @@ INSERT INTO public.condominium_ledger_entries
   (id, workspace_id, condominium_id, fiscal_year_id, direction, amount, payment_status)
 VALUES
   ('$ledger_id',
-   '90000000-0000-0000-0000-000000000001',
-   '90000000-0000-0000-0000-000000000002',
-   NULL, 'Uscita', 100.00, 'Registrato');
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000081',
+   'Uscita', 100.00, 'Registrato');
 
 INSERT INTO public.condominium_installments
-  (id, ledger_entry_id, amount, paid_amount, due_date)
+  (id, workspace_id, condominium_id, fiscal_year_id, ledger_entry_id, amount, paid_amount, due_date)
 VALUES
-  ('$first_installment_id', '$ledger_id', 50.00, 0.00, current_date + 30),
-  ('$second_installment_id', '$ledger_id', 50.00, 0.00, current_date + 30);
+  ('$first_installment_id',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000081',
+   '$ledger_id', 50.00, 0.00, current_date + 30),
+  ('$second_installment_id',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000081',
+   '$ledger_id', 50.00, 0.00, current_date + 30);
 
 DO \$verify\$
 BEGIN
