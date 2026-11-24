@@ -567,6 +567,21 @@ BEGIN
 END
 $derived_guard$;
 
+-- A second payment changes paid_amount but leaves the aggregate status
+-- unchanged. The nested no-op status refresh must also avoid the closed-year lock.
+UPDATE public.condominium_installments
+SET paid_amount=45
+WHERE id='90000000-0000-0000-0000-000000000131';
+
+DO $noop_derived_guard$
+BEGIN
+  IF (SELECT payment_status FROM public.condominium_ledger_entries
+      WHERE id='90000000-0000-0000-0000-000000000030') <> 'Parzialmente pagato' THEN
+    RAISE EXCEPTION 'No-op nested payment-status refresh should preserve the aggregate status';
+  END IF;
+END
+$noop_derived_guard$;
+
 UPDATE public.condominium_fiscal_years
 SET status='Aperto'
 WHERE id='00000000-0000-0000-0000-000000000081';
