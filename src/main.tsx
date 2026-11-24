@@ -5,6 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { loadPortalRegistrationRequests } from "./lib/portalRegistrationRequestPagination";
+import { getPortalRegistrationRequestWorkspaceView } from "./lib/portalRegistrationRequestWorkspaceState";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2323,7 +2324,7 @@ function App() {
   });
   const [condominiumMembers, setCondominiumMembers] = useState<CondominiumMember[]>(() => load(KEYS.condominiumMembers, initialCondominiumMembers));
   const [condominiumRequests, setCondominiumRequests] = useState<CondominiumRequest[]>(() => load(KEYS.condominiumRequests, initialCondominiumRequests));
-  const [registrationRequests, setRegistrationRequests] = useState<PortalRegistrationRequest[]>([]);
+  const [registrationRequestState, setRegistrationRequestState] = useState<{ workspaceId: string; requests: PortalRegistrationRequest[]; error: string | null }>({ workspaceId: "", requests: [], error: null });
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(false);
   const [profile, setProfile] =
     useState<AdminProfile>(() => {
@@ -2340,6 +2341,10 @@ function App() {
           makeWorkspaceId(),
       };
     });
+
+  const registrationRequestView = getPortalRegistrationRequestWorkspaceView(registrationRequestState, profile.workspaceId);
+  const registrationRequests = registrationRequestView.requests;
+  const registrationRequestsError = registrationRequestView.error;
 
   const [portalMembers, setPortalMembers] =
     useState<PortalMember[]>(
@@ -3011,17 +3016,30 @@ function App() {
   };
 
   useEffect(() => {
-    if (!supabaseConfigured || !supabase || sessionRole !== "admin" || !profile.workspaceId) {
-      setRegistrationRequests([]);
+    const workspaceId = profile.workspaceId;
+    if (!supabaseConfigured || !supabase || sessionRole !== "admin" || !workspaceId) {
+      setRegistrationRequestState({ workspaceId: "", requests: [], error: null });
       return;
     }
     let cancelled = false;
+    // Tag the empty loading snapshot immediately. The derived view also hides
+    // any previous workspace snapshot before this effect runs after a switch.
+    setRegistrationRequestState({ workspaceId, requests: [], error: null });
     const loadRegistrationRequests = async () => {
       try {
-        const combined = await loadPortalRegistrationRequests(supabase, profile.workspaceId);
-        if (!cancelled) setRegistrationRequests(combined as PortalRegistrationRequest[]);
+        const combined = await loadPortalRegistrationRequests(supabase, workspaceId);
+        if (!cancelled) {
+          setRegistrationRequestState({ workspaceId, requests: combined as PortalRegistrationRequest[], error: null });
+        }
       } catch (error) {
         console.error("BETHAG portal registration requests load error", error);
+        if (!cancelled) {
+          setRegistrationRequestState({
+            workspaceId,
+            requests: [],
+            error: "Impossibile caricare le richieste di registrazione. Aggiorna la pagina e riprova.",
+          });
+        }
       }
     };
     void loadRegistrationRequests();
@@ -3081,7 +3099,9 @@ function App() {
       }
       return;
     }
-    setRegistrationRequests((current) => current.filter((item) => item.id !== requestId));
+    setRegistrationRequestState((current) => current.workspaceId === profile.workspaceId
+      ? { ...current, requests: current.requests.filter((item) => item.id !== requestId) }
+      : current);
     try {
       const backend = await loadBackendState(profile.workspaceId);
       setCondominiumMembers(backend.condominiumMembers);
@@ -7729,6 +7749,7 @@ function App() {
               }
               isAdministrator={isAdministrator}
               registrationRequests={registrationRequests}
+              registrationRequestsError={registrationRequestsError}
               condominiumMembers={condominiumMembers}
               onApproveRegistration={approvePortalRegistration}
             />
@@ -8975,6 +8996,7 @@ function Dashboard({
   subscription,
   isAdministrator,
   registrationRequests,
+  registrationRequestsError,
   condominiumMembers,
   onApproveRegistration,
 }: any) {
@@ -9014,6 +9036,12 @@ function Dashboard({
 
       </header>
 
+
+      {isAdministrator && registrationRequestsError && (
+        <div className="card" role="alert" style={{ marginBottom: 16 }}>
+          {registrationRequestsError}
+        </div>
+      )}
 
       {isAdministrator && registrationRequests.length > 0 && (
         <PortalRegistrationRequestsPanel
