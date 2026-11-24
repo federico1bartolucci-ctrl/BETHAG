@@ -5,8 +5,14 @@ set -euo pipefail
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     CREATE ROLE authenticated NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN;
   END IF;
 END
 $$;
@@ -184,6 +190,38 @@ $$;
 SELECT 'LEGACY DEFECT REPRODUCED: scope-mismatched SAL rows were cascade-deleted' AS result;
 
 \i supabase/rebuild/candidates/accounting-point1-20261124/20261124202340_prevent_work_delete_with_progress.sql
+
+DO $acl$
+DECLARE
+  v_oid oid := 'public.prevent_work_delete_with_progress()'::regprocedure;
+BEGIN
+  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid=v_oid) THEN
+    RAISE EXCEPTION 'work deletion guard must be SECURITY DEFINER';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p, unnest(coalesce(p.proconfig,array[]::text[])) cfg
+    WHERE p.oid=v_oid AND cfg='search_path=""'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p, unnest(coalesce(p.proconfig,array[]::text[])) cfg
+    WHERE p.oid=v_oid AND cfg='row_security=off'
+  ) THEN
+    RAISE EXCEPTION 'work deletion guard must use empty search_path and row_security=off';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(
+      coalesce((SELECT proacl FROM pg_proc WHERE oid=v_oid),
+               acldefault('f',(SELECT proowner FROM pg_proc WHERE oid=v_oid)))
+    ) a
+    WHERE a.grantee IN (0,'anon'::regrole,'authenticated'::regrole,'service_role'::regrole)
+      AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'Application role EXECUTE remains on work deletion trigger';
+  END IF;
+  IF NOT has_function_privilege('postgres',v_oid,'EXECUTE') THEN
+    RAISE EXCEPTION 'Owner EXECUTE was not preserved';
+  END IF;
+END
+$acl$;
 
 INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title)
 VALUES
