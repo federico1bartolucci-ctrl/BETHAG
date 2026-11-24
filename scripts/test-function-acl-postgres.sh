@@ -79,9 +79,9 @@ GRANT EXECUTE ON FUNCTION private.can_manage_workspace_module(uuid, text) TO aut
 SQL
 
 awk '
-  /CREATE OR REPLACE FUNCTION public.generate_consumption_allocations\\(/ { capture=1 }
+  index($0, "CREATE OR REPLACE FUNCTION public.generate_consumption_allocations(") { capture=1 }
   capture { print }
-  capture && /^\\$function\\$;$/ { exit }
+  capture && $0 == "$function$;" { exit }
 ' "$migration" > "$tmp_sql"
 test -s "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
