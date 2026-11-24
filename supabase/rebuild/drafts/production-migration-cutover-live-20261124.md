@@ -87,3 +87,14 @@ Il workflow `.github/workflows/qa-final-collaudo.yml` supporta `workflow_dispatc
 Il workflow manuale opera però sul progetto QA condiviso e include fixture temporanee reversibili (tra cui modifica/ripristino del piano Portal), test autenticati e flussi browser. Non è stato avviato: la presente fase mantiene il vincolo di non scrivere su QA senza autorizzazione specifica. Non esiste, tra le azioni GitHub collegate disponibili in questa sessione, un'azione di dispatch workflow.
 
 **Stato dopo questa verifica:** Build, PostgreSQL 17 e Baseline Safety PASS sullo SHA `e3b9f8a...`; il nuovo aggiornamento del manifest richiede una nuova CI exact-head. APP-01..APP-15, Data API Dashboard, revisione tecnica indipendente, riconferma del rischio backup e approvazione owner restano gate aperti. Nessuna scrittura Production/QA.
+
+
+## Rettifica evidenze Data API già fornite — 25 novembre 2026
+
+Le schermate erano già state inviate dall'owner e vengono ora registrate senza richiederne un nuovo invio.
+
+- **Production, branch `main`, 24 novembre 2026 (evidenza Dashboard acquisita nella conversazione alle 21:30:39 UTC):** schemi esposti 2/3; tabelle 0/48; funzioni 0/173; auto-esposizione nuove tabelle disattivata; Extra search path `public`, `extensions`; Max rows 1000. La schermata Production mostra il conteggio, non i nomi degli schemi.
+- **Production, 8 novembre 2026:** precedente schermata con i nomi `graphql_public` e `public` esposti; `private` non esposto; `supabase_functions` assente dalle scelte disponibili.
+- **QA, branch `bethag-launch-qa`, 24 novembre 2026, schermata delle 22:36:** `graphql_public` e `public` esposti; `private` non esposto. Questa evidenza è conservata separatamente e non viene usata come prova dell'impostazione Production.
+
+**Disposizione corretta:** la verifica Dashboard Production non è più classificata come del tutto mancante: è riconfermata al 24 novembre per conteggio e impostazioni accessorie. I nomi esatti Production restano supportati dalla schermata Production dell'8 novembre, non da quella Production del 24 novembre. Il runner resta fail-closed se richiede una verifica name-level Production entro 24 ore. Nessuna modifica alle impostazioni Supabase è stata eseguita.
