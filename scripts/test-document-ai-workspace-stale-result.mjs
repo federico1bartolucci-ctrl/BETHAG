@@ -43,8 +43,9 @@ const legacyIdOnlyFailure = [workspaceBDocument].map((document) =>
 );
 assert.equal(legacyIdOnlyFailure[0].aiStatus, "Non elaborato");
 
+const workspaceBDocuments = [workspaceBDocument];
 const staleSuccess = updateDocumentAiStateForWorkspace(
-  [workspaceBDocument],
+  workspaceBDocuments,
   {
     currentWorkspaceId: "workspace-b",
     requestWorkspaceId: "workspace-a",
@@ -52,12 +53,13 @@ const staleSuccess = updateDocumentAiStateForWorkspace(
   },
   aiResultFromA,
 );
+assert.strictEqual(staleSuccess, workspaceBDocuments);
 assert.strictEqual(staleSuccess[0], workspaceBDocument);
 assert.equal(staleSuccess[0].aiSummary, "Dati preesistenti del workspace B");
 assert.equal(staleSuccess[0].extractedData, "workspace-b-data");
 
 const staleFailure = updateDocumentAiStateForWorkspace(
-  [workspaceBDocument],
+  workspaceBDocuments,
   {
     currentWorkspaceId: "workspace-b",
     requestWorkspaceId: "workspace-a",
@@ -65,6 +67,7 @@ const staleFailure = updateDocumentAiStateForWorkspace(
   },
   { aiStatus: "Non elaborato" },
 );
+assert.strictEqual(staleFailure, workspaceBDocuments);
 assert.strictEqual(staleFailure[0], workspaceBDocument);
 assert.equal(staleFailure[0].aiStatus, "Confermato");
 
