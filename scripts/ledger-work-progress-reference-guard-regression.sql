@@ -30,6 +30,9 @@ CREATE TABLE public.condominium_work_progress (
 -- read SAL rows under the activity-module RLS policy.
 DO $role_setup$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     CREATE ROLE authenticated NOLOGIN;
   END IF;
