@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: ["main"]
+  push:
+    branches: ["fix/qa-app08-11-cleanup-generated-incoming-member-20261124"]
   workflow_dispatch:
 
 concurrency:
@@ -12,7 +14,7 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'fix/qa-app08-11-cleanup-generated-incoming-member-20261124' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
