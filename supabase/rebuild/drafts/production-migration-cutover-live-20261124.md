@@ -25,8 +25,9 @@ Il difetto riguarda le funzioni future create da postgres; non dimostra un'espos
 
 ## Sequenza e clean-install
 
-- Migrazioni da aggiungere a Production: **1**.
-- File SQL clean-install: **29** (5 baseline + 1 head canonico + 20 incrementali + 3 forward Production).
+- Migrazioni proposte da aggiungere a Production: **1**, subordinata a nuova approvazione.
+- Inventario deployable standard: **28 migrazioni canoniche congelate**. La candidata resta esclusivamente in `supabase/rebuild/drafts` e non è visibile a `supabase db push`.
+- Rehearsal della candidata: database PostgreSQL 17 separato e locale/effimero; non fa parte del clean-install standard.
 - Hash candidato: `499ea493e828243309ee2f4bb9c3242d2fbeb862`.
 - Postflight ipotizzato: ledger 268, head `20261124234000`.
 
@@ -55,3 +56,10 @@ Nessun merge, deploy, migrazione o modifica a Production/QA. Nessun reset, nuovo
 - La candidata resta in `supabase/rebuild/drafts`; non è stata aggiunta alla catena `supabase/migrations`. Il runner storico e il freeze 19/248/267 restano intatti.
 
 **Limite esplicito:** il runner appena aggiunto non è un runner di cutover Production. Serve a validare localmente la transazione/ledger e impedire un'esecuzione remota accidentale. Per un eventuale cutover serviranno ancora integrazione controllata clean-install, verifica completa delle catene, un runner Production distinto sottoposto a revisione e nuova approvazione esplicita.
+
+
+## Rettifica exact-head — 25 novembre 2026
+
+La candidata resta **non deployable**: è conservata solo in `supabase/rebuild/drafts`. Il clean-install standard deve applicare esattamente le 28 migrazioni canoniche congelate; la candidata viene verificata separatamente su PostgreSQL 17 isolato. I controlli di inventario, baseline e runner devono applicare tutti la stessa regola. Nessuna promozione della bozza in `supabase/migrations` è autorizzata da questo documento.
+
+La CI sul commit precedente `19128bdd902d9430bc79e49ac47728714dc83d8f` ha evidenziato un disallineamento: il validatore filename richiedeva 29 file mentre la proposta draft-only ne mantiene 28; il controllo di baseline e il verificatore del runner contenevano ancora l'aspettativa precedente. Le correzioni sono state allineate ai 28 file e alla rehearsal separata; restano da certificare sul nuovo exact-head con Build e Baseline Safety. APP-01..APP-15 resta un gate distinto e non può essere considerato superato se il workflow è SKIPPED.
