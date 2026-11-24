@@ -39,7 +39,9 @@ try{
  const paidState=await db.from("condominium_installments").select("paid_amount,status").eq("id",installmentId).single();assert.ifError(paidState.error);assert.equal(Number(paidState.data.paid_amount),125.5);assert.equal(paidState.data.status,"Pagato");
  const fixtureName="BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE";
  let fixture=await db.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("name",fixtureName).order("created_at",{ascending:true}).limit(1).maybeSingle();assert.ifError(fixture.error);
+ assert.ok(fixture.data, "APP-07 pre-existing closed-year fixture is missing; refusing to create persistent QA data");
  if(!fixture.data){
+  throw new Error("APP-07 fixture creation is disabled; provision it through a separately approved QA setup");
   const fc=await db.from("condominiums").insert({workspace_id:w.data.id,name:fixtureName,address:"Via QA esercizio chiuso",city:"Imola",data:{bethag_qa_fixture:"APP07 closed fiscal year guard"}}).select("id").single();assert.ifError(fc.error);
   const fu=await db.from("condominium_units").insert({workspace_id:w.data.id,condominium_id:fc.data.id,unit_code:"APP07-CLOSED-01",data:{unitType:"Abitazione",active:true}}).select("id").single();assert.ifError(fu.error);
   const ff=await db.from("condominium_fiscal_years").insert({workspace_id:w.data.id,condominium_id:fc.data.id,name:"APP07 esercizio chiuso",start_date:"2026-01-01",end_date:"2026-12-31",status:"Aperto",opening_balance:0}).select("id").single();assert.ifError(ff.error);
