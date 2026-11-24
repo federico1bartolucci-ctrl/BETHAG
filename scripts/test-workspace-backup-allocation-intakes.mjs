@@ -276,4 +276,4 @@ for (const relatedTable of ["documents", "condominium_ledger_entries", "condomin
   assert.match(definition, /"condominium_id"\s+uuid/);
 }
 
-console.log("Workspace backup allocation-intake regression checks passed.");
+console.log("Workspace backup allocation-intake reference-ownership regression checks passed.");
