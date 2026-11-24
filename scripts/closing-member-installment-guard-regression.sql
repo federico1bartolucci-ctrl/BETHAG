@@ -6,10 +6,8 @@ CREATE TABLE public.condominium_members (
   active boolean NOT NULL DEFAULT true,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
-CREATE TABLE public.condominium_installments (
-  id uuid PRIMARY KEY,
-  member_id uuid
-);
+ALTER TABLE public.condominium_installments
+  ADD COLUMN IF NOT EXISTS member_id uuid;
 
 CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history()
 RETURNS trigger LANGUAGE plpgsql AS $function$
