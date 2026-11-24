@@ -107,3 +107,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f supabase/migrations/20261124170000_reconcile_ledger_status_on_installment_move.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/installment-ledger-status-regression.sql
+
+# Verify that closing-member installment protection is case/whitespace insensitive.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/closing-member-installment-guard-regression.sql
