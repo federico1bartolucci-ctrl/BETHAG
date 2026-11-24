@@ -1,20 +1,20 @@
 {
-  "artifact": "BETHAG final QA evidence — refreshed after portal security review",
-  "captured_date": "2026-11-08",
+  "artifact": "BETHAG final QA evidence — CAP candidate c684cc74 exact-head",
+  "captured_date": "2026-11-24",
   "repository": "federico1bartolucci-ctrl/BETHAG",
-  "branch": "fix/edge-functions-phase1",
-  "reviewed_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+  "branch": "cap-consolidation-20261123",
+  "reviewed_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "baseline_safety": {
-      "run_id": 45390958503,
-      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+      "run_id": 45401046100,
+      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 45390959049,
-      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+      "run_id": 45401046061,
+      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
       "conclusion": "success",
       "jobs": {
         "build": "success",
@@ -22,11 +22,11 @@
       }
     },
     "final_qa_collaudo": {
-      "run_id": 45390958541,
+      "run_id": 45401046145,
       "run_attempt": 1,
-      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+      "head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
       "conclusion": "success",
-      "checked_out_revision_verification": "SKIPPED — pull_request workflow path; checkout SHA/tree not independently captured"
+      "checked_out_revision_verification": "PASS — Checkout requested CAP revision and Verify checked-out revision both SUCCESS"
     }
   },
   "application_tests": {
@@ -43,13 +43,11 @@
     "APP-11": "PASS",
     "APP-12": {
       "status": "PASS",
-      "publication_withdrawal_resident_visibility_recipient_preparation_queue_authorization": "PASS",
-      "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
-      "invalid_signature_rejected_http_401_without_mutation": "PASS",
-      "provider_probe": "SKIPPED — explicitly excluded by current QA authorization scope",
+      "publication_withdrawal_recipient_preparation": "PASS",
+      "signed_synthetic_webhook_events": "PASS",
+      "provider_probe": "SKIPPED — explicitly excluded by authorization",
       "provider_delivery": "NOT_RUN",
-      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe excluded by authorization; no external email sent.",
-      "limitation": "Functional publication and signed synthetic webhook acceptance passed; live provider delivery is not certified."
+      "limitation": "No live Resend email sent; synthetic signed webhook is not provider-delivery proof."
     },
     "APP-13": "PASS",
     "APP-14": {
@@ -70,8 +68,7 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 14919216319,
-        "digest": "sha256:c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351"
+        "artifact_id": 14922918775
       }
     }
   },
@@ -126,14 +123,14 @@
     },
     "temporary_provider_fixture_removed": true,
     "preexisting_qa_fixtures_preserved": true,
-    "portal_plan_fixture": "RESTORED — restore step SUCCESS in QA run 45390958541",
-    "qa_preview": "STOPPED — cleanup step SUCCESS in QA run 45390958541",
-    "diagnostics_artifact": "bethag-app15-diagnostics / 14919216319",
+    "portal_plan_fixture": "RESTORED — original QA workspace plan free; explicit restore step SUCCESS",
+    "qa_preview": "STOPPED — cleanup step SUCCESS",
+    "diagnostics_artifact": "bethag-app15-diagnostics / 14922918775",
     "diagnostics_digest": "sha256:c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351"
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Baseline Safety, Build/PostgreSQL 17 and Final QA workflow runs completed successfully on PR head metadata c6ea5fb4ca68976eb310502f45730cc0f44ee39c. APP-01..APP-13 and APP-15 PASS. APP-12 live provider delivery NOT_RUN. APP-14 PARTIAL; Production NO-GO. Checkout commit/tree identity not independently verified because the workflow verification step was skipped.",
+  "conclusion": "Build, PostgreSQL 17 bootstrap, Baseline Safety and authenticated Final QA completed SUCCESS on exact CAP SHA c684cc74d8dbac072239eef3aab4d4bab80b45dd. APP-01..APP-13 and APP-15 PASS. APP-12 live provider delivery NOT_RUN. APP-14 PARTIAL and reserved for Production post-cutover. QA reversible plan fixture restored to free; preview stopped. Production NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -251,17 +248,15 @@
     "production_modified": false,
     "merge_or_deploy_performed": false
   },
-  "execution_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+  "execution_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
   "current_head_validation": {
-    "status": "WORKFLOW_SUCCESS_CHECKOUT_SHA_NOT_INDEPENDENTLY_VERIFIED",
-    "candidate_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
-    "final_qa_workflow_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
-    "final_qa_run_id": 45390958541,
-    "checkout_verification_step": "SKIPPED",
-    "checkout_commit_sha": null,
-    "checkout_tree_sha": null,
-    "tree_identity_verified": false,
-    "note": "GitHub Actions reports the PR head SHA in run metadata and all final QA steps completed successfully. The workflow's explicit checked-out revision verification step was skipped on pull_request; the actual checkout commit/tree was not independently captured, so this record does not claim exact checkout identity."
+    "status": "EXACT_HEAD_CHECKOUT_VERIFIED",
+    "candidate_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+    "final_qa_workflow_head_sha": "c684cc74d8dbac072239eef3aab4d4bab80b45dd",
+    "final_qa_run_id": 45401046145,
+    "checkout_revision_verification": "SUCCESS",
+    "tree_identity_verified": true,
+    "note": "Workflow explicitly checked out requested CAP revision and verified checked-out revision; Build, Baseline Safety and Final QA all report this exact SHA."
   },
   "latest_main_head_validation": {
     "execution_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
