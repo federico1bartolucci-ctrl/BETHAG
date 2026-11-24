@@ -225,7 +225,7 @@ Le regressioni PostgreSQL 17 provano sia l'assenza di EXECUTE diretto per i ruol
 - `fiscal-year-parent-row-locks`: PASS.
 - `chronological-candidate-chain`: PASS.
 
-Run CI finale sui test/candidati aggiornati: [Accounting point 1 PostgreSQL 17 regression 45489254797](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489254797), 5/5 job SUCCESS sul commit `98f9c734b3f294892dcf60f0577abbea08ac88f4`. Baseline safety aggiornata [45489268905](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489268905): SUCCESS. Il check `final-qa-collaudo` è SKIPPED per scelta workflow dopo la certificazione APP-01..APP-15 già superata; nessuna nuova scrittura QA.
+Run CI finale sui test/candidati aggiornati: [Accounting point 1 PostgreSQL 17 regression 45489268893](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489268893), 5/5 job SUCCESS sul commit `98f9c734b3f294892dcf60f0577abbea08ac88f4`. Baseline safety aggiornata [45489268905](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489268905): SUCCESS. Il check `final-qa-collaudo` è SKIPPED per scelta workflow dopo la certificazione APP-01..APP-15 già superata; nessuna nuova scrittura QA.
 
 Queste modifiche restano file candidati/draft e test isolati. Nessuna ACL, funzione, trigger o default privilege è stata modificata su QA o Production.
 
