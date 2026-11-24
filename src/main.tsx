@@ -5,7 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
-import { applyInsurancePoliciesLoadResponse } from "./lib/insurancePolicyLoadGuard.mjs";
+import { applyInsurancePoliciesLoadFailure, applyInsurancePoliciesLoadResponse, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadGuard.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -17069,6 +17069,11 @@ type CondominiumInsurancePolicy = {
 
 function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condominiumId: number; isAdministrator: boolean }) {
   const [policies, setPolicies] = useState<CondominiumInsurancePolicy[]>([]);
+  const [policiesCondominiumId, setPoliciesCondominiumId] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadErrorCondominiumId, setLoadErrorCondominiumId] = useState<number | null>(null);
+  const visiblePolicies = selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId });
+  const visibleLoadError = loadErrorCondominiumId === condominiumId ? loadError : null;
   const [loading, setLoading] = useState(false);
   const insurancePolicyLoadSequence = useRef(0);
   const currentCondominiumIdRef = useRef(condominiumId);
@@ -17084,18 +17089,21 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
   const loadPolicies = async () => {
     const requestSequence = ++insurancePolicyLoadSequence.current;
     const requestedCondominiumId = condominiumId;
-    if (!supabase || !supabaseConfigured) return;
     setLoading(true);
+    setLoadError(null);
+    setLoadErrorCondominiumId(null);
     try {
+      if (!supabase || !supabaseConfigured) throw new Error("Servizio polizze assicurative non disponibile.");
       const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId) return;
-      const { data: condominium } = await supabase
+      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+      const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
         .select("id")
         .eq("workspace_id", workspaceId)
         .eq("legacy_id", requestedCondominiumId)
         .maybeSingle();
-      if (!condominium?.id) return;
+      if (condominiumError) throw condominiumError;
+      if (!condominium?.id) throw new Error("Impossibile individuare il condominio.");
       const { data, error } = await supabase
         .from("condominium_insurance_policies")
         .select("*")
@@ -17110,11 +17118,21 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         requestSequence,
         currentRequestSequence: insurancePolicyLoadSequence.current,
         setPolicies,
+        setPoliciesCondominiumId,
       });
     } catch (error) {
-      if (requestSequence === insurancePolicyLoadSequence.current && requestedCondominiumId === currentCondominiumIdRef.current) {
-        console.error("BETHAG insurance load error", error);
-      }
+      const applied = applyInsurancePoliciesLoadFailure({
+        error,
+        requestedCondominiumId,
+        currentCondominiumId: currentCondominiumIdRef.current,
+        requestSequence,
+        currentRequestSequence: insurancePolicyLoadSequence.current,
+        setPolicies,
+        setPoliciesCondominiumId,
+        setLoadError,
+        setLoadErrorCondominiumId,
+      });
+      if (applied) console.error("BETHAG insurance load error", error);
     } finally {
       if (requestSequence === insurancePolicyLoadSequence.current && requestedCondominiumId === currentCondominiumIdRef.current) {
         setLoading(false);
@@ -17281,11 +17299,11 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         </div>
       )}
 
-      {loading ? <p>Caricamento polizze…</p> : policies.length === 0 ? (
+      {loading ? <p>Caricamento polizze…</p> : visibleLoadError ? <p role="alert" style={{ color: "#b91c1c", margin: 0 }}>{visibleLoadError}</p> : visiblePolicies.length === 0 ? (
         <Empty text="Nessuna polizza assicurativa registrata." />
       ) : (
         <div className="related-list">
-          {policies.map(policy => {
+          {visiblePolicies.map(policy => {
             const expired = policy.end_date && new Date(policy.end_date + "T23:59:59") < new Date();
             const daysToExpiry = policy.end_date ? Math.ceil((new Date(policy.end_date + "T23:59:59").getTime() - Date.now()) / 86400000) : null;
             const warning = !expired && daysToExpiry !== null && daysToExpiry <= 30;
