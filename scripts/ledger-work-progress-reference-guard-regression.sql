@@ -122,7 +122,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Regression: SAL accounting references or paid amount were changed';
   END IF;
-END; $;
+END; $$;
 
 -- The caller cannot see SAL rows, but the trigger must still enforce their links.
 SET ROLE authenticated;
@@ -152,5 +152,5 @@ BEGIN
       RAISE;
     END IF;
   END;
-END $rls_test$;
+END; $rls_test$;
 RESET ROLE;
