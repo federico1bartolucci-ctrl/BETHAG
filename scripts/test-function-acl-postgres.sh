@@ -115,3 +115,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Preserve ledger references and paid SAL amounts when ledger rows are deleted/edited.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/ledger-work-progress-reference-guard-regression.sql
+
+# Audit changes to SAL expense/payment ledger references even when no amount changes.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/work-progress-accounting-link-audit-regression.sql
