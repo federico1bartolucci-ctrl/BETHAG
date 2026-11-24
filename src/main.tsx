@@ -7,6 +7,7 @@ import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase
 import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore, prepareWorkspaceRowsForBackupRestore } from "./lib/backupSecurityRestore.mjs";
 import { prepareAllocationIntakesForBackupRestore } from "./lib/backupAllocationIntakesRestore.mjs";
+import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationIntakesRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
@@ -3476,13 +3477,22 @@ function App() {
                 [...restoredCondominiumIds],
                 { documents, ledgerEntries, allocationTables, units }
               );
+            } else if (table === "condominium_creation_intakes") {
+              prepared = prepareCreationIntakesForBackupRestore(
+                rows,
+                profile.workspaceId,
+                existingRows,
+                [...restoredCondominiumIds]
+              );
             } else {
               prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
             }
             if (prepared.skipped > 0) {
               const skippedReason = table === "condominium_allocation_intakes"
                 ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato, un riferimento collegato non appartiene allo stesso workspace e condominio o il record è duplicato nel backup"
-                : "l'ID esiste in un altro workspace o è duplicato nel backup";
+                : table === "condominium_creation_intakes"
+                  ? "il condominio creato non è stato ripristinato, il percorso Storage non appartiene al workspace corrente o il record è duplicato nel backup"
+                  : "l'ID esiste in un altro workspace o è duplicato nel backup";
               errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
             }
             for (const workspaceRow of prepared.updateRows) {
