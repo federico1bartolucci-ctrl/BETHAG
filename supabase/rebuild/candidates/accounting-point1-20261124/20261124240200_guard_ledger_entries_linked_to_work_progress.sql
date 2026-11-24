@@ -80,4 +80,4 @@ $function$;
 -- direct EXECUTE merely because they can update the parent ledger table.
 -- Trigger execution remains valid after creation without caller EXECUTE.
 REVOKE EXECUTE ON FUNCTION public.guard_ledger_entry_integrity()
-  FROM PUBLIC, anon, authenticated;
+  FROM PUBLIC, anon, authenticated, service_role;
