@@ -18,6 +18,8 @@ on:
       - 'scripts/test-installment-payment-status-concurrency.sh'
       - 'scripts/test-accounting-point1-supporting-regressions.mjs'
       - 'package.json'
+      - 'scripts/test-migration-filename-validation.mjs'
+      - 'scripts/migration-filename-validation.mjs'
       - 'scripts/archived-condominium-move-regression.sql'
       - 'scripts/closing-member-installment-guard-regression.sql'
       - 'scripts/installment-fiscal-year-due-date-regression.sql'
