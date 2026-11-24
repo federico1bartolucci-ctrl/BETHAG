@@ -19,12 +19,14 @@ CREATE OR REPLACE FUNCTION private.check_condominium_member_transfer_closure(uui
 CREATE OR REPLACE FUNCTION public.check_condominium_member_transfer_closure(uuid) RETURNS jsonb LANGUAGE sql AS 'SELECT ''{}''::jsonb';
 CREATE OR REPLACE FUNCTION public.normalize_zero_ownership_owner() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END';
 CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END';
+GRANT USAGE ON SCHEMA private TO authenticated, service_role;
+CREATE OR REPLACE FUNCTION private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 SQL
 
 # Execute the exact ACL statements from the migration against real PostgreSQL.
 sed -E 's/^[[:space:]]+//' "$migration" \
   | grep -Ei '^(revoke all on function|grant execute on function)' \
-  | grep -Ei 'check_condominium_member_transfer_closure|normalize_zero_ownership_owner|preserve_closing_condominium_member_history' \
+  | grep -Ei 'check_condominium_member_transfer_closure|normalize_zero_ownership_owner|preserve_closing_condominium_member_history|generate_fiscal_year_carryovers' \
   > "$tmp_sql"
 test -s "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
