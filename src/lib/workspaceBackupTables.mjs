@@ -1,6 +1,6 @@
-// Tables included in the workspace backup's generic workspace-scoped export/restore.
-// Authorization, immutable audit, and workflow tables with separate security semantics
-// remain deliberately outside this manifest until their restore rules are reviewed.
+// Export/restore manifests for workspace-scoped business data.
+// Authorization rows remain exportable for reference but are skipped by the restore guard.
+// Other omitted workflow/audit tables require separate restore semantics and are not added here.
 export const WORKSPACE_BACKUP_EXPORT_TABLES = Object.freeze([
   "condominiums",
   "condominium_members",
