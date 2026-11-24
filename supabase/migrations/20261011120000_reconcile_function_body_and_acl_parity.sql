@@ -1465,7 +1465,7 @@ grant execute on function private.can_access_resident_condominium_module(target_
 
 revoke all on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) to PUBLIC;
+grant execute on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.close_condominium_member_transfer(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
@@ -1497,7 +1497,7 @@ grant execute on function public.audit_condominium_work_progress_change() to "se
 
 revoke all on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) to PUBLIC;
+
 
 grant execute on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) to "authenticated";
 
@@ -1605,13 +1605,13 @@ grant execute on function public.guard_millesimal_value_integrity() to "service_
 
 revoke all on function public.normalize_zero_ownership_owner() from public, anon, authenticated, service_role;
 
-grant execute on function public.normalize_zero_ownership_owner() to PUBLIC;
+
 
 grant execute on function public.normalize_zero_ownership_owner() to "service_role";
 
 revoke all on function public.preserve_closing_condominium_member_history() from public, anon, authenticated, service_role;
 
-grant execute on function public.preserve_closing_condominium_member_history() to PUBLIC;
+
 
 grant execute on function public.preserve_closing_condominium_member_history() to "service_role";
 
