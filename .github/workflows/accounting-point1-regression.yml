@@ -14,6 +14,7 @@ on:
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233100_audit_work_details_and_references.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233200_normalize_closing_member_installment_guard.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233600_serialize_installment_payment_status_recalculation.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233700_allow_derived_installment_status_refresh.sql'
       - 'scripts/test-accounting-point1-supporting-regressions.sh'
       - 'scripts/test-installment-payment-status-concurrency.sh'
       - 'scripts/test-accounting-point1-supporting-regressions.mjs'
