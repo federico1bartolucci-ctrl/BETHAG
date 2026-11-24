@@ -22,7 +22,7 @@ ALTER TABLE public.condominium_work_progress
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'Presentato',
   ADD COLUMN IF NOT EXISTS percentage numeric NOT NULL DEFAULT 0;
 
-\i supabase/migrations/20261124200000_audit_work_progress_accounting_link_changes.sql
+\i supabase/migrations/20261124240300_audit_work_progress_accounting_link_changes.sql
 
 DROP TRIGGER IF EXISTS audit_condominium_work_progress_change_test
   ON public.condominium_work_progress;
