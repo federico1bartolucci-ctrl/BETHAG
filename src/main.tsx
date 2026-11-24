@@ -3488,22 +3488,30 @@ function App() {
             } else if (table === "communication_recipients") {
               const uniqueIds = (values: any[]) => Array.from(new Set(values.filter((id) => typeof id === "string" && id.length > 0)));
               const communicationIds = uniqueIds(rows.map((row: any) => row?.communication_id));
-              const memberIds = uniqueIds(rows.map((row: any) => row?.member_id));
-              const existingRecipients = await loadPaginatedWorkspaceRows(
-                supabase, profile.workspaceId, "communication_recipients", "id", null
-              );
-              const allMemberIds = uniqueIds([
-                ...memberIds,
-                ...existingRecipients.map((row: any) => row?.member_id)
-              ]);
-              const [communications, members] = await Promise.all([
+              const providerEventIds = uniqueIds(rows.map((row: any) => row?.provider_event_id));
+              const [communications, existingByCommunication, existingByProviderEvent] = await Promise.all([
                 communicationIds.length
                   ? loadPaginatedRowsByInFilter(supabase, "communications", "id", communicationIds, "id")
                   : Promise.resolve([]),
-                allMemberIds.length
-                  ? loadPaginatedRowsByInFilter(supabase, "condominium_members", "id", allMemberIds, "id")
+                communicationIds.length
+                  ? loadPaginatedRowsByInFilter(supabase, "communication_recipients", "communication_id", communicationIds, "id")
+                  : Promise.resolve([]),
+                providerEventIds.length
+                  ? loadPaginatedRowsByInFilter(supabase, "communication_recipients", "provider_event_id", providerEventIds, "id")
                   : Promise.resolve([])
               ]);
+              const existingRecipientMap = new Map<string, any>();
+              for (const recipient of [...existingRows, ...existingByCommunication, ...existingByProviderEvent]) {
+                if (recipient?.id != null) existingRecipientMap.set(String(recipient.id), recipient);
+              }
+              const existingRecipients = [...existingRecipientMap.values()];
+              const allMemberIds = uniqueIds([
+                ...rows.map((row: any) => row?.member_id),
+                ...existingRecipients.map((row: any) => row?.member_id)
+              ]);
+              const members = allMemberIds.length
+                ? await loadPaginatedRowsByInFilter(supabase, "condominium_members", "id", allMemberIds, "id")
+                : [];
               prepared = prepareCommunicationRecipientsForBackupRestore(
                 rows,
                 profile.workspaceId,
