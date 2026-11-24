@@ -27,12 +27,13 @@ function hasProviderEvidence(row) {
   return [
     row.provider_message_id,
     row.provider_event_id,
+    row.event_type,
+  ].some(nonEmptyString) || [
     row.sent_at,
     row.delivered_at,
     row.bounced_at,
     row.complained_at,
-    row.event_type,
-  ].some(nonEmptyString);
+  ].some(validTimestamp);
 }
 
 function normalizeDeliveryState(row) {
@@ -46,19 +47,19 @@ function normalizeDeliveryState(row) {
   // A provider message ID is proof that the provider accepted the send.
   // Never let a stale pending/failed flag make that recipient sendable again.
   if (["pending", "failed", "skipped", "queued"].includes(status) && hasMessageId) {
-    status = nonEmptyString(row.delivered_at) ? "delivered" : "sent";
+    status = validTimestamp(row.delivered_at) ? "delivered" : "sent";
   } else if (["pending", "failed", "queued"].includes(status) && hasEvidence) {
     // Provider event/time metadata without a message ID is ambiguous.
     // Keep it out of the automatic pending/failed retry path.
     status = "skipped";
     errorMessage = errorMessage || "Storico provider incompleto: verifica manuale richiesta prima di un nuovo invio.";
-  } else if (status === "pending" && nonEmptyString(row.queued_at)) {
+  } else if (status === "pending" && validTimestamp(row.queued_at)) {
     status = "queued";
   }
 
   if ((status === "sent" || status === "delivered") && !hasMessageId) return null;
-  if (status === "delivered" && !nonEmptyString(row.delivered_at)) status = "sent";
-  if (status === "queued" && !nonEmptyString(row.queued_at)) return null;
+  if (status === "delivered" && !validTimestamp(row.delivered_at)) status = "sent";
+  if (status === "queued" && !validTimestamp(row.queued_at)) return null;
 
   return { status, errorMessage };
 }
@@ -248,6 +249,13 @@ export function prepareCommunicationRecipientsForBackupRestore(
         ? String(memberFromBackup.id)
         : null;
 
+    const malformedProviderMetadata = ["provider_message_id", "provider_event_id", "event_type", "error_message"]
+      .some((field) => row[field] != null && typeof row[field] !== "string");
+    if (malformedProviderMetadata) {
+      skipped += 1;
+      continue;
+    }
+
     const eventId = nonEmptyString(stateSource.provider_event_id)
       ? String(stateSource.provider_event_id)
       : null;
@@ -288,16 +296,16 @@ export function prepareCommunicationRecipientsForBackupRestore(
       provider_message_id: nonEmptyString(stateSource.provider_message_id) ? String(stateSource.provider_message_id) : null,
       provider_event_id: eventId,
       error_message: deliveryState.errorMessage,
-      sent_at: nonEmptyString(stateSource.sent_at) ? stateSource.sent_at : null,
-      delivered_at: nonEmptyString(stateSource.delivered_at) ? stateSource.delivered_at : null,
-      bounced_at: nonEmptyString(stateSource.bounced_at) ? stateSource.bounced_at : null,
-      complained_at: nonEmptyString(stateSource.complained_at) ? stateSource.complained_at : null,
+      sent_at: validTimestamp(stateSource.sent_at) ? stateSource.sent_at : null,
+      delivered_at: validTimestamp(stateSource.delivered_at) ? stateSource.delivered_at : null,
+      bounced_at: validTimestamp(stateSource.bounced_at) ? stateSource.bounced_at : null,
+      complained_at: validTimestamp(stateSource.complained_at) ? stateSource.complained_at : null,
       event_type: nonEmptyString(stateSource.event_type) ? stateSource.event_type : null,
       queued_at: deliveryState.status === "queued" && validTimestamp(stateSource.queued_at)
         ? stateSource.queued_at
         : null,
-      created_at: existing?.created_at || row.created_at || undefined,
-      updated_at: stateSource.updated_at || existing?.updated_at || row.updated_at || undefined,
+      created_at: validTimestamp(existing?.created_at) ? existing.created_at : validTimestamp(row.created_at) ? row.created_at : undefined,
+      updated_at: validTimestamp(stateSource.updated_at) ? stateSource.updated_at : validTimestamp(existing?.updated_at) ? existing.updated_at : validTimestamp(row.updated_at) ? row.updated_at : undefined,
     };
 
     if (normalized.status === "queued" && !normalized.queued_at) {
