@@ -7,8 +7,14 @@ migration="supabase/rebuild/candidates/accounting-point1-20261124/20261124240400
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $roles$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
     CREATE ROLE authenticated NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN
+    CREATE ROLE service_role NOLOGIN;
   END IF;
 END
 $roles$;
@@ -63,9 +69,52 @@ CREATE POLICY work_progress_authenticated_hidden
   FOR ALL TO authenticated USING (false) WITH CHECK (false);
 GRANT SELECT, UPDATE, DELETE ON public.condominium_ledger_entries TO authenticated;
 GRANT SELECT ON public.condominium_work_progress TO authenticated;
+
+-- Simulate the live Supabase ACL of the pre-existing trigger helper so that
+-- CREATE OR REPLACE must preserve service_role but the candidate must remove
+-- PUBLIC/anon/authenticated direct execution.
+CREATE OR REPLACE FUNCTION public.guard_ledger_entry_integrity()
+RETURNS trigger LANGUAGE plpgsql AS $stub$ BEGIN RETURN NEW; END $stub$;
+GRANT EXECUTE ON FUNCTION public.guard_ledger_entry_integrity()
+  TO PUBLIC, anon, authenticated, service_role;
 SQL
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql"
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $acl$
+DECLARE
+  v_oid oid := 'public.guard_ledger_entry_integrity()'::regprocedure;
+BEGIN
+  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid=v_oid) THEN
+    RAISE EXCEPTION 'guard_ledger_entry_integrity must be SECURITY DEFINER';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p, unnest(coalesce(p.proconfig,array[]::text[])) cfg
+    WHERE p.oid=v_oid AND cfg='search_path=""'
+  ) THEN
+    RAISE EXCEPTION 'guard_ledger_entry_integrity must use an empty search_path';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(
+      coalesce((SELECT proacl FROM pg_proc WHERE oid=v_oid),
+               acldefault('f',(SELECT proowner FROM pg_proc WHERE oid=v_oid)))
+    ) a
+    WHERE a.grantee IN (0,'anon'::regrole,'authenticated'::regrole)
+      AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'PUBLIC/anon/authenticated EXECUTE remains on trigger helper';
+  END IF;
+  IF NOT has_function_privilege('service_role',v_oid,'EXECUTE')
+     OR NOT has_function_privilege('postgres',v_oid,'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role/owner EXECUTE was not preserved';
+  END IF;
+  IF (SELECT prorettype FROM pg_proc WHERE oid=v_oid) <> 'trigger'::regtype THEN
+    RAISE EXCEPTION 'guard_ledger_entry_integrity must remain a trigger function';
+  END IF;
+END
+$acl$;
+SQL
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
