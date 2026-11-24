@@ -4,16 +4,20 @@ on:
   pull_request:
     paths:
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124202340_prevent_work_delete_with_progress.sql'
-      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql'
-      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124240400_harden_work_progress_payment_allocation.sql'
-      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124240600_lock_fiscal_year_parent_rows.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233300_guard_ledger_entries_linked_to_work_progress.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233400_harden_work_progress_payment_allocation.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233500_lock_fiscal_year_parent_rows.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124170000_reconcile_ledger_status_on_installment_move.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124220000_prevent_mutation_from_archived_condominium.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124223000_audit_all_work_progress_fields.sql'
       - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233000_validate_installment_fiscal_year_due_date.sql'
-      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124240000_audit_work_details_and_references.sql'
-      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124240100_normalize_closing_member_installment_guard.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233100_audit_work_details_and_references.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233200_normalize_closing_member_installment_guard.sql'
+      - 'supabase/rebuild/candidates/accounting-point1-20261124/20261124233600_serialize_installment_payment_status_recalculation.sql'
       - 'scripts/test-accounting-point1-supporting-regressions.sh'
+      - 'scripts/test-installment-payment-status-concurrency.sh'
+      - 'scripts/test-accounting-point1-supporting-regressions.mjs'
+      - 'package.json'
       - 'scripts/archived-condominium-move-regression.sql'
       - 'scripts/closing-member-installment-guard-regression.sql'
       - 'scripts/installment-fiscal-year-due-date-regression.sql'
@@ -100,12 +104,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
-      - name: Run supporting accounting regressions
-        run: bash scripts/test-accounting-point1-supporting-regressions.sh
+      - name: Run npm test with PostgreSQL supporting regressions
+        run: npm test
 
   chronological-candidate-chain:
     runs-on: ubuntu-latest
