@@ -15,6 +15,10 @@ DO $roles$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
 END $roles$;
 CREATE SCHEMA supabase_migrations;
+CREATE SCHEMA storage;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT EXECUTE ON FUNCTIONS TO PUBLIC;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO postgres;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA storage GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
 CREATE TABLE supabase_migrations.schema_migrations(
  version text PRIMARY KEY, name text NOT NULL, statements text[] NOT NULL,
  created_by text, idempotency_key text

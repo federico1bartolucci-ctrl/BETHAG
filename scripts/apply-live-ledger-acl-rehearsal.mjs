@@ -23,6 +23,8 @@ assert.ok(!/supabase\.co|tctcgptrsmvgajqjgnev/i.test(databaseUrl), "STOP: Supaba
 const manifest = JSON.parse(await readFile(join(root,"supabase/rebuild/drafts/production-migration-cutover-live-20261124.json"),"utf8"));
 const snapshot = JSON.parse(await readFile(join(root,"supabase/rebuild/drafts/production-ledger-live-20261124.json"),"utf8"));
 const item = manifest.sequence?.[0];
+const preflight = await readFile(join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql"),"utf8");
+const postflight = await readFile(join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"),"utf8");
 assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
 assert.equal(manifest.production_apply_authorized,false);
 assert.equal(snapshot.count,267);
@@ -53,10 +55,10 @@ const migrationVersion=item.file.slice(0,14), migrationName=item.file.slice(15,-
 assert.ok(!ledger.some(x=>x.version===migrationVersion||x.name===migrationName),"Candidate already present in rehearsal ledger.");
 const temp=await mkdtemp(join(tmpdir(),"bethag-live-ledger-rehearsal-"));
 try {
- const wrapped=["BEGIN;","SELECT pg_advisory_xact_lock(hashtext('bethag-live-ledger-acl-rehearsal'));",sql,
+ const wrapped=["BEGIN;","SELECT pg_advisory_xact_lock(hashtext('bethag-live-ledger-acl-rehearsal'));",preflight,sql,
    "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key) VALUES ("+
    "'"+migrationVersion+"','"+migrationName+"',ARRAY[$bethag_candidate$"+sql+"$bethag_candidate$],'bethag-local-rehearsal',NULL);",
-   "COMMIT;",""].join("\n");
+   postflight,\n   "COMMIT;",""].join("\n");
  const file=join(temp,"candidate.sql");
  await writeFile(file,wrapped,{mode:0o600});
  await psql(["-f",file]);
