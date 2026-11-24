@@ -19,7 +19,7 @@ const statements = migration
 
 function grantsFor(signature) {
   return statements.filter((statement) =>
-    /^grant\s+execute\s+on\s+function\s+/i.test(statement)
+    /^grant\\s+execute\\s+on\\s+function\\s+/i.test(statement)
     && statement.toLowerCase().includes(signature.toLowerCase()),
   );
 }
@@ -29,12 +29,12 @@ test('transfer closure checker is executable only by authenticated and service_r
   const publicGrants = grantsFor('public.check_condominium_member_transfer_closure(');
 
   assert.equal(privateGrants.length, 1);
-  assert.match(privateGrants[0], /to\s+"authenticated",\s+"service_role"$/i);
+  assert.match(privateGrants[0], /to\\s+"authenticated",\\s+"service_role"$/i);
   assert.equal(publicGrants.length, 2);
   assert.ok(publicGrants.every((grant) =>
-    /to\s+"authenticated"$/i.test(grant) || /to\s+"service_role"$/i.test(grant),
+    /to\\s+"authenticated"$/i.test(grant) || /to\\s+"service_role"$/i.test(grant),
   ));
-  assert.ok(publicGrants.every((grant) => !/\bto\s+public\b/i.test(grant)));
+  assert.ok(publicGrants.every((grant) => !/\\bto\\s+public\\b/i.test(grant)));
 });
 
 test('trigger functions do not receive direct PUBLIC execute grants', () => {
@@ -44,15 +44,15 @@ test('trigger functions do not receive direct PUBLIC execute grants', () => {
   ]) {
     const grants = grantsFor(signature);
     assert.equal(grants.length, 1, signature);
-    assert.match(grants[0], /to\s+"service_role"$/i, signature);
-    assert.doesNotMatch(grants[0], /\bto\s+public\b/i, signature);
+    assert.match(grants[0], /to\\s+"service_role"$/i, signature);
+    assert.doesNotMatch(grants[0], /\\bto\\s+public\\b/i, signature);
   }
 });
 
 test('the ACL parity migration contains no execute grant to PUBLIC', () => {
   const publicExecuteGrants = statements.filter((statement) =>
-    /^grant\s+execute\s+on\s+function\s+/i.test(statement)
-    && /\bto\s+public\b/i.test(statement),
+    /^grant\\s+execute\\s+on\\s+function\\s+/i.test(statement)
+    && /\\bto\\s+public\\b/i.test(statement),
   );
   assert.deepEqual(publicExecuteGrants, []);
 });
@@ -60,7 +60,7 @@ test('the ACL parity migration contains no execute grant to PUBLIC', () => {
 test('private fiscal carryover generator remains executable by authenticated', () => {
   const grants = grantsFor('private.generate_fiscal_year_carryovers(');
   assert.equal(grants.length, 1);
-  assert.match(grants[0], /to\s+"authenticated",\s+"service_role"$/i);
+  assert.match(grants[0], /to\\s+"authenticated",\\s+"service_role"$/i);
 });
 
 test('invoker-backed private RPCs preserve the live authenticated grants', () => {
@@ -83,12 +83,12 @@ test('invoker-backed private RPCs preserve the live authenticated grants', () =>
   for (const signature of sharedRoleFunctions) {
     const grants = grantsFor(signature);
     assert.equal(grants.length, 1, signature);
-    assert.match(grants[0], /to\s+"authenticated",\s+"service_role"$/i, signature);
+    assert.match(grants[0], /to\\s+"authenticated",\\s+"service_role"$/i, signature);
   }
 
   const transferCloseGrants = grantsFor('private.close_condominium_member_transfer(');
   assert.equal(transferCloseGrants.length, 1);
-  assert.match(transferCloseGrants[0], /to\s+"authenticated",\s+"service_role"$/i);
+  assert.match(transferCloseGrants[0], /to\\s+"authenticated",\\s+"service_role"$/i);
 });
 
 test('consumption allocation RPC rejects an expense from a different fiscal year', () => {
@@ -99,56 +99,6 @@ test('consumption allocation RPC rejects an expense from a different fiscal year
   const bodyEnd = migration.indexOf(delimiter + ';', bodyStart + 3 + delimiter.length);
   assert.ok(bodyStart >= 0 && bodyEnd > bodyStart, 'consumption allocation function body must be delimited');
   const body = migration.slice(bodyStart + 3 + delimiter.length, bodyEnd).toLowerCase();
-  const guard = body.indexOf('if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then');
-  const deletion = body.indexOf('delete from public.condominium_expense_allocations');
-  assert.ok(guard >= 0, 'RPC must compare the expense fiscal year with the requested fiscal year');
-  assert.ok(guard < deletion, 'RPC must reject a mismatch before modifying allocations');
-  assert.ok(body.includes('la spesa e i dati di consumo devono appartenere allo stesso esercizio contabile'));
-});
-test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
-  const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences("IF NOT "), 6);
-  assert.equal(occurrences(" THEN"), 6);
-  assert.equal(occurrences("RAISE EXCEPTION"), 6);
-  assert.equal(occurrences("has_function_privilege('anon'"), 20);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 20);
-  assert.equal(occurrences("has_function_privilege('public'"), 0,
-    "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
-});
-test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
-  const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences("IF NOT "), 6);
-  assert.equal(occurrences(" THEN"), 6);
-  assert.equal(occurrences("RAISE EXCEPTION"), 6);
-  assert.equal(occurrences("has_function_privilege('anon'"), 20);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 20);
-  assert.equal(occurrences("has_function_privilege('public'"), 0,
-    "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
-});
-.length);
-  assert.ok(bodyStart >= 0 && bodyEnd > bodyStart, 'consumption allocation function body must be delimited');
-  const body = migration.slice(bodyStart + 'AS $function
-  const guard = body.indexOf('if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then');
-  const deletion = body.indexOf('delete from public.condominium_expense_allocations');
-  assert.ok(guard >= 0, 'RPC must compare the expense fiscal year with the requested fiscal year');
-  assert.ok(guard < deletion, 'RPC must reject a mismatch before modifying allocations');
-  assert.ok(body.includes('la spesa e i dati di consumo devono appartenere allo stesso esercizio contabile'));
-});
-
-test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
-  const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences("IF NOT "), 6);
-  assert.equal(occurrences(" THEN"), 6);
-  assert.equal(occurrences("RAISE EXCEPTION"), 6);
-  assert.equal(occurrences("has_function_privilege('anon'"), 20);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 20);
-  assert.equal(occurrences("has_function_privilege('public'"), 0,
-    "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
-});
-.length, bodyEnd).toLowerCase();
   const guard = body.indexOf('if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then');
   const deletion = body.indexOf('delete from public.condominium_expense_allocations');
   assert.ok(guard >= 0, 'RPC must compare the expense fiscal year with the requested fiscal year');
