@@ -92,6 +92,6 @@ const emptyBackup = getBackupRestoreBackendAvailability(
   restorableTables
 );
 assert.equal(emptyBackup.blockReason, "");
-assert.match(emptyBackup.localOnlyNotice, /nessun record backend ripristinabili/i);
+assert.match(emptyBackup.localOnlyNotice, /non erano presenti record backend ripristinabili/i);
 
 console.log("Workspace backup restore Supabase-availability runtime regression: PASS");
