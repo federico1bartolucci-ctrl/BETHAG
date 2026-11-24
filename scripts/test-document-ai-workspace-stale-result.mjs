@@ -51,8 +51,9 @@ const staleFailure = updateDocumentAiStateForWorkspace(
 assert.strictEqual(staleFailure[0], workspaceBDocument);
 assert.equal(staleFailure[0].aiStatus, "Non elaborato");
 
+const currentDocuments = [workspaceADocument];
 const currentResult = updateDocumentAiStateForWorkspace(
-  [workspaceADocument],
+  currentDocuments,
   {
     currentWorkspaceId: "workspace-a",
     requestWorkspaceId: "workspace-a",
@@ -60,7 +61,7 @@ const currentResult = updateDocumentAiStateForWorkspace(
   },
   aiResultFromA,
 );
-assert.notStrictEqual(currentResult, [workspaceADocument]);
+assert.notStrictEqual(currentResult, currentDocuments);
 assert.equal(currentResult[0].aiStatus, "Da verificare");
 assert.equal(currentResult[0].aiSummary, "Contenuto estratto dal workspace A");
 assert.equal(currentResult[0].extractedData, "workspace-a-data");
