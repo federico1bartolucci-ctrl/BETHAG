@@ -40,7 +40,7 @@ CREATE POLICY work_progress_rls_regression_deny
   ON public.condominium_work_progress FOR SELECT TO authenticated USING (false);
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT ON public.condominium_work_progress TO authenticated;
-GRANT UPDATE, DELETE ON public.condominium_ledger_entries TO authenticated;
+GRANT SELECT, UPDATE, DELETE ON public.condominium_ledger_entries TO authenticated;
 
 DROP TRIGGER IF EXISTS trg_guard_ledger_entry_integrity_test
   ON public.condominium_ledger_entries;
