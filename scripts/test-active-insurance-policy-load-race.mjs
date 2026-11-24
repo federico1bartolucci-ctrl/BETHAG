@@ -87,7 +87,7 @@ assert.match(section, /const requestSequence = \+\+insurancePolicyLoadSequence\.
 assert.match(section, /applyInsurancePoliciesLoadResponse\(/);
 assert.match(section, /currentCondominiumId:\s*currentCondominiumIdRef\.current/);
 assert.match(section, /currentRequestSequence:\s*insurancePolicyLoadSequence\.current/);
-assert.match(section, /if\s*\(requestSequence === insurancePolicyLoadSequence\.current\)/);
+assert.match(section, /if\s*\(requestSequence === insurancePolicyLoadSequence\.current\s*&&/);
 assert.match(section, /return\s*\(\)\s*=>\s*\{\s*insurancePolicyLoadSequence\.current\s*\+=\s*1/s);
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 assert.match(packageJson.scripts.test, /test-active-insurance-policy-load-race\.mjs/);
