@@ -19,7 +19,7 @@ VALUES
   'Archived work guard test', 'Da programmare', 0, 0)
 ON CONFLICT (id) DO UPDATE SET condominium_id=EXCLUDED.condominium_id;
 
-\i supabase/migrations/20261124220000_prevent_mutation_from_archived_condominium.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124220000_prevent_mutation_from_archived_condominium.sql
 
 DROP TRIGGER IF EXISTS prevent_archived_condominium_mutation_test
   ON public.condominium_works;
