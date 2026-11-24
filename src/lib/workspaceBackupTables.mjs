@@ -39,6 +39,7 @@ export const WORKSPACE_BACKUP_EXPORT_TABLES = Object.freeze([
   "deadlines",
   "assemblies",
   "communications",
+  "communication_recipients",
   "portal_access",
   "workspace_members",
   "portal_registration_requests"
@@ -84,6 +85,7 @@ export const WORKSPACE_BACKUP_RESTORE_ORDER = Object.freeze([
   "deadlines",
   "assemblies",
   "communications",
+  "communication_recipients",
   "portal_access",
   "workspace_members",
   "portal_registration_requests"
