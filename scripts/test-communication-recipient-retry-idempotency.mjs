@@ -323,7 +323,7 @@ try {
     `INSERT INTO public.communication_recipients
       (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,queued_at)
      VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario','owner','queued',now())`,
-    [inFlightRecipientId, inFlightCommunicationId, workspaceId, condominiumId],
+    [inFlightRecipientId, inFlightCommunicationId, workspaceId, condominiumId, activeMemberId],
   );
   await db.query("SELECT private.prepare_communication_recipients($1)", [inFlightCommunicationId]);
   const inFlightState = await db.query(
