@@ -1,0 +1,36 @@
+const READY_TRANSCRIPTION_STATUSES = new Set(["Da verificare", "Confermato"]);
+
+export function hasManualAssemblyTranscription(assembly) {
+  return typeof assembly?.transcriptionText === "string" && assembly.transcriptionText.trim().length > 0;
+}
+
+export function isAssemblyTranscriptionReady(assembly) {
+  return hasManualAssemblyTranscription(assembly) &&
+    READY_TRANSCRIPTION_STATUSES.has(assembly?.transcriptionStatus);
+}
+
+export function buildManualAssemblyMinutesDraft(assembly) {
+  if (!isAssemblyTranscriptionReady(assembly)) return null;
+
+  const transcription = assembly.transcriptionText.trim();
+  return [
+    "BOZZA DI VERBALE",
+    "",
+    assembly.title || "Assemblea",
+    `Data: ${assembly.date || "da definire"}`,
+    `Ora: ${assembly.time || "da definire"}`,
+    `Luogo: ${assembly.place || "da definire"}`,
+    "",
+    "Trascrizione manuale:",
+    transcription,
+    "",
+    "Questa bozza contiene la trascrizione inserita manualmente; non è una sintesi generata dall'AI.",
+    "La trascrizione e il verbale devono essere verificati dall'amministratore prima della conferma o pubblicazione.",
+  ].join("\n");
+}
+
+export function canConfirmAssemblyMinutes(assembly) {
+  return isAssemblyTranscriptionReady(assembly) &&
+    typeof assembly?.minutesDraft === "string" &&
+    assembly.minutesDraft.trim().length > 0;
+}
