@@ -310,3 +310,15 @@ Commit fix: `66d79c6e463ccddbaf691bbd4fc0e6ae5173b973`. La CI sul nuovo head dev
 La CI sul commit `76cbdb7eb56cec639425a527d0ca5e70680bb54e` ha superato `chronological-candidate-chain`, `work-progress-payment-allocation` e `work-delete-sal-guard`. Il job supporting regressions ha poi individuato lo stesso timestamp obsoleto in un secondo harness: `scripts/work-details-reference-audit-regression.sql` includeva `20261124240000_audit_work_details_and_references.sql`; aggiornato a `20261124233100_audit_work_details_and_references.sql`.
 
 Commit fix: `40ee47740f4c7c11aef7073abdf4afd92883c7ba`. La nuova CI sul nuovo head deve confermare il superamento integrale. Punto 1 resta RIAPERTO. Nessuna modifica QA/Production.
+
+
+### Chiusura Punto 1 — evidenza CI finale (24 novembre 2026)
+
+Il commit `10bfbe99c8398dc708115e0141c93260c9ff5640` ha superato sul medesimo SHA tutti i controlli richiesti per il consolidamento tecnico:
+- BETHAG build: PASS; PostgreSQL bootstrap: PASS (run `45495319661`).
+- Baseline safety: PASS (run `45495319633`).
+- PostgreSQL 17: supporting regressions, work-progress-payment-allocation, work-delete-sal-guard, fiscal-year-parent-row-locks e chronological-candidate-chain: tutti PASS (run `45495319835`).
+
+La catena candidata include `scripts/migration-filename-validation.mjs` e verifica l'intero insieme di 38 file (28 migrazioni canoniche + 10 candidate): timestamp calendario validi, versioni uniche e postcondizioni PostgreSQL. I dieci file restano in `supabase/rebuild/candidates/accounting-point1-20261124/`, non installabili dalla Supabase CLI; le 28 migrazioni canoniche non sono state modificate. Nessun reset o modifica remota.
+
+**Punto 1: CHIUSO** sulla base dei controlli automatizzati sopra elencati. La chiusura non equivale ad approvazione/integrazione delle dieci candidate in Production, né ad autorizzazione di merge o deploy.
