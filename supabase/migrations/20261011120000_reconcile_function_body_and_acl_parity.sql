@@ -836,6 +836,10 @@ begin
     raise exception 'Il movimento selezionato non è una spesa valida';
   end if;
 
+  if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then
+    raise exception 'La spesa e i dati di consumo devono appartenere allo stesso esercizio contabile';
+  end if;
+
   if exists(
     select 1 from public.condominium_fiscal_years
     where id=p_fiscal_year_id
@@ -1447,6 +1451,387 @@ begin
 end;
 $function$;
 
+
+-- Restore the hardened portal registration implementations verified in Production.
+CREATE OR REPLACE FUNCTION private.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+DECLARE
+  v_request public.portal_registration_requests%rowtype;
+  v_member public.condominium_members%rowtype;
+  v_workspace uuid;
+  v_condominium_name text;
+  v_account_email text;
+  v_email_confirmed_at timestamptz;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+
+  -- Lock the selected member before the request row. Self-registration
+  -- follows the same lock order, preventing concurrent account-link takeover
+  -- and avoiding a member/request lock inversion.
+  SELECT * INTO v_member
+  FROM public.condominium_members
+  WHERE id=p_member_id AND active=true
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Condòmino non trovato o non attivo'; END IF;
+
+  SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
+  FROM public.condominiums c
+  WHERE c.id=v_member.condominium_id;
+
+  IF v_workspace IS NULL THEN
+    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- Authorize the selected workspace before reading or revealing request state.
+  IF NOT private.can_manage_workspace_module(v_workspace,'portale') THEN
+    RAISE EXCEPTION 'Autorizzazione gestione Portale richiesta';
+  END IF;
+
+  SELECT * INTO v_request
+  FROM public.portal_registration_requests
+  WHERE id=p_request_id AND status IN ('pending','email_mismatch')
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Richiesta non trovata o già gestita'; END IF;
+  IF v_request.requested_user_id IS NULL THEN
+    RAISE EXCEPTION 'La richiesta non è associata ad un account autenticato';
+  END IF;
+
+  -- A request left unassigned because condominium names collide across
+  -- workspaces may be resolved manually by an administrator in the selected
+  -- workspace. A previously assigned request must still match exactly.
+
+  IF v_request.workspace_id IS NOT NULL AND v_request.workspace_id<>v_workspace THEN
+    RAISE EXCEPTION 'Richiesta e condominio non appartengono allo stesso workspace';
+  END IF;
+
+  -- If the same name identifies multiple active condominiums inside this
+  -- workspace, the request does not identify a unique destination. Require a
+  -- corrected/qualified request instead of choosing a member arbitrarily.
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND (
+       SELECT count(*)
+       FROM public.condominiums c
+       WHERE c.workspace_id=v_workspace
+         AND c.archived_at IS NULL
+         AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+     ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
+  -- Bind approval to the condominium named in the resident's request. This
+  -- also prevents a manager from resolving an unassigned request against a
+  -- different condominium in the same workspace.
+  IF v_request.workspace_id IS NULL
+     AND nullif(trim(v_request.condominium_name),'') IS NULL THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_REQUIRED';
+  END IF;
+  IF nullif(trim(v_request.condominium_name),'') IS NOT NULL
+     AND lower(trim(v_request.condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_MISMATCH';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1 FROM public.condominiums c
+    WHERE c.id=v_member.condominium_id AND c.archived_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'Il condominio è archiviato: approvazione portale non consentita';
+  END IF;
+
+  SELECT lower(trim(coalesce(u.email,''))),u.email_confirmed_at
+  INTO v_account_email,v_email_confirmed_at
+  FROM auth.users u
+  WHERE u.id=v_request.requested_user_id;
+  IF NOT FOUND OR v_email_confirmed_at IS NULL
+     OR v_account_email<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'ACCOUNT_EMAIL_NOT_VERIFIED_OR_MISMATCH';
+  END IF;
+
+  IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_request.requested_user_id THEN
+    RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+  END IF;
+
+  IF v_request.status='email_mismatch'
+     AND v_request.matched_member_id IS NOT NULL
+     AND v_request.matched_member_id<>v_member.id THEN
+    RAISE EXCEPTION 'MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER';
+  END IF;
+  IF lower(trim(coalesce(v_member.email,'')))<>lower(trim(coalesce(v_request.email,''))) THEN
+    RAISE EXCEPTION 'MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL';
+  END IF;
+
+  -- An unassigned request may be manually resolved only when its verified
+  -- account email identifies one active member across same-named condominiums
+  -- in the selected workspace. Same-name duplicates sharing an email remain
+  -- ambiguous and must fail closed rather than link to an arbitrary property.
+  IF v_request.workspace_id IS NULL AND (
+    SELECT count(*)
+    FROM public.condominium_members cm
+    JOIN public.condominiums c ON c.id=cm.condominium_id
+    WHERE cm.active=true
+      AND c.archived_at IS NULL
+      AND c.workspace_id=v_workspace
+      AND lower(trim(c.name))=lower(trim(v_request.condominium_name))
+      AND lower(trim(coalesce(cm.email,'')))=lower(trim(coalesce(v_request.email,'')))
+  ) > 1 THEN
+    RAISE EXCEPTION 'PORTAL_REQUEST_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+  END IF;
+
+  UPDATE public.condominium_members
+  SET user_id=v_request.requested_user_id,updated_at=now()
+  WHERE id=v_member.id
+  RETURNING * INTO v_member;
+
+  PERFORM private.upsert_portal_access_for_member(
+    v_workspace,
+    v_member.id,
+    lower(trim(v_request.email)),
+    '[]'::jsonb
+  );
+
+  INSERT INTO public.workspace_members AS existing_member(
+    workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
+  )
+  VALUES(
+    v_workspace,v_request.requested_user_id,'resident',true,'{}'::jsonb,
+    v_member.condominium_id,v_member.legacy_id
+  )
+  ON CONFLICT(workspace_id,user_id)
+  DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
+    condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
+
+  UPDATE public.profiles AS existing_profile
+  SET full_name=v_member.name,email=lower(trim(v_request.email)),
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
+  WHERE id=v_request.requested_user_id;
+
+  UPDATE public.portal_registration_requests
+  SET status='approved',matched_member_id=v_member.id,workspace_id=v_workspace,
+      reviewed_by=auth.uid(),reviewed_at=now(),updated_at=now()
+  WHERE id=v_request.id;
+
+  RETURN jsonb_build_object(
+    'status','approved','workspace_id',v_workspace,
+    'member_id',v_member.id,
+    'email_mismatch',lower(trim(v_request.email))<>lower(trim(coalesce(v_member.email,'')))
+  );
+END;
+$function$;
+
+
+CREATE OR REPLACE FUNCTION private.complete_portal_registration(p_full_name text, p_fiscal_code text DEFAULT NULL::text, p_condominium_name text DEFAULT NULL::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_email text;
+  v_member public.condominium_members%rowtype;
+  v_candidate_count integer := 0;
+  v_workspace uuid;
+  v_condominium_name text;
+  v_request_id uuid;
+BEGIN
+  IF v_user_id IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+
+  SELECT lower(trim(u.email)) INTO v_email
+  FROM auth.users u
+  WHERE u.id = v_user_id AND u.email_confirmed_at IS NOT NULL;
+
+  IF v_email IS NULL THEN RAISE EXCEPTION 'E-mail non ancora verificata'; END IF;
+
+  SELECT count(*) INTO v_candidate_count
+  FROM public.condominium_members cm
+  WHERE cm.active = true
+    AND (
+      lower(trim(cm.name)) = lower(trim(p_full_name))
+      OR (
+        coalesce(nullif(regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g'),''),'') <> ''
+        AND regexp_replace(lower(coalesce(cm.data->>'fiscalCode','')),'[^a-z0-9]','','g')
+          = regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g')
+      )
+    );
+
+  IF v_candidate_count = 1 THEN
+    SELECT cm.* INTO v_member
+    FROM public.condominium_members cm
+    WHERE cm.active = true
+      AND (
+        lower(trim(cm.name)) = lower(trim(p_full_name))
+        OR (
+          coalesce(nullif(regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g'),''),'') <> ''
+          AND regexp_replace(lower(coalesce(cm.data->>'fiscalCode','')),'[^a-z0-9]','','g')
+            = regexp_replace(lower(trim(p_fiscal_code)),'[^a-z0-9]','','g')
+        )
+      )
+    LIMIT 1
+    FOR UPDATE;
+
+    SELECT c.workspace_id, c.name INTO v_workspace, v_condominium_name
+    FROM public.condominiums c
+    WHERE c.id = v_member.condominium_id;
+
+    -- A condominium name is not a unique identifier inside a workspace.
+    -- Even a unique person match must not auto-link when the selected name,
+    -- or the matched member's condominium name when omitted, resolves to
+    -- multiple active condominiums in that same workspace.
+    IF (
+         SELECT count(*)
+         FROM public.condominiums c
+         WHERE c.workspace_id=v_workspace
+           AND c.archived_at IS NULL
+           AND lower(trim(c.name)) = lower(trim(coalesce(nullif(trim(p_condominium_name),''), v_condominium_name)))
+       ) > 1 THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_AMBIGUOUS_WITHIN_WORKSPACE';
+    END IF;
+
+    -- A unique person match is not sufficient when the resident explicitly
+    -- selected a different condominium. Never auto-link across that choice.
+    IF nullif(trim(p_condominium_name),'') IS NOT NULL
+       AND lower(trim(p_condominium_name)) <> lower(trim(coalesce(v_condominium_name,''))) THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_CONDOMINIUM_MISMATCH';
+    END IF;
+
+    IF v_member.user_id IS NOT NULL AND v_member.user_id <> v_user_id THEN
+      RAISE EXCEPTION 'PORTAL_MEMBER_ALREADY_LINKED';
+    END IF;
+
+    IF lower(trim(coalesce(v_member.email,''))) = v_email THEN
+      UPDATE public.condominium_members
+      SET user_id = v_user_id, updated_at = now()
+      WHERE id = v_member.id
+      RETURNING * INTO v_member;
+
+      PERFORM private.upsert_portal_access_for_member(
+        v_workspace,
+        v_member.id,
+        v_email,
+        '["documenti","verbali","regolamento","assemblee","comunicazioni"]'::jsonb
+      );
+
+      INSERT INTO public.workspace_members AS existing_member(
+        workspace_id,user_id,role,active,permissions,condominium_id,legacy_id
+      )
+      VALUES(
+        v_workspace,v_user_id,'resident',true,'{}'::jsonb,
+        v_member.condominium_id,v_member.legacy_id
+      )
+      ON CONFLICT(workspace_id,user_id)
+      DO UPDATE SET active=true,
+        role=CASE WHEN existing_member.role IN ('admin','collaborator')
+                  THEN existing_member.role ELSE 'resident' END,
+        condominium_id=excluded.condominium_id,legacy_id=excluded.legacy_id;
+
+      UPDATE public.profiles AS existing_profile
+      SET full_name=v_member.name,email=v_email,
+          role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                    THEN existing_profile.role ELSE 'resident' END,
+          active=true,updated_at=now()
+      WHERE id=v_user_id;
+
+      UPDATE public.portal_registration_requests
+      SET status='approved',matched_member_id=v_member.id,workspace_id=v_workspace,
+          requested_user_id=v_user_id,reviewed_at=coalesce(reviewed_at,now()),updated_at=now()
+      WHERE requested_user_id = v_user_id
+        AND lower(trim(email)) = v_email
+        AND status IN ('pending','email_mismatch')
+        AND (workspace_id IS NULL OR workspace_id = v_workspace)
+        AND (matched_member_id IS NULL OR matched_member_id = v_member.id)
+        AND (
+          nullif(trim(condominium_name),'') IS NULL
+          OR lower(trim(condominium_name)) = lower(trim(v_condominium_name))
+        );
+
+      RETURN jsonb_build_object(
+        'status','approved','workspace_id',v_workspace,
+        'condominium_id',v_member.condominium_id,'member_id',v_member.id
+      );
+    END IF;
+
+    INSERT INTO public.portal_registration_requests(
+      workspace_id,requested_user_id,email,full_name,fiscal_code,
+      condominium_name,status,matched_member_id,note
+    )
+    VALUES(
+      v_workspace,v_user_id,v_email,trim(p_full_name),nullif(trim(p_fiscal_code),''),
+      nullif(trim(p_condominium_name),''),'email_mismatch',v_member.id,
+      'Incongruenza e-mail: e-mail dell''account diversa da quella presente nell''anagrafica del condòmino.'
+    )
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_request_id;
+
+    RETURN jsonb_build_object('status','email_mismatch','request_id',v_request_id);
+  END IF;
+
+  -- Assign a workspace only when the condominium name identifies exactly
+  -- one condominium across the entire database. Grouping by workspace here
+  -- would incorrectly choose an arbitrary workspace when names collide.
+  SELECT (array_agg(c.workspace_id))[1] INTO v_workspace
+  FROM public.condominiums c
+  WHERE p_condominium_name IS NOT NULL
+    AND c.archived_at IS NULL
+    AND lower(trim(c.name))=lower(trim(p_condominium_name))
+  HAVING count(*)=1;
+
+  IF v_workspace IS NULL THEN
+    SELECT (array_agg(w.id))[1] INTO v_workspace
+    FROM public.workspaces w
+    HAVING count(*)=1;
+  END IF;
+
+  -- Never create an unassigned request that no workspace administrator can
+  -- discover. In a multi-workspace environment, require an exact active
+  -- condominium name; duplicate names remain unassigned for manual resolution.
+  IF v_workspace IS NULL THEN
+    IF nullif(trim(p_condominium_name),'') IS NULL THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NAME_REQUIRED';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.condominiums c
+      WHERE c.archived_at IS NULL
+        AND lower(trim(c.name))=lower(trim(p_condominium_name))
+    ) THEN
+      RAISE EXCEPTION 'PORTAL_CONDOMINIUM_NOT_FOUND';
+    END IF;
+  END IF;
+
+  INSERT INTO public.portal_registration_requests(
+    workspace_id,requested_user_id,email,full_name,fiscal_code,
+    condominium_name,status,note
+  )
+  VALUES(
+    v_workspace,v_user_id,v_email,trim(p_full_name),nullif(trim(p_fiscal_code),''),
+    nullif(trim(p_condominium_name),''),'pending',
+    'Profilo condòmino non individuato automaticamente.'
+  )
+  ON CONFLICT DO NOTHING
+  RETURNING id INTO v_request_id;
+
+  UPDATE public.profiles AS existing_profile
+  SET full_name=trim(p_full_name),email=v_email,
+      role=CASE WHEN existing_profile.role IN ('admin','collaborator')
+                THEN existing_profile.role ELSE 'resident' END,
+      active=true,updated_at=now()
+  WHERE id=v_user_id;
+
+  RETURN jsonb_build_object('status','pending','request_id',v_request_id);
+END;
+$function$;
+
+
 revoke all on function private.apply_portal_member_permissions() from public, anon, authenticated, service_role;
 
 revoke all on function private.can_access_condominium(target_condominium uuid) from public, anon, authenticated, service_role;
@@ -1463,11 +1848,17 @@ revoke all on function private.can_access_resident_condominium_module(target_con
 
 grant execute on function private.can_access_resident_condominium_module(target_condominium uuid, required_permission text) to "authenticated";
 
+revoke all on function private.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid) from public, anon, authenticated, service_role;
+
+grant execute on function private.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid) to "authenticated";
+
 revoke all on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) to PUBLIC;
+grant execute on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.close_condominium_member_transfer(p_transfer_id uuid) from public, anon, authenticated, service_role;
+
+grant execute on function private.close_condominium_member_transfer(p_transfer_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.confirm_condominium_member_transfer(p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb) from public, anon, authenticated, service_role;
 
@@ -1497,7 +1888,7 @@ grant execute on function public.audit_condominium_work_progress_change() to "se
 
 revoke all on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) to PUBLIC;
+
 
 grant execute on function public.check_condominium_member_transfer_closure(p_transfer_id uuid) to "authenticated";
 
@@ -1605,13 +1996,13 @@ grant execute on function public.guard_millesimal_value_integrity() to "service_
 
 revoke all on function public.normalize_zero_ownership_owner() from public, anon, authenticated, service_role;
 
-grant execute on function public.normalize_zero_ownership_owner() to PUBLIC;
+
 
 grant execute on function public.normalize_zero_ownership_owner() to "service_role";
 
 revoke all on function public.preserve_closing_condominium_member_history() from public, anon, authenticated, service_role;
 
-grant execute on function public.preserve_closing_condominium_member_history() to PUBLIC;
+
 
 grant execute on function public.preserve_closing_condominium_member_history() to "service_role";
 
@@ -1685,7 +2076,7 @@ grant execute on function public.validate_unit_owner_member_refs() to "service_r
 
 revoke all on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) from public, anon, authenticated, service_role;
 
-grant execute on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) to "service_role";
+grant execute on function private.archive_condominium(p_workspace_id uuid, p_condominium_id uuid, p_reason text) to "authenticated", "service_role";
 
 revoke all on function private.can_access_workspace_module(target_workspace uuid, required_permission text) from public, anon, authenticated, service_role;
 
@@ -1697,39 +2088,39 @@ grant execute on function private.can_manage_workspace_module(target_workspace u
 
 revoke all on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) to "service_role";
+grant execute on function private.close_condominium_fiscal_year(p_workspace_id uuid, p_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) to "service_role";
+grant execute on function private.close_fiscal_year_and_generate_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) from public, anon, authenticated, service_role;
 
-grant execute on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) to "service_role";
+grant execute on function private.compensate_fiscal_carryover(p_workspace_id uuid, p_condominium_id uuid, p_carryover_id uuid, p_amount numeric, p_target_installment_id uuid, p_notes text) to "authenticated", "service_role";
 
 revoke all on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) from public, anon, authenticated, service_role;
 
-grant execute on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) to "service_role";
+grant execute on function private.complete_portal_registration(p_full_name text, p_fiscal_code text, p_condominium_name text) to "authenticated", "service_role";
 
 revoke all on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) to "service_role";
+grant execute on function private.confirm_condominium_creation_intake(p_intake_id uuid, p_condominium_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) from public, anon, authenticated, service_role;
 
-grant execute on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) to "service_role";
+grant execute on function private.delete_condominium(p_workspace_id uuid, p_legacy_id bigint, p_security_code text) to "authenticated", "service_role";
 
 revoke all on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) to "service_role";
+grant execute on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) to "service_role";
+grant execute on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) to "service_role";
+grant execute on function private.generate_installments_from_allocations_schedule(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_dates date[], p_fiscal_year_id uuid, p_percentages numeric[], p_unify_by_member boolean) to "authenticated", "service_role";
 
 revoke all on function private.handle_new_user() from public, anon, authenticated, service_role;
 
@@ -1747,15 +2138,15 @@ grant execute on function private.is_workspace_staff(target_workspace uuid) to "
 
 revoke all on function private.list_archived_condominiums(p_workspace_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.list_archived_condominiums(p_workspace_id uuid) to "service_role";
+grant execute on function private.list_archived_condominiums(p_workspace_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) from public, anon, authenticated, service_role;
 
-grant execute on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) to "service_role";
+grant execute on function private.register_condominium_installment_payment(p_workspace_id uuid, p_condominium_id uuid, p_installment_id uuid, p_payment_date date, p_amount numeric, p_method text, p_reference text, p_notes text) to "authenticated", "service_role";
 
 revoke all on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) to "service_role";
+grant execute on function private.restore_condominium(p_workspace_id uuid, p_condominium_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.save_condominium(p_workspace_id uuid, p_legacy_id bigint, p_name text, p_address text, p_city text, p_postal_code text, p_province text, p_data jsonb) from public, anon, authenticated, service_role;
 
@@ -1765,11 +2156,11 @@ grant execute on function private.save_condominium(p_workspace_id uuid, p_legacy
 
 revoke all on function private.set_personal_security_code(p_code text, p_enabled boolean) from public, anon, authenticated, service_role;
 
-grant execute on function private.set_personal_security_code(p_code text, p_enabled boolean) to "service_role";
+grant execute on function private.set_personal_security_code(p_code text, p_enabled boolean) to "authenticated", "service_role";
 
 revoke all on function private.verify_personal_security_code(p_code text) from public, anon, authenticated, service_role;
 
-grant execute on function private.verify_personal_security_code(p_code text) to "service_role";
+grant execute on function private.verify_personal_security_code(p_code text) to "authenticated", "service_role";
 
 revoke all on function public.touch_documents_updated_at() from public, anon, authenticated, service_role;
 
