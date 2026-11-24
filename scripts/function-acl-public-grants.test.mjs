@@ -91,6 +91,19 @@ test('invoker-backed private RPCs preserve the live authenticated grants', () =>
   assert.match(transferCloseGrants[0], /to\s+"authenticated",\s+"service_role"$/i);
 });
 
+test('consumption allocation RPC rejects an expense from a different fiscal year', () => {
+  const match = migration.match(
+    /CREATE OR REPLACE FUNCTION public\\.generate_consumption_allocations\\([\\s\\S]*?AS \\$function\\$([\\s\\S]*?)\\$function\\$;/i,
+  );
+  assert.ok(match, 'generate_consumption_allocations definition must be present in the parity migration');
+  const body = match[1].toLowerCase();
+  const guard = body.indexOf('if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then');
+  const deletion = body.indexOf('delete from public.condominium_expense_allocations');
+  assert.ok(guard >= 0, 'RPC must compare the expense fiscal year with the requested fiscal year');
+  assert.ok(guard < deletion, 'RPC must reject a mismatch before modifying allocations');
+  assert.ok(body.includes('la spesa e i dati di consumo devono appartenere allo stesso esercizio contabile'));
+});
+
 test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
   const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
   assert.equal(occurrences("IF NOT "), 6);
