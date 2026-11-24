@@ -3,29 +3,31 @@
   "captured_date": "2026-11-08",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/edge-functions-phase1",
-  "reviewed_head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
+  "reviewed_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
-    "final_qa_collaudo": {
-      "run_id": 45387686799,
-      "run_attempt": 1,
-      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
+    "baseline_safety": {
+      "run_id": 45389819279,
+      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 45387686747,
-      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
+      "run_id": 45389819297,
+      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
       "conclusion": "success",
       "jobs": {
         "build": "success",
         "postgres_bootstrap": "success"
       }
     },
-    "baseline_safety": {
-      "run_id": 45387686644,
-      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
-      "conclusion": "success"
+    "final_qa_collaudo": {
+      "run_id": 45389819328,
+      "run_attempt": 1,
+      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+      "conclusion": "success",
+      "checked_out_commit_sha": "55554053b2d103419eae1941d658d1adb2d6faf3",
+      "checked_out_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90"
     }
   },
   "application_tests": {
@@ -47,30 +49,30 @@
       "invalid_signature_rejected_http_401_without_mutation": "PASS",
       "provider_probe": "SKIPPED — explicitly excluded by current QA authorization scope",
       "provider_test_recipient": "delivered@resend.dev",
-      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe was explicitly skipped in run 45387686799; no external email was sent in this run.",
-      "limitation": "Current exact-head QA verified publication, recipient preparation and signed synthetic webhook handling. It did not perform a live Resend send. Historical provider test evidence belongs to an older tested SHA and is not carried forward as current-head provider-delivery certification.",
-      "provider_delivery": "NOT_RUN"
+      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe explicitly skipped in run 45389819328; no external email was sent.",
+      "provider_delivery": "NOT_RUN",
+      "limitation": "Publication and signed synthetic webhook acceptance passed. No live provider delivery certification."
     },
     "APP-13": "PASS",
     "APP-14": {
       "status": "PARTIAL",
-      "disposition": "Production post-cutover gate; Production remains NO-GO until guarded 19-migration cutover, postflight and authenticated Production smoke are completed."
+      "disposition": "Production cutover/postflight not executed; Production remains NO-GO."
     },
     "APP-15": {
       "status": "PASS",
       "navigation": {
-        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
-        "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
-        "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
+        "admin": "PASS",
+        "collaborator": "PASS",
+        "resident": "PASS"
       },
       "authentication_session": {
-        "admin": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
-        "collaborator": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
-        "resident": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors."
+        "admin": "PASS",
+        "collaborator": "PASS",
+        "resident": "PASS"
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 13596314597
+        "artifact_id": 14918486658
       }
     },
     "APP15": {
@@ -141,11 +143,14 @@
       "recipients": 0
     },
     "temporary_provider_fixture_removed": true,
-    "preexisting_qa_fixtures_preserved": true
+    "preexisting_qa_fixtures_preserved": true,
+    "portal_plan_fixture": "RESTORED — original plan free verified in QA run 45389819328",
+    "qa_preview": "STOPPED — workflow cleanup completed",
+    "diagnostics_artifact": "bethag-app15-diagnostics / 14918486658"
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "Exact-head recertification SUCCESS on QA branch commit 5d96342209be77e189012dec754bc764999e64e2: baseline safety run 42496340234 PASS; Build/PostgreSQL 17 run 42496340111 PASS; final QA APP-01..APP-15 run 42496340118 PASS. APP-01..APP-13 and APP-15 are accepted on QA. APP-14 remains PARTIAL pending a separately approved Production cutover, postflight and authenticated Production smoke. Production was not modified; no merge or deploy was performed.",
+  "conclusion": "QA APP-01..APP-13 and APP-15 PASS on candidate tree fef903141932e61a7c5ad34ad6bed1134c2d2f90. APP-12 provider delivery NOT_RUN. APP-14 PARTIAL and Production NO-GO.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -263,31 +268,16 @@
     "production_modified": false,
     "merge_or_deploy_performed": false
   },
-  "execution_head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
+  "execution_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
   "current_head_validation": {
-    "execution_head_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
-    "verified_at": "2026-11-07",
-    "workflows": {
-      "baseline_safety": {
-        "run_id": 42419684071,
-        "conclusion": "success"
-      },
-      "build_postgres17": {
-        "run_id": 42419684103,
-        "conclusion": "success"
-      },
-      "final_qa_app01_app15": {
-        "run_id": 42419684025,
-        "conclusion": "success"
-      }
-    },
-    "build_postgres17_rehearsal": {
-      "status": "PASS",
-      "steps": "Baseline bootstrap, 28 chronological clean-install migrations, portal-registration repair, 19 canonical migrations through guarded runner, ACL/postcondition rehearsals, collaborator permission RLS and rollback checks all succeeded on isolated PostgreSQL 17."
-    },
-    "app_acceptance": "APP-01..APP-15 PASS; QA fixture restored; preview stopped; cleanup completed.",
-    "workflow_execution_sha": "4109fb1bf3dc24d6351dc9a614b80b538adbceb3",
-    "note": "workflow_runs.*.head_sha records the QA-tested source SHA consumed by the guarded runner; current_head_validation.execution_head_sha records the GitHub Actions workflow checkout SHA. These are distinct by design."
+    "status": "PASS_WITH_EXPLICIT_CHECKOUT_TREE_RECONCILIATION",
+    "candidate_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+    "candidate_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90",
+    "final_qa_workflow_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+    "final_qa_checked_out_merge_commit_sha": "55554053b2d103419eae1941d658d1adb2d6faf3",
+    "final_qa_checked_out_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90",
+    "tree_identity_verified": true,
+    "note": "The pull_request QA workflow checked out the GitHub-generated merge commit. Its Git tree is identical to the candidate PR head tree. Workflow run metadata identifies the PR head SHA. The workflow's explicit checkout-verification step was skipped; tree identity was independently checked through Git commit metadata."
   },
   "latest_main_head_validation": {
     "execution_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
