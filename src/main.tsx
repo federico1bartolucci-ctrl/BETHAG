@@ -5,6 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { applyInsurancePoliciesLoadResponse } from "./lib/insurancePolicyLoadGuard.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -17069,6 +17070,9 @@ type CondominiumInsurancePolicy = {
 function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condominiumId: number; isAdministrator: boolean }) {
   const [policies, setPolicies] = useState<CondominiumInsurancePolicy[]>([]);
   const [loading, setLoading] = useState(false);
+  const insurancePolicyLoadSequence = useRef(0);
+  const currentCondominiumIdRef = useRef(condominiumId);
+  currentCondominiumIdRef.current = condominiumId;
   const [editing, setEditing] = useState<string | null>(null);
   const emptyForm = {
     company_name: "", policy_number: "", policy_type: "Globale fabbricati", coverage: "",
@@ -17078,6 +17082,8 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
   const [form, setForm] = useState(emptyForm);
 
   const loadPolicies = async () => {
+    const requestSequence = ++insurancePolicyLoadSequence.current;
+    const requestedCondominiumId = condominiumId;
     if (!supabase || !supabaseConfigured) return;
     setLoading(true);
     try {
@@ -17087,7 +17093,7 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         .from("condominiums")
         .select("id")
         .eq("workspace_id", workspaceId)
-        .eq("legacy_id", condominiumId)
+        .eq("legacy_id", requestedCondominiumId)
         .maybeSingle();
       if (!condominium?.id) return;
       const { data, error } = await supabase
@@ -17097,15 +17103,30 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
       if (error) throw error;
-      setPolicies((data || []) as CondominiumInsurancePolicy[]);
+      applyInsurancePoliciesLoadResponse({
+        data,
+        requestedCondominiumId,
+        currentCondominiumId: currentCondominiumIdRef.current,
+        requestSequence,
+        currentRequestSequence: insurancePolicyLoadSequence.current,
+        setPolicies,
+      });
     } catch (error) {
-      console.error("BETHAG insurance load error", error);
+      if (requestSequence === insurancePolicyLoadSequence.current && requestedCondominiumId === currentCondominiumIdRef.current) {
+        console.error("BETHAG insurance load error", error);
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence === insurancePolicyLoadSequence.current && requestedCondominiumId === currentCondominiumIdRef.current) {
+        setLoading(false);
+      }
     }
   };
-
-  useEffect(() => { void loadPolicies(); }, [condominiumId]);
+  useEffect(() => {
+    void loadPolicies();
+    return () => {
+      insurancePolicyLoadSequence.current += 1;
+    };
+  }, [condominiumId]);
 
   const resetForm = () => {
     setEditing(null);
