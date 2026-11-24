@@ -38,3 +38,20 @@ export function canConfirmAssemblyMinutes(assembly) {
   // transcript and assembly metadata. Any source edit makes the draft stale.
   return assembly.minutesDraft === buildManualAssemblyMinutesDraft(assembly);
 }
+
+
+export function canPublishAssemblyMinutes(assembly) {
+  return assembly?.minutesStatus === "Confermato" &&
+    canConfirmAssemblyMinutes(assembly);
+}
+
+export function reconcileAssemblyMinutesAfterEdit(assembly) {
+  if (canConfirmAssemblyMinutes(assembly)) return assembly;
+
+  return {
+    ...assembly,
+    minutesStatus: "Non elaborato",
+    minutesDraft: "",
+    publishedToPortal: false,
+  };
+}
