@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
+import { sendEmailMethodResponse } from "../_shared/send-email-method-response.mjs";
+import { buildEmailPersistenceWarning, persistEmailStatusUpdate, recordEmailPersistenceFailure } from "../_shared/email-status-persistence.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +16,8 @@ function json(data: unknown, status = 200) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const methodResponse = sendEmailMethodResponse(req.method, corsHeaders);
+  if (methodResponse) return methodResponse;
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Autenticazione richiesta." }, 401);
@@ -85,6 +88,7 @@ Deno.serve(async (req: Request) => {
     }
 
     let sent = 0, failed = 0;
+    const persistenceState = { persistenceFailures: 0, persistenceFailureDetails: [] as string[] };
     for (const recipient of recipients) {
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -98,34 +102,63 @@ Deno.serve(async (req: Request) => {
         const resendData = await resendResponse.json();
         if (!resendResponse.ok) {
           failed++;
-          await supabase.from("communication_recipients").update({
-            status: "failed", queued_at: null,
-            error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
-          }).eq("id", recipient.id);
+          const statusWrite = await persistEmailStatusUpdate(
+            persistenceState,
+            `recipient ${recipient.id} failure status`,
+            () => supabase.from("communication_recipients").update({
+              status: "failed", queued_at: null,
+              error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
+            }).eq("id", recipient.id),
+          );
+          if (statusWrite.error) console.error("BETHAG recipient failure status persistence error", recipient.id, statusWrite.error);
           continue;
         }
         sent++;
-        await supabase.from("communication_recipients").update({
-          status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
-          sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq("id", recipient.id);
+        const statusWrite = await persistEmailStatusUpdate(
+          persistenceState,
+          `recipient ${recipient.id} sent status`,
+          () => supabase.from("communication_recipients").update({
+            status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
+            sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+          }).eq("id", recipient.id),
+        );
+        if (statusWrite.error) console.error("BETHAG recipient sent status persistence error", recipient.id, statusWrite.error);
       } catch (error) {
         failed++;
-        await supabase.from("communication_recipients").update({
-          status: "failed", queued_at: null,
-          error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
-        }).eq("id", recipient.id);
+        const statusWrite = await persistEmailStatusUpdate(
+          persistenceState,
+          `recipient ${recipient.id} network failure status`,
+          () => supabase.from("communication_recipients").update({
+            status: "failed", queued_at: null,
+            error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
+          }).eq("id", recipient.id),
+        );
+        if (statusWrite.error) console.error("BETHAG recipient network-failure status persistence error", recipient.id, statusWrite.error);
       }
     }
 
-    const { count: remaining } = await supabase.from("communication_recipients")
+    const { count: remaining, error: remainingError } = await supabase.from("communication_recipients")
       .select("id", { count: "exact", head: true }).eq("communication_id", communication.id).in("status", ["pending","queued"]);
-    const status = failed === 0 && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
-    await supabase.from("communications").update({
-      email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    }).eq("id", communication.id);
+    if (remainingError) {
+      recordEmailPersistenceFailure(persistenceState, "remaining recipients query", remainingError);
+      console.error("BETHAG remaining recipient query error", remainingError);
+    }
+    const status = failed === 0 && !remainingError && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
+    const communicationStatusWrite = await persistEmailStatusUpdate(
+      persistenceState,
+      "communication status",
+      () => supabase.from("communications").update({
+        email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("id", communication.id),
+    );
+    if (communicationStatusWrite.error) console.error("BETHAG communication status persistence error", communicationStatusWrite.error);
 
-    return json({ success: true, sent, failed, remaining: remaining ?? 0, status });
+    return json({
+      success: true, sent, failed, remaining: remaining ?? 0, status,
+      persistenceFailures: persistenceState.persistenceFailures,
+      persistenceWarning: buildEmailPersistenceWarning(persistenceState),
+      persistenceFailureDetails: persistenceState.persistenceFailureDetails.length ? persistenceState.persistenceFailureDetails : undefined,
+    });
   } catch (error) {
     console.error("BETHAG send-email error", error);
     return json({ error: error instanceof Error ? error.message : "Errore interno." }, 500);
