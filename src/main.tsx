@@ -3456,7 +3456,10 @@ function App() {
           }
 
           try {
-            const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) =>
+              id.length > 0 && (table !== "communication_recipients" || uuidPattern.test(id))
+            );
             const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
             let prepared: { updateRows: any[]; insertRows: any[]; skipped: number };
             if (table === "condominium_allocation_intakes") {
@@ -3486,9 +3489,15 @@ function App() {
                 [...restoredCondominiumIds]
               );
             } else if (table === "communication_recipients") {
-              const uniqueIds = (values: any[]) => Array.from(new Set(values.filter((id) => typeof id === "string" && id.length > 0)));
-              const communicationIds = uniqueIds(rows.map((row: any) => row?.communication_id));
-              const providerEventIds = uniqueIds(rows.map((row: any) => row?.provider_event_id));
+              const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+              const uniqueUuids = (values: any[]) => Array.from(new Set(values
+                .filter((id) => typeof id === "string" && uuidPattern.test(id.trim()))
+                .map((id) => id.trim())));
+              const uniqueStrings = (values: any[]) => Array.from(new Set(values
+                .filter((value) => typeof value === "string" && value.trim().length > 0)
+                .map((value) => value.trim())));
+              const communicationIds = uniqueUuids(rows.map((row: any) => row?.communication_id));
+              const providerEventIds = uniqueStrings(rows.map((row: any) => row?.provider_event_id));
               const [communications, existingByCommunication, existingByProviderEvent] = await Promise.all([
                 communicationIds.length
                   ? loadPaginatedRowsByInFilter(supabase, "communications", "id", communicationIds, "id")
@@ -3505,7 +3514,7 @@ function App() {
                 if (recipient?.id != null) existingRecipientMap.set(String(recipient.id), recipient);
               }
               const existingRecipients = [...existingRecipientMap.values()];
-              const allMemberIds = uniqueIds([
+              const allMemberIds = uniqueUuids([
                 ...rows.map((row: any) => row?.member_id),
                 ...existingRecipients.map((row: any) => row?.member_id)
               ]);
