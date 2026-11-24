@@ -30,7 +30,7 @@ assert.ok(prepareStart >= 0 && resetStart > prepareStart && grantsStart > resetS
 const prepareSql = retrySql.slice(prepareStart, resetStart);
 const resetSql = retrySql.slice(resetStart, grantsStart);
 assert.doesNotMatch(prepareSql, /DELETE\s+FROM\s+public\.communication_recipients/i, "Preparation must not delete pending rows and regenerate recipient UUIDs.");
-assert.match(prepareSql, /WHERE r\.communication_id = p_communication_id[\s\S]*AND r\.status = 'failed'[\s\S]*SET status = 'pending'/i);
+assert.match(prepareSql, /UPDATE public\.communication_recipients r\s+SET status = 'pending'[\s\S]*WHERE r\.communication_id = p_communication_id[\s\S]*AND r\.status = 'failed'/i);
 assert.match(prepareSql, /ON CONFLICT \(communication_id, LOWER\(BTRIM\(email\)\)\) DO UPDATE/i);
 assert.doesNotMatch(prepareSql.slice(prepareSql.indexOf("ON CONFLICT"), prepareSql.indexOf("SELECT COUNT")), /\b(?:id|status)\s*=/i, "The conflict update must not replace recipient identity or delivery state.");
 assert.match(prepareSql, /status = 'skipped'[\s\S]*provider_event_id/i);
@@ -48,11 +48,11 @@ try {
   `);
 
   const roles = new Set(["anon", "authenticated", "service_role", "authenticator", "supabase_admin"]);
-  for (const match of grantSql.matchAll(/\bTO\s+("(?: ""|[^"])+")/g)) {
+  for (const match of grantSql.matchAll(/\bTO\s+("(?:\"\"|[^"])+")/g)) {
     const role = match[1].slice(1, -1).replace(/""/g, '"');
     if (role.toUpperCase() !== "PUBLIC" && role !== "postgres") roles.add(role);
   }
-  for (const match of grantSql.matchAll(/\bFOR ROLE\s+("(?: ""|[^"])+")/g)) {
+  for (const match of grantSql.matchAll(/\bFOR ROLE\s+("(?:\"\"|[^"])+")/g)) {
     const role = match[1].slice(1, -1).replace(/""/g, '"');
     if (role !== "postgres") roles.add(role);
   }
