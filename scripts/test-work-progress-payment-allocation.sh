@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
-migration="supabase/migrations/20261124180000_harden_work_progress_payment_allocation.sql"
+migration="supabase/migrations/20261124240400_harden_work_progress_payment_allocation.sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $roles$
@@ -104,6 +104,10 @@ VALUES
  ('40000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001',60),
  ('40000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001',40);
 
+INSERT INTO public.condominium_work_progress(id,work_id,ledger_entry_id,paid_amount)
+VALUES
+ ('40000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000002',0);
+
 -- Updating a row must exclude its previous value, not double-count it.
 UPDATE public.condominium_work_progress
 SET paid_amount=40
@@ -173,6 +177,25 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM='TEST_EXPECTED_LEDGER_DELETE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
     IF SQLERRM <> 'La voce contabile è collegata a ripartizioni, rate o SAL e non può essere cancellata' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE public.condominium_ledger_entries
+    SET amount=90
+    WHERE id='30000000-0000-0000-0000-000000000002';
+    RAISE EXCEPTION 'TEST_EXPECTED_EXPENSE_LEDGER_UPDATE_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_EXPENSE_LEDGER_UPDATE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è collegata a ripartizioni, rate o SAL: importo, direzione, esercizio, fornitore, documento e appartenenza non possono essere modificati' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    DELETE FROM public.condominium_ledger_entries
+    WHERE id='30000000-0000-0000-0000-000000000002';
+    RAISE EXCEPTION 'TEST_EXPECTED_EXPENSE_LEDGER_DELETE_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_EXPENSE_LEDGER_DELETE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è collegata a uno o più SAL e non può essere cancellata' THEN RAISE; END IF;
   END;
 END
 $test$;
