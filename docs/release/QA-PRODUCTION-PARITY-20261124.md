@@ -237,3 +237,25 @@ Queste modifiche restano file candidati/draft e test isolati. Nessuna ACL, funzi
 4. **Punto 4 — NON INIZIATO:** aggiornamento manifest e nuova approvazione, subordinati alla chiusura del Punto 3.
 
 La regressione SQL isolata non sostituisce il collaudo live; ora entrambi i livelli risultano superati per il Punto 2. Nessun DDL/DML remoto, modifica ACL, replay migrazioni, merge o deploy è stato eseguito.
+
+
+### Riconferma Data API QA da Dashboard — 24 novembre 2026, 22:36 CET
+
+Screenshot acquisito sul branch **bethag-launch-qa** nella pagina Integrations → Data API → Settings. Il menu "Exposed schemas" mostra esattamente:
+
+- `graphql_public`: esposto.
+- `public`: esposto.
+- `private`: **non esposto**.
+
+La pagina mostra inoltre:
+- Tabelle esposte: `0 of 48`.
+- Funzioni esposte: `0 of 173`.
+- Automatically expose new tables: **disattivato**.
+- Extra search path: `public`, `extensions`.
+- Max rows: `1000`.
+
+Questa evidenza aggiorna e sostituisce il riferimento del 5 novembre: sul branch QA attuale lo schema `private` non è esposto tramite Data API; inoltre non risultano tabelle o funzioni abilitate singolarmente e l'esposizione automatica di nuove tabelle è disattivata. Non è stata modificata né salvata alcuna impostazione.
+
+**Implicazione per l'audit:** il rischio di invocazione diretta delle funzioni private tramite endpoint Data API/PostgREST non è presente nella configurazione QA osservata. Resta però valido il rilievo PostgreSQL prospettico: il default globale EXECUTE per PUBLIC può essere ereditato da nuove funzioni create dal ruolo `postgres`. Il draft forward-only resta una misura di hardening difensivo da valutare separatamente; non è stato applicato. La schermata QA non prova la configurazione Data API di Production e non va estesa a Production per inferenza.
+
+**Esito verifica Data API QA: CHIUSA — screenshot del branch corretto acquisito e valori leggibili.** Il Punto 3 resta IN CORSO esclusivamente per la decisione/approvazione separata sul draft forward-only e per la relativa eventuale applicazione controllata; nessuna modifica remota è autorizzata da questa verifica.
