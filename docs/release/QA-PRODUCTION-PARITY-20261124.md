@@ -144,9 +144,9 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 
 ### Collaudo live APP-01..APP-15
 
-- Workflow: [Final QA collaudo, run 45485248003](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45485248003).
+- Workflow: [Final QA collaudo, run 45488661020](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661020).
 - Evento: pull request #431, branch `integration/accounting-point1-main-20261124`.
-- Commit verificato: `bde7ddf4a721f36ac521774c57f2ed891b95eba0`.
+- Commit verificato: `e37c36335ac79c790cc197098fe7cb0b354db214`.
 - Job `final-qa-collaudo`: **SUCCESS**; tutti gli step completati con esito positivo.
 - APP-01..04, APP-05..07, APP-08..11, APP-12, APP-13 e APP-15: PASS nei rispettivi test autenticati/API/UI. I test APP-14/Phase 1 e i flussi Edge Functions previsti dal workflow sono terminati PASS.
 - APP-12 webhook Resend firmato: PASS. Il probe di invio live è stato escluso dall'autorizzazione e non è stato eseguito.
@@ -155,6 +155,8 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 - Fixture temporanee APP-05/06 eliminate; cleanup browser verificato; documenti e oggetti Storage temporanei rimossi.
 - Il piano workspace è stato portato temporaneamente da `free` a `portal` e ripristinato a `free`. Verifica read-only successiva sul progetto QA: `workspace_plan=free`.
 - Preview QA arrestato regolarmente; diagnostica APP-15 caricata come artifact `bethag-app15-diagnostics` (artifact ID `14964446568`).
+- Seconda esecuzione completa sul commit aggiornato: [run 45488661020](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661020), job SUCCESS; APP-15, ripristino piano, upload diagnostica e arresto preview tutti PASS.
+- Dopo la certificazione, il branch è stato rimosso dalla allowlist automatica del workflow QA: ulteriori collaudi live richiederanno un dispatch esplicito.
 
 La run non ha eseguito invii reali Resend, merge, deploy, reset o ricreazione del QA. Non è stato creato alcun ambiente a pagamento. I dati QA/Production restano distinti e preservati.
 
