@@ -1,0 +1,127 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { updateDocumentAiStateForWorkspace } from "../src/lib/documentAiWorkspaceGuard.mjs";
+
+const workspaceADocument = {
+  id: 42,
+  condominiumId: 7,
+  storagePath: "workspace-a/condominium-7/document-42/original.pdf",
+  aiStatus: "In elaborazione",
+  aiSummary: "",
+  extractedData: "",
+};
+
+const workspaceBDocument = {
+  id: 42,
+  condominiumId: 7,
+  storagePath: "workspace-b/condominium-7/document-42/original.pdf",
+  aiStatus: "Non elaborato",
+  aiSummary: "Dati preesistenti del workspace B",
+  extractedData: "workspace-b-data",
+};
+
+const aiResultFromA = {
+  aiStatus: "Da verificare",
+  aiSummary: "Contenuto estratto dal workspace A",
+  extractedData: "workspace-a-data",
+};
+
+const staleSuccess = updateDocumentAiStateForWorkspace(
+  [workspaceBDocument],
+  {
+    currentWorkspaceId: "workspace-b",
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.strictEqual(staleSuccess[0], workspaceBDocument);
+assert.equal(staleSuccess[0].aiSummary, "Dati preesistenti del workspace B");
+assert.equal(staleSuccess[0].extractedData, "workspace-b-data");
+
+const staleFailure = updateDocumentAiStateForWorkspace(
+  [workspaceBDocument],
+  {
+    currentWorkspaceId: "workspace-b",
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  { aiStatus: "Non elaborato" },
+);
+assert.strictEqual(staleFailure[0], workspaceBDocument);
+assert.equal(staleFailure[0].aiStatus, "Non elaborato");
+
+const currentResult = updateDocumentAiStateForWorkspace(
+  [workspaceADocument],
+  {
+    currentWorkspaceId: "workspace-a",
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.notStrictEqual(currentResult, [workspaceADocument]);
+assert.equal(currentResult[0].aiStatus, "Da verificare");
+assert.equal(currentResult[0].aiSummary, "Contenuto estratto dal workspace A");
+assert.equal(currentResult[0].extractedData, "workspace-a-data");
+
+const replacedDocument = {
+  ...workspaceADocument,
+  storagePath: "workspace-a/condominium-7/document-42/replacement.pdf",
+};
+const replacedFileResult = updateDocumentAiStateForWorkspace(
+  [replacedDocument],
+  {
+    currentWorkspaceId: "workspace-a",
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.strictEqual(replacedFileResult[0], replacedDocument);
+
+const movedDocument = {
+  ...workspaceADocument,
+  condominiumId: 8,
+};
+const movedCondominiumResult = updateDocumentAiStateForWorkspace(
+  [movedDocument],
+  {
+    currentWorkspaceId: "workspace-a",
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.strictEqual(movedCondominiumResult[0], movedDocument);
+
+const missingWorkspace = updateDocumentAiStateForWorkspace(
+  [workspaceADocument],
+  {
+    currentWorkspaceId: null,
+    requestWorkspaceId: "workspace-a",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.strictEqual(missingWorkspace[0], workspaceADocument);
+
+const mainSource = await readFile("src/main.tsx", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const processStart = mainSource.indexOf("const processDocumentAI = async");
+const confirmStart = mainSource.indexOf("const confirmDocumentAI = async", processStart);
+assert.ok(processStart >= 0 && confirmStart > processStart, "active document AI handler must exist");
+const processSource = mainSource.slice(processStart, confirmStart);
+assert.match(mainSource, /import \{ updateDocumentAiStateForWorkspace \} from "\.\/lib\/documentAiWorkspaceGuard\.mjs";/);
+assert.match(mainSource, /const activeDocumentWorkspaceIdRef = useRef\(profile\.workspaceId\);[\s\S]*?activeDocumentWorkspaceIdRef\.current = profile\.workspaceId;/);
+assert.match(processSource, /getActiveWorkspaceId\(undefined, requestWorkspaceId\)/);
+assert.match(processSource, /updateDocumentAiStateForWorkspace/);
+assert.doesNotMatch(processSource, /doc\.id === item\.id/, "AI results must not update documents by legacy ID alone");
+const testCommand = packageJson.scripts?.test ?? "";
+assert.equal(
+  testCommand.split("test-document-ai-workspace-stale-result.mjs").length - 1,
+  1,
+  "document AI workspace regression must be wired exactly once into npm test",
+);
+
+console.log("Document AI workspace stale-result runtime regression: PASS");
