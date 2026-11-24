@@ -181,7 +181,7 @@ assert.ok(packageJson.scripts.test.includes("test-backup-security-restore.mjs"),
 assert.match(workflow, /run:\s*npm test/, "the build workflow must execute npm test");
 
 // Confirm why replaying these rows is security-sensitive in the current schema.
-assert.match(security, /CREATE POLICY "workspace_members" AS PERMISSIVE FOR ALL TO "authenticated" USING \(private\.is_workspace_admin\(workspace_id\)\) WITH CHECK \(private\.is_workspace_admin\(workspace_id\)\)/);
+assert.match(security, /CREATE POLICY "admins manage memberships" ON "public"\."workspace_members" AS PERMISSIVE FOR ALL TO "authenticated" USING \(private\.is_workspace_admin\(workspace_id\)\) WITH CHECK \(private\.is_workspace_admin\(workspace_id\)\)/);
 assert.match(security, /CREATE POLICY "authorized managers manage portal access"[\s\S]*?private\.can_manage_workspace_module\(workspace_id, 'portale'::text\)/);
 const workspaceAccess = functions.slice(
   functions.indexOf("FUNCTION private.can_access_workspace_module"),
