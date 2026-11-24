@@ -156,7 +156,7 @@ const processSource = mainSource.slice(processStart, confirmStart);
 const confirmSource = mainSource.slice(confirmStart, assemblyStart);
 assert.match(mainSource, /import \{ updateDocumentAiStateForWorkspace \} from "\.\/lib\/documentAiWorkspaceGuard\.mjs";/);
 assert.match(mainSource, /const activeDocumentWorkspaceIdRef = useRef\(profile\.workspaceId\);[\s\S]*?activeDocumentWorkspaceIdRef\.current = profile\.workspaceId;/);
-assert.match(mainSource, /const documentsWorkspaceIdRef = useRef<string \\| null>\(null\);/);
+assert.match(mainSource, /const documentsWorkspaceIdRef = useRef<string \| null>\(null\);/);
 assert.equal((mainSource.match(/documentsWorkspaceIdRef\.current = (?:workspaceId|profile\.workspaceId);/g) ?? []).length, 2);
 assert.match(processSource, /documentsWorkspaceIdRef\.current !== requestWorkspaceId/);
 assert.match(confirmSource, /documentsWorkspaceIdRef\.current !== requestWorkspaceId/);
