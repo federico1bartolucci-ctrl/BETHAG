@@ -12,7 +12,7 @@ const [live, freeze, snapshot, liveProposal, liveProposalSnapshot] = await Promi
   readFile(root + "/drafts/production-ledger-live-20261124.json", "utf8").then(JSON.parse),
 ]);
 const deployableFiles = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql")).sort();
-const files = deployableFiles.filter(file => file !== liveProposalFile);
+const files = deployableFiles;
 const productionSet = new Set(live.production.migrations.map(row => row.version + "|" + row.name));
 const qaSet = new Set(live.qa.migrations.map(row => row.version + "|" + row.name));
 const common = [...productionSet].filter(pair => qaSet.has(pair));
@@ -64,9 +64,10 @@ assert.equal(freeze.live_ledger.production_only_migration.name, "reconcile_produ
 // not the 24 November live ledger. Keep the historical freeze separate from
 // the current 267-row one-migration proposal.
 assert.equal(files.length, 28, "Frozen historical canonical migration files must remain at 28.");
-assert.equal(deployableFiles.length, 29,
-  "Expected 28 frozen historical files plus exactly one separately reviewed live proposal.");
-assert.ok(deployableFiles.includes(liveProposalFile));
+assert.equal(deployableFiles.length, 28,
+  "Standard Supabase CLI inventory must remain at the 28 frozen canonical migrations.");
+assert.ok(!deployableFiles.includes(liveProposalFile),
+  "DRAFT_NOT_APPROVED live proposal must remain outside supabase/migrations.");
 assert.equal(freeze.clean_install.migration_file_count, 28);
 assert.ok(pending.every(item => files.includes(item.file)));
 assert.ok(pending.every(item => !productionSet.has(item.version + "|" + item.name)));
@@ -89,16 +90,12 @@ assert.deepEqual(liveProposalSnapshot.head, {
 assert.equal(liveProposal.sequence.length, 1);
 assert.equal(liveProposal.sequence[0].file, liveProposalFile);
 assert.equal(liveProposal.sequence[0].git_blob_sha, liveProposal.live_ledger.proposed_addition.git_blob_sha);
-assert.equal(liveProposal.clean_install.migration_file_count, 29);
+assert.equal(liveProposal.clean_install.migration_file_count, 28);
 assert.ok(!liveProposalSnapshot.migrations.some(row =>
   row.version === liveProposal.sequence[0].file.slice(0, 14)
   || row.name === liveProposal.sequence[0].file.slice(15, -4)));
 
-const [proposalSql, draftProposalSql] = await Promise.all([
-  readFile("supabase/migrations/" + liveProposalFile, "utf8"),
-  readFile(root + "/drafts/" + liveProposalFile, "utf8"),
-]);
-assert.equal(gitBlobSha(proposalSql), liveProposal.sequence[0].git_blob_sha);
+const draftProposalSql = await readFile(root + "/drafts/" + liveProposalFile, "utf8");
 assert.equal(gitBlobSha(draftProposalSql), liveProposal.sequence[0].git_blob_sha);
 
 const productionOnlySql = await readFile(root + "/production-forward-migrations/" + freeze.live_ledger.production_only_migration.file, "utf8");
