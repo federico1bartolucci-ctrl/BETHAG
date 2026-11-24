@@ -46,12 +46,24 @@ export function canPublishAssemblyMinutes(assembly) {
 }
 
 export function reconcileAssemblyMinutesAfterEdit(assembly) {
-  if (canConfirmAssemblyMinutes(assembly)) return assembly;
+  if (!canConfirmAssemblyMinutes(assembly)) {
+    return {
+      ...assembly,
+      minutesStatus: "Non elaborato",
+      minutesDraft: "",
+      publishedToPortal: false,
+    };
+  }
 
-  return {
-    ...assembly,
-    minutesStatus: "Non elaborato",
-    minutesDraft: "",
-    publishedToPortal: false,
-  };
+  // A legacy unconfirmed publication flag must not become visible merely because
+  // the administrator confirms a previously saved draft. Publication stays an
+  // explicit action after confirmation.
+  if (assembly.minutesStatus !== "Confermato") {
+    return {
+      ...assembly,
+      publishedToPortal: false,
+    };
+  }
+
+  return assembly;
 }
