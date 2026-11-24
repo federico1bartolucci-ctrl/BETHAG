@@ -3456,12 +3456,32 @@ function App() {
           try {
             const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
             const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
-            const prepared = table === "condominium_allocation_intakes"
-              ? prepareAllocationIntakesForBackupRestore(rows, profile.workspaceId, existingRows, [...restoredCondominiumIds])
-              : prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+            let prepared: { updateRows: any[]; insertRows: any[]; skipped: number };
+            if (table === "condominium_allocation_intakes") {
+              const uniqueIds = (values: any[]) => Array.from(new Set(values.filter((id) => typeof id === "string" && id.length > 0)));
+              const idsFor = (field: string) => uniqueIds(rows.map((row: any) => row?.[field]));
+              const unitIds = uniqueIds(rows.flatMap((row: any) =>
+                Array.isArray(row?.rows) ? row.rows.map((item: any) => item?.unit_id) : []
+              ));
+              const [documents, ledgerEntries, allocationTables, units] = await Promise.all([
+                loadPaginatedRowsByInFilter(supabase, "documents", "id", idsFor("document_id"), "id"),
+                loadPaginatedRowsByInFilter(supabase, "condominium_ledger_entries", "id", idsFor("ledger_entry_id"), "id"),
+                loadPaginatedRowsByInFilter(supabase, "condominium_millesimal_tables", "id", idsFor("allocation_table_id"), "id"),
+                loadPaginatedRowsByInFilter(supabase, "condominium_units", "id", unitIds, "id"),
+              ]);
+              prepared = prepareAllocationIntakesForBackupRestore(
+                rows,
+                profile.workspaceId,
+                existingRows,
+                [...restoredCondominiumIds],
+                { documents, ledgerEntries, allocationTables, units }
+              );
+            } else {
+              prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+            }
             if (prepared.skipped > 0) {
               const skippedReason = table === "condominium_allocation_intakes"
-                ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato o il record è duplicato nel backup"
+                ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato, un riferimento collegato non appartiene allo stesso workspace e condominio o il record è duplicato nel backup"
                 : "l'ID esiste in un altro workspace o è duplicato nel backup";
               errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
             }
