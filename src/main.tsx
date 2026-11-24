@@ -4556,9 +4556,35 @@ function App() {
     const document = documents.find((item) => item.id === id);
     if (!document) return;
 
+    const requestWorkspaceId = activeDocumentWorkspaceIdRef.current;
+    if (!requestWorkspaceId) {
+      alert("Workspace o Supabase non disponibili.");
+      return;
+    }
+    const requestDocument = {
+      id: document.id,
+      condominiumId: document.condominiumId,
+      storagePath: document.storagePath,
+    };
+    const updateCurrentDocument = (
+      current: DocumentItem[],
+      patch: Partial<DocumentItem>
+    ) => updateDocumentAiStateForWorkspace(
+      current,
+      {
+        currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        requestWorkspaceId,
+        requestDocument,
+      },
+      patch
+    );
+
     try {
-      const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId || !supabase) throw new Error("Workspace o Supabase non disponibili.");
+      const workspaceId = await getActiveWorkspaceId(undefined, requestWorkspaceId);
+      if (!workspaceId || workspaceId !== requestWorkspaceId || !supabase) {
+        throw new Error("Workspace o Supabase non disponibili.");
+      }
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
 
       let operationalMessage = "Dati AI confermati.";
       const extracted = document.extractedData ? JSON.parse(document.extractedData) : null;
@@ -4592,8 +4618,12 @@ function App() {
           if (existingIntakeError) throw existingIntakeError;
           if (existingIntake?.id) {
             operationalMessage = "Il riparto di questo documento è già presente in Contabilità come proposta. Non è stata creata una seconda acquisizione.";
-            setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
-            alert(operationalMessage);
+            if (activeDocumentWorkspaceIdRef.current === requestWorkspaceId) {
+              setDocuments((current) =>
+                updateCurrentDocument(current, { aiStatus: "Confermato" })
+              );
+              alert(operationalMessage);
+            }
             return;
           }
         }
@@ -4676,23 +4706,28 @@ function App() {
           ? `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità e collegati al lavoro "${selectedWork.title}".`
           : `Fattura confermata: ${invoiceNumber ? `n. ${invoiceNumber}, ` : ""}${amount.toFixed(2)} € registrati in Contabilità. Nessun lavoro è stato collegato automaticamente.`;
 
-        if (result.workId) {
+        if (result.workId && activeDocumentWorkspaceIdRef.current === requestWorkspaceId) {
           setCondominiumWorks((current) => current.map((work) => work.id === result.workId ? { ...work, documentIds: Array.from(new Set([...(work.documentIds ?? []), document.id])) } : work));
         }
 
         if (invoiceDate) {
-          setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, date: invoiceDate } : doc));
+          setDocuments((current) =>
+            updateCurrentDocument(current, { date: invoiceDate })
+          );
         }
       }
 
-      setDocuments((current) => current.map((doc) => doc.id === id ? { ...doc, aiStatus: "Confermato" } : doc));
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
+      setDocuments((current) =>
+        updateCurrentDocument(current, { aiStatus: "Confermato" })
+      );
       alert(operationalMessage);
     } catch (error: any) {
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
       console.error("BETHAG AI confirmation failed", error);
       alert(error?.message || "Impossibile confermare e trasferire i dati AI.");
     }
   };
-
 
   /* =======================================================
      ASSEMBLEE
