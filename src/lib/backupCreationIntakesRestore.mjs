@@ -2,10 +2,12 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+const BACKSLASH = String.fromCharCode(92);
+
 function isWorkspaceStoragePath(path, workspaceId) {
   if (typeof path !== "string" || !path.startsWith(workspaceId + "/")) return false;
   const relativePath = path.slice(workspaceId.length + 1);
-  if (!relativePath || relativePath.includes("\\\\")) return false;
+  if (!relativePath || relativePath.includes(BACKSLASH)) return false;
   const segments = relativePath.split("/");
   return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
@@ -17,7 +19,7 @@ function hasSafeSourceDocuments(value, workspaceId) {
   return documents.every((document) => {
     // Older backups may contain filenames only; they are metadata, not Storage paths.
     if (typeof document === "string") {
-      return document.trim().length > 0 && !document.includes("/") && !document.includes("\\\\");
+      return document.trim().length > 0 && !document.includes("/") && !document.includes(BACKSLASH);
     }
     if (!isRecord(document)) return false;
     if (Object.hasOwn(document, "stored") && typeof document.stored !== "boolean") return false;
