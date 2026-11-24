@@ -20,7 +20,8 @@ ALTER TABLE public.condominium_work_progress
   ADD COLUMN IF NOT EXISTS progress_date date NOT NULL DEFAULT current_date,
   ADD COLUMN IF NOT EXISTS title text NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'Presentato',
-  ADD COLUMN IF NOT EXISTS percentage numeric NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS percentage numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS notes text NOT NULL DEFAULT '';
 
 \i supabase/migrations/20261124223000_audit_all_work_progress_fields.sql
 
