@@ -275,6 +275,36 @@ try {
   assert.equal(acceptedQueued.rows[0].provider_message_id, "re_queued_123");
   assert.equal(acceptedQueued.rows[0].queued_at, null);
 
+
+  // Re-preparing a communication whose recipients were already delivered must
+  // not downgrade its aggregate email status to "no_recipients".
+  const completedCommunicationId = "99999999-9999-4999-8999-999999999999";
+  const completedRecipientId = "aaaaaaaa-1111-4111-8111-111111111111";
+  const completedAt = "2026-11-24T12:00:00.000Z";
+  await db.query(
+    "INSERT INTO public.communications(id,workspace_id,condominium_id,title,body,published,email_status,email_prepared_at) VALUES ($1,$2,$3,'Already sent','Body',true,'Inviata',$4)",
+    [completedCommunicationId, workspaceId, condominiumId, completedAt],
+  );
+  await db.query(
+    `INSERT INTO public.communication_recipients
+      (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,provider_message_id,sent_at)
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario','owner','sent','re_completed_123',$6)`,
+    [completedRecipientId, completedCommunicationId, workspaceId, condominiumId, activeMemberId, completedAt],
+  );
+  const completedPrepare = await db.query(
+    "SELECT private.prepare_communication_recipients($1) AS result",
+    [completedCommunicationId],
+  );
+  const completedState = await db.query(
+    "SELECT email_status,email_prepared_at FROM public.communications WHERE id=$1",
+    [completedCommunicationId],
+  );
+  assert.equal(completedPrepare.rows[0].result.recipient_count, 0);
+  assert.equal(completedState.rows[0].email_status, "Inviata",
+    "Re-preparing an already-sent communication must preserve its aggregate delivery status.");
+  assert.equal(new Date(completedState.rows[0].email_prepared_at).toISOString(), completedAt,
+    "Re-preparing an already-sent communication must not erase its prior preparation timestamp.");
+
   console.log("Communication recipient retry idempotency PostgreSQL runtime regression: PASS");
 } finally {
   await db.close();
