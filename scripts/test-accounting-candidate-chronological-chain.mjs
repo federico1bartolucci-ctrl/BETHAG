@@ -28,14 +28,14 @@ assert.equal(files.length, 38, `Expected 38 reviewed candidate migration files, 
 assert.equal(new Set(files.map((name) => name.slice(0, 14))).size, files.length,
   "Candidate migration versions must be unique.");
 for (const name of files) {
-  assert.match(name, /^\\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/, "Invalid candidate migration filename: " + name);
+  assert.match(name, /^\d{14}_[a-z0-9][a-z0-9_-]*\\.sql$/, "Invalid candidate migration filename: " + name);
 }
 
 const grantSql = await readFile(migrationDirectory + "/20261017000005_bethag_baseline_grants.sql", "utf8");
 const roles = new Set(["anon", "authenticated", "service_role", "authenticator", "supabase_admin"]);
 for (const pattern of [
-  /\\bTO\\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
-  /\\bFOR\\s+ROLE\\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
+  /\bTO\\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
+  /\bFOR\\s+ROLE\\s+(?:"((?:""|[^"])*)"|([a-z_][a-z0-9_$]*))/gi,
 ]) {
   for (const match of grantSql.matchAll(pattern)) {
     const role = (match[1] ?? match[2]).replace(/""/g, '"');
@@ -55,7 +55,7 @@ const bootstrapSql = [
     return "DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + literal +
       "') THEN CREATE ROLE \"" + identifier + "\" NOLOGIN; END IF; END $role$;";
   }),
-].join("\\n");
+].join("\n");
 psql(["-c", bootstrapSql]);
 
 for (const filename of files) {
