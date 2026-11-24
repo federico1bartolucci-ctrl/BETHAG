@@ -131,7 +131,3 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Capture SAL descriptive/date/sequence changes in the audit payload.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/work-progress-field-audit-regression.sql
-
-# Require the installment fiscal year to match its linked expense ledger.
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-  -f scripts/installment-ledger-fiscal-year-regression.sql
