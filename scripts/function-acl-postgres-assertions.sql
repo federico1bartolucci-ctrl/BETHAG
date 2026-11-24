@@ -84,4 +84,5 @@ SELECT public.generate_fiscal_year_carryovers(
   '00000000-0000-0000-0000-000000000003',
   '00000000-0000-0000-0000-000000000004'
 );
+SELECT public.close_condominium_member_transfer('00000000-0000-0000-0000-000000000005');
 RESET ROLE;
