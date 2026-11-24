@@ -23,6 +23,7 @@ on:
       - 'scripts/work-details-reference-audit-regression.sql'
       - 'scripts/work-progress-accounting-link-audit-regression.sql'
       - 'scripts/work-progress-field-audit-regression.sql'
+      - 'scripts/test-accounting-candidate-chronological-chain.mjs'
       - 'scripts/test-work-delete-with-sal-guard.sh'
       - 'scripts/test-work-progress-payment-allocation.sh'
       - 'scripts/test-fiscal-year-close-write-lock.sh'
@@ -105,3 +106,31 @@ jobs:
           sudo apt-get install --yes postgresql-client
       - name: Run supporting accounting regressions
         run: bash scripts/test-accounting-point1-supporting-regressions.sh
+
+  chronological-candidate-chain:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_candidate_chain
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_candidate_chain"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_candidate_chain
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Rehearse all candidate migrations in chronological order
+        run: node scripts/test-accounting-candidate-chronological-chain.mjs
