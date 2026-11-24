@@ -42,6 +42,30 @@ assert.ok(draft.includes("non è una sintesi generata dall'AI"));
 assert.equal(canConfirmAssemblyMinutes({ ...manuallyTranscribed, minutesDraft: draft }), true);
 assert.equal(canConfirmAssemblyMinutes({ ...manuallyTranscribed, minutesDraft: " " }), false);
 
+// Regression: the source transcript or metadata can change after draft generation.
+// The previous guard accepted any non-empty draft, allowing confirmation of
+// minutes that no longer represented the current assembly data.
+const staleTranscript = {
+  ...manuallyTranscribed,
+  transcriptionText: "L'assemblea respinge il preventivo.",
+  minutesDraft: draft,
+};
+assert.equal(canConfirmAssemblyMinutes(staleTranscript), false);
+
+const staleDate = {
+  ...manuallyTranscribed,
+  date: "2026-11-25",
+  minutesDraft: draft,
+};
+assert.equal(canConfirmAssemblyMinutes(staleDate), false);
+
+const staleTitle = {
+  ...manuallyTranscribed,
+  title: "Assemblea straordinaria",
+  minutesDraft: draft,
+};
+assert.equal(canConfirmAssemblyMinutes(staleTitle), false);
+
 // The active component must use the tested guard and must not fake an audio
 // upload/transcription state or delayed minutes generation.
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
@@ -63,3 +87,4 @@ assert.match(main, /transcriptionStatus: v\.trim\(\) \? "Da verificare" : "Non e
 const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 assert.match(pkg.scripts.test, /test-assembly-audio-transcription-guard\.mjs/);
 console.log("Assembly audio transcription false-positive runtime regression: PASS");
+console.log("Assembly minutes draft freshness runtime regression: PASS");
