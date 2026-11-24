@@ -154,7 +154,7 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 - Il test APP-07 ha verificato il blocco di modifica contabile su fixture QA persistente di esercizio chiuso; il valore originale è rimasto invariato. La fixture è stata mantenuta, non cancellata.
 - Fixture temporanee APP-05/06 eliminate; cleanup browser verificato; documenti e oggetti Storage temporanei rimossi.
 - Il piano workspace è stato portato temporaneamente da `free` a `portal` e ripristinato a `free`. Verifica read-only successiva sul progetto QA: `workspace_plan=free`.
-- Preview QA arrestato regolarmente; diagnostica APP-15 caricata come artifact `bethag-app15-diagnostics` (artifact ID `14964446568`).
+- Preview QA arrestato regolarmente; diagnostica APP-15 caricata come artifact `bethag-app15-diagnostics` (artifact ID `14964813119`).
 - Ulteriore esecuzione completa sul commit aggiornato: [run 45488661020](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661020), job SUCCESS; APP-15, ripristino piano, upload diagnostica e arresto preview tutti PASS.
 - Dopo la certificazione, il branch è stato rimosso dalla allowlist automatica del workflow QA: ulteriori collaudi live richiederanno un dispatch esplicito.
 
