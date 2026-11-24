@@ -20,7 +20,6 @@ const manifestPath=join(root,"supabase/rebuild/drafts/production-migration-cutov
 const candidatePath=join(root,"supabase/migrations",candidate);
 const preflightPath=join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql");
 const postflightPath=join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql");
-const runnerPath=join(root,"scripts/apply-live-ledger-acl-production.mjs");
 const blobSha=s=>{const t=s.replace(/\r\n/g,"\n"),b=Buffer.from(t);return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\0"),b])).digest("hex");};
 const fingerprintSha=s=>createHash("sha256").update(s).digest("hex");
 const lit=s=>"'"+String(s).replaceAll("'","''")+"'";
@@ -40,10 +39,15 @@ async function main(){
   exact(process.env.BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION,"YES","STOP: second Production apply authorization is missing.");
   exact(process.env.BETHAG_PRODUCTION_PROJECT_REF,projectRef,"STOP: wrong Production project ref.");
   const expected=process.env.BETHAG_EXPECTED_COMMIT_SHA?.trim()||"";
-  exact(process.env.BETHAG_APPROVED_SOURCE_COMMIT_SHA?.trim(),expected,"STOP: approved source SHA and checkout SHA differ.");
-  assert.match(expected,/^[0-9a-f]{40}$/,"STOP: full 40-character source SHA required.");
-  exact(execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim(),expected,"STOP: checkout differs from approved source SHA.");
+  const approvedSource=process.env.BETHAG_APPROVED_SOURCE_COMMIT_SHA?.trim()||"";
+  assert.match(approvedSource,/^[0-9a-f]{40}$/,"STOP: BETHAG_APPROVED_SOURCE_COMMIT_SHA must identify the exact owner-approved source release.");
+  exact(execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim(),expected,"STOP: checkout differs from BETHAG_EXPECTED_COMMIT_SHA.");
   exact(execFileSync("git",["status","--porcelain"],{cwd:root,encoding:"utf8"}).trim(),"","STOP: Production runner requires a clean checkout.");
+  execFileSync("git",["cat-file","-e",approvedSource+"^{commit}"],{cwd:root,stdio:"ignore"});
+  execFileSync("git",["merge-base","--is-ancestor",approvedSource,expected],{cwd:root,stdio:"ignore"});
+  const postApprovalChanges=execFileSync("git",["diff","--name-only",approvedSource+".."+expected],{cwd:root,encoding:"utf8"}).trim().split("\n").filter(Boolean);
+  assert.ok(postApprovalChanges.every(path=>path==="supabase/rebuild/drafts/production-migration-cutover-live-20261124.json"),
+    "STOP: only the explicit owner-approval manifest may change after the approved source SHA.");
 
   const [manifest,snapshot,sql,preflight,postflight]=await Promise.all([
     readFile(manifestPath,"utf8").then(JSON.parse),readFile(snapshotPath,"utf8").then(JSON.parse),
@@ -67,7 +71,6 @@ async function main(){
 
   const paths=["scripts/apply-live-ledger-acl-production.mjs","supabase/migrations/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
-    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json",
     "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
     "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
   const pieces=[];
@@ -75,10 +78,18 @@ async function main(){
   const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+expected+"\0"+pieces.join(""));
   const approval=manifest.owner_authorization;
   exact(approval?.status,"RECEIVED","STOP: explicit owner authorization record is missing.");
-  exact(approval?.approved_commit_sha,expected,"STOP: approval does not bind this exact source SHA.");
+  exact(approval?.approved_commit_sha,approvedSource,"STOP: approval does not bind this exact owner-approved source SHA.");
   exact(approval?.approved_release_fingerprint,fingerprint,"STOP: approval does not bind this exact release fingerprint.");
   exact(approval?.approved_target_project_ref,projectRef,"STOP: approval does not bind the exact Production project.");
   assert.ok(approval?.approved_by&&approval?.approval_reference,"STOP: approval must identify approver and evidence reference.");
+  exact(approval?.independent_technical_review?.status,"PASS","STOP: independent technical review is not recorded as PASS.");
+  assert.ok(approval?.independent_technical_review?.reviewer&&approval?.independent_technical_review?.evidence_reference,
+    "STOP: independent technical review must identify reviewer and evidence.");
+  exact(approval?.qa_app_01_to_15_status,"PASS","STOP: APP-01..APP-15 are not freshly accepted as PASS.");
+  assert.match(approval?.qa_tested_commit_sha??"",/^[0-9a-f]{40}$/,"STOP: QA acceptance must identify the exact tested commit SHA.");
+  exact(approval?.data_api_exposure_verified,true,"STOP: fresh Production Data API exposure verification is missing.");
+  assert.ok(approval?.data_api_exposure_evidence_reference,"STOP: Data API exposure verification evidence is missing.");
+  exact(approval?.residual_backup_risk_reconfirmed,true,"STOP: residual physical-restore risk has not been explicitly reconfirmed.");
   assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
   const start=Date.parse(approval?.approved_window_start_utc??""),end=Date.parse(approval?.approved_window_end_utc??"");
   assert.ok(Number.isFinite(start)&&Number.isFinite(end)&&end>start,"STOP: approval must specify a valid UTC execution window.");
@@ -136,7 +147,7 @@ $ledger_guard$;`;
       child.on("error",reject);child.on("close",code=>code===0?resolve():reject(new Error("Production transaction failed: "+(err||out))));
     });
     console.log(JSON.stringify({status:"PASS",mode:"OWNER_APPROVED_PRODUCTION_FORWARD_ONLY",
-      project_ref:projectRef,source_commit_sha:expected,release_fingerprint:fingerprint,
+      project_ref:projectRef,execution_commit_sha:expected,approved_source_commit_sha:approvedSource,release_fingerprint:fingerprint,
       historical_rows_preserved:267,canonical_rows_added:1,final_ledger_rows:268,
       final_ledger_head:"20261124234000",candidate_git_blob_sha:item.git_blob_sha,
       postflight_notice_observed:/POSTFLIGHT PASS/.test(err+out)},null,2));
