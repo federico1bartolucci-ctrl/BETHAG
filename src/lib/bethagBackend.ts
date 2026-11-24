@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadWorkspacePaginatedRows } from "./workspacePagination.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -66,21 +67,7 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   // PostgREST applies a default maximum row count (commonly 1,000).
   // Load every condominium explicitly: otherwise older workspaces with more
   // than one page silently lose later records on navigation/refresh.
-  const condominiumRows: any[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase
-      .from("condominiums")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + 999);
-    if (error) throw error;
-    const batch = data ?? [];
-    condominiumRows.push(...batch);
-    if (batch.length < 1000) break;
-  }
-  const condominiums = { data: condominiumRows, error: null };
+  const condominiums = await loadWorkspacePaginatedRows(supabase, "condominiums", workspaceId, { orderBy: "created_at" });
 
   const client = supabase;
   const loadWorkspaceRows = async (
@@ -104,21 +91,13 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     return { data: rows, error: null };
   };
   const loadWorkspaceCondominiumMembers = async () => {
-    const rows: any[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await client
-        .from("condominium_members")
-        .select("*, condominiums!inner(workspace_id)")
-        .eq("condominiums.workspace_id", workspaceId)
-        .order("created_at", { ascending: true })
-        .range(offset, offset + 999);
-      if (error) throw error;
-      const batch = data ?? [];
-      rows.push(...batch);
-      if (batch.length < 1000) break;
-    }
-    return { data: rows, error: null };
+    return loadWorkspacePaginatedRows(supabase, "condominium_members", workspaceId, {
+      select: "*, condominiums!inner(workspace_id)",
+      orderBy: "created_at",
+      workspaceColumn: "condominiums.workspace_id",
+    });
   };
+
 
   const [
     condominiumMembers,
@@ -142,26 +121,28 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
     condominiumMemberTransfers,
   ] = await Promise.all([
     loadWorkspaceCondominiumMembers(),
-    loadWorkspaceRows("condominium_units"),
-    supabase.from("documents").select("*").eq("workspace_id", workspaceId),
-    supabase.from("deadlines").select("*").eq("workspace_id", workspaceId),
-    supabase.from("assemblies").select("*").eq("workspace_id", workspaceId),
-    supabase.from("suppliers").select("*").eq("workspace_id", workspaceId),
-    supabase.from("activities").select("*").eq("workspace_id", workspaceId),
-    supabase.from("communications").select("*").eq("workspace_id", workspaceId),
-    supabase.from("condominium_requests").select("*").eq("workspace_id", workspaceId),
-    supabase.from("condominium_works").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_fiscal_years").select("*").eq("workspace_id", workspaceId).order("start_date"),
-    supabase.from("condominium_ledger_entries").select("*").eq("workspace_id", workspaceId).order("entry_date"),
-    supabase.from("condominium_funds").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_expense_allocations").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("condominium_tax_obligations").select("*").eq("workspace_id", workspaceId).order("due_date"),
-    supabase.from("condominium_legal_cases").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("portal_access").select("*").eq("workspace_id", workspaceId).order("created_at"),
-    supabase.from("workspace_members").select("*").eq("workspace_id", workspaceId).eq("role", "collaborator").order("created_at"),
-    loadWorkspaceRows(
+    loadWorkspacePaginatedRows(supabase, "condominium_units", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "documents", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "deadlines", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "assemblies", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "suppliers", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "activities", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "communications", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_requests", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_works", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_fiscal_years", workspaceId, { orderBy: "start_date" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_ledger_entries", workspaceId, { orderBy: "entry_date" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_funds", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_expense_allocations", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { orderBy: "due_date" }),
+    loadWorkspacePaginatedRows(supabase, "condominium_legal_cases", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "portal_access", workspaceId, { orderBy: "created_at" }),
+    loadWorkspacePaginatedRows(supabase, "workspace_members", workspaceId, { orderBy: "created_at" }).then(({ data, error }) => ({ data: (data ?? []).filter((row) => row.role === "collaborator"), error })),
+    loadWorkspacePaginatedRows(
+      supabase,
       "condominium_member_transfers",
-      "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at"
+      workspaceId,
+      { select: "id,condominium_id,unit_id,incoming_member_id,transfer_date,data,created_at", orderBy: "created_at" }
     ),
   ]);
 
@@ -282,10 +263,11 @@ export async function loadBackendState(workspaceId: string): Promise<BackendStat
   });
 
   const condominiumSupplierLegacyByDbId = new Map<string, number>();
-  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } = await supabase
-    .from("condominium_suppliers")
-    .select("id,condominium_id,business_name,data")
-    .eq("workspace_id", workspaceId);
+  const { data: condominiumSuppliersForWorks, error: condominiumSuppliersForWorksError } =
+    await loadWorkspacePaginatedRows(supabase, "condominium_suppliers", workspaceId, {
+      select: "id,condominium_id,business_name,data",
+      orderBy: "created_at",
+    });
   if (condominiumSuppliersForWorksError) throw condominiumSuppliersForWorksError;
 
   (condominiumSuppliersForWorks ?? []).forEach((supplier: any) => {
