@@ -64,3 +64,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Audit descriptive and accounting-reference-only work updates.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/work-details-reference-audit-regression.sql
+
+# Prove the private-schema function default is globally hardened without
+# changing storage schema-specific grants or Supabase-managed owner defaults.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/private-function-default-acl-repair-regression.sql
