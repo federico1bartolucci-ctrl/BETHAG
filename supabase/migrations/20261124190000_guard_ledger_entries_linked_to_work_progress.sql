@@ -27,9 +27,7 @@ BEGIN
 
     SELECT count(*) INTO v_work_progress
     FROM public.condominium_work_progress
-    WHERE workspace_id = OLD.workspace_id
-      AND condominium_id = OLD.condominium_id
-      AND (ledger_entry_id = OLD.id OR payment_entry_id = OLD.id);
+    WHERE ledger_entry_id = OLD.id OR payment_entry_id = OLD.id;
 
     IF v_allocations > 0 OR v_installments > 0 THEN
       RAISE EXCEPTION 'La voce contabile è collegata a ripartizioni o rate e non può essere cancellata';
