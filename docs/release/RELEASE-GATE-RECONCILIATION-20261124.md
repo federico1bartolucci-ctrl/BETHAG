@@ -94,3 +94,39 @@ Nel workflow `qa-final-collaudo.yml`, lo step “Verify checked-out revision” 
 APP-12 provider delivery NOT_RUN, APP-14 PARTIAL e checkout SHA/tree non verificato. Restano inoltre da riconfermare approvazione owner per source/execution SHA e fingerprint correnti, Data API exposure, preflight read-only dal checkout finale, backup/restore o accettazione rischio aggiornata, operatore, finestra e rollback. Il manifest congelato contiene approvazioni storiche non trasferibili al candidato corrente.
 
 Production: **NO-GO**. PR #389: **Draft, non merged**. Nessuna migrazione, deploy, cutover, merge, invio email o modifica Production eseguita.
+
+
+## Riconciliazione exact-head CAP — run 45401046145 (2026-11-24)
+
+Candidate CAP head verificato dai metadati GitHub: `c684cc74d8dbac072239eef3aab4d4bab80b45dd`.
+
+Workflow sul medesimo SHA:
+- Build/PostgreSQL 17 run 45401046061 — SUCCESS; job `build` e `postgres-bootstrap` SUCCESS.
+- Baseline Safety run 45401046100 — SUCCESS.
+- Final authenticated QA run 45401046145 — SUCCESS; il checkout richiesto e la verifica esplicita della revisione estratta risultano SUCCESS.
+
+### Accettazione applicativa
+
+- APP-01..APP-13: PASS.
+- APP-15: PASS per amministratore, collaboratore e condomino, inclusi navigazione, autenticazione e persistenza sessione.
+- APP-12 provider live-send: NOT RUN, escluso dal perimetro autorizzato. Pubblicazione, preparazione destinatari e webhook sintetici firmati: PASS. Nessuna email esterna inviata.
+- APP-14: PARTIAL; nessun collaudo Production post-cutover eseguito.
+- Fixture reversibile del piano Portal ripristinato: log esplicito `RESTORED`, piano originario `free`.
+- Preview QA arrestata; diagnostica APP-15 caricata: artifact `bethag-app15-diagnostics`, ID `14922918775`, digest `sha256:84e3db1413a223488257e835b38d8e67e94dd039798eaeff4406ad620b06949a`.
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiornato per registrare questo exact-head e i tre run. Il commit documentale di aggiornamento è `ccdea3c43a33282280930081132d95c31eca392b`; non modifica codice applicativo, migrazioni o manifest congelato.
+
+### Fingerprint osservato
+
+Dal log del Final QA:
+- `BETHAG_RELEASE_FINGERPRINT=1dab15902dd7d44b0c66364bee093cc60752eb79689542819eb622099153b220`
+- `BETHAG_RELEASE_SOURCE_SHA=5d96342209be77e189012dec754bc764999e64e2`
+- `BETHAG_RELEASE_CRITICAL_FILE_COUNT=41`
+
+Il source SHA stampato dal fingerprint deriva dal campo storico `user_authorization.approved_commit_sha` del manifest congelato; non coincide con il commit branch/checkout QA `c684cc74...`. Il fingerprint è evidenza di calcolo sui 41 file critici al momento del run, non una nuova approvazione owner per il candidato corrente.
+
+### Limiti della riconciliazione
+
+I file snapshot `production-ledger-20261105.json` e `live-migration-ledgers-20261105.json` mantengono catture del 7 novembre 2026; non sono stati aggiornati né presentati come snapshot freschi. Per il checker attuale risultano quindi da rinfrescare con una nuova lettura read-only delle registry live QA e Production, con confronto ordinato versione/nome. Questa operazione non è stata eseguita in questo passaggio.
+
+APP-12 provider delivery NOT_RUN; APP-14 non eseguito; approvazioni source/execution SHA, Data API, preflight Production, backup/rischio, operatore, finestra e rollback restano gate separati. Production: **NO-GO**. PR #389: **Draft, non merged**. Nessuna migrazione, deploy, cutover, invio email o modifica Production eseguita.
