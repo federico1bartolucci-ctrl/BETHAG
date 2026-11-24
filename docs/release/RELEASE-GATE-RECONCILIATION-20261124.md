@@ -143,3 +143,43 @@ Lettura diretta read-only delle migration registry tramite Supabase:
 **Interpretazione prudenziale:** la registry Production oggi registra tutte le 19 versioni previste, ma questa sola lettura non prova quando siano state applicate, da quale procedura, né che le postcondizioni di schema/ACL siano soddisfatte. Non modificare retroattivamente il manifest congelato e non dichiarare cutover certificato sulla sola base del conteggio. È necessaria una riconciliazione read-only delle postcondizioni e della provenienza, prima di qualunque decisione.
 
 Nessuna scrittura SQL, migrazione, deploy o altra modifica è stata eseguita su Production o QA durante questa lettura. Questo rilievo sostituisce l'assunzione operativa precedente secondo cui la registry Production risultava ancora a 248 righe, ma non autorizza alcuna azione correttiva.
+
+
+## Audit read-only delle postcondizioni Production — 2026-11-24
+
+Eseguito con sole query `SELECT` sui cataloghi PostgreSQL di Production (`tctcgptrsmvgajqjgnev`) e confronto QA (`jhuyhlzzydcgghrzeexn`). Nessuna DDL/DML eseguita.
+
+### Registry e provenienza disponibile
+
+La tabella `supabase_migrations.schema_migrations` in Production contiene 267 righe e le colonne:
+`version`, `name`, `statements`, `created_by`, `idempotency_key`, `rollback`.
+Per tutte le 19 versioni della sequenza congelata:
+- versione e nome coincidono con il manifest;
+- `created_by = 'bethag-reviewed-cutover'`;
+- `statement_count = 1`;
+- `idempotency_key = NULL`;
+- `rollback_count = NULL`.
+
+Quindi il ledger conserva un'etichetta di esecutore e il testo dello statement, ma **non conserva un timestamp di applicazione né una chiave idempotente**. L'etichetta non dimostra da sola chi abbia materialmente lanciato le query o in quale finestra. Non è stata trovata, con queste fonti, una prova indipendente e datata dell'esecuzione. La presenza delle righe è certa; la provenienza temporale resta NON DIMOSTRATA.
+
+### Postcondizioni osservate in Production
+
+- Migrazioni 1–2 e 16, 18: default ACL per oggetti pubblici creati da `postgres`: `authenticated` ha solo CRUD sulle nuove tabelle; `service_role` ha CRUD + REFERENCES/TRIGGER/TRUNCATE; nessun default applicativo per `anon`; nessun default EXECUTE/sequence per PUBLIC, anon, authenticated o service_role. Le ACL proprie di `postgres` non sono state confuse con privilegi assegnati ai ruoli applicativi.
+- Migrazioni 3, 4, 9, 10, 11 e 17: wrapper pubblico `close_condominium_member_transfer(uuid)` è SECURITY INVOKER; EXECUTE è negato ad anon e consentito ad authenticated/service_role. Gli helper di chiusura sono negati ad anon; le due funzioni trigger pubbliche sono negate ad anon/authenticated e consentite a service_role. `authenticated` e `service_role` hanno USAGE sullo schema private; l'implementazione privata di chiusura è SECURITY DEFINER.
+- Migrazioni 5–8: sulle 47 relazioni public interrogate, MAINTAIN effettivo è zero per authenticated e service_role; privilegi strutturali TRUNCATE/REFERENCES/TRIGGER di authenticated sono zero; MAINTAIN di anon è zero. Default ACL pubblici osservati coerenti con la lista prevista.
+- Migrazione 12: entrambe le funzioni private di autorizzazione moduli contengono il controllo del valore booleano JSON `= 'true'::jsonb`.
+- Migrazioni 13–14: `workspace_members.data` è jsonb NOT NULL con default `{}`; `private.save_condominium` conserva `archived_at`, `archived_by` e `archive_reason` durante l'upsert.
+- Migrazione 15: funzioni private archive/restore presenti e SECURITY DEFINER; trigger `trg_apply_incoming_transfer_member_metadata` presente su `public.condominium_members`; ACL strutturali authenticated su `public.condominium_fund_availability` assenti; helper `private.is_workspace_staff` non direttamente eseguibile da authenticated.
+- Migrazione 19: `private.complete_portal_registration` e `private.admin_approve_portal_registration` contengono i guard-rail di ambiguità intra-workspace e il locking `FOR UPDATE`; helper `private.upsert_portal_access_for_member` non è eseguibile da anon/authenticated/service_role.
+
+**Esito tecnico:** tutte le 19 postcondizioni catalogabili sopra risultano coerenti con il codice delle migrazioni e con le query read-only eseguite, nei limiti degli oggetti/condizioni esplicitamente interrogati. Non equivale a certificazione completa di ogni singolo test applicativo o di ogni postcondizione non inclusa nelle query.
+
+### Differenze QA rilevate
+
+- QA non contiene la versione Production `20261105050000` e mantiene una definizione precedente delle funzioni di registrazione portale: non presenta i due guard-rail di ambiguità verificati in Production.
+- QA conserva un default `UPDATE` su sequence public per `service_role`, assente in Production.
+- QA contiene 283 righe e migrazioni proprie ulteriori rispetto alla sequenza Production; non è quindi corretto aspettarsi uguaglianza numerica o di insieme senza una specifica riconciliazione di ambiente.
+
+### Stato del gate
+
+Le postcondizioni principali delle 19 migrazioni risultano presenti in Production; il ledger le attribuisce a `bethag-reviewed-cutover`, ma non consente di ricostruire data/ora o prova esterna di esecuzione. Serve ancora una fonte indipendente (runbook firmato, log operativo conservato o evidenza di cutover) per chiudere la provenienza. Il manifest storico non viene alterato e rimane congelato. Nessuna modifica Production/QA è stata eseguita. Production resta **NO-GO** fino alla chiusura dei gate di approvazione e preflight; PR #389 resta Draft.
