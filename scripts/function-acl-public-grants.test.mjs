@@ -63,14 +63,42 @@ test('private fiscal carryover generator remains executable by authenticated', (
   assert.match(grants[0], /to\s+"authenticated",\s+"service_role"$/i);
 });
 
-test('PostgreSQL ACL runtime assertions contain five complete IF/THEN guards', () => {
+test('invoker-backed private RPCs preserve the live authenticated grants', () => {
+  const sharedRoleFunctions = [
+    'private.archive_condominium(',
+    'private.close_condominium_fiscal_year(',
+    'private.close_fiscal_year_and_generate_carryovers(',
+    'private.compensate_fiscal_carryover(',
+    'private.complete_portal_registration(',
+    'private.confirm_condominium_creation_intake(',
+    'private.delete_condominium(',
+    'private.generate_installments_from_allocations(',
+    'private.generate_installments_from_allocations_schedule(',
+    'private.list_archived_condominiums(',
+    'private.register_condominium_installment_payment(',
+    'private.restore_condominium(',
+    'private.set_personal_security_code(',
+    'private.verify_personal_security_code(',
+  ];
+  for (const signature of sharedRoleFunctions) {
+    const grants = grantsFor(signature);
+    assert.equal(grants.length, 1, signature);
+    assert.match(grants[0], /to\s+"authenticated",\s+"service_role"$/i, signature);
+  }
+
+  const transferCloseGrants = grantsFor('private.close_condominium_member_transfer(');
+  assert.equal(transferCloseGrants.length, 1);
+  assert.match(transferCloseGrants[0], /to\s+"authenticated"$/i);
+});
+
+test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
   const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences("IF NOT "), 5);
-  assert.equal(occurrences(" THEN"), 5);
-  assert.equal(occurrences("RAISE EXCEPTION"), 5);
-  assert.equal(occurrences("has_function_privilege('anon'"), 5);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 5);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 5);
+  assert.equal(occurrences("IF NOT "), 6);
+  assert.equal(occurrences(" THEN"), 6);
+  assert.equal(occurrences("RAISE EXCEPTION"), 6);
+  assert.equal(occurrences("has_function_privilege('anon'"), 20);
+  assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
+  assert.equal(occurrences("has_function_privilege('service_role'"), 19);
   assert.equal(occurrences("has_function_privilege('public'"), 0,
     "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
 });
