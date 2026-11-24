@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+const postgresAssertions = readFileSync(
+  new URL('../scripts/function-acl-postgres-assertions.sql', import.meta.url),
+  'utf8',
+);
+
 const migration = readFileSync(
   new URL('../supabase/migrations/20261011120000_reconcile_function_body_and_acl_parity.sql', import.meta.url),
   'utf8',
@@ -50,4 +55,15 @@ test('the ACL parity migration contains no execute grant to PUBLIC', () => {
     && /\bto\s+public\b/i.test(statement),
   );
   assert.deepEqual(publicExecuteGrants, []);
+});
+
+test('PostgreSQL ACL runtime assertions contain four complete IF/THEN guards', () => {
+  assert.equal((postgresAssertions.match(/\\bIF\\b/g) || []).length, 4);
+  assert.equal((postgresAssertions.match(/\\bTHEN\\b/g) || []).length, 4);
+  assert.equal((postgresAssertions.match(/RAISE EXCEPTION/g) || []).length, 4);
+  assert.equal((postgresAssertions.match(/has_function_privilege\\('anon'/g) || []).length, 4);
+  assert.equal((postgresAssertions.match(/has_function_privilege\\('authenticated'/g) || []).length, 4);
+  assert.equal((postgresAssertions.match(/has_function_privilege\\('service_role'/g) || []).length, 4);
+  assert.doesNotMatch(postgresAssertions, /has_function_privilege\\(\\s*'public'/i,
+    'PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup');
 });
