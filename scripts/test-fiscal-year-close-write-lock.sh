@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
-migration="supabase/migrations/20261124190000_serialize_fiscal_year_close_writes.sql"
+migration="supabase/migrations/20261124240500_serialize_fiscal_year_close_writes.sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TABLE public.condominium_fiscal_years (
