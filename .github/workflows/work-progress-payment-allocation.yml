@@ -1,0 +1,43 @@
+name: Work progress payment allocation
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261124180000_harden_work_progress_payment_allocation.sql'
+      - 'scripts/test-work-progress-payment-allocation.sh'
+      - '.github/workflows/work-progress-payment-allocation.yml'
+  push:
+    branches:
+      - fix/pr15-work-progress-payment-cap
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Verify cumulative payment allocation
+        run: bash scripts/test-work-progress-payment-allocation.sh
