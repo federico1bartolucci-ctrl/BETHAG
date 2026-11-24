@@ -21,6 +21,18 @@ for(const pattern of [/BETHAG_LIVE_LEDGER_PRODUCTION_APPLY/,/BETHAG_ALLOW_LIVE_L
  /approved_target_project_ref/,/EXCEPT SELECT version,name FROM supabase_migrations\.schema_migrations/,
  /pg_advisory_xact_lock/,/BEGIN;/,/COMMIT;/,/PGPASSFILE/,/delete env\.DATABASE_URL/,/delete env\.PGPASSWORD/])assert.match(runner,pattern);
 assert.match(runner,/assertLiveLedgerAclEvidenceMatchesSource/);
+assert.match(runner,/sslmode/);
+assert.match(runner,/Production PostgreSQL connections must require TLS/);
+assert.match(runner,/ci_tested_commit_sha/);
+assert.match(runner,/ci_build_status/);
+assert.match(runner,/ci_baseline_safety_status/);
+assert.match(runner,/postgres17_rehearsal_status/);
+assert.match(runner,/qa_final_workflow_status/);
+assert.match(runner,/full_clean_install/);
+assert.match(runner,/guarded_runner/);
+assert.match(runner,/global_function_default_acl_regression/);
+assert.match(runner,/PREFLIGHT PASS/);
+assert.match(runner,/POSTFLIGHT PASS/);
 assert.match(runner,/exactLedgerPostGuard/);
 assert.match(runner,/historical version\/name pairs changed during the transaction/);
 assert.match(approvalGuard,/qa_tested_commit_sha/);

@@ -32,6 +32,13 @@ function targetUrl(value){
   const direct=u.hostname===`db.${projectRef}.supabase.co`&&decodeURIComponent(u.username)==="postgres";
   const pooler=u.hostname.endsWith(".pooler.supabase.com")&&decodeURIComponent(u.username)===`postgres.${projectRef}`;
   assert.ok((direct||pooler)&&decodeURIComponent(u.pathname.slice(1))==="postgres","STOP: target is not the exact approved BETHAG Production database.");
+  const sslMode=(u.searchParams.get("sslmode")||process.env.PGSSLMODE||"require").toLowerCase();
+  assert.ok(["require","verify-ca","verify-full"].includes(sslMode),"STOP: Production PostgreSQL connections must require TLS.");
+  u.searchParams.set("sslmode",sslMode);
+  const timeout=Number(u.searchParams.get("connect_timeout")||15);
+  assert.ok(Number.isInteger(timeout)&&timeout>=1&&timeout<=60,"STOP: PostgreSQL connect_timeout must be between 1 and 60 seconds.");
+  u.searchParams.set("connect_timeout",String(timeout));
+  if(!u.searchParams.has("application_name"))u.searchParams.set("application_name","bethag-live-ledger-acl-production-runner");
   return u;
 }
 function exact(a,b,m){assert.equal(a,b,m);}
@@ -71,6 +78,9 @@ async function main(){
   exact(snapshot.head?.version,"20261105050000","STOP: pinned ledger head differs.");
   exact(manifest.live_ledger?.rows,267,"STOP: manifest live ledger row count differs.");
   exact(manifest.live_ledger?.head_version,"20261105050000","STOP: manifest live ledger head differs.");
+  exact(manifest.rehearsal_evidence?.full_clean_install,"PASS","STOP: 29-file PostgreSQL 17 clean-install rehearsal is not PASS in the reviewed manifest.");
+  exact(manifest.rehearsal_evidence?.guarded_runner,"PASS","STOP: exact 267-to-268 local guarded-runner rehearsal is not PASS in the reviewed manifest.");
+  exact(manifest.rehearsal_evidence?.global_function_default_acl_regression,"PASS","STOP: global function ACL regression is not PASS in the reviewed manifest.");
 
   const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/migrations/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
@@ -88,6 +98,15 @@ async function main(){
   exact(approval?.independent_technical_review?.status,"PASS","STOP: independent technical review is not recorded as PASS.");
   assert.ok(approval?.independent_technical_review?.reviewer&&approval?.independent_technical_review?.evidence_reference,
     "STOP: independent technical review must identify reviewer and evidence.");
+  exact(approval?.ci_tested_commit_sha,approvedSource,"STOP: Build/Baseline/PostgreSQL CI evidence must cover the exact approved source SHA.");
+  exact(approval?.ci_build_status,"success","STOP: Build CI is not SUCCESS.");
+  assert.ok(approval?.ci_build_run_reference,"STOP: Build CI run reference is missing.");
+  exact(approval?.ci_baseline_safety_status,"success","STOP: Baseline Safety CI is not SUCCESS.");
+  assert.ok(approval?.ci_baseline_safety_run_reference,"STOP: Baseline Safety CI run reference is missing.");
+  exact(approval?.postgres17_rehearsal_status,"PASS","STOP: PostgreSQL 17 rehearsal evidence is not PASS.");
+  assert.ok(approval?.postgres17_rehearsal_evidence_reference,"STOP: PostgreSQL 17 rehearsal evidence reference is missing.");
+  exact(approval?.qa_final_workflow_status,"success","STOP: final APP-01..APP-15 workflow is skipped or unsuccessful.");
+  assert.ok(approval?.qa_final_workflow_evidence_reference,"STOP: final APP-01..APP-15 workflow evidence reference is missing.");
   exact(approval?.qa_app_01_to_15_status,"PASS","STOP: APP-01..APP-15 are not freshly accepted as PASS.");
   assert.match(approval?.qa_tested_commit_sha??"",/^[0-9a-f]{40}$/,"STOP: QA acceptance must identify the exact tested commit SHA.");
   assertLiveLedgerAclEvidenceMatchesSource(approval,approvedSource);
@@ -179,11 +198,14 @@ $ledger_post_guard$;`;
       child.stderr.setEncoding("utf8").on("data",x=>err+=x);
       child.on("error",reject);child.on("close",code=>code===0?resolve():reject(new Error("Production transaction failed: "+(err||out))));
     });
+    const notices=err+out;
+    assert.ok(/PREFLIGHT PASS/.test(notices),"Production preflight completion notice was not observed.");
+    assert.ok(/POSTFLIGHT PASS/.test(notices),"Production postflight completion notice was not observed.");
     console.log(JSON.stringify({status:"PASS",mode:"OWNER_APPROVED_PRODUCTION_FORWARD_ONLY",
       project_ref:projectRef,execution_commit_sha:expected,approved_source_commit_sha:approvedSource,release_fingerprint:fingerprint,
       historical_rows_preserved:267,canonical_rows_added:1,final_ledger_rows:268,
       final_ledger_head:"20261124234000",candidate_git_blob_sha:item.git_blob_sha,
-      postflight_notice_observed:/POSTFLIGHT PASS/.test(err+out)},null,2));
+      preflight_notice_observed:/PREFLIGHT PASS/.test(notices),postflight_notice_observed:/POSTFLIGHT PASS/.test(notices)},null,2));
   }finally{
     if(tmpDir)await rm(tmpDir,{recursive:true,force:true});
     if(passDir)await rm(passDir,{recursive:true,force:true});
