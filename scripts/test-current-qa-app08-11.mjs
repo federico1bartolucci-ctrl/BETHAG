@@ -65,16 +65,17 @@ try{
   await remove("condominium_installments","id",ids.blockedInstallment);
  }
  if(ids.fiscalYear) await remove("condominium_fiscal_years","id",ids.fiscalYear);
- if(ids.unit2) {
-  // The transfer RPC creates the incoming owner as well as retaining the outgoing
-  // owner. Remove every member attached to this isolated test unit before deleting it.
-  const unitMembers = await cleanup.from("condominium_members").select("id").eq("unit_id",ids.unit2);
-  assert.ifError(unitMembers.error, "QA cleanup could not enumerate members for the financial blocker unit");
+ const removeUnitAndAllGeneratedMembers = async (unitId, label) => {
+  if (!unitId) return;
+  // Transfer-confirmation RPCs create incoming members not returned as tracked IDs.
+  const unitMembers = await cleanup.from("condominium_members").select("id").eq("unit_id",unitId);
+  assert.ifError(unitMembers.error, "QA cleanup could not enumerate members for " + label);
   for (const member of unitMembers.data) {
    await remove("condominium_members","id",member.id);
   }
-  await remove("condominium_units","id",ids.unit2);
- }
+  await remove("condominium_units","id",unitId);
+ };
+ if(ids.unit2) await removeUnitAndAllGeneratedMembers(ids.unit2,"financial blocker unit");
  if(ids.transfer) await remove("condominium_member_transfers","id",ids.transfer);
  if(ids.openTransfer) await remove("condominium_member_transfers","id",ids.openTransfer);
  if(ids.openInstallment) {
@@ -82,8 +83,7 @@ try{
   await remove("condominium_installments","id",ids.openInstallment);
  }
  if(ids.openMember) await remove("condominium_members","id",ids.openMember);
- if(ids.old) await remove("condominium_members","id",ids.old);
- if(ids.unit) await remove("condominium_units","id",ids.unit);
+ if(ids.unit) await removeUnitAndAllGeneratedMembers(ids.unit,"primary transfer unit");
  if(ids.condo) await remove("condominiums","id",ids.condo);
  await resident.auth.signOut();await admin.auth.signOut();
 }
