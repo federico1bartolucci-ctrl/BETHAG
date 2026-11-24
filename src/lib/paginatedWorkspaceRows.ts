@@ -51,27 +51,3 @@ export async function loadPaginatedRowsByInFilter(
   }
   return rows;
 }
-
-/**
- * Restricts restored condominium members to condominiums successfully restored
- * for the current workspace and removes the nonexistent workspace_id column.
- */
-export function filterCondominiumMembersToWorkspace(rows: any[], condominiumIds: string[]) {
-  const allowedCondominiumIds = new Set(
-    (condominiumIds ?? []).filter((id) => typeof id === "string" && id.length > 0)
-  );
-  const safeRows: any[] = [];
-  let skipped = 0;
-
-  for (const row of Array.isArray(rows) ? rows : []) {
-    const condominiumId = String(row?.condominium_id ?? "");
-    if (!row || typeof row !== "object" || !allowedCondominiumIds.has(condominiumId)) {
-      skipped += 1;
-      continue;
-    }
-    const { workspace_id: _ignoredWorkspaceId, ...memberRow } = row;
-    safeRows.push(memberRow);
-  }
-
-  return { rows: safeRows, skipped };
-}

@@ -4,7 +4,8 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
+import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
+import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore } from "./lib/backupSecurityRestore.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
@@ -3409,38 +3410,34 @@ function App() {
           // condominium_members è scoped tramite condominium_id: la tabella non ha workspace_id.
           // Si ripristinano solo righe collegate a condomini inclusi e ripristinati nel workspace corrente.
           if (table === "condominium_members") {
-            const scoped = filterCondominiumMembersToWorkspace(rows, [...restoredCondominiumIds]);
-            if (scoped.skipped > 0) {
-              errors.push(table + ": " + scoped.skipped + " record ignorati perché il condominio di riferimento non è presente nel backup del workspace.");
+            try {
+              const memberIds = rows
+                .map((row: any) => String(row?.id ?? ""))
+                .filter((id: string) => id.length > 0);
+              const existingMembers = memberIds.length && restoredCondominiumIds.size
+                ? await loadPaginatedRowsByInFilter(supabase, table, "id", memberIds, "id")
+                : [];
+              const scoped = prepareCondominiumMembersForBackupRestore(
+                rows,
+                [...restoredCondominiumIds],
+                existingMembers
+              );
+              if (scoped.skipped > 0) {
+                errors.push(table + ": " + scoped.skipped + " record ignorati perché il condominio non appartiene al backup ripristinato o il membro esistente appartiene a un altro workspace.");
+              }
+              if (!scoped.rows.length) continue;
+              const { error } = await supabase.from(table).upsert(scoped.rows, { onConflict: "id" });
+              if (error) errors.push(table + ": " + error.message);
+            } catch (e: any) {
+              errors.push(table + ": " + (e?.message || "Impossibile verificare i membri esistenti; ripristino bloccato per sicurezza."));
             }
-            if (!scoped.rows.length) continue;
-            const { error } = await supabase.from(table).upsert(scoped.rows, { onConflict: "id" });
-            if (error) errors.push(table + ": " + error.message);
             continue;
           }
 
-          // Le membership sono dati di autorizzazione, non semplici dati anagrafici:
-          // un backup modificato manualmente non deve poter creare un nuovo amministratore.
-          // Il restore può aggiornare solo membership non-admin.
-          if (table === "workspace_members") {
-            const safeRows = rows.filter((row: any) => {
-              const role = String(row?.role || "").toLowerCase();
-              if (role === "admin") {
-                skippedSecurityRows.push("workspace_members:admin");
-                return false;
-              }
-              return role === "collaborator" || role === "resident";
-            });
-            if (!safeRows.length) continue;
-            const normalized = safeRows.map((row: any) => ({
-              ...row,
-              workspace_id: profile.workspaceId,
-              role: String(row.role).toLowerCase() as "collaborator" | "resident",
-            }));
-            const { error } = await supabase
-              .from(table)
-              .upsert(normalized, { onConflict: "workspace_id,user_id" });
-            if (error) errors.push(table + ": " + error.message);
+          // Le membership, gli accessi portale e le richieste di registrazione sono
+          // dati di autorizzazione/workflow: un JSON modificabile non può crearli o riassegnarli.
+          if (isBackupAuthorizationTable(table)) {
+            skippedSecurityRows.push(table + ":" + rows.length);
             continue;
           }
 
@@ -3456,9 +3453,9 @@ function App() {
         const sourceErrorSummary = sourceReadErrorSummary
           ? "Il backup sorgente era incompleto; alcune tabelle non sono state esportate: " + sourceReadErrorSummary + ". "
           : "";
-        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
+        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + (skippedSecurityRows.length ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione." : ""));
       } else {
-        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
+        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + (skippedSecurityRows.length ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione." : ""));
       }
       window.location.reload();
     } catch (e: any) {

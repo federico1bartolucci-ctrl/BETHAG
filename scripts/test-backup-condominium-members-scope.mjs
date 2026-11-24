@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import {
-  filterCondominiumMembersToWorkspace,
-  loadPaginatedRowsByInFilter,
-} from "../src/lib/paginatedWorkspaceRows.ts";
+import { loadPaginatedRowsByInFilter } from "../src/lib/paginatedWorkspaceRows.ts";
+import { prepareCondominiumMembersForBackupRestore } from "../src/lib/backupSecurityRestore.mjs";
 
 function createMockClient(pages, errorKey = null) {
   const requests = [];
@@ -87,15 +85,15 @@ await assert.rejects(
 
 // Restore accepts only members linked to successfully restored workspace condominiums
 // and strips the nonexistent workspace_id property before upsert.
-const filtered = filterCondominiumMembersToWorkspace([
-  { id: "member-1", condominium_id: "condo-1", name: "Resident A" },
-  { id: "member-2", condominium_id: "condo-2", name: "Resident B", workspace_id: "untrusted" },
+const filtered = prepareCondominiumMembersForBackupRestore([
+  { id: "member-1", condominium_id: "condo-1", name: "Resident A", workspace_id: "untrusted" },
+  { id: "member-2", condominium_id: "condo-2", name: "Resident B" },
   { id: "member-3", condominium_id: "foreign-condo", name: "Foreign resident" },
   { id: "member-4", condominium_id: null, name: "Unscoped resident" },
-], ["condo-1", "condo-2"]);
+], ["condo-1", "condo-2"], []);
 assert.deepEqual(filtered.rows, [
-  { id: "member-1", condominium_id: "condo-1", name: "Resident A" },
-  { id: "member-2", condominium_id: "condo-2", name: "Resident B" },
+  { id: "member-1", condominium_id: "condo-1", name: "Resident A", user_id: null, email: null, active: true, permissions: {} },
+  { id: "member-2", condominium_id: "condo-2", name: "Resident B", user_id: null, email: null, active: true, permissions: {} },
 ]);
 assert.equal(filtered.skipped, 2);
 assert.ok(filtered.rows.every((row) => !Object.hasOwn(row, "workspace_id")));
@@ -121,7 +119,8 @@ const restoreEnd = mainSource.indexOf("const exportWorkspaceBackup = async () =>
 assert.ok(restoreStart >= 0 && restoreEnd > restoreStart, "workspace backup restore function must exist");
 const restoreFunction = mainSource.slice(restoreStart, restoreEnd);
 assert.match(restoreFunction, /restoredCondominiumIds = new Set/);
-assert.match(restoreFunction, /filterCondominiumMembersToWorkspace\(rows, \[\.\.\.restoredCondominiumIds\]\)/);
+assert.match(restoreFunction, /prepareCondominiumMembersForBackupRestore\s*\(/);
+assert.match(restoreFunction, /loadPaginatedRowsByInFilter\(supabase, table, "id", memberIds, "id"\)/);
 assert.match(restoreFunction, /supabase\.from\(table\)\.upsert\(scoped\.rows, \{ onConflict: "id" \}\)/);
 assert.ok(
   restoreFunction.indexOf('if (table === "condominium_members")') <
