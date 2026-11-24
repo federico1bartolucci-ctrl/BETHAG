@@ -14,13 +14,13 @@ const accessMigrationName = "20261102200855_restore_secure_communication_recipie
 const retryMigrationName = "20261124141500_preserve_communication_recipient_ids_on_retry.sql";
 const actualNames = (await readdir(migrationDir)).filter((name) => name.endsWith(".sql")).sort();
 assert.ok(actualNames.includes(accessMigrationName), "The authenticated communication RPC grant migration must exist.");
-assert.ok(actualNames.includes(retryMigrationName), "The recipient retry migration must exist.");
-assert.equal(actualNames.at(-1), retryMigrationName, "The retry migration must be the latest migration in this isolated test fixture.");
+assert.ok(!actualNames.includes(retryMigrationName), "The proposed retry migration must remain outside the frozen deployable sequence until a new release freeze is approved.");
+assert.equal(actualNames.length, 28, "The frozen deployable migration sequence must remain at 28 files.");
 
 const [schemaSql, indexSql, functionSql, securitySql, grantSql, accessSql, retrySql] = await Promise.all([
   ...baselineNames.map((name) => readFile(`${migrationDir}/${name}`, "utf8")),
   readFile(`${migrationDir}/${accessMigrationName}`, "utf8"),
-  readFile(`${migrationDir}/${retryMigrationName}`, "utf8"),
+  readFile(`supabase/rebuild/drafts/${retryMigrationName}`, "utf8"),
 ]);
 
 const prepareStart = retrySql.indexOf("CREATE OR REPLACE FUNCTION private.prepare_communication_recipients");
