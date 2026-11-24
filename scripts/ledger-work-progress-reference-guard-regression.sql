@@ -33,7 +33,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     CREATE ROLE authenticated NOLOGIN;
   END IF;
-END $rls_test$;
+END; $rls_test$;
 ALTER TABLE public.condominium_work_progress ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_progress_rls_regression_deny ON public.condominium_work_progress;
 CREATE POLICY work_progress_rls_regression_deny
@@ -122,7 +122,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Regression: SAL accounting references or paid amount were changed';
   END IF;
-END $$;
+END; $;
 
 -- The caller cannot see SAL rows, but the trigger must still enforce their links.
 SET ROLE authenticated;
