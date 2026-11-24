@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS public.condominium_installments (
 );
 SQL
 
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLE IF NOT EXISTS public.condominium_ledger_entries (
+  id uuid PRIMARY KEY,
+  workspace_id uuid NOT NULL,
+  condominium_id uuid NOT NULL,
+  fiscal_year_id uuid,
+  direction text NOT NULL,
+  amount numeric NOT NULL,
+  payment_status text NOT NULL DEFAULT 'Registrato',
+  due_date date
+);
+SQL
+
 # Execute the ledger-status trigger migration and verify both sides of reassignment.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f supabase/migrations/20261124170000_reconcile_ledger_status_on_installment_move.sql
