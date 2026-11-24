@@ -182,7 +182,7 @@ INSERT INTO public.condominium_work_progress(id,work_id,payment_entry_id,paid_am
 VALUES ('40000000-0000-0000-0000-000000000005',
         '00000000-0000-0000-0000-000000000004',
         '30000000-0000-0000-0000-000000000004',60);
-\\echo PAYMENT_LOCK_HELD
+\echo PAYMENT_LOCK_HELD
 SELECT pg_sleep(2);
 COMMIT;
 SQL
