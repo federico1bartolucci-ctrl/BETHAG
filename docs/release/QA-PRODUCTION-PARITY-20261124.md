@@ -140,15 +140,29 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 
 ## Esito e prossimi gate
 
-**Punto 2: IN CORSO, non certificato.**
+**Punto 2: CHIUSO — riconciliazione inventari e collaudo applicativo QA completati il 24 novembre 2026.**
 
-La riconciliazione semantica del ledger e del catalogo è documentata: 259 versioni condivise con payload identico, 3 corrispondenze cross-versione esatte, 2 mappature operative equivalenti e 6 migrazioni Production-only ricondotte a interventi già rappresentati in QA o a hardening ACL da verificare al Punto 3. Le differenze di policy e registrazione sono state ricondotte alla migrazione canonica Production `20261105050000`, che coincide con le definizioni live Production e supera la regressione PostgreSQL 17 isolata.
+### Collaudo live APP-01..APP-15
 
-Restano i gate per certificare il QA come ambiente di collaudo corrente:
-1. eseguire APP-01..APP-15 sul branch QA attuale; il workflow associato alla PR #431 risulta SKIPPED perché il branch non è tra quelli ammessi dal filtro del workflow;
-2. i dataset sono diversi e devono restare preservati;
-3. il branch è non-persistent e con `with_data=false`: stato e continuità vanno certificati senza reset, conversione a persistent o ricreazione.
+- Workflow: [Final QA collaudo, run 45485248003](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45485248003).
+- Evento: pull request #431, branch `integration/accounting-point1-main-20261124`.
+- Commit verificato: `bde7ddf4a721f36ac521774c57f2ed891b95eba0`.
+- Job `final-qa-collaudo`: **SUCCESS**; tutti gli step completati con esito positivo.
+- APP-01..04, APP-05..07, APP-08..11, APP-12, APP-13 e APP-15: PASS nei rispettivi test autenticati/API/UI. I test APP-14/Phase 1 e i flussi Edge Functions previsti dal workflow sono terminati PASS.
+- APP-12 webhook Resend firmato: PASS. Il probe di invio live è stato escluso dall'autorizzazione e non è stato eseguito.
+- APP-15: navigazione e persistenza sessione verificate per admin, collaborator e resident; nessun errore browser non gestito.
+- Il test APP-07 ha verificato il blocco di modifica contabile su fixture QA persistente di esercizio chiuso; il valore originale è rimasto invariato. La fixture è stata mantenuta, non cancellata.
+- Fixture temporanee APP-05/06 eliminate; cleanup browser verificato; documenti e oggetti Storage temporanei rimossi.
+- Il piano workspace è stato portato temporaneamente da `free` a `portal` e ripristinato a `free`. Verifica read-only successiva sul progetto QA: `workspace_plan=free`.
+- Preview QA arrestato regolarmente; diagnostica APP-15 caricata come artifact `bethag-app15-diagnostics` (artifact ID `14964446568`).
 
-La regressione SQL isolata non sostituisce il collaudo applicativo live. Nessuna modifica remota è autorizzata o necessaria per documentare questi risultati.
+La run non ha eseguito invii reali Resend, merge, deploy, reset o ricreazione del QA. Non è stato creato alcun ambiente a pagamento. I dati QA/Production restano distinti e preservati.
 
-Non è stato eseguito alcun DDL/DML remoto, modifica ACL, replay migrazioni, reset, merge o deploy. Non è stato creato alcun ambiente o costo aggiuntivo.
+### Stato dei gate successivi
+
+1. **Punto 1 — CHIUSO tecnicamente:** consolidamento e regressioni SQL isolate completati; nessuna autorizzazione di merge/deploy implicita.
+2. **Punto 2 — CHIUSO:** inventari e riconciliazione semantica documentati; collaudo APP-01..APP-15 live sul QA esistente completato PASS.
+3. **Punto 3 — NON INIZIATO:** audit ACL/security complessiva sulla catena candidata. È il prossimo punto della scaletta e deve partire da una verifica read-only.
+4. **Punto 4 — NON INIZIATO:** aggiornamento manifest e nuova approvazione, subordinati alla chiusura del Punto 3.
+
+La regressione SQL isolata non sostituisce il collaudo live; ora entrambi i livelli risultano superati per il Punto 2. Nessun DDL/DML remoto, modifica ACL, replay migrazioni, merge o deploy è stato eseguito.
