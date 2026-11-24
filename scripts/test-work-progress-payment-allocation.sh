@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
-migration="supabase/migrations/20261124240400_harden_work_progress_payment_allocation.sql"
+migration="supabase/rebuild/candidates/accounting-point1-20261124/20261124240400_harden_work_progress_payment_allocation.sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $roles$
@@ -65,7 +65,7 @@ GRANT SELECT, UPDATE, DELETE ON public.condominium_ledger_entries TO authenticat
 GRANT SELECT ON public.condominium_work_progress TO authenticated;
 SQL
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261124240200_guard_ledger_entries_linked_to_work_progress.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
