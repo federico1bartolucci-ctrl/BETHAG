@@ -9,6 +9,7 @@ import { getPortalRegistrationRequestWorkspaceView } from "./lib/portalRegistrat
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
+import { updateDocumentAiStateForWorkspace } from "./lib/documentAiWorkspaceGuard.mjs";
 
 /* =========================================================
    BETHAG
@@ -2342,6 +2343,9 @@ function App() {
       };
     });
 
+  const activeDocumentWorkspaceIdRef = useRef(profile.workspaceId);
+  activeDocumentWorkspaceIdRef.current = profile.workspaceId;
+
   const registrationRequestView = getPortalRegistrationRequestWorkspaceView(registrationRequestState, profile.workspaceId);
   const registrationRequests = registrationRequestView.requests;
   const registrationRequestsError = registrationRequestView.error;
@@ -4477,15 +4481,40 @@ function App() {
       return;
     }
 
+    const requestWorkspaceId = activeDocumentWorkspaceIdRef.current;
+    if (!requestWorkspaceId) {
+      alert("Workspace attivo non disponibile.");
+      return;
+    }
+
+    const requestDocument = {
+      id: item.id,
+      condominiumId: item.condominiumId,
+      storagePath: item.storagePath,
+    };
+    const updateCurrentDocument = (
+      current: DocumentItem[],
+      patch: Partial<DocumentItem>
+    ) => updateDocumentAiStateForWorkspace(
+      current,
+      {
+        currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        requestWorkspaceId,
+        requestDocument,
+      },
+      patch
+    );
+
     setDocuments((current) =>
-      current.map((doc) =>
-        doc.id === item.id ? { ...doc, aiStatus: "In elaborazione" } : doc
-      )
+      updateCurrentDocument(current, { aiStatus: "In elaborazione" })
     );
 
     try {
-      const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
+      const workspaceId = await getActiveWorkspaceId(undefined, requestWorkspaceId);
+      if (!workspaceId || workspaceId !== requestWorkspaceId) {
+        throw new Error("Il workspace del documento non è più disponibile.");
+      }
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
 
       if (!item.storagePath) {
         throw new Error("Questo documento non dispone del file originale memorizzato. Ricaricalo dal modulo Documenti prima di avviare l'analisi AI.");
@@ -4498,25 +4527,19 @@ function App() {
       }]);
 
       setDocuments((current) =>
-        current.map((doc) =>
-          doc.id === item.id
-            ? {
-                ...doc,
-                aiStatus: "Da verificare",
-                aiSummary: draft.summary || "Analisi AI completata: verifica richiesta.",
-                extractedData: JSON.stringify(draft),
-                aiDocumentType: draft.documentType || "Altro",
-                aiConfidence: Number.isFinite(Number(draft.confidence)) ? Number(draft.confidence) : 0,
-              }
-            : doc
-        )
+        updateCurrentDocument(current, {
+          aiStatus: "Da verificare",
+          aiSummary: draft.summary || "Analisi AI completata: verifica richiesta.",
+          extractedData: JSON.stringify(draft),
+          aiDocumentType: draft.documentType || "Altro",
+          aiConfidence: Number.isFinite(Number(draft.confidence)) ? Number(draft.confidence) : 0,
+        })
       );
     } catch (error: any) {
+      if (activeDocumentWorkspaceIdRef.current !== requestWorkspaceId) return;
       console.error("BETHAG general document AI error", error);
       setDocuments((current) =>
-        current.map((doc) =>
-          doc.id === item.id ? { ...doc, aiStatus: "Non elaborato" } : doc
-        )
+        updateCurrentDocument(current, { aiStatus: "Non elaborato" })
       );
       alert(error?.message || "Impossibile analizzare il documento con l'AI.");
     }
