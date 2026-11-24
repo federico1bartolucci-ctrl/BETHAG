@@ -4,6 +4,7 @@ import {
   formatBackupReadErrors,
   getCommunicationRecipientLedgerRestoreBlockReason,
 } from "../src/lib/backupRestoreSourceErrors.mjs";
+import { prepareCommunicationRecipientsForBackupRestore } from "../src/lib/backupCommunicationRecipientsRestore.mjs";
 
 const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -20,6 +21,10 @@ assert.ok(guardCall >= 0, "restore must call the legacy recipient-ledger guard")
 assert.ok(firstConfirmation > guardCall, "legacy backup guard must run before user confirmation");
 assert.ok(firstFrontendMutation > guardCall, "legacy backup guard must run before React state mutation");
 assert.ok(firstLocalStorageWrite > guardCall, "legacy backup guard must run before localStorage mutation");
+const recipientPreflightCall = restoreHandler.indexOf("prepareCommunicationRecipientsForBackupRestore(");
+assert.ok(recipientPreflightCall > guardCall, "recipient rows must be validated after the legacy guard");
+assert.ok(firstConfirmation > recipientPreflightCall, "recipient row integrity preflight must run before confirmation");
+assert.match(restoreHandler, /recipientPreflight\.skipped > 0/, "any recipient row that would be skipped by restore must block the entire restore before writes");
 assert.match(restoreHandler, /if \(recipientLedgerBlockReason\)\s*\{\s*alert\(recipientLedgerBlockReason\);\s*return;/);
 assert.ok(packageJson.scripts.test.includes("test-backup-legacy-communication-ledger-guard.mjs"),
   "legacy recipient-ledger regression must be wired into npm test");
@@ -167,5 +172,56 @@ const missingLedgerPropertyWithNoCommunications = {
   frontendState: { communications: [] },
 };
 assert.equal(getCommunicationRecipientLedgerRestoreBlockReason(missingLedgerPropertyWithNoCommunications), "");
+
+
+
+const validWorkspaceId = "11111111-1111-4111-8111-111111111111";
+const validCondominiumId = "22222222-2222-4222-8222-222222222222";
+const validCommunication = {
+  id: communicationId,
+  workspace_id: validWorkspaceId,
+  condominium_id: validCondominiumId,
+  email_status: "Inviata",
+  email_prepared_at: "2026-11-24T12:00:00.000Z",
+};
+const validRecipient = {
+  id: recipientId,
+  communication_id: communicationId,
+  workspace_id: validWorkspaceId,
+  condominium_id: validCondominiumId,
+  member_id: null,
+  email: "mario@example.it",
+  name: "Mario Rossi",
+  recipient_role: "owner",
+  status: "sent",
+  provider_message_id: "re_accepted_123",
+  sent_at: "2026-11-24T12:00:00.000Z",
+};
+const validRecipientPreflight = prepareCommunicationRecipientsForBackupRestore(
+  [validRecipient],
+  validWorkspaceId,
+  [],
+  [validCommunication],
+  [validCondominiumId],
+  [],
+);
+assert.equal(validRecipientPreflight.skipped, 0, "a complete, valid recipient ledger must pass the read-only preflight");
+
+const malformedSentRecipient = {
+  ...validRecipient,
+  provider_message_id: null,
+};
+const malformedRecipientPreflight = prepareCommunicationRecipientsForBackupRestore(
+  [malformedSentRecipient],
+  validWorkspaceId,
+  [],
+  [validCommunication],
+  [validCondominiumId],
+  [],
+);
+assert.equal(malformedRecipientPreflight.skipped, 1,
+  "a sent recipient without provider acceptance evidence must be skipped by the restore helper");
+assert.ok(malformedRecipientPreflight.skipped > 0,
+  "the restore handler must block before any writes when the real restore helper would omit a recipient row");
 
 console.log("Legacy communication recipient-ledger restore guard runtime regression: PASS");
