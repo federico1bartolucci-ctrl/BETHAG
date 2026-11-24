@@ -41,7 +41,7 @@ const expectedCandidateFiles = [
   "20261124233600_serialize_installment_payment_status_recalculation.sql",
 ];
 assert.equal(canonicalFiles.length, 28, `Expected frozen 28-file canonical migration chain, found ${canonicalFiles.length}`);
-assert.deepEqual(candidateFiles, expectedCandidateFiles, "Accounting candidate set differs from the reviewed ten-file set.");
+assert.deepEqual(candidateFiles, expectedCandidateFiles, "Accounting candidate set differs from the reviewed eleven-file set.");
 const files = [...canonicalFiles, ...candidateFiles].sort();
 assert.equal(files.length, 39, `Expected 39 files across canonical plus staged candidate chains, found ${files.length}`);
 assert.equal(new Set(files.map((name) => name.slice(0, 14))).size, files.length,
