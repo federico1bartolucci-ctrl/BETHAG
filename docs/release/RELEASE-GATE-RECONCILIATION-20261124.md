@@ -183,3 +183,13 @@ Quindi il ledger conserva un'etichetta di esecutore e il testo dello statement, 
 ### Stato del gate
 
 Le postcondizioni principali delle 19 migrazioni risultano presenti in Production; il ledger le attribuisce a `bethag-reviewed-cutover`, ma non consente di ricostruire data/ora o prova esterna di esecuzione. Serve ancora una fonte indipendente (runbook firmato, log operativo conservato o evidenza di cutover) per chiudere la provenienza. Il manifest storico non viene alterato e rimane congelato. Nessuna modifica Production/QA è stata eseguita. Production resta **NO-GO** fino alla chiusura dei gate di approvazione e preflight; PR #389 resta Draft.
+
+
+### Snapshot aggiornato delle registry
+
+Creato `supabase/rebuild/live-migration-ledgers-20261124.json` con le 267 righe Production e le 283 righe QA lette direttamente, più il confronto rispetto allo snapshot storico da 248 righe e alle 19 migrazioni canoniche:
+- Production: insieme esatto di 267 coppie attese; 0 mancanti, 0 inattese.
+- QA: mancano 7 delle 19 migrazioni canoniche Production: `20261102100100`, `20261102100200`, `20261104130000`, `20261105010000`, `20261105020000`, `20261105030000`, `20261105050000`.
+- QA ha 24 coppie versione/nome non presenti in Production; Production ha 8 coppie non presenti in QA. Gli ambienti non sono equivalenti per registry e non vanno trattati come copie sincronizzate.
+
+Il nuovo snapshot è una cattura corrente read-only; non sostituisce né riscrive gli snapshot storici o il manifest congelato.
