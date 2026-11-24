@@ -90,3 +90,9 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 GRANT EXECUTE ON FUNCTION public.generate_consumption_allocations(uuid, uuid, uuid, uuid, text) TO authenticated;
 SQL
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/consumption-allocation-fiscal-year-assertions.sql
+
+# Execute the ledger-status trigger migration and verify both sides of reassignment.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f supabase/migrations/20261124170000_reconcile_ledger_status_on_installment_move.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/installment-ledger-status-regression.sql
