@@ -18,11 +18,27 @@ CREATE TABLE public.condominium_ledger_entries (
   condominium_id uuid NOT NULL,
   direction text NOT NULL,
   supplier_id uuid,
-  amount numeric NOT NULL
+  amount numeric NOT NULL,
+  fiscal_year_id uuid,
+  document_id uuid
+);
+
+CREATE TABLE public.condominium_expense_allocations (
+  workspace_id uuid NOT NULL,
+  condominium_id uuid NOT NULL,
+  ledger_entry_id uuid NOT NULL
+);
+
+CREATE TABLE public.condominium_installments (
+  workspace_id uuid NOT NULL,
+  condominium_id uuid NOT NULL,
+  ledger_entry_id uuid NOT NULL
 );
 
 CREATE TABLE public.condominium_work_progress (
   id uuid PRIMARY KEY,
+  workspace_id uuid NOT NULL DEFAULT '10000000-0000-0000-0000-000000000001',
+  condominium_id uuid NOT NULL DEFAULT '20000000-0000-0000-0000-000000000001',
   work_id uuid NOT NULL,
   ledger_entry_id uuid,
   payment_entry_id uuid,
@@ -38,6 +54,11 @@ BEFORE INSERT OR UPDATE ON public.condominium_work_progress
 FOR EACH ROW
 EXECUTE FUNCTION public.validate_condominium_work_progress_accounting_links();
 
+CREATE TRIGGER trg_guard_ledger_entry_integrity
+BEFORE DELETE OR UPDATE ON public.condominium_ledger_entries
+FOR EACH ROW
+EXECUTE FUNCTION public.guard_ledger_entry_integrity();
+
 INSERT INTO public.condominium_works(id,workspace_id,condominium_id)
 VALUES
  ('00000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001'),
@@ -47,7 +68,13 @@ VALUES
 INSERT INTO public.condominium_ledger_entries(id,workspace_id,condominium_id,direction,amount)
 VALUES
  ('30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Uscita',100),
- ('30000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Uscita',100);
+ ('30000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Uscita',100),
+ ('30000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Uscita',50);
+
+-- An unrelated ledger entry remains editable.
+UPDATE public.condominium_ledger_entries
+SET amount=55
+WHERE id='30000000-0000-0000-0000-000000000003';
 
 -- Exact payment coverage split across two SALs must remain valid.
 INSERT INTO public.condominium_work_progress(id,work_id,payment_entry_id,paid_amount)
@@ -92,6 +119,30 @@ BEGIN
 END
 $test$;
 
+-- Linked payment movements cannot be edited or deleted after assignment.
+DO $test$
+BEGIN
+  BEGIN
+    UPDATE public.condominium_ledger_entries
+    SET amount=90
+    WHERE id='30000000-0000-0000-0000-000000000001';
+    RAISE EXCEPTION 'TEST_EXPECTED_LEDGER_UPDATE_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_LEDGER_UPDATE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è già collegata a ripartizioni, rate o SAL: importo, direzione, esercizio, fornitore, documento e appartenenza non possono essere modificati' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    DELETE FROM public.condominium_ledger_entries
+    WHERE id='30000000-0000-0000-0000-000000000001';
+    RAISE EXCEPTION 'TEST_EXPECTED_LEDGER_DELETE_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_LEDGER_DELETE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è collegata a ripartizioni, rate o SAL e non può essere cancellata' THEN RAISE; END IF;
+  END;
+END
+$test$;
+
 DO $test$
 BEGIN
   IF (SELECT round(sum(paid_amount),2)
@@ -105,6 +156,13 @@ BEGIN
     WHERE id='40000000-0000-0000-0000-000000000004'
   ) THEN
     RAISE EXCEPTION 'Rejected over-allocation was persisted';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.condominium_ledger_entries
+    WHERE id='30000000-0000-0000-0000-000000000001' AND amount=100
+  ) THEN
+    RAISE EXCEPTION 'Linked payment entry was modified or deleted';
   END IF;
 END
 $test$;
