@@ -220,7 +220,6 @@ insert_fixture   "90000000-0000-0000-0000-000000000020"   "90000000-0000-0000-00
 
 run_payment_status_race   "fixed_payment_status"   "90000000-0000-0000-0000-000000000020"   "90000000-0000-0000-0000-000000000120"   "90000000-0000-0000-0000-000000000121"   "fixed"
 
-echo "Installment payment-status concurrency PostgreSQL regression: PASS"
 
 # Install the real fiscal-year guards on the isolated fixture tables. The
 # supporting-regression database is intentionally minimal and does not load the
@@ -351,3 +350,152 @@ DROP TRIGGER IF EXISTS trg_zz_test_pause_installment_before_status_sync
   ON public.condominium_installments;
 DROP FUNCTION IF EXISTS public.test_pause_installment_before_status_sync();
 SQL
+
+# Apply the focused fix: nested payment_status-only updates from the installment
+# AFTER trigger must not reacquire fiscal-year locks after the ledger locks.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f \
+  "supabase/rebuild/candidates/accounting-point1-20261124/20261124233700_allow_derived_installment_status_refresh.sql"
+
+# Restore the two rows to their original ledgers and use distinguishable
+# payment totals so both aggregate results can be checked after the move.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000030',
+    paid_amount=0
+WHERE id='90000000-0000-0000-0000-000000000130';
+
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000031',
+    paid_amount=50
+WHERE id='90000000-0000-0000-0000-000000000131';
+SQL
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE OR REPLACE FUNCTION public.test_pause_installment_before_status_sync()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RAISE NOTICE 'CROSS_LEDGER_LOCK_ORDER_FIXED:%', NEW.id;
+  PERFORM pg_sleep(3);
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER trg_zz_test_pause_installment_before_status_sync
+BEFORE UPDATE OF ledger_entry_id
+ON public.condominium_installments
+FOR EACH ROW
+EXECUTE FUNCTION public.test_pause_installment_before_status_sync();
+SQL
+
+: >"$first_log"
+: >"$second_log"
+first_app="cross_ledger_move_fixed_first"
+second_app="cross_ledger_move_fixed_second"
+
+PGAPPNAME="$first_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$first_log" 2>&1 <<'SQL' &
+BEGIN;
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000031'
+WHERE id='90000000-0000-0000-0000-000000000130';
+COMMIT;
+SQL
+first_pid=$!
+wait_for_marker "$first_log" "CROSS_LEDGER_LOCK_ORDER_FIXED:90000000-0000-0000-0000-000000000130" "$first_pid"
+
+PGAPPNAME="$second_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$second_log" 2>&1 <<'SQL' &
+BEGIN;
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000030'
+WHERE id='90000000-0000-0000-0000-000000000131';
+COMMIT;
+SQL
+second_pid=$!
+wait_for_marker "$second_log" "CROSS_LEDGER_LOCK_ORDER_FIXED:90000000-0000-0000-0000-000000000131" "$second_pid"
+
+first_status=0
+second_status=0
+if wait "$first_pid"; then first_status=0; else first_status=$?; fi
+if wait "$second_pid"; then second_status=0; else second_status=$?; fi
+if [[ "$first_status" -ne 0 || "$second_status" -ne 0 ]]; then
+  cat "$first_log"
+  cat "$second_log"
+  echo "Cross-ledger moves still failed after the nested status-refresh guard (first=$first_status second=$second_status)"
+  exit 1
+fi
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $verify$
+BEGIN
+  IF (SELECT ledger_entry_id FROM public.condominium_installments
+      WHERE id='90000000-0000-0000-0000-000000000130')
+      <> '90000000-0000-0000-0000-000000000031'::uuid
+     OR (SELECT ledger_entry_id FROM public.condominium_installments
+      WHERE id='90000000-0000-0000-0000-000000000131')
+      <> '90000000-0000-0000-0000-000000000030'::uuid THEN
+    RAISE EXCEPTION 'Both opposite-direction installment moves must commit';
+  END IF;
+  IF (SELECT payment_status FROM public.condominium_ledger_entries
+      WHERE id='90000000-0000-0000-0000-000000000030') <> 'Pagato' THEN
+    RAISE EXCEPTION 'Source ledger aggregate was not refreshed after cross-ledger move';
+  END IF;
+  IF (SELECT payment_status FROM public.condominium_ledger_entries
+      WHERE id='90000000-0000-0000-0000-000000000031') <> 'Da pagare' THEN
+    RAISE EXCEPTION 'Destination ledger aggregate was not refreshed after cross-ledger move';
+  END IF;
+END
+$verify$;
+SQL
+
+echo "CROSS_LEDGER_LOCK_ORDER_FIXED: both opposite-direction moves committed and both ledger aggregates were refreshed"
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DROP TRIGGER IF EXISTS trg_zz_test_pause_installment_before_status_sync
+  ON public.condominium_installments;
+DROP FUNCTION IF EXISTS public.test_pause_installment_before_status_sync();
+
+UPDATE public.condominium_fiscal_years
+SET status='Chiuso'
+WHERE id='00000000-0000-0000-0000-000000000081';
+
+DO $direct_guard$
+BEGIN
+  BEGIN
+    UPDATE public.condominium_ledger_entries
+    SET payment_status='Parzialmente pagato'
+    WHERE id='90000000-0000-0000-0000-000000000030';
+    RAISE EXCEPTION 'TEST_EXPECTED_DIRECT_CLOSED_LEDGER_STATUS_UPDATE_BLOCK_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_DIRECT_CLOSED_LEDGER_STATUS_UPDATE_BLOCK_NOT_RAISED' THEN
+      RAISE;
+    END IF;
+    IF SQLERRM <> 'L''esercizio contabile di origine è chiuso: modifica non consentita.' THEN
+      RAISE;
+    END IF;
+  END;
+END
+$direct_guard$;
+
+-- The parent ledger is in a closed year, but this installment belongs to the
+-- other open year. Its nested, derived status refresh must remain possible.
+UPDATE public.condominium_installments
+SET paid_amount=40
+WHERE id='90000000-0000-0000-0000-000000000131';
+
+DO $derived_guard$
+BEGIN
+  IF (SELECT payment_status FROM public.condominium_ledger_entries
+      WHERE id='90000000-0000-0000-0000-000000000030') <> 'Parzialmente pagato' THEN
+    RAISE EXCEPTION 'Nested derived payment-status refresh should be allowed for a valid open-year installment';
+  END IF;
+END
+$derived_guard$;
+
+UPDATE public.condominium_fiscal_years
+SET status='Aperto'
+WHERE id='00000000-0000-0000-0000-000000000081';
+SQL
+
+echo "PASS: direct closed-year ledger mutation remains blocked; nested derived payment-status refresh succeeds"
+echo "Installment payment-status concurrency PostgreSQL regression: PASS"
