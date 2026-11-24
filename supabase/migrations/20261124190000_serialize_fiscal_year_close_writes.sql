@@ -11,6 +11,9 @@ declare
   v_new_status text;
   v_old_parent_id uuid;
   v_new_parent_id uuid;
+  v_old_parent_found boolean := false;
+  v_new_parent_found boolean := false;
+  v_parent record;
   v_year record;
 begin
   if tg_table_name in ('condominium_ledger_entries','condominium_budgets','condominium_installments') then
@@ -24,43 +27,87 @@ begin
   elsif tg_table_name = 'condominium_expense_allocations' then
     if tg_op <> 'INSERT' then
       v_old_parent_id := old.ledger_entry_id;
-      select le.fiscal_year_id
-        into v_old_year_id
-      from public.condominium_ledger_entries le
-      where le.id = v_old_parent_id;
     end if;
     if tg_op <> 'DELETE' then
       v_new_parent_id := new.ledger_entry_id;
-      select le.fiscal_year_id
-        into v_new_year_id
+    end if;
+
+    /*
+      Lock the referenced ledger rows before reading fiscal_year_id.
+      Without this parent lock, a concurrent ledger move can make this
+      trigger read the old fiscal year, wait on its lock, and then write
+      an allocation against the parent's new (possibly closing/closed) year.
+      Lock old and new parents in UUID order to avoid update-move deadlocks.
+    */
+    for v_parent in
+      select le.id, le.fiscal_year_id
       from public.condominium_ledger_entries le
-      where le.id = v_new_parent_id;
+      where (v_old_parent_id is not null and le.id = v_old_parent_id)
+         or (v_new_parent_id is not null and le.id = v_new_parent_id)
+      order by le.id
+      for share
+    loop
+      if v_old_parent_id is not null and v_parent.id = v_old_parent_id then
+        v_old_parent_found := true;
+        v_old_year_id := v_parent.fiscal_year_id;
+      end if;
+      if v_new_parent_id is not null and v_parent.id = v_new_parent_id then
+        v_new_parent_found := true;
+        v_new_year_id := v_parent.fiscal_year_id;
+      end if;
+    end loop;
+
+    if v_old_parent_id is not null and not v_old_parent_found then
+      raise exception 'Movimento contabile di origine non trovato';
+    end if;
+    if v_new_parent_id is not null and not v_new_parent_found then
+      raise exception 'Movimento contabile di destinazione non trovato';
     end if;
 
   elsif tg_table_name = 'condominium_payment_movements' then
     if tg_op <> 'INSERT' then
       v_old_parent_id := old.installment_id;
-      select i.fiscal_year_id
-        into v_old_year_id
-      from public.condominium_installments i
-      where i.id = v_old_parent_id;
     end if;
     if tg_op <> 'DELETE' then
       v_new_parent_id := new.installment_id;
-      select i.fiscal_year_id
-        into v_new_year_id
+    end if;
+
+    /*
+      Lock the referenced installment rows before reading fiscal_year_id.
+      This serializes payment-movement writes with concurrent installment
+      fiscal-year moves and with fiscal-year closure. Old/new parents are
+      locked in UUID order for deterministic update behavior.
+    */
+    for v_parent in
+      select i.id, i.fiscal_year_id
       from public.condominium_installments i
-      where i.id = v_new_parent_id;
+      where (v_old_parent_id is not null and i.id = v_old_parent_id)
+         or (v_new_parent_id is not null and i.id = v_new_parent_id)
+      order by i.id
+      for share
+    loop
+      if v_old_parent_id is not null and v_parent.id = v_old_parent_id then
+        v_old_parent_found := true;
+        v_old_year_id := v_parent.fiscal_year_id;
+      end if;
+      if v_new_parent_id is not null and v_parent.id = v_new_parent_id then
+        v_new_parent_found := true;
+        v_new_year_id := v_parent.fiscal_year_id;
+      end if;
+    end loop;
+
+    if v_old_parent_id is not null and not v_old_parent_found then
+      raise exception 'Rata di origine non trovata';
+    end if;
+    if v_new_parent_id is not null and not v_new_parent_found then
+      raise exception 'Rata di destinazione non trovata';
     end if;
   end if;
 
   /*
-    Il processo di chiusura blocca la riga dell'esercizio con FOR UPDATE.
-    Anche ogni scrittura contabile deve acquisire gli stessi lock prima di
-    verificare lo stato: così una scrittura concorrente attende la chiusura
-    e, dopo il commit, legge lo stato aggiornato invece di usare "Aperto".
-    L'ordinamento per id rende deterministico il lock quando una modifica
-    sposta una riga tra due esercizi.
+    The close operation locks fiscal-year rows with FOR UPDATE. Every
+    accounting write must lock the same rows before checking status. Sorting
+    by UUID makes locks deterministic when a row moves between two years.
   */
   for v_year in
     select fy.id, fy.status
