@@ -3481,7 +3481,7 @@ function App() {
             }
             if (prepared.skipped > 0) {
               const skippedReason = table === "condominium_allocation_intakes"
-                ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato o il record è duplicato nel backup"
+                ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato, un riferimento collegato non appartiene allo stesso workspace e condominio o il record è duplicato nel backup"
                 : "l'ID esiste in un altro workspace o è duplicato nel backup";
               errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
             }
