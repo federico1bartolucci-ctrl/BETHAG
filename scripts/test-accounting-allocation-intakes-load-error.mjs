@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/AccountingPage.tsx", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const errorCheckStart = source.indexOf("for (const result of [");
+const errorCheckEnd = source.indexOf("])", errorCheckStart);
+assert.ok(errorCheckStart >= 0 && errorCheckEnd > errorCheckStart, "Accounting load error check must exist");
+const checkedResults = source.slice(errorCheckStart, errorCheckEnd);
+assert.match(checkedResults, /allocationIntakesResult/);
+assert.match(packageJson.scripts.test, /test-accounting-allocation-intakes-load-error\.mjs/);
+console.log("Accounting allocation intake hydration error regression checks passed.");
