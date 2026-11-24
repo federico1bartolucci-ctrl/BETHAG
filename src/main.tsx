@@ -8,6 +8,7 @@ import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/p
 import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore, prepareWorkspaceRowsForBackupRestore } from "./lib/backupSecurityRestore.mjs";
 import { prepareAllocationIntakesForBackupRestore } from "./lib/backupAllocationIntakesRestore.mjs";
 import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationIntakesRestore.mjs";
+import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupCommunicationRecipientsRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
@@ -3484,6 +3485,33 @@ function App() {
                 existingRows,
                 [...restoredCondominiumIds]
               );
+            } else if (table === "communication_recipients") {
+              const uniqueIds = (values: any[]) => Array.from(new Set(values.filter((id) => typeof id === "string" && id.length > 0)));
+              const communicationIds = uniqueIds(rows.map((row: any) => row?.communication_id));
+              const memberIds = uniqueIds(rows.map((row: any) => row?.member_id));
+              const existingRecipients = await loadPaginatedWorkspaceRows(
+                supabase, profile.workspaceId, "communication_recipients", "id", null
+              );
+              const allMemberIds = uniqueIds([
+                ...memberIds,
+                ...existingRecipients.map((row: any) => row?.member_id)
+              ]);
+              const [communications, members] = await Promise.all([
+                communicationIds.length
+                  ? loadPaginatedRowsByInFilter(supabase, "communications", "id", communicationIds, "id")
+                  : Promise.resolve([]),
+                allMemberIds.length
+                  ? loadPaginatedRowsByInFilter(supabase, "condominium_members", "id", allMemberIds, "id")
+                  : Promise.resolve([])
+              ]);
+              prepared = prepareCommunicationRecipientsForBackupRestore(
+                rows,
+                profile.workspaceId,
+                existingRecipients,
+                communications,
+                [...restoredCondominiumIds],
+                members
+              );
             } else {
               prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
             }
@@ -3492,7 +3520,9 @@ function App() {
                 ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato, un riferimento collegato non appartiene allo stesso workspace e condominio o il record è duplicato nel backup"
                 : table === "condominium_creation_intakes"
                   ? "il condominio creato non è stato ripristinato, il percorso Storage non appartiene al workspace corrente o il record è duplicato nel backup"
-                  : "l'ID esiste in un altro workspace o è duplicato nel backup";
+                  : table === "communication_recipients"
+                    ? "la comunicazione o il condominio non appartengono al workspace ripristinato, il membro non è coerente, lo stato provider non è verificabile o il record è duplicato"
+                    : "l'ID esiste in un altro workspace o è duplicato nel backup";
               errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
             }
             for (const workspaceRow of prepared.updateRows) {
