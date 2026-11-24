@@ -7,7 +7,7 @@ ALTER TABLE public.condominium_works
   ADD COLUMN IF NOT EXISTS fund_id uuid,
   ADD COLUMN IF NOT EXISTS register_item_id uuid;
 
-\i supabase/rebuild/candidates/accounting-point1-20261124/20261124240000_audit_work_details_and_references.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124233100_audit_work_details_and_references.sql
 
 UPDATE public.condominium_works
 SET title='Titolo aggiornato',
