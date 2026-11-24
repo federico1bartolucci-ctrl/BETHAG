@@ -279,3 +279,13 @@ Portata nel branch #431 la validazione calendario (anno/mese/giorno, bisestili, 
 La CI sul commit `9bef89781fb5a2a8d75500d785039cc4aa09252c` ha individuato un errore di harness, non SQL: `scripts/test-work-progress-payment-allocation.sh` puntava ancora ai nomi pre-rinominazione `20261124240200_guard_ledger_entries_linked_to_work_progress.sql` e `20261124240400_harden_work_progress_payment_allocation.sql`. Entrambi i riferimenti sono stati aggiornati rispettivamente a `20261124233300_guard_ledger_entries_linked_to_work_progress.sql` e `20261124233400_harden_work_progress_payment_allocation.sql`.
 
 Commit di correzione: `5cb356cfc93ffde3f9bcc0b4690f16c10892df7d`. Il job work-delete-sal-guard e la rehearsal cronologica sul precedente SHA erano PASS; il job payment-allocation falliva esclusivamente perché il file SQL richiesto non esisteva al vecchio percorso. La correzione è ora in attesa di CI esatta sul nuovo head. Il Punto 1 resta RIAPERTO fino a regressione PostgreSQL 17 completa PASS. Nessuna modifica a QA/Production.
+
+
+### Follow-up regressioni candidate rinominate — 24 novembre 2026
+
+La CI sul commit `4e1a5517b2dda2240fa64eea789cddb03dd7e1e5` ha superato i test `work-delete-sal-guard`, `work-progress-payment-allocation` e `chronological-candidate-chain`. Due job hanno individuato ulteriori riferimenti obsoleti dovuti alla rinomina dei candidati:
+
+- `scripts/closing-member-installment-guard-regression.sql`: aggiornato il percorso da timestamp `24240100` a `24233200`.
+- `scripts/test-fiscal-year-close-write-lock.sh`: aggiornato il percorso da timestamp `24240600` a `24233500`.
+
+La correzione riguarda esclusivamente gli harness di test, non i corpi SQL delle migrazioni. Commit: `3922b9124980f7b5d4108864fd7176adf35b4751` e `7f6a5e8b892e05d8f4994cbaa806f9398eeaf502`. Punto 1 resta RIAPERTO fino al completamento integrale della nuova CI sul nuovo head. Nessuna modifica a QA/Production.
