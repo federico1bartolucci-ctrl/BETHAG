@@ -226,6 +226,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_global_function_acl_test
           PGPASSWORD: postgres
+      - name: Create isolated database for live-ledger ACL runner rehearsal
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_live_ledger_acl_test
+        env:
+          PGPASSWORD: postgres
+      - name: Rehearse exact 267-to-268 ledger transition with local-only guarded runner
+        run: node scripts/test-live-ledger-acl-rehearsal.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_live_ledger_acl_test
+          PGPASSWORD: postgres
+
       - name: Rehearse forward-only trigger-function ACL repair on isolated PostgreSQL
         run: createdb --host=localhost --port=5432 --username=postgres bethag_trigger_acl_repair_test && node scripts/test-postgres-trigger-function-acl-repair.mjs
         env:
