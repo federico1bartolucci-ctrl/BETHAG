@@ -17,8 +17,11 @@ BEGIN
     RAISE EXCEPTION 'STOP: candidate migration already exists in the ledger';
   END IF;
 
-  SELECT defaclacl INTO v_global FROM pg_default_acl
-  WHERE defaclrole='postgres'::regrole AND defaclnamespace=0 AND defaclobjtype='f';
+  SELECT COALESCE(
+    (SELECT defaclacl FROM pg_default_acl
+     WHERE defaclrole='postgres'::regrole AND defaclnamespace=0 AND defaclobjtype='f'),
+    acldefault('f','postgres'::regrole)
+  ) INTO v_global;
   IF v_global IS NULL
      OR NOT EXISTS (SELECT 1 FROM aclexplode(v_global) a
        WHERE a.grantee=0 AND a.privilege_type='EXECUTE') THEN
@@ -42,10 +45,8 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
-    WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0
-      AND d.defaclobjtype='f' AND a.grantee='postgres'::regrole
-      AND a.privilege_type='EXECUTE'
+    SELECT 1 FROM aclexplode(v_global) a
+    WHERE a.grantee='postgres'::regrole AND a.privilege_type='EXECUTE'
   ) THEN
     RAISE EXCEPTION 'STOP: postgres owner EXECUTE default must be preserved';
   END IF;
