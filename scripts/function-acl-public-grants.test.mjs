@@ -88,7 +88,7 @@ test('invoker-backed private RPCs preserve the live authenticated grants', () =>
 
   const transferCloseGrants = grantsFor('private.close_condominium_member_transfer(');
   assert.equal(transferCloseGrants.length, 1);
-  assert.match(transferCloseGrants[0], /to\s+"authenticated"$/i);
+  assert.match(transferCloseGrants[0], /to\s+"authenticated",\s+"service_role"$/i);
 });
 
 test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
