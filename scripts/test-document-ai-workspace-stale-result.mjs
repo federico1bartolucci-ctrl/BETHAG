@@ -131,13 +131,18 @@ const mainSource = await readFile("src/main.tsx", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const processStart = mainSource.indexOf("const processDocumentAI = async");
 const confirmStart = mainSource.indexOf("const confirmDocumentAI = async", processStart);
-assert.ok(processStart >= 0 && confirmStart > processStart, "active document AI handler must exist");
+const assemblyStart = mainSource.indexOf("/* =======================================================\\n     ASSEMBLEE", confirmStart);
+assert.ok(processStart >= 0 && confirmStart > processStart && assemblyStart > confirmStart, "active document AI handlers must exist");
 const processSource = mainSource.slice(processStart, confirmStart);
-assert.match(mainSource, /import \{ updateDocumentAiStateForWorkspace \} from "\.\/lib\/documentAiWorkspaceGuard\.mjs";/);
-assert.match(mainSource, /const activeDocumentWorkspaceIdRef = useRef\(profile\.workspaceId\);[\s\S]*?activeDocumentWorkspaceIdRef\.current = profile\.workspaceId;/);
-assert.match(processSource, /getActiveWorkspaceId\(undefined, requestWorkspaceId\)/);
+const confirmSource = mainSource.slice(confirmStart, assemblyStart);
+assert.match(mainSource, /import \\{ updateDocumentAiStateForWorkspace \\} from "\\.\\/lib\\/documentAiWorkspaceGuard\\.mjs";/);
+assert.match(mainSource, /const activeDocumentWorkspaceIdRef = useRef\\(profile\\.workspaceId\\);[\\s\\S]*?activeDocumentWorkspaceIdRef\\.current = profile\\.workspaceId;/);
+assert.match(processSource, /getActiveWorkspaceId\\(undefined, requestWorkspaceId\\)/);
 assert.match(processSource, /updateDocumentAiStateForWorkspace/);
-assert.doesNotMatch(processSource, /doc\.id === item\.id/, "AI results must not update documents by legacy ID alone");
+assert.doesNotMatch(processSource, /doc\\.id === item\\.id/, "AI processing results must not update documents by legacy ID alone");
+assert.match(confirmSource, /getActiveWorkspaceId\\(undefined, requestWorkspaceId\\)/);
+assert.match(confirmSource, /updateDocumentAiStateForWorkspace/);
+assert.doesNotMatch(confirmSource, /doc\\.id === id/, "AI confirmation results must not update documents by legacy ID alone");
 const testCommand = packageJson.scripts?.test ?? "";
 assert.equal(
   testCommand.split("test-document-ai-workspace-stale-result.mjs").length - 1,
