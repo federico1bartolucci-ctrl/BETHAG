@@ -22,14 +22,14 @@ const expectedCleanInstallFiles = [
   manifest.clean_install.existing_canonical_head,
   ...manifest.clean_install.pending_canonical_increments,
   ...manifest.clean_install.exact_production_forward_files,
-  liveProposal.sequence[0].file,
 ].sort();
 assert.equal(liveProposal.live_ledger.rows, 267);
 assert.equal(liveProposal.live_ledger.head_version, "20261105050000");
 assert.equal(liveProposal.sequence.length, 1);
 assert.equal(liveProposal.sequence[0].git_blob_sha, "499ea493e828243309ee2f4bb9c3242d2fbeb862");
-assert.equal(cleanInstallFiles.length, 29, "Expected 28 frozen historical files plus one separately reviewed live proposal.");
-assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen historical chain plus exact live proposal.");
+assert.equal(cleanInstallFiles.length, 28, "Expected exactly 28 frozen canonical deployable migrations.");
+assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen 28-file historical chain.");
+assert.ok(!cleanInstallFiles.includes(liveProposal.sequence[0].file), "Unapproved live proposal must remain outside the standard Supabase CLI inventory.");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
 const sha = (text) => {
   // Match Git's canonical text-blob representation on Windows and Unix.
@@ -38,7 +38,7 @@ const sha = (text) => {
   return createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
 };
 assert.equal(sha("alpha\nbeta\n"), sha("alpha\r\nbeta\r\n"), "Frozen SQL hash verification must be portable across LF/CRLF checkouts.");
-const proposalSql = await readFile(join(root, "supabase/migrations/" + liveProposal.sequence[0].file), "utf8");
+const proposalSql = await readFile(join(root, "supabase/rebuild/drafts/" + liveProposal.sequence[0].file), "utf8");
 assert.equal(sha(proposalSql), liveProposal.sequence[0].git_blob_sha, "Live proposal SQL blob differs from the separately captured exact candidate.");
 assert.equal(manifest.sequence.length, 19, "Superseding cutover must contain exactly nineteen incremental migrations.");
 assert.match(preflight, /ledger_count <> 248 OR ledger_head <> '20261104222229'/, "Preflight must verify the current 248-row Production ledger.");
