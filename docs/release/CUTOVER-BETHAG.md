@@ -681,3 +681,67 @@ Non risulta un'approvazione attuale riferita a uno SHA esecutivo finale che incl
 
 Le 248 righe storiche Production devono restare preservate. Non eseguire baseline replay, riscrittura del ledger, SQL manuale, apply Supabase o DDL/DML Production fuori dal runner approvato.
 
+
+
+---
+
+## Stato CAP aggiornato dopo le integrazioni — 24 novembre 2026
+
+**Questo addendum sostituisce, per lo stato operativo corrente, il precedente riepilogo del 24 novembre che indicava il candidato `2261de7bcd5d81cbf79d506e77747bda318f89f1` e considerava #408–#410 ancora esterne al CAP.**
+
+### Identità corrente
+
+- Candidato CAP attuale: `9e8c3b38cb45fce644f8f4e8657abcce210782d8`, branch `cap-consolidation-20261123`, PR #389 Draft.
+- Il branch CAP incorpora ora i merge di #408, #409, #411 e #410:
+  - #408: `b8819d08d746e3b464611916237ee13f742b4e5b`
+  - #409: `f5443751afefa9eaef50a4852cfbad992450c289`
+  - #411: `917988ed8c12f197eb7bd067734dd0ea0d829694`
+  - #410: `9e8c3b38cb45fce644f8f4e8657abcce210782d8`
+- PR #412, relativa al backup delle rilevazioni consumi, resta separata e Draft; non è inclusa nel candidato CAP.
+
+### Verifiche sullo SHA corrente
+
+- Build e PostgreSQL bootstrap [45370417412](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45370417412): **SUCCESS** sullo SHA corrente.
+- Baseline Safety [45370417277](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45370417277): **SUCCESS** sullo SHA corrente.
+- Final QA autenticata [45370417247](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45370417247): **SKIPPED**.
+- La precedente QA autenticata [45360807751](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45360807751) ha eseguito il checkout dello SHA superseduto `2261de7bcd5d81cbf79d506e77747bda318f89f1`; non costituisce prova APP-01..APP-13/15 per il candidato `9e8c3b38cb45fce644f8f4e8657abcce210782d8`.
+
+### Gate residui
+
+1. Eseguire il collaudo autenticato QA APP-01..APP-13 e APP-15 sullo SHA corrente, senza riutilizzare la precedente evidenza sul commit superseduto. APP-14 resta il gate Production successivo al cutover.
+2. Mantenere APP-14 come gate Production post-cutover/postflight.
+3. Verificare backup provider corrente e rischio residuo; il restore fisico provider-managed resta **NON TESTATO**.
+4. Eseguire il preflight Production esclusivamente read-only sul checkout esatto e pulito, verificando i 248 record storici e i 19 hash SQL.
+5. Riconfermare Data API exposed schemas e override dalla Dashboard Production.
+6. Definire nuova finestra, freeze, comunicazioni, operatore, recovery/escalation e criteri STOP.
+7. Ricevere nuova approvazione scritta riferita espressamente a SHA, fingerprint, target, 19 hash ordinati, finestra, operatore e rischio residuo.
+
+**DECISIONE: PRODUCTION NO-GO.** I PASS di Build, Baseline Safety e PostgreSQL bootstrap non sostituiscono il collaudo autenticato sullo SHA corrente né l'approvazione del cutover. Nessuna autorizzazione storica del 7–8 novembre è estendibile a questo candidato.
+
+Questa PR è documentale e resta Draft. Non autorizza merge, deploy, preflight mutativi, migrazioni o scritture Production.
+
+
+---
+
+## Stato CAP corrente dopo hardening QA — 24 novembre 2026
+
+Questo addendum prevale sulle precedenti sezioni di stato per la decisione operativa corrente.
+
+### Identità e verifiche esatte
+
+- CAP head corrente: `be8fd54a61bb13e9f0c8cea0799e4821e7950520`, branch `cap-consolidation-20261123`, PR #389 Draft.
+- Build e PostgreSQL bootstrap [45372086720](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45372086720): **SUCCESS** sullo SHA esatto. `npm test`, Vite Build, Chromium e browser smoke pubblico isolato: **PASS**.
+- Baseline Safety [45372086725](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45372086725): **SUCCESS** sullo SHA esatto.
+- I passaggi di QA autenticata non sono stati eseguiti sul candidato corrente; APP-01..APP-15 non sono certificati su questo head.
+- La precedente QA autenticata [45360807751](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45360807751) resta riferita al vecchio SHA `2261de7bcd5d81cbf79d506e77747bda318f89f1` e non è trasferibile al candidato attuale.
+- Le PR #412 e #414 riguardano la catena backup e restano follow-up Draft separati; non sono incluse nel candidato CAP.
+
+### Stato della presente PR documentale
+
+Questa branch è stata riallineata direttamente al CAP head `be8fd54a61bb13e9f0c8cea0799e4821e7950520`. Il precedente disallineamento di 5 commit è risolto; il nuovo head contiene soltanto il commit documentale sopra la base CAP corrente. La CI sul nuovo SHA deve completarsi prima di considerare aggiornata la documentazione.
+
+### Decisione
+
+**PRODUCTION NO-GO.** Nessuna Final QA autenticata APP-01..APP-15 sul CAP head corrente, nessuna nuova approvazione di SHA/fingerprint/finestra e nessun preflight Production read-only attestato per questo candidato. APP-14 resta il gate Production post-cutover/postflight. Il restore fisico provider-managed resta **NON TESTATO**.
+
+Nessuna QA o Production modificata; nessun merge, deploy, reset o workflow manualmente dispatchato.
