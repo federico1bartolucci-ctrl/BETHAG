@@ -111,3 +111,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Verify that closing-member installment protection is case/whitespace insensitive.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/closing-member-installment-guard-regression.sql
+
+# Preserve ledger references and paid SAL amounts when ledger rows are deleted/edited.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/ledger-work-progress-reference-guard-regression.sql
