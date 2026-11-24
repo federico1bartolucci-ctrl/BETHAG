@@ -111,6 +111,11 @@ const backupRows = [
     source_documents: [],
   },
   {
+    id: "missing-workspace-intake",
+    created_condominium_id: null,
+    source_documents: [],
+  },
+  {
     id: "malformed-source-documents",
     workspace_id: workspaceId,
     created_condominium_id: null,
@@ -128,7 +133,7 @@ const prepared = prepareCreationIntakesForBackupRestore(
 
 assert.equal(prepared.updateRows.length, 1);
 assert.equal(prepared.insertRows.length, 1);
-assert.equal(prepared.skipped, 10);
+assert.equal(prepared.skipped, 11);
 
 const [updated] = prepared.updateRows;
 assert.equal(updated.workspace_id, workspaceId);
