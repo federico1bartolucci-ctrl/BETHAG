@@ -129,6 +129,10 @@ const publishStart = main.indexOf("const toggleAssemblyPublication = (");
 const supplierStart = main.indexOf("FORNITORI", publishStart);
 assert.ok(publishStart >= 0 && supplierStart > publishStart);
 assert.match(main.slice(publishStart, supplierStart), /canPublishAssemblyMinutes/);
+const visibleMinutesStart = main.indexOf("const visibleMinutes = assemblies.filter");
+const visibleCommunicationsStart = main.indexOf("const visibleCommunications", visibleMinutesStart);
+assert.ok(visibleMinutesStart >= 0 && visibleCommunicationsStart > visibleMinutesStart);
+assert.match(main.slice(visibleMinutesStart, visibleCommunicationsStart), /canPublishAssemblyMinutes\(a\)/);
 
 assert.match(main, /label="Trascrizione manuale \(necessaria per la bozza\)"/);
 assert.match(main, /transcriptionStatus: v\.trim\(\) \? "Da verificare" : "Non elaborato"/);
