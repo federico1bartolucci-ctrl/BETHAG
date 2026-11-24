@@ -76,10 +76,10 @@ BEGIN
   IF NOT has_function_privilege('postgres',v_oid,'EXECUTE') THEN
     RAISE EXCEPTION 'Function owner lost EXECUTE';
   END IF;
-  IF NOT EXISTS (
+  IF EXISTS (
     SELECT 1 FROM aclexplode((SELECT proacl FROM pg_proc WHERE oid=v_oid)) a
     WHERE a.grantee=0 AND a.privilege_type='EXECUTE'
-  ) IS FALSE THEN
+  ) THEN
     RAISE EXCEPTION 'New private function still has PUBLIC EXECUTE';
   END IF;
 
@@ -133,7 +133,7 @@ ROLLBACK;`;
 
 execFileSync("psql", [
   "-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1",
-  "-c", setup + "\\n" + migration + "\\n" + migration + "\\n" + verify
+  "-c", setup + "\n" + migration + "\n" + migration + "\n" + verify
 ], { stdio: "inherit" });
 
 console.log(JSON.stringify({
