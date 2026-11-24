@@ -160,7 +160,7 @@ assert.equal(unchangedSource.publishedToPortal, true);
 // upload/transcription state or delayed minutes generation.
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 assert.match(main, /buildManualAssemblyMinutesDraft/);
-assert.match(main, /canConfirmAssemblyMinutes/);
+assert.match(main, /confirmAssemblyMinutes/);
 const attachStart = main.indexOf("const attachAssemblyAudio = (");
 const generateStart = main.indexOf("const generateMinutes = (", attachStart);
 assert.ok(attachStart >= 0 && generateStart > attachStart);
