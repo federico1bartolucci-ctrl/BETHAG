@@ -48,6 +48,7 @@ const staleSuccess = updateDocumentAiStateForWorkspace(
   workspaceBDocuments,
   {
     currentWorkspaceId: "workspace-b",
+    documentsWorkspaceId: "workspace-b",
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
@@ -62,6 +63,7 @@ const staleFailure = updateDocumentAiStateForWorkspace(
   workspaceBDocuments,
   {
     currentWorkspaceId: "workspace-b",
+    documentsWorkspaceId: "workspace-b",
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
@@ -76,6 +78,7 @@ const currentResult = updateDocumentAiStateForWorkspace(
   currentDocuments,
   {
     currentWorkspaceId: "workspace-a",
+    documentsWorkspaceId: "workspace-a",
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
@@ -94,6 +97,7 @@ const replacedFileResult = updateDocumentAiStateForWorkspace(
   [replacedDocument],
   {
     currentWorkspaceId: "workspace-a",
+    documentsWorkspaceId: "workspace-a",
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
@@ -109,6 +113,7 @@ const movedCondominiumResult = updateDocumentAiStateForWorkspace(
   [movedDocument],
   {
     currentWorkspaceId: "workspace-a",
+    documentsWorkspaceId: "workspace-a",
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
@@ -120,12 +125,26 @@ const missingWorkspace = updateDocumentAiStateForWorkspace(
   [workspaceADocument],
   {
     currentWorkspaceId: null,
+    documentsWorkspaceId: null,
     requestWorkspaceId: "workspace-a",
     requestDocument: workspaceADocument,
   },
   aiResultFromA,
 );
 assert.strictEqual(missingWorkspace[0], workspaceADocument);
+
+const staleCollectionDocuments = [workspaceADocument];
+const staleCollectionResult = updateDocumentAiStateForWorkspace(
+  staleCollectionDocuments,
+  {
+    currentWorkspaceId: "workspace-b",
+    documentsWorkspaceId: "workspace-a",
+    requestWorkspaceId: "workspace-b",
+    requestDocument: workspaceADocument,
+  },
+  aiResultFromA,
+);
+assert.strictEqual(staleCollectionResult, staleCollectionDocuments);
 
 const mainSource = await readFile("src/main.tsx", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
@@ -137,6 +156,10 @@ const processSource = mainSource.slice(processStart, confirmStart);
 const confirmSource = mainSource.slice(confirmStart, assemblyStart);
 assert.match(mainSource, /import \{ updateDocumentAiStateForWorkspace \} from "\.\/lib\/documentAiWorkspaceGuard\.mjs";/);
 assert.match(mainSource, /const activeDocumentWorkspaceIdRef = useRef\(profile\.workspaceId\);[\s\S]*?activeDocumentWorkspaceIdRef\.current = profile\.workspaceId;/);
+assert.match(mainSource, /const documentsWorkspaceIdRef = useRef<string \\| null>\(null\);/);
+assert.equal((mainSource.match(/documentsWorkspaceIdRef\.current = (?:workspaceId|profile\.workspaceId);/g) ?? []).length, 2);
+assert.match(processSource, /documentsWorkspaceIdRef\.current !== requestWorkspaceId/);
+assert.match(confirmSource, /documentsWorkspaceIdRef\.current !== requestWorkspaceId/);
 assert.match(processSource, /getActiveWorkspaceId\(undefined, requestWorkspaceId\)/);
 assert.match(processSource, /updateDocumentAiStateForWorkspace/);
 assert.doesNotMatch(processSource, /doc\.id === item\.id/, "AI processing results must not update documents by legacy ID alone");
