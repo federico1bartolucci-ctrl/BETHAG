@@ -18,7 +18,7 @@ const projectRef="tctcgptrsmvgajqjgnev";
 const candidate="20261124234000_revoke_postgres_global_public_function_execute.sql";
 const snapshotPath=join(root,"supabase/rebuild/drafts/production-ledger-live-20261124.json");
 const manifestPath=join(root,"supabase/rebuild/drafts/production-migration-cutover-live-20261124.json");
-const candidatePath=join(root,"supabase/migrations",candidate);
+const candidatePath=join(root,"supabase/rebuild/drafts",candidate);
 const preflightPath=join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql");
 const postflightPath=join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql");
 const blobSha=s=>{const t=s.replace(/\r\n/g,"\n"),b=Buffer.from(t);return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\0"),b])).digest("hex");};
@@ -78,11 +78,13 @@ async function main(){
   exact(snapshot.head?.version,"20261105050000","STOP: pinned ledger head differs.");
   exact(manifest.live_ledger?.rows,267,"STOP: manifest live ledger row count differs.");
   exact(manifest.live_ledger?.head_version,"20261105050000","STOP: manifest live ledger head differs.");
-  exact(manifest.rehearsal_evidence?.full_clean_install,"PASS","STOP: 29-file PostgreSQL 17 clean-install rehearsal is not PASS in the reviewed manifest.");
+  exact(manifest.clean_install?.migration_file_count,28,"STOP: canonical Supabase CLI clean-install inventory must remain at 28 migrations.");
+  exact(manifest.rehearsal_evidence?.full_clean_install,"PASS","STOP: 28-file PostgreSQL 17 canonical clean-install rehearsal is not PASS in the reviewed manifest.");
+  exact(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS","STOP: separate PostgreSQL 17 rehearsal of the non-deployable draft candidate is not PASS.");
   exact(manifest.rehearsal_evidence?.guarded_runner,"PASS","STOP: exact 267-to-268 local guarded-runner rehearsal is not PASS in the reviewed manifest.");
   exact(manifest.rehearsal_evidence?.global_function_default_acl_regression,"PASS","STOP: global function ACL regression is not PASS in the reviewed manifest.");
 
-  const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/migrations/"+candidate,
+  const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/rebuild/drafts/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
     "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
     "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
