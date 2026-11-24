@@ -2345,6 +2345,7 @@ function App() {
 
   const activeDocumentWorkspaceIdRef = useRef(profile.workspaceId);
   activeDocumentWorkspaceIdRef.current = profile.workspaceId;
+  const documentsWorkspaceIdRef = useRef<string | null>(null);
 
   const registrationRequestView = getPortalRegistrationRequestWorkspaceView(registrationRequestState, profile.workspaceId);
   const registrationRequests = registrationRequestView.requests;
@@ -4486,6 +4487,10 @@ function App() {
       alert("Workspace attivo non disponibile.");
       return;
     }
+    if (documentsWorkspaceIdRef.current !== requestWorkspaceId) {
+      alert("L'elenco documenti non è ancora sincronizzato con il workspace attivo. Aggiorna la pagina e riprova.");
+      return;
+    }
 
     const requestDocument = {
       id: item.id,
@@ -4499,6 +4504,7 @@ function App() {
       current,
       {
         currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        documentsWorkspaceId: documentsWorkspaceIdRef.current,
         requestWorkspaceId,
         requestDocument,
       },
@@ -4561,6 +4567,10 @@ function App() {
       alert("Workspace o Supabase non disponibili.");
       return;
     }
+    if (documentsWorkspaceIdRef.current !== requestWorkspaceId) {
+      alert("L'elenco documenti non è ancora sincronizzato con il workspace attivo. Aggiorna la pagina e riprova.");
+      return;
+    }
     const requestDocument = {
       id: document.id,
       condominiumId: document.condominiumId,
@@ -4573,6 +4583,7 @@ function App() {
       current,
       {
         currentWorkspaceId: activeDocumentWorkspaceIdRef.current,
+        documentsWorkspaceId: documentsWorkspaceIdRef.current,
         requestWorkspaceId,
         requestDocument,
       },
@@ -6732,6 +6743,7 @@ function App() {
 
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        documentsWorkspaceIdRef.current = workspaceId;
         setDocuments(backend.documents);
         setDeadlines(backend.deadlines);
         setAssemblies(backend.assemblies);
@@ -6795,6 +6807,7 @@ function App() {
         setCondominiums(backend.condominiums);
         setCondominiumMembers(backend.condominiumMembers);
         setCondominiumUnits(Array.isArray(backend.condominiumUnits) ? backend.condominiumUnits : []);
+        documentsWorkspaceIdRef.current = profile.workspaceId;
         setDocuments(backend.documents);
         setDeadlines(backend.deadlines);
         setAssemblies(backend.assemblies);
