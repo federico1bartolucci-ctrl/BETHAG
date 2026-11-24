@@ -106,6 +106,9 @@ test('invoker-backed private RPCs preserve the live authenticated grants', () =>
 test('portal approval RPC preserves workspace, identity, and account-link safeguards', () => {
   const definition = functionDefinition('private.admin_approve_portal_registration');
   const body = definition.body;
+  const approvalGrants = grantsFor('private.admin_approve_portal_registration(');
+  assert.equal(approvalGrants.length, 1);
+  assert.match(approvalGrants[0], /to\s+"authenticated"$/i);
   assert.match(definition.header, /SECURITY DEFINER/i);
   assert.match(definition.header, /SET search_path TO ''/i);
   const memberLock = body.indexOf('from public.condominium_members');
