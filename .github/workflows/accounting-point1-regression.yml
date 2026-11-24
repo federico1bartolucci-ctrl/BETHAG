@@ -1,0 +1,63 @@
+name: Accounting point 1 PostgreSQL 17 regression
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261124202340_prevent_work_delete_with_progress.sql'
+      - 'supabase/migrations/20261124240200_guard_ledger_entries_linked_to_work_progress.sql'
+      - 'supabase/migrations/20261124240400_harden_work_progress_payment_allocation.sql'
+      - 'supabase/migrations/20261124240600_lock_fiscal_year_parent_rows.sql'
+      - 'scripts/test-work-delete-with-sal-guard.sh'
+      - 'scripts/test-work-progress-payment-allocation.sh'
+      - 'scripts/test-fiscal-year-close-write-lock.sh'
+      - '.github/workflows/accounting-point1-regression.yml'
+  push:
+    branches:
+      - integration/accounting-point1-main-20261124
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: work-delete-sal-guard
+            database: bethag_work_delete
+            script: scripts/test-work-delete-with-sal-guard.sh
+          - name: work-progress-payment-allocation
+            database: bethag_payment_allocation
+            script: scripts/test-work-progress-payment-allocation.sh
+          - name: fiscal-year-parent-row-locks
+            database: bethag_fiscal_year
+            script: scripts/test-fiscal-year-close-write-lock.sh
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/${{ matrix.database }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Create isolated regression database
+        run: createdb "${{ matrix.database }}"
+      - name: Run PostgreSQL 17 regression
+        run: bash "${{ matrix.script }}"
