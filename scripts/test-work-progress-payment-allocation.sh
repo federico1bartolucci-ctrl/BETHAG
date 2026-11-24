@@ -4,6 +4,14 @@ set -euo pipefail
 : "${DATABASE_URL:?DATABASE_URL is required}"
 migration="supabase/migrations/20261124180000_harden_work_progress_payment_allocation.sql"
 
+DO $roles$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
+END
+$roles$;
+
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TABLE public.condominium_works (
   id uuid PRIMARY KEY,
@@ -44,6 +52,17 @@ CREATE TABLE public.condominium_work_progress (
   payment_entry_id uuid,
   paid_amount numeric NOT NULL DEFAULT 0
 );
+
+ALTER TABLE public.condominium_ledger_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.condominium_work_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY ledger_entries_authenticated_all
+  ON public.condominium_ledger_entries
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY work_progress_authenticated_hidden
+  ON public.condominium_work_progress
+  FOR ALL TO authenticated USING (false) WITH CHECK (false);
+GRANT SELECT, UPDATE, DELETE ON public.condominium_ledger_entries TO authenticated;
+GRANT SELECT ON public.condominium_work_progress TO authenticated;
 SQL
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -122,6 +141,18 @@ BEGIN
 END
 $test$;
 
+-- Accounting users cannot see activity-module rows under RLS, but the
+-- integrity trigger must still enforce the rule as its SECURITY DEFINER owner.
+SET ROLE authenticated;
+DO $test$
+BEGIN
+  IF (SELECT count(*) FROM public.condominium_work_progress
+      WHERE payment_entry_id='30000000-0000-0000-0000-000000000001') <> 0 THEN
+    RAISE EXCEPTION 'RLS fixture should hide work progress from authenticated';
+  END IF;
+END
+$test$;
+
 -- Linked payment movements cannot be edited or deleted after assignment.
 DO $test$
 BEGIN
@@ -145,6 +176,7 @@ BEGIN
   END;
 END
 $test$;
+RESET ROLE;
 
 DO $test$
 BEGIN
