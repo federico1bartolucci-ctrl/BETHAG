@@ -221,3 +221,117 @@ insert_fixture   "90000000-0000-0000-0000-000000000020"   "90000000-0000-0000-00
 run_payment_status_race   "fixed_payment_status"   "90000000-0000-0000-0000-000000000020"   "90000000-0000-0000-0000-000000000120"   "90000000-0000-0000-0000-000000000121"   "fixed"
 
 echo "Installment payment-status concurrency PostgreSQL regression: PASS"
+
+# Reproduce a second lock-order cycle when two installments move in opposite
+# directions between ledger entries in different fiscal years. The BEFORE
+# closed-year guard holds each installment's own fiscal-year row; the AFTER
+# status trigger then locks both ledger parents. Updating the second ledger
+# fires the ledger closed-year guard and waits on the other transaction's year.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+INSERT INTO public.condominium_fiscal_years
+  (id, workspace_id, condominium_id, start_date, end_date, status)
+VALUES
+  ('00000000-0000-0000-0000-000000000082',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   current_date - 365, current_date + 365, 'Aperto')
+ON CONFLICT (id) DO UPDATE
+SET status='Aperto', start_date=EXCLUDED.start_date, end_date=EXCLUDED.end_date;
+
+INSERT INTO public.condominium_ledger_entries
+  (id, workspace_id, condominium_id, fiscal_year_id, direction, amount, payment_status)
+VALUES
+  ('90000000-0000-0000-0000-000000000030',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000081',
+   'Uscita', 50.00, 'Registrato'),
+  ('90000000-0000-0000-0000-000000000031',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000082',
+   'Uscita', 50.00, 'Registrato');
+
+INSERT INTO public.condominium_installments
+  (id, workspace_id, condominium_id, fiscal_year_id, ledger_entry_id, amount, paid_amount, due_date)
+VALUES
+  ('90000000-0000-0000-0000-000000000130',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000081',
+   '90000000-0000-0000-0000-000000000030',
+   50.00, 10.00, current_date + 30),
+  ('90000000-0000-0000-0000-000000000131',
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000080',
+   '00000000-0000-0000-0000-000000000082',
+   '90000000-0000-0000-0000-000000000031',
+   50.00, 20.00, current_date + 30);
+SQL
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE OR REPLACE FUNCTION public.test_pause_installment_before_status_sync()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RAISE NOTICE 'CROSS_LEDGER_LOCK_ORDER_REPRODUCTION:%', NEW.id;
+  PERFORM pg_sleep(3);
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_zz_test_pause_installment_before_status_sync
+  ON public.condominium_installments;
+CREATE TRIGGER trg_zz_test_pause_installment_before_status_sync
+BEFORE UPDATE OF ledger_entry_id
+ON public.condominium_installments
+FOR EACH ROW
+EXECUTE FUNCTION public.test_pause_installment_before_status_sync();
+SQL
+
+first_app="cross_ledger_move_first"
+second_app="cross_ledger_move_second"
+first_log="$tmp_dir/cross-ledger-first.log"
+second_log="$tmp_dir/cross-ledger-second.log"
+
+PGAPPNAME="$first_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$first_log" 2>&1 <<'SQL' &
+BEGIN;
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000031'
+WHERE id='90000000-0000-0000-0000-000000000130';
+COMMIT;
+SQL
+first_pid=$!
+wait_for_marker "$first_log" "CROSS_LEDGER_LOCK_ORDER_REPRODUCTION:90000000-0000-0000-0000-000000000130" "$first_pid"
+
+PGAPPNAME="$second_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$second_log" 2>&1 <<'SQL' &
+BEGIN;
+UPDATE public.condominium_installments
+SET ledger_entry_id='90000000-0000-0000-0000-000000000030'
+WHERE id='90000000-0000-0000-0000-000000000131';
+COMMIT;
+SQL
+second_pid=$!
+wait_for_marker "$second_log" "CROSS_LEDGER_LOCK_ORDER_REPRODUCTION:90000000-0000-0000-0000-000000000131" "$second_pid"
+
+first_status=0
+second_status=0
+if wait "$first_pid"; then first_status=0; else first_status=$?; fi
+if wait "$second_pid"; then second_status=0; else second_status=$?; fi
+
+if [[ "$first_status" -ne 0 || "$second_status" -ne 0 ]] \
+  && { grep -qi "deadlock detected" "$first_log" || grep -qi "deadlock detected" "$second_log"; }; then
+  echo "CROSS_LEDGER_LOCK_ORDER_DEFECT_REPRODUCED: opposite-direction installment moves deadlocked under the current full trigger chain"
+else
+  cat "$first_log"
+  cat "$second_log"
+  echo "Expected cross-ledger lock-order deadlock was not reproduced (first=$first_status second=$second_status)"
+  exit 1
+fi
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DROP TRIGGER IF EXISTS trg_zz_test_pause_installment_before_status_sync
+  ON public.condominium_installments;
+DROP FUNCTION IF EXISTS public.test_pause_installment_before_status_sync();
+SQL
