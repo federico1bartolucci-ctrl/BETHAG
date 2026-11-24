@@ -642,3 +642,42 @@ Questa rettifica prevale su ogni precedente finestra, SHA di esecuzione e stato 
 - **Stato operativo:** Production **NO-GO** fino a CI sul commit finale, approvazione del suo SHA, preflight locale read-only con connessione PostgreSQL diretta, controllo Data API e backup/rischio residuo, oltre a tutti i gate del runner.
 
 La conferma della finestra non costituisce autorizzazione a eseguire le migrazioni, né autorizza merge, deploy o scritture Production. APP-14 resta subordinato al postflight e agli smoke test autenticati successivi al cutover. Il restore fisico provider-managed non è stato testato e non viene dichiarato come tale.
+
+
+---
+
+## Stato aggiornato della release CAP — 2026-11-24
+
+Questo addendum prevale, per la decisione operativa corrente, su finestre, commit e approvazioni storiche riportati nelle sezioni precedenti. Le autorizzazioni del 7–8 novembre erano circoscritte a SHA, fingerprint, manifest e finestra allora approvati: **non costituiscono autorizzazione per il candidato CAP attuale**. La finestra 8 novembre 2026 è trascorsa.
+
+### Identità e prove attuali
+
+- Candidato CAP consolidato: `2261de7bcd5d81cbf79d506e77747bda318f89f1`, branch `cap-consolidation-20261123`, PR #389 draft.
+- CI CAP [45359454036](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45359454036): SUCCESS sullo SHA CAP.
+- QA autenticato [45360807751](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45360807751): APP-01..APP-13 e APP-15 PASS sullo SHA CAP. APP-14 resta il post-cutover Production gate.
+- Correzione date locali PR #408: CI [45366198220](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45366198220) SUCCESS sul proprio head `b023516355f5cc293edfd6c23655399f79ed1251`; QA autenticato saltato.
+- Correzione chiusura subentro PR #409: CI [45367240996](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45367240996) SUCCESS sul proprio head `aa65b0de26ca3e5ce2519658e18a391acf39ae54`; QA autenticato saltato.
+- Correzione caricamenti Registro PR #410: CI [45368143126](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45368143126) SUCCESS sul proprio head `4fa4303ddd0358f4bdf50db6e87d316eb231916b`; regressione `Register condominium-switch stale-load regression: PASS`; QA autenticato saltato.
+- Le PR #408, #409 e #410 sono modifiche successive isolate, non incluse nello SHA CAP e non ancora integrate. Le rispettive CI verdi non sostituiscono una nuova QA APP-01..APP-15 su un candidato finale integrato.
+- Il rehearsal PostgreSQL 17 dei workflow recenti è isolato in GitHub Actions; non è una lettura o modifica del database Production.
+
+### Stato operativo
+
+**DECISIONE: PRODUCTION NO-GO. PUNTO 10 NON CHIUDIBILE COME RELEASE APPROVATA.**
+
+Non risulta un'approvazione attuale riferita a uno SHA esecutivo finale che includa le correzioni ancora aperte, né a un nuovo fingerprint e a una nuova finestra. Le autorizzazioni storiche non possono essere estese implicitamente. Non sono stati eseguiti merge, deploy, freeze, preflight Production sul nuovo candidato o migrazioni Production.
+
+### Gate residui obbligatori
+
+1. Revisionare e integrare le correzioni isolate soltanto dopo review; nessun merge automatico è autorizzato.
+2. Fissare un unico SHA finale e ricalcolare il fingerprint, verificando i 19 hash SQL congelati e l'identità del manifest.
+3. Eseguire sullo SHA finale la CI completa e il collaudo autenticato QA APP-01..APP-15; APP-14 resta successivo al cutover.
+4. Verificare immediatamente prima del cutover un backup provider identificabile e aggiornato. Il restore fisico provider-managed resta **NON TESTATO**; non dichiararlo superato.
+5. Eseguire il preflight Production esclusivamente read-only, da checkout pulito e pinned, con connessione PostgreSQL diretta e controllo dei 248 record storici e dei 19 hash. Nessun preflight è qui attestato per il candidato CAP del 24 novembre.
+6. Riconfermare Data API exposed schemas e override dal Dashboard Production.
+7. Definire nuova finestra, freeze, avviso amministratori, contatti recovery/escalation e criteri STOP/forward recovery.
+8. Ricevere approvazione scritta esplicita per SHA esecutivo, fingerprint, target, 19 hash ordinati, finestra, operatore e rischio residuo.
+9. Solo dopo tali gate, eseguire il runner guarded forward-only autorizzato. Chiudere APP-14 solo dopo postflight e smoke autenticato Production.
+
+Le 248 righe storiche Production devono restare preservate. Non eseguire baseline replay, riscrittura del ledger, SQL manuale, apply Supabase o DDL/DML Production fuori dal runner approvato.
+
