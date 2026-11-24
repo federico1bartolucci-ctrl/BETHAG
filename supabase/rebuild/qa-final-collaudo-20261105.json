@@ -3,19 +3,19 @@
   "captured_date": "2026-11-08",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/edge-functions-phase1",
-  "reviewed_head_sha": "5d96342209be77e189012dec754bc764999e64e2",
+  "reviewed_head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "final_qa_collaudo": {
-      "run_id": 42496340118,
+      "run_id": 45387686799,
       "run_attempt": 1,
-      "head_sha": "5d96342209be77e189012dec754bc764999e64e2",
+      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 42496340111,
-      "head_sha": "5d96342209be77e189012dec754bc764999e64e2",
+      "run_id": 45387686747,
+      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
       "conclusion": "success",
       "jobs": {
         "build": "success",
@@ -23,8 +23,8 @@
       }
     },
     "baseline_safety": {
-      "run_id": 42496340234,
-      "head_sha": "5d96342209be77e189012dec754bc764999e64e2",
+      "run_id": 45387686644,
+      "head_sha": "cb202da730000f5cbf631966841812c5bf8e662c",
       "conclusion": "success"
     }
   },
@@ -45,10 +45,11 @@
       "publication_withdrawal_resident_visibility_recipient_preparation_queue_authorization": "PASS",
       "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
       "invalid_signature_rejected_http_401_without_mutation": "PASS",
-      "provider_probe": "PASS",
+      "provider_probe": "SKIPPED — explicitly excluded by current QA authorization scope",
       "provider_test_recipient": "delivered@resend.dev",
-      "provider_delivery_observed": "PASS — QA provider test messages delivered; see Resend provider evidence",
-      "limitation": "Synthetic webhook acceptance covers sent/delivered/bounced/complained event handling; provider delivery was observed for test messages, not a full production-volume deliverability certification."
+      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe was explicitly skipped in run 45387686799; no external email was sent in this run.",
+      "limitation": "Current exact-head QA verified publication, recipient preparation and signed synthetic webhook handling. It did not perform a live Resend send. Historical provider test evidence belongs to an older tested SHA and is not carried forward as current-head provider-delivery certification.",
+      "provider_delivery": "NOT_RUN"
     },
     "APP-13": "PASS",
     "APP-14": {
