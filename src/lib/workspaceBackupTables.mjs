@@ -3,6 +3,7 @@
 // Other omitted workflow/audit tables require separate restore semantics and are not added here.
 export const WORKSPACE_BACKUP_EXPORT_TABLES = Object.freeze([
   "condominiums",
+  "condominium_creation_intakes",
   "condominium_members",
   "condominium_units",
   "documents",
@@ -47,6 +48,7 @@ export const WORKSPACE_BACKUP_EXPORT_TABLES = Object.freeze([
 // parent condominiums/units/members/fiscal years/tables first, then dependent records.
 export const WORKSPACE_BACKUP_RESTORE_ORDER = Object.freeze([
   "condominiums",
+  "condominium_creation_intakes",
   "condominium_units",
   "condominium_members",
   "condominium_member_transfers",
