@@ -66,7 +66,7 @@ assert.deepEqual(JSON.parse(output), {
 console.log("Register SAL and work local-date regression checks passed.");
 
 
-const accounting = read("src/AccountingPage.tsx");
+const accounting = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
 assert.match(accounting, /import \{ localISODate \} from "\.\/lib\/local-date"/);
 assert.match(accounting, /entry_date: localISODate\(\)/, "new ledger entries default to the local calendar date");
 assert.equal((accounting.match(/payment_date:localISODate\(\)/g) ?? []).length, 2, "payment form initial and reset dates use the local calendar");
