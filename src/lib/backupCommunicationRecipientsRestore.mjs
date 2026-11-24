@@ -65,8 +65,10 @@ function normalizeDeliveryState(row) {
 }
 
 function timestampValue(row) {
-  const value = Date.parse(row?.updated_at || row?.sent_at || row?.created_at || "");
-  return Number.isFinite(value) ? value : 0;
+  for (const candidate of [row?.updated_at, row?.sent_at, row?.created_at]) {
+    if (validTimestamp(candidate)) return Date.parse(candidate);
+  }
+  return 0;
 }
 
 function communicationEmailKey(communicationId, email) {
