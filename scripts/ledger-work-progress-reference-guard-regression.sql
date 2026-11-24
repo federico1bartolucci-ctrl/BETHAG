@@ -37,7 +37,7 @@ BEGIN
   END IF;
 END; $role_setup$;
 
-\i supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124233300_guard_ledger_entries_linked_to_work_progress.sql
 
 -- Reproduce the real module boundary: authenticated accounting users cannot
 -- read SAL rows under the activity-module RLS policy.
