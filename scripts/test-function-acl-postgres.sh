@@ -21,6 +21,7 @@ CREATE OR REPLACE FUNCTION public.normalize_zero_ownership_owner() RETURNS trigg
 CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END';
 GRANT USAGE ON SCHEMA private TO authenticated, service_role;
 CREATE OR REPLACE FUNCTION private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
+CREATE OR REPLACE FUNCTION public.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid) RETURNS integer LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS 'BEGIN RETURN private.generate_fiscal_year_carryovers($1,$2,$3,$4); END';
 SQL
 
 # Execute the exact ACL statements from the migration against real PostgreSQL.
