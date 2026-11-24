@@ -1625,7 +1625,7 @@ BEGIN
     'email_mismatch',lower(trim(v_request.email))<>lower(trim(coalesce(v_member.email,'')))
   );
 END;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION private.complete_portal_registration(p_full_name text, p_fiscal_code text DEFAULT NULL::text, p_condominium_name text DEFAULT NULL::text)
@@ -1829,7 +1829,7 @@ BEGIN
 
   RETURN jsonb_build_object('status','pending','request_id',v_request_id);
 END;
-$function$
+$function$;
 
 
 revoke all on function private.apply_portal_member_permissions() from public, anon, authenticated, service_role;
