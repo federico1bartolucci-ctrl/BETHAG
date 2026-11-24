@@ -81,6 +81,12 @@ const backupRows = [
     source_documents: [{ name: "escape.pdf", stored: true, storagePath: workspaceId + "/../other-workspace/escape.pdf" }],
   },
   {
+    id: "backslash-storage-intake",
+    workspace_id: workspaceId,
+    created_condominium_id: null,
+    source_documents: [{ name: "escape.pdf", stored: true, storagePath: workspaceId + String.fromCharCode(92) + ".." + String.fromCharCode(92) + "other-workspace" + String.fromCharCode(92) + "escape.pdf" }],
+  },
+  {
     id: "missing-stored-path-intake",
     workspace_id: workspaceId,
     created_condominium_id: null,
@@ -122,7 +128,7 @@ const prepared = prepareCreationIntakesForBackupRestore(
 
 assert.equal(prepared.updateRows.length, 1);
 assert.equal(prepared.insertRows.length, 1);
-assert.equal(prepared.skipped, 9);
+assert.equal(prepared.skipped, 10);
 
 const [updated] = prepared.updateRows;
 assert.equal(updated.workspace_id, workspaceId);
