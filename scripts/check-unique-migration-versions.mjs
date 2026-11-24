@@ -25,5 +25,5 @@ if (invalid.length || duplicates.length) {
   for (const [version, names] of duplicates) console.error(`Duplicate migration version ${version}: ${names.join(", ")}`);
   process.exit(1);
 }
-assert.equal(files.length, 28, `Expected 28 canonical migrations, found ${files.length}`);
-console.log(`PASS: ${files.length} canonical migration files have valid, unique 14-digit versions.`);
+assert.equal(files.length, 29, `Expected 28 frozen historical migrations plus one live-ledger proposal, found ${files.length}`);
+console.log(`PASS: ${files.length} canonical migration files (28 frozen historical + 1 live proposal) have valid, unique 14-digit versions.`);
