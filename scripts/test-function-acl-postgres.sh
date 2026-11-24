@@ -49,3 +49,43 @@ sed -E 's/^[[:space:]]+//' "$migration" \
 test -s "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/function-acl-postgres-assertions.sql
+
+# Execute the real consumption-allocation function body with a mismatched fiscal year.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLE public.condominium_ledger_entries (
+  id uuid PRIMARY KEY,
+  workspace_id uuid NOT NULL,
+  condominium_id uuid NOT NULL,
+  fiscal_year_id uuid,
+  direction text NOT NULL,
+  amount numeric NOT NULL,
+  due_date date
+);
+INSERT INTO public.condominium_ledger_entries (
+  id, workspace_id, condominium_id, fiscal_year_id, direction, amount
+) VALUES (
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000005',
+  'Uscita',
+  125.00
+);
+CREATE OR REPLACE FUNCTION private.can_manage_workspace_module(uuid, text)
+RETURNS boolean LANGUAGE sql AS 'SELECT true';
+GRANT USAGE ON SCHEMA public, private TO authenticated;
+GRANT SELECT, UPDATE ON public.condominium_ledger_entries TO authenticated;
+GRANT EXECUTE ON FUNCTION private.can_manage_workspace_module(uuid, text) TO authenticated;
+SQL
+
+awk '
+  /CREATE OR REPLACE FUNCTION public.generate_consumption_allocations\\(/ { capture=1 }
+  capture { print }
+  capture && /^\\$function\\$;$/ { exit }
+' "$migration" > "$tmp_sql"
+test -s "$tmp_sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+GRANT EXECUTE ON FUNCTION public.generate_consumption_allocations(uuid, uuid, uuid, uuid, text) TO authenticated;
+SQL
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/consumption-allocation-fiscal-year-assertions.sql
