@@ -2,42 +2,62 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { applyInsurancePoliciesLoadResponse } from "../src/lib/insurancePolicyLoadGuard.mjs";
 
-// Reproduce the old race: condominium B is displayed, then a late response for A overwrites it.
-let visiblePolicies = [{ id: "policy-B", condominium_id: "B" }];
-visiblePolicies = [{ id: "policy-A", condominium_id: "A" }];
-assert.equal(visiblePolicies[0].condominium_id, "A", "legacy stale-response race must reproduce");
+function deferred() {
+  let resolve;
+  const promise = new Promise((r) => { resolve = r; });
+  return { promise, resolve };
+}
 
-// Only a response matching both the current condo and request sequence may update state.
-visiblePolicies = [{ id: "policy-B", condominium_id: "B" }];
+// Reproduce the old asynchronous race: B resolves first, then A's stale response overwrites it.
+let legacyVisible = [];
+const legacyA = deferred();
+const legacyB = deferred();
+const legacyLoad = (promise) => promise.then((data) => { legacyVisible = data; });
+const pendingLegacyA = legacyLoad(legacyA.promise);
+const pendingLegacyB = legacyLoad(legacyB.promise);
+legacyB.resolve([{ id: "policy-B", condominium_id: "B" }]);
+await pendingLegacyB;
+legacyA.resolve([{ id: "policy-A", condominium_id: "A" }]);
+await pendingLegacyA;
+assert.equal(legacyVisible[0].condominium_id, "A", "legacy stale-response race must reproduce");
+
+// Guarded requests: B applies and late A is discarded.
+let currentCondominiumId = "A";
+let currentSequence = 1;
+let visiblePolicies = [];
 const setPolicies = (data) => { visiblePolicies = data; };
+const guardedLoad = (promise, requestedCondominiumId, requestSequence) => promise.then((data) =>
+  applyInsurancePoliciesLoadResponse({
+    data,
+    requestedCondominiumId,
+    currentCondominiumId,
+    requestSequence,
+    currentRequestSequence: currentSequence,
+    setPolicies,
+  })
+);
+const requestA = deferred();
+const pendingA = guardedLoad(requestA.promise, "A", 1);
+currentCondominiumId = "B";
+currentSequence = 2;
+const requestB = deferred();
+const pendingB = guardedLoad(requestB.promise, "B", 2);
+requestB.resolve([{ id: "policy-B", condominium_id: "B" }]);
+assert.equal(await pendingB, true);
+requestA.resolve([{ id: "policy-A", condominium_id: "A" }]);
+assert.equal(await pendingA, false);
+assert.equal(visiblePolicies[0].condominium_id, "B", "late A response must not overwrite B");
+
+// A prop change before the next effect invalidates a response even with unchanged sequence.
+currentCondominiumId = "C";
 assert.equal(applyInsurancePoliciesLoadResponse({
-  data: [{ id: "policy-A", condominium_id: "A" }],
-  requestedCondominiumId: "A",
-  currentCondominiumId: "B",
-  requestSequence: 1,
+  data: [{ id: "policy-B", condominium_id: "B" }],
+  requestedCondominiumId: "B",
+  currentCondominiumId,
+  requestSequence: 2,
   currentRequestSequence: 2,
   setPolicies,
 }), false);
-assert.equal(visiblePolicies[0].condominium_id, "B", "stale A response must not overwrite B");
-
-assert.equal(applyInsurancePoliciesLoadResponse({
-  data: [{ id: "policy-B", condominium_id: "B" }],
-  requestedCondominiumId: "B",
-  currentCondominiumId: "B",
-  requestSequence: 2,
-  currentRequestSequence: 2,
-  setPolicies,
-}), true);
-assert.equal(visiblePolicies[0].condominium_id, "B", "current response must apply");
-
-assert.equal(applyInsurancePoliciesLoadResponse({
-  data: [{ id: "policy-B", condominium_id: "B" }],
-  requestedCondominiumId: "B",
-  currentCondominiumId: "C",
-  requestSequence: 2,
-  currentRequestSequence: 2,
-  setPolicies,
-}), false, "a changed condo prop invalidates a response before the next effect runs");
 assert.throws(() => applyInsurancePoliciesLoadResponse({
   data: { id: "malformed" },
   requestedCondominiumId: "C",
@@ -55,7 +75,7 @@ assert.equal(applyInsurancePoliciesLoadResponse({
   setPolicies,
 }), true);
 
-// Verify the helper is used by the active local component and stale loads cannot clear current loading state.
+// Verify the guard is wired into the active local component and loading state.
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const start = main.lastIndexOf("function InsurancePoliciesSection(");
 assert.ok(start >= 0, "active InsurancePoliciesSection must exist");
@@ -67,8 +87,8 @@ assert.match(section, /const requestSequence = \+\+insurancePolicyLoadSequence\.
 assert.match(section, /applyInsurancePoliciesLoadResponse\(/);
 assert.match(section, /currentCondominiumId:\s*currentCondominiumIdRef\.current/);
 assert.match(section, /currentRequestSequence:\s*insurancePolicyLoadSequence\.current/);
-assert.match(section, /if\s*\(requestSequence === insurancePolicyLoadSequence\.current\)/, "stale requests must not clear loading state or log current errors");
-assert.match(section, /return\s*\(\)\s*=>\s*\{\s*insurancePolicyLoadSequence\.current\s*\+=\s*1/s, "unmount cleanup must invalidate pending loads");
+assert.match(section, /if\s*\(requestSequence === insurancePolicyLoadSequence\.current\)/);
+assert.match(section, /return\s*\(\)\s*=>\s*\{\s*insurancePolicyLoadSequence\.current\s*\+=\s*1/s);
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-assert.match(packageJson.scripts.test, /test-active-insurance-policy-load-race\.mjs/, "regression must be wired into npm test");
-console.log("Insurance policy stale-load runtime regression: PASS (legacy overwrite reproduced; stale and current responses; prop-change invalidation; malformed response; active component wiring).");
+assert.match(packageJson.scripts.test, /test-active-insurance-policy-load-race\.mjs/);
+console.log("Insurance policy stale-load runtime regression: PASS (legacy race reproduced with deferred responses; stale/current response, prop change, malformed/empty data, and component wiring).");
