@@ -23,6 +23,11 @@ BEGIN
      OR has_function_privilege('authenticated', 'public.preserve_closing_condominium_member_history()', 'EXECUTE') THEN
     RAISE EXCEPTION 'Unexpected ACL: preserve_closing_condominium_member_history';
   END IF;
+  IF NOT has_function_privilege('authenticated', 'private.admin_approve_portal_registration(uuid,uuid)', 'EXECUTE')
+     OR has_function_privilege('service_role', 'private.admin_approve_portal_registration(uuid,uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'private.admin_approve_portal_registration(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Unexpected ACL: private admin_approve_portal_registration must be callable by authenticated only';
+  END IF;
   IF NOT has_function_privilege('authenticated', 'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)', 'EXECUTE')
      OR NOT has_function_privilege('service_role', 'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'private.generate_fiscal_year_carryovers(uuid,uuid,uuid,uuid)', 'EXECUTE') THEN
