@@ -219,7 +219,7 @@ assert.equal(duplicateEvent.insertRows.length, 1);
 assert.equal(duplicateEvent.skipped, 1, "Duplicate provider event IDs must not violate the unique provider-event index.");
 
 const existingEventConflict = prepareCommunicationRecipientsForBackupRestore(
-  [sentRecipient],
+  [{ ...sentRecipient, provider_event_id: providerEventId }],
   workspaceId,
   [{ ...sentRecipient, id: replacementRecipientId, communication_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", provider_event_id: providerEventId }],
   [communication],
