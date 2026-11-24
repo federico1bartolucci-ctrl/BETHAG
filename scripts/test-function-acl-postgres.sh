@@ -119,3 +119,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Audit changes to SAL expense/payment ledger references even when no amount changes.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/work-progress-accounting-link-audit-regression.sql
+
+# Record every tracked dimension when a single work update changes several fields.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/work-change-audit-regression.sql
