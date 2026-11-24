@@ -13,9 +13,79 @@ CREATE TABLE public.condominium_budgets (fiscal_year_id uuid);
 CREATE TABLE public.condominium_installments (id uuid PRIMARY KEY, fiscal_year_id uuid);
 CREATE TABLE public.condominium_expense_allocations (id uuid PRIMARY KEY, ledger_entry_id uuid);
 CREATE TABLE public.condominium_payment_movements (id uuid PRIMARY KEY, installment_id uuid);
-SQL
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+-- Install the previous implementation first, so the test proves the defect
+-- before applying the corrected migration. This version reads the parent
+-- fiscal_year_id without locking the parent row.
+CREATE OR REPLACE FUNCTION public.prevent_closed_condominium_accounting()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_old_year_id uuid;
+  v_new_year_id uuid;
+  v_old_status text;
+  v_new_status text;
+  v_old_parent_id uuid;
+  v_new_parent_id uuid;
+  v_year record;
+begin
+  if tg_table_name in ('condominium_ledger_entries','condominium_budgets','condominium_installments') then
+    if tg_op <> 'INSERT' then v_old_year_id := old.fiscal_year_id; end if;
+    if tg_op <> 'DELETE' then v_new_year_id := new.fiscal_year_id; end if;
+
+  elsif tg_table_name = 'condominium_expense_allocations' then
+    if tg_op <> 'INSERT' then
+      v_old_parent_id := old.ledger_entry_id;
+      select le.fiscal_year_id into v_old_year_id
+      from public.condominium_ledger_entries le where le.id = v_old_parent_id;
+    end if;
+    if tg_op <> 'DELETE' then
+      v_new_parent_id := new.ledger_entry_id;
+      select le.fiscal_year_id into v_new_year_id
+      from public.condominium_ledger_entries le where le.id = v_new_parent_id;
+    end if;
+
+  elsif tg_table_name = 'condominium_payment_movements' then
+    if tg_op <> 'INSERT' then
+      v_old_parent_id := old.installment_id;
+      select i.fiscal_year_id into v_old_year_id
+      from public.condominium_installments i where i.id = v_old_parent_id;
+    end if;
+    if tg_op <> 'DELETE' then
+      v_new_parent_id := new.installment_id;
+      select i.fiscal_year_id into v_new_year_id
+      from public.condominium_installments i where i.id = v_new_parent_id;
+    end if;
+  end if;
+
+  for v_year in
+    select fy.id, fy.status
+    from public.condominium_fiscal_years fy
+    where fy.id = v_old_year_id or fy.id = v_new_year_id
+    order by fy.id
+    for update
+  loop
+    if v_year.id = v_old_year_id then v_old_status := v_year.status; end if;
+    if v_year.id = v_new_year_id then v_new_status := v_year.status; end if;
+  end loop;
+
+  if v_old_year_id is not null and v_old_status = 'Chiuso' then
+    raise exception 'L''esercizio contabile di origine è chiuso: modifica non consentita.';
+  end if;
+  if v_new_year_id is not null
+     and v_new_year_id is distinct from v_old_year_id
+     and v_new_status = 'Chiuso' then
+    raise exception 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.';
+  end if;
+
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$function$;
+SQL
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TRIGGER trg_block_closed_ledger
@@ -41,13 +111,16 @@ VALUES
  ('10000000-0000-0000-0000-000000000003','Aperto'),
  ('10000000-0000-0000-0000-000000000004','Aperto'),
  ('10000000-0000-0000-0000-000000000005','Aperto'),
- ('10000000-0000-0000-0000-000000000006','Aperto');
+ ('10000000-0000-0000-0000-000000000006','Aperto'),
+ ('10000000-0000-0000-0000-000000000007','Aperto'),
+ ('10000000-0000-0000-0000-000000000008','Aperto');
 
 INSERT INTO public.condominium_ledger_entries(id,fiscal_year_id)
 VALUES
  ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001'),
  ('20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000002'),
- ('20000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000003');
+ ('20000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000003'),
+ ('20000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000007');
 
 INSERT INTO public.condominium_installments(id,fiscal_year_id)
 VALUES
@@ -55,47 +128,11 @@ VALUES
  ('30000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000005'),
  ('30000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000002');
 
--- Child writes in an open fiscal year remain allowed.
+-- Ordinary child writes in an open fiscal year remain allowed.
 INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id)
 VALUES ('40000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
 INSERT INTO public.condominium_payment_movements(id,installment_id)
 VALUES ('50000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000003');
-
--- Child writes started after closure must be rejected.
-UPDATE public.condominium_fiscal_years
-SET status='Chiuso'
-WHERE id='10000000-0000-0000-0000-000000000001';
-
-DO $test$
-BEGIN
-  BEGIN
-    INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id)
-    VALUES ('40000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001');
-    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_ALLOCATION_REJECTION_NOT_RAISED';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM='TEST_EXPECTED_CLOSED_ALLOCATION_REJECTION_NOT_RAISED' THEN RAISE; END IF;
-    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
-  END;
-
-  BEGIN
-    INSERT INTO public.condominium_payment_movements(id,installment_id)
-    VALUES ('50000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000001');
-    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_PAYMENT_REJECTION_NOT_RAISED';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM='TEST_EXPECTED_CLOSED_PAYMENT_REJECTION_NOT_RAISED' THEN RAISE; END IF;
-    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
-  END;
-
-  BEGIN
-    INSERT INTO public.condominium_ledger_entries(id,fiscal_year_id)
-    VALUES ('20000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000001');
-    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_LEDGER_REJECTION_NOT_RAISED';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM='TEST_EXPECTED_CLOSED_LEDGER_REJECTION_NOT_RAISED' THEN RAISE; END IF;
-    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
-  END;
-END
-$test$;
 SQL
 
 wait_for_marker() {
@@ -145,15 +182,15 @@ run_parent_move_close_race() {
   local child_sql="$5"
   local child_table="$6"
   local child_id="$7"
+  local expected="$8"
 
-  local move_app="${label}_move"
-  local close_app="${label}_close"
-  local child_app="${label}_child"
-  local move_log="$tmp_dir/${label}-move.log"
-  local close_log="$tmp_dir/${label}-close.log"
-  local child_log="$tmp_dir/${label}-child.log"
+  local move_app="$label"_move
+  local close_app="$label"_close
+  local child_app="$label"_child
+  local move_log="$tmp_dir/$label-move.log"
+  local close_log="$tmp_dir/$label-close.log"
+  local child_log="$tmp_dir/$label-child.log"
 
-  # Move the parent and hold its row plus fiscal-year locks.
   PGAPPNAME="$move_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$move_log" 2>&1 <<SQL &
 BEGIN;
 UPDATE public.$parent_table SET fiscal_year_id='$to_year' WHERE id='$parent_id';
@@ -164,7 +201,6 @@ SQL
   local move_pid=$!
   wait_for_marker "$move_log" "PARENT_MOVE_LOCKS_HELD" "$move_pid"
 
-  # Queue closure on the target year before starting the child write.
   PGAPPNAME="$close_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$close_log" 2>&1 <<SQL &
 BEGIN;
 SELECT id FROM public.condominium_fiscal_years WHERE id='$to_year' FOR UPDATE;
@@ -176,8 +212,6 @@ SQL
   local close_pid=$!
   wait_for_lock_waiter "$close_app" "$close_log" "$close_pid"
 
-  # The old trigger reads the parent's old fiscal year and waits there.
-  # The fixed trigger waits on the parent row, then reads the committed target.
   PGAPPNAME="$child_app" psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$child_log" 2>&1 <<SQL &
 BEGIN;
 $child_sql
@@ -197,12 +231,36 @@ SQL
   fi
   wait "$close_pid"
 
+  if [[ "$expected" == "allowed" ]]; then
+    if [[ "$child_status" -ne 0 ]]; then
+      cat "$child_log"
+      echo "Legacy implementation did not reproduce the expected unsafe child write: $label"
+      return 1
+    fi
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
+DO \$verify\$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.$child_table WHERE id='$child_id') THEN
+    RAISE EXCEPTION 'Legacy reproduction did not persist the child row: $label';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.$parent_table WHERE id='$parent_id' AND fiscal_year_id='$to_year') THEN
+    RAISE EXCEPTION 'Parent fiscal-year move did not commit: $label';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.condominium_fiscal_years WHERE id='$to_year' AND status='Chiuso') THEN
+    RAISE EXCEPTION 'Target fiscal year did not close: $label';
+  END IF;
+END
+\$verify\$;
+SQL
+    echo "LEGACY DEFECT REPRODUCED: child row persisted in the now-closed fiscal year ($label)"
+    return 0
+  fi
+
   if [[ "$child_status" -eq 0 ]]; then
     cat "$child_log"
     echo "Child write unexpectedly succeeded while its parent moved into a closing fiscal year: $label"
     return 1
   fi
-
   grep -F "L'esercizio contabile di destinazione è chiuso: modifica non consentita." "$child_log"
 
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
@@ -222,6 +280,65 @@ END
 SQL
 }
 
+# Reproduce the old race: a child allocation is accepted after its parent
+# moves into a target fiscal year that is being closed.
+run_parent_move_close_race \
+  "legacy_allocation" \
+  "condominium_ledger_entries" \
+  "20000000-0000-0000-0000-000000000004" \
+  "10000000-0000-0000-0000-000000000008" \
+  "INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id) VALUES ('40000000-0000-0000-0000-000000000010','20000000-0000-0000-0000-000000000004');" \
+  "condominium_expense_allocations" \
+  "40000000-0000-0000-0000-000000000010" \
+  "allowed"
+
+# Apply the corrected implementation after the legacy reproduction.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+UPDATE public.condominium_fiscal_years
+SET status='Chiuso'
+WHERE id='10000000-0000-0000-0000-000000000001';
+
+DO $test$
+BEGIN
+  BEGIN
+    INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id)
+    VALUES ('40000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001');
+    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_ALLOCATION_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_CLOSED_ALLOCATION_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    INSERT INTO public.condominium_payment_movements(id,installment_id)
+    VALUES ('50000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000001');
+    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_PAYMENT_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_CLOSED_PAYMENT_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    INSERT INTO public.condominium_ledger_entries(id,fiscal_year_id)
+    VALUES ('20000000-0000-0000-0000-000000000005','10000000-0000-0000-0000-000000000001');
+    RAISE EXCEPTION 'TEST_EXPECTED_CLOSED_LEDGER_REJECTION_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_CLOSED_LEDGER_REJECTION_NOT_RAISED' THEN RAISE; END IF;
+    IF SQLERRM <> 'L''esercizio contabile di destinazione è chiuso: modifica non consentita.' THEN RAISE; END IF;
+  END;
+END
+$test$;
+
+-- Ordinary child writes in an open year remain allowed after the fix.
+INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id)
+VALUES ('40000000-0000-0000-0000-000000000011','20000000-0000-0000-0000-000000000002');
+INSERT INTO public.condominium_payment_movements(id,installment_id)
+VALUES ('50000000-0000-0000-0000-000000000011','30000000-0000-0000-0000-000000000003');
+SQL
+
+# The corrected trigger must reject both concurrent child-write races.
 run_parent_move_close_race \
   "allocation_parent" \
   "condominium_ledger_entries" \
@@ -229,7 +346,8 @@ run_parent_move_close_race \
   "10000000-0000-0000-0000-000000000004" \
   "INSERT INTO public.condominium_expense_allocations(id,ledger_entry_id) VALUES ('40000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000003');" \
   "condominium_expense_allocations" \
-  "40000000-0000-0000-0000-000000000003"
+  "40000000-0000-0000-0000-000000000003" \
+  "rejected"
 
 run_parent_move_close_race \
   "payment_parent" \
@@ -238,6 +356,7 @@ run_parent_move_close_race \
   "10000000-0000-0000-0000-000000000006" \
   "INSERT INTO public.condominium_payment_movements(id,installment_id) VALUES ('50000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000002');" \
   "condominium_payment_movements" \
-  "50000000-0000-0000-0000-000000000003"
+  "50000000-0000-0000-0000-000000000003" \
+  "rejected"
 
 echo "Fiscal-year parent-row serialization regression: PASS"
