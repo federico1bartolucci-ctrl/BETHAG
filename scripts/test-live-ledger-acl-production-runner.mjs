@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 const runner=await readFile("scripts/apply-live-ledger-acl-production.mjs","utf8");
+const approvalGuard=await readFile("scripts/lib/live-ledger-acl-approval-guard.mjs","utf8");
 const manifest=JSON.parse(await readFile("supabase/rebuild/drafts/production-migration-cutover-live-20261124.json","utf8"));
 const snapshot=JSON.parse(await readFile("supabase/rebuild/drafts/production-ledger-live-20261124.json","utf8"));
 assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
@@ -15,6 +16,9 @@ for(const pattern of [/BETHAG_LIVE_LEDGER_PRODUCTION_APPLY/,/BETHAG_ALLOW_LIVE_L
  /approved_release_fingerprint/,/approved_window_start_utc/,/approved_window_end_utc/,
  /approved_target_project_ref/,/EXCEPT SELECT version,name FROM supabase_migrations\.schema_migrations/,
  /pg_advisory_xact_lock/,/BEGIN;/,/COMMIT;/,/PGPASSFILE/,/delete env\.DATABASE_URL/,/delete env\.PGPASSWORD/])assert.match(runner,pattern);
+assert.match(runner,/assertLiveLedgerAclEvidenceMatchesSource/);
+assert.match(approvalGuard,/qa_tested_commit_sha/);
+assert.match(approvalGuard,/reviewed_commit_sha/);
 assert.doesNotMatch(runner,/\bapply_migration\s*\(/i);
 assert.doesNotMatch(runner,/\b(?:DELETE|UPDATE)\s+FROM\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner,/DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { assertLiveLedgerAclEvidenceMatchesSource } from "./lib/live-ledger-acl-approval-guard.mjs";
 
 const root=resolve(fileURLToPath(new URL("..",import.meta.url)));
 const projectRef="tctcgptrsmvgajqjgnev";
@@ -89,6 +90,7 @@ async function main(){
     "STOP: independent technical review must identify reviewer and evidence.");
   exact(approval?.qa_app_01_to_15_status,"PASS","STOP: APP-01..APP-15 are not freshly accepted as PASS.");
   assert.match(approval?.qa_tested_commit_sha??"",/^[0-9a-f]{40}$/,"STOP: QA acceptance must identify the exact tested commit SHA.");
+  assertLiveLedgerAclEvidenceMatchesSource(approval,approvedSource);
   exact(approval?.data_api_exposure_verified,true,"STOP: fresh Production Data API exposure verification is missing.");
   assert.ok(approval?.data_api_exposure_evidence_reference,"STOP: Data API exposure verification evidence is missing.");
   exact(approval?.residual_backup_risk_reconfirmed,true,"STOP: residual physical-restore risk has not been explicitly reconfirmed.");
