@@ -75,7 +75,37 @@ Questa decisione di non procedere con una prova a pagamento **non equivale, da s
 
 Fino a tale conferma, il gate backup/restore o risk acceptance resta **OPEN** e Production resta **NO-GO**.
 
-## 7. Operazioni non eseguite
+
+
+## 7. Accettazione esplicita del rischio — 2026-11-24
+
+Il responsabile ha espresso in questa conversazione la seguente accettazione, qui riportata integralmente:
+
+> Accetto, ai fini della preparazione al rilascio di BETHAG, il rischio residuo relativo al mancato collaudo del ripristino fisico Supabase. Sono consapevole che il backup fisico è visibile e risulta COMPLETED, ma che il restore non è stato eseguito, PITR non è attivo e Storage, Auth, Edge Functions e altre configurazioni richiedono procedure separate. Accetto che tale rischio permanga senza attivare servizi a pagamento.
+
+### Ambito e identità del candidato
+
+- Natura dell'accettazione: **limitata alla preparazione al rilascio**; non è autorizzazione al cutover, al deploy, a modifiche Production o all'attivazione di servizi a pagamento.
+- Branch CAP: `cap-consolidation-20261123`.
+- Head documentale presente immediatamente prima della registrazione di questa accettazione: `f53d756ded7684e4891034abf3385f3e585e878b`.
+- Source SHA approvato dal responsabile per il rilascio: **NON INDICATO**.
+- Execution SHA approvato per eventuale cutover: **NON INDICATO**.
+- Fingerprint di rilascio approvato: **NON INDICATO**.
+
+L'head sopra identifica il commit documentale CAP osservato al momento della registrazione; non viene qualificato come source SHA o execution SHA approvato. L'accettazione esplicita è acquisita, ma il suo collegamento formale al fingerprint e agli SHA definitivi del candidato resta da completare prima di un'approvazione di rilascio.
+
+### Disposizione aggiornata
+
+- Accettazione del rischio residuo per la **preparazione**: **RECEIVED**.
+- Prova di restore fisico: **NOT RUN**.
+- Gate 10.6: **OPEN — accettazione ricevuta, associazione a source SHA / execution SHA / fingerprint finale ancora da completare**.
+- Production: **NO-GO**.
+
+## 8. Operazioni non eseguite
+
+La registrazione dell'accettazione non ha comportato restore, creazione di progetti, attivazione di add-on, scritture su Production o QA, migrazioni, deploy, cutover, invii email o merge.
+
+## 9. Operazioni non eseguite
 
 Durante questa verifica non sono stati eseguiti:
 
