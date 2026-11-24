@@ -64,3 +64,10 @@ assert.deepEqual(JSON.parse(output), {
 }, "Register dates must follow local calendar days around midnight and DST");
 
 console.log("Register SAL and work local-date regression checks passed.");
+
+
+const accounting = read("src/AccountingPage.tsx");
+assert.match(accounting, /import \{ localISODate \} from "\.\/lib\/local-date"/);
+assert.match(accounting, /entry_date: localISODate\(\)/, "new ledger entries default to the local calendar date");
+assert.equal((accounting.match(/payment_date:localISODate\(\)/g) ?? []).length, 2, "payment form initial and reset dates use the local calendar");
+assert.match(accounting, /opened_date: localISODate\(\)/, "new accounting case defaults to the local calendar date");
