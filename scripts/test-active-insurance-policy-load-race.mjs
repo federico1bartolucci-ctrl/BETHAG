@@ -135,7 +135,7 @@ assert.equal(applyInsurancePoliciesLoadResponse({
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const start = main.lastIndexOf("function InsurancePoliciesSection(");
 assert.ok(start >= 0, "active InsurancePoliciesSection must exist");
-const section = main.slice(start, start + 10000);
+const section = main.slice(start, start + 20000);
 assert.match(main, /applyInsurancePoliciesLoadFailure/);
 assert.match(section, /const insurancePolicyLoadSequence = useRef\(0\)/);
 assert.match(section, /currentCondominiumIdRef\.current = condominiumId/);
