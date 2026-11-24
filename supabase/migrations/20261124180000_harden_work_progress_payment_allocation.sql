@@ -1,3 +1,71 @@
+CREATE OR REPLACE FUNCTION public.guard_ledger_entry_integrity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_catalog'
+AS $function$
+declare
+  v_allocations integer := 0;
+  v_installments integer := 0;
+  v_work_progress_payments integer := 0;
+begin
+  if tg_op='DELETE' then
+    select count(*) into v_allocations
+    from public.condominium_expense_allocations
+    where workspace_id=old.workspace_id
+      and condominium_id=old.condominium_id
+      and ledger_entry_id=old.id;
+
+    select count(*) into v_installments
+    from public.condominium_installments
+    where workspace_id=old.workspace_id
+      and condominium_id=old.condominium_id
+      and ledger_entry_id=old.id;
+
+    select count(*) into v_work_progress_payments
+    from public.condominium_work_progress
+    where payment_entry_id=old.id;
+
+    if v_allocations>0 or v_installments>0 or v_work_progress_payments>0 then
+      raise exception 'La voce contabile è collegata a ripartizioni, rate o SAL e non può essere cancellata';
+    end if;
+    return old;
+  end if;
+
+  if tg_op='UPDATE' then
+    select count(*) into v_allocations
+    from public.condominium_expense_allocations
+    where workspace_id=old.workspace_id
+      and condominium_id=old.condominium_id
+      and ledger_entry_id=old.id;
+
+    select count(*) into v_installments
+    from public.condominium_installments
+    where workspace_id=old.workspace_id
+      and condominium_id=old.condominium_id
+      and ledger_entry_id=old.id;
+
+    select count(*) into v_work_progress_payments
+    from public.condominium_work_progress
+    where payment_entry_id=old.id;
+
+    if (v_allocations>0 or v_installments>0 or v_work_progress_payments>0) and (
+      new.amount is distinct from old.amount
+      or new.direction is distinct from old.direction
+      or new.fiscal_year_id is distinct from old.fiscal_year_id
+      or new.condominium_id is distinct from old.condominium_id
+      or new.workspace_id is distinct from old.workspace_id
+      or new.supplier_id is distinct from old.supplier_id
+      or new.document_id is distinct from old.document_id
+    ) then
+      raise exception 'La voce contabile è già collegata a ripartizioni, rate o SAL: importo, direzione, esercizio, fornitore, documento e appartenenza non possono essere modificati';
+    end if;
+    return new;
+  end if;
+
+  return new;
+end;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.validate_condominium_work_progress_accounting_links()
  RETURNS trigger
  LANGUAGE plpgsql
