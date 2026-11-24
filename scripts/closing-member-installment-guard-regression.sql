@@ -24,7 +24,7 @@ CREATE TRIGGER trg_preserve_closing_member
 BEFORE INSERT OR UPDATE OF active, data ON public.condominium_members
 FOR EACH ROW EXECUTE FUNCTION public.preserve_closing_condominium_member_history();
 
-\i supabase/rebuild/candidates/accounting-point1-20261124/20261124240100_normalize_closing_member_installment_guard.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124233200_normalize_closing_member_installment_guard.sql
 
 CREATE TRIGGER trg_prevent_new_installment_for_closing_member
 BEFORE INSERT ON public.condominium_installments
