@@ -24,7 +24,7 @@ CREATE TABLE public.condominium_work_progress (
   paid_amount numeric NOT NULL
 );
 
-\i supabase/migrations/20261124190000_guard_ledger_entries_linked_to_work_progress.sql
+\i supabase/migrations/20261124240200_guard_ledger_entries_linked_to_work_progress.sql
 
 DROP TRIGGER IF EXISTS trg_guard_ledger_entry_integrity_test
   ON public.condominium_ledger_entries;
