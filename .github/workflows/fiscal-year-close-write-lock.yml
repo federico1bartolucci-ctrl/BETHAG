@@ -1,0 +1,43 @@
+name: Fiscal year close write lock
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261124190000_serialize_fiscal_year_close_writes.sql'
+      - 'scripts/test-fiscal-year-close-write-lock.sh'
+      - '.github/workflows/fiscal-year-close-write-lock.yml'
+  push:
+    branches:
+      - fix/pr15-fiscal-year-close-write-lock
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Verify fiscal year close serialization
+        run: bash scripts/test-fiscal-year-close-write-lock.sh
