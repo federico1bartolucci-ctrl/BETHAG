@@ -15,7 +15,7 @@ const [freeze, proposal, liveSnapshot, deployableFiles] = await Promise.all([
   readdir(migrationRoot).then(names => names.filter(name => name.endsWith(".sql")).sort()),
 ]);
 
-const historicalFiles = deployableFiles.filter(name => name !== proposalFile);
+const historicalFiles = deployableFiles;
 const frozenHistoricalFiles = [
   ...freeze.clean_install.baseline_files,
   freeze.clean_install.existing_canonical_head,
@@ -27,8 +27,10 @@ assert.equal(freeze.clean_install.migration_file_count, 28);
 assert.equal(frozenHistoricalFiles.length, 28);
 assert.deepEqual(historicalFiles, frozenHistoricalFiles,
   "The 28 frozen historical deployable migration files must remain unchanged.");
-assert.equal(deployableFiles.length, 29,
-  "Expected 28 frozen historical files plus exactly one live-ledger proposal.");
+assert.equal(deployableFiles.length, 28,
+  "The standard Supabase CLI inventory must contain only the 28 frozen canonical migrations.");
+assert.ok(!deployableFiles.includes(proposalFile),
+  "DRAFT_NOT_APPROVED candidate must not be visible to supabase db push.");
 assert.ok(deployableFiles.includes(proposalFile),
   "The separately reviewed live-ledger proposal must be present in the deployable inventory.");
 
@@ -38,7 +40,7 @@ assert.equal(proposal.approval_scope, "NONE");
 assert.equal(proposal.live_ledger.rows, 267);
 assert.equal(proposal.live_ledger.head_version, "20261105050000");
 assert.equal(proposal.live_ledger.exact_version_name_match, true);
-assert.equal(proposal.clean_install.migration_file_count, 29);
+assert.equal(proposal.clean_install.migration_file_count, 28);
 assert.equal(proposal.sequence.length, 1);
 assert.equal(proposal.sequence[0].file, proposalFile);
 assert.equal(proposal.sequence[0].git_blob_sha, proposal.live_ledger.proposed_addition.git_blob_sha);
