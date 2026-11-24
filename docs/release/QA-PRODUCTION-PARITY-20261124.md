@@ -303,3 +303,10 @@ Commit fix: `85564372c374151a44e995104c75bab88f728c09`. Restano in esecuzione al
 La CI sul commit `fde8a3e26bce1c220d80c0e6bebff0382518aac8` ha superato `chronological-candidate-chain`, `work-progress-payment-allocation` e `work-delete-sal-guard`. Il job `supporting-regressions` ha individuato un ulteriore percorso obsoleto in `scripts/work-change-audit-regression.sql`: il riferimento `20261124240000_audit_work_details_and_references.sql` è stato aggiornato a `20261124233100_audit_work_details_and_references.sql`.
 
 Commit fix: `66d79c6e463ccddbaf691bbd4fc0e6ae5173b973`. La CI sul nuovo head deve confermare tutte le regressioni, Build e baseline. Punto 1 resta RIAPERTO; nessuna modifica QA/Production.
+
+
+### Supporting regressions — terzo path fix (24 novembre 2026)
+
+La CI sul commit `76cbdb7eb56cec639425a527d0ca5e70680bb54e` ha superato `chronological-candidate-chain`, `work-progress-payment-allocation` e `work-delete-sal-guard`. Il job supporting regressions ha poi individuato lo stesso timestamp obsoleto in un secondo harness: `scripts/work-details-reference-audit-regression.sql` includeva `20261124240000_audit_work_details_and_references.sql`; aggiornato a `20261124233100_audit_work_details_and_references.sql`.
+
+Commit fix: `40ee47740f4c7c11aef7073abdf4afd92883c7ba`. La nuova CI sul nuovo head deve confermare il superamento integrale. Punto 1 resta RIAPERTO. Nessuna modifica QA/Production.
