@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history() 
 SQL
 
 # Execute the exact ACL statements from the migration against real PostgreSQL.
-grep -Ei '^(revoke all on function (private\\.check_condominium_member_transfer_closure|public\\.check_condominium_member_transfer_closure|public\\.normalize_zero_ownership_owner|public\\.preserve_closing_condominium_member_history)|grant execute on function (private\\.check_condominium_member_transfer_closure|public\\.check_condominium_member_transfer_closure|public\\.normalize_zero_ownership_owner|public\\.preserve_closing_condominium_member_history))' "$migration" > "$tmp_sql"
+grep -Ei '^(revoke all on function (private[.]check_condominium_member_transfer_closure|public[.]check_condominium_member_transfer_closure|public[.]normalize_zero_ownership_owner|public[.]preserve_closing_condominium_member_history)|grant execute on function (private[.]check_condominium_member_transfer_closure|public[.]check_condominium_member_transfer_closure|public[.]normalize_zero_ownership_owner|public[.]preserve_closing_condominium_member_history))' "$migration" > "$tmp_sql"
 test -s "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/function-acl-postgres-assertions.sql
