@@ -233,7 +233,7 @@ Queste modifiche restano file candidati/draft e test isolati. Nessuna ACL, funzi
 
 1. **Punto 1 — CHIUSO tecnicamente:** consolidamento e regressioni SQL isolate completati; nessuna autorizzazione di merge/deploy implicita.
 2. **Punto 2 — CHIUSO:** inventari e riconciliazione semantica documentati; collaudo APP-01..APP-15 live sul QA esistente completato PASS.
-3. **Punto 3 — IN CORSO:** audit read-only QA/Production completato; hardening dei due trigger candidati e draft forward-only per i default EXECUTE globali provati su PostgreSQL 17 isolato. Restano da riconfermare le impostazioni Data API correnti e da decidere/approvare l'eventuale migrazione forward-only; nessuna applicazione remota eseguita.
+3. **Punto 3 — IN CORSO:** audit read-only QA/Production completato; hardening dei due trigger candidati e draft forward-only per i default EXECUTE globali provati su PostgreSQL 17 isolato. La verifica Data API QA è chiusa; la configurazione Data API Production resta non verificata. Resta da decidere/approvare l'eventuale migrazione forward-only; nessuna applicazione remota eseguita.
 4. **Punto 4 — NON INIZIATO:** aggiornamento manifest e nuova approvazione, subordinati alla chiusura del Punto 3.
 
 La regressione SQL isolata non sostituisce il collaudo live; ora entrambi i livelli risultano superati per il Punto 2. Nessun DDL/DML remoto, modifica ACL, replay migrazioni, merge o deploy è stato eseguito.
