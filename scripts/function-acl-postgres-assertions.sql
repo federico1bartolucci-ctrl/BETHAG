@@ -1,4 +1,4 @@
-DO $$
+DO $acl$
 BEGIN
   IF NOT has_function_privilege('authenticated', 'private.check_condominium_member_transfer_closure(uuid)', 'EXECUTE')
      OR NOT has_function_privilege('service_role', 'private.check_condominium_member_transfer_closure(uuid)', 'EXECUTE')
@@ -75,7 +75,7 @@ BEGIN
     RAISE EXCEPTION 'Unexpected ACL: invoker-backed private RPCs must retain authenticated execution';
   END IF;
 END
-$;
+$acl$;
 
 SET ROLE authenticated;
 SELECT public.generate_fiscal_year_carryovers(
