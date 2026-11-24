@@ -8,7 +8,9 @@ const [live, freeze, snapshot] = await Promise.all([
   readFile(root + "/production-migration-cutover-freeze-20261105.json", "utf8").then(JSON.parse),
   readFile(root + "/production-ledger-20261105.json", "utf8").then(JSON.parse),
 ]);
-const files = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql")).sort();
+const deployableFiles = (await readdir("supabase/migrations")).filter(file => file.endsWith(".sql")).sort();
+const liveProposalFile = "20261124234000_revoke_postgres_global_public_function_execute.sql";
+const files = deployableFiles.filter(file => file !== liveProposalFile);
 const productionSet = new Set(live.production.migrations.map(row => row.version + "|" + row.name));
 const qaSet = new Set(live.qa.migrations.map(row => row.version + "|" + row.name));
 const common = [...productionSet].filter(pair => qaSet.has(pair));
@@ -57,7 +59,8 @@ assert.equal(freeze.expected_postflight.ledger_rows, 267);
 assert.equal(freeze.sequence.length, 19);
 assert.equal(freeze.live_ledger.production_only_migration.version, "20261104222229");
 assert.equal(freeze.live_ledger.production_only_migration.name, "reconcile_production_acl_least_privilege");
-assert.equal(files.length, 28);
+assert.equal(files.length, 28, "Frozen canonical history must remain at 28 files.");
+assert.ok(deployableFiles.includes(liveProposalFile), "Separately reviewed live proposal must exist in deployable inventory.");
 assert.equal(freeze.clean_install.migration_file_count, 28);
 assert.ok(pending.every(item => files.includes(item.file)));
 assert.ok(pending.every(item => !productionSet.has(item.version + "|" + item.name)));
