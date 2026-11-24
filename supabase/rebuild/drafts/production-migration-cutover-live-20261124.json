@@ -312,7 +312,43 @@
       }
     },
     "candidate_draft_rehearsal": "PASS",
-    "candidate_draft_rehearsal_target": "isolated PostgreSQL 17; candidate read from supabase/rebuild/drafts; excluded from standard Supabase CLI migration inventory"
+    "candidate_draft_rehearsal_target": "isolated PostgreSQL 17; candidate read from supabase/rebuild/drafts; excluded from standard Supabase CLI migration inventory",
+    "exact_head_ci_evidence": {
+      "tested_commit_sha": "cb8b3b110349add442711a4e864a58ee35c6bc9e",
+      "build": {
+        "run_id": 45513584521,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584521"
+      },
+      "postgres17": {
+        "run_id": 45513584521,
+        "conclusion": "success",
+        "job": "postgres-bootstrap",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584521"
+      },
+      "baseline_safety": {
+        "run_id": 45513584439,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584439"
+      },
+      "final_qa": {
+        "run_id": 45513584487,
+        "conclusion": "skipped",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584487"
+      },
+      "browser_smoke": {
+        "run_id": 45513584521,
+        "conclusion": "success",
+        "step": "Run isolated public-login browser smoke test"
+      },
+      "authenticated_qa_in_build": {
+        "run_id": 45513584521,
+        "authentication": "skipped",
+        "edit_archive": "skipped",
+        "reason": "Workflow conditions exclude this branch; no QA write performed."
+      },
+      "interpretation": "Exact-head technical CI PASS for Build, PostgreSQL 17, Baseline Safety and isolated public-login browser smoke. APP-01..APP-15 final acceptance remains NOT PASS because dedicated workflow was SKIPPED."
+    }
   },
   "clean_install": {
     "migration_file_count": 28,
