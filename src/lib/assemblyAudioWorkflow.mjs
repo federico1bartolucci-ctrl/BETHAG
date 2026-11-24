@@ -45,7 +45,32 @@ export function canPublishAssemblyMinutes(assembly) {
     canConfirmAssemblyMinutes(assembly);
 }
 
-export function reconcileAssemblyMinutesAfterEdit(assembly) {
+export function confirmAssemblyMinutes(assembly) {
+  if (!canConfirmAssemblyMinutes(assembly)) return null;
+
+  return {
+    ...assembly,
+    minutesStatus: "Confermato",
+    // A legacy unconfirmed record may carry a stale publication flag. Moving
+    // from review to confirmation must not publish it implicitly.
+    publishedToPortal: assembly.minutesStatus === "Confermato"
+      ? Boolean(assembly.publishedToPortal)
+      : false,
+  };
+}
+
+export function reconcileAssemblyMinutesAfterEdit(assembly, previousAssembly = null) {
+  // Moving an assembly to another condominium changes its publication audience,
+  // even when the transcript and visible meeting metadata remain identical.
+  if (previousAssembly && previousAssembly.condominiumId !== assembly?.condominiumId) {
+    return {
+      ...assembly,
+      minutesStatus: "Non elaborato",
+      minutesDraft: "",
+      publishedToPortal: false,
+    };
+  }
+
   if (!canConfirmAssemblyMinutes(assembly)) {
     return {
       ...assembly,

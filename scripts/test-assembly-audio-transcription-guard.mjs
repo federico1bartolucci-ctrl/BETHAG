@@ -5,6 +5,7 @@ import {
   isAssemblyTranscriptionReady,
   canConfirmAssemblyMinutes,
   canPublishAssemblyMinutes,
+  confirmAssemblyMinutes,
   reconcileAssemblyMinutesAfterEdit,
 } from "../src/lib/assemblyAudioWorkflow.mjs";
 
@@ -75,12 +76,31 @@ assert.equal(canConfirmAssemblyMinutes({ ...manuallyTranscribed, place: "Sala di
 // editing its source, and the publication handler did not require confirmation.
 const confirmedMinutes = {
   ...manuallyTranscribed,
+  condominiumId: 101,
   minutesStatus: "Confermato",
   minutesDraft: draft,
   publishedToPortal: false,
 };
 assert.equal(canPublishAssemblyMinutes(confirmedMinutes), true);
 assert.equal(canPublishAssemblyMinutes({ ...confirmedMinutes, minutesStatus: "Da verificare" }), false);
+
+// Confirming a legacy unconfirmed record must clear its old publication flag.
+// Re-confirming an already confirmed and published record must preserve publication.
+const confirmedFromLegacyFlag = confirmAssemblyMinutes({
+  ...manuallyTranscribed,
+  minutesStatus: "Da verificare",
+  minutesDraft: draft,
+  publishedToPortal: true,
+});
+assert.equal(confirmedFromLegacyFlag.minutesStatus, "Confermato");
+assert.equal(confirmedFromLegacyFlag.publishedToPortal, false);
+assert.equal(canPublishAssemblyMinutes(confirmedFromLegacyFlag), true);
+const reconfirmedPublished = confirmAssemblyMinutes({
+  ...confirmedMinutes,
+  publishedToPortal: true,
+});
+assert.equal(reconfirmedPublished.minutesStatus, "Confermato");
+assert.equal(reconfirmedPublished.publishedToPortal, true);
 
 const stalePublishedMinutes = {
   ...confirmedMinutes,
@@ -112,12 +132,25 @@ const confirmedAfterLegacySave = {
 assert.equal(canPublishAssemblyMinutes(confirmedAfterLegacySave), true);
 assert.equal(confirmedAfterLegacySave.publishedToPortal, false);
 
+// Changing the condominium changes the resident audience. A previously
+// confirmed and published minute must be invalidated and explicitly republished.
+const movedCondominiumMinutes = reconcileAssemblyMinutesAfterEdit({
+  ...confirmedMinutes,
+  condominiumId: 202,
+  publishedToPortal: true,
+}, confirmedMinutes);
+assert.equal(movedCondominiumMinutes.minutesStatus, "Non elaborato");
+assert.equal(movedCondominiumMinutes.minutesDraft, "");
+assert.equal(movedCondominiumMinutes.publishedToPortal, false);
+assert.equal(canConfirmAssemblyMinutes(movedCondominiumMinutes), false);
+assert.equal(canPublishAssemblyMinutes(movedCondominiumMinutes), false);
+
 // An unrelated edit does not invalidate a current, confirmed and published draft.
 const unchangedSource = reconcileAssemblyMinutesAfterEdit({
   ...confirmedMinutes,
   notes: "Nota amministrativa aggiornata",
   publishedToPortal: true,
-});
+}, confirmedMinutes);
 assert.equal(unchangedSource.minutesStatus, "Confermato");
 assert.equal(unchangedSource.minutesDraft, draft);
 assert.equal(unchangedSource.publishedToPortal, true);
@@ -127,7 +160,7 @@ assert.equal(unchangedSource.publishedToPortal, true);
 // upload/transcription state or delayed minutes generation.
 const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 assert.match(main, /buildManualAssemblyMinutesDraft/);
-assert.match(main, /canConfirmAssemblyMinutes/);
+assert.match(main, /confirmAssemblyMinutes/);
 const attachStart = main.indexOf("const attachAssemblyAudio = (");
 const generateStart = main.indexOf("const generateMinutes = (", attachStart);
 assert.ok(attachStart >= 0 && generateStart > attachStart);
@@ -137,12 +170,12 @@ assert.doesNotMatch(attachHandler, /setAssemblies|transcriptionStatus|setTimeout
 const confirmStart = main.indexOf("const confirmMinutes = (");
 const publicationStart = main.indexOf("const toggleAssemblyPublication = (", confirmStart);
 assert.ok(confirmStart >= 0 && publicationStart > confirmStart);
-assert.match(main.slice(confirmStart, publicationStart), /canConfirmAssemblyMinutes/);
+assert.match(main.slice(confirmStart, publicationStart), /confirmAssemblyMinutes\(assembly\)/);
 
 const saveStart = main.indexOf("const saveAssembly = (");
 const editAssemblyStart = main.indexOf("const editAssembly = (", saveStart);
 assert.ok(saveStart >= 0 && editAssemblyStart > saveStart);
-assert.match(main.slice(saveStart, editAssemblyStart), /reconcileAssemblyMinutesAfterEdit/);
+assert.match(main.slice(saveStart, editAssemblyStart), /reconcileAssemblyMinutesAfterEdit\(assemblyForm,\s*selectedAssembly\)/);
 const publishStart = main.indexOf("const toggleAssemblyPublication = (");
 const supplierStart = main.indexOf("FORNITORI", publishStart);
 assert.ok(publishStart >= 0 && supplierStart > publishStart);
@@ -160,3 +193,5 @@ assert.match(pkg.scripts.test, /test-assembly-audio-transcription-guard\.mjs/);
 console.log("Assembly audio transcription false-positive runtime regression: PASS");
 console.log("Assembly minutes draft freshness runtime regression: PASS");
 console.log("Assembly minutes publication freshness runtime regression: PASS");
+console.log("Assembly minutes condominium-scope freshness runtime regression: PASS");
+console.log("Assembly minutes explicit-confirmation publication regression: PASS");
