@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore, prepareWorkspaceRowsForBackupRestore } from "./lib/backupSecurityRestore.mjs";
+import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
@@ -3373,17 +3374,7 @@ function App() {
         );
       }
 
-      const restoreOrder = [
-        "condominiums", "condominium_units", "condominium_members", "documents", "suppliers", "activities",
-        "condominium_fiscal_years", "condominium_funds", "condominium_suppliers", "condominium_register_items",
-        "condominium_budgets", "condominium_tax_obligations", "condominium_legal_cases",
-        "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies", "condominium_ledger_entries",
-        "condominium_expense_allocations", "condominium_installments", "condominium_payment_movements",
-        "condominium_works", "condominium_work_documents", "condominium_work_progress",
-        "condominium_work_events", "condominium_audit_log", "condominium_requests",
-        "deadlines", "assemblies", "communications", "portal_access",
-        "workspace_members", "portal_registration_requests"
-      ];
+      const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;
       const errors: string[] = [];
       const skippedSecurityRows: string[] = [];
       let restoredCondominiumIds = new Set<string>();
@@ -3504,16 +3495,7 @@ function App() {
       alert("L'esportazione del backup è riservata all'Amministratore.");
       return;
     }
-    const tableNames = [
-      "condominiums", "condominium_members", "condominium_units", "documents", "suppliers", "activities",
-      "condominium_fiscal_years", "condominium_ledger_entries", "condominium_funds", "condominium_expense_allocations",
-      "condominium_installments", "condominium_payment_movements", "condominium_budgets", "condominium_tax_obligations",
-      "condominium_legal_cases", "condominium_millesimal_tables", "condominium_millesimal_values", "condominium_insurance_policies",
-      "condominium_register_items", "condominium_suppliers", "condominium_works", "condominium_work_documents",
-      "condominium_work_progress", "condominium_work_events", "condominium_audit_log", "condominium_requests",
-      "deadlines", "assemblies", "communications", "portal_access",
-      "workspace_members", "portal_registration_requests"
-    ];
+    const tableNames = WORKSPACE_BACKUP_EXPORT_TABLES;
     const backend: Record<string, unknown> = {};
     const errors: Record<string, string> = {};
     if (supabase && profile.workspaceId) {
