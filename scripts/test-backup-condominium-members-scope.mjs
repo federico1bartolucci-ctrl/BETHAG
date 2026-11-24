@@ -125,7 +125,7 @@ assert.match(restoreFunction, /filterCondominiumMembersToWorkspace\(rows, \[\.\.
 assert.match(restoreFunction, /supabase\.from\(table\)\.upsert\(scoped\.rows, \{ onConflict: "id" \}\)/);
 assert.ok(
   restoreFunction.indexOf('if (table === "condominium_members")') <
-    restoreFunction.indexOf('const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));'),
+    restoreFunction.lastIndexOf('const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));'),
   "member restore must bypass the generic workspace_id normalization",
 );
 
