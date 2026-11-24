@@ -63,3 +63,27 @@ Nessun merge, deploy, migrazione o modifica a Production/QA. Nessun reset, nuovo
 La candidata resta **non deployable**: è conservata solo in `supabase/rebuild/drafts`. Il clean-install standard deve applicare esattamente le 28 migrazioni canoniche congelate; la candidata viene verificata separatamente su PostgreSQL 17 isolato. I controlli di inventario, baseline e runner devono applicare tutti la stessa regola. Nessuna promozione della bozza in `supabase/migrations` è autorizzata da questo documento.
 
 La CI sul commit precedente `19128bdd902d9430bc79e49ac47728714dc83d8f` ha evidenziato un disallineamento: il validatore filename richiedeva 29 file mentre la proposta draft-only ne mantiene 28; il controllo di baseline e il verificatore del runner contenevano ancora l'aspettativa precedente. Le correzioni sono state allineate ai 28 file e alla rehearsal separata; restano da certificare sul nuovo exact-head con Build e Baseline Safety. APP-01..APP-15 resta un gate distinto e non può essere considerato superato se il workflow è SKIPPED.
+
+
+## Nuova verifica Production read-only — 25 novembre 2026
+
+Rilevazione SQL UTC: `2026-11-24T23:48:57.016286Z` (ora locale italiana: 25 novembre).
+
+- Progetto `tctcgptrsmvgajqjgnev`: `ACTIVE_HEALTHY`, PostgreSQL 17.6.
+- `list_migrations`: 267 righe. Confronto integrale con lo snapshot pinned: **267/267 coppie versione/nome identiche**; nessuna coppia solo-live o solo-snapshot.
+- Head: `20261105050000 / reconcile_portal_registration_upsert`; candidata `20261124234000` assente.
+- Default globale funzioni di `postgres`: `{=X/postgres,postgres=X/postgres}`; nessuna riga globale esplicita in `pg_default_acl`, quindi il grant PUBLIC EXECUTE deriva dal default implicito PostgreSQL.
+- Default funzioni schema `public`: `{postgres=X/postgres}`; schema `storage`: `{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}`, da preservare.
+- Funzioni in `public`: 130; funzioni con PUBLIC EXECUTE: 0.
+- Supabase Security Advisor: 0 security lints.
+- Nessun override `pgrst.db_schemas` o `pgrst.db_extra_search_path` rilevato per i ruoli/database ispezionati.
+
+**Data API:** ancora **NOT RECONFIRMED**. Il connettore Supabase fornisce stato progetto e accesso SQL, ma non restituisce il valore effettivo della lista "Exposed schemas" del Dashboard. La precedente evidenza owner registrata nel manifest è del 7 novembre e non soddisfa il gate temporale del runner. La verifica deve essere acquisita direttamente dal Dashboard Production prima di ogni cutover.
+
+## Collaudo QA: modalità disponibile e limite operativo
+
+Il workflow `.github/workflows/qa-final-collaudo.yml` supporta `workflow_dispatch` con input `target_ref` e controlla che il checkout corrisponda esattamente allo SHA richiesto. Il branch corrente è escluso dal trigger automatico PR; il run sullo SHA `e3b9f8a...` è correttamente `SKIPPED`.
+
+Il workflow manuale opera però sul progetto QA condiviso e include fixture temporanee reversibili (tra cui modifica/ripristino del piano Portal), test autenticati e flussi browser. Non è stato avviato: la presente fase mantiene il vincolo di non scrivere su QA senza autorizzazione specifica. Non esiste, tra le azioni GitHub collegate disponibili in questa sessione, un'azione di dispatch workflow.
+
+**Stato dopo questa verifica:** Build, PostgreSQL 17 e Baseline Safety PASS sullo SHA `e3b9f8a...`; il nuovo aggiornamento del manifest richiede una nuova CI exact-head. APP-01..APP-15, Data API Dashboard, revisione tecnica indipendente, riconferma del rischio backup e approvazione owner restano gate aperti. Nessuna scrittura Production/QA.
