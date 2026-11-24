@@ -32,7 +32,7 @@ END
 $;
 
 SET ROLE authenticated;
-SELECT private.generate_fiscal_year_carryovers(
+SELECT public.generate_fiscal_year_carryovers(
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000003',
