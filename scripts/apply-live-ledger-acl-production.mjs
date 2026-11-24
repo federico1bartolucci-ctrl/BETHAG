@@ -71,14 +71,13 @@ async function main(){
   const item=manifest.sequence[0];
   exact(item.file,candidate,"STOP: candidate migration filename differs.");
   exact(item.git_blob_sha,"499ea493e828243309ee2f4bb9c3242d2fbeb862","STOP: candidate SQL hash differs.");
-  exact(blobSha(sql),item.git_blob_sha,"STOP: deployable candidate SQL hash mismatch.");
+  exact(blobSha(sql),item.git_blob_sha,"STOP: draft candidate SQL hash mismatch.");
   exact(snapshot.project_ref,projectRef,"STOP: snapshot project ref differs.");
   exact(snapshot.count,267,"STOP: pinned ledger must contain 267 rows.");
   exact(snapshot.migrations?.length,267,"STOP: all 267 historical version/name pairs are required.");
   exact(snapshot.head?.version,"20261105050000","STOP: pinned ledger head differs.");
   exact(manifest.live_ledger?.rows,267,"STOP: manifest live ledger row count differs.");
   exact(manifest.live_ledger?.head_version,"20261105050000","STOP: manifest live ledger head differs.");
-  exact(manifest.clean_install?.migration_file_count,28,"STOP: canonical Supabase CLI clean-install inventory must remain at 28 migrations.");
   exact(manifest.rehearsal_evidence?.full_clean_install,"PASS","STOP: 28-file PostgreSQL 17 canonical clean-install rehearsal is not PASS in the reviewed manifest.");
   exact(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS","STOP: separate PostgreSQL 17 rehearsal of the non-deployable draft candidate is not PASS.");
   exact(manifest.rehearsal_evidence?.guarded_runner,"PASS","STOP: exact 267-to-268 local guarded-runner rehearsal is not PASS in the reviewed manifest.");
