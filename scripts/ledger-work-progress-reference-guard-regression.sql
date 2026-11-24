@@ -26,6 +26,22 @@ CREATE TABLE public.condominium_work_progress (
 
 \i supabase/migrations/20261124240200_guard_ledger_entries_linked_to_work_progress.sql
 
+-- Reproduce the real module boundary: authenticated accounting users cannot
+-- read SAL rows under the activity-module RLS policy.
+DO $
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
+END $;
+ALTER TABLE public.condominium_work_progress ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS work_progress_rls_regression_deny ON public.condominium_work_progress;
+CREATE POLICY work_progress_rls_regression_deny
+  ON public.condominium_work_progress FOR SELECT TO authenticated USING (false);
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.condominium_work_progress TO authenticated;
+GRANT UPDATE, DELETE ON public.condominium_ledger_entries TO authenticated;
+
 DROP TRIGGER IF EXISTS trg_guard_ledger_entry_integrity_test
   ON public.condominium_ledger_entries;
 CREATE TRIGGER trg_guard_ledger_entry_integrity_test
@@ -107,3 +123,34 @@ BEGIN
     RAISE EXCEPTION 'Regression: SAL accounting references or paid amount were changed';
   END IF;
 END $$;
+
+-- The caller cannot see SAL rows, but the trigger must still enforce their links.
+SET ROLE authenticated;
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM public.condominium_work_progress) <> 0 THEN
+    RAISE EXCEPTION 'Regression: authenticated accounting user unexpectedly sees activity SAL rows';
+  END IF;
+
+  BEGIN
+    DELETE FROM public.condominium_ledger_entries
+    WHERE id='00000000-0000-0000-0000-000000000030';
+    RAISE EXCEPTION 'Regression: RLS-hidden SAL expense ledger entry was deleted';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'La voce contabile è collegata a uno o più SAL%' THEN
+      RAISE;
+    END IF;
+  END;
+
+  BEGIN
+    UPDATE public.condominium_ledger_entries
+    SET amount=501.00
+    WHERE id='00000000-0000-0000-0000-000000000031';
+    RAISE EXCEPTION 'Regression: RLS-hidden SAL payment ledger entry was modified';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'La voce contabile è collegata a ripartizioni, rate o SAL:%' THEN
+      RAISE;
+    END IF;
+  END;
+END $$;
+RESET ROLE;
