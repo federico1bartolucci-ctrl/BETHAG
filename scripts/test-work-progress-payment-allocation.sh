@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
-migration="supabase/rebuild/candidates/accounting-point1-20261124/20261124240400_harden_work_progress_payment_allocation.sql"
+migration="supabase/rebuild/candidates/accounting-point1-20261124/20261124233400_harden_work_progress_payment_allocation.sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $roles$
@@ -79,7 +79,7 @@ GRANT EXECUTE ON FUNCTION public.guard_ledger_entry_integrity()
   TO PUBLIC, anon, authenticated, service_role;
 SQL
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/rebuild/candidates/accounting-point1-20261124/20261124233300_guard_ledger_entries_linked_to_work_progress.sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $acl$
