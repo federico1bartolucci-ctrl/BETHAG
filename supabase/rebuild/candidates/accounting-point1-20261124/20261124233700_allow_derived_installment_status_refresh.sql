@@ -32,12 +32,47 @@ begin
     END IF;
   END IF;
 
-  if tg_table_name in ('condominium_ledger_entries','condominium_budgets','condominium_installments') then
+  if tg_table_name in ('condominium_ledger_entries','condominium_budgets') then
     if tg_op <> 'INSERT' then
       v_old_year_id := old.fiscal_year_id;
     end if;
     if tg_op <> 'DELETE' then
       v_new_year_id := new.fiscal_year_id;
+    end if;
+
+  elsif tg_table_name = 'condominium_installments' then
+    if tg_op <> 'INSERT' then
+      v_old_year_id := old.fiscal_year_id;
+      v_old_parent_id := old.ledger_entry_id;
+    end if;
+    if tg_op <> 'DELETE' then
+      v_new_year_id := new.fiscal_year_id;
+      v_new_parent_id := new.ledger_entry_id;
+    end if;
+
+    -- Lock old/new ledger parents before fiscal-year rows, matching direct
+    -- ledger writes and the installment-total/status-sync triggers.
+    for v_parent in
+      select le.id
+      from public.condominium_ledger_entries le
+      where (v_old_parent_id is not null and le.id = v_old_parent_id)
+         or (v_new_parent_id is not null and le.id = v_new_parent_id)
+      order by le.id
+      for update
+    loop
+      if v_old_parent_id is not null and v_parent.id = v_old_parent_id then
+        v_old_parent_found := true;
+      end if;
+      if v_new_parent_id is not null and v_parent.id = v_new_parent_id then
+        v_new_parent_found := true;
+      end if;
+    end loop;
+
+    if v_old_parent_id is not null and not v_old_parent_found then
+      raise exception 'Movimento contabile di origine non trovato';
+    end if;
+    if v_new_parent_id is not null and not v_new_parent_found then
+      raise exception 'Movimento contabile di destinazione non trovato';
     end if;
 
   elsif tg_table_name = 'condominium_expense_allocations' then
