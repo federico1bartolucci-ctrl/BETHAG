@@ -7,6 +7,22 @@ on:
       - 'supabase/migrations/20261124240200_guard_ledger_entries_linked_to_work_progress.sql'
       - 'supabase/migrations/20261124240400_harden_work_progress_payment_allocation.sql'
       - 'supabase/migrations/20261124240600_lock_fiscal_year_parent_rows.sql'
+      - 'supabase/migrations/20261124170000_reconcile_ledger_status_on_installment_move.sql'
+      - 'supabase/migrations/20261124220000_prevent_mutation_from_archived_condominium.sql'
+      - 'supabase/migrations/20261124223000_audit_all_work_progress_fields.sql'
+      - 'supabase/migrations/20261124233000_validate_installment_fiscal_year_due_date.sql'
+      - 'supabase/migrations/20261124240000_audit_work_details_and_references.sql'
+      - 'supabase/migrations/20261124240100_normalize_closing_member_installment_guard.sql'
+      - 'scripts/test-accounting-point1-supporting-regressions.sh'
+      - 'scripts/archived-condominium-move-regression.sql'
+      - 'scripts/closing-member-installment-guard-regression.sql'
+      - 'scripts/installment-fiscal-year-due-date-regression.sql'
+      - 'scripts/installment-ledger-status-regression.sql'
+      - 'scripts/ledger-work-progress-reference-guard-regression.sql'
+      - 'scripts/work-change-audit-regression.sql'
+      - 'scripts/work-details-reference-audit-regression.sql'
+      - 'scripts/work-progress-accounting-link-audit-regression.sql'
+      - 'scripts/work-progress-field-audit-regression.sql'
       - 'scripts/test-work-delete-with-sal-guard.sh'
       - 'scripts/test-work-progress-payment-allocation.sh'
       - 'scripts/test-fiscal-year-close-write-lock.sh'
@@ -61,3 +77,31 @@ jobs:
         run: PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=postgres createdb "${{ matrix.database }}"
       - name: Run PostgreSQL 17 regression
         run: bash "${{ matrix.script }}"
+
+  supporting-regressions:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_supporting_regressions
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_supporting_regressions"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_supporting_regressions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Run supporting accounting regressions
+        run: bash scripts/test-accounting-point1-supporting-regressions.sh
