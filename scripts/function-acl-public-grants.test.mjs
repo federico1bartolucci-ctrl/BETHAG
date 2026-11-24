@@ -98,7 +98,7 @@ test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', ()
   assert.equal(occurrences("RAISE EXCEPTION"), 6);
   assert.equal(occurrences("has_function_privilege('anon'"), 20);
   assert.equal(occurrences("has_function_privilege('authenticated'"), 20);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 19);
+  assert.equal(occurrences("has_function_privilege('service_role'"), 20);
   assert.equal(occurrences("has_function_privilege('public'"), 0,
     "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
 });
