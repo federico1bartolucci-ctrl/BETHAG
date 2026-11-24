@@ -22,7 +22,8 @@ CREATE OR REPLACE FUNCTION public.preserve_closing_condominium_member_history() 
 SQL
 
 # Execute the exact ACL statements from the migration against real PostgreSQL.
-grep -Ei '^(revoke all on function|grant execute on function)' "$migration" \
+sed -E 's/^[[:space:]]+//' "$migration" \
+  | grep -Ei '^(revoke all on function|grant execute on function)' \
   | grep -Ei 'check_condominium_member_transfer_closure|normalize_zero_ownership_owner|preserve_closing_condominium_member_history' \
   > "$tmp_sql"
 test -s "$tmp_sql"
