@@ -42,7 +42,6 @@ const incrementalMigrations = [
   "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
   "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
   "20261105050000_reconcile_portal_registration_upsert.sql",
-  "20261124234000_revoke_postgres_global_public_function_execute.sql",
 ];
 const productionForwardMigrations = [
   "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
