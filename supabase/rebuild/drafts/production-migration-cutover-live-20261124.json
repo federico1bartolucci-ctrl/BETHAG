@@ -1,0 +1,349 @@
+{
+  "artifact": "BETHAG Production ACL cutover proposal — live-ledger refresh 2026-11-24",
+  "captured_date": "2026-11-24",
+  "status": "DRAFT_NOT_APPROVED",
+  "reviewed_source_commit": "d020633b75b23413c46d0d64ecd4bf1d568565de",
+  "repository": "federico1bartolucci-ctrl/BETHAG",
+  "branch": "fix/postgres-global-function-default-acl-20261124",
+  "production_project_ref": "tctcgptrsmvgajqjgnev",
+  "live_ledger": {
+    "rows": 267,
+    "head_version": "20261105050000",
+    "head_name": "reconcile_portal_registration_upsert",
+    "captured_at_utc": "2026-11-24 read-only Supabase list_migrations",
+    "stored_snapshot_rows": 267,
+    "exact_version_name_match": true,
+    "historical_rows_to_preserve": 267,
+    "baseline_rows_to_insert": 0,
+    "delete_or_rewrite_historical_rows": false,
+    "proposed_addition": {
+      "version": "20261124234000",
+      "name": "revoke_postgres_global_public_function_execute",
+      "file": "20261124234000_revoke_postgres_global_public_function_execute.sql",
+      "git_blob_sha": "499ea493e828243309ee2f4bb9c3242d2fbeb862",
+      "production_status": "NOT_APPLIED"
+    }
+  },
+  "live_catalog": {
+    "public_relations": 47,
+    "authenticated": {
+      "select": 47,
+      "insert": 41,
+      "update": 41,
+      "delete": 42,
+      "maintain": 0,
+      "truncate": 0,
+      "references": 0,
+      "trigger": 0
+    },
+    "service_role": {
+      "select": 47,
+      "insert": 47,
+      "update": 47,
+      "delete": 47,
+      "maintain": 0,
+      "truncate": 47,
+      "references": 47,
+      "trigger": 47
+    },
+    "anon_current_table_privileges": 0,
+    "service_role_private_schema_usage": true,
+    "authenticated_private_schema_usage": true,
+    "public_close_wrapper_security_definer": false,
+    "private_close_implementation_security_definer": true,
+    "public_close_wrapper_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_close_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "routines_inventoried": 171,
+    "routines_with_public_execute": 4,
+    "public_execute_targets": [
+      "private.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+      "public.check_condominium_member_transfer_closure(p_transfer_id uuid)",
+      "public.normalize_zero_ownership_owner()",
+      "public.preserve_closing_condominium_member_history()"
+    ],
+    "service_role_maintain_list_exactly_matches_live_relations": true,
+    "supabase_admin_defaults_untouched": true,
+    "postgres_default_maintain": 0,
+    "supabase_admin_default_maintain_entries": 3,
+    "postgres_default_anon_crud": true,
+    "workspace_members_data_column_present": false,
+    "condominiums_archived_at_column_present": true,
+    "save_condominium_archive_state_preserved": false,
+    "supabase_admin_default_acl_disposition": {
+      "provider_managed": true,
+      "provider_documentation": "https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema-448af9",
+      "immutable_from_postgres_role": true,
+      "public_default_acl_rows": 3,
+      "public_table_default_includes_maintain": true,
+      "public_objects_owned_by_supabase_admin": 0,
+      "installed_extensions_in_public": 0,
+      "production_and_qa_public_acl_match": true,
+      "qa_only_system_schema_default_acl": {
+        "schema": "supabase_functions",
+        "acl_rows": 3,
+        "schema_usage": {
+          "anon": true,
+          "authenticated": true,
+          "service_role": true
+        },
+        "relations": [
+          {
+            "name": "hooks",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          },
+          {
+            "name": "migrations",
+            "owner": "supabase_functions_admin",
+            "rls_enabled": false,
+            "anon": "SELECT INSERT UPDATE DELETE TRUNCATE",
+            "authenticated": "SELECT INSERT UPDATE DELETE TRUNCATE"
+          }
+        ],
+        "function": {
+          "name": "http_request",
+          "anon_execute": true,
+          "authenticated_execute": true,
+          "service_role_execute": true
+        },
+        "expected_upstream_bootstrap": "https://github.com/supabase/supabase/blob/master/docker/volumes/db/webhooks.sql",
+        "disposition": "PRESERVE_PROVIDER_SYSTEM_SCHEMA; VERIFY_NOT_EXPOSED_BEFORE_RELEASE",
+        "exposure_status": "VERIFIED_NOT_EXPOSED",
+        "note": "Supabase upstream webhooks bootstrap grants schema USAGE and default ALL privileges to anon/authenticated/service_role. The schema and objects are internal webhook infrastructure; do not normalize with BETHAG migrations. Production Dashboard verification on 2026-11-07 confirmed supabase_functions is absent from the exposed-schema choices; preserve this provider-managed schema and recheck immediately before cutover.",
+        "role_level_override": {
+          "pgrst_db_schemas_override_present": false,
+          "authenticator_role_config_checked": true,
+          "database_role_config_checked": true,
+          "effective_dashboard_data_api_config": "VERIFIED_BY_OWNER_IN_PRODUCTION_DASHBOARD_2026-11-07"
+        },
+        "exposure_evidence": {
+          "verified_date": "2026-11-07",
+          "verified_by": "Project owner / Production Dashboard operator",
+          "exposed_schemas": [
+            "graphql_public",
+            "public"
+          ],
+          "available_schema_choices": [
+            "graphql_public",
+            "private",
+            "public"
+          ],
+          "private_exposed": false,
+          "supabase_functions_present_in_exposed_schema_choices": false,
+          "exposed_tables": "0/48",
+          "exposed_functions": "0/171",
+          "automatic_new_table_exposure": false,
+          "extra_search_path": [
+            "public",
+            "extensions"
+          ],
+          "note": "The owner visually verified the Production Data API settings in Supabase Dashboard. supabase_functions was absent from the available exposed-schema choices and therefore was not exposed by this setting. This is Dashboard evidence, not an independent connector read."
+        }
+      },
+      "disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
+      "controls": [
+        "Do not attempt ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin.",
+        "Keep extensions installed outside public unless explicitly reviewed.",
+        "Continue auditing effective privileges on actual application relations and routines."
+      ]
+    },
+    "captured_at_utc": "2026-11-24 read-only catalog queries",
+    "global_postgres_function_default_acl": "{=X/postgres,postgres=X/postgres}",
+    "public_schema_postgres_function_default_acl": "{postgres=X/postgres}",
+    "storage_schema_postgres_function_default_acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "public_functions": 130,
+    "public_functions_with_public_execute": 0,
+    "qa_matches_production_acl_observation": true,
+    "note": "Global default EXECUTE for PUBLIC remains. No current public function has PUBLIC EXECUTE. Storage schema-specific defaults are intentional and must be preserved."
+  },
+  "sequence": [
+    {
+      "order": 1,
+      "file": "20261124234000_revoke_postgres_global_public_function_execute.sql",
+      "git_blob_sha": "499ea493e828243309ee2f4bb9c3242d2fbeb862",
+      "purpose": "Remove the built-in global EXECUTE default inherited by future postgres-owned functions; preserve existing routine ACLs and schema-specific intentional grants, including storage grants.",
+      "postcondition": "The global postgres function default ACL grants EXECUTE to neither PUBLIC nor anon/authenticated/service_role; owner retains EXECUTE; existing function ACLs and Supabase-managed role defaults are unchanged; schema-specific storage grants remain intact.",
+      "production_status": "PENDING_NOT_APPLIED"
+    }
+  ],
+  "execution_order": [
+    "Riconfermare in sola lettura il ledger Production a 267 righe, head 20261105050000, preservando tutte le 267 coppie versione/nome.",
+    "Confermare il catalogo ACL: default globale postgres EXECUTE presente; default specifici storage da preservare; nessuna funzione public esistente con PUBLIC EXECUTE.",
+    "Rendere la migrazione candidata parte della catena clean-install (29 file complessivi), verificando hash Git blob e ordine cronologico.",
+    "Creare preflight e postflight specifici per una sola migrazione: preflight 267/head 20261105050000; postflight 268/head 20261124234000; verificare ACL e grant storage.",
+    "Aggiornare un runner dedicato che accetti solo la proposta e 267 righe storiche, lasciando immutato il runner storico 19/248/267; rehearsal solo PostgreSQL 17 locale.",
+    "Eseguire clean-install 29 file, regressione ACL, rehearsal runner, controlli sicurezza e CI completa. APP-01..APP-15 non sono PASS se saltati.",
+    "QA ha 283 righe e storia diversa: verifica compatibilità senza applicare migrazioni, resettare o alterare dati.",
+    "Ricalcolare fingerprint sul commit finale e acquisire nuova approvazione esplicita per SHA, hash, target e finestra; nessuna autorizzazione è presente.",
+    "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only."
+  ],
+  "expected_postflight": {
+    "ledger_rows": 268,
+    "new_canonical_rows": [
+      {
+        "version": "20261124234000",
+        "name": "revoke_postgres_global_public_function_execute"
+      }
+    ],
+    "authenticated": {
+      "select": 47,
+      "insert": 41,
+      "update": 41,
+      "delete": 42,
+      "maintain": 0,
+      "truncate": 0,
+      "references": 0,
+      "trigger": 0
+    },
+    "service_role": {
+      "select": 47,
+      "insert": 47,
+      "update": 47,
+      "delete": 47,
+      "maintain": 0,
+      "truncate": 47,
+      "references": 47,
+      "trigger": 47
+    },
+    "anon_current_table_privileges": 0,
+    "public_execute_allowlist": [],
+    "public_close_wrapper_security_definer": false,
+    "private_schema_usage": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_close_execute": {
+      "anon": false,
+      "authenticated": true,
+      "service_role": true
+    },
+    "workspace_members_data_column_present": true,
+    "save_condominium_archive_state_preserved": true,
+    "original_247_rows_unchanged": true,
+    "canonical_rows_added": 1,
+    "latest_ledger_version_after_sort": "20261124234000",
+    "supabase_admin_default_acl_maintain_entries": 3,
+    "provider_default_acl_disposition_required": false,
+    "archive_condominium_lifecycle_functions_match_qa": true,
+    "incoming_coowner_metadata_trigger_present": true,
+    "authenticated_private_invoker_grants": 18,
+    "private_is_workspace_staff_authenticated_execute": false,
+    "trigger_functions_not_public_executable": true,
+    "authenticated_structural_privilege_relations": 0,
+    "fund_availability_authenticated_structural_privileges": false,
+    "anon_default_table_privileges": 0,
+    "transfer_closure_helpers_anon_execute": false,
+    "transfer_closure_helpers_authenticated_execute": true,
+    "supabase_admin_default_acl_disposition": "ACCEPTED_PROVIDER_MANAGED_BASELINE",
+    "original_248_rows_unchanged": true,
+    "portal_registration_upsert_helper": true,
+    "portal_registration_helper_direct_execute": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": false
+    },
+    "portal_registration_authenticated_callers": true,
+    "original_267_rows_unchanged": true
+  },
+  "critical_execution_constraint": {
+    "observed": "Production live ledger verified read-only at 267 rows/head 20261105050000 on 2026-11-24. QA has 283 rows and distinct history. The previous 248-row freeze is historical only.",
+    "rule": "Preserve all 267 Production rows; add only the single proposed migration after all gates. QA must not be reset or mutated to force parity.",
+    "status": "DRAFT_NOT_APPROVED_NO_PRODUCTION_AUTHORIZATION"
+  },
+  "no_go_gates": [
+    "Production ledger differs from 267 rows/head 20261105050000 at final preflight.",
+    "Any historical version/name pair or candidate SQL hash differs.",
+    "Global postgres function default no longer exhibits the reviewed defect or storage schema grants differ from baseline.",
+    "PostgreSQL 17 clean-install, ACL regression, guarded runner rehearsal or exact-SHA CI fails or is skipped.",
+    "QA history cannot be reconciled without reset or remote writes.",
+    "APP acceptance, Data API exposure, backup disposition or operator prerequisites are not freshly verified.",
+    "No new explicit owner approval for exact final SHA, fingerprint and candidate hash exists."
+  ],
+  "safety": "Read-only live verification 2026-11-24: Production ledger 267 rows/head 20261105050000; all 19 prior sequence entries present by version/name. Only candidate 20261124234000 is absent. QA ledger 283 rows and distinct history; no reset, migration or data change authorized. Both catalogs show global postgres function default {=X/postgres,postgres=X/postgres}, public-schema default {postgres=X/postgres}, storage-specific grants to anon/authenticated/service_role preserved; 130 public functions and zero with PUBLIC EXECUTE. Historical 248-row/19-increment authorization is not reused. No remote writes, migrations, deploys or merges performed.",
+  "rehearsal_evidence": {
+    "status": "PENDING",
+    "target": "isolated PostgreSQL 17 only",
+    "historical_rows_assumption": 267,
+    "proposed_canonical_rows": 1,
+    "proposed_final_ledger_rows": 268,
+    "proposed_clean_install_files": 29,
+    "global_function_default_acl_regression": "PASS on earlier PR CI only; rerun required on final proposal SHA",
+    "full_clean_install": "NOT RUN",
+    "guarded_runner": "NOT RUN",
+    "qa_authenticated_collaudo": "NOT RUN",
+    "production_ddl_or_ledger_mutations": false,
+    "production_execution_authorized": false,
+    "production_execution_performed": false
+  },
+  "clean_install": {
+    "migration_file_count": 29,
+    "baseline_files": [
+      "20261017000001_bethag_baseline_schema.sql",
+      "20261017000002_bethag_baseline_indexes_views.sql",
+      "20261017000003_bethag_baseline_functions.sql",
+      "20261017000004_bethag_baseline_security.sql",
+      "20261017000005_bethag_baseline_grants.sql"
+    ],
+    "existing_canonical_head": "20261022202747_harden_close_member_transfer_search_path.sql",
+    "pending_canonical_increments": [
+      "20261022210629_restrict_private_function_public_execute.sql",
+      "20261022210630_harden_default_privileges_and_private_execute.sql",
+      "20261022213544_restrict_close_member_transfer_execute.sql",
+      "20261022233440_align_public_function_execute.sql",
+      "20261023000001_revoke_authenticated_maintain.sql",
+      "20261023000002_revoke_default_maintain.sql",
+      "20261023000003_revoke_service_role_maintain.sql",
+      "20261023000004_application_default_table_privileges.sql",
+      "20261023000733_use_invoker_for_close_transfer_rpc.sql",
+      "20261027100000_revoke_public_execute_from_transfer_closure_helpers.sql",
+      "20261027110000_repair_service_role_transfer_invoker_path.sql",
+      "20261028100000_fix_collaborator_module_permission_boolean.sql",
+      "20261102100100_add_workspace_member_profile_data.sql",
+      "20261102100200_preserve_server_owned_condominium_archive_state.sql",
+      "20261104130000_reconcile_qa_security_and_coowner_rpcs.sql",
+      "20261105010000_reconcile_postgres_public_table_default_acl.sql",
+      "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
+      "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
+      "20261105050000_reconcile_portal_registration_upsert.sql",
+      "20261124234000_revoke_postgres_global_public_function_execute.sql"
+    ],
+    "exact_production_forward_files": [
+      "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
+      "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
+      "20261103070901_grant_service_role_private_resend_event_rpc.sql"
+    ],
+    "ordering": "Proposed only: 29 deployable migration files in lexicographic 14-digit version order for a new installation; existing Production cutover remains subject to fresh live-ledger reconciliation and exact approval."
+  },
+  "backup_restore_risk_acceptance": {
+    "accepted": true,
+    "accepted_by": "Project owner (user)",
+    "accepted_at_utc": "2026-10-27T08:56:11Z",
+    "evidence_reference": "ChatGPT project conversation, 2026-10-27 08:56:11 UTC: user considered the visible scheduled physical backups sufficient for preparation and declined the paid Restore to a New Project physical-restore test.",
+    "scope": "Residual risk accepted: provider-managed physical backup restore was not independently tested; the local logical-dump restore was verified and scheduled physical backup visibility was confirmed.",
+    "physical_restore_status": "NOT EXECUTED",
+    "paid_restore_to_new_project": "DECLINED — USD 9.68/month; no paid recovery project authorized."
+  },
+  "accepted_residual_risks": [
+    "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
+  ],
+  "review_disposition": {
+    "status": "DRAFT_PENDING_TECHNICAL_REVIEW",
+    "independent_review_recorded": false,
+    "owner_approval_required": true,
+    "limitation": "Adds one migration to current 267-row Production ledger. Does not inherit historical 19-migration authorization; not executable."
+  },
+  "proposal_created_at_utc": "2026-11-24",
+  "approval_scope": "NONE",
+  "production_apply_authorized": false
+}
