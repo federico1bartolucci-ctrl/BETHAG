@@ -272,3 +272,10 @@ L'audit della PR #432 ha evidenziato che cinque timestamp dei candidati contabil
 - `20261124233500_lock_fiscal_year_parent_rows.sql`
 
 Portata nel branch #431 la validazione calendario (anno/mese/giorno, bisestili, ora, minuti e secondi) e la relativa regressione runtime. Il controllo è ora usato sia dal validatore delle 28 migrazioni canoniche sia dalla rehearsal combinata delle 28 canoniche + 10 candidate. La regressione è stata aggiunta a `npm test`. La CI sul nuovo head è in corso; fino al suo completamento il Punto 1 è da considerare **RIAPERTO — verifica timestamp in attesa di CI esatta**. Nessun database remoto è stato modificato.
+
+
+### Regressione payment-allocation — fix riferimento migrazione — 24 novembre 2026
+
+La CI sul commit `9bef89781fb5a2a8d75500d785039cc4aa09252c` ha individuato un errore di harness, non SQL: `scripts/test-work-progress-payment-allocation.sh` puntava ancora ai nomi pre-rinominazione `20261124240200_guard_ledger_entries_linked_to_work_progress.sql` e `20261124240400_harden_work_progress_payment_allocation.sql`. Entrambi i riferimenti sono stati aggiornati rispettivamente a `20261124233300_guard_ledger_entries_linked_to_work_progress.sql` e `20261124233400_harden_work_progress_payment_allocation.sql`.
+
+Commit di correzione: `5cb356cfc93ffde3f9bcc0b4690f16c10892df7d`. Il job work-delete-sal-guard e la rehearsal cronologica sul precedente SHA erano PASS; il job payment-allocation falliva esclusivamente perché il file SQL richiesto non esisteva al vecchio percorso. La correzione è ora in attesa di CI esatta sul nuovo head. Il Punto 1 resta RIAPERTO fino a regressione PostgreSQL 17 completa PASS. Nessuna modifica a QA/Production.
