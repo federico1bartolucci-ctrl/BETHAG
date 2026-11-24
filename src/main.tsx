@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
+import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
@@ -3385,14 +3385,43 @@ function App() {
       ];
       const errors: string[] = [];
       const skippedSecurityRows: string[] = [];
+      let restoredCondominiumIds = new Set<string>();
       if (supabase) {
         for (const table of restoreOrder) {
           const rows = Array.isArray(backup.backend?.[table]) ? backup.backend[table] : [];
           if (!rows.length) continue;
 
+          if (table === "condominiums") {
+            const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));
+            const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
+            if (error) {
+              errors.push(table + ": " + error.message);
+            } else {
+              restoredCondominiumIds = new Set(
+                normalized
+                  .map((row: any) => String(row?.id ?? ""))
+                  .filter((id: string) => id.length > 0)
+              );
+            }
+            continue;
+          }
+
+          // condominium_members è scoped tramite condominium_id: la tabella non ha workspace_id.
+          // Si ripristinano solo righe collegate a condomini inclusi e ripristinati nel workspace corrente.
+          if (table === "condominium_members") {
+            const scoped = filterCondominiumMembersToWorkspace(rows, [...restoredCondominiumIds]);
+            if (scoped.skipped > 0) {
+              errors.push(table + ": " + scoped.skipped + " record ignorati perché il condominio di riferimento non è presente nel backup del workspace.");
+            }
+            if (!scoped.rows.length) continue;
+            const { error } = await supabase.from(table).upsert(scoped.rows, { onConflict: "id" });
+            if (error) errors.push(table + ": " + error.message);
+            continue;
+          }
+
           // Le membership sono dati di autorizzazione, non semplici dati anagrafici:
-          // un backup modificato manualmente non deve poter creare un nuovo
-          // amministratore. Il restore può aggiornare solo membership non-admin.
+          // un backup modificato manualmente non deve poter creare un nuovo amministratore.
+          // Il restore può aggiornare solo membership non-admin.
           if (table === "workspace_members") {
             const safeRows = rows.filter((row: any) => {
               const role = String(row?.role || "").toLowerCase();
@@ -3415,7 +3444,7 @@ function App() {
             continue;
           }
 
-          const normalized = rows.map((row: any) => ({...row, workspace_id: profile.workspaceId}));
+          const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));
           const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
           if (error) errors.push(table + ": " + error.message);
         }
@@ -3455,10 +3484,28 @@ function App() {
     const backend: Record<string, unknown> = {};
     const errors: Record<string, string> = {};
     if (supabase && profile.workspaceId) {
-      await Promise.all(tableNames.map(async (table) => {
+      try {
+        backend.condominiums = await loadPaginatedWorkspaceRows(supabase, profile.workspaceId, "condominiums", "id", null);
+      } catch (e: any) {
+        errors.condominiums = e?.message || "Errore di lettura";
+      }
+      const condominiumIds = Array.isArray(backend.condominiums)
+        ? (backend.condominiums as any[])
+            .map((condominium) => String(condominium?.id ?? ""))
+            .filter((id) => id.length > 0)
+        : [];
+      await Promise.all(tableNames.filter((table) => table !== "condominiums").map(async (table) => {
         try {
-          const orderBy = table === "workspace_members" ? "user_id" : "id";
-          const rows = await loadPaginatedWorkspaceRows(supabase, profile.workspaceId, table, orderBy, null);
+          let rows: any[];
+          if (table === "condominium_members") {
+            if (errors.condominiums) {
+              throw new Error("Impossibile determinare i condomini del workspace: " + errors.condominiums);
+            }
+            rows = await loadPaginatedRowsByInFilter(supabase, table, "condominium_id", condominiumIds, "id");
+          } else {
+            const orderBy = table === "workspace_members" ? "user_id" : "id";
+            rows = await loadPaginatedWorkspaceRows(supabase, profile.workspaceId, table, orderBy, null);
+          }
           backend[table] = rows;
         } catch (e: any) {
           errors[table] = e?.message || "Errore di lettura";
