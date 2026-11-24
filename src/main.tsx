@@ -3491,7 +3491,7 @@ function App() {
               const skippedReason = table === "condominium_allocation_intakes"
                 ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato, un riferimento collegato non appartiene allo stesso workspace e condominio o il record è duplicato nel backup"
                 : table === "condominium_creation_intakes"
-                  ? "il condominio creato non è stato ripristinato, il percorso Storage non appartiene al workspace corrente, l'attribuzione non è valida o il record è duplicato nel backup"
+                  ? "il condominio creato non è stato ripristinato, il percorso Storage non appartiene al workspace corrente o il record è duplicato nel backup"
                   : "l'ID esiste in un altro workspace o è duplicato nel backup";
               errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
             }
