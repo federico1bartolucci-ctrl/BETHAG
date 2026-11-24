@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { loadWorkspacePaginatedRows } from "./lib/workspacePagination.mjs";
 import { localISODate, localISODateAfterDays } from "./lib/local-date";
@@ -16,16 +16,17 @@ export default function RegisterPage({workspaceId,condominiums,isAdministrator=f
  const [supplierForm,setSupplierForm]=useState({business_name:"",contact_name:"",fiscal_code:"",vat_number:"",email:"",phone:"",category:"",contract_start:"",contract_end:"",notes:""});
  const [editing,setEditing]=useState<string|null>(null); const [editingSupplier,setEditingSupplier]=useState<string|null>(null); const [showWorkForm,setShowWorkForm]=useState(false); const [editingWork,setEditingWork]=useState<string|null>(null); const [workForm,setWorkForm]=useState({title:"",category:"Manutenzione",description:"",status:"Da programmare",priority:"Media",supplier_id:"",register_item_id:"",fund_id:"",start_date:"",expected_end_date:"",actual_end_date:"",estimated_amount:0,approved_amount:0,actual_amount:0,progress_percent:0,notes:""}); const [showItemForm,setShowItemForm]=useState(false); const [showSupplierForm,setShowSupplierForm]=useState(false);
 
- async function resolve(){if(!supabase||selected==="all"){setDbId(null);return;}const {data,error}=await supabase.from("condominiums").select("id").eq("workspace_id",workspaceId).eq("legacy_id",selected).maybeSingle();if(error)throw error;setDbId(data?.id??null);}
- async function load(){if(!supabase){setLoading(false);return;}setLoading(true);setError("");try{await resolve();const [a,b,d,e,fnd,pq]=await Promise.all([
+ const loadRequestRef=useRef(0);
+ async function resolve():Promise<string|null>{if(!supabase||selected==="all")return null;const {data,error}=await supabase.from("condominiums").select("id").eq("workspace_id",workspaceId).eq("legacy_id",selected).maybeSingle();if(error)throw error;return data?.id??null;}
+ async function load(){const requestId=++loadRequestRef.current;if(!supabase){setDbId(null);setLoading(false);return;}setDbId(null);setLoading(true);setError("");try{const resolvedDbId=await resolve();const [a,b,d,e,fnd,pq]=await Promise.all([
  loadWorkspacePaginatedRows(supabase,"condominium_register_items",workspaceId,{orderBy:"expiry_date"}),
  loadWorkspacePaginatedRows(supabase,"condominium_suppliers",workspaceId,{orderBy:"business_name"}),
  loadWorkspacePaginatedRows(supabase,"condominium_works",workspaceId,{orderBy:"start_date"}),
  loadWorkspacePaginatedRows(supabase,"documents",workspaceId,{orderBy:"created_at"}),
  loadWorkspacePaginatedRows(supabase,"condominium_funds",workspaceId,{orderBy:"name"}),
  loadWorkspacePaginatedRows(supabase,"condominium_work_progress",workspaceId,{orderBy:"progress_date"})
- ]);setItems(a.data??[]);setSuppliers(b.data??[]);setWorks(d.data??[]);setDocuments(e.data??[]);setFunds(fnd.data??[]);setProgress(pq.data??[]);}catch(e:any){setError(e?.message||"Impossibile caricare il registro.");}finally{setLoading(false);}}
- useEffect(()=>{load();},[workspaceId,selected]);
+ ]);if(requestId!==loadRequestRef.current)return;setDbId(resolvedDbId);setItems(a.data??[]);setSuppliers(b.data??[]);setWorks(d.data??[]);setDocuments(e.data??[]);setFunds(fnd.data??[]);setProgress(pq.data??[]);}catch(e:any){if(requestId===loadRequestRef.current)setError(e?.message||"Impossibile caricare il registro.");}finally{if(requestId===loadRequestRef.current)setLoading(false);}}
+ useEffect(()=>{void load();},[workspaceId,selected]);
 
  const scopedItems=useMemo(()=>dbId?items.filter(x=>x.condominium_id===dbId):[],[items,dbId]); const scopedSuppliers=useMemo(()=>dbId?suppliers.filter(x=>x.condominium_id===dbId):[],[suppliers,dbId]); const scopedWorks=useMemo(()=>dbId?works.filter(x=>x.condominium_id===dbId):[],[works,dbId]);
  const today=localISODate();
