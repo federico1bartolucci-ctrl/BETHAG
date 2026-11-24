@@ -259,3 +259,16 @@ Questa evidenza aggiorna e sostituisce il riferimento del 5 novembre: sul branch
 **Implicazione per l'audit:** il rischio di invocazione diretta delle funzioni private tramite endpoint Data API/PostgREST non è presente nella configurazione QA osservata. Resta però valido il rilievo PostgreSQL prospettico: il default globale EXECUTE per PUBLIC può essere ereditato da nuove funzioni create dal ruolo `postgres`. Il draft forward-only resta una misura di hardening difensivo da valutare separatamente; non è stato applicato. La schermata QA non prova la configurazione Data API di Production e non va estesa a Production per inferenza.
 
 **Esito verifica Data API QA: CHIUSA — screenshot del branch corretto acquisito e valori leggibili.** Il Punto 3 resta IN CORSO esclusivamente per la decisione/approvazione separata sul draft forward-only e per la relativa eventuale applicazione controllata; nessuna modifica remota è autorizzata da questa verifica.
+
+
+### Correzione timestamp candidati — 24 novembre 2026
+
+L'audit della PR #432 ha evidenziato che cinque timestamp dei candidati contabili avevano ora 24 e non erano timestamp di calendario validi. I file sono stati rinominati senza modificarne il contenuto, mantenendo l'ordine cronologico e l'insieme di dieci candidati:
+
+- `20261124233100_audit_work_details_and_references.sql`
+- `20261124233200_normalize_closing_member_installment_guard.sql`
+- `20261124233300_guard_ledger_entries_linked_to_work_progress.sql`
+- `20261124233400_harden_work_progress_payment_allocation.sql`
+- `20261124233500_lock_fiscal_year_parent_rows.sql`
+
+Portata nel branch #431 la validazione calendario (anno/mese/giorno, bisestili, ora, minuti e secondi) e la relativa regressione runtime. Il controllo è ora usato sia dal validatore delle 28 migrazioni canoniche sia dalla rehearsal combinata delle 28 canoniche + 10 candidate. La regressione è stata aggiunta a `npm test`. La CI sul nuovo head è in corso; fino al suo completamento il Punto 1 è da considerare **RIAPERTO — verifica timestamp in attesa di CI esatta**. Nessun database remoto è stato modificato.
