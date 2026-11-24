@@ -206,7 +206,7 @@ SQL
   grep -F "L'esercizio contabile di destinazione è chiuso: modifica non consentita." "$child_log"
 
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
-DO \\$verify\\$
+DO \$verify\$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.$child_table WHERE id='$child_id') THEN
     RAISE EXCEPTION 'Child row persisted during fiscal-year closure: $label';
@@ -218,7 +218,7 @@ BEGIN
     RAISE EXCEPTION 'Target fiscal year did not close: $label';
   END IF;
 END
-\\$verify\\$;
+\$verify\$;
 SQL
 }
 
