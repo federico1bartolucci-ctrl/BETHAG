@@ -23,7 +23,7 @@ ALTER TABLE public.condominium_work_progress
   ADD COLUMN IF NOT EXISTS percentage numeric NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS notes text NOT NULL DEFAULT '';
 
-\i supabase/migrations/20261124223000_audit_all_work_progress_fields.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124223000_audit_all_work_progress_fields.sql
 
 DROP TRIGGER IF EXISTS audit_condominium_work_progress_change_test
   ON public.condominium_work_progress;
