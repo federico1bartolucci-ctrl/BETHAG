@@ -1848,6 +1848,10 @@ revoke all on function private.can_access_resident_condominium_module(target_con
 
 grant execute on function private.can_access_resident_condominium_module(target_condominium uuid, required_permission text) to "authenticated";
 
+revoke all on function private.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid) from public, anon, authenticated, service_role;
+
+grant execute on function private.admin_approve_portal_registration(p_request_id uuid, p_member_id uuid) to "authenticated";
+
 revoke all on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
 grant execute on function private.check_condominium_member_transfer_closure(p_transfer_id uuid) to "authenticated", "service_role";
