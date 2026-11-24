@@ -290,11 +290,11 @@ BEFORE INSERT OR UPDATE ON public.condominium_installments
 FOR EACH ROW EXECUTE FUNCTION public.validate_condominium_installment_total();
 SQL
 
-# Reproduce a second lock-order cycle when two installments move in opposite
-# directions between ledger entries in different fiscal years. The BEFORE
-# closed-year guard holds each installment's own fiscal-year row; the AFTER
-# status trigger then locks both ledger parents. Updating the second ledger
-# fires the ledger closed-year guard and waits on the other transaction's year.
+# Reproduce the full legacy lock-order cycle for opposite-direction moves.
+# The BEFORE installment-total trigger locks only NEW.ledger_entry_id, while
+# the closed-year guard holds each installment's fiscal-year row. The AFTER
+# status trigger then requests both ledger parents in UUID order; updating the
+# second ledger also waits on the other transaction's fiscal-year row.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO public.condominium_fiscal_years
   (id, workspace_id, condominium_id, start_date, end_date, status)
@@ -502,6 +502,26 @@ $verify$;
 SQL
 
 echo "CROSS_LEDGER_LOCK_ORDER_FIXED: both opposite-direction moves committed and both ledger aggregates were refreshed"
+
+DO $amount_guard$
+BEGIN
+  BEGIN
+    UPDATE public.condominium_installments
+    SET amount=51
+    WHERE id='90000000-0000-0000-0000-000000000130';
+    RAISE EXCEPTION 'TEST_EXPECTED_INSTALLMENT_TOTAL_OVERFLOW_BLOCK_NOT_RAISED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='TEST_EXPECTED_INSTALLMENT_TOTAL_OVERFLOW_BLOCK_NOT_RAISED' THEN
+      RAISE;
+    END IF;
+    IF SQLERRM <> 'Il totale delle rate supera l''importo della spesa' THEN
+      RAISE;
+    END IF;
+  END;
+END
+$amount_guard$;
+
+echo "PASS: installment-total ceiling remains enforced after deterministic parent locking"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DROP TRIGGER IF EXISTS trg_zz_test_pause_installment_before_status_sync
