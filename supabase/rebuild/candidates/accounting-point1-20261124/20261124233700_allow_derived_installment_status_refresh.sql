@@ -139,3 +139,67 @@ begin
   return new;
 end;
 $function$;
+
+
+-- The installment-total guard must acquire both old and new ledger parents in
+-- the same UUID order as the AFTER status-sync trigger. Locking only NEW first
+-- lets opposite-direction moves hold A/B in reverse order before sync begins.
+CREATE OR REPLACE FUNCTION public.validate_condominium_installment_total()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_old_ledger_id uuid;
+  v_new_ledger_id uuid;
+  v_ledger_amount numeric;
+  v_ledger_found boolean := false;
+  v_parent record;
+  v_total numeric;
+begin
+  if new.ledger_entry_id is null then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    v_old_ledger_id := old.ledger_entry_id;
+  end if;
+  v_new_ledger_id := new.ledger_entry_id;
+
+  for v_parent in
+    select le.id, le.amount, le.workspace_id, le.condominium_id, le.direction
+    from public.condominium_ledger_entries le
+    where (v_old_ledger_id is not null and le.id = v_old_ledger_id)
+       or (v_new_ledger_id is not null and le.id = v_new_ledger_id)
+    order by le.id
+    for update
+  loop
+    if v_parent.id = v_new_ledger_id
+       and v_parent.workspace_id = new.workspace_id
+       and v_parent.condominium_id = new.condominium_id
+       and v_parent.direction = 'Uscita' then
+      v_ledger_amount := v_parent.amount;
+      v_ledger_found := true;
+    end if;
+  end loop;
+
+  if not v_ledger_found or v_ledger_amount is null or v_ledger_amount <= 0 then
+    raise exception 'Movimento contabile della rata non valido';
+  end if;
+
+  select coalesce(sum(i.amount), 0)
+    into v_total
+  from public.condominium_installments i
+  where i.ledger_entry_id = new.ledger_entry_id
+    and i.workspace_id = new.workspace_id
+    and i.condominium_id = new.condominium_id
+    and i.id is distinct from new.id;
+
+  if round(v_total + new.amount, 2) > round(v_ledger_amount, 2) + 0.005 then
+    raise exception 'Il totale delle rate supera l''importo della spesa';
+  end if;
+
+  return new;
+end;
+$function$;
