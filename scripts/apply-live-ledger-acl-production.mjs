@@ -72,7 +72,7 @@ async function main(){
   exact(manifest.live_ledger?.rows,267,"STOP: manifest live ledger row count differs.");
   exact(manifest.live_ledger?.head_version,"20261105050000","STOP: manifest live ledger head differs.");
 
-  const paths=["scripts/apply-live-ledger-acl-production.mjs","supabase/migrations/"+candidate,
+  const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/migrations/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
     "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
     "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
