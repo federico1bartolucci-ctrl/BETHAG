@@ -77,7 +77,7 @@ VALUES
    '00000000-0000-0000-0000-000000000002',
    '00000000-0000-0000-0000-000000000031', 200.00, 150.00);
 
-DO $rls_test$$
+DO $rls_test$
 BEGIN
   BEGIN
     DELETE FROM public.condominium_ledger_entries
@@ -152,5 +152,5 @@ BEGIN
       RAISE;
     END IF;
   END;
-END $$;
+END $rls_test$;
 RESET ROLE;
