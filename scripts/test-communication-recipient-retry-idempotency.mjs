@@ -310,6 +310,28 @@ try {
   assert.equal(new Date(completedState.rows[0].email_prepared_at).toISOString(), completedAt,
     "Re-preparing an already-sent communication must not erase its prior preparation timestamp.");
 
+  const inFlightCommunicationId = "99999999-9999-4999-8999-999999999998";
+  const inFlightRecipientId = "aaaaaaaa-1111-4111-8111-111111111112";
+  await db.query(
+    "INSERT INTO public.communications(id,workspace_id,condominium_id,title,body,published,email_status,email_prepared_at) VALUES ($1,$2,$3,'Send in progress','Body',true,'prepared',$4)",
+    [inFlightCommunicationId, workspaceId, condominiumId, completedAt],
+  );
+  await db.query(
+    `INSERT INTO public.communication_recipients
+      (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,queued_at)
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario','owner','queued',now())`,
+    [inFlightRecipientId, inFlightCommunicationId, workspaceId, condominiumId],
+  );
+  await db.query("SELECT private.prepare_communication_recipients($1)", [inFlightCommunicationId]);
+  const inFlightState = await db.query(
+    "SELECT email_status,email_prepared_at FROM public.communications WHERE id=$1",
+    [inFlightCommunicationId],
+  );
+  assert.equal(inFlightState.rows[0].email_status, "prepared",
+    "A concurrent queued recipient must not make an in-flight communication appear empty.");
+  assert.equal(new Date(inFlightState.rows[0].email_prepared_at).toISOString(), completedAt,
+    "A concurrent queued recipient must retain the current preparation timestamp.");
+
   console.log("Communication recipient retry idempotency PostgreSQL runtime regression: PASS");
 } finally {
   await db.close();
