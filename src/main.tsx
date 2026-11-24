@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { buildManualAssemblyMinutesDraft, canConfirmAssemblyMinutes } from "./lib/assemblyAudioWorkflow.mjs";
+import { buildManualAssemblyMinutesDraft, canConfirmAssemblyMinutes, canPublishAssemblyMinutes, reconcileAssemblyMinutesAfterEdit } from "./lib/assemblyAudioWorkflow.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -4705,12 +4705,14 @@ function App() {
       return;
     }
 
+    const assemblyForSave = reconcileAssemblyMinutesAfterEdit(assemblyForm);
+
     if (selectedAssembly) {
       setAssemblies((current) =>
         current.map((item) =>
           item.id === selectedAssembly.id
             ? {
-                ...assemblyForm,
+                ...assemblyForSave,
                 id: selectedAssembly.id,
               }
             : item
@@ -4720,7 +4722,7 @@ function App() {
       setAssemblies((current) => [
         ...current,
         {
-          ...assemblyForm,
+          ...assemblyForSave,
           id: makeId(),
         },
       ]);
@@ -4874,6 +4876,13 @@ function App() {
       )
     )
       return;
+
+    const assembly = assemblies.find((item) => item.id === id);
+    if (!assembly) return;
+    if (!assembly.publishedToPortal && !canPublishAssemblyMinutes(assembly)) {
+      alert("Prima di pubblicare il verbale, genera una bozza aggiornata e confermala.");
+      return;
+    }
 
     setAssemblies((current) =>
       current.map((item) =>
