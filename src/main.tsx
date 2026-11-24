@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore, prepareWorkspaceRowsForBackupRestore } from "./lib/backupSecurityRestore.mjs";
+import { prepareAllocationIntakesForBackupRestore } from "./lib/backupAllocationIntakesRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
@@ -3455,8 +3456,15 @@ function App() {
           try {
             const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
             const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
-            const prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
-            if (prepared.skipped > 0) errors.push(table + ": " + prepared.skipped + " record ignorati perché l'ID esiste in un altro workspace o è duplicato nel backup.");
+            const prepared = table === "condominium_allocation_intakes"
+              ? prepareAllocationIntakesForBackupRestore(rows, profile.workspaceId, existingRows, [...restoredCondominiumIds])
+              : prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+            if (prepared.skipped > 0) {
+              const skippedReason = table === "condominium_allocation_intakes"
+                ? "l'ID appartiene a un altro workspace, il condominio non è stato ripristinato o il record è duplicato nel backup"
+                : "l'ID esiste in un altro workspace o è duplicato nel backup";
+              errors.push(table + ": " + prepared.skipped + " record ignorati perché " + skippedReason + ".");
+            }
             for (const workspaceRow of prepared.updateRows) {
               const { data: updated, error } = await supabase.from(table).update(workspaceRow)
                 .eq("id", workspaceRow.id).eq("workspace_id", profile.workspaceId)
