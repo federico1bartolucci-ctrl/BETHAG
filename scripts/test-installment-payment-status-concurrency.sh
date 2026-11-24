@@ -222,6 +222,22 @@ run_payment_status_race   "fixed_payment_status"   "90000000-0000-0000-0000-0000
 
 echo "Installment payment-status concurrency PostgreSQL regression: PASS"
 
+# Install the real fiscal-year guards on the isolated fixture tables. The
+# supporting-regression database is intentionally minimal and does not load the
+# complete baseline trigger inventory by itself.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "supabase/rebuild/candidates/accounting-point1-20261124/20261124233500_lock_fiscal_year_parent_rows.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DROP TRIGGER IF EXISTS trg_block_closed_installments ON public.condominium_installments;
+CREATE TRIGGER trg_block_closed_installments
+BEFORE INSERT OR DELETE OR UPDATE ON public.condominium_installments
+FOR EACH ROW EXECUTE FUNCTION public.prevent_closed_condominium_accounting();
+
+DROP TRIGGER IF EXISTS trg_block_closed_ledger ON public.condominium_ledger_entries;
+CREATE TRIGGER trg_block_closed_ledger
+BEFORE INSERT OR DELETE OR UPDATE ON public.condominium_ledger_entries
+FOR EACH ROW EXECUTE FUNCTION public.prevent_closed_condominium_accounting();
+SQL
+
 # Reproduce a second lock-order cycle when two installments move in opposite
 # directions between ledger entries in different fiscal years. The BEFORE
 # closed-year guard holds each installment's own fiscal-year row; the AFTER
