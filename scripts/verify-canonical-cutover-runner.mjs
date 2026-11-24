@@ -9,6 +9,7 @@ import { releaseFingerprint } from "./lib/release-readiness-utils.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const manifest = JSON.parse(await readFile(join(root, "supabase/rebuild/production-migration-cutover-freeze-20261105.json"), "utf8"));
+const liveProposal = JSON.parse(await readFile(join(root, "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json"), "utf8"));
 const appEvidence = JSON.parse(await readFile(join(root, "supabase/rebuild/qa-final-collaudo-20261105.json"), "utf8"));
 const runner = await readFile(join(root, "scripts/apply-reviewed-production-migrations.mjs"), "utf8");
 const preflight = await readFile(join(root, "supabase/rebuild/production-cutover-preflight-20261105.sql"), "utf8");
@@ -25,6 +26,8 @@ const expectedCleanInstallFiles = [
 assert.equal(cleanInstallFiles.length, 28, "Clean-install migration directory must contain exactly 28 reviewed SQL files.");
 assert.deepEqual(cleanInstallFiles, expectedCleanInstallFiles, "Deployable migration directory differs from the frozen 28-file clean-install sequence.");
 const workflow = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
+const proposalSql = await readFile(join(root, "supabase/migrations/" + liveProposal.sequence[0].file), "utf8");
+assert.equal(sha(proposalSql), liveProposal.sequence[0].git_blob_sha, "Live proposal SQL blob differs from the separately captured exact candidate.");
 const sha = (text) => {
   // Match Git's canonical text-blob representation on Windows and Unix.
   const canonicalText = text.replace(/\r\n/g, "\n");
