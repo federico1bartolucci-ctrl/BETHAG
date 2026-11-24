@@ -123,3 +123,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Record every tracked dimension when a single work update changes several fields.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/work-change-audit-regression.sql
+
+# Prevent moving existing records out of archived condominiums.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/archived-condominium-move-regression.sql
