@@ -116,15 +116,6 @@ test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', ()
   assert.equal(occurrences("has_function_privilege('public'"), 0,
     "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
 });
-, definitionStart);
-  const bodyEnd = migration.indexOf('$function$;', bodyStart + 'AS $function
-  const guard = body.indexOf('if v_expense.fiscal_year_id is distinct from p_fiscal_year_id then');
-  const deletion = body.indexOf('delete from public.condominium_expense_allocations');
-  assert.ok(guard >= 0, 'RPC must compare the expense fiscal year with the requested fiscal year');
-  assert.ok(guard < deletion, 'RPC must reject a mismatch before modifying allocations');
-  assert.ok(body.includes('la spesa e i dati di consumo devono appartenere allo stesso esercizio contabile'));
-});
-
 test('PostgreSQL ACL runtime assertions contain six complete IF/THEN guards', () => {
   const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
   assert.equal(occurrences("IF NOT "), 6);
