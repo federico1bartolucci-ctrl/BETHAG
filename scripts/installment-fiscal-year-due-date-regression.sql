@@ -14,6 +14,18 @@ ALTER TABLE public.condominium_fiscal_years
   ADD COLUMN IF NOT EXISTS end_date date,
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'Aperto';
 
+INSERT INTO public.condominium_fiscal_years
+  (id,workspace_id,condominium_id,start_date,end_date,status)
+VALUES
+ ('00000000-0000-0000-0000-000000000081','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000080','2026-01-01','2026-12-31','Aperto'),
+ ('00000000-0000-0000-0000-000000000082','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000080','2027-01-01','2027-12-31','Aperto')
+ON CONFLICT (id) DO UPDATE
+SET workspace_id=EXCLUDED.workspace_id,
+    condominium_id=EXCLUDED.condominium_id,
+    start_date=EXCLUDED.start_date,
+    end_date=EXCLUDED.end_date,
+    status=EXCLUDED.status;
+
 UPDATE public.condominium_fiscal_years
 SET start_date='2026-01-01', end_date='2026-12-31', status='Aperto'
 WHERE id='00000000-0000-0000-0000-000000000081';
