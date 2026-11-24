@@ -5,6 +5,7 @@ import {
   isAssemblyTranscriptionReady,
   canConfirmAssemblyMinutes,
   canPublishAssemblyMinutes,
+  confirmAssemblyMinutes,
   reconcileAssemblyMinutesAfterEdit,
 } from "../src/lib/assemblyAudioWorkflow.mjs";
 
@@ -83,6 +84,24 @@ const confirmedMinutes = {
 assert.equal(canPublishAssemblyMinutes(confirmedMinutes), true);
 assert.equal(canPublishAssemblyMinutes({ ...confirmedMinutes, minutesStatus: "Da verificare" }), false);
 
+// Confirming a legacy unconfirmed record must clear its old publication flag.
+// Re-confirming an already confirmed and published record must preserve publication.
+const confirmedFromLegacyFlag = confirmAssemblyMinutes({
+  ...manuallyTranscribed,
+  minutesStatus: "Da verificare",
+  minutesDraft: draft,
+  publishedToPortal: true,
+});
+assert.equal(confirmedFromLegacyFlag.minutesStatus, "Confermato");
+assert.equal(confirmedFromLegacyFlag.publishedToPortal, false);
+assert.equal(canPublishAssemblyMinutes(confirmedFromLegacyFlag), true);
+const reconfirmedPublished = confirmAssemblyMinutes({
+  ...confirmedMinutes,
+  publishedToPortal: true,
+});
+assert.equal(reconfirmedPublished.minutesStatus, "Confermato");
+assert.equal(reconfirmedPublished.publishedToPortal, true);
+
 const stalePublishedMinutes = {
   ...confirmedMinutes,
   time: "19:00",
@@ -151,7 +170,7 @@ assert.doesNotMatch(attachHandler, /setAssemblies|transcriptionStatus|setTimeout
 const confirmStart = main.indexOf("const confirmMinutes = (");
 const publicationStart = main.indexOf("const toggleAssemblyPublication = (", confirmStart);
 assert.ok(confirmStart >= 0 && publicationStart > confirmStart);
-assert.match(main.slice(confirmStart, publicationStart), /canConfirmAssemblyMinutes/);
+assert.match(main.slice(confirmStart, publicationStart), /confirmAssemblyMinutes\(assembly\)/);
 
 const saveStart = main.indexOf("const saveAssembly = (");
 const editAssemblyStart = main.indexOf("const editAssembly = (", saveStart);
@@ -175,3 +194,4 @@ console.log("Assembly audio transcription false-positive runtime regression: PAS
 console.log("Assembly minutes draft freshness runtime regression: PASS");
 console.log("Assembly minutes publication freshness runtime regression: PASS");
 console.log("Assembly minutes condominium-scope freshness runtime regression: PASS");
+console.log("Assembly minutes explicit-confirmation publication regression: PASS");
