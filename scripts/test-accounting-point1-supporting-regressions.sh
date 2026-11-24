@@ -72,4 +72,6 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 
 
 # Reproduce and fix stale ledger status under concurrent installment updates.
+# The fixture supplies workspace, condominium and open fiscal-year scope because
+# the preceding supporting regressions install the real installment-scope trigger.
 bash scripts/test-installment-payment-status-concurrency.sh
