@@ -131,3 +131,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Capture SAL descriptive/date/sequence changes in the audit payload.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/work-progress-field-audit-regression.sql
+
+# Require each installment to have a fiscal year containing its due date.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/installment-fiscal-year-due-date-regression.sql
