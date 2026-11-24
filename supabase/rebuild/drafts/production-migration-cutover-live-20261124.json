@@ -179,10 +179,10 @@
   "execution_order": [
     "Riconfermare in sola lettura il ledger Production a 267 righe, head 20261105050000, preservando tutte le 267 coppie versione/nome.",
     "Confermare il catalogo ACL: default globale postgres EXECUTE presente come default effettivo; default specifici storage da preservare; nessuna funzione public esistente con PUBLIC EXECUTE.",
-    "Rendere la migrazione candidata parte della catena clean-install (29 file complessivi), verificando hash Git blob e ordine cronologico — PASS su PostgreSQL 17.",
+    "Mantenere la migrazione candidata fuori da supabase/migrations finché DRAFT_NOT_APPROVED; verificarne hash Git blob e ordine in una rehearsal PostgreSQL 17 separata dalla clean-install canonica a 28 file — PASS.",
     "Creare e verificare preflight/postflight per la singola migrazione: 267/head 20261105050000 → 268/head 20261124234000; verificare ACL globale, owner, schema public e grant storage — PASS nel rehearsal locale.",
     "Implementare il runner Production dedicato 267→268, separato dal runner storico 248→267 e dal runner locale; applicazione transazionale, ledger storico confrontato integralmente prima e dopo, TLS obbligatorio, approvazione e finestra vincolate — implementato fail-closed, non eseguito.",
-    "Eseguire clean-install 29 file, regressione ACL, rehearsal runner 267→268, controlli sicurezza, Baseline Safety e Build sullo SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36 — PASS. Il workflow finale APP-01..APP-15 è SKIPPED e non vale come accettazione.",
+    "Eseguire clean-install canonica a 28 file, rehearsal PostgreSQL 17 separata della candidata in drafts, regressione ACL e rehearsal del runner 267→268 sul database isolato — PASS.",
     "QA mantiene il ledger storico distinto (283 righe); nessuna migrazione o reset QA. Un run QA parziale è stato interrotto dopo APP-12/webhook; le fixture temporanee sono state ripulite, ma il run non è accettazione APP-01..APP-15. Il branch resta escluso dal workflow QA condiviso.",
     "Ricalcolare il fingerprint sullo SHA sorgente definitivo e acquisire approvazione esplicita per SHA, fingerprint, hash, progetto e finestra; servono revisione indipendente, APP-01..APP-15 PASS, CI esatta, verifica Data API recente e riconferma del rischio backup — nessuna approvazione presente.",
     "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only. Nessuna esecuzione automatica o implicita."
@@ -277,7 +277,7 @@
     "historical_rows_assumption": 267,
     "proposed_canonical_rows": 1,
     "proposed_final_ledger_rows": 268,
-    "proposed_clean_install_files": 29,
+    "proposed_clean_install_files": 28,
     "global_function_default_acl_regression": "PASS",
     "full_clean_install": "PASS",
     "guarded_runner": "PASS",
@@ -310,10 +310,12 @@
         "conclusion": "skipped",
         "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45507517178"
       }
-    }
+    },
+    "candidate_draft_rehearsal": "PASS",
+    "candidate_draft_rehearsal_target": "isolated PostgreSQL 17; candidate read from supabase/rebuild/drafts; excluded from standard Supabase CLI migration inventory"
   },
   "clean_install": {
-    "migration_file_count": 29,
+    "migration_file_count": 28,
     "baseline_files": [
       "20261017000001_bethag_baseline_schema.sql",
       "20261017000002_bethag_baseline_indexes_views.sql",
@@ -341,15 +343,14 @@
       "20261105010000_reconcile_postgres_public_table_default_acl.sql",
       "20261105020000_revoke_public_execute_from_public_trigger_functions.sql",
       "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
-      "20261105050000_reconcile_portal_registration_upsert.sql",
-      "20261124234000_revoke_postgres_global_public_function_execute.sql"
+      "20261105050000_reconcile_portal_registration_upsert.sql"
     ],
     "exact_production_forward_files": [
       "20261102151610_harden_live_production_acl_and_transfer_invoker.sql",
       "20261102200855_restore_secure_communication_recipient_rpc_execute.sql",
       "20261103070901_grant_service_role_private_resend_event_rpc.sql"
     ],
-    "ordering": "Proposed only: 29 deployable migration files in lexicographic 14-digit version order for a new installation; existing Production cutover remains subject to fresh live-ledger reconciliation and exact approval."
+    "ordering": "The standard Supabase CLI inventory remains the 28 frozen canonical files. The 267→268 ACL candidate stays in supabase/rebuild/drafts and is applied only by the guarded Production runner after fresh approval; it is not included in supabase db push."
   },
   "backup_restore_risk_acceptance": {
     "accepted": true,
