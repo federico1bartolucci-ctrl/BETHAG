@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
+import { resolveRecipientCount, summarizeCommunicationSendStatus } from "../_shared/communication-send-summary.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,12 +80,17 @@ Deno.serve(async (req: Request) => {
 
     const recipients = claimed ?? [];
     if (!recipients.length) {
-      const { count } = await supabase.from("communication_recipients")
+      const { count, error: recipientCountError } = await supabase.from("communication_recipients")
         .select("id", { count: "exact", head: true }).eq("communication_id", communication.id).in("status", ["sent","delivered"]);
-      return json({ success: true, idempotent: true, recipientCount: count ?? 0, prepared });
+      const recipientCountResult = resolveRecipientCount(count, recipientCountError);
+      if (!recipientCountResult.ok) {
+        console.error("BETHAG send-email recipient count query failed", recipientCountError);
+        return json({ success: false, idempotent: true, recipientCount: null, recipientCountQueryFailed: true, prepared }, 503);
+      }
+      return json({ success: true, idempotent: true, recipientCount: recipientCountResult.count, prepared });
     }
 
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, statusPersistenceFailures = 0;
     for (const recipient of recipients) {
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -98,34 +104,47 @@ Deno.serve(async (req: Request) => {
         const resendData = await resendResponse.json();
         if (!resendResponse.ok) {
           failed++;
-          await supabase.from("communication_recipients").update({
+          const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
             status: "failed", queued_at: null,
             error_message: resendData?.message ?? "Invio non riuscito.", updated_at: new Date().toISOString(),
           }).eq("id", recipient.id);
+          if (recipientStatusError) statusPersistenceFailures++;
           continue;
         }
         sent++;
-        await supabase.from("communication_recipients").update({
+        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
           status: "sent", queued_at: null, provider_message_id: resendData?.id ?? null,
           sent_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }).eq("id", recipient.id);
+        if (recipientStatusError) statusPersistenceFailures++;
       } catch (error) {
         failed++;
-        await supabase.from("communication_recipients").update({
+        const { error: recipientStatusError } = await supabase.from("communication_recipients").update({
           status: "failed", queued_at: null,
           error_message: error instanceof Error ? error.message : "Errore di rete.", updated_at: new Date().toISOString(),
         }).eq("id", recipient.id);
+        if (recipientStatusError) statusPersistenceFailures++;
       }
     }
 
-    const { count: remaining } = await supabase.from("communication_recipients")
+    const { count: remaining, error: remainingCountError } = await supabase.from("communication_recipients")
       .select("id", { count: "exact", head: true }).eq("communication_id", communication.id).in("status", ["pending","queued"]);
-    const status = failed === 0 && (remaining ?? 0) === 0 ? "Inviata" : sent > 0 ? "Parzialmente inviata" : "Errore";
-    await supabase.from("communications").update({
+    const sendSummary = summarizeCommunicationSendStatus({
+      sent,
+      failed,
+      statusPersistenceFailures,
+      remainingCount: remaining,
+      remainingCountError,
+    });
+    if (sendSummary.remainingCountQueryFailed) {
+      console.error("BETHAG send-email remaining recipient count query failed", remainingCountError);
+    }
+    const status = sendSummary.status;
+    const { error: communicationStatusError } = await supabase.from("communications").update({
       email_status: status, email_prepared_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }).eq("id", communication.id);
 
-    return json({ success: true, sent, failed, remaining: remaining ?? 0, status });
+    return json({ success: true, sent, failed, remaining: sendSummary.remaining, status, statusPersistenceFailures, communicationStatusPersistenceFailed: Boolean(communicationStatusError), remainingCountQueryFailed: sendSummary.remainingCountQueryFailed });
   } catch (error) {
     console.error("BETHAG send-email error", error);
     return json({ error: error instanceof Error ? error.message : "Errore interno." }, 500);
