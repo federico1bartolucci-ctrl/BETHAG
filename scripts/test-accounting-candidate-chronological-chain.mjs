@@ -38,11 +38,12 @@ const expectedCandidateFiles = [
   "20261124233300_guard_ledger_entries_linked_to_work_progress.sql",
   "20261124233400_harden_work_progress_payment_allocation.sql",
   "20261124233500_lock_fiscal_year_parent_rows.sql",
+  "20261124233600_serialize_installment_payment_status_recalculation.sql",
 ];
 assert.equal(canonicalFiles.length, 28, `Expected frozen 28-file canonical migration chain, found ${canonicalFiles.length}`);
 assert.deepEqual(candidateFiles, expectedCandidateFiles, "Accounting candidate set differs from the reviewed ten-file set.");
 const files = [...canonicalFiles, ...candidateFiles].sort();
-assert.equal(files.length, 38, `Expected 38 files across canonical plus staged candidate chains, found ${files.length}`);
+assert.equal(files.length, 39, `Expected 39 files across canonical plus staged candidate chains, found ${files.length}`);
 assert.equal(new Set(files.map((name) => name.slice(0, 14))).size, files.length,
   "Candidate migration versions must be unique.");
 const filenameValidation = validateMigrationFilenames(files);
