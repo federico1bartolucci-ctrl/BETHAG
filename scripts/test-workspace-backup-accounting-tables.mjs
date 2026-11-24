@@ -97,7 +97,7 @@ for (const table of criticalAccountingTables) {
   const escaped = table.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const definition = schemaSource.match(new RegExp('CREATE TABLE "public"\\."' + escaped + '" \\(([\\s\\S]*?)\\n\\);'));
   assert.ok(definition, table + " must exist in the baseline schema");
-  assert.match(definition[1], /"workspace_id"\\s+uuid/,
+  assert.match(definition[1], /"workspace_id"\s+uuid/,
     table + " must support the generic workspace-scoped backup loader");
 }
 
