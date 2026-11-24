@@ -14,6 +14,9 @@ ALTER TABLE public.condominium_fiscal_years
   ADD COLUMN IF NOT EXISTS end_date date,
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'Aperto';
 
+ALTER TABLE public.condominium_installments
+  ADD COLUMN IF NOT EXISTS fiscal_year_id uuid;
+
 INSERT INTO public.condominium_fiscal_years
   (id,workspace_id,condominium_id,start_date,end_date,status)
 VALUES
