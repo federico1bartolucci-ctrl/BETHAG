@@ -86,6 +86,18 @@ BEGIN
     RAISE EXCEPTION 'New public function inherited an application EXECUTE privilege';
   END IF;
 
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(
+      coalesce(
+        (SELECT proacl FROM pg_proc WHERE oid='public.bethag_acl_after_probe()'::regprocedure),
+        acldefault('f',(SELECT proowner FROM pg_proc WHERE oid='public.bethag_acl_after_probe()'::regprocedure))
+      )
+    ) a
+    WHERE a.grantee=0 AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'New public function still has PUBLIC EXECUTE';
+  END IF;
+
   IF NOT has_function_privilege('anon','storage.bethag_acl_after_probe()','EXECUTE')
      OR NOT has_function_privilege('authenticated','storage.bethag_acl_after_probe()','EXECUTE')
      OR NOT has_function_privilege('service_role','storage.bethag_acl_after_probe()','EXECUTE') THEN
