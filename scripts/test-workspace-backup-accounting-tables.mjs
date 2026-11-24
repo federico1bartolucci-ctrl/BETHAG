@@ -8,8 +8,8 @@ import { loadPaginatedWorkspaceRows } from "../src/lib/paginatedWorkspaceRows.ts
 
 const criticalAccountingTables = [
   "condominium_accounting_settings",
-  "condominium_allocation_rules",
   "condominium_member_transfers",
+  "condominium_millesimal_values",
   "condominium_fiscal_carryovers",
   "condominium_fiscal_carryover_compensations",
 ];
@@ -30,7 +30,8 @@ for (const table of criticalAccountingTables) {
 
 const restoreIndex = (table) => WORKSPACE_BACKUP_RESTORE_ORDER.indexOf(table);
 assert.ok(restoreIndex("condominiums") < restoreIndex("condominium_accounting_settings"));
-assert.ok(restoreIndex("condominium_millesimal_tables") < restoreIndex("condominium_allocation_rules"));
+assert.ok(restoreIndex("condominium_millesimal_tables") < restoreIndex("condominium_millesimal_values"));
+assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_millesimal_values"));
 assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_member_transfers"));
 assert.ok(restoreIndex("condominium_members") < restoreIndex("condominium_member_transfers"));
 assert.ok(restoreIndex("condominium_fiscal_years") < restoreIndex("condominium_fiscal_carryovers"));
