@@ -57,14 +57,20 @@ test('the ACL parity migration contains no execute grant to PUBLIC', () => {
   assert.deepEqual(publicExecuteGrants, []);
 });
 
-test('PostgreSQL ACL runtime assertions contain four complete IF/THEN guards', () => {
+test('private fiscal carryover generator remains executable by authenticated', () => {
+  const grants = grantsFor('private.generate_fiscal_year_carryovers(');
+  assert.equal(grants.length, 1);
+  assert.match(grants[0], /to\s+"authenticated",\s+"service_role"$/i);
+});
+
+test('PostgreSQL ACL runtime assertions contain five complete IF/THEN guards', () => {
   const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
-  assert.equal(occurrences("IF NOT "), 4);
-  assert.equal(occurrences(" THEN"), 4);
-  assert.equal(occurrences("RAISE EXCEPTION"), 4);
-  assert.equal(occurrences("has_function_privilege('anon'"), 4);
-  assert.equal(occurrences("has_function_privilege('authenticated'"), 4);
-  assert.equal(occurrences("has_function_privilege('service_role'"), 4);
+  assert.equal(occurrences("IF NOT "), 5);
+  assert.equal(occurrences(" THEN"), 5);
+  assert.equal(occurrences("RAISE EXCEPTION"), 5);
+  assert.equal(occurrences("has_function_privilege('anon'"), 5);
+  assert.equal(occurrences("has_function_privilege('authenticated'"), 5);
+  assert.equal(occurrences("has_function_privilege('service_role'"), 5);
   assert.equal(occurrences("has_function_privilege('public'"), 0,
     "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
 });
