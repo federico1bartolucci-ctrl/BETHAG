@@ -24,10 +24,6 @@ CREATE TABLE public.condominium_work_progress (
   paid_amount numeric NOT NULL
 );
 
-\i supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql
-
--- Reproduce the real module boundary: authenticated accounting users cannot
--- read SAL rows under the activity-module RLS policy.
 DO $role_setup$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
@@ -37,6 +33,11 @@ BEGIN
     CREATE ROLE authenticated NOLOGIN;
   END IF;
 END; $role_setup$;
+
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124240200_guard_ledger_entries_linked_to_work_progress.sql
+
+-- Reproduce the real module boundary: authenticated accounting users cannot
+-- read SAL rows under the activity-module RLS policy.
 ALTER TABLE public.condominium_work_progress ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_progress_rls_regression_deny ON public.condominium_work_progress;
 CREATE POLICY work_progress_rls_regression_deny
