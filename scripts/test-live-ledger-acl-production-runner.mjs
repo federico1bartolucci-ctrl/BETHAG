@@ -8,6 +8,8 @@ const runner=await readFile("scripts/apply-live-ledger-acl-production.mjs","utf8
 const approvalGuard=await readFile("scripts/lib/live-ledger-acl-approval-guard.mjs","utf8");
 const manifest=JSON.parse(await readFile("supabase/rebuild/drafts/production-migration-cutover-live-20261124.json","utf8"));
 const snapshot=JSON.parse(await readFile("supabase/rebuild/drafts/production-ledger-live-20261124.json","utf8"));
+const preflight=await readFile("supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql","utf8");
+const postflight=await readFile("supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql","utf8");
 assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
 assert.equal(manifest.approval_scope,"NONE");
 assert.equal(manifest.production_apply_authorized,false);

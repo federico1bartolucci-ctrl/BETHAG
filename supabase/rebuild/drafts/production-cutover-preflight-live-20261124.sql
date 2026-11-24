@@ -41,6 +41,30 @@ BEGIN
     RAISE EXCEPTION 'STOP: intentional storage function defaults differ from reviewed baseline';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0
+      AND d.defaclobjtype='f' AND a.grantee='postgres'::regrole
+      AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'STOP: postgres owner EXECUTE default must be preserved';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace
+      AND d.defaclobjtype='f' AND a.grantee='postgres'::regrole
+      AND a.privilege_type='EXECUTE'
+  ) OR EXISTS (
+    SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace
+      AND d.defaclobjtype='f'
+      AND a.grantee IN (0,'anon'::regrole,'authenticated'::regrole,'service_role'::regrole)
+      AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'STOP: public-schema function defaults differ from reviewed owner-only baseline';
+  END IF;
+
   IF EXISTS (
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f',p.proowner))) a
