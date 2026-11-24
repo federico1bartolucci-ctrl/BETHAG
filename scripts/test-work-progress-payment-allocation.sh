@@ -105,9 +105,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'PUBLIC/anon/authenticated EXECUTE remains on trigger helper';
   END IF;
-  IF NOT has_function_privilege('service_role',v_oid,'EXECUTE')
-     OR NOT has_function_privilege('postgres',v_oid,'EXECUTE') THEN
-    RAISE EXCEPTION 'service_role/owner EXECUTE was not preserved';
+  IF has_function_privilege('service_role',v_oid,'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role direct EXECUTE remains on trigger helper';
+  END IF;
+  IF NOT has_function_privilege('postgres',v_oid,'EXECUTE') THEN
+    RAISE EXCEPTION 'Owner EXECUTE was not preserved';
   END IF;
   IF (SELECT prorettype FROM pg_proc WHERE oid=v_oid) <> 'trigger'::regtype THEN
     RAISE EXCEPTION 'guard_ledger_entry_integrity must remain a trigger function';
