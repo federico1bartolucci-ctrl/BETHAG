@@ -503,6 +503,7 @@ SQL
 
 echo "CROSS_LEDGER_LOCK_ORDER_FIXED: both opposite-direction moves committed and both ledger aggregates were refreshed"
 
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $amount_guard$
 BEGIN
   BEGIN
@@ -520,6 +521,7 @@ BEGIN
   END;
 END
 $amount_guard$;
+SQL
 
 echo "PASS: installment-total ceiling remains enforced after deterministic parent locking"
 
