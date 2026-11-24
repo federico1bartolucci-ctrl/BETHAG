@@ -58,7 +58,8 @@ try {
  const wrapped=["BEGIN;","SELECT pg_advisory_xact_lock(hashtext('bethag-live-ledger-acl-rehearsal'));",preflight,sql,
    "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key) VALUES ("+
    "'"+migrationVersion+"','"+migrationName+"',ARRAY[$bethag_candidate$"+sql+"$bethag_candidate$],'bethag-local-rehearsal',NULL);",
-   postflight,\n   "COMMIT;",""].join("\n");
+   postflight,
+   "COMMIT;",""].join("\n");
  const file=join(temp,"candidate.sql");
  await writeFile(file,wrapped,{mode:0o600});
  await psql(["-f",file]);
