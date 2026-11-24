@@ -91,6 +91,17 @@ GRANT EXECUTE ON FUNCTION public.generate_consumption_allocations(uuid, uuid, uu
 SQL
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/consumption-allocation-fiscal-year-assertions.sql
 
+# Provide the minimal installment table before installing its production trigger.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLE IF NOT EXISTS public.condominium_installments (
+  id uuid PRIMARY KEY,
+  ledger_entry_id uuid,
+  amount numeric NOT NULL,
+  paid_amount numeric NOT NULL DEFAULT 0,
+  due_date date NOT NULL
+);
+SQL
+
 # Execute the ledger-status trigger migration and verify both sides of reassignment.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f supabase/migrations/20261124170000_reconcile_ledger_status_on_installment_move.sql
