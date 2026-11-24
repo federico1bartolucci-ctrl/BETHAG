@@ -30,7 +30,11 @@ export function buildManualAssemblyMinutesDraft(assembly) {
 }
 
 export function canConfirmAssemblyMinutes(assembly) {
-  return isAssemblyTranscriptionReady(assembly) &&
-    typeof assembly?.minutesDraft === "string" &&
-    assembly.minutesDraft.trim().length > 0;
+  if (!isAssemblyTranscriptionReady(assembly) ||
+      typeof assembly?.minutesDraft !== "string" ||
+      !assembly.minutesDraft.trim()) return false;
+
+  // Confirmation is allowed only for the exact draft generated from the current
+  // transcript and assembly metadata. Any source edit makes the draft stale.
+  return assembly.minutesDraft === buildManualAssemblyMinutesDraft(assembly);
 }
