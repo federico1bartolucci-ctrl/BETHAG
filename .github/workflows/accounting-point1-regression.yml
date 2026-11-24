@@ -58,6 +58,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
       - name: Create isolated regression database
-        run: createdb "${{ matrix.database }}"
+        run: PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=postgres createdb "${{ matrix.database }}"
       - name: Run PostgreSQL 17 regression
         run: bash "${{ matrix.script }}"
