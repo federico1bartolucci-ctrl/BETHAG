@@ -251,16 +251,14 @@ RESET ROLE;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.condominium_works
+  IF (
+    SELECT count(*) FROM public.condominium_works
     WHERE id IN (
       '00000000-0000-0000-0000-000000000301',
       '00000000-0000-0000-0000-000000000302',
       '00000000-0000-0000-0000-000000000303'
     )
-    GROUP BY id
-    HAVING count(*) = 3
-  ) THEN
+  ) <> 3 THEN
     RAISE EXCEPTION 'Regression: a work with any SAL scope was not preserved';
   END IF;
 
