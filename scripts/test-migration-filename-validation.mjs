@@ -27,6 +27,11 @@ const invalidFilenames = [
   "00000101000000_year_zero.sql",
   "20261124_missing_time.sql",
   "20261124000000_missing_extension.txt",
+  "20261124240000_audit_work_details_and_references.sql",
+  "20261124240100_normalize_closing_member_installment_guard.sql",
+  "20261124240200_guard_ledger_entries_linked_to_work_progress.sql",
+  "20261124240400_harden_work_progress_payment_allocation.sql",
+  "20261124240600_lock_fiscal_year_parent_rows.sql",
 ];
 assert.deepEqual(
   validateMigrationFilenames(invalidFilenames).invalid,
