@@ -1721,7 +1721,7 @@ grant execute on function private.delete_condominium(p_workspace_id uuid, p_lega
 
 revoke all on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) to "service_role";
+grant execute on function private.generate_fiscal_year_carryovers(p_workspace_id uuid, p_condominium_id uuid, p_source_fiscal_year_id uuid, p_target_fiscal_year_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.generate_installments_from_allocations(p_workspace_id uuid, p_condominium_id uuid, p_ledger_entry_id uuid, p_title text, p_due_date date, p_fiscal_year_id uuid) from public, anon, authenticated, service_role;
 
