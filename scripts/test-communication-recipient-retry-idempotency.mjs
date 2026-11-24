@@ -17,6 +17,10 @@ assert.ok(actualNames.includes(accessMigrationName), "The authenticated communic
 assert.ok(!actualNames.includes(retryMigrationName), "The proposed retry migration must remain outside the frozen deployable sequence until a new release freeze is approved.");
 assert.equal(actualNames.length, 28, "The frozen deployable migration sequence must remain at 28 files.");
 
+const sendFunction = await readFile("supabase/functions/bethag-send-email/index.ts", "utf8");
+assert.match(sendFunction, /"Idempotency-Key":\s*`bethag-communication-recipient-\$\{recipient\.id\}`/,
+  "The runtime provider idempotency key must continue to derive from the stable recipient UUID.");
+
 const [schemaSql, indexSql, functionSql, securitySql, grantSql, accessSql, retrySql] = await Promise.all([
   ...baselineNames.map((name) => readFile(`${migrationDir}/${name}`, "utf8")),
   readFile(`${migrationDir}/${accessMigrationName}`, "utf8"),
@@ -106,9 +110,9 @@ try {
   );
 
   await db.query(
-    \`INSERT INTO public.communication_recipients
+    `INSERT INTO public.communication_recipients
       (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,error_message)
-     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario old','owner','failed','Temporary network failure')\`,
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario old','owner','failed','Temporary network failure')`,
     [failedRecipientId, communicationId, workspaceId, condominiumId, activeMemberId],
   );
 
@@ -170,8 +174,8 @@ try {
   assert.equal(firstRetry.rows[0].id, stableRecipientId, "Fixed retry must preserve the current recipient UUID.");
   assert.equal(firstRetry.rows[0].status, "pending");
   assert.equal(firstRetry.rows[0].provider_message_id, null);
-  const originalIdempotencyKey = \`bethag-communication-recipient-\${stableRecipientId}\`;
-  assert.equal(\`bethag-communication-recipient-\${firstRetry.rows[0].id}\`, originalIdempotencyKey);
+  const originalIdempotencyKey = `bethag-communication-recipient-${stableRecipientId}`;
+  assert.equal(`bethag-communication-recipient-${firstRetry.rows[0].id}`, originalIdempotencyKey);
 
   await db.query("SELECT private.prepare_communication_recipients($1)", [communicationId]);
   const repeatedPrepare = await db.query(
