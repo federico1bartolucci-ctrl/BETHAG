@@ -28,6 +28,14 @@ BEGIN
     RAISE EXCEPTION 'STOP: reviewed global PUBLIC EXECUTE defect is not present';
   END IF;
 
+  IF EXISTS (
+    SELECT 1 FROM aclexplode(v_global) a
+    WHERE a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)
+      AND a.privilege_type='EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'STOP: global postgres function defaults contain unexpected application-role EXECUTE grants';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
     WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='storage'::regnamespace
