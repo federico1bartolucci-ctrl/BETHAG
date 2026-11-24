@@ -29,3 +29,8 @@ CREATE TRIGGER trg_prevent_work_delete_with_progress
 BEFORE DELETE ON public.condominium_works
 FOR EACH ROW
 EXECUTE FUNCTION public.prevent_work_delete_with_progress();
+
+-- Trigger-only SECURITY DEFINER helper: no direct EXECUTE for API roles.
+-- The trigger is created by the migration owner and runs without caller EXECUTE.
+REVOKE EXECUTE ON FUNCTION public.prevent_work_delete_with_progress()
+  FROM PUBLIC, anon, authenticated, service_role;
