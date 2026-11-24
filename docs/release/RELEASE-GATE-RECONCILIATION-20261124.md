@@ -204,3 +204,36 @@ Punto 10.4 è chiuso per il suo perimetro documentale/di riconciliazione:
 - la provenienza temporale dell'applicazione delle 19 migrazioni resta non dimostrata e viene mantenuta come limitazione esplicita, senza alterare il manifest storico.
 
 La chiusura di 10.4 non certifica il cutover e non modifica il NO-GO Production. Passaggio successivo: Punto 10.5, preflight Production esclusivamente read-only.
+
+
+## Punto 10.5 — preflight Production read-only aggiornato (2026-11-24)
+
+Il vecchio `production-cutover-preflight-20261105.sql` è mantenuto come evidenza storica del pre-cutover del 5 novembre: non è più il controllo appropriato per lo stato attuale, perché si aspetta il ledger a 248 righe e l'assenza delle 19 migrazioni canoniche.
+
+È stato aggiunto `supabase/rebuild/production-readonly-preflight-20261124.sql`, distinto dal preflight storico e dal postflight. Lo script interroga esclusivamente cataloghi e ledger; non contiene DDL, DML, GRANT/REVOKE, migrazioni, chiamate a provider o modifiche di configurazione.
+
+### Esecuzione verificata
+
+- Script commit: `ff5003981f3d257bc58710a4651d5d5a43a6d163`.
+- Progetto: Production `tctcgptrsmvgajqjgnev`.
+- Esecuzione SQL read-only: completata senza eccezioni.
+- PostgreSQL: 17.6.
+- Ledger: 267 righe, prima versione `20260928021707`, ultima `20261105050000`.
+- Tabelle public: 47; viste public: 1.
+- Tabelle public senza RLS: 0.
+- `authenticated` MAINTAIN: 0; `service_role` MAINTAIN: 0.
+- USAGE su `private`: presente per authenticated e service_role.
+- Eccezioni default MAINTAIN provider-managed `supabase_admin`: 3, come atteso e documentato.
+- Il blocco PL/pgSQL ha verificato anche identità esatta delle 19 migrazioni canoniche, ACL PUBLIC EXECUTE, privilegi diretti anon, privilegi strutturali authenticated, funzioni/trigger portal e trasferimento, e preservazione dei metadati archivio.
+
+**Esito del controllo SQL: PASS** per le condizioni esplicitamente codificate nello script. Questo PASS non certifica i gate esterni e non autorizza cutover.
+
+### Limiti non risolti
+
+- Data API exposed schemas, incluso `supabase_functions`: non leggibile dai cataloghi SQL interrogati; richiede verifica indipendente nel Dashboard Supabase, sezione API Settings.
+- Provenienza temporale delle 19 migrazioni: non dimostrata dal ledger attuale.
+- Backup e prova di restore fisico, oppure nuova accettazione esplicita del rischio: mancanti.
+- Approvazione owner del source SHA, execution SHA e fingerprint correnti: mancante.
+- Operatore, finestra di manutenzione, piano di rollback e relativa approvazione: mancanti.
+
+Lo script non altera né sostituisce il manifest congelato o le evidenze storiche. Nessuna modifica ai dati Production/QA, migrazione, deploy, invio email, cutover o merge è stata eseguita. PR #389 resta Draft; Production resta **NO-GO**.
