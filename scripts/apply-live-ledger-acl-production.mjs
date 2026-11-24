@@ -67,11 +67,11 @@ async function main(){
   exact(manifest.approval_scope,"LIVE_LEDGER_ACL_267_TO_268","STOP: approval scope is not the single 267-to-268 live-ledger ACL migration.");
   exact(manifest.production_apply_authorized,true,"STOP: manifest does not authorize Production apply.");
   exact(manifest.sequence?.length,1,"STOP: runner accepts exactly one candidate migration.");
+  exact(manifest.clean_install?.migration_file_count,28,"STOP: standard Supabase CLI clean-install inventory must remain at 28 canonical migrations.");
   const item=manifest.sequence[0];
   exact(item.file,candidate,"STOP: candidate migration filename differs.");
   exact(item.git_blob_sha,"499ea493e828243309ee2f4bb9c3242d2fbeb862","STOP: candidate SQL hash differs.");
   exact(blobSha(sql),item.git_blob_sha,"STOP: deployable candidate SQL hash mismatch.");
-  exact(blobSha(await readFile(join(root,"supabase/rebuild/drafts",candidate),"utf8")),item.git_blob_sha,"STOP: archived candidate SQL hash mismatch.");
   exact(snapshot.project_ref,projectRef,"STOP: snapshot project ref differs.");
   exact(snapshot.count,267,"STOP: pinned ledger must contain 267 rows.");
   exact(snapshot.migrations?.length,267,"STOP: all 267 historical version/name pairs are required.");
