@@ -12,7 +12,7 @@ const productionOnly = production.filter((row) => !qaSet.has(pair(row)));
 const qaOnly = qa.filter((row) => !productionSet.has(pair(row)));
 const deployableFiles = (await readdir("supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
 const liveProposalFile = "20261124234000_revoke_postgres_global_public_function_execute.sql";
-const canonicalFiles = deployableFiles.filter((name) => name !== liveProposalFile);
+const canonicalFiles = deployableFiles;
 
 assert.match(live.captured_at_utc ?? "", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 assert.equal(live.captured_at, live.captured_at_utc.slice(0, 10));
@@ -42,7 +42,7 @@ const expectedForwardAclCandidates = [
   "20261105030000_reconcile_postgres_public_function_sequence_default_acl.sql",
 ];
 assert.equal(canonicalFiles.length, 28, "Frozen historical migration chain unexpectedly changed; re-review snapshot before continuing.");
-assert.ok(deployableFiles.includes(liveProposalFile), "The separately reviewed live proposal must exist in the deployable directory.");
+assert.ok(!deployableFiles.includes(liveProposalFile), "The unapproved live proposal must remain outside the deployable Supabase CLI inventory.");
 assert.deepEqual(
   canonicalFiles.filter((name) => expectedForwardAclCandidates.includes(name)),
   expectedForwardAclCandidates,
