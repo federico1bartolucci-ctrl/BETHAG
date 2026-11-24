@@ -90,6 +90,7 @@ try {
 
   await db.exec(`CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT '${userId}'::uuid $$;`);
   await db.query("INSERT INTO auth.users(id) VALUES ($1)", [userId]);
+  await db.query("INSERT INTO public.profiles(id,full_name,email,role,active) VALUES ($1,'Retry Test Admin','retry-admin@example.it','admin',true)", [userId]);
   await db.query("INSERT INTO public.workspaces(id,name) VALUES ($1,'Retry test workspace')", [workspaceId]);
   await db.query(
     "INSERT INTO public.workspace_members(workspace_id,user_id,role,active) VALUES ($1,$2,'admin',true)",
