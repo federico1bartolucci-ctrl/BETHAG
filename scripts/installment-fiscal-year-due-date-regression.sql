@@ -37,7 +37,7 @@ UPDATE public.condominium_fiscal_years
 SET start_date='2027-01-01', end_date='2027-12-31', status='Aperto'
 WHERE id='00000000-0000-0000-0000-000000000082';
 
-\i supabase/migrations/20261124233000_validate_installment_fiscal_year_due_date.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124233000_validate_installment_fiscal_year_due_date.sql
 
 DROP TRIGGER IF EXISTS validate_installment_fiscal_year_due_date_test
   ON public.condominium_installments;
