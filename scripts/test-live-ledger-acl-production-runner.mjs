@@ -56,5 +56,15 @@ try{
  try{execFileSync("git",["worktree","remove","--force",worktree],{stdio:"pipe"});}catch{}
  await rm(worktree,{recursive:true,force:true});
 }
+
+assert.equal(manifest.clean_install?.migration_file_count,28,
+  "Canonical Supabase CLI inventory must remain at 28 while the live proposal is unapproved.");
+assert.equal(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS",
+  "Separate PostgreSQL 17 rehearsal of the draft candidate is required.");
+assert.match(runner,/candidatePath=join\(root,"supabase\/rebuild\/drafts",candidate\)/,
+  "Production runner must read the candidate from the non-deployable drafts directory.");
+assert.doesNotMatch(runner,/candidatePath=join\(root,"supabase\/migrations",candidate\)/,
+  "Production runner must not make the unapproved candidate part of the standard CLI inventory.");
+
 console.log(JSON.stringify({status:"PASS",production_apply:"BLOCKED_WITHOUT_EXPLICIT_OWNER_APPROVAL",
  blocked_before_connection:true,pinned_ledger_rows:267,no_production_or_qa_writes:true},null,2));
