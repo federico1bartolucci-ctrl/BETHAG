@@ -1,7 +1,8 @@
 CREATE OR REPLACE FUNCTION public.guard_ledger_entry_integrity()
  RETURNS trigger
  LANGUAGE plpgsql
- SET search_path TO 'public', 'pg_catalog'
+ SECURITY DEFINER
+ SET search_path TO ''
 AS $function$
 declare
   v_allocations integer := 0;
