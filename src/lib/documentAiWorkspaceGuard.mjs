@@ -10,12 +10,14 @@ export function updateDocumentAiStateForWorkspace(documents, context, patch) {
 
   const requestWorkspaceId = context?.requestWorkspaceId;
   const currentWorkspaceId = context?.currentWorkspaceId;
+  const documentsWorkspaceId = context?.documentsWorkspaceId;
   const requestDocument = context?.requestDocument;
 
   if (
     typeof requestWorkspaceId !== "string" ||
     requestWorkspaceId.length === 0 ||
     currentWorkspaceId !== requestWorkspaceId ||
+    documentsWorkspaceId !== requestWorkspaceId ||
     !requestDocument
   ) {
     return documents;
