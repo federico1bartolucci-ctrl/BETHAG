@@ -42,7 +42,9 @@ async function main(){
   const approvedSource=process.env.BETHAG_APPROVED_SOURCE_COMMIT_SHA?.trim()||"";
   assert.match(approvedSource,/^[0-9a-f]{40}$/,"STOP: BETHAG_APPROVED_SOURCE_COMMIT_SHA must identify the exact owner-approved source release.");
   exact(execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim(),expected,"STOP: checkout differs from BETHAG_EXPECTED_COMMIT_SHA.");
-  exact(execFileSync("git",["status","--porcelain"],{cwd:root,encoding:"utf8"}).trim(),"","STOP: Production runner requires a clean checkout.");
+  const dirty=execFileSync("git",["status","--porcelain"],{cwd:root,encoding:"utf8"}).trim();
+  const unexpectedDirty=dirty.split("\n").filter(Boolean).filter(entry=>entry!=="?? node_modules/"&&entry!=="?? package-lock.json");
+  exact(unexpectedDirty.length,0,"STOP: Production runner requires a clean checkout; only generated node_modules/package-lock artifacts may be untracked.");
   execFileSync("git",["cat-file","-e",approvedSource+"^{commit}"],{cwd:root,stdio:"ignore"});
   execFileSync("git",["merge-base","--is-ancestor",approvedSource,expected],{cwd:root,stdio:"ignore"});
   const postApprovalChanges=execFileSync("git",["diff","--name-only",approvedSource+".."+expected],{cwd:root,encoding:"utf8"}).trim().split("\n").filter(Boolean);
