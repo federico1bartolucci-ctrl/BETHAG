@@ -21,6 +21,8 @@ for(const pattern of [/BETHAG_LIVE_LEDGER_PRODUCTION_APPLY/,/BETHAG_ALLOW_LIVE_L
  /approved_target_project_ref/,/EXCEPT SELECT version,name FROM supabase_migrations\.schema_migrations/,
  /pg_advisory_xact_lock/,/BEGIN;/,/COMMIT;/,/PGPASSFILE/,/delete env\.DATABASE_URL/,/delete env\.PGPASSWORD/])assert.match(runner,pattern);
 assert.match(runner,/assertLiveLedgerAclEvidenceMatchesSource/);
+assert.match(runner,/exactLedgerPostGuard/);
+assert.match(runner,/historical version\/name pairs changed during the transaction/);
 assert.match(approvalGuard,/qa_tested_commit_sha/);
 assert.match(approvalGuard,/reviewed_commit_sha/);
 assert.doesNotMatch(runner,/\bapply_migration\s*\(/i);

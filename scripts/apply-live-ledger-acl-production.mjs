@@ -129,13 +129,32 @@ ${vals}
  END IF;
 END
 $ledger_guard$;`;
+  const exactLedgerPostGuard = `DO $ledger_post_guard$
+BEGIN
+ IF (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 268 THEN
+  RAISE EXCEPTION 'FAIL: expected exactly 268 total ledger rows after candidate';
+ END IF;
+ IF (SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='20261124234000' AND name='revoke_postgres_global_public_function_execute') <> 1 THEN
+  RAISE EXCEPTION 'FAIL: exact candidate ledger row is not present exactly once';
+ END IF;
+ IF EXISTS (WITH expected(version,name) AS (VALUES
+${vals}
+ ) SELECT 1 FROM (
+  (SELECT version,name FROM expected EXCEPT SELECT version,name FROM supabase_migrations.schema_migrations WHERE version <> '20261124234000')
+  UNION ALL
+  (SELECT version,name FROM supabase_migrations.schema_migrations WHERE version <> '20261124234000' EXCEPT SELECT version,name FROM expected)
+ ) delta) THEN
+  RAISE EXCEPTION 'FAIL: one or more historical version/name pairs changed during the transaction';
+ END IF;
+END
+$ledger_post_guard$;`;
   const transaction=["BEGIN;","SELECT pg_advisory_xact_lock(hashtext('bethag-live-ledger-acl-267-to-268'));",
     exactLedgerGuard,preflight,sql,
     "INSERT INTO supabase_migrations.schema_migrations(version,name,statements,created_by,idempotency_key) VALUES ("+
     lit("20261124234000")+","+lit("revoke_postgres_global_public_function_execute")+
     ",ARRAY[$bethag_live_acl_candidate$"+sql+"$bethag_live_acl_candidate$],"+
     lit("bethag-live-ledger-acl-production-runner")+",NULL);",
-    postflight,"COMMIT;",""].join("\n");
+    exactLedgerPostGuard,postflight,"COMMIT;",""].join("\n");
 
   const env={...process.env,PGHOST:db.hostname,PGPORT:db.port||"5432",
     PGDATABASE:decodeURIComponent(db.pathname.slice(1)),PGUSER:decodeURIComponent(db.username)};
