@@ -128,8 +128,20 @@ try {
     assert.ifError(residentDownloadErr); assert.ok(residentDownload && residentDownload.size > 0);
     record("APP-13 shared document upload/download", true, "collaborator upload + metadata; resident downloaded shared bytes");
   } finally {
-    if (documentId) await admin.from("documents").delete().eq("id", documentId).eq("workspace_id", workspaceId);
-    if (objectCreated) await admin.storage.from("bethag-documents").remove([path]);
+    if (documentId) {
+      const removed = await admin.from("documents").delete().eq("id", documentId).eq("workspace_id", workspaceId);
+      assert.ifError(removed.error, "Failed to remove temporary QA document metadata");
+      const remaining = await admin.from("documents").select("id").eq("id", documentId).eq("workspace_id", workspaceId);
+      assert.ifError(remaining.error);
+      assert.equal(remaining.data.length, 0, "Temporary QA document metadata remains");
+    }
+    if (objectCreated) {
+      const removed = await admin.storage.from("bethag-documents").remove([path]);
+      assert.ifError(removed.error, "Failed to remove temporary QA Storage object");
+      const remaining = await admin.storage.from("bethag-documents").list(workspaceId + "/" + condominiumId, { search: marker + ".txt" });
+      assert.ifError(remaining.error);
+      assert.equal((remaining.data || []).length, 0, "Temporary QA Storage object remains");
+    }
   }
 
   const { data: adminLedgerBefore, error: ledgerBeforeErr } = await admin.from("condominium_ledger_entries").select("id").eq("workspace_id", workspaceId).like("notes", marker);
@@ -147,6 +159,16 @@ try {
     if (restorePermissions.error) {
       console.error("Failed to restore original QA collaborator permissions", restorePermissions.error.message);
       process.exitCode = 1;
+    } else {
+      const restored = await fixtureAdmin.from("workspace_members")
+        .select("permissions")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", userIds.collaborator)
+        .single();
+      if (restored.error || JSON.stringify(restored.data?.permissions ?? []) !== JSON.stringify(originalCollaboratorPermissions)) {
+        console.error("QA collaborator permission restoration could not be verified", restored.error?.message || restored.data?.permissions);
+        process.exitCode = 1;
+      }
     }
   }
   for (const client of Object.values(clients)) await client.auth.signOut();
