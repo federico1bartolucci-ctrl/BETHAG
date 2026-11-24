@@ -31,8 +31,6 @@ assert.equal(deployableFiles.length, 28,
   "The standard Supabase CLI inventory must contain only the 28 frozen canonical migrations.");
 assert.ok(!deployableFiles.includes(proposalFile),
   "DRAFT_NOT_APPROVED candidate must not be visible to supabase db push.");
-assert.ok(deployableFiles.includes(proposalFile),
-  "The separately reviewed live-ledger proposal must be present in the deployable inventory.");
 
 assert.equal(proposal.status, "DRAFT_NOT_APPROVED");
 assert.equal(proposal.production_apply_authorized, false);
@@ -64,17 +62,10 @@ const gitBlobSha = (content) => {
     .digest("hex");
 };
 
-const [deployableSql, draftSql] = await Promise.all([
-  readFile(migrationRoot + "/" + proposalFile, "utf8"),
-  readFile(rebuildRoot + "/drafts/" + proposalFile, "utf8"),
-]);
+const draftSql = await readFile(rebuildRoot + "/drafts/" + proposalFile, "utf8");
 const expectedBlobSha = proposal.sequence[0].git_blob_sha;
-assert.equal(gitBlobSha(deployableSql), expectedBlobSha,
-  "Deployable proposal SQL differs from the exact reviewed Git blob.");
 assert.equal(gitBlobSha(draftSql), expectedBlobSha,
-  "Draft proposal SQL differs from the exact reviewed Git blob.");
-assert.equal(gitBlobSha(deployableSql), gitBlobSha(draftSql),
-  "Deployable and draft copies of the proposal must be byte-identical after LF normalization.");
+  "Non-deployable draft proposal SQL differs from the exact reviewed Git blob.");
 
 console.log(JSON.stringify({
   status: "PASS",
