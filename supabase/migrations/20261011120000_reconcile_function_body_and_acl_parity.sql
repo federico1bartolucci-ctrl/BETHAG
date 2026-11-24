@@ -1469,7 +1469,7 @@ grant execute on function private.check_condominium_member_transfer_closure(p_tr
 
 revoke all on function private.close_condominium_member_transfer(p_transfer_id uuid) from public, anon, authenticated, service_role;
 
-grant execute on function private.close_condominium_member_transfer(p_transfer_id uuid) to "authenticated";
+grant execute on function private.close_condominium_member_transfer(p_transfer_id uuid) to "authenticated", "service_role";
 
 revoke all on function private.confirm_condominium_member_transfer(p_unit_id uuid, p_outgoing_member_id uuid, p_incoming_name text, p_incoming_email text, p_incoming_user_id uuid, p_transfer_date date, p_transfer_type text, p_notes text, p_data jsonb) from public, anon, authenticated, service_role;
 
