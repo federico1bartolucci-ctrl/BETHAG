@@ -237,6 +237,59 @@ BEFORE INSERT OR DELETE OR UPDATE ON public.condominium_ledger_entries
 FOR EACH ROW EXECUTE FUNCTION public.prevent_closed_condominium_accounting();
 SQL
 
+# Install the production legacy validation trigger: it locks only NEW.ledger_entry_id
+# before the AFTER status trigger, which is the other half of the lock-order cycle.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE OR REPLACE FUNCTION public.validate_condominium_installment_total()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_ledger_amount numeric;
+  v_total numeric;
+BEGIN
+  IF NEW.ledger_entry_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT le.amount
+    INTO v_ledger_amount
+  FROM public.condominium_ledger_entries le
+  WHERE le.id=NEW.ledger_entry_id
+    AND le.workspace_id=NEW.workspace_id
+    AND le.condominium_id=NEW.condominium_id
+    AND le.direction='Uscita'
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_ledger_amount IS NULL OR v_ledger_amount<=0 THEN
+    RAISE EXCEPTION 'Movimento contabile della rata non valido';
+  END IF;
+
+  SELECT coalesce(sum(i.amount),0)
+    INTO v_total
+  FROM public.condominium_installments i
+  WHERE i.ledger_entry_id=NEW.ledger_entry_id
+    AND i.workspace_id=NEW.workspace_id
+    AND i.condominium_id=NEW.condominium_id
+    AND i.id IS DISTINCT FROM NEW.id;
+
+  IF round(v_total+NEW.amount,2)>round(v_ledger_amount,2)+0.005 THEN
+    RAISE EXCEPTION 'Il totale delle rate supera l''importo della spesa';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_validate_installment_total
+  ON public.condominium_installments;
+CREATE TRIGGER trg_validate_installment_total
+BEFORE INSERT OR UPDATE ON public.condominium_installments
+FOR EACH ROW EXECUTE FUNCTION public.validate_condominium_installment_total();
+SQL
+
 # Reproduce a second lock-order cycle when two installments move in opposite
 # directions between ledger entries in different fiscal years. The BEFORE
 # closed-year guard holds each installment's own fiscal-year row; the AFTER
