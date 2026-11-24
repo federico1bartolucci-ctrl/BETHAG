@@ -74,7 +74,6 @@ try {
   }
 
   await db.exec(accessSql);
-  await db.exec(retrySql);
 
   const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const workspaceId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -107,12 +106,57 @@ try {
   );
 
   await db.query(
-    `INSERT INTO public.communication_recipients
+    \`INSERT INTO public.communication_recipients
       (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,error_message)
-     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario old','owner','failed','Temporary network failure')`,
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario old','owner','failed','Temporary network failure')\`,
     [failedRecipientId, communicationId, workspaceId, condominiumId, activeMemberId],
   );
 
+  // Reproduce the legacy function before applying the proposed migration:
+  // failed -> pending -> DELETE pending -> INSERT, which changes the UUID.
+  const legacyPrepare = await db.query(
+    "SELECT private.prepare_communication_recipients($1) AS result",
+    [communicationId],
+  );
+  const legacyRebuilt = await db.query(
+    "SELECT id::text,status FROM public.communication_recipients WHERE communication_id=$1 AND email='mario@example.it'",
+    [communicationId],
+  );
+  const legacyOriginal = await db.query(
+    "SELECT id::text FROM public.communication_recipients WHERE id=$1",
+    [failedRecipientId],
+  );
+  assert.equal(legacyPrepare.rows[0].result.retried_failed, 1);
+  assert.equal(legacyRebuilt.rows.length, 1);
+  assert.notEqual(legacyRebuilt.rows[0].id, failedRecipientId, "Legacy preparation must reproduce the recipient UUID regeneration defect.");
+  assert.equal(legacyOriginal.rows.length, 0, "Legacy preparation must reproduce deletion of the original failed row.");
+
+  // Reproduce the old stale-queue behavior: an ambiguous queued row was
+  // automatically made sendable again after the timeout.
+  await db.query(
+    "UPDATE public.communication_recipients SET status='queued',queued_at=now()-interval '1 hour',error_message=NULL WHERE id=$1",
+    [staleQueuedId],
+  );
+  const legacyReset = await db.query(
+    "SELECT private.reset_stale_communication_recipients($1, interval '15 minutes') AS result",
+    [communicationId],
+  );
+  const legacyStale = await db.query(
+    "SELECT id::text,status FROM public.communication_recipients WHERE id=$1",
+    [staleQueuedId],
+  );
+  assert.equal(legacyReset.rows[0].result.reset, 1);
+  assert.equal(legacyStale.rows[0].id, staleQueuedId);
+  assert.equal(legacyStale.rows[0].status, "pending", "Legacy stale-queue recovery must reproduce automatic resend eligibility.");
+
+  // Apply the proposed migration only after both legacy defects are reproduced.
+  await db.exec(retrySql);
+
+  const stableRecipientId = legacyRebuilt.rows[0].id;
+  await db.query(
+    "UPDATE public.communication_recipients SET status='failed', error_message='Temporary network failure' WHERE id=$1",
+    [stableRecipientId],
+  );
   const firstPrepare = await db.query(
     "SELECT private.prepare_communication_recipients($1) AS result",
     [communicationId],
@@ -123,11 +167,11 @@ try {
   );
   assert.equal(firstPrepare.rows[0].result.retried_failed, 1);
   assert.equal(firstRetry.rows.length, 1);
-  assert.equal(firstRetry.rows[0].id, failedRecipientId, "Retry must preserve the original recipient UUID.");
+  assert.equal(firstRetry.rows[0].id, stableRecipientId, "Fixed retry must preserve the current recipient UUID.");
   assert.equal(firstRetry.rows[0].status, "pending");
   assert.equal(firstRetry.rows[0].provider_message_id, null);
-  const originalIdempotencyKey = `bethag-communication-recipient-${failedRecipientId}`;
-  assert.equal(`bethag-communication-recipient-${firstRetry.rows[0].id}`, originalIdempotencyKey);
+  const originalIdempotencyKey = \`bethag-communication-recipient-\${stableRecipientId}\`;
+  assert.equal(\`bethag-communication-recipient-\${firstRetry.rows[0].id}\`, originalIdempotencyKey);
 
   await db.query("SELECT private.prepare_communication_recipients($1)", [communicationId]);
   const repeatedPrepare = await db.query(
@@ -135,7 +179,7 @@ try {
     [communicationId],
   );
   assert.equal(repeatedPrepare.rows.length, 1, "Repeated preparation must not duplicate the active recipient.");
-  assert.equal(repeatedPrepare.rows[0].id, failedRecipientId, "Repeated preparation must keep the provider idempotency key stable.");
+  assert.equal(repeatedPrepare.rows[0].id, stableRecipientId, "Repeated preparation must keep the provider idempotency key stable.");
   assert.equal(repeatedPrepare.rows[0].status, "pending");
 
   const acceptedMemberId = "77777777-7777-4777-8777-777777777777";
