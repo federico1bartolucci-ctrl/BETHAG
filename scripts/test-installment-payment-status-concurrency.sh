@@ -313,12 +313,12 @@ VALUES
    '00000000-0000-0000-0000-000000000001',
    '00000000-0000-0000-0000-000000000080',
    '00000000-0000-0000-0000-000000000081',
-   'Uscita', 50.00, 'Registrato'),
+   'Uscita', 100.00, 'Registrato'),
   ('90000000-0000-0000-0000-000000000031',
    '00000000-0000-0000-0000-000000000001',
    '00000000-0000-0000-0000-000000000080',
    '00000000-0000-0000-0000-000000000082',
-   'Uscita', 50.00, 'Registrato');
+   'Uscita', 100.00, 'Registrato');
 
 INSERT INTO public.condominium_installments
   (id, workspace_id, condominium_id, fiscal_year_id, ledger_entry_id, amount, paid_amount, due_date)
@@ -507,7 +507,7 @@ DO $amount_guard$
 BEGIN
   BEGIN
     UPDATE public.condominium_installments
-    SET amount=51
+    SET amount=101
     WHERE id='90000000-0000-0000-0000-000000000130';
     RAISE EXCEPTION 'TEST_EXPECTED_INSTALLMENT_TOTAL_OVERFLOW_BLOCK_NOT_RAISED';
   EXCEPTION WHEN raise_exception THEN
