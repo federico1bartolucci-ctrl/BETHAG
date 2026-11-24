@@ -4,7 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: ["main"]
-  workflow_dispatch:
+  # Explicit manual trigger; select the CAP branch when launching authenticated QA.
+  workflow_dispatch: {}
 
 concurrency:
   group: bethag-qa-shared-environment
