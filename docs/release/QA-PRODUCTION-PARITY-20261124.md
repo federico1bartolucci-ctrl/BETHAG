@@ -14,6 +14,8 @@ Il progetto QA non compare come progetto autonomo in `list_projects`, ma è anco
 - `is_default=false`, `persistent=false`, `with_data=false`
 - Branch status: `FUNCTIONS_DEPLOYED`
 - Preview status: `ACTIVE_HEALTHY`
+- Supabase classifica il branch come preview/ephemeral, non persistente. La documentazione ufficiale precisa che i preview branch possono essere messi in pausa dopo inattività o eliminati alla chiusura/merge della PR e generano usage di compute/servizi secondo consumo. Non è stato convertito in persistent e non è stato creato alcun branch aggiuntivo.
+- `with_data=false` indica che non è un clone dei dati Production; i conteggi presenti sono dati propri del branch (seed/test e successive attività), da preservare.
 
 La chiamata `get_project(jhuyhlzzydcgghrzeexn)` restituisce `Project not found`, ma gli endpoint branch-aware `list_migrations`, `list_tables` ed `execute_sql` accettano il preview ref e restituiscono dati. Quindi il branch QA è raggiungibile in sola lettura attraverso il progetto padre; la precedente classificazione come non accessibile era incompleta.
 
