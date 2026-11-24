@@ -438,8 +438,44 @@
       "security_lints": 0
     },
     "data_api_exposure": {
-      "status": "NOT_RECONFIRMED",
-      "reason": "Neither the Supabase project metadata connector nor the SQL connector exposes the effective Dashboard Data API exposed-schema setting. No pgrst.db_schemas or pgrst.db_extra_search_path override was found for the inspected roles/database. The last recorded owner Dashboard verification is dated 2026-11-07; a fresh owner Dashboard check remains mandatory before cutover."
+      "status": "RECONFIRMED_COUNT_ONLY",
+      "production_dashboard_evidence": {
+        "observed_date": "2026-11-24",
+        "observed_at_utc": "2026-11-24T21:30:39Z",
+        "environment": "Production",
+        "branch": "main",
+        "exposed_schema_count": "2/3",
+        "exposed_tables": "0/48",
+        "exposed_functions": "0/173",
+        "automatic_new_table_exposure": false,
+        "extra_search_path": [
+          "public",
+          "extensions"
+        ],
+        "max_rows": 1000,
+        "limitation": "The Production screenshot shows the count and settings, but not the schema names."
+      },
+      "prior_production_name_evidence": {
+        "verified_date": "2026-11-08",
+        "exposed_schemas": [
+          "graphql_public",
+          "public"
+        ],
+        "private_exposed": false,
+        "supabase_functions_present_in_exposed_schema_choices": false
+      },
+      "separate_qa_evidence": {
+        "observed_date": "2026-11-24",
+        "branch": "bethag-launch-qa",
+        "exposed_schemas": [
+          "graphql_public",
+          "public"
+        ],
+        "private_exposed": false,
+        "note": "QA evidence is recorded separately and is not substituted for Production evidence."
+      },
+      "reason": "The owner-provided Production Dashboard screenshot from 2026-11-24 reconfirms the exposed-schema count and related Data API settings. It does not display the schema names. The exact Production names are present in the earlier 2026-11-08 Production screenshot; the 2026-11-24 QA screenshot independently shows the same names for QA. Do not claim the names were visibly rechecked on Production on 2026-11-24.",
+      "gate_disposition": "Dashboard check no longer missing; exact Production names are based on the 2026-11-08 Production capture and 2026-11-24 count-only Production reconfirmation. Keep final cutover preflight fail-closed if the approved runner requires a fresh name-level Production capture."
     },
     "scope": "Fresh read-only Production verification only. No DDL, migration, ledger or application-data writes."
   }
