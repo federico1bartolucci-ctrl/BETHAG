@@ -37,6 +37,7 @@ CREATE OR REPLACE FUNCTION private.restore_condominium(uuid,uuid) RETURNS intege
 CREATE OR REPLACE FUNCTION private.set_personal_security_code(text,boolean) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.verify_personal_security_code(text) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.close_condominium_member_transfer(uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
+GRANT EXECUTE ON FUNCTION private.close_condominium_member_transfer(uuid) TO service_role;
 CREATE OR REPLACE FUNCTION public.close_condominium_member_transfer(uuid) RETURNS integer LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS 'BEGIN RETURN private.close_condominium_member_transfer($1); END';
 SQL
 
