@@ -193,3 +193,14 @@ Creato `supabase/rebuild/live-migration-ledgers-20261124.json` con le 267 righe 
 - QA ha 24 coppie versione/nome non presenti in Production; Production ha 8 coppie non presenti in QA. Gli ambienti non sono equivalenti per registry e non vanno trattati come copie sincronizzate.
 
 Il nuovo snapshot è una cattura corrente read-only; non sostituisce né riscrive gli snapshot storici o il manifest congelato.
+
+
+### Chiusura operativa Punto 10.4
+
+Punto 10.4 è chiuso per il suo perimetro documentale/di riconciliazione:
+- snapshot live completo Production/QA creato e verificato;
+- confronto Production esatto rispetto a 248 storiche + 19 canoniche: 267/267, nessuna coppia mancante o inattesa;
+- fingerprint ricalcolato logicamente per identità dei file: tutti i 41 file critici hanno lo stesso Git blob SHA tra il candidato testato `c684cc74d8dbac072239eef3aab4d4bab80b45dd` e l'HEAD corrente al momento della verifica; pertanto il fingerprint osservato `1dab15902dd7d44b0c66364bee093cc60752eb79689542819eb622099153b220` resta invariato. Nessuno dei 41 file critici è stato modificato dai commit documentali successivi.
+- la provenienza temporale dell'applicazione delle 19 migrazioni resta non dimostrata e viene mantenuta come limitazione esplicita, senza alterare il manifest storico.
+
+La chiusura di 10.4 non certifica il cutover e non modifica il NO-GO Production. Passaggio successivo: Punto 10.5, preflight Production esclusivamente read-only.
