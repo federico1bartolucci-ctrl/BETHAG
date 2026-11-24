@@ -215,7 +215,7 @@ La regressione `scripts/private-function-default-acl-repair-regression.sql` è s
 ### Hardening ACL dei due trigger contabili candidati
 
 La revisione ha rilevato che:
-- `guard_ledger_entry_integrity()` diventa SECURITY DEFINER nel candidato 24240200, ma il precedente GRANT a authenticated sarebbe rimasto con CREATE OR REPLACE. Aggiunta revoca EXECUTE a PUBLIC/anon/authenticated, preservando owner e service_role.
+- `guard_ledger_entry_integrity()` diventa SECURITY DEFINER nel candidato 24240200, ma i precedenti GRANT a authenticated e service_role sarebbero rimasti con CREATE OR REPLACE. Aggiunta revoca EXECUTE a PUBLIC/anon/authenticated/service_role; resta EXECUTE al solo owner postgres.
 - `prevent_work_delete_with_progress()` è una nuova funzione trigger SECURITY DEFINER. Aggiunta revoca EXECUTE a PUBLIC/anon/authenticated/service_role.
 
 Le regressioni PostgreSQL 17 provano sia l'assenza di EXECUTE diretto per i ruoli applicativi sia l'effettivo funzionamento dei trigger sotto authenticated con RLS che nasconde le righe SAL:
@@ -225,7 +225,7 @@ Le regressioni PostgreSQL 17 provano sia l'assenza di EXECUTE diretto per i ruol
 - `fiscal-year-parent-row-locks`: PASS.
 - `chronological-candidate-chain`: PASS.
 
-Run CI: [Accounting point 1 PostgreSQL 17 regression 45488640834](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488640834). Build [45488661186](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661186) e baseline safety [45488661137](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661137): SUCCESS.
+Run CI finale sui test/candidati aggiornati: [Accounting point 1 PostgreSQL 17 regression 45489254797](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489254797), 5/5 job SUCCESS sul commit `98f9c734b3f294892dcf60f0577abbea08ac88f4`. Baseline safety aggiornata [45489268905](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45489268905): SUCCESS. Il check `final-qa-collaudo` è SKIPPED per scelta workflow dopo la certificazione APP-01..APP-15 già superata; nessuna nuova scrittura QA.
 
 Queste modifiche restano file candidati/draft e test isolati. Nessuna ACL, funzione, trigger o default privilege è stata modificata su QA o Production.
 
