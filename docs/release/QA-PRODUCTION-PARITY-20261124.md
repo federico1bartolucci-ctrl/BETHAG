@@ -142,11 +142,13 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 
 **Punto 2: IN CORSO, non certificato.**
 
-Sono ora disponibili gli inventari live in sola lettura. Non è ancora possibile dichiarare parità completa:
-1. il ledger presenta 24 versioni QA-only e 8 Production-only, da riconciliare per payload e mappatura;
-2. una policy RLS differisce;
-3. due funzioni di registrazione hanno differenze logiche;
-4. i dataset sono diversi e devono restare preservati;
-5. il branch è non-persistent e con `with_data=false`: il suo stato e la sua continuità vanno certificati senza reset o ricreazione.
+La riconciliazione semantica del ledger e del catalogo è documentata: 259 versioni condivise con payload identico, 3 corrispondenze cross-versione esatte, 2 mappature operative equivalenti e 6 migrazioni Production-only ricondotte a interventi già rappresentati in QA o a hardening ACL da verificare al Punto 3. Le differenze di policy e registrazione sono state ricondotte alla migrazione canonica Production `20261105050000`, che coincide con le definizioni live Production e supera la regressione PostgreSQL 17 isolata.
+
+Restano i gate per certificare il QA come ambiente di collaudo corrente:
+1. eseguire APP-01..APP-15 sul branch QA attuale; il workflow associato alla PR #431 risulta SKIPPED perché il branch non è tra quelli ammessi dal filtro del workflow;
+2. i dataset sono diversi e devono restare preservati;
+3. il branch è non-persistent e con `with_data=false`: stato e continuità vanno certificati senza reset, conversione a persistent o ricreazione.
+
+La regressione SQL isolata non sostituisce il collaudo applicativo live. Nessuna modifica remota è autorizzata o necessaria per documentare questi risultati.
 
 Non è stato eseguito alcun DDL/DML remoto, modifica ACL, replay migrazioni, reset, merge o deploy. Non è stato creato alcun ambiente o costo aggiuntivo.
