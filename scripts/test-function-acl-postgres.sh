@@ -27,6 +27,7 @@ CREATE OR REPLACE FUNCTION private.close_condominium_fiscal_year(uuid,uuid) RETU
 CREATE OR REPLACE FUNCTION private.close_fiscal_year_and_generate_carryovers(uuid,uuid,uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.compensate_fiscal_carryover(uuid,uuid,uuid,numeric,uuid,text) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.complete_portal_registration(text,text,text) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
+CREATE OR REPLACE FUNCTION private.admin_approve_portal_registration(uuid,uuid) RETURNS jsonb LANGUAGE sql SECURITY DEFINER AS 'SELECT ''{}''::jsonb';
 CREATE OR REPLACE FUNCTION private.confirm_condominium_creation_intake(uuid,uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.delete_condominium(uuid,bigint,text) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
 CREATE OR REPLACE FUNCTION private.generate_installments_from_allocations(uuid,uuid,uuid,text,date,uuid) RETURNS integer LANGUAGE sql SECURITY DEFINER AS 'SELECT 1';
@@ -44,7 +45,7 @@ SQL
 # Execute the exact ACL statements from the migration against real PostgreSQL.
 sed -E 's/^[[:space:]]+//' "$migration" \
   | grep -Ei '^(revoke all on function|grant execute on function)' \
-  | grep -Ei 'check_condominium_member_transfer_closure|normalize_zero_ownership_owner|preserve_closing_condominium_member_history|generate_fiscal_year_carryovers|archive_condominium|close_condominium_fiscal_year|close_fiscal_year_and_generate_carryovers|compensate_fiscal_carryover|complete_portal_registration|confirm_condominium_creation_intake|delete_condominium|generate_installments_from_allocations|generate_installments_from_allocations_schedule|list_archived_condominiums|register_condominium_installment_payment|restore_condominium|set_personal_security_code|verify_personal_security_code|close_condominium_member_transfer' \
+  | grep -Ei 'check_condominium_member_transfer_closure|normalize_zero_ownership_owner|preserve_closing_condominium_member_history|generate_fiscal_year_carryovers|archive_condominium|close_condominium_fiscal_year|close_fiscal_year_and_generate_carryovers|compensate_fiscal_carryover|complete_portal_registration|admin_approve_portal_registration|confirm_condominium_creation_intake|delete_condominium|generate_installments_from_allocations|generate_installments_from_allocations_schedule|list_archived_condominiums|register_condominium_installment_payment|restore_condominium|set_personal_security_code|verify_personal_security_code|close_condominium_member_transfer' \
   > "$tmp_sql"
 test -s "$tmp_sql"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$tmp_sql"
