@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 const runner=await readFile("scripts/apply-live-ledger-acl-production.mjs","utf8");
 const approvalGuard=await readFile("scripts/lib/live-ledger-acl-approval-guard.mjs","utf8");
 const manifest=JSON.parse(await readFile("supabase/rebuild/drafts/production-migration-cutover-live-20261124.json","utf8"));
@@ -23,13 +25,20 @@ assert.doesNotMatch(runner,/\bapply_migration\s*\(/i);
 assert.doesNotMatch(runner,/\b(?:DELETE|UPDATE)\s+FROM\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner,/DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);
 const sha=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
-const result=spawnSync(process.execPath,["scripts/apply-live-ledger-acl-production.mjs"],{encoding:"utf8",timeout:10000,env:{
- ...process.env,DATABASE_URL:"postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
- BETHAG_LIVE_LEDGER_PRODUCTION_APPLY:"YES",BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION:"YES",
- BETHAG_PRODUCTION_PROJECT_REF:"tctcgptrsmvgajqjgnev",BETHAG_EXPECTED_COMMIT_SHA:sha,
- BETHAG_APPROVED_SOURCE_COMMIT_SHA:sha}});
-assert.notEqual(result.status,0);
-assert.match(result.stderr,/not explicitly approved for Production cutover/);
-assert.doesNotMatch(result.stderr,/ECONNREFUSED|ENOTFOUND|timeout expired|could not translate host name/i);
+const worktree=await mkdtemp(join(tmpdir(),"bethag-live-ledger-runner-gate-"));
+try{
+ execFileSync("git",["worktree","add","--detach",worktree,sha],{stdio:"pipe"});
+ const result=spawnSync(process.execPath,["scripts/apply-live-ledger-acl-production.mjs"],{cwd:worktree,encoding:"utf8",timeout:10000,env:{
+  ...process.env,DATABASE_URL:"postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
+  BETHAG_LIVE_LEDGER_PRODUCTION_APPLY:"YES",BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION:"YES",
+  BETHAG_PRODUCTION_PROJECT_REF:"tctcgptrsmvgajqjgnev",BETHAG_EXPECTED_COMMIT_SHA:sha,
+  BETHAG_APPROVED_SOURCE_COMMIT_SHA:sha}});
+ assert.notEqual(result.status,0);
+ assert.match(result.stderr,/not explicitly approved for Production cutover/);
+ assert.doesNotMatch(result.stderr,/ECONNREFUSED|ENOTFOUND|timeout expired|could not translate host name/i);
+}finally{
+ try{execFileSync("git",["worktree","remove","--force",worktree],{stdio:"pipe"});}catch{}
+ await rm(worktree,{recursive:true,force:true});
+}
 console.log(JSON.stringify({status:"PASS",production_apply:"BLOCKED_WITHOUT_EXPLICIT_OWNER_APPROVAL",
  blocked_before_connection:true,pinned_ledger_rows:267,no_production_or_qa_writes:true},null,2));
