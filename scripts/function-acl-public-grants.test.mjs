@@ -58,12 +58,13 @@ test('the ACL parity migration contains no execute grant to PUBLIC', () => {
 });
 
 test('PostgreSQL ACL runtime assertions contain four complete IF/THEN guards', () => {
-  assert.equal((postgresAssertions.match(/\\bIF\\b/g) || []).length, 4);
-  assert.equal((postgresAssertions.match(/\\bTHEN\\b/g) || []).length, 4);
-  assert.equal((postgresAssertions.match(/RAISE EXCEPTION/g) || []).length, 4);
-  assert.equal((postgresAssertions.match(/has_function_privilege\\('anon'/g) || []).length, 4);
-  assert.equal((postgresAssertions.match(/has_function_privilege\\('authenticated'/g) || []).length, 4);
-  assert.equal((postgresAssertions.match(/has_function_privilege\\('service_role'/g) || []).length, 4);
-  assert.doesNotMatch(postgresAssertions, /has_function_privilege\\(\\s*'public'/i,
-    'PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup');
+  const occurrences = (needle) => postgresAssertions.split(needle).length - 1;
+  assert.equal(occurrences("IF NOT "), 4);
+  assert.equal(occurrences(" THEN"), 4);
+  assert.equal(occurrences("RAISE EXCEPTION"), 4);
+  assert.equal(occurrences("has_function_privilege('anon'"), 4);
+  assert.equal(occurrences("has_function_privilege('authenticated'"), 4);
+  assert.equal(occurrences("has_function_privilege('service_role'"), 4);
+  assert.equal(occurrences("has_function_privilege('public'"), 0,
+    "PUBLIC access is detected through inherited application-role privileges, not a pseudo-role lookup");
 });
