@@ -26,6 +26,23 @@ const aiResultFromA = {
   extractedData: "workspace-a-data",
 };
 
+// Reproduce the previous ID-only updater: a late A result overwrites B's
+// same-numbered document, and a late A failure resets B's confirmed status.
+const legacyIdOnlySuccess = [workspaceBDocument].map((document) =>
+  document.id === workspaceADocument.id
+    ? { ...document, ...aiResultFromA }
+    : document
+);
+assert.equal(legacyIdOnlySuccess[0].aiSummary, "Contenuto estratto dal workspace A");
+assert.equal(legacyIdOnlySuccess[0].extractedData, "workspace-a-data");
+
+const legacyIdOnlyFailure = [workspaceBDocument].map((document) =>
+  document.id === workspaceADocument.id
+    ? { ...document, aiStatus: "Non elaborato" }
+    : document
+);
+assert.equal(legacyIdOnlyFailure[0].aiStatus, "Non elaborato");
+
 const staleSuccess = updateDocumentAiStateForWorkspace(
   [workspaceBDocument],
   {
