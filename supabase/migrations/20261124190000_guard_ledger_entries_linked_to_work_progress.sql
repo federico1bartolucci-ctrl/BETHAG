@@ -1,11 +1,11 @@
--- Protect SAL accounting references from ledger deletion or critical edits.
--- condominium_work_progress uses ON DELETE SET NULL for both ledger links;
--- without this guard a ledger deletion silently detaches the SAL from its
--- expense/payment record while retaining the paid amount.
+-- Protect both SAL ledger references from deletion or accounting-critical edits.
+-- This function must bypass the activity-module RLS policy so accounting
+-- operators cannot miss linked SAL rows while changing a ledger entry.
 CREATE OR REPLACE FUNCTION public.guard_ledger_entry_integrity()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path TO 'public', 'pg_catalog'
+SECURITY DEFINER
+SET search_path TO ''
 AS $function$
 DECLARE
   v_allocations integer := 0;
@@ -27,7 +27,8 @@ BEGIN
 
     SELECT count(*) INTO v_work_progress
     FROM public.condominium_work_progress
-    WHERE ledger_entry_id = OLD.id OR payment_entry_id = OLD.id;
+    WHERE ledger_entry_id = OLD.id
+       OR payment_entry_id = OLD.id;
 
     IF v_allocations > 0 OR v_installments > 0 THEN
       RAISE EXCEPTION 'La voce contabile è collegata a ripartizioni o rate e non può essere cancellata';
@@ -54,9 +55,8 @@ BEGIN
 
     SELECT count(*) INTO v_work_progress
     FROM public.condominium_work_progress
-    WHERE workspace_id = OLD.workspace_id
-      AND condominium_id = OLD.condominium_id
-      AND (ledger_entry_id = OLD.id OR payment_entry_id = OLD.id);
+    WHERE ledger_entry_id = OLD.id
+       OR payment_entry_id = OLD.id;
 
     IF (v_allocations > 0 OR v_installments > 0 OR v_work_progress > 0) AND (
       NEW.amount IS DISTINCT FROM OLD.amount
