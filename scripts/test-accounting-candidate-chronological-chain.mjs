@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
+import { validateMigrationFilenames } from "./migration-filename-validation.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl, "DATABASE_URL is required.");
@@ -32,11 +33,11 @@ const expectedCandidateFiles = [
   "20261124220000_prevent_mutation_from_archived_condominium.sql",
   "20261124223000_audit_all_work_progress_fields.sql",
   "20261124233000_validate_installment_fiscal_year_due_date.sql",
-  "20261124240000_audit_work_details_and_references.sql",
-  "20261124240100_normalize_closing_member_installment_guard.sql",
-  "20261124240200_guard_ledger_entries_linked_to_work_progress.sql",
-  "20261124240400_harden_work_progress_payment_allocation.sql",
-  "20261124240600_lock_fiscal_year_parent_rows.sql",
+  "20261124233100_audit_work_details_and_references.sql",
+  "20261124233200_normalize_closing_member_installment_guard.sql",
+  "20261124233300_guard_ledger_entries_linked_to_work_progress.sql",
+  "20261124233400_harden_work_progress_payment_allocation.sql",
+  "20261124233500_lock_fiscal_year_parent_rows.sql",
 ];
 assert.equal(canonicalFiles.length, 28, `Expected frozen 28-file canonical migration chain, found ${canonicalFiles.length}`);
 assert.deepEqual(candidateFiles, expectedCandidateFiles, "Accounting candidate set differs from the reviewed ten-file set.");
@@ -44,9 +45,9 @@ const files = [...canonicalFiles, ...candidateFiles].sort();
 assert.equal(files.length, 38, `Expected 38 files across canonical plus staged candidate chains, found ${files.length}`);
 assert.equal(new Set(files.map((name) => name.slice(0, 14))).size, files.length,
   "Candidate migration versions must be unique.");
-for (const name of files) {
-  assert.match(name, /^\d{14}_[a-z0-9][a-z0-9_-]*\.sql$/, "Invalid candidate migration filename: " + name);
-}
+const filenameValidation = validateMigrationFilenames(files);
+assert.deepEqual(filenameValidation.invalid, [], "Canonical/candidate chain contains invalid calendar timestamps or filenames.");
+assert.deepEqual(filenameValidation.duplicates, [], "Canonical/candidate chain contains duplicate migration versions.");
 
 const grantSql = await readFile(migrationDirectory + "/20261017000005_bethag_baseline_grants.sql", "utf8");
 const roles = new Set(["anon", "authenticated", "service_role", "authenticator", "supabase_admin"]);
