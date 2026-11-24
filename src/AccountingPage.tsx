@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { loadWorkspacePaginatedRows } from "./lib/accountingPagination.mjs";
+import { loadAccountingLegalCases } from "./lib/accountingLegalCasesPagination.mjs";
 
 type Condominium = {
   id: number;
@@ -602,40 +604,17 @@ function AccountingPage({
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("entry_date", { ascending: false }),
-          supabase
-            .from("condominium_funds")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("name"),
-          supabase
-            .from("condominium_tax_obligations")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
-          supabase
-            .from("condominium_legal_cases")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("opened_date", { ascending: false }),
-          supabase
-            .from("condominium_expense_allocations")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
+          loadWorkspacePaginatedRows(supabase, "condominium_funds", workspaceId, { select: "*", orderBy: [{"column":"name"}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_tax_obligations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
+          loadAccountingLegalCases(supabase, workspaceId),
+          loadWorkspacePaginatedRows(supabase, "condominium_expense_allocations", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
           supabase
             .from("condominium_allocation_intakes")
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("created_at", { ascending: false }),
-          supabase
-            .from("condominium_units")
-            .select("id, condominium_id, unit_code, building_code, data")
-            .eq("workspace_id", workspaceId)
-            .order("unit_code"),
-          supabase
-            .from("condominium_members")
-            .select("id, condominium_id, unit_id, active, name, email, data")
-            .order("created_at"),
+          loadWorkspacePaginatedRows(supabase, "condominium_units", workspaceId, { select: "id, condominium_id, unit_code, building_code, data", orderBy: [{"column":"unit_code"}] }),
+          supabase.from("condominium_members").select("id, condominium_id, unit_id, active, name, email, data").eq("workspace_id", workspaceId).order("created_at"),
           supabase
             .from("condominium_millesimal_tables")
             .select("*")
@@ -645,33 +624,17 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
-          supabase
-            .from("condominium_consumption_readings")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("period_end", { ascending:false }),
-          supabase
-            .from("condominium_allocation_rules")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("priority", { ascending:false }),
-          supabase
-            .from("condominium_installments")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("due_date"),
+          loadWorkspacePaginatedRows(supabase, "condominium_consumption_readings", workspaceId, { select: "*", orderBy: [{"column":"period_end","ascending":false}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_allocation_rules", workspaceId, { select: "*", orderBy: [{"column":"priority","ascending":false}] }),
+          loadWorkspacePaginatedRows(supabase, "condominium_installments", workspaceId, { select: "*", orderBy: [{"column":"due_date"}] }),
           supabase
             .from("condominium_budgets")
             .select("*")
             .eq("workspace_id", workspaceId)
             .order("category"),
-          supabase
-            .from("condominium_fiscal_carryovers")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("created_at"),
+          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryovers", workspaceId, { select: "*", orderBy: [{"column":"created_at"}] }),
           supabase.from("condominium_accounting_settings").select("*").eq("workspace_id", workspaceId),
-          supabase.from("condominium_fiscal_carryover_compensations").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending:false }),
+          loadWorkspacePaginatedRows(supabase, "condominium_fiscal_carryover_compensations", workspaceId, { select: "*", orderBy: [{"column":"created_at","ascending":false}] }),
         ]);
       for (const result of [
         yearsResult,
@@ -680,6 +643,7 @@ function AccountingPage({
         taxResult,
         caseResult,
         allocationsResult,
+        allocationIntakesResult,
         unitsResult,
         membersResult,
         millesimalTablesResult,
