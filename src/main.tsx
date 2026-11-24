@@ -12896,6 +12896,7 @@ function PortalPage({
   );
   const visibleMinutes = assemblies.filter((a: Assembly) =>
     a.publishedToPortal &&
+    canPublishAssemblyMinutes(a) &&
     (
       isAdministrator ||
       (
