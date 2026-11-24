@@ -21,8 +21,8 @@ function validateFilters(filters, workspaceColumn) {
 
 function encodeCursorValue(value) {
   if (typeof value !== "string") return String(value);
-  if (/^\\d{4}-\\d{2}-\\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value)) return value;
-  return '"' + value.replace(/\\\\/g, "\\\\\\\\").replace(/"/g, '\\"') + '"';
+  if (/^\d{4}-\d{2}-\d{2}(?:[Tt ][0-9:.+-]+(?:Z|z)?)?$/.test(value)) return value;
+  return '"' + value.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
 }
 
 function validateCursor(row, orderBy) {
