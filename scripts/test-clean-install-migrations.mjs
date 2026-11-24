@@ -53,7 +53,7 @@ assert.equal(liveProposal.live_ledger.rows, 267, "Live proposal must retain the 
 assert.equal(liveProposal.live_ledger.head_version, "20261105050000");
 assert.equal(proposalMigration?.file, "20261124234000_revoke_postgres_global_public_function_execute.sql");
 assert.equal(proposalMigration?.git_blob_sha, "499ea493e828243309ee2f4bb9c3242d2fbeb862");
-const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwardFiles, proposalMigration.file].sort();
+const expectedFiles = [...baselineFiles, existingHead, ...pendingFiles, ...forwardFiles].sort();
 const actualFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
 
 assert.equal(freeze.clean_install?.migration_file_count, 28,
@@ -64,8 +64,14 @@ assert.deepEqual(freeze.clean_install.pending_canonical_increments, pendingFiles
 assert.deepEqual(freeze.clean_install.exact_production_forward_files, forwardFiles);
 assert.deepEqual(actualFiles, expectedFiles,
   "Deployable migration directory differs from the frozen 28-file chronological clean-install sequence.");
-assert.equal(actualFiles.length, 29, "Expected 28 frozen historical files plus the single live-ledger proposal.");
-assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 29,
+assert.ok(!actualFiles.includes(proposalMigration.file),
+  "Unapproved live-ledger candidate must remain outside the standard supabase db push inventory.");
+assert.equal(liveProposal.status, "DRAFT_NOT_APPROVED");
+assert.equal(liveProposal.production_apply_authorized, false);
+assert.equal(liveProposal.clean_install?.migration_file_count, 28);
+assert.equal(liveProposal.rehearsal_evidence?.candidate_draft_rehearsal, "PASS");
+assert.equal(actualFiles.length, 28, "Only the 28 canonical migrations may be present in the standard Supabase CLI inventory.");
+assert.equal(new Set(actualFiles.map((name) => name.slice(0, 14))).size, 28,
   "Clean-install migration versions must be unique.");
 
 for (const item of freeze.sequence) {
@@ -73,10 +79,11 @@ for (const item of freeze.sequence) {
   assert.equal(gitBlobSha(sql), item.git_blob_sha,
     "Pending canonical SQL differs from its frozen reviewed hash: " + item.file);
 }
-for (const item of forwardItems) {
-const proposalSql = await readFile(migrationDirectory + "/" + proposalMigration.file, "utf8");
+const proposalSql = await readFile(root + "/rebuild/drafts/" + proposalMigration.file, "utf8");
 assert.equal(gitBlobSha(proposalSql), proposalMigration.git_blob_sha,
-  "Live-ledger ACL candidate differs from its exact reviewed SQL blob.");
+  "Live-ledger ACL draft differs from its exact reviewed SQL blob.");
+
+for (const item of forwardItems) {
   const sql = await readFile(migrationDirectory + "/" + item.file, "utf8");
   assert.equal(gitBlobSha(sql), item.git_blob_sha,
     "Clean-install Production-forward SQL differs from the exact applied Production-ledger payload: " + item.file);
@@ -124,7 +131,8 @@ const query = [
 "  'postgres_authenticated_default_table_crud', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='authenticated'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
 "  'postgres_service_role_default_table_crud', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE')),",
 "  'postgres_service_role_default_table_structural', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='r' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('REFERENCES','TRIGGER','TRUNCATE')),",
-"  'postgres_service_role_default_function_execute', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0 AND d.defaclobjtype='f' AND a.grantee IN (0,'anon'::regrole,'authenticated'::regrole,'service_role'::regrole) AND a.privilege_type='EXECUTE'),",
+"  'postgres_global_function_default_public_execute', (SELECT count(*)::int FROM aclexplode(COALESCE((SELECT d.defaclacl FROM pg_default_acl d WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0 AND d.defaclobjtype='f'), acldefault('f','postgres'::regrole))) a WHERE a.grantee=0 AND a.privilege_type='EXECUTE'),",
+"  'postgres_global_function_default_application_execute', (SELECT count(*)::int FROM aclexplode(COALESCE((SELECT d.defaclacl FROM pg_default_acl d WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace=0 AND d.defaclobjtype='f'), acldefault('f','postgres'::regrole))) a WHERE a.grantee IN ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole) AND a.privilege_type='EXECUTE'),",
 "  'postgres_service_role_default_sequence_privileges', (SELECT count(*)::int FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclrole='postgres'::regrole AND d.defaclnamespace='public'::regnamespace AND d.defaclobjtype='S' AND a.grantee='service_role'::regrole AND a.privilege_type IN ('SELECT','UPDATE','USAGE')),",
 "  'transfer_wrapper_invoker', (SELECT NOT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='close_condominium_member_transfer' AND pg_get_function_identity_arguments(p.oid)='p_transfer_id uuid'),",
 "  'private_schema_service_role_usage', has_schema_privilege('service_role','private','USAGE'),",
@@ -153,7 +161,8 @@ assert.equal(state.postgres_anon_default_table_privileges, 0, "Postgres default 
 assert.equal(state.postgres_authenticated_default_table_crud, 4, "Authenticated default table CRUD grants are missing after clean install.");
 assert.equal(state.postgres_service_role_default_table_crud, 4, "service_role default table CRUD grants are missing after clean install.");
 assert.equal(state.postgres_service_role_default_table_structural, 3, "service_role default structural table grants are missing after clean install.");
-assert.equal(state.postgres_service_role_default_function_execute, 0, "Global postgres function defaults must not grant EXECUTE to PUBLIC or application roles.");
+assert.equal(state.postgres_global_function_default_public_execute, 1, "The 28-file canonical clean install must retain the observed implicit PUBLIC EXECUTE default until the separate draft candidate rehearsal.");
+assert.equal(state.postgres_global_function_default_application_execute, 0, "The implicit global default must not grant EXECUTE to anon/authenticated/service_role.");
 assert.equal(state.postgres_service_role_default_sequence_privileges, 0, "service_role must not receive blanket default sequence privileges; grant required sequences explicitly.");
 assert.equal(state.transfer_wrapper_invoker, true, "Public transfer wrapper is not SECURITY INVOKER.");
 assert.equal(state.private_schema_service_role_usage, true, "service_role lacks private schema USAGE.");
