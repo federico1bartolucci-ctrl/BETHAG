@@ -5,11 +5,6 @@ ALTER TABLE public.condominium_work_progress
 
 \i supabase/migrations/20261124223000_audit_all_work_progress_fields.sql
 
-DROP TRIGGER IF EXISTS audit_condominium_work_progress_fields_test
-  ON public.condominium_work_progress;
-CREATE TRIGGER audit_condominium_work_progress_fields_test
-AFTER INSERT OR DELETE OR UPDATE ON public.condominium_work_progress
-FOR EACH ROW EXECUTE FUNCTION public.audit_condominium_work_progress_change();
 
 UPDATE public.condominium_work_progress
 SET progress_no=2,
