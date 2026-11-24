@@ -276,6 +276,11 @@ try {
   assert.equal(acceptedQueued.rows[0].queued_at, null);
 
 
+  // Keep only the intended active member in this condominium so the
+  // completed communication fixture has no newly eligible recipients.
+  await db.query("UPDATE public.condominium_members SET active=false WHERE id=$1", [acceptedMemberId]);
+  await db.query("UPDATE public.condominium_members SET active=false WHERE id=$1", [ambiguousMemberId]);
+
   // Re-preparing a communication whose recipients were already delivered must
   // not downgrade its aggregate email status to "no_recipients".
   const completedCommunicationId = "99999999-9999-4999-8999-999999999999";
