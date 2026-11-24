@@ -5,7 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
-import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore } from "./lib/backupSecurityRestore.mjs";
+import { isBackupAuthorizationTable, prepareCondominiumMembersForBackupRestore, prepareWorkspaceRowsForBackupRestore } from "./lib/backupSecurityRestore.mjs";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
@@ -3393,17 +3393,29 @@ function App() {
           if (!rows.length) continue;
 
           if (table === "condominiums") {
-            const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));
-            const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
-            if (error) {
-              errors.push(table + ": " + error.message);
-            } else {
-              restoredCondominiumIds = new Set(
-                normalized
-                  .map((row: any) => String(row?.id ?? ""))
-                  .filter((id: string) => id.length > 0)
-              );
+            const restoredIds = new Set<string>();
+            try {
+              const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
+              const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
+              const prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+              if (prepared.skipped > 0) errors.push(table + ": " + prepared.skipped + " record ignorati perché l'ID esiste in un altro workspace o è duplicato nel backup.");
+              for (const workspaceRow of prepared.updateRows) {
+                const { data: updated, error } = await supabase.from(table)
+                  .update(workspaceRow).eq("id", workspaceRow.id).eq("workspace_id", profile.workspaceId)
+                  .select("id").maybeSingle();
+                if (error) errors.push(table + ": " + error.message);
+                else if (!updated) errors.push(table + ": aggiornamento bloccato perché il record non appartiene più al workspace corrente.");
+                else restoredIds.add(String(workspaceRow.id));
+              }
+              if (prepared.insertRows.length) {
+                const { error } = await supabase.from(table).insert(prepared.insertRows);
+                if (error) errors.push(table + ": " + error.message);
+                else prepared.insertRows.forEach((row: any) => { if (row.id != null) restoredIds.add(String(row.id)); });
+              }
+            } catch (e: any) {
+              errors.push(table + ": " + (e?.message || "Impossibile verificare la proprietà dei record; ripristino bloccato per sicurezza."));
             }
+            restoredCondominiumIds = restoredIds;
             continue;
           }
 
@@ -3425,9 +3437,17 @@ function App() {
               if (scoped.skipped > 0) {
                 errors.push(table + ": " + scoped.skipped + " record ignorati perché il condominio non appartiene al backup ripristinato o il membro esistente appartiene a un altro workspace.");
               }
-              if (!scoped.rows.length) continue;
-              const { error } = await supabase.from(table).upsert(scoped.rows, { onConflict: "id" });
-              if (error) errors.push(table + ": " + error.message);
+              for (const memberRow of scoped.updateRows) {
+                const { data: updated, error } = await supabase.from(table).update(memberRow)
+                  .eq("id", memberRow.id).eq("condominium_id", memberRow.condominium_id)
+                  .select("id").maybeSingle();
+                if (error) errors.push(table + ": " + error.message);
+                else if (!updated) errors.push(table + ": aggiornamento bloccato perché il membro non appartiene più al condominio verificato.");
+              }
+              if (scoped.insertRows.length) {
+                const { error } = await supabase.from(table).insert(scoped.insertRows);
+                if (error) errors.push(table + ": " + error.message);
+              }
             } catch (e: any) {
               errors.push(table + ": " + (e?.message || "Impossibile verificare i membri esistenti; ripristino bloccato per sicurezza."));
             }
@@ -3441,9 +3461,25 @@ function App() {
             continue;
           }
 
-          const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));
-          const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
-          if (error) errors.push(table + ": " + error.message);
+          try {
+            const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
+            const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
+            const prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+            if (prepared.skipped > 0) errors.push(table + ": " + prepared.skipped + " record ignorati perché l'ID esiste in un altro workspace o è duplicato nel backup.");
+            for (const workspaceRow of prepared.updateRows) {
+              const { data: updated, error } = await supabase.from(table).update(workspaceRow)
+                .eq("id", workspaceRow.id).eq("workspace_id", profile.workspaceId)
+                .select("id").maybeSingle();
+              if (error) errors.push(table + ": " + error.message);
+              else if (!updated) errors.push(table + ": aggiornamento bloccato perché il record non appartiene più al workspace corrente.");
+            }
+            if (prepared.insertRows.length) {
+              const { error } = await supabase.from(table).insert(prepared.insertRows);
+              if (error) errors.push(table + ": " + error.message);
+            }
+          } catch (e: any) {
+            errors.push(table + ": " + (e?.message || "Impossibile verificare la proprietà dei record; ripristino bloccato per sicurezza."));
+          }
         }
       }
       if (errors.length || sourceReadErrorSummary) {

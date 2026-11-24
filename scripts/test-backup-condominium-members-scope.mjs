@@ -121,11 +121,14 @@ const restoreFunction = mainSource.slice(restoreStart, restoreEnd);
 assert.match(restoreFunction, /restoredCondominiumIds = new Set/);
 assert.match(restoreFunction, /prepareCondominiumMembersForBackupRestore\s*\(/);
 assert.match(restoreFunction, /loadPaginatedRowsByInFilter\(supabase, table, "id", memberIds, "id"\)/);
-assert.match(restoreFunction, /supabase\.from\(table\)\.upsert\(scoped\.rows, \{ onConflict: "id" \}\)/);
+assert.ok(restoreFunction.includes(".update(memberRow)"));
+assert.ok(restoreFunction.includes('.eq("id", memberRow.id)'));
+assert.ok(restoreFunction.includes('.eq("condominium_id", memberRow.condominium_id)'));
+assert.ok(restoreFunction.includes(".insert(scoped.insertRows)"));
 assert.ok(
   restoreFunction.indexOf('if (table === "condominium_members")') <
-    restoreFunction.lastIndexOf('const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));'),
-  "member restore must bypass the generic workspace_id normalization",
+    restoreFunction.lastIndexOf("prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows)"),
+  "member restore must be handled before generic workspace-row restore",
 );
 
 const memberDefinition = schema.match(/CREATE TABLE "public"\."condominium_members" \(([\s\S]*?)\n\);/);
