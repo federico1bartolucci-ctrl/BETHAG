@@ -27,6 +27,30 @@ const malformedResponse = await loadAccountingUnitMembers(async () => ({ data: n
 assert.equal(malformedResponse.ok, false);
 assert.match(malformedResponse.error, /Risposta non valida/);
 
+// The response envelope may be an array while individual rows are malformed.
+// The active consumer dereferences member.data and indexes member.unit_id, so
+// accepting null/missing-unit rows would still crash or silently mis-group owners.
+const nullRowResponse = await loadAccountingUnitMembers(async () => ({ data: [null], error: null }));
+assert.equal(nullRowResponse.ok, false);
+assert.deepEqual(nullRowResponse.data, []);
+assert.match(nullRowResponse.error, /Risposta non valida/);
+
+const missingUnitResponse = await loadAccountingUnitMembers(async () => ({
+  data: [{ id: 1, data: { role: "Proprietario" } }],
+  error: null,
+}));
+assert.equal(missingUnitResponse.ok, false);
+assert.deepEqual(missingUnitResponse.data, []);
+assert.match(missingUnitResponse.error, /Risposta non valida/);
+
+const malformedMetadataResponse = await loadAccountingUnitMembers(async () => ({
+  data: [{ id: 1, unit_id: "unit-1", data: [] }],
+  error: null,
+}));
+assert.equal(malformedMetadataResponse.ok, false);
+assert.deepEqual(malformedMetadataResponse.data, []);
+assert.match(malformedMetadataResponse.error, /Risposta non valida/);
+
 const source = await readFile("src/AccountingPage.tsx", "utf8");
 const queryStart = source.indexOf("const unitMembersResult = await loadAccountingUnitMembers");
 const queryEnd = source.indexOf("const byUnit = new Map", queryStart);
