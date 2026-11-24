@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora'
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -99,12 +99,8 @@ jobs:
           BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
         run: node scripts/test-current-qa-app12.mjs && node scripts/test-current-qa-resend-webhook.mjs
 
-      - name: APP-12 — probe deployed email provider configuration with Resend test recipient
-        env:
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
-          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
-          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
-        run: node scripts/test-current-qa-app12-provider.mjs
+      - name: APP-12 provider live-send probe — excluded by QA authorization scope
+        run: echo "SKIPPED: live Resend send requires separate explicit authorization"
 
       - name: Phase 1 — authenticated Edge Functions acceptance (invitations, deletion guards and AI)
         env:
