@@ -3,18 +3,18 @@
   "captured_date": "2026-11-08",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/edge-functions-phase1",
-  "reviewed_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+  "reviewed_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
   "qa_project_ref": "jhuyhlzzydcgghrzeexn",
   "existing_qa_branch_preserved": true,
   "workflow_runs": {
     "baseline_safety": {
-      "run_id": 45389819279,
-      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+      "run_id": 45390958503,
+      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
       "conclusion": "success"
     },
     "build": {
-      "run_id": 45389819297,
-      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+      "run_id": 45390959049,
+      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
       "conclusion": "success",
       "jobs": {
         "build": "success",
@@ -22,12 +22,11 @@
       }
     },
     "final_qa_collaudo": {
-      "run_id": 45389819328,
+      "run_id": 45390958541,
       "run_attempt": 1,
-      "head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+      "head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
       "conclusion": "success",
-      "checked_out_commit_sha": "55554053b2d103419eae1941d658d1adb2d6faf3",
-      "checked_out_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90"
+      "checked_out_revision_verification": "SKIPPED — pull_request workflow path; checkout SHA/tree not independently captured"
     }
   },
   "application_tests": {
@@ -48,10 +47,9 @@
       "signed_synthetic_webhook_events_sent_delivered_bounced_complained": "PASS",
       "invalid_signature_rejected_http_401_without_mutation": "PASS",
       "provider_probe": "SKIPPED — explicitly excluded by current QA authorization scope",
-      "provider_test_recipient": "delivered@resend.dev",
-      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe explicitly skipped in run 45389819328; no external email was sent.",
       "provider_delivery": "NOT_RUN",
-      "limitation": "Publication and signed synthetic webhook acceptance passed. No live provider delivery certification."
+      "provider_delivery_observed": "NOT RUN — live Resend provider-send probe excluded by authorization; no external email sent.",
+      "limitation": "Functional publication and signed synthetic webhook acceptance passed; live provider delivery is not certified."
     },
     "APP-13": "PASS",
     "APP-14": {
@@ -72,24 +70,8 @@
       },
       "diagnostic_artifact": {
         "name": "bethag-app15-diagnostics",
-        "artifact_id": 14918486658
-      }
-    },
-    "APP15": {
-      "status": "PASS",
-      "navigation": {
-        "admin": "PASS — all entitled administrator navigation destinations activated; Free plan retained core Condomìni access; locked modules correctly blocked without changing active route: Documenti, Scadenze, Assemblee, Fornitori, Attività, Lavori e manutenzioni, Comunicazioni, Portale condomini; homepage route survived refresh; no uncaught browser errors.",
-        "collaborator": "PASS — administrator-only accounting and collaborator administration absent; homepage active; no uncaught browser errors.",
-        "resident": "PASS — resident portal landing visible; staff navigation and accounting controls absent; no uncaught browser errors."
-      },
-      "authentication_session": {
-        "admin": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
-        "collaborator": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors.",
-        "resident": "PASS — Supabase Auth sign-in, role-specific landing, refresh/session persistence, no uncaught page errors."
-      },
-      "diagnostic_artifact": {
-        "name": "bethag-app15-diagnostics",
-        "artifact_id": 13596314597
+        "artifact_id": 14919216319,
+        "digest": "sha256:c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351"
       }
     }
   },
@@ -144,13 +126,14 @@
     },
     "temporary_provider_fixture_removed": true,
     "preexisting_qa_fixtures_preserved": true,
-    "portal_plan_fixture": "RESTORED — original plan free verified in QA run 45389819328",
-    "qa_preview": "STOPPED — workflow cleanup completed",
-    "diagnostics_artifact": "bethag-app15-diagnostics / 14918486658"
+    "portal_plan_fixture": "RESTORED — restore step SUCCESS in QA run 45390958541",
+    "qa_preview": "STOPPED — cleanup step SUCCESS in QA run 45390958541",
+    "diagnostics_artifact": "bethag-app15-diagnostics / 14919216319",
+    "diagnostics_digest": "sha256:c70391f4a599c5377f22068806922b1430c310e0b914bda2f297b5386dfe2351"
   },
   "production_modified": false,
   "merge_or_deploy_performed": false,
-  "conclusion": "QA APP-01..APP-13 and APP-15 PASS on candidate tree fef903141932e61a7c5ad34ad6bed1134c2d2f90. APP-12 provider delivery NOT_RUN. APP-14 PARTIAL and Production NO-GO.",
+  "conclusion": "Baseline Safety, Build/PostgreSQL 17 and Final QA workflow runs completed successfully on PR head metadata c6ea5fb4ca68976eb310502f45730cc0f44ee39c. APP-01..APP-13 and APP-15 PASS. APP-12 live provider delivery NOT_RUN. APP-14 PARTIAL; Production NO-GO. Checkout commit/tree identity not independently verified because the workflow verification step was skipped.",
   "production_preflight": {
     "status": "PASS_READ_ONLY_SQL",
     "captured_date": "2026-11-06",
@@ -268,16 +251,17 @@
     "production_modified": false,
     "merge_or_deploy_performed": false
   },
-  "execution_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
+  "execution_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
   "current_head_validation": {
-    "status": "PASS_WITH_EXPLICIT_CHECKOUT_TREE_RECONCILIATION",
-    "candidate_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
-    "candidate_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90",
-    "final_qa_workflow_head_sha": "a3975a8b620597ed037dd79e0c712f6b8a08875f",
-    "final_qa_checked_out_merge_commit_sha": "55554053b2d103419eae1941d658d1adb2d6faf3",
-    "final_qa_checked_out_tree_sha": "fef903141932e61a7c5ad34ad6bed1134c2d2f90",
-    "tree_identity_verified": true,
-    "note": "The pull_request QA workflow checked out the GitHub-generated merge commit. Its Git tree is identical to the candidate PR head tree. Workflow run metadata identifies the PR head SHA. The workflow's explicit checkout-verification step was skipped; tree identity was independently checked through Git commit metadata."
+    "status": "WORKFLOW_SUCCESS_CHECKOUT_SHA_NOT_INDEPENDENTLY_VERIFIED",
+    "candidate_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+    "final_qa_workflow_head_sha": "c6ea5fb4ca68976eb310502f45730cc0f44ee39c",
+    "final_qa_run_id": 45390958541,
+    "checkout_verification_step": "SKIPPED",
+    "checkout_commit_sha": null,
+    "checkout_tree_sha": null,
+    "tree_identity_verified": false,
+    "note": "GitHub Actions reports the PR head SHA in run metadata and all final QA steps completed successfully. The workflow's explicit checked-out revision verification step was skipped on pull_request; the actual checkout commit/tree was not independently captured, so this record does not claim exact checkout identity."
   },
   "latest_main_head_validation": {
     "execution_head_sha": "d7f83c00233a52078b9e1ff61c45f0ea0b8263f0",
