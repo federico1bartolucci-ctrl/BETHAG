@@ -167,7 +167,7 @@ BEGIN
     RAISE EXCEPTION 'TEST_EXPECTED_LEDGER_UPDATE_REJECTION_NOT_RAISED';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM='TEST_EXPECTED_LEDGER_UPDATE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
-    IF SQLERRM <> 'La voce contabile è già collegata a ripartizioni, rate o SAL: importo, direzione, esercizio, fornitore, documento e appartenenza non possono essere modificati' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è collegata a ripartizioni, rate o SAL: importo, direzione, esercizio, fornitore, documento e appartenenza non possono essere modificati' THEN RAISE; END IF;
   END;
 
   BEGIN
@@ -176,7 +176,7 @@ BEGIN
     RAISE EXCEPTION 'TEST_EXPECTED_LEDGER_DELETE_REJECTION_NOT_RAISED';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM='TEST_EXPECTED_LEDGER_DELETE_REJECTION_NOT_RAISED' THEN RAISE; END IF;
-    IF SQLERRM <> 'La voce contabile è collegata a ripartizioni, rate o SAL e non può essere cancellata' THEN RAISE; END IF;
+    IF SQLERRM <> 'La voce contabile è collegata a uno o più SAL e non può essere cancellata' THEN RAISE; END IF;
   END;
 
   BEGIN
