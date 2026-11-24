@@ -130,3 +130,16 @@ Il source SHA stampato dal fingerprint deriva dal campo storico `user_authorizat
 I file snapshot `production-ledger-20261105.json` e `live-migration-ledgers-20261105.json` mantengono catture del 7 novembre 2026; non sono stati aggiornati né presentati come snapshot freschi. Per il checker attuale risultano quindi da rinfrescare con una nuova lettura read-only delle registry live QA e Production, con confronto ordinato versione/nome. Questa operazione non è stata eseguita in questo passaggio.
 
 APP-12 provider delivery NOT_RUN; APP-14 non eseguito; approvazioni source/execution SHA, Data API, preflight Production, backup/rischio, operatore, finestra e rollback restano gate separati. Production: **NO-GO**. PR #389: **Draft, non merged**. Nessuna migrazione, deploy, cutover, invio email o modifica Production eseguita.
+
+
+## Rilievo critico — registry Production riletta in sola lettura (2026-11-24)
+
+Lettura diretta read-only delle migration registry tramite Supabase:
+- Production project `tctcgptrsmvgajqjgnev`: **267 righe**, prima versione `20260928021707`, ultima `20261105050000`.
+- QA project `jhuyhlzzydcgghrzeexn`: **283 righe**, ultima versione `20261105001928`.
+- L'insieme delle 267 coppie versione/nome Production coincide con l'insieme composto dalle 248 coppie dello snapshot storico e dalle 19 migrazioni elencate nella sequenza canonica congelata: nessuna coppia mancante o aggiuntiva. L'ordine della sequenza nel manifest non coincide con l'ordinamento cronologico della registry; la verifica è stata quindi effettuata sull'insieme delle coppie, non sulla posizione.
+- Il manifest congelato continua tuttavia a riportare le 19 migrazioni come `PENDING_NOT_APPLIED`; lo snapshot Production versionato nel repository è del 7 novembre e riporta 248 righe.
+
+**Interpretazione prudenziale:** la registry Production oggi registra tutte le 19 versioni previste, ma questa sola lettura non prova quando siano state applicate, da quale procedura, né che le postcondizioni di schema/ACL siano soddisfatte. Non modificare retroattivamente il manifest congelato e non dichiarare cutover certificato sulla sola base del conteggio. È necessaria una riconciliazione read-only delle postcondizioni e della provenienza, prima di qualunque decisione.
+
+Nessuna scrittura SQL, migrazione, deploy o altra modifica è stata eseguita su Production o QA durante questa lettura. Questo rilievo sostituisce l'assunzione operativa precedente secondo cui la registry Production risultava ancora a 248 righe, ma non autorizza alcuna azione correttiva.
