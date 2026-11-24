@@ -138,8 +138,10 @@ try {
   // Reproduce the old stale-queue behavior: an ambiguous queued row was
   // automatically made sendable again after the timeout.
   await db.query(
-    "UPDATE public.communication_recipients SET status='queued',queued_at=now()-interval '1 hour',error_message=NULL WHERE id=$1",
-    [staleQueuedId],
+    `INSERT INTO public.communication_recipients
+      (id,communication_id,workspace_id,condominium_id,email,name,recipient_role,status,queued_at)
+     VALUES ($1,$2,$3,$4,'stale@example.it','Stale','owner','queued',now()-interval '1 hour')`,
+    [staleQueuedId, communicationId, workspaceId, condominiumId],
   );
   const legacyReset = await db.query(
     "SELECT private.reset_stale_communication_recipients($1, interval '15 minutes') AS result",
@@ -241,10 +243,8 @@ try {
   assert.equal(inactive.rows[0].status, "skipped", "A no-longer-active pending recipient must be retained but excluded from sending.");
 
   await db.query(
-    `INSERT INTO public.communication_recipients
-      (id,communication_id,workspace_id,condominium_id,email,name,recipient_role,status,queued_at)
-     VALUES ($1,$2,$3,$4,'stale@example.it','Stale','owner','queued',now()-interval '1 hour')`,
-    [staleQueuedId, communicationId, workspaceId, condominiumId],
+    "UPDATE public.communication_recipients SET status='queued',queued_at=now()-interval '1 hour',error_message=NULL WHERE id=$1",
+    [staleQueuedId],
   );
   await db.query(
     `INSERT INTO public.communication_recipients
