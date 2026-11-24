@@ -4,6 +4,7 @@ set -euo pipefail
 : "${DATABASE_URL:?DATABASE_URL is required}"
 migration="supabase/migrations/20261124180000_harden_work_progress_payment_allocation.sql"
 
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $roles$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
@@ -12,7 +13,6 @@ BEGIN
 END
 $roles$;
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TABLE public.condominium_works (
   id uuid PRIMARY KEY,
   workspace_id uuid NOT NULL,
