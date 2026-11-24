@@ -127,8 +127,8 @@ assert.ok(restoreFunction.includes('.eq("condominium_id", memberRow.condominium_
 assert.ok(restoreFunction.includes(".insert(scoped.insertRows)"));
 assert.ok(
   restoreFunction.indexOf('if (table === "condominium_members")') <
-    restoreFunction.lastIndexOf('const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));'),
-  "member restore must bypass the generic workspace_id normalization",
+    restoreFunction.lastIndexOf("prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows)"),
+  "member restore must be handled before generic workspace-row restore",
 );
 
 const memberDefinition = schema.match(/CREATE TABLE "public"\."condominium_members" \(([\s\S]*?)\n\);/);

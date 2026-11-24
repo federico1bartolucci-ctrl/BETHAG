@@ -3461,9 +3461,25 @@ function App() {
             continue;
           }
 
-          const normalized = rows.map((row: any) => ({ ...row, workspace_id: profile.workspaceId }));
-          const { error } = await supabase.from(table).upsert(normalized, { onConflict: "id" });
-          if (error) errors.push(table + ": " + error.message);
+          try {
+            const rowIds = rows.map((row: any) => String(row?.id ?? "")).filter((id: string) => id.length > 0);
+            const existingRows = rowIds.length ? await loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id") : [];
+            const prepared = prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows);
+            if (prepared.skipped > 0) errors.push(table + ": " + prepared.skipped + " record ignorati perché l'ID esiste in un altro workspace o è duplicato nel backup.");
+            for (const workspaceRow of prepared.updateRows) {
+              const { data: updated, error } = await supabase.from(table).update(workspaceRow)
+                .eq("id", workspaceRow.id).eq("workspace_id", profile.workspaceId)
+                .select("id").maybeSingle();
+              if (error) errors.push(table + ": " + error.message);
+              else if (!updated) errors.push(table + ": aggiornamento bloccato perché il record non appartiene più al workspace corrente.");
+            }
+            if (prepared.insertRows.length) {
+              const { error } = await supabase.from(table).insert(prepared.insertRows);
+              if (error) errors.push(table + ": " + error.message);
+            }
+          } catch (e: any) {
+            errors.push(table + ": " + (e?.message || "Impossibile verificare la proprietà dei record; ripristino bloccato per sicurezza."));
+          }
         }
       }
       if (errors.length || sourceReadErrorSummary) {
