@@ -70,3 +70,68 @@ Per chiudere il punto occorre una nuova approvazione esplicita, riferita a sourc
 ## 7. Vincoli rispettati
 
 Nessuna modifica a Production o QA è stata eseguita manualmente durante questo audit. Non sono state eseguite migrazioni, deploy, cutover, invii email, restore o merge. PR #389 resta Draft. Production resta **NO-GO**.
+
+## Riconciliazione tecnica successiva — exact-head 78d9ec6 (24 novembre 2026)
+
+Questa sezione aggiorna le rilevazioni precedenti, che riportavano head e run superati. Non modifica il manifest Production congelato e non registra una nuova approvazione owner.
+
+### Identità e CI/QA corrente
+
+- PR #389: aperta, Draft, non merged; head `78d9ec6c19ac9b7f5833609fff57fc522938af76`; base `main`; GitHub riporta `mergeable: true`.
+- Build/PostgreSQL 17: run [45426235950](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45426235950), SUCCESS; job `build` e `postgres-bootstrap` entrambi SUCCESS.
+- Baseline Safety: run [45426236122](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45426236122), SUCCESS.
+- Authenticated Final QA: run [45426236232](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45426236232), SUCCESS; metadati run associati allo stesso head PR.
+- APP-01..APP-13 e APP-15: PASS nel Final QA. APP-15 include navigazione, autenticazione Supabase e persistenza sessione per admin, collaborator e resident.
+- APP-12: pubblicazione/ritiro comunicazioni, preparazione destinatari e webhook sintetici firmati PASS; provider live-send SKIPPED e `provider_delivery: NOT_RUN`. Nessuna email reale inviata.
+- APP-14: PARTIAL/non eseguito in Production; resta il post-cutover/postflight.
+- Il fixture temporaneo del piano Portal è stato ripristinato a `free` (log `RESTORED`); preview arrestata. Il fixture persistente APP-07 resta deliberatamente presente, come già registrato nelle evidenze precedenti.
+- Artifact APP-15: [bethag-app15-diagnostics, ID 14936747962](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45426236232/artifacts/14936747962).
+
+Il registro `supabase/rebuild/qa-final-collaudo-20261105.json` è stato aggiornato nel commit `84b914baa4069eea83acb26eed7cb09572421f5b` per riportare il nuovo head, i tre run, gli stati APP e l'artifact. La registrazione mantiene esplicitamente APP-12 provider delivery NOT_RUN e APP-14 PARTIAL. La verifica dei log non ha trovato uno step separato denominato “Verify checked-out revision”; non viene quindi dichiarata una verifica indipendente dello SHA estratto oltre ai metadati del run.
+
+### Separazione delle identità
+
+| Campo | Valore osservato | Significato / stato |
+|---|---|---|
+| PR head / candidato QA | `78d9ec6c19ac9b7f5833609fff57fc522938af76` | Head identificato dai metadati GitHub dei tre workflow |
+| Source SHA usato dal fingerprint | `5d96342209be77e189012dec754bc764999e64e2` | Valore letto da `manifest.user_authorization.approved_commit_sha`; approvazione storica, non riconfermata per questo candidato |
+| Fingerprint osservato | `1dab15902dd7d44b0c66364bee093cc60752eb79689542819eb622099153b220` | Calcolato nel Final QA sui 41 file critici usando il Source SHA sopra; non è una nuova approvazione |
+| Execution SHA per un futuro runner Production | NON SELEZIONATO | Dovrà essere il commit esatto del checkout pulito dal quale sarà eseguito il runner; il valore storico `c4f1aced...` non è trasferibile automaticamente |
+| Fingerprint storico approvato | `35018277d9d27c25538f40c9392536645762747d65f1d38f8154d2bf773a52ab` | Approvazione dell'8 novembre, riferita alla precedente finestra e al precedente perimetro |
+
+Il codice del runner distingue effettivamente:
+- `BETHAG_QA_TESTED_COMMIT_SHA`: SHA per cui il registro QA deve riportare Build, Baseline e Final QA tutti SUCCESS;
+- `BETHAG_EXPECTED_COMMIT_SHA`: SHA esatto del checkout pulito sul quale gira il runner;
+- `BETHAG_APPROVED_SOURCE_COMMIT_SHA`: Source SHA approvato, che deve coincidere con `manifest.user_authorization.approved_commit_sha`;
+- fingerprint: SHA-256 del contratto eseguibile, dei file critici, del manifest congelato e del Source SHA.
+
+Il runner ammette che il checkout di esecuzione sia successivo al QA soltanto entro una lista ristretta di modifiche post-QA consentite e con il payload tecnico congelato invariato. Pertanto il futuro Execution SHA non va confuso né con il QA-tested SHA né con il Source SHA.
+
+### Blocco tecnico rilevante
+
+Il runner Production contiene un controllo esplicito che richiede APP-12 `provider_delivery_observed` con valore che inizi per `PASS`. Il registro QA aggiornato riporta correttamente `provider_delivery: NOT_RUN`, perché l'invio live Resend è escluso dall'autorizzazione attuale. Di conseguenza il runner deve bloccare l'applicazione Production: non è corretto aggirare il controllo o trasformare i webhook sintetici in prova di consegna provider. Per chiudere questo gate servirebbe un'autorizzazione separata e specifica per un probe live controllato; non è compresa nell'autorizzazione tecnica ricevuta in questa conversazione.
+
+### Matrice aggiornata dei gate
+
+| Gate | Stato verificato al 24 novembre |
+|---|---|
+| Build + PostgreSQL 17 sul head corrente | PASS |
+| Baseline Safety sul head corrente | PASS |
+| Final authenticated QA sul head corrente | PASS, con la limitazione di provenienza checkout sopra descritta |
+| APP-01..APP-13 e APP-15 | PASS |
+| APP-12 live provider delivery | NOT RUN — blocca il runner |
+| APP-14 Production postflight | PARTIAL / da eseguire solo dopo cutover |
+| Registry Production e 19 postcondizioni catalogate | Riconciliazione read-only precedente PASS nel perimetro interrogato |
+| Provenienza temporale dell'applicazione delle 19 migrazioni | NON DIMOSTRATA dal ledger |
+| Production read-only preflight SQL 24 novembre | PASS; non equivale al preflight locale exact-execution-SHA del runner |
+| Data API exposed schemas | Ultima evidenza Dashboard owner 7 novembre; da riconfermare prima di un eventuale cutover |
+| Backup/restore fisico | Non collaudato; accettazione rischio 24 novembre limitata alla preparazione, non al cutover |
+| Source SHA e fingerprint correnti | Non approvati nuovamente |
+| Execution SHA | Non selezionato né approvato |
+| Operatore, finestra, piano rollback e approvazioni operative correnti | Da riconfermare |
+| PR #389 | Draft, non merged |
+| Production | **NO-GO** |
+
+### Esito
+
+La nuova evidenza chiude la verifica CI/QA applicativa sul head PR `78d9ec6...`, ma non chiude il Punto 10.7 (approvazione del candidato) né il Punto 10.8 (release gates). In particolare, il gate APP-12 provider delivery è intenzionalmente NOT RUN e il runner Production lo blocca. Non è stata eseguita alcuna modifica Production, migrazione, deploy, cutover, invio email o merge. Nessun valore storico di approvazione viene riutilizzato come approvazione corrente.
