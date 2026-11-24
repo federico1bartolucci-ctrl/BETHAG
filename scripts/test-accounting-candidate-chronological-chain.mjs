@@ -23,8 +23,25 @@ function psql(args, input) {
 }
 
 const migrationDirectory = "supabase/migrations";
-const files = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
-assert.equal(files.length, 38, `Expected 38 reviewed candidate migration files, found ${files.length}`);
+const candidateDirectory = "supabase/rebuild/candidates/accounting-point1-20261124";
+const canonicalFiles = (await readdir(migrationDirectory)).filter((name) => name.endsWith(".sql")).sort();
+const candidateFiles = (await readdir(candidateDirectory)).filter((name) => name.endsWith(".sql")).sort();
+const expectedCandidateFiles = [
+  "20261124170000_reconcile_ledger_status_on_installment_move.sql",
+  "20261124202340_prevent_work_delete_with_progress.sql",
+  "20261124220000_prevent_mutation_from_archived_condominium.sql",
+  "20261124223000_audit_all_work_progress_fields.sql",
+  "20261124233000_validate_installment_fiscal_year_due_date.sql",
+  "20261124240000_audit_work_details_and_references.sql",
+  "20261124240100_normalize_closing_member_installment_guard.sql",
+  "20261124240200_guard_ledger_entries_linked_to_work_progress.sql",
+  "20261124240400_harden_work_progress_payment_allocation.sql",
+  "20261124240600_lock_fiscal_year_parent_rows.sql",
+];
+assert.equal(canonicalFiles.length, 28, `Expected frozen 28-file canonical migration chain, found ${canonicalFiles.length}`);
+assert.deepEqual(candidateFiles, expectedCandidateFiles, "Accounting candidate set differs from the reviewed ten-file set.");
+const files = [...canonicalFiles, ...candidateFiles].sort();
+assert.equal(files.length, 38, `Expected 38 files across canonical plus staged candidate chains, found ${files.length}`);
 assert.equal(new Set(files.map((name) => name.slice(0, 14))).size, files.length,
   "Candidate migration versions must be unique.");
 for (const name of files) {
@@ -60,7 +77,8 @@ psql(["-c", bootstrapSql]);
 
 for (const filename of files) {
   console.log("Applying candidate migration " + filename);
-  psql(["-f", migrationDirectory + "/" + filename]);
+  const sourceDirectory = candidateFiles.includes(filename) ? candidateDirectory : migrationDirectory;
+  psql(["-f", sourceDirectory + "/" + filename]);
 }
 
 const query = `
@@ -124,6 +142,8 @@ for (const key of [
 console.log(JSON.stringify({
   candidate_chronological_chain: "PASS",
   engine: "PostgreSQL 17",
+  canonical_migration_count: canonicalFiles.length,
+  staged_candidate_migration_count: candidateFiles.length,
   migration_count: files.length,
   migrations: files,
   postconditions: state,
