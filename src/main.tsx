@@ -10,7 +10,7 @@ import { prepareAllocationIntakesForBackupRestore } from "./lib/backupAllocation
 import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationIntakesRestore.mjs";
 import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupCommunicationRecipientsRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
-import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
+import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3323,6 +3323,36 @@ function App() {
       if (!backup.workspaceId || backup.workspaceId !== profile.workspaceId) {
         alert("Il backup appartiene a un workspace diverso. Il ripristino è stato bloccato.");
         return;
+      }
+      const recipientLedgerBlockReason = getCommunicationRecipientLedgerRestoreBlockReason(backup);
+      if (recipientLedgerBlockReason) {
+        alert(recipientLedgerBlockReason);
+        return;
+      }
+      const recipientRowsForPreflight = Array.isArray(backup.backend?.communication_recipients)
+        ? backup.backend.communication_recipients
+        : [];
+      if (recipientRowsForPreflight.length) {
+        try {
+          const preflightCommunications = Array.isArray(backup.backend?.communications) ? backup.backend.communications : [];
+          const preflightCondominiums = Array.isArray(backup.backend?.condominiums) ? backup.backend.condominiums : [];
+          const preflightMembers = Array.isArray(backup.backend?.condominium_members) ? backup.backend.condominium_members : [];
+          const recipientPreflight = prepareCommunicationRecipientsForBackupRestore(
+            recipientRowsForPreflight,
+            profile.workspaceId,
+            [],
+            preflightCommunications,
+            preflightCondominiums.map((row: any) => String(row?.id ?? "")),
+            preflightMembers
+          );
+          if (recipientPreflight.skipped > 0) {
+            alert("Ripristino bloccato: " + recipientPreflight.skipped + " record destinatario non superano i controlli di integrità e appartenenza. Nessun dato è stato modificato; correggi il backup o riconcilia manualmente lo storico email prima di procedere.");
+            return;
+          }
+        } catch (e: any) {
+          alert("Ripristino bloccato: impossibile validare lo storico dei destinatari email. Nessun dato è stato modificato. " + (e?.message || ""));
+          return;
+        }
       }
       const sourceReadErrorSummary = formatBackupReadErrors(backup.backendReadErrors);
       const sourceReadWarning = sourceReadErrorSummary
