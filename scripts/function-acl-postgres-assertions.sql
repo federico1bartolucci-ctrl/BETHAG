@@ -71,6 +71,7 @@ BEGIN
      OR NOT has_function_privilege('service_role', 'private.verify_personal_security_code(text)', 'EXECUTE')
      OR has_function_privilege('anon', 'private.verify_personal_security_code(text)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE')
+     OR NOT has_function_privilege('service_role', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'private.close_condominium_member_transfer(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'Unexpected ACL: invoker-backed private RPCs must retain authenticated execution';
   END IF;
