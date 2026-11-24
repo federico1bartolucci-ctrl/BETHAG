@@ -1,4 +1,4 @@
-export function prepareAllocationIntakesForBackupRestore(rows, workspaceId, existingRows, restoredCondominiumIds) {
+export function prepareAllocationIntakesForBackupRestore(rows, workspaceId, existingRows, restoredCondominiumIds, relatedRows = {}) {
   const targetWorkspaceId = String(workspaceId ?? "");
   if (!targetWorkspaceId) throw new Error("Workspace di ripristino non valido.");
 
@@ -11,6 +11,37 @@ export function prepareAllocationIntakesForBackupRestore(rows, workspaceId, exis
       .filter((row) => row && typeof row === "object" && row.id != null)
       .map((row) => [String(row.id), row])
   );
+  const byId = (values) => new Map(
+    (Array.isArray(values) ? values : [])
+      .filter((row) => row && typeof row === "object" && !Array.isArray(row) && row.id != null)
+      .map((row) => [String(row.id), row])
+  );
+  const related = {
+    documents: byId(relatedRows.documents),
+    ledgerEntries: byId(relatedRows.ledgerEntries),
+    allocationTables: byId(relatedRows.allocationTables),
+    units: byId(relatedRows.units),
+  };
+  const hasOwnedReference = (id, collection, condominiumId, allowWorkspaceDocument = false) => {
+    if (id == null) return true;
+    const normalizedId = String(id);
+    if (!normalizedId) return false;
+    const record = collection.get(normalizedId);
+    if (!record || String(record.workspace_id ?? "") !== targetWorkspaceId) return false;
+    if (allowWorkspaceDocument && record.condominium_id == null) return true;
+    return String(record.condominium_id ?? "") === condominiumId;
+  };
+  const hasValidRelatedReferences = (row, condominiumId) => {
+    if (!hasOwnedReference(row.document_id, related.documents, condominiumId, true)) return false;
+    if (!hasOwnedReference(row.ledger_entry_id, related.ledgerEntries, condominiumId)) return false;
+    if (!hasOwnedReference(row.allocation_table_id, related.allocationTables, condominiumId)) return false;
+    if (row.rows != null && !Array.isArray(row.rows)) return false;
+    for (const item of Array.isArray(row.rows) ? row.rows : []) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      if (item.unit_id != null && !hasOwnedReference(item.unit_id, related.units, condominiumId)) return false;
+    }
+    return true;
+  };
 
   const updateRows = [];
   const insertRows = [];
@@ -24,7 +55,7 @@ export function prepareAllocationIntakesForBackupRestore(rows, workspaceId, exis
     }
 
     const condominiumId = String(row.condominium_id ?? "");
-    if (!allowedCondominiumIds.has(condominiumId)) {
+    if (!allowedCondominiumIds.has(condominiumId) || !hasValidRelatedReferences(row, condominiumId)) {
       skipped += 1;
       continue;
     }
