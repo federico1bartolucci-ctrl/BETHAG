@@ -10,7 +10,7 @@ import { prepareAllocationIntakesForBackupRestore } from "./lib/backupAllocation
 import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationIntakesRestore.mjs";
 import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupCommunicationRecipientsRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
-import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
+import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3322,6 +3322,11 @@ function App() {
       }
       if (!backup.workspaceId || backup.workspaceId !== profile.workspaceId) {
         alert("Il backup appartiene a un workspace diverso. Il ripristino è stato bloccato.");
+        return;
+      }
+      const recipientLedgerBlockReason = getCommunicationRecipientLedgerRestoreBlockReason(backup);
+      if (recipientLedgerBlockReason) {
+        alert(recipientLedgerBlockReason);
         return;
       }
       const sourceReadErrorSummary = formatBackupReadErrors(backup.backendReadErrors);
