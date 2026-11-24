@@ -28,12 +28,12 @@ CREATE TABLE public.condominium_work_progress (
 
 -- Reproduce the real module boundary: authenticated accounting users cannot
 -- read SAL rows under the activity-module RLS policy.
-DO $rls_test$
+DO $role_setup$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     CREATE ROLE authenticated NOLOGIN;
   END IF;
-END; $rls_test$;
+END; $role_setup$;
 ALTER TABLE public.condominium_work_progress ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_progress_rls_regression_deny ON public.condominium_work_progress;
 CREATE POLICY work_progress_rls_regression_deny
@@ -77,7 +77,7 @@ VALUES
    '00000000-0000-0000-0000-000000000002',
    '00000000-0000-0000-0000-000000000031', 200.00, 150.00);
 
-DO $rls_test$
+DO $visible_sal_guard$
 BEGIN
   BEGIN
     DELETE FROM public.condominium_ledger_entries
@@ -122,11 +122,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Regression: SAL accounting references or paid amount were changed';
   END IF;
-END; $$;
+END; $visible_sal_guard$;
 
 -- The caller cannot see SAL rows, but the trigger must still enforce their links.
 SET ROLE authenticated;
-DO $rls_test$
+DO $hidden_sal_guard$
 BEGIN
   IF (SELECT count(*) FROM public.condominium_work_progress) <> 0 THEN
     RAISE EXCEPTION 'Regression: authenticated accounting user unexpectedly sees activity SAL rows';
@@ -152,5 +152,5 @@ BEGIN
       RAISE;
     END IF;
   END;
-END; $rls_test$;
+END; $hidden_sal_guard$;
 RESET ROLE;
