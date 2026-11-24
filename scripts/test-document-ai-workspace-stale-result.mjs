@@ -15,7 +15,7 @@ const workspaceBDocument = {
   id: 42,
   condominiumId: 7,
   storagePath: "workspace-b/condominium-7/document-42/original.pdf",
-  aiStatus: "Non elaborato",
+  aiStatus: "Confermato",
   aiSummary: "Dati preesistenti del workspace B",
   extractedData: "workspace-b-data",
 };
@@ -49,7 +49,7 @@ const staleFailure = updateDocumentAiStateForWorkspace(
   { aiStatus: "Non elaborato" },
 );
 assert.strictEqual(staleFailure[0], workspaceBDocument);
-assert.equal(staleFailure[0].aiStatus, "Non elaborato");
+assert.equal(staleFailure[0].aiStatus, "Confermato");
 
 const currentDocuments = [workspaceADocument];
 const currentResult = updateDocumentAiStateForWorkspace(
