@@ -94,6 +94,24 @@ assert.equal(invalidatedMinutes.minutesStatus, "Non elaborato");
 assert.equal(invalidatedMinutes.minutesDraft, "");
 assert.equal(invalidatedMinutes.publishedToPortal, false);
 
+// Legacy records could have a publication flag while the minutes were only
+// "Da verificare". Saving and then confirming must not silently republish them.
+const legacyUnconfirmedPublication = reconcileAssemblyMinutesAfterEdit({
+  ...manuallyTranscribed,
+  minutesStatus: "Da verificare",
+  minutesDraft: draft,
+  publishedToPortal: true,
+});
+assert.equal(legacyUnconfirmedPublication.minutesStatus, "Da verificare");
+assert.equal(legacyUnconfirmedPublication.minutesDraft, draft);
+assert.equal(legacyUnconfirmedPublication.publishedToPortal, false);
+const confirmedAfterLegacySave = {
+  ...legacyUnconfirmedPublication,
+  minutesStatus: "Confermato",
+};
+assert.equal(canPublishAssemblyMinutes(confirmedAfterLegacySave), true);
+assert.equal(confirmedAfterLegacySave.publishedToPortal, false);
+
 // An unrelated edit does not invalidate a current, confirmed and published draft.
 const unchangedSource = reconcileAssemblyMinutesAfterEdit({
   ...confirmedMinutes,
