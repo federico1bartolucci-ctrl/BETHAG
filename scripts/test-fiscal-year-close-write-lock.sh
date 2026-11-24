@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
-migration="supabase/migrations/20261124200000_lock_fiscal_year_parent_rows.sql"
+migration="supabase/migrations/20261124240600_lock_fiscal_year_parent_rows.sql"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
