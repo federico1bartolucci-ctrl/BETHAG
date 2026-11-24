@@ -155,7 +155,7 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 - Fixture temporanee APP-05/06 eliminate; cleanup browser verificato; documenti e oggetti Storage temporanei rimossi.
 - Il piano workspace è stato portato temporaneamente da `free` a `portal` e ripristinato a `free`. Verifica read-only successiva sul progetto QA: `workspace_plan=free`.
 - Preview QA arrestato regolarmente; diagnostica APP-15 caricata come artifact `bethag-app15-diagnostics` (artifact ID `14964446568`).
-- Seconda esecuzione completa sul commit aggiornato: [run 45488661020](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661020), job SUCCESS; APP-15, ripristino piano, upload diagnostica e arresto preview tutti PASS.
+- Ulteriore esecuzione completa sul commit aggiornato: [run 45488661020](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661020), job SUCCESS; APP-15, ripristino piano, upload diagnostica e arresto preview tutti PASS.
 - Dopo la certificazione, il branch è stato rimosso dalla allowlist automatica del workflow QA: ulteriori collaudi live richiederanno un dispatch esplicito.
 
 La run non ha eseguito invii reali Resend, merge, deploy, reset o ricreazione del QA. Non è stato creato alcun ambiente a pagamento. I dati QA/Production restano distinti e preservati.
@@ -176,7 +176,7 @@ Le query sono state eseguite in sola lettura sul branch QA esistente `jhuyhlzzyd
 | Policy RLS | 103 | 103 | una differenza già classificata |
 | Security Advisor | 0 lint | 0 lint | nessun rilievo |
 
-Per le 173 funzioni sono stati confrontati firma, owner, SECURITY DEFINER, configurazione `search_path`, ACL normalizzate e privilegi effettivi. Le sei differenze testuali iniziali delle ACL erano soltanto l'ordine degli elementi; dopo normalizzazione il numero di differenze semantiche è **zero**. Nessuna funzione public/private è eseguibile da `anon`. Tutte le funzioni SECURITY DEFINER hanno un `search_path` esplicito. I ruoli applicativi non hanno CREATE sugli schemi `public` e `private`.
+Per le 173 funzioni sono stati confrontati firma, owner, SECURITY DEFINER, configurazione `search_path`, ACL normalizzate e privilegi effettivi. Le sei differenze testuali iniziali delle ACL erano soltanto l'ordine degli elementi; dopo normalizzazione il numero di differenze semantiche è **zero**. Nessuna funzione public/private è eseguibile da `anon`. Tutte le funzioni SECURITY DEFINER hanno un `search_path` esplicito. I ruoli applicativi non hanno CREATE sugli schemi `public` e `private`. I ruoli `anon` e `authenticated` non hanno BYPASSRLS; `service_role` e `postgres` lo hanno, come previsto dal modello Supabase. `authenticated` ha USAGE ma non CREATE su `private`; `anon` non ha neppure USAGE. Nessun ruolo applicativo ha CREATE su `public` o `private`.
 
 I 147 trigger applicativi e le 103 funzioni trigger coincidono tra QA e Production, inclusi stato di abilitazione, funzione associata e definizione. Le 47 tabelle hanno RLS attiva e ACL identiche; non risultano privilegi diretti per `anon`.
 
