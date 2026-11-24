@@ -127,3 +127,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Prevent moving existing records out of archived condominiums.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/archived-condominium-move-regression.sql
+
+# Capture SAL descriptive/date/sequence changes in the audit payload.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/work-progress-field-audit-regression.sql
