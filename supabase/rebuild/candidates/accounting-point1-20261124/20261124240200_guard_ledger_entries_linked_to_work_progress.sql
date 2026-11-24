@@ -75,3 +75,9 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- This is a trigger-only SECURITY DEFINER helper. Callers must not receive
+-- direct EXECUTE merely because they can update the parent ledger table.
+-- Trigger execution remains valid after creation without caller EXECUTE.
+REVOKE EXECUTE ON FUNCTION public.guard_ledger_entry_integrity()
+  FROM PUBLIC, anon, authenticated;
