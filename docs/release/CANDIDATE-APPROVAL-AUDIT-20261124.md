@@ -135,3 +135,20 @@ Il runner Production contiene un controllo esplicito che richiede APP-12 `provid
 ### Esito
 
 La nuova evidenza chiude la verifica CI/QA applicativa sul head PR `78d9ec6...`, ma non chiude il Punto 10.7 (approvazione del candidato) né il Punto 10.8 (release gates). In particolare, il gate APP-12 provider delivery è intenzionalmente NOT RUN e il runner Production lo blocca. Non è stata eseguita alcuna modifica Production, migrazione, deploy, cutover, invio email o merge. Nessun valore storico di approvazione viene riutilizzato come approvazione corrente.
+
+## Correzione in corso — origine del Source SHA nel fingerprint
+
+Durante la prosecuzione dell'audit è stata rilevata una discrepanza tra il contratto documentato e il comportamento di `scripts/print-release-fingerprint.mjs`: lo script prendeva `manifest.user_authorization.approved_commit_sha`, cioè lo SHA approvato storicamente l'8 novembre, anziché lo SHA del Final QA corrente. Il modulo `releaseFingerprint` descrive invece il parametro come full QA-tested source commit SHA. Con i dati correnti i due valori sono diversi:
+- QA-tested SHA registrato: `78d9ec6c19ac9b7f5833609fff57fc522938af76`;
+- source SHA storico nel manifest: `5d96342209be77e189012dec754bc764999e64e2`.
+
+Correzione applicata nel commit `fde213906b9d03ea5f531417b939d0ff6fa7b204`:
+- il fingerprint script legge `reviewed_head_sha` dal registro QA;
+- prima del calcolo verifica che Build, Baseline Safety e Final QA risultino tutti SUCCESS sul medesimo SHA;
+- non modifica il manifest congelato né l'approvazione storica.
+
+È stato poi individuato il secondo vincolo collegato: il runner confronta il diff successivo al QA con una allowlist esplicita. Per consentire il corretto uso del fingerprint script aggiornato come modifica post-QA, l'allowlist del runner è stata estesa con `scripts/print-release-fingerprint.mjs`, nel commit `2e44196718611636dba00a0ce808287b5ac2c699`.
+
+**Verifica ancora necessaria:** questi due commit sono successivi all'ultimo QA eseguito (`78d9ec6...`). Il connettore GitHub non ha restituito workflow run associati al primo commit; quindi non dichiaro Build, Baseline, Final QA o i test del runner PASS sul nuovo stato. Occorre ottenere una nuova esecuzione CI/QA sul nuovo head prima di congelare fingerprint ed execution SHA. Il fingerprint aggiornato non è ancora stato calcolato e verificato da un workflow. L'approvazione del candidato resta OPEN.
+
+Questa correzione è limitata alla coerenza tra QA evidence, fingerprint e allowlist. Non cambia le 19 migrazioni, il loro ordine o i rispettivi hash. APP-12 provider delivery resta NOT_RUN e continua a bloccare il runner Production. Nessuna operazione Production/QA, migrazione, deploy, cutover, invio email o merge è stata eseguita.
