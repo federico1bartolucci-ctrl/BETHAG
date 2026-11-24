@@ -1,3 +1,4 @@
+import { analyzeCondominiumDocumentsByStorageMode } from "./lib/condominiumAiDocumentMode";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
@@ -7169,7 +7170,14 @@ function App() {
         storagePath: item.path,
         mimeType: item.type || selectedFiles[index]?.type || "application/octet-stream",
       }));
-      const draft = await analyzeCondominiumStoredDocumentsWithAI(workspaceId, analysisFiles);
+      const draft = await analyzeCondominiumDocumentsByStorageMode(
+        workspaceId,
+        selectedFiles,
+        storageMode,
+        analysisFiles,
+        analyzeCondominiumStoredDocumentsWithAI,
+        analyzeCondominiumDocumentsWithAI,
+      );
 
       if (storageMode === "analysis" && storedDocuments.length) {
         await Promise.all(
