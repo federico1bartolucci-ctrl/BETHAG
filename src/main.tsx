@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { buildManualAssemblyMinutesDraft, canConfirmAssemblyMinutes, canPublishAssemblyMinutes, reconcileAssemblyMinutesAfterEdit } from "./lib/assemblyAudioWorkflow.mjs";
+import { buildManualAssemblyMinutesDraft, canPublishAssemblyMinutes, confirmAssemblyMinutes, reconcileAssemblyMinutesAfterEdit } from "./lib/assemblyAudioWorkflow.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -4845,18 +4845,14 @@ function App() {
       return;
     }
     const assembly = assemblies.find((item) => item.id === id);
-    if (!assembly || !canConfirmAssemblyMinutes(assembly)) {
+    const confirmedAssembly = assembly ? confirmAssemblyMinutes(assembly) : null;
+    if (!confirmedAssembly) {
       alert("Non è possibile confermare il verbale senza una trascrizione manuale e una bozza da verificare.");
       return;
     }
     setAssemblies((current) =>
       current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              minutesStatus: "Confermato",
-            }
-          : item
+        item.id === id ? confirmedAssembly : item
       )
     );
   };
