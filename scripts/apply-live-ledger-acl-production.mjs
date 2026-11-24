@@ -102,8 +102,8 @@ async function main(){
   assert.notEqual(approval?.independent_technical_review?.reviewer,approval?.approved_by,
     "STOP: independent technical reviewer must be distinct from the owner approver.");
   assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
-  assert.match(approval?.approved_window_start_utc??"",/^\\d{4}-\\d{2}-\\d{2}T.*Z$/,"STOP: execution window start must be an explicit UTC timestamp.");
-  assert.match(approval?.approved_window_end_utc??"",/^\\d{4}-\\d{2}-\\d{2}T.*Z$/,"STOP: execution window end must be an explicit UTC timestamp.");
+  assert.match(approval?.approved_window_start_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window start must be an explicit UTC timestamp.");
+  assert.match(approval?.approved_window_end_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window end must be an explicit UTC timestamp.");
   const start=Date.parse(approval.approved_window_start_utc),end=Date.parse(approval.approved_window_end_utc);
   assert.ok(Number.isFinite(start)&&Number.isFinite(end)&&end>start,"STOP: approval must specify a valid UTC execution window.");
   assert.ok(Date.now()>=start&&Date.now()<=end,"STOP: current time is outside the approved UTC execution window.");
