@@ -183,7 +183,7 @@ $$;
 
 SELECT 'LEGACY DEFECT REPRODUCED: scope-mismatched SAL rows were cascade-deleted' AS result;
 
-\i supabase/migrations/20261124202340_prevent_work_delete_with_progress.sql
+\i supabase/rebuild/candidates/accounting-point1-20261124/20261124202340_prevent_work_delete_with_progress.sql
 
 INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title)
 VALUES
