@@ -182,12 +182,23 @@ INSERT INTO public.condominium_work_progress(id,work_id,payment_entry_id,paid_am
 VALUES ('40000000-0000-0000-0000-000000000005',
         '00000000-0000-0000-0000-000000000004',
         '30000000-0000-0000-0000-000000000004',60);
+\\echo PAYMENT_LOCK_HELD
 SELECT pg_sleep(2);
 COMMIT;
 SQL
 first_pid=$!
 
-sleep 0.5
+for attempt in {1..50}; do
+  if grep -q "PAYMENT_LOCK_HELD" "$first_log"; then
+    break
+  fi
+  sleep 0.1
+done
+if ! grep -q "PAYMENT_LOCK_HELD" "$first_log"; then
+  wait "$first_pid"
+  echo "First transaction did not acquire the payment lock"
+  exit 1
+fi
 
 if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 >"$second_log" 2>&1 <<'SQL'; then
 BEGIN;
