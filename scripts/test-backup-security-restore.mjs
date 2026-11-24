@@ -129,7 +129,7 @@ const prepared = prepareCondominiumMembersForBackupRestore(
   existingMembers,
 );
 assert.equal(prepared.skipped, 2);
-assert.equal(prepared.rows.length, 2);
+assert.equal(prepared.rows.length, 2);\nassert.deepEqual(prepared.updateRows.map((row) => row.id), ["member-existing"]);\nassert.deepEqual(prepared.insertRows.map((row) => row.id), ["member-new"]);
 
 const existing = prepared.rows.find((row) => row.id === "member-existing");
 assert.equal(existing.condominium_id, "condo-a");
@@ -170,11 +170,17 @@ const restoreEnd = mainSource.indexOf("const exportWorkspaceBackup = async () =>
 assert.ok(restoreStart >= 0 && restoreEnd > restoreStart, "workspace backup restore function must exist");
 const restoreFunction = mainSource.slice(restoreStart, restoreEnd);
 const authorizationGate = restoreFunction.indexOf("if (isBackupAuthorizationTable(table))");
-const genericUpsert = restoreFunction.lastIndexOf('supabase.from(table).upsert(normalized, { onConflict: "id" })');
-assert.ok(authorizationGate >= 0 && authorizationGate < genericUpsert, "authorization records must be skipped before generic upsert");
-assert.match(restoreFunction, /prepareCondominiumMembersForBackupRestore\s*\(/);
-assert.match(restoreFunction, /loadPaginatedRowsByInFilter\(supabase,\s*table,\s*"id",\s*memberIds,\s*"id"\)/);
-assert.doesNotMatch(restoreFunction, /\.from\(table\)\s*\.upsert\(normalized,\s*\{\s*onConflict:\s*"workspace_id,user_id"\s*\}\)/);
+const genericGuard = restoreFunction.lastIndexOf("prepareWorkspaceRowsForBackupRestore(rows, profile.workspaceId, existingRows)");
+assert.ok(authorizationGate >= 0 && authorizationGate < genericGuard, "authorization records must be skipped before generic workspace-row restore");
+assert.ok(restoreFunction.includes("prepareCondominiumMembersForBackupRestore"));
+assert.ok(restoreFunction.includes("prepareWorkspaceRowsForBackupRestore"));
+assert.ok(restoreFunction.includes('loadPaginatedRowsByInFilter(supabase, table, "id", memberIds, "id")'));
+assert.ok(restoreFunction.includes('loadPaginatedRowsByInFilter(supabase, table, "id", rowIds, "id")'));
+assert.ok(restoreFunction.includes(".update(workspaceRow)") && restoreFunction.includes('.eq("workspace_id", profile.workspaceId)'));
+assert.ok(restoreFunction.includes(".insert(prepared.insertRows)"));
+assert.ok(restoreFunction.includes(".update(memberRow)") && restoreFunction.includes('.eq("condominium_id", memberRow.condominium_id)'));
+assert.ok(restoreFunction.includes(".insert(scoped.insertRows)"));
+assert.ok(!restoreFunction.includes(".upsert("), "backup restore must not use ID-only ON CONFLICT updates");
 assert.match(restoreFunction, /skippedSecurityRows\.push\(table \+ ":" \+ rows\.length\)/);
 assert.match(restoreFunction, /record di autorizzazione\/workflow/);
 assert.ok(packageJson.scripts.test.includes("test-backup-security-restore.mjs"), "security restore regression must run through npm test");
@@ -183,6 +189,8 @@ assert.match(workflow, /run:\s*npm test/, "the build workflow must execute npm t
 // Confirm why replaying these rows is security-sensitive in the current schema.
 assert.match(security, /CREATE POLICY "admins manage memberships" ON "public"\."workspace_members" AS PERMISSIVE FOR ALL TO "authenticated" USING \(private\.is_workspace_admin\(workspace_id\)\) WITH CHECK \(private\.is_workspace_admin\(workspace_id\)\)/);
 assert.match(security, /CREATE POLICY "authorized managers manage portal access"[\s\S]*?private\.can_manage_workspace_module\(workspace_id, 'portale'::text\)/);
+assert.ok(security.includes('CREATE POLICY "authorized managers manage activities"') && security.includes("WITH CHECK (private.can_manage_workspace_module(workspace_id, 'attivita'::text))"));
+assert.ok(functions.includes("wm.workspace_id = target_workspace") && functions.includes("wm.role = 'admin'"));
 const workspaceAccess = functions.slice(
   functions.indexOf("FUNCTION private.can_access_workspace_module"),
   functions.indexOf("FUNCTION private.can_manage_workspace_module"),
