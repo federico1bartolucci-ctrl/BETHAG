@@ -158,11 +158,80 @@ Questi dati non dimostrano né un difetto né una replica completa. Confermano c
 
 La run non ha eseguito invii reali Resend, merge, deploy, reset o ricreazione del QA. Non è stato creato alcun ambiente a pagamento. I dati QA/Production restano distinti e preservati.
 
+## Punto 3 — audit ACL/security read-only (24 novembre 2026)
+
+### Inventario live QA e Production
+
+Le query sono state eseguite in sola lettura sul branch QA esistente `jhuyhlzzydcgghrzeexn` e su Production `tctcgptrsmvgajqjgnev`.
+
+| Controllo | QA | Production | Esito |
+|---|---:|---:|---|
+| Funzioni public/private | 173 | 173 | ACL semantiche identiche |
+| Funzioni SECURITY DEFINER | 73 | 73 | nessuna eseguibile da anon |
+| Funzioni trigger | 103 | 103 | ACL identiche |
+| Trigger applicativi | 147 | 147 | definizioni e stato identici |
+| Tabelle public con RLS | 47 | 47 | ACL tabella identiche |
+| Policy RLS | 103 | 103 | una differenza già classificata |
+| Security Advisor | 0 lint | 0 lint | nessun rilievo |
+
+Per le 173 funzioni sono stati confrontati firma, owner, SECURITY DEFINER, configurazione `search_path`, ACL normalizzate e privilegi effettivi. Le sei differenze testuali iniziali delle ACL erano soltanto l'ordine degli elementi; dopo normalizzazione il numero di differenze semantiche è **zero**. Nessuna funzione public/private è eseguibile da `anon`. Tutte le funzioni SECURITY DEFINER hanno un `search_path` esplicito. I ruoli applicativi non hanno CREATE sugli schemi `public` e `private`.
+
+I 147 trigger applicativi e le 103 funzioni trigger coincidono tra QA e Production, inclusi stato di abilitazione, funzione associata e definizione. Le 47 tabelle hanno RLS attiva e ACL identiche; non risultano privilegi diretti per `anon`.
+
+### Differenze dei default ACL — non introdotte dai candidati contabili
+
+I default ACL del ruolo `postgres` nello schema `public` restano diversi:
+
+| Tipo | QA | Production |
+|---|---|---|
+| Tabelle | `{postgres=arwdDxtm/postgres,service_role=Dxt/postgres}` | `{postgres=arwdDxtm/postgres,authenticated=arwd/postgres,service_role=arwdDxt/postgres}` |
+| Funzioni | `{postgres=X/postgres}` | `{postgres=X/postgres}` |
+| Sequenze | `{postgres=rwU/postgres,service_role=w/postgres}` | `{postgres=rwU/postgres}` |
+
+Le differenze sono coerenti con la catena forward-only presente nel solo ledger Production:
+- `20261105010000`: default CRUD per authenticated e privilegi applicativi/strutturali per service_role sulle future tabelle public.
+- `20261105020000`: revoca EXECUTE diretto su due funzioni trigger pubbliche.
+- `20261105030000`: revoca dei default EXECUTE e dei default sulle sequenze nello schema public.
+
+Non sono state pareggiate: Production è la baseline da preservare e i candidati del Punto 1 non creano nuove tabelle o sequenze. Nessuna ALTER DEFAULT PRIVILEGES remota è stata eseguita.
+
+### Difetto individuato: default EXECUTE globale per nuove funzioni private
+
+La migrazione storica `20261022210630_harden_default_privileges_and_private_execute.sql` contiene:
+
+`ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA private REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`.
+
+Questa revoca schema-specifica non annulla il privilegio EXECUTE concesso dal default globale PostgreSQL: i default ACL di schema si sommano a quelli globali. Nei cataloghi live non esiste un default ACL globale per le funzioni del ruolo postgres né un default ACL specifico per private; quindi una nuova funzione creata da postgres in private erediterebbe PUBLIC EXECUTE. È un difetto prospettico, non un'esposizione corrente: le 173 funzioni live non sono eseguibili da anon e le ACL delle funzioni private già esistenti sono state ristrette individualmente. L'ultima evidenza disponibile della Dashboard Data API (5 novembre 2026) mostra `private` non esposto; la configurazione API non è stata riletta oggi e dovrà essere riconfermata prima della chiusura definitiva del Punto 3.
+
+È stato preparato, ma **non applicato**, il draft forward-only:
+`supabase/rebuild/drafts/20261124215000_revoke_postgres_global_public_function_execute.sql`.
+
+Il draft revoca il default globale EXECUTE per PUBLIC/anon/authenticated/service_role sulle nuove funzioni create da postgres. Non modifica funzioni esistenti, default ACL specifici di schema (ad esempio storage) né default dei ruoli Supabase-managed.
+
+La regressione `scripts/private-function-default-acl-repair-regression.sql` è stata eseguita su PostgreSQL 17 isolato, due applicazioni del draft nella stessa transazione, poi ROLLBACK: **PASS**. Verifica che nuove funzioni private/public non ereditino EXECUTE applicativo, che i grant specifici storage restino efficaci, che le ACL delle funzioni esistenti non cambino e che i default `supabase_admin` restino invariati.
+
+### Hardening ACL dei due trigger contabili candidati
+
+La revisione ha rilevato che:
+- `guard_ledger_entry_integrity()` diventa SECURITY DEFINER nel candidato 24240200, ma il precedente GRANT a authenticated sarebbe rimasto con CREATE OR REPLACE. Aggiunta revoca EXECUTE a PUBLIC/anon/authenticated, preservando owner e service_role.
+- `prevent_work_delete_with_progress()` è una nuova funzione trigger SECURITY DEFINER. Aggiunta revoca EXECUTE a PUBLIC/anon/authenticated/service_role.
+
+Le regressioni PostgreSQL 17 provano sia l'assenza di EXECUTE diretto per i ruoli applicativi sia l'effettivo funzionamento dei trigger sotto authenticated con RLS che nasconde le righe SAL:
+- `work-progress-payment-allocation`: PASS.
+- `work-delete-sal-guard`: PASS.
+- `supporting-regressions`, inclusa la prova dei default ACL globali: PASS.
+- `fiscal-year-parent-row-locks`: PASS.
+- `chronological-candidate-chain`: PASS.
+
+Run CI: [Accounting point 1 PostgreSQL 17 regression 45488640834](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488640834). Build [45488661186](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661186) e baseline safety [45488661137](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45488661137): SUCCESS.
+
+Queste modifiche restano file candidati/draft e test isolati. Nessuna ACL, funzione, trigger o default privilege è stata modificata su QA o Production.
+
 ### Stato dei gate successivi
 
 1. **Punto 1 — CHIUSO tecnicamente:** consolidamento e regressioni SQL isolate completati; nessuna autorizzazione di merge/deploy implicita.
 2. **Punto 2 — CHIUSO:** inventari e riconciliazione semantica documentati; collaudo APP-01..APP-15 live sul QA esistente completato PASS.
-3. **Punto 3 — NON INIZIATO:** audit ACL/security complessiva sulla catena candidata. È il prossimo punto della scaletta e deve partire da una verifica read-only.
+3. **Punto 3 — IN CORSO:** audit read-only QA/Production completato; hardening dei due trigger candidati e draft forward-only per i default EXECUTE globali provati su PostgreSQL 17 isolato. Restano da riconfermare le impostazioni Data API correnti e da decidere/approvare l'eventuale migrazione forward-only; nessuna applicazione remota eseguita.
 4. **Punto 4 — NON INIZIATO:** aggiornamento manifest e nuova approvazione, subordinati alla chiusura del Punto 3.
 
 La regressione SQL isolata non sostituisce il collaudo live; ora entrambi i livelli risultano superati per il Punto 2. Nessun DDL/DML remoto, modifica ACL, replay migrazioni, merge o deploy è stato eseguito.
