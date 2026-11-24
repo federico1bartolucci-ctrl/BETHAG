@@ -8,6 +8,7 @@ import { loadPaginatedWorkspaceRows } from "../src/lib/paginatedWorkspaceRows.ts
 
 const criticalAccountingTables = [
   "condominium_accounting_settings",
+  "condominium_consumption_readings",
   "condominium_member_transfers",
   "condominium_millesimal_values",
   "condominium_fiscal_carryovers",
@@ -34,6 +35,9 @@ assert.ok(restoreIndex("condominium_millesimal_tables") < restoreIndex("condomin
 assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_millesimal_values"));
 assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_member_transfers"));
 assert.ok(restoreIndex("condominium_members") < restoreIndex("condominium_member_transfers"));
+assert.ok(restoreIndex("condominium_fiscal_years") < restoreIndex("condominium_consumption_readings"));
+assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_consumption_readings"));
+assert.ok(restoreIndex("condominiums") < restoreIndex("condominium_consumption_readings"));
 assert.ok(restoreIndex("condominium_fiscal_years") < restoreIndex("condominium_fiscal_carryovers"));
 assert.ok(restoreIndex("condominium_units") < restoreIndex("condominium_fiscal_carryovers"));
 assert.ok(restoreIndex("condominium_members") < restoreIndex("condominium_fiscal_carryovers"));
@@ -84,15 +88,17 @@ assert.ok(calls.every((call) => call.scopedWorkspace === workspaceId));
 assert.ok(calls.every((call) => call.orderColumn === "id"));
 assert.ok(calls.every((call) => call.from === 0 && call.to === 999));
 
-const [mainSource, schemaSource, packageJson] = await Promise.all([
+const [mainSource, schemaSource, packageJson, accountingPageSource] = await Promise.all([
   readFile(new URL("../src/main.tsx", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20261017000001_bethag_baseline_schema.sql", import.meta.url), "utf8"),
   readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
+  readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8"),
 ]);
 assert.match(mainSource, /import \{ WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER \} from "\.\/lib\/workspaceBackupTables\.mjs";/);
 assert.match(mainSource, /const tableNames = WORKSPACE_BACKUP_EXPORT_TABLES;/);
 assert.match(mainSource, /const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;/);
 assert.ok(packageJson.scripts.test.includes("test-workspace-backup-accounting-tables.mjs"));
+assert.match(accountingPageSource, /\.from\("condominium_consumption_readings"\)\s*\.select\("\*"\)\s*\.eq\("workspace_id",\s*workspaceId\)/);
 
 for (const table of criticalAccountingTables) {
   const escaped = table.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -101,5 +107,8 @@ for (const table of criticalAccountingTables) {
   assert.match(definition[1], /"workspace_id"\s+uuid/,
     table + " must support the generic workspace-scoped backup loader");
 }
+assert.match(schemaSource, /ALTER TABLE "public"\."condominium_consumption_readings" ADD CONSTRAINT "[^"]+" FOREIGN KEY \(condominium_id\) REFERENCES condominiums\(id\)/);
+assert.match(schemaSource, /ALTER TABLE "public"\."condominium_consumption_readings" ADD CONSTRAINT "[^"]+" FOREIGN KEY \(unit_id\) REFERENCES condominium_units\(id\)/);
+assert.match(schemaSource, /ALTER TABLE "public"\."condominium_consumption_readings" ADD CONSTRAINT "[^"]+" FOREIGN KEY \(fiscal_year_id\) REFERENCES condominium_fiscal_years\(id\)/);
 
 console.log("Workspace backup accounting continuity table regression checks passed.");
