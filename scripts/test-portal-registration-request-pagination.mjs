@@ -8,7 +8,8 @@ const start = source.indexOf("const loadRegistrationRequests = async () => {");
 const end = source.indexOf("void loadRegistrationRequests();", start);
 assert.ok(start >= 0 && end > start, "registration-request loading effect must exist");
 const effect = source.slice(start, end);
-assert.match(effect, /loadPortalRegistrationRequests\(supabase, profile\.workspaceId\)/, "admin registration request list must use the paginated loader");
+assert.match(effect, /const workspaceId = profile\.workspaceId;/, "admin registration request list must capture the active workspace ID");
+assert.match(effect, /loadPortalRegistrationRequests\(supabase, workspaceId\)/, "admin registration request list must use the paginated loader for the captured workspace");
 assert.doesNotMatch(effect, /supabase\s*\.from\("portal_registration_requests"\)/, "effect must not retain unpaginated direct list queries");
 assert.ok(packageJson.scripts.test.includes("test-portal-registration-request-pagination.mjs"), "regression test must run via npm test");
 
