@@ -26,8 +26,19 @@ assert.ok(packageJson.scripts.test.includes("test-backup-restore-partial-fronten
 // The backend can be partial, but the full frontend/localStorage snapshot must
 // not be committed over the pre-restore local state.
 const backendRows = new Map();
-backendRows.set("condominiums", [{ id: "condo-1", name: "Restored" }]);
-const backendErrors = ["documents: permission denied"];
+const backendErrors = [];
+async function writeBackendTable(table, rows) {
+  if (table === "documents") return { error: { message: "permission denied" } };
+  backendRows.set(table, rows);
+  return { error: null };
+}
+for (const [table, rows] of [
+  ["condominiums", [{ id: "condo-1", name: "Restored" }]],
+  ["documents", [{ id: "document-1", name: "Not restored" }]],
+]) {
+  const result = await writeBackendTable(table, rows);
+  if (result.error) backendErrors.push(table + ": " + result.error.message);
+}
 let frontendState = { condominiums: [{ id: "condo-old", name: "Current" }] };
 const storage = new Map([["condominiums", JSON.stringify(frontendState.condominiums)]]);
 let frontendCommitCalls = 0;

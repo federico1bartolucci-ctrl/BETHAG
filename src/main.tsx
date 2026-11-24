@@ -3577,7 +3577,7 @@ function App() {
         apply("collaborators", setCollaborators);
         apply("subscription", setSubscription);
         if (state.profile) setProfile(state.profile as AdminProfile);
-  
+
         Object.entries(state).forEach(([key, value]) => {
           const storageKey = (KEYS as Record<string,string>)[key];
           if (storageKey && value !== undefined && key !== "profile") {
@@ -3585,7 +3585,7 @@ function App() {
           }
         });
         if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
-  
+
         // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
         // escluse le chiavi di sessione/autenticazione. Questo completa il
         // ripristino delle preferenze e dello stato locale non duplicato nel
