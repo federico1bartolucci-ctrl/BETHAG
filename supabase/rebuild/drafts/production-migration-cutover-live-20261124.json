@@ -178,14 +178,14 @@
   ],
   "execution_order": [
     "Riconfermare in sola lettura il ledger Production a 267 righe, head 20261105050000, preservando tutte le 267 coppie versione/nome.",
-    "Confermare il catalogo ACL: default globale postgres EXECUTE presente; default specifici storage da preservare; nessuna funzione public esistente con PUBLIC EXECUTE.",
-    "Rendere la migrazione candidata parte della catena clean-install (29 file complessivi), verificando hash Git blob e ordine cronologico.",
-    "Creare preflight e postflight specifici per una sola migrazione: preflight 267/head 20261105050000; postflight 268/head 20261124234000; verificare ACL e grant storage.",
-    "Aggiornare un runner dedicato che accetti solo la proposta e 267 righe storiche, lasciando immutato il runner storico 19/248/267; rehearsal solo PostgreSQL 17 locale.",
-    "Eseguire clean-install 29 file, regressione ACL, rehearsal runner, controlli sicurezza e CI completa. APP-01..APP-15 non sono PASS se saltati.",
-    "QA ha 283 righe e storia diversa: verifica compatibilità senza applicare migrazioni, resettare o alterare dati.",
-    "Ricalcolare fingerprint sul commit finale e acquisire nuova approvazione esplicita per SHA, hash, target e finestra; nessuna autorizzazione è presente.",
-    "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only."
+    "Confermare il catalogo ACL: default globale postgres EXECUTE presente come default effettivo; default specifici storage da preservare; nessuna funzione public esistente con PUBLIC EXECUTE.",
+    "Rendere la migrazione candidata parte della catena clean-install (29 file complessivi), verificando hash Git blob e ordine cronologico — PASS su PostgreSQL 17.",
+    "Creare e verificare preflight/postflight per la singola migrazione: 267/head 20261105050000 → 268/head 20261124234000; verificare ACL globale, owner, schema public e grant storage — PASS nel rehearsal locale.",
+    "Implementare il runner Production dedicato 267→268, separato dal runner storico 248→267 e dal runner locale; applicazione transazionale, ledger storico confrontato integralmente prima e dopo, TLS obbligatorio, approvazione e finestra vincolate — implementato fail-closed, non eseguito.",
+    "Eseguire clean-install 29 file, regressione ACL, rehearsal runner 267→268, controlli sicurezza, Baseline Safety e Build sullo SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36 — PASS. Il workflow finale APP-01..APP-15 è SKIPPED e non vale come accettazione.",
+    "QA mantiene il ledger storico distinto (283 righe); nessuna migrazione o reset QA. Un run QA parziale è stato interrotto dopo APP-12/webhook; le fixture temporanee sono state ripulite, ma il run non è accettazione APP-01..APP-15. Il branch resta escluso dal workflow QA condiviso.",
+    "Ricalcolare il fingerprint sullo SHA sorgente definitivo e acquisire approvazione esplicita per SHA, fingerprint, hash, progetto e finestra; servono revisione indipendente, APP-01..APP-15 PASS, CI esatta, verifica Data API recente e riconferma del rischio backup — nessuna approvazione presente.",
+    "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only. Nessuna esecuzione automatica o implicita."
   ],
   "expected_postflight": {
     "ledger_rows": 268,
@@ -270,21 +270,47 @@
     "APP acceptance, Data API exposure, backup disposition or operator prerequisites are not freshly verified.",
     "No new explicit owner approval for exact final SHA, fingerprint and candidate hash exists."
   ],
-  "safety": "Read-only live verification 2026-11-24: Production ledger 267 rows/head 20261105050000; all 19 prior sequence entries present by version/name. Only candidate 20261124234000 is absent. QA ledger 283 rows and distinct history; no reset, migration or data change authorized. Both catalogs show global postgres function default {=X/postgres,postgres=X/postgres}, public-schema default {postgres=X/postgres}, storage-specific grants to anon/authenticated/service_role preserved; 130 public functions and zero with PUBLIC EXECUTE. Historical 248-row/19-increment authorization is not reused. No remote writes, migrations, deploys or merges performed.",
+  "safety": "Production read-only verification 2026-11-24: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. PostgreSQL 17 clean-install, ACL regression, exact 267→268 local runner rehearsal, Build and Baseline Safety PASS on source SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36. QA ledger history was not migrated or reset. A concurrent workflow change accidentally started QA run 45507023362; synthetic test records were temporarily written and cleanup routines completed, the APP-07 persistent fixture was verified as pre-existing on 2026-11-02, no email was sent, and Portal plan fixture restoration returned RESTORE_NOT_REQUIRED. The partial QA run is not APP-01..APP-15 acceptance; current branch is excluded from shared QA workflow. No Production execution is authorized or performed.",
   "rehearsal_evidence": {
-    "status": "PENDING",
+    "status": "TECHNICAL_REHEARSAL_PASS_APPLICATION_ACCEPTANCE_PENDING",
     "target": "isolated PostgreSQL 17 only",
     "historical_rows_assumption": 267,
     "proposed_canonical_rows": 1,
     "proposed_final_ledger_rows": 268,
     "proposed_clean_install_files": 29,
-    "global_function_default_acl_regression": "PASS on earlier PR CI only; rerun required on final proposal SHA",
-    "full_clean_install": "NOT RUN",
-    "guarded_runner": "NOT RUN",
-    "qa_authenticated_collaudo": "NOT RUN",
+    "global_function_default_acl_regression": "PASS",
+    "full_clean_install": "PASS",
+    "guarded_runner": "PASS",
+    "qa_authenticated_collaudo": "NOT ACCEPTED — final APP-01..APP-15 workflow skipped; see qa_execution_disposition",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
-    "production_execution_performed": false
+    "production_execution_performed": false,
+    "production_runner_negative_gate": "PASS — blocked before any Production connection without owner approval",
+    "production_runner_positive_apply": "NOT RUN — requires separate explicit owner approval",
+    "ci_evidence": {
+      "tested_commit_sha": "6ec0d273f61180000bad64051e95a5d1af6a3e36",
+      "build": {
+        "run_id": 45507517179,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45507517179"
+      },
+      "baseline_safety": {
+        "run_id": 45507517266,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45507517266"
+      },
+      "postgres17": {
+        "run_id": 45507517179,
+        "job_id": 138847052256,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45507517179"
+      },
+      "final_qa": {
+        "run_id": 45507517178,
+        "conclusion": "skipped",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45507517178"
+      }
+    }
   },
   "clean_install": {
     "migration_file_count": 29,
@@ -345,5 +371,46 @@
   },
   "proposal_created_at_utc": "2026-11-24",
   "approval_scope": "NONE",
-  "production_apply_authorized": false
+  "production_apply_authorized": false,
+  "production_runner": {
+    "status": "IMPLEMENTED_FAIL_CLOSED_NOT_EXECUTED",
+    "file": "scripts/apply-live-ledger-acl-production.mjs",
+    "transition": "exactly 267 historical pairs → 268 rows with one candidate",
+    "separate_from": "scripts/apply-reviewed-production-migrations.mjs and scripts/apply-live-ledger-acl-rehearsal.mjs",
+    "controls": [
+      "exact complete 267-pair snapshot guard before transaction and after candidate insert",
+      "one exact candidate SQL file and pinned Git blob hash",
+      "preflight, migration, canonical ledger insert and postflight in one PostgreSQL transaction",
+      "advisory transaction lock; rollback on any preflight, migration or postflight error",
+      "exact Production project/host/database validation and TLS-required PostgreSQL connection",
+      "clean checkout; approved source SHA separated from approval-record commit; only manifest-only delta permitted",
+      "SHA-256 release fingerprint includes runner, approval guard, candidate SQL, ledger snapshot, preflight and postflight",
+      "owner approval, independent technical review, exact-SHA Build/Baseline/PostgreSQL CI, APP-01..APP-15 PASS, fresh Data API evidence, backup-risk reconfirmation and UTC execution window required"
+    ],
+    "negative_path_test": "PASS — no approval means blocked before Production connection",
+    "production_apply": "NOT EXECUTED",
+    "production_authorized": false
+  },
+  "qa_execution_disposition": {
+    "status": "PARTIAL_RUN_CLEANUP_COMPLETED_NOT_ACCEPTED_AS_FINAL_QA",
+    "run_id": 45507023362,
+    "source_commit_sha": "10e44f0fce0a508670d18beefd77f06a96bd2b0f",
+    "conclusion": "cancelled after APP-12 and signed webhook test outputs; APP-15 and browser workflows skipped",
+    "completed_suites": [
+      "APP-01..04 and APP-13 real-auth RLS/Storage",
+      "APP-05..07 condominium/accounting/closed-period guard",
+      "APP-08..11 transfer invariants",
+      "APP-09 carryover blockers",
+      "APP-12 communication publication/recipient preparation",
+      "signed Resend webhook synthetic event verification"
+    ],
+    "cleanup": "temporary fixture cleanup code completed before suite PASS output; no live email sent",
+    "persistent_app07_fixture": {
+      "name": "BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE",
+      "created_at_utc": "2026-11-02T04:12:46.316843Z",
+      "disposition": "pre-existing; not created by this run"
+    },
+    "portal_plan_fixture": "RESTORE_NOT_REQUIRED; prepare step did not run",
+    "final_acceptance": "NOT ACCEPTED — APP-01..APP-15 final workflow remains skipped on the current branch"
+  }
 }
