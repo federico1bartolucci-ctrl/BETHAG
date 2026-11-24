@@ -135,3 +135,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
 # Require each installment to have a fiscal year containing its due date.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f scripts/installment-fiscal-year-due-date-regression.sql
+
+# Audit descriptive and accounting-reference-only work updates.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f scripts/work-details-reference-audit-regression.sql
