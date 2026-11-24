@@ -60,7 +60,7 @@ export function prepareCreationIntakesForBackupRestore(rows, workspaceId, existi
       continue;
     }
 
-    if (row.workspace_id != null && String(row.workspace_id) !== targetWorkspaceId) {
+    if (String(row.workspace_id ?? "") !== targetWorkspaceId) {
       skipped += 1;
       continue;
     }
