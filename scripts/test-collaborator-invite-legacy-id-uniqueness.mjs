@@ -40,11 +40,13 @@ try {
   assert.equal(baseline.rows[0].count, 2, "the baseline schema must reproduce two Auth users claiming one collaborator legacy ID");
   console.log("PASS baseline reproduction: two different workspace users can claim the same legacy collaborator ID.");
 
+  await db.exec("BEGIN; SAVEPOINT candidate_preflight;");
   await assert.rejects(
     db.exec(migration),
     /WORKSPACE_MEMBER_LEGACY_ID_DUPLICATES_EXIST/,
     "the candidate migration must refuse to hide pre-existing duplicate identities",
   );
+  await db.exec("ROLLBACK TO SAVEPOINT candidate_preflight; RELEASE SAVEPOINT candidate_preflight; COMMIT;");
   const absentIndex = await db.query(
     "SELECT to_regclass('public.workspace_members_workspace_legacy_id_uidx') AS index_name",
   );
