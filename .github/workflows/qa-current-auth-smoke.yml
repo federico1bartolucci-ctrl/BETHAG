@@ -1,16 +1,13 @@
 name: BETHAG current QA authenticated smoke
+permissions:
+  contents: read
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "src/**"
-      - "public/**"
-      - "scripts/test-browser-current-qa-auth.mjs"
-      - "package.json"
-      - "vite.config.ts"
-      - ".github/workflows/qa-current-auth-smoke.yml"
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Exact current CAP commit SHA to test"
+        required: true
+        type: string
 env:
   VITE_SUPABASE_ENABLE: "true"
   VITE_SUPABASE_URL: "https://jhuyhlzzydcgghrzeexn.supabase.co"
@@ -21,10 +18,32 @@ concurrency:
 
 jobs:
   authenticated-smoke:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout trusted CAP branch
+        uses: actions/checkout@v4
+        with:
+          ref: cap-consolidation-20261123
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify requested SHA is the current trusted CAP head
+        env:
+          EXPECTED_SHA: ${{ inputs.target_ref }}
+        run: |
+          if ! [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "target_ref must be a full 40-character lowercase commit SHA"
+            exit 1
+          fi
+          TRUSTED_SHA="$(git rev-parse HEAD)"
+          echo "Requested SHA: $EXPECTED_SHA"
+          echo "Trusted CAP head: $TRUSTED_SHA"
+          test "$EXPECTED_SHA" = "$TRUSTED_SHA"
+          git checkout --detach "$EXPECTED_SHA"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          echo "Checked-out SHA: $ACTUAL_SHA"
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: 24
