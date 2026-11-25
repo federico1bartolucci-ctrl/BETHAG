@@ -61,6 +61,25 @@ VALUES (
 );
 `;
 
+const guardedFixtureSql = fixtureSql.replace(
+  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'free');`,
+  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'plus');`,
+) + `
+INSERT INTO public.communication_recipients (
+  id, communication_id, workspace_id, condominium_id, member_id, user_id,
+  email, name, recipient_role, status, queued_at
+)
+VALUES (
+  '${ids.recipient}', '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
+  '${ids.member}', NULL, '${memberEmail}', 'Communication Regression Resident',
+  'resident', 'queued', now() - interval '20 minutes'
+);
+UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
+`;
+
+const baselineSql = `
+BEGIN;
+${fixtureSql}
 const baselineSql = `
 BEGIN;
 ${fixtureSql}
@@ -125,17 +144,8 @@ psql(["-f", migration]);
 
 const guardedSql = `
 BEGIN;
-${fixtureSql}
-INSERT INTO public.communication_recipients (
-  id, communication_id, workspace_id, condominium_id, member_id, user_id,
-  email, name, recipient_role, status, queued_at
-)
-VALUES (
-  '${ids.recipient}', '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
-  '${ids.member}', NULL, '${memberEmail}', 'Communication Regression Resident',
-  'resident', 'queued', now() - interval '20 minutes'
-);
-
+${guardedFixtureSql}
+/* recipient fixture is inserted while the workspace is Plus, then the workspace is downgraded */
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '${ids.admin}', true);
 
