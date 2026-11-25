@@ -117,3 +117,8 @@ assert.match(output, /WORKSPACE_PLAN_SERVER_MANAGED_POSTGRES_PASS/);
 console.log("PASS PostgreSQL 17: authenticated workspace admin is rejected despite passing the workspace-admin RLS predicate.");
 console.log("PASS PostgreSQL 17: service_role can update the server-managed plan.");
 console.log("PASS PostgreSQL 17: the denied client upgrade leaves the workspace plan unchanged.");
+
+execFileSync(process.execPath, ["scripts/test-portal-plan-entitlement-postgres.mjs"], {
+  stdio: "inherit",
+  env: process.env,
+});
