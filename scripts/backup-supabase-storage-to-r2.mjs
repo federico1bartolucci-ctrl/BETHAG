@@ -117,7 +117,10 @@ async function main() {
   });
 
   currentStage = "R2 destination bucket access";
-  await destination.send(new HeadBucketCommand({ Bucket: destinationBucket }));
+  // Bucket-scoped Object Read & Write tokens explicitly allow object listing.
+  // Use ListObjectsV2 as the access probe instead of HeadBucket, which is a
+  // bucket-level operation and can be rejected by a bucket-scoped token.
+  const existingBlobObjects = await listAll(destination, destinationBucket, DESTINATION_PREFIX + "objects/");
   currentStage = "R2 lifecycle configuration";
   // Lifecycle is bucket configuration, not object access. Read it with the dedicated
   // Cloudflare configuration token rather than the bucket-scoped S3 object token.
@@ -139,8 +142,7 @@ async function main() {
   }
   currentStage = "Supabase Storage source listing";
   const sourceObjects = await listAll(source, SOURCE_BUCKET);
-  currentStage = "R2 existing blob inventory";
-  const existingBlobObjects = await listAll(destination, destinationBucket, DESTINATION_PREFIX + "objects/");
+  currentStage = "R2 existing blob inventory indexing";
   const blobsByHash = new Map();
   for (const item of existingBlobObjects) {
     const match = item.Key?.match(/^backups\/objects\/([a-f0-9]{64})\//);
