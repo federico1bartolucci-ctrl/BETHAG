@@ -118,15 +118,40 @@ const baselineOutput = psql(["-c", baselineSql]);
 assert.match(baselineOutput, /COMMUNICATIONS_FREE_PLAN_BASELINE_BYPASS_REPRODUCED/);
 console.log("PASS baseline reproduction: a Free workspace admin can publish a communication, prepare recipients and reset stale queued delivery rows.");
 
-const migration = "supabase/rebuild/proposed-forward-migrations/20261125141500_require_plus_plan_for_communications.sql";
-psql(["-f", migration]);
+const planMigration = "supabase/rebuild/proposed-forward-migrations/20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements.sql";
+const portalPlanMigration = "supabase/rebuild/proposed-forward-migrations/20261125134000_require_server_portal_plan_for_resident_access.sql";
+const communicationMigration = "supabase/rebuild/proposed-forward-migrations/20261125141500_require_plus_plan_for_communications.sql";
+const portalPublicationMigration = "supabase/rebuild/proposed-forward-migrations/20261125170000_require_portal_plan_for_communication_publication.sql";
+psql(["-f", planMigration]);
+psql(["-f", portalPlanMigration]);
+psql(["-f", communicationMigration]);
+psql(["-f", portalPublicationMigration]);
 
-// The candidate blocks inserts for Free workspaces. Seed the existing communication
-// and queued recipient while the fixture is Plus, then downgrade through postgres.
-const guardedFixtureSql = fixtureSql.replace(
-  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'free');`,
-  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'plus');`,
-) + `
+// Create the persistent fixture as Free, then use only service_role to seed the
+// existing communication/recipient and downgrade it before authenticated tests.
+const fixtureWithoutCommunication = fixtureSql.replace(
+  `INSERT INTO public.communications (
+  id, workspace_id, condominium_id, title, body, published, legacy_id
+)
+VALUES (
+  '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
+  'Plan gate regression', 'Test body', false, 991001
+);
+`,
+  "",
+);
+assert.notEqual(fixtureWithoutCommunication, fixtureSql, "Communication seed must be separated from the Free workspace fixture.");
+const guardedFixtureSql = fixtureWithoutCommunication + `
+SET LOCAL ROLE service_role;
+UPDATE public.workspaces SET plan = 'plus' WHERE id = '${ids.workspace}'::uuid;
+INSERT INTO public.communications (
+  id, workspace_id, condominium_id, title, body, published, legacy_id, data
+)
+VALUES (
+  '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
+  'Plan gate regression', 'Test body', false, 991001,
+  '{"audience":"Tutti","date":"2026-11-25","status":"Bozza","publishedToPortal":false,"emailStatus":"Non inviata","emailPreparedAt":""}'::jsonb
+);
 INSERT INTO public.communication_recipients (
   id, communication_id, workspace_id, condominium_id, member_id, user_id,
   email, name, recipient_role, status, queued_at
@@ -137,6 +162,7 @@ VALUES (
   'resident', 'queued', now() - interval '20 minutes'
 );
 UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
+RESET ROLE;
 `;
 
 const guardedSql = `
@@ -152,6 +178,14 @@ DECLARE
   v_result jsonb;
   v_count integer;
 BEGIN
+  v_denied := false;
+  BEGIN
+    UPDATE public.workspaces SET plan = 'plus' WHERE id = '${ids.workspace}'::uuid;
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM <> 'WORKSPACE_PLAN_SERVER_MANAGED' THEN RAISE; END IF;
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'FREE_ADMIN_SELF_UPGRADE_NOT_BLOCKED'; END IF;
   -- Private SECURITY DEFINER implementations must not be callable directly by
   -- authenticated clients; public SECURITY INVOKER wrappers delegate to guarded private SECURITY DEFINER functions.
   IF has_function_privilege('authenticated', 'private.prepare_communication_recipients(uuid)', 'EXECUTE')
@@ -285,11 +319,33 @@ BEGIN
     RAISE EXCEPTION 'PLUS_PLAN_HELPER_RETURNED_FALSE';
   END IF;
 
+  v_denied := false;
+  BEGIN
+    UPDATE public.communications
+    SET published = true,
+        data = jsonb_set(jsonb_set(data, '{publishedToPortal}', 'true'::jsonb), '{status}', '"Pubblicata"'::jsonb)
+    WHERE id = '${ids.communication}'::uuid;
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM <> 'PORTAL_PLAN_REQUIRED' THEN RAISE; END IF;
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'PLUS_PLAN_PORTAL_PUBLICATION_NOT_BLOCKED'; END IF;
+
+  v_denied := false;
+  BEGIN
+    INSERT INTO public.communications (workspace_id, condominium_id, title, body, published)
+    VALUES ('${ids.workspace}'::uuid, '${ids.condominium}'::uuid, 'Plus portal blocked', 'Body', true);
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM <> 'PORTAL_PLAN_REQUIRED' THEN RAISE; END IF;
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'PLUS_PLAN_PORTAL_INSERT_NOT_BLOCKED'; END IF;
+
   UPDATE public.communications
-  SET published = true
+  SET title = 'Plus content allowed'
   WHERE id = '${ids.communication}'::uuid;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
-  IF v_rows <> 1 THEN RAISE EXCEPTION 'PLUS_PLAN_COMMUNICATION_PUBLISH_FAILED'; END IF;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'PLUS_PLAN_CONTENT_EDIT_FAILED'; END IF;
 
   v_result := public.prepare_communication_recipients('${ids.communication}'::uuid);
   IF coalesce((v_result->>'recipient_count')::integer, 0) <> 1 THEN
@@ -311,6 +367,56 @@ BEGIN
   VALUES ('${ids.workspace}'::uuid, '${ids.condominium}'::uuid, 'Plus allowed', 'Body', false);
 END
 $plus$;
+
+RESET ROLE;
+SET LOCAL ROLE service_role;
+UPDATE public.workspaces SET plan = 'professional' WHERE id = '${ids.workspace}'::uuid;
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+
+DO $professional$
+DECLARE
+  v_denied boolean := false;
+BEGIN
+  IF NOT private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
+    RAISE EXCEPTION 'PROFESSIONAL_PLUS_ENTITLEMENT_MISSING';
+  END IF;
+  BEGIN
+    UPDATE public.communications SET published = true
+    WHERE id = '${ids.communication}'::uuid;
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM <> 'PORTAL_PLAN_REQUIRED' THEN RAISE; END IF;
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'PROFESSIONAL_PLAN_PORTAL_PUBLICATION_NOT_BLOCKED'; END IF;
+END
+$professional$;
+
+RESET ROLE;
+SET LOCAL ROLE service_role;
+UPDATE public.workspaces SET plan = 'portal' WHERE id = '${ids.workspace}'::uuid;
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+
+DO $portal$
+DECLARE
+  v_rows integer;
+BEGIN
+  IF NOT private.workspace_has_portal_plan('${ids.workspace}'::uuid) THEN
+    RAISE EXCEPTION 'PORTAL_PLAN_HELPER_RETURNED_FALSE';
+  END IF;
+  UPDATE public.communications
+  SET published = true,
+      data = jsonb_set(jsonb_set(data, '{publishedToPortal}', 'true'::jsonb), '{status}', '"Pubblicata"'::jsonb)
+  WHERE id = '${ids.communication}'::uuid;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'PORTAL_PLAN_COMMUNICATION_PUBLISH_FAILED'; END IF;
+  UPDATE public.communications SET title = 'Portal published edit'
+  WHERE id = '${ids.communication}'::uuid;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'PORTAL_PLAN_PUBLISHED_CONTENT_EDIT_FAILED'; END IF;
+END
+$portal$;
 
 RESET ROLE;
 SET LOCAL ROLE service_role;
@@ -338,12 +444,22 @@ BEGIN
   END;
   IF NOT v_denied THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_CONTENT_UPDATE_NOT_BLOCKED'; END IF;
 
-  -- Unpublishing and delivery-status finalization remain available after downgrade.
+  -- Delivery metadata may change while the Portal publication remains live.
   UPDATE public.communications
-  SET published = false, email_status = 'Errore'
+  SET email_status = 'Errore',
+      email_prepared_at = now(),
+      data = jsonb_set(jsonb_set(data, '{emailStatus}', '"Errore"'::jsonb), '{emailPreparedAt}', to_jsonb(now()::text))
   WHERE id = '${ids.communication}'::uuid;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
-  IF v_rows <> 1 THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_UNPUBLISH_OR_STATUS_UPDATE_BLOCKED'; END IF;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_STATUS_FINALIZATION_BLOCKED'; END IF;
+
+  -- Unpublishing and its mirrored UI-only JSON fields remain available after downgrade.
+  UPDATE public.communications
+  SET published = false,
+      data = jsonb_set(jsonb_set(data, '{publishedToPortal}', 'false'::jsonb), '{status}', '"Bozza"'::jsonb)
+  WHERE id = '${ids.communication}'::uuid;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_UNPUBLISH_BLOCKED'; END IF;
 END
 $downgrade$;
 
@@ -355,5 +471,7 @@ SELECT 'COMMUNICATIONS_PLUS_PLAN_POSTGRES_PASS';
 const output = psql(["-c", guardedSql]);
 assert.match(output, /COMMUNICATIONS_PLUS_PLAN_POSTGRES_PASS/);
 console.log("PASS PostgreSQL 17: Free workspace cannot publish/create communications, prepare recipients, reset queued recipients or alter recipient identity.");
-console.log("PASS PostgreSQL 17: Plus workspace can publish, prepare and recover stale recipient queues.");
-console.log("PASS PostgreSQL 17: delivery-status finalization and unpublishing remain available after downgrade.");
+console.log("PASS PostgreSQL 17: Plus and Professional can create/edit/send communications but cannot publish them to the resident Portal.");
+console.log("PASS PostgreSQL 17: Portal can publish and edit published communications.");
+console.log("PASS PostgreSQL 17: delivery-status JSON mirrors and unpublishing remain available after downgrade.");
+console.log("PASS PostgreSQL 17: authenticated workspace admins cannot self-upgrade the server-managed plan.");
