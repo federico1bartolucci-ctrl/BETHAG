@@ -85,9 +85,25 @@ This section supersedes the earlier safety statement about database access. The 
 - Baseline safety run [45652938868](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45652938868): SUCCESS.
 - PR remains Draft and unmerged. The candidate remains outside `supabase/migrations`; canonical Production history and manifests are unchanged.
 
+### Frontend entitlement alignment
+
+- Found and corrected a second bypass/mismatch: the local subscription UI advertised Communications as a standalone €2.90/month add-on, although the database and Edge Function correctly required Plus or higher and had no server-managed Communications add-on entitlement.
+- Communications is now marked server-managed alongside AI and Portal. A client-local `subscription.addons` value cannot unlock it; Plus, Professional and Portal include the feature by plan hierarchy.
+- The standalone price was removed from the UI. The subscription page now explains that Communications, AI and Portal are plan-controlled, not individually purchasable until server-side billing entitlements exist.
+- Plus gating now runs before communication creation, editing, email-composer opening, and before any email communication is inserted/sent. Database and Edge Function enforcement remain authoritative.
+- Added regression coverage to `scripts/test-subscription-server-managed-addons.mjs` for forged local add-ons, plan hierarchy, UI messaging, and each communication entry point.
+- This is a UI/security-alignment correction; it does not change the QA database schema or Production.
+
+### Latest CI
+
+- Latest head at time of this record: `bb6c390fb7170d105fa7d7e8fd20d2082890da24`.
+- Baseline Safety run [45656759542](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45656759542): **SUCCESS**, including migration-baseline and ACL safety plus clean bootstrap.
+- Build + PostgreSQL 17 run [45656759533](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45656759533): still running at the time of documentation; do not treat it as passed until the workflow reports SUCCESS.
+- The latest CI test now covers the Free/Plus UI gate and prevents local-only Communications add-on activation.
+
 ## Remaining gates
 
 1. Confirm the Data API exposed-schema list explicitly excludes `private`; current SQL catalog checks establish ACLs but cannot read the project-level exposed-schema setting.
-2. Run/retain the GitHub CI checks against the latest PR head after this documentation update.
+2. Confirm Build + PostgreSQL 17 run 45656759533 completes SUCCESS on the current code head; rerun after this documentation-only commit if needed.
 3. Review the full PR dependency chain and integrate the communications correction only through the canonical release path; keep the candidate outside `supabase/migrations` until approved.
 4. Keep Production unchanged until a separate explicit release go/no-go decision.
