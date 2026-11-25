@@ -35,6 +35,12 @@ assert.ok(!deployableFiles.includes(proposalFile),
 assert.equal(proposal.status, "DRAFT_NOT_APPROVED");
 assert.equal(proposal.production_apply_authorized, false);
 assert.equal(proposal.approval_scope, "NONE");
+assert.equal(proposal.owner_authorization?.status, "EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL",
+  "Expired owner approval must remain historical and inactive.");
+assert.equal(proposal.owner_authorization?.current_authorization, false,
+  "Expired owner approval must not authorize Production execution.");
+assert.equal(proposal.current_disposition?.production_apply_authorized, false,
+  "Current disposition must remain fail-closed.");
 assert.equal(proposal.live_ledger.rows, 267);
 assert.equal(proposal.live_ledger.head_version, "20261105050000");
 assert.equal(proposal.live_ledger.exact_version_name_match, true);
