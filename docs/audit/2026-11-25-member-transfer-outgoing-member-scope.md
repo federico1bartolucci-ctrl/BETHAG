@@ -35,3 +35,15 @@ It then applies the new candidate migration and verifies both the closure-check 
 ## Dependency and safety
 
 Stacked on PR #452 (which itself includes #451/#450/#440/#438). Draft only. The SQL remains under `supabase/rebuild/proposed-forward-migrations`, not the live `supabase/migrations` directory. No QA/Production changes, merge, deploy, reset or manual workflow dispatch.
+
+## Exact-head CI evidence
+
+Code/test commit `069b98db19be3e865425bff162058693cbe5eee2` — GitHub Actions run [45582718332](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45582718332):
+- `build`: PASS;
+- `npm test`: PASS, including baseline reproduction and corrected rejection for all four malformed/out-of-scope cases;
+- `npm run build`: PASS;
+- public browser smoke: PASS;
+- `postgres-bootstrap`: PASS on isolated PostgreSQL 17;
+- no QA workflow was dispatched.
+
+This evidence is for the exact code/test SHA above. The documentation-only follow-up commit must also pass its own exact-head CI before this audit point is considered fully closed.
