@@ -8277,6 +8277,7 @@ function App() {
               subscription={
                 subscription
               }
+              serverPlan={serverWorkspacePlan}
               portalMembers={
                 portalMembers
               }
@@ -14646,6 +14647,7 @@ function ProfilePage({
   profile,
   setProfile,
   subscription,
+  serverPlan,
   portalMembers,
   isAdministrator = false,
   onExportBackup,
@@ -14742,7 +14744,7 @@ function ProfilePage({
           <h2>
             {
               PLAN_NAMES[
-                subscription.plan
+                serverPlan
               ]
             }
           </h2>
@@ -14753,7 +14755,7 @@ function ProfilePage({
           className="secondary-button"
           type="button"
         >
-          Piano attivo
+          Piano registrato
         </button>
 
       </div>
