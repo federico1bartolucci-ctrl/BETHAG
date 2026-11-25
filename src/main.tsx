@@ -5913,6 +5913,7 @@ function App() {
       alert("Non disponi dell'autorizzazione per gestire le comunicazioni.");
       return;
     }
+    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
 
     if (!supabaseConfigured || !supabase) {
       alert("Il servizio e-mail BETHAG non è disponibile perché Supabase non è configurato.");
@@ -6095,6 +6096,7 @@ function App() {
     event: React.FormEvent<HTMLFormElement>
   ) => {
     if (!requireModulePermission("comunicazioni", "La gestione delle comunicazioni")) return;
+    if (!requirePlan("plus", "La gestione delle comunicazioni", "comunicazioni")) return;
     event.preventDefault();
 
     if (
@@ -6203,6 +6205,7 @@ function App() {
     item: Communication
   ) => {
     if (!requireModulePermission("comunicazioni", "La modifica delle comunicazioni")) return;
+    if (!requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")) return;
     setSelectedCommunication(item);
     setCommunicationForm(item);
     openModal("communication");
@@ -6418,6 +6421,7 @@ function App() {
 
   const newCommunication = (condominiumId?: number) => {
     if (!requireModulePermission("comunicazioni", "La creazione delle comunicazioni")) return;
+    if (!requirePlan("plus", "La creazione delle comunicazioni", "comunicazioni")) return;
     setSelectedCommunication(null);
 
     setCommunicationForm({
@@ -6448,6 +6452,7 @@ function App() {
       alert("Non disponi dell'autorizzazione per gestire le comunicazioni.");
       return;
     }
+    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
 
     setSelectedCommunication(null);
     setCommunicationForm({
