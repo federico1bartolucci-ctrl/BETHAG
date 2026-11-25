@@ -34,7 +34,7 @@ for (const path of workflows) {
     path + ": checkout must start from the trusted CAP branch.");
   assert.match(workflow, /^          persist-credentials: false$/m,
     path + ": checkout credentials must not persist.");
-  assert.match(workflow, /EXPECTED_SHA="\$\{\{ inputs\.target_ref \}\}"/,
+  assert.match(workflow, /^          EXPECTED_SHA: \$\{\{ inputs\.target_ref \}\}$/m,
     path + ": the requested SHA must be passed explicitly.");
   assert.match(workflow, /\^\[0-9a-f\]\{40\}\$/,
     path + ": the target must be a full lowercase 40-character SHA.");
