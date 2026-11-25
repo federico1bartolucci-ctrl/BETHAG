@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
-const workflow = await readFile(".github/workflows/storage-backup-r2.yml", "utf8");
+const workflow = await readFile(".github/workflows/build.yml", "utf8");
 const runbook = await readFile("docs/STORAGE_BACKUP_R2.md", "utf8");
 
 assert.match(script, /SUPABASE_STORAGE_BUCKET \|\| "bethag-documents"/);
