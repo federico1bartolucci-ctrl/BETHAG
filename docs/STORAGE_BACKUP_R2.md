@@ -20,7 +20,8 @@ The script:
 2. Requires a Cloudflare API read token and verifies an enabled R2 Bucket Lock rule for prefix `backups/` with at least 2,592,000 seconds (30 days) of retention. If this gate is absent, it fails before writing any object.
 3. Downloads each source object, computes SHA-256, and checks the downloaded byte count against the source listing.
 4. Stores content-addressed blobs under `backups/objects/<sha256>/<generation>`. A recent copy is reused; a new generation is uploaded after 25 days so objects referenced by retained snapshots are renewed before the 30-day retention window expires.
-5. Writes a timestamped JSON manifest under `backups/snapshots/`, preserving original object keys, sizes, hashes, timestamps, content headers and user metadata.
+5. Re-lists the source bucket and compares each object key, size, ETag, and `LastModified` timestamp. A metadata-only replacement can retain the same key, size, and ETag; the timestamp is therefore part of the consistency signature. Missing/invalid timestamps fail closed, and a changed signature prevents the snapshot manifest from being published.
+6. Writes a timestamped JSON manifest under `backups/snapshots/`, preserving original object keys, sizes, hashes, timestamps, content headers and user metadata.
 6. Reads the manifest back from R2 and compares the bytes to verify the write.
 
 No source object is deleted or changed. The script does not call any delete API.
@@ -70,6 +71,7 @@ To restore, select a manifest by timestamp, download each referenced blob, verif
 ## Operational status
 
 - Repository implementation: pending PR review and CI.
+- Source consistency guard includes `LastModified` to detect metadata-only source revisions; runtime regression is wired into `npm test`.
 - Cloudflare bucket/account: not created by this change.
 - Bucket Lock and lifecycle: not configured.
 - GitHub Environment/secrets: not configured.
