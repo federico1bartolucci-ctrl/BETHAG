@@ -1,15 +1,11 @@
 name: BETHAG final QA collaudo APP-01..APP-15
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       target_ref:
         description: "Exact CAP commit SHA to test"
         required: true
-        default: "be8fd54a61bb13e9f0c8cea0799e4821e7950520"
         type: string
 
 concurrency:
@@ -18,14 +14,14 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout requested CAP revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_ref || github.sha }}
+          ref: ${{ inputs.target_ref }}
 
       - name: Verify checked-out revision
         if: github.event_name == 'workflow_dispatch'
