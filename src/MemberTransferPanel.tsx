@@ -87,7 +87,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const wholePropertyOutgoingIds = useMemo(() => currentUnitOwners.map(m => m.id), [currentUnitOwners]);
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
   const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
-  const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
+  const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate && preview.transfer_scope === transferScope;
   const condominiumLabel = (id?: string | number | null) => {
     if (id == null) return "Condominio non disponibile";
     const match = condominiums.find(c => String(c.id) === String(id));
@@ -193,6 +193,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       const base = results[0];
       const merged = {
         ...base,
+        transfer_scope: transferScope,
         transfer_date: nextTransferDate,
         unit_id: nextUnitId,
         outgoing_member_id: nextOutgoingId,
