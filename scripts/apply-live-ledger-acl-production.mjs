@@ -56,8 +56,12 @@ async function main(){
   execFileSync("git",["cat-file","-e",approvedSource+"^{commit}"],{cwd:root,stdio:"ignore"});
   execFileSync("git",["merge-base","--is-ancestor",approvedSource,expected],{cwd:root,stdio:"ignore"});
   const postApprovalChanges=execFileSync("git",["diff","--name-only",approvedSource+".."+expected],{cwd:root,encoding:"utf8"}).trim().split("\n").filter(Boolean);
-  assert.ok(postApprovalChanges.every(path=>path==="supabase/rebuild/drafts/production-migration-cutover-live-20261124.json"),
-    "STOP: only the explicit owner-approval manifest may change after the approved source SHA.");
+  const approvedDocumentationPaths = new Set([
+    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json",
+    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.md"
+  ]);
+  assert.ok(postApprovalChanges.every(path=>approvedDocumentationPaths.has(path)),
+    "STOP: only the owner-approval manifest and its reviewed runbook may change after the approved source SHA.");
 
   const [manifest,snapshot,sql,preflight,postflight]=await Promise.all([
     readFile(manifestPath,"utf8").then(JSON.parse),readFile(snapshotPath,"utf8").then(JSON.parse),
@@ -86,7 +90,8 @@ async function main(){
   const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/rebuild/drafts/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
     "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
-    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
+    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql",
+    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.md"];
   const pieces=[];
   for(const path of paths.sort()) pieces.push(path+"\0"+(await readFile(join(root,path),"utf8")).replace(/\r\n/g,"\n")+"\0");
   const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+approvedSource+"\0"+pieces.join(""));

@@ -67,6 +67,9 @@ assert.equal(manifest.clean_install?.migration_file_count,28,
   "Canonical Supabase CLI inventory must remain at 28 while the live proposal is unapproved.");
 assert.equal(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS",
   "Separate PostgreSQL 17 rehearsal of the draft candidate is required.");
+assert.match(runner,/approvedDocumentationPaths/);
+assert.match(runner,/production-migration-cutover-live-20261124\\.md/);
+assert.match(runner,/reviewed runbook may change after the approved source SHA/);
 assert.match(runner,/candidatePath=join\(root,"supabase\/rebuild\/drafts",candidate\)/,
   "Production runner must read the candidate from the non-deployable drafts directory.");
 assert.doesNotMatch(runner,/candidatePath=join\(root,"supabase\/migrations",candidate\)/,
