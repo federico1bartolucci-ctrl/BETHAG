@@ -67,9 +67,19 @@ assert.throws(
   "missing LastModified must fail closed instead of weakening the consistency guard"
 );
 assert.throws(
+  () => sourceObjectSignature([{ ...original[0], LastModified: null }]),
+  /valid LastModified timestamp/,
+  "null LastModified must not be interpreted as the Unix epoch"
+);
+assert.throws(
   () => sourceObjectSignature([{ ...original[0], Size: Number.NaN }]),
   /valid size/,
   "invalid source sizes must fail closed"
+);
+assert.throws(
+  () => sourceObjectSignature([{ ...original[0], Size: null }]),
+  /valid size/,
+  "null source size must not be interpreted as zero bytes"
 );
 
 console.log("PASS: Storage backup source-signature runtime regression");
