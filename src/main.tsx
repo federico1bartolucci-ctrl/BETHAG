@@ -2347,6 +2347,8 @@ function App() {
       };
     });
   const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free");
+  const serverPlanAvailable = Boolean(supabaseConfigured && profile.workspaceId);
+  const displayedWorkspacePlan = serverPlanAvailable ? serverWorkspacePlan : subscription.plan;
   const getEntitlementSubscription = (addon?: AddonId) =>
     getAuthoritativeEntitlementSubscription(
       subscription,
@@ -8243,7 +8245,8 @@ function App() {
               setSubscription={
                 setSubscription
               }
-              serverPlan={serverWorkspacePlan}
+              serverPlan={displayedWorkspacePlan}
+              serverPlanAvailable={serverPlanAvailable}
               isAdministrator={isAdministrator}
             />
           )}
@@ -8276,7 +8279,8 @@ function App() {
               setProfile={
                 setProfile
               }
-              serverPlan={serverWorkspacePlan}
+              serverPlan={displayedWorkspacePlan}
+              serverPlanAvailable={serverPlanAvailable}
               portalMembers={
                 portalMembers
               }
@@ -13865,11 +13869,13 @@ function SubscriptionPage({
   subscription,
   setSubscription,
   serverPlan,
+  serverPlanAvailable,
   isAdministrator = false,
 }: {
   subscription: Subscription;
   setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
   serverPlan: PlanId;
+  serverPlanAvailable: boolean;
   isAdministrator?: boolean;
 }) {
   const plans = [
@@ -13902,7 +13908,7 @@ function SubscriptionPage({
   };
 
   const isIncluded = (addon: AddonId) =>
-    hasFeature(isServerManagedAddon(addon) ? serverPlan : subscription.plan, ADDON_REQUIRED_PLAN[addon]);
+    hasFeature(isServerManagedAddon(addon) && serverPlanAvailable ? serverPlan : subscription.plan, ADDON_REQUIRED_PLAN[addon]);
 
   return (
     <>
@@ -13914,7 +13920,7 @@ function SubscriptionPage({
           <p>{PLAN_DESCRIPTIONS[subscription.plan]}</p>
         </div>
         <div className="subscription-current-right">
-          <span className="eyebrow">Piano registrato sul server</span>
+          <span className="eyebrow">{serverPlanAvailable ? "Piano registrato sul server" : "Piano demo locale"}</span>
           <strong>{PLAN_NAMES[serverPlan]}</strong>
           <Badge value={subscription.status} />
           {getClientUnlockedAddons(subscription).length > 0 && <span className="badge">{getClientUnlockedAddons(subscription).length} sblocc{getClientUnlockedAddons(subscription).length === 1 ? "o" : "hi"} singol{getClientUnlockedAddons(subscription).length === 1 ? "o" : "i"}</span>}
@@ -13923,16 +13929,19 @@ function SubscriptionPage({
 
       <section className="pricing-grid">
         {plans.map((plan) => (
-          <article className={`pricing-card ${serverPlan === plan.id ? "current" : subscription.plan === plan.id ? "preview" : ""}`} key={plan.id}>
-            {serverPlan === plan.id && <div className="current-plan">Piano server attivo</div>}
-            {subscription.status === "Demo" && subscription.plan === plan.id && serverPlan !== plan.id && <div className="current-plan">Anteprima demo</div>}
+          <article className={`pricing-card ${(serverPlanAvailable ? serverPlan : subscription.plan) === plan.id ? "current" : subscription.plan === plan.id ? "preview" : ""}`} key={plan.id}>
+            {serverPlanAvailable && serverPlan === plan.id && <div className="current-plan">Piano server attivo</div>}
+            {!serverPlanAvailable && subscription.plan === plan.id && <div className="current-plan">Piano demo</div>}
+            {serverPlanAvailable && subscription.status === "Demo" && subscription.plan === plan.id && serverPlan !== plan.id && <div className="current-plan">Anteprima demo</div>}
             <div className="pricing-icon">{plan.id === "free" ? "🆓" : plan.id === "plus" ? <AppIcon name="sparkles" size={20} /> : plan.id === "professional" ? "🚀" : "👥"}</div>
             <h2>{plan.title}</h2>
             <p>{plan.description}</p>
             <ul>{plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul>
             <button className={subscription.plan === plan.id ? "secondary-button" : "primary-button"} onClick={() => activateDemo(plan.id)}>
               {subscription.plan === plan.id
-                ? serverPlan === plan.id ? "Piano server attivo" : "Anteprima attiva"
+                ? serverPlanAvailable
+                  ? serverPlan === plan.id ? "Piano server attivo" : "Anteprima attiva"
+                  : "Piano demo attivo"
                 : "Prova struttura"}
             </button>
           </article>
@@ -14646,6 +14655,7 @@ function ProfilePage({
   profile,
   setProfile,
   serverPlan,
+  serverPlanAvailable,
   portalMembers,
   isAdministrator = false,
   onExportBackup,
@@ -14753,7 +14763,7 @@ function ProfilePage({
           className="secondary-button"
           type="button"
         >
-          Piano registrato
+          {serverPlanAvailable ? "Piano registrato" : "Piano demo locale"}
         </button>
 
       </div>
