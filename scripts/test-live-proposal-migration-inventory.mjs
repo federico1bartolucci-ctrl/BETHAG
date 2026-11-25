@@ -30,11 +30,15 @@ assert.deepEqual(historicalFiles, frozenHistoricalFiles,
 assert.equal(deployableFiles.length, 28,
   "The standard Supabase CLI inventory must contain only the 28 frozen canonical migrations.");
 assert.ok(!deployableFiles.includes(proposalFile),
-  "DRAFT_NOT_APPROVED candidate must not be visible to supabase db push.");
+  "The live-ledger candidate must remain outside supabase db push, even after explicit approval.");
 
-assert.equal(proposal.status, "DRAFT_NOT_APPROVED");
-assert.equal(proposal.production_apply_authorized, false);
-assert.equal(proposal.approval_scope, "NONE");
+const proposalApproved = proposal.status === "APPROVED_FOR_PRODUCTION_CUTOVER";
+assert.ok(proposalApproved || proposal.status === "DRAFT_NOT_APPROVED",
+  "Proposal status must be either draft or explicitly approved for the single live-ledger ACL cutover.");
+assert.equal(proposal.production_apply_authorized, proposalApproved,
+  "Production apply authorization must match the explicit manifest status.");
+assert.equal(proposal.approval_scope, proposalApproved ? "LIVE_LEDGER_ACL_267_TO_268" : "NONE",
+  "Approval scope must match the explicit manifest status.");
 assert.equal(proposal.live_ledger.rows, 267);
 assert.equal(proposal.live_ledger.head_version, "20261105050000");
 assert.equal(proposal.live_ledger.exact_version_name_match, true);
