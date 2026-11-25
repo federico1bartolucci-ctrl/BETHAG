@@ -17,6 +17,7 @@ The scheduled workflow runs every six hours and can also be manually dispatched 
 
 The script:
 1. Reads the Supabase bucket through its S3-compatible endpoint.
+   - Enumerates every `ListObjectsV2` page with an explicit 1,000-object page size; missing, repeated or cyclic continuation tokens, malformed page metadata and duplicate keys abort the run rather than allowing a partial inventory.
 2. Requires a Cloudflare API read token and verifies an enabled R2 Bucket Lock rule for prefix `backups/` with at least 2,592,000 seconds (30 days) of retention. If this gate is absent, it fails before writing any object.
 3. Downloads each source object, computes SHA-256, and checks the downloaded byte count against the source listing.
 4. Stores content-addressed blobs under `backups/objects/<sha256>/<generation>`. A recent copy is reused; a new generation is uploaded after 25 days so objects referenced by retained snapshots are renewed before the 30-day retention window expires.
@@ -69,11 +70,10 @@ To restore, select a manifest by timestamp, download each referenced blob, verif
 
 ## Operational status
 
-- Repository implementation: PR #490 under review; merge only after CI passes.
+- Repository implementation: PR #490 merged into `main` (R2 jurisdiction endpoint, S3 addressing and lifecycle preflight); first successful snapshot remains pending.
 - Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
 - GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
 - First backup: attempted on 26 November 2026; failed at R2 S3 bucket access with HTTP 403. No successful snapshot or manifest has been confirmed.
 - Restore utility and isolated restore drill: NOT RUN.
-- Production and QA data/configuration: unchanged.
 - Production and QA data/configuration: unchanged.
