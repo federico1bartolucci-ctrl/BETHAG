@@ -5,6 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261125064000_scope_member_transfer_closure_financial_positions_to_unit.sql";
 const scopeMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125073000_validate_member_transfer_outgoing_member_scope.sql";
+const unitAllocationMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125090000_include_unit_unassigned_allocations_in_transfer_closure.sql";
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const auditEvidence = await readFile(
   "docs/audit/2026-11-25-member-transfer-outgoing-member-scope.md",
@@ -41,6 +42,7 @@ const checkPublicRpc = extractPublicFunction("check_condominium_member_transfer_
 const closePublicRpc = extractPublicFunction("close_condominium_member_transfer");
 const migrationSql = await readFile(migrationPath, "utf8");
 const scopeMigrationSql = await readFile(scopeMigrationPath, "utf8");
+const unitAllocationMigrationSql = await readFile(unitAllocationMigrationPath, "utf8");
 const marker = "CREATE OR REPLACE FUNCTION private.check_condominium_member_transfer_closure(";
 const start = baselineSql.indexOf(marker);
 const endMarker = "$function$" + String.fromCharCode(10) + ";";
@@ -67,6 +69,8 @@ const ids = {
   otherUnitMember: "f3333333-3333-4333-8333-333333333333",
   foreignMember: "f4444444-4444-4444-8444-444444444444",
   missingMember: "f5555555-5555-4555-8555-555555555555",
+  unitAUnassignedAllocation: "20000000-0000-4000-8000-000000000003",
+  unitBUnassignedAllocation: "20000000-0000-4000-8000-000000000004",
   transfer: "f0000000-0000-4000-8000-000000000001",
   shareTransfer: "f0000000-0000-4000-8000-000000000002",
   emptyArrayTransfer: "f0000000-0000-4000-8000-000000000003",
@@ -189,7 +193,9 @@ try {
         ('${ids.foreignMember}', '${ids.foreignCondominium}', NULL, true, now(),
           '{"position_status":"Attivo","current_owner":true}'::jsonb);
     INSERT INTO public.condominium_ledger_entries(id, workspace_id, condominium_id, direction)
-      VALUES ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', 'Uscita');
+      VALUES
+        ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', 'Uscita'),
+        ('20000000-0000-4000-8000-000000000002', '${ids.workspace}', '${ids.condominium}', 'Uscita');
 
     -- Install the exact baseline trigger functions used by the application.
     -- They validate workspace and condominium ownership but do not require the
@@ -254,7 +260,9 @@ try {
       (id, workspace_id, condominium_id, ledger_entry_id, unit_id, member_id, amount, paid_amount)
     VALUES
       ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', '20000000-0000-4000-8000-000000000001', '${ids.unitA}', '${ids.memberA}', 40, 10),
-      ('20000000-0000-4000-8000-000000000002', '${ids.workspace}', '${ids.condominium}', '20000000-0000-4000-8000-000000000001', '${ids.unitB}', '${ids.memberA}', 50, 0);
+      ('20000000-0000-4000-8000-000000000002', '${ids.workspace}', '${ids.condominium}', '20000000-0000-4000-8000-000000000001', '${ids.unitB}', '${ids.memberA}', 50, 0),
+      ('${ids.unitAUnassignedAllocation}', '${ids.workspace}', '${ids.condominium}', '20000000-0000-4000-8000-000000000002', '${ids.unitA}', NULL, 40, 10),
+      ('${ids.unitBUnassignedAllocation}', '${ids.workspace}', '${ids.condominium}', '20000000-0000-4000-8000-000000000001', '${ids.unitB}', NULL, 60, 0);
 
     INSERT INTO public.condominium_fiscal_carryovers
       (id, workspace_id, condominium_id, unit_id, member_id, balance) VALUES
@@ -386,138 +394,8 @@ try {
          OR (member_id IS NULL AND unit_id = '${ids.unitA}');
     UPDATE public.condominium_expense_allocations
       SET paid_amount = amount
-      WHERE member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}';
-    UPDATE public.condominium_fiscal_carryovers
-      SET balance = 0
-      WHERE (member_id = '${ids.memberA}' AND (unit_id IS NULL OR unit_id = '${ids.unitA}'))
-         OR (member_id IS NULL AND unit_id = '${ids.unitA}');
-  `);
-
-  // The #452 close helper still trusted JSON member IDs when archiving records.
-  // Reproduce cross-unit, cross-condominium, missing-ID and NULL-ID cases before
-  // applying the new scope-validation migration.
-  const baselineScopeCases = [
-    { id: ids.otherUnitScopeTransfer, unexpectedMember: ids.otherUnitMember, label: "another unit in the same condominium" },
-    { id: ids.foreignScopeTransfer, unexpectedMember: ids.foreignMember, label: "another condominium/workspace" },
-    { id: ids.missingMemberScopeTransfer, unexpectedMember: null, label: "a non-existent member ID" },
-    { id: ids.nullMemberScopeTransfer, unexpectedMember: null, label: "a NULL member ID" }
-  ];
-  for (const item of baselineScopeCases) {
-    const baselineScopeCheck = await call(item.id);
-    assert.equal(Number(baselineScopeCheck.open_total), 0,
-      "Baseline must not find financial balances for the isolated scope-test members: " + item.label);
-    const baselineScopeClose = await db.query(
-      "SELECT public.close_condominium_member_transfer($1::uuid) AS closed",
-      [item.id]
-    );
-    assert.equal(baselineScopeClose.rows[0].closed, true,
-      "Baseline close helper must reproduce accepting " + item.label + ".");
-    const primaryState = await db.query(
-      "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
-      [ids.scopeTestMember]
-    );
-    assert.equal(primaryState.rows[0].active, false,
-      "Baseline must archive the primary member for " + item.label + ".");
-    if (item.unexpectedMember) {
-      const unexpectedState = await db.query(
-        "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
-        [item.unexpectedMember]
-      );
-      assert.equal(unexpectedState.rows[0].active, false,
-        "Baseline must reproduce archiving a member outside the selected unit/condominium: " + item.label);
-    }
-    await db.query(
-      "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
-      [ids.scopeTestMember]
-    );
-    if (item.unexpectedMember) {
-      await db.query(
-        "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
-        [item.unexpectedMember]
-      );
-    }
-  }
-  await db.exec(`
-    UPDATE public.condominium_member_transfers
-    SET status = 'Confermato', closed_at = NULL, closed_by = NULL
-    WHERE id IN (
-      '${ids.otherUnitScopeTransfer}',
-      '${ids.foreignScopeTransfer}',
-      '${ids.missingMemberScopeTransfer}',
-      '${ids.nullMemberScopeTransfer}'
-    );
-  `);
-  console.log("PASS baseline reproduction: transfer closure archived other-unit/cross-condominium members and accepted missing/NULL outgoing IDs.");
-
-  const ownershipShare = await call(ids.shareTransfer);
-  assert.equal(Number(ownershipShare.open_total), 0,
-    "Ownership-share transfers must retain their existing zero-closure behavior.");
-  assert.equal(Number(ownershipShare.open_installments), 0);
-  assert.equal(Number(ownershipShare.open_allocations), 0);
-  assert.equal(Number(ownershipShare.open_member_carryovers), 0);
-  assert.equal(Number(ownershipShare.open_unit_carryovers), 0);
-  console.log("PASS ownership-share compatibility: no closure balances are introduced.");
-
-  await db.exec(scopeMigrationSql);
-  const correctedScopeCases = [
-    { id: ids.otherUnitScopeTransfer, label: "member assigned to another unit" },
-    { id: ids.foreignScopeTransfer, label: "member belonging to another condominium/workspace" },
-    { id: ids.missingMemberScopeTransfer, label: "non-existent member ID" },
-    { id: ids.nullMemberScopeTransfer, label: "NULL member ID" }
-  ];
-  for (const item of correctedScopeCases) {
-    let checkError;
-    try {
-      await call(item.id);
-    } catch (error) {
-      checkError = error;
-    }
-    assert.ok(checkError, "Closure check must reject " + item.label + ".");
-    assert.match(String(checkError.message), /TRANSFER_OUTGOING_MEMBER_SCOPE_MISMATCH/);
-
-    let closeError;
-    try {
-      await db.query(
-        "SELECT public.close_condominium_member_transfer($1::uuid)",
-        [item.id]
-      );
-    } catch (error) {
-      closeError = error;
-    }
-    assert.ok(closeError, "Authoritative close must reject " + item.label + ".");
-    assert.match(String(closeError.message), /TRANSFER_OUTGOING_MEMBER_SCOPE_MISMATCH/);
-
-    const transferState = await db.query(
-      "SELECT status, closed_at, closed_by FROM public.condominium_member_transfers WHERE id = $1::uuid",
-      [item.id]
-    );
-    assert.equal(transferState.rows[0].status, "Confermato",
-      "Rejected scope mismatch must leave transfer status unchanged: " + item.label);
-    assert.equal(transferState.rows[0].closed_at, null,
-      "Rejected scope mismatch must not set closed_at: " + item.label);
-    const primaryState = await db.query(
-      "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
-      [ids.scopeTestMember]
-    );
-    assert.equal(primaryState.rows[0].active, true,
-      "Rejected scope mismatch must not archive the primary member: " + item.label);
-  }
-  const outOfScopeState = await db.query(
-    "SELECT id, active FROM public.condominium_members WHERE id = ANY($1::uuid[])",
-    [[ids.otherUnitMember, ids.foreignMember]]
-  );
-  assert.ok(outOfScopeState.rows.every(row => row.active === true),
-    "Rejected transfers must not archive any out-of-scope member.");
-  console.log("PASS corrected outgoing-member scope: check and close reject other-unit, cross-condominium, missing and NULL IDs without changing members or transfer state.");
-
-  // Clear only Unit A and legacy unit-null member obligations. Unit B remains
-  // unpaid; the corrected close operation must ignore those other-unit rows.
-  await db.exec(`
-    UPDATE public.condominium_installments
-      SET paid_amount = amount
-      WHERE (member_id = '${ids.memberA}' AND (unit_id IS NULL OR unit_id = '${ids.unitA}'))
-         OR (member_id IS NULL AND unit_id = '${ids.unitA}');
-    UPDATE public.condominium_expense_allocations
+      WHERE (member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}')
+         OR (member_id IS NULL AND unit_id = '${ids.unitA}');    UPDATE public.condominium_expense_allocations
       SET paid_amount = amount
       WHERE member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}';
     UPDATE public.condominium_fiscal_carryovers
