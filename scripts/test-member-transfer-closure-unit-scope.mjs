@@ -44,9 +44,11 @@ const ids = {
   unitA: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   unitB: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   memberA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  otherMember: "f1111111-1111-4111-8111-111111111111",
   transfer: "f0000000-0000-4000-8000-000000000001",
   shareTransfer: "f0000000-0000-4000-8000-000000000002",
-  emptyArrayTransfer: "f0000000-0000-4000-8000-000000000003"
+  emptyArrayTransfer: "f0000000-0000-4000-8000-000000000003",
+  missingPrimaryTransfer: "f0000000-0000-4000-8000-000000000004"
 };
 
 const db = new PGlite();
@@ -146,8 +148,11 @@ try {
       ('${ids.unitA}', '${ids.workspace}', '${ids.condominium}'),
       ('${ids.unitB}', '${ids.workspace}', '${ids.condominium}');
     INSERT INTO public.condominium_members(id, condominium_id, active, updated_at, data)
-      VALUES ('${ids.memberA}', '${ids.condominium}', true, now(),
-        '{"position_status":"Attivo","current_owner":true}'::jsonb);
+      VALUES
+        ('${ids.memberA}', '${ids.condominium}', true, now(),
+          '{"position_status":"Attivo","current_owner":true}'::jsonb),
+        ('${ids.otherMember}', '${ids.condominium}', true, now(),
+          '{"position_status":"Attivo","current_owner":true}'::jsonb);
     INSERT INTO public.condominium_ledger_entries(id, workspace_id, condominium_id, direction)
       VALUES ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', 'Uscita');
 
@@ -174,7 +179,10 @@ try {
        jsonb_build_object('transfer_scope', 'ownership_share', 'outgoing_member_ids', jsonb_build_array('${ids.memberA}'))),
       ('${ids.emptyArrayTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
        '${ids.memberA}', 'Confermato',
-       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', '[]'::jsonb));
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', '[]'::jsonb)),
+      ('${ids.missingPrimaryTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.memberA}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.otherMember}')));
 
     -- Unit A: valid member-linked obligations that must remain in the closure check.
     INSERT INTO public.condominium_installments
@@ -232,6 +240,14 @@ try {
     return result.rows[0].result;
   };
 
+  const missingPrimaryBefore = await call(ids.missingPrimaryTransfer);
+  assert.equal(Number(missingPrimaryBefore.open_installments), 0,
+    "Baseline must expose the missing-primary bug: a non-empty array that omits outgoing_member_id hides the primary member's installments.");
+  assert.equal(Number(missingPrimaryBefore.open_allocations), 0);
+  assert.equal(Number(missingPrimaryBefore.open_member_carryovers), 0);
+  assert.equal(Number(missingPrimaryBefore.open_total), 5);
+  console.log("PASS baseline reproduction: non-empty outgoing_member_ids omitting the primary member hides that member's balances.");
+
   const emptyArrayBefore = await call(ids.emptyArrayTransfer);
   assert.equal(Number(emptyArrayBefore.open_installments), 0,
     "Baseline must expose the empty-array bug: member-linked installments disappear when array_agg returns NULL.");
@@ -267,6 +283,23 @@ try {
   console.log("PASS baseline close reproduction: the authoritative close helper also blocks Unit A because of Unit B obligations.");
 
   await db.exec(migrationSql);
+  const missingPrimaryAfter = await call(ids.missingPrimaryTransfer);
+  assert.equal(Number(missingPrimaryAfter.open_installments), 90,
+    "Corrected function must prepend the primary outgoing_member_id when a non-empty JSON array omits it.");
+  assert.equal(Number(missingPrimaryAfter.open_allocations), 30);
+  assert.equal(Number(missingPrimaryAfter.open_member_carryovers), 12);
+  assert.equal(Number(missingPrimaryAfter.open_unit_carryovers), 5);
+  assert.equal(Number(missingPrimaryAfter.open_total), 137);
+  let missingPrimaryCloseError;
+  try {
+    await db.query("SELECT public.close_condominium_member_transfer($1::uuid)", [ids.missingPrimaryTransfer]);
+  } catch (error) {
+    missingPrimaryCloseError = error;
+  }
+  assert.ok(missingPrimaryCloseError, "A non-empty outgoing_member_ids array omitting the primary member must not bypass closure.");
+  assert.match(String(missingPrimaryCloseError.message), /TRANSFER_FINANCIAL_POSITIONS_OPEN/);
+  console.log("PASS corrected primary-member inclusion: the omitted primary member's balances are counted and closure is blocked.");
+
   const emptyArrayAfter = await call(ids.emptyArrayTransfer);
   assert.equal(Number(emptyArrayAfter.open_installments), 90,
     "Corrected function must fall back to the primary outgoing_member_id when the JSON array is empty.");
