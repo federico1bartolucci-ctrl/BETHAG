@@ -6,27 +6,38 @@ import {
   isServerManagedAddon,
 } from "../src/lib/subscription-entitlements.js";
 
-const freeWithForgedAddons = { plan: "free", addons: ["ai", "portale", "documenti"] };
+const freeWithForgedAddons = {
+  plan: "free",
+  addons: ["ai", "portale", "comunicazioni", "documenti"],
+};
 assert.equal(hasEntitlement(freeWithForgedAddons, "plus", "ai"), false);
 assert.equal(hasEntitlement(freeWithForgedAddons, "professional", "ai"), false);
 assert.equal(hasEntitlement(freeWithForgedAddons, "portal", "portale"), false);
+assert.equal(hasEntitlement(freeWithForgedAddons, "plus", "comunicazioni"), false);
 assert.equal(hasEntitlement(freeWithForgedAddons, "plus", "documenti"), true);
 assert.deepEqual(getClientUnlockedAddons(freeWithForgedAddons), ["documenti"]);
-assert.equal(isServerManagedAddon("ai"), true);
-assert.equal(isServerManagedAddon("portale"), true);
+
+for (const addon of ["ai", "portale", "comunicazioni"]) {
+  assert.equal(isServerManagedAddon(addon), true, addon + " must require a server-owned entitlement.");
+}
 assert.equal(isServerManagedAddon("documenti"), false);
 
-assert.equal(hasEntitlement({ plan: "plus", addons: ["ai"] }, "plus", "ai"), true);
-assert.equal(hasEntitlement({ plan: "professional", addons: [] }, "professional", "ai"), true);
-assert.equal(hasEntitlement({ plan: "portal", addons: [] }, "portal", "portale"), true);
+assert.equal(hasEntitlement({ plan: "plus", addons: [] }, "plus", "comunicazioni"), true);
+assert.equal(hasEntitlement({ plan: "professional", addons: [] }, "plus", "comunicazioni"), true);
+assert.equal(hasEntitlement({ plan: "portal", addons: [] }, "plus", "comunicazioni"), true);
 assert.equal(hasEntitlement({ plan: "professional", addons: ["portale"] }, "portal", "portale"), false);
+assert.equal(hasEntitlement({ plan: "portal", addons: [] }, "portal", "portale"), true);
 
 const mainSource = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 assert.match(mainSource, /from "\.\/lib\/subscription-entitlements\.js"/);
 assert.match(mainSource, /if \(isServerManagedAddon\(addon\)\) return;/);
 assert.match(mainSource, /disabled=\{included \|\| unlocked \|\| serverManaged\}/);
 assert.match(mainSource, /getClientUnlockedAddons\(subscription\)/);
-assert.match(mainSource, /PORTAL_PLAN_REQUIRED/);
+assert.match(mainSource, /comunicazioni: "Incluso da Plus"/);
+assert.match(mainSource, /addon === "comunicazioni"/);
+assert.match(mainSource, /addon && !isServerManagedAddon\(addon\)/);
+assert.match(mainSource, /Le Comunicazioni richiedono un piano Plus o superiore verificato dal server/);
 
-console.log("PASS UI entitlement runtime: local AI/Portal add-ons cannot unlock server-managed features.");
-console.log("PASS subscription UI: server-managed add-ons are disabled until a server entitlement exists.");
+console.log("PASS UI entitlement runtime: local AI, Portal and Communications add-ons cannot unlock server-managed features.");
+console.log("PASS Plus, Professional and Portal plans include Communications; Free cannot unlock it with client-local add-on state.");
+console.log("PASS subscription UI disables single activation and does not advertise a standalone price for server-managed entitlements.");
