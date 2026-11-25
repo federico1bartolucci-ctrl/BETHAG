@@ -4,8 +4,10 @@ import { PGlite } from "@electric-sql/pglite";
 
 const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261125080000_validate_member_transfer_outgoing_ids_on_confirmation.sql";
+const unitAllocationMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125090001_include_unit_unassigned_allocations_in_transfer_confirmation.sql";
 const baselineSql = await readFile(baselinePath, "utf8");
 const migrationSql = await readFile(migrationPath, "utf8");
+const unitAllocationMigrationSql = await readFile(unitAllocationMigrationPath, "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 assert.match(packageJson.scripts.test, /test-member-transfer-confirm-outgoing-member-ids\.mjs/,
   "Outgoing-member confirmation regression must be wired into npm test.");
@@ -34,6 +36,7 @@ const ids = {
   memberValidA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee05",
   memberValidB: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee06",
   memberEmpty: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee07",
+  unitValidUnassignedAllocation: "30000000-0000-4000-8000-000000000001",
   missingId: "f1111111-1111-4111-8111-111111111111"
 };
 
@@ -100,11 +103,15 @@ try {
     );
     CREATE TABLE public.condominium_expense_allocations (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id uuid,
+      condominium_id uuid,
+      unit_id uuid,
       member_id uuid,
       due_date date,
       amount numeric NOT NULL DEFAULT 0,
       paid_amount numeric NOT NULL DEFAULT 0,
-      ledger_entry_id uuid
+      ledger_entry_id uuid,
+      status text
     );
     CREATE TABLE public.condominium_ledger_entries (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -200,6 +207,15 @@ try {
   console.log("PASS baseline reproduction: confirmation accepts missing and NULL outgoing-member IDs and creates uncloseable transfer records.");
 
   await db.exec(migrationSql);
+  await db.exec(unitAllocationMigrationSql);
+  await db.exec(`
+    INSERT INTO public.condominium_expense_allocations(
+      id, workspace_id, condominium_id, unit_id, member_id, amount, paid_amount, due_date, status
+    ) VALUES (
+      '${ids.unitValidUnassignedAllocation}', '${ids.workspace}', '${ids.condominium}',
+      '${ids.unitValid}', NULL, 40, 10, '2026-12-01', 'Parzialmente pagato'
+    );
+  `);
   const beforeTransfers = await db.query(
     "SELECT count(*)::int AS count FROM public.condominium_member_transfers"
   );
@@ -244,6 +260,14 @@ try {
     payload([ids.memberValidA, ids.memberValidB])
   );
   assert.ok(valid.rows[0].transfer_id, "A complete valid co-owner array must still be accepted.");
+  const validSnapshot = await db.query(
+    "SELECT data->'accounting_snapshot'->'unit_unassigned_allocations' AS allocations, (data->'accounting_snapshot'->>'unit_unassigned_allocations_outstanding')::numeric AS outstanding FROM public.condominium_member_transfers WHERE id=$1::uuid",
+    [valid.rows[0].transfer_id]
+  );
+  assert.deepEqual(validSnapshot.rows[0].allocations.map(row => row.id), [ids.unitValidUnassignedAllocation],
+    "Confirmation snapshot must preserve unit-unassigned allocations for the transferred unit.");
+  assert.equal(Number(validSnapshot.rows[0].allocations[0].residual), 30);
+  assert.equal(Number(validSnapshot.rows[0].outstanding), 30);
   const validMembers = await db.query(
     "SELECT id, active, data->>'position_status' AS position_status FROM public.condominium_members WHERE id = ANY($1::uuid[]) ORDER BY id",
     [[ids.memberValidA, ids.memberValidB]]
