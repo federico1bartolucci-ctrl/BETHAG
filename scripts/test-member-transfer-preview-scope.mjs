@@ -15,7 +15,9 @@ const installmentScopeTrigger = extractFunction("validate_condominium_installmen
 const allocationScopeTrigger = extractFunction("validate_condominium_expense_allocation_scope");
 
 const migrationPath = "supabase/rebuild/drafts/20261125040000_scope_member_transfer_preview_by_workspace_and_condominium.sql";
+const unitAllocationPreviewMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125090002_include_unit_unassigned_allocations_in_transfer_preview.sql";
 const migrationSql = await readFile(migrationPath, "utf8");
+const unitAllocationPreviewMigrationSql = await readFile(unitAllocationPreviewMigrationPath, "utf8");
 assert.ok(migrationSql.includes("CREATE OR REPLACE FUNCTION public.preview_condominium_member_transfer("));
 
 const ids = {
@@ -28,6 +30,9 @@ const ids = {
   mislinkedInstallment: "10000000-0000-4000-8000-000000000002",
   unitBUnassignedInstallment: "10000000-0000-4000-8000-000000000003",
   ledgerB: "20000000-0000-4000-8000-000000000001",
+  ledgerA: "20000000-0000-4000-8000-000000000002",
+  unitAUnassignedAllocation: "30000000-0000-4000-8000-000000000002",
+  unitBUnassignedAllocation: "30000000-0000-4000-8000-000000000003",
   mislinkedAllocation: "30000000-0000-4000-8000-000000000001",
   ownCarryover: "40000000-0000-4000-8000-000000000001",
   unitBCarryover: "40000000-0000-4000-8000-000000000002"
@@ -149,7 +154,9 @@ try {
 
     INSERT INTO public.condominium_ledger_entries
       (id, workspace_id, condominium_id, unit_id, direction, expense_type, entry_date, deliberation_date, description, amount)
-    VALUES ('${ids.ledgerB}', '${ids.workspace}', '${ids.condominium}', '${ids.unitB}', 'Uscita', 'Straordinaria', '2026-11-01', '2026-11-01', 'Delibera unità B', 50);
+    VALUES
+      ('${ids.ledgerB}', '${ids.workspace}', '${ids.condominium}', '${ids.unitB}', 'Uscita', 'Straordinaria', '2026-11-01', '2026-11-01', 'Delibera unità B', 50),
+      ('${ids.ledgerA}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}', 'Uscita', 'Straordinaria', '2026-11-02', '2026-11-02', 'Delibera unità A', 40);
 
     -- The real baseline scope triggers allow these rows because both the member
     -- and unit independently belong to the same workspace/condominium. They do
@@ -163,7 +170,10 @@ try {
 
     INSERT INTO public.condominium_expense_allocations
       (id, workspace_id, condominium_id, ledger_entry_id, unit_id, member_id, amount, paid_amount, due_date, status)
-    VALUES ('${ids.mislinkedAllocation}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerB}', '${ids.unitB}', '${ids.memberA}', 50, 0, '2026-12-01', 'Da pagare');
+    VALUES
+      ('${ids.mislinkedAllocation}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerB}', '${ids.unitB}', '${ids.memberA}', 50, 0, '2026-12-01', 'Da pagare'),
+      ('${ids.unitAUnassignedAllocation}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerA}', '${ids.unitA}', NULL, 40, 10, '2026-12-01', 'Parzialmente pagato'),
+      ('${ids.unitBUnassignedAllocation}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerB}', '${ids.unitB}', NULL, 100, 0, '2026-12-01', 'Da pagare');
 
     INSERT INTO public.condominium_fiscal_carryovers
       (id, workspace_id, condominium_id, unit_id, member_id, balance, kind, status)
@@ -227,6 +237,22 @@ try {
     "The selected unit's own unpaid installment warning must remain intact.");
   assert.equal(after.review_flags.extraordinary_deliberated_before_due_after, false,
     "The other unit's extraordinary allocation must not trigger the selected unit's review flag.");
+  assert.equal(after.unit_unassigned_allocations, undefined,
+    "The scoped preview still omits unit-unassigned expense allocations before the new correction.");
+
+  await db.exec("RESET ROLE");
+  await db.exec(unitAllocationPreviewMigrationSql);
+  await db.exec("SET ROLE authenticated");
+  const withAllocResult = await db.query(
+    "SELECT public.preview_condominium_member_transfer($1::uuid, $2::uuid, $3::date) AS preview",
+    [ids.unitA, ids.memberA, "2026-11-25"]
+  );
+  const withAlloc = withAllocResult.rows[0].preview;
+  assert.deepEqual(withAlloc.unit_unassigned_allocations.map(row => row.id), [ids.unitAUnassignedAllocation],
+    "Preview must expose only the selected unit's unit-unassigned expense allocations.");
+  assert.equal(Number(withAlloc.unit_unassigned_allocations_outstanding), 30);
+  assert.equal(withAlloc.review_flags.unit_unassigned_allocations, true,
+    "Outstanding unit-unassigned allocations must raise a review flag.");
 
   console.log(JSON.stringify({
     suite: "BETHAG_MEMBER_TRANSFER_PREVIEW_UNIT_SCOPE",
@@ -242,7 +268,9 @@ try {
       selected_unit_installments: after.installments_before.length,
       outstanding_before: Number(after.outstanding_before),
       other_unit_extraordinary_allocations: after.extraordinary_deliberated_before_due_after.length,
-      selected_unit_carryovers: after.unit_unassigned_carryovers.length
+      selected_unit_carryovers: after.unit_unassigned_carryovers.length,
+      unit_unassigned_allocations: withAlloc.unit_unassigned_allocations.length,
+      unit_unassigned_allocations_outstanding: Number(withAlloc.unit_unassigned_allocations_outstanding)
     }
   }, null, 2));
 } finally {
