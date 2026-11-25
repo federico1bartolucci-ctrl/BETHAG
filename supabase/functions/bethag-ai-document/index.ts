@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
 const corsHeaders={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["Riparto spese","Fattura","Verbale","Convocazione","Regolamento","Altro"]},summary:{type:"string"},confidence:{type:"number"},expenseAmount:{type:"string"},supplier:{type:"string"},supplierVatNumber:{type:"string"},invoiceNumber:{type:"string"},documentDate:{type:"string"},workReference:{type:"string"},condominiumReferences:{type:"array",items:{type:"string"}},unitRows:{type:"array",items:{type:"object",additionalProperties:false,properties:{unitCode:{type:"string"},description:{type:"string"},amount:{type:"string"},millesimi:{type:"string"},owner:{type:"string"}},required:["unitCode","description","amount","millesimi","owner"]}},warnings:{type:"array",items:{type:"string"}}},required:["documentType","summary","confidence","expenseAmount","supplier","supplierVatNumber","invoiceNumber","documentDate","workReference","condominiumReferences","unitRows","warnings"]};
 const json=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,"Content-Type":"application/json"}});
@@ -14,7 +15,16 @@ const sb=createClient(url,key,{global:{headers:{Authorization:auth}}});const {da
 const p=await req.json();const workspaceId=String(p.workspaceId??"");const files=Array.isArray(p.files)?p.files:[];if(!workspaceId||!files.length)return json({error:"Workspace o documenti mancanti."},400);
 const {data:m,error:membershipError}=await sb.from("workspace_members").select("role,active,permissions").eq("workspace_id",workspaceId).eq("user_id",user.id).eq("active",true).maybeSingle();if(membershipError)throw membershipError;
 if(!m)return json({error:"Non disponi dell'autorizzazione per i documenti."},403);const allowed=m.role==="admin"||(m.role==="collaborator"&&Array.isArray(m.permissions)&&m.permissions.includes("documenti"));if(!allowed)return json({error:"Non disponi dell'autorizzazione per i documenti."},403);
-if(Deno.env.get("BETHAG_AI_ENABLED")!=="true")return json({error:"Funzioni AI temporaneamente disattivate durante la fase di progettazione.",code:"AI_DISABLED"},503);if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
+if(Deno.env.get("BETHAG_AI_ENABLED")!=="true")return json({error:"Funzioni AI temporaneamente disattivate durante la fase di progettazione.",code:"AI_DISABLED"},503);
+const planAccess = await checkWorkspacePlanEntitlement(sb, workspaceId, "plus");
+if (!planAccess.allowed) return json({
+  error: planAccess.code === "WORKSPACE_PLAN_REQUIRED"
+    ? "L'elaborazione AI dei documenti richiede almeno il piano Plus."
+    : "Impossibile verificare il piano del workspace. Riprova più tardi.",
+  code: planAccess.code,
+  requiredPlan: "plus",
+}, planAccess.status);
+if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
 const content:any[]=[{type:"input_text",text:"Analizza i documenti di amministrazione condominiale allegati per BETHAG. Estrai solo informazioni realmente presenti. Non inventare importi, nominativi, millesimi o riferimenti. Se un dato è incerto lascialo vuoto e inserisci una warning. I millesimi appartengono alle unità, mai alle persone. Per riparti conserva le righe rilevate; per fatture identifica fornitore, partita IVA se presente, numero fattura, importo, data e ogni riferimento a lavori/manutenzioni; per verbali e convocazioni identifica oggetto e riferimenti. L'output sarà sempre sottoposto a verifica dell'amministratore. Documenti: "+files.map((f:any)=>f.filename).join(", ")}];
 const openAIFileIds:string[]=[];
 try{
