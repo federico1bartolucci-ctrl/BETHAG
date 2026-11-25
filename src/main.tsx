@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { resolveUniqueWorkspaceId } from "./lib/resolveUniquePortalWorkspace.mjs";
 import { escapePostgrestIlikeLiteral } from "./lib/escapePostgrestIlikeLiteral.mjs";
+import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -3152,12 +3153,14 @@ function App() {
 
     let cancelled = false;
     let authInitializationComplete = false;
+    const authSessionRevision = createAuthSessionRevision();
 
     const applySupabaseSession = async (
       session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null,
+      revision: number,
       source: "initialization" | "event" = "event"
     ) => {
-      if (cancelled) return;
+      if (cancelled || !authSessionRevision.isCurrent(revision)) return;
 
       if (!session?.user) {
         // Ignore an early INITIAL_SESSION null event until the explicit
@@ -3196,6 +3199,7 @@ function App() {
               p_fiscal_code: pendingRegistration.fiscalCode || null,
               p_condominium_name: pendingRegistration.condominiumName || null,
             });
+            if (cancelled || !authSessionRevision.isCurrent(revision)) return;
             if (completionError) throw completionError;
             sessionStorage.removeItem("bethag-pending-resident-registration");
             if (completion?.status === "pending") {
@@ -3204,6 +3208,7 @@ function App() {
               return;
             }
           } catch (registrationError) {
+            if (cancelled || !authSessionRevision.isCurrent(revision)) return;
             console.error("BETHAG resident registration completion failed", registrationError);
             await supabase.auth.signOut();
             const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
@@ -3223,7 +3228,8 @@ function App() {
           normalizedEmail
         );
 
-        if (!access || cancelled) {
+        if (cancelled || !authSessionRevision.isCurrent(revision)) return;
+        if (!access) {
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3247,7 +3253,7 @@ function App() {
         }));
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled) {
+        if (!cancelled && authSessionRevision.isCurrent(revision)) {
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3263,14 +3269,15 @@ function App() {
 
 
     const initializeAuth = async () => {
+      const revision = authSessionRevision.begin();
       try {
         const { data } = await supabase.auth.getSession();
-        await applySupabaseSession(data.session, "initialization");
+        await applySupabaseSession(data.session, revision, "initialization");
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       } catch (error) {
         console.error("BETHAG auth session initialization failed", error);
-        await applySupabaseSession(null, "initialization");
+        await applySupabaseSession(null, revision, "initialization");
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       }
@@ -3279,8 +3286,11 @@ function App() {
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Ignore the transient initial null event without invalidating getSession().
+      if (!session?.user && !authInitializationComplete) return;
+      const revision = authSessionRevision.begin();
       window.setTimeout(() => {
-        void applySupabaseSession(session, "event");
+        void applySupabaseSession(session, revision, "event");
       }, 0);
     });
 
