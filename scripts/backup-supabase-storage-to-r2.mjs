@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
@@ -22,7 +22,7 @@ async function assertBucketLock(accountId, bucketName, token) {
   const response = await fetch(
     "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) +
       "/r2/buckets/" + encodeURIComponent(bucketName) + "/lock",
-    { headers: { Authorization: "Bearer " + token, Accept: "application/json" } }
+    { headers: { Authorization: "Bearer " + token, Accept: "application/json", "cf-r2-jurisdiction": process.env.R2_JURISDICTION || "default" } }
   );
   if (!response.ok) throw new Error("Cannot verify R2 Bucket Lock rules (HTTP " + response.status + ")");
   const payload = await response.json();
@@ -80,6 +80,21 @@ async function main() {
   });
 
   await destination.send(new HeadBucketCommand({ Bucket: destinationBucket }));
+  const lifecycle = await destination.send(new GetBucketLifecycleConfigurationCommand({ Bucket: destinationBucket }));
+  const lifecycleRules = lifecycle.Rules || [];
+  const hasSnapshotsExpiry = lifecycleRules.some((rule) =>
+    rule.Status === "Enabled" &&
+    rule.Filter?.Prefix === DESTINATION_PREFIX + "snapshots/" &&
+    Number(rule.Expiration?.Days) >= 31
+  );
+  const hasBlobsExpiry = lifecycleRules.some((rule) =>
+    rule.Status === "Enabled" &&
+    rule.Filter?.Prefix === DESTINATION_PREFIX + "objects/" &&
+    Number(rule.Expiration?.Days) >= 60
+  );
+  if (!hasSnapshotsExpiry || !hasBlobsExpiry) {
+    throw new Error("R2 lifecycle gate failed: require snapshots expiration >=31 days and objects expiration >=60 days. No backup was written.");
+  }
   const sourceObjects = await listAll(source, SOURCE_BUCKET);
   const snapshotId = new Date().toISOString().replace(/[-:.]/g, "").replace("T", "-").replace("Z", "Z");
   const now = Date.now();
