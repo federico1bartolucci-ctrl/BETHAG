@@ -17,16 +17,16 @@ assert.match(workflow, /^permissions:\n  contents: read$/m,
   "The workflow token must be read-only.");
 assert.match(workflow, /^    if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'$/m,
   "The workflow definition must be dispatched from main only.");
-assert.match(workflow, /^          ref: cap-consolidation-20261123$/m,
-  "The initial checkout must come from the trusted CAP branch.");
+assert.match(workflow, /^          ref: main$/m,
+  "The initial checkout must come from the trusted main branch.");
 assert.match(workflow, /^          persist-credentials: false$/m,
   "Checkout credentials must not persist into candidate scripts.");
 assert.match(workflow, /^          if ! \[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]; then$/m,
   "The requested target must be a full lowercase 40-character SHA.");
 assert.match(workflow, /TRUSTED_SHA="\$\(git rev-parse HEAD\)"/,
-  "The workflow must capture the current trusted CAP branch head.");
+  "The workflow must capture the current trusted main branch head.");
 assert.match(workflow, /test "\$EXPECTED_SHA" = "\$TRUSTED_SHA"/,
-  "The requested SHA must equal the current trusted CAP head.");
+  "The requested SHA must equal the current trusted main head.");
 assert.match(workflow, /git checkout --detach "\$EXPECTED_SHA"/,
   "Only the verified exact SHA may be checked out.");
 assert.match(workflow, /test "\$ACTUAL_SHA" = "\$EXPECTED_SHA"/,
@@ -34,7 +34,7 @@ assert.match(workflow, /test "\$ACTUAL_SHA" = "\$EXPECTED_SHA"/,
 assert.doesNotMatch(workflow, /github\.head_ref|inputs\.target_ref \|\| github\.sha/,
   "No PR branch or implicit SHA fallback may activate Final QA.");
 
-const verifyIndex = workflow.indexOf("- name: Verify requested SHA is the current trusted CAP head");
+const verifyIndex = workflow.indexOf("- name: Verify requested SHA is the current trusted main head");
 const setupIndex = workflow.indexOf("- name: Setup Node");
 const installIndex = workflow.indexOf("- name: Install dependencies");
 const firstQaSecretIndex = workflow.indexOf("BETHAG_QA_SERVICE_ROLE_KEY");
@@ -47,7 +47,7 @@ console.log(JSON.stringify({
   status: "PASS",
   pull_request_trigger: "DISABLED",
   dispatch_source: "MAIN_ONLY",
-  target_ref: "EXACT_CURRENT_TRUSTED_CAP_HEAD",
+  target_ref: "EXACT_CURRENT_TRUSTED_MAIN_HEAD",
   token_permissions: "CONTENTS_READ_ONLY",
   checkout_credentials: "NOT_PERSISTED",
   qa_secrets_before_trust_gate: "NONE"

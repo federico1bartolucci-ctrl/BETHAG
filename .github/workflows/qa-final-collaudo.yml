@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       target_ref:
-        description: "Exact CAP commit SHA to test"
+        description: "Exact main commit SHA to test"
         required: true
         type: string
 
@@ -21,14 +21,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout trusted CAP branch
+      - name: Checkout trusted main branch
         uses: actions/checkout@v4
         with:
-          ref: cap-consolidation-20261123
+          ref: main
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Verify requested SHA is the current trusted CAP head
+      - name: Verify requested SHA is the current trusted main head
         env:
           EXPECTED_SHA: ${{ inputs.target_ref }}
         run: |
@@ -38,7 +38,7 @@ jobs:
           fi
           TRUSTED_SHA="$(git rev-parse HEAD)"
           echo "Requested SHA: $EXPECTED_SHA"
-          echo "Trusted CAP head: $TRUSTED_SHA"
+          echo "Trusted main head: $TRUSTED_SHA"
           test "$EXPECTED_SHA" = "$TRUSTED_SHA"
           git checkout --detach "$EXPECTED_SHA"
           ACTUAL_SHA="$(git rev-parse HEAD)"
