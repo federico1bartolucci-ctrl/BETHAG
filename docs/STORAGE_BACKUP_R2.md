@@ -33,6 +33,8 @@ Before the first scheduled run, create the R2 bucket manually and configure:
 - Bucket Lock rule: prefix `backups/`, type `Age`, at least 2,592,000 seconds.
 - Lifecycle rule for `backups/snapshots/`: expire after 31 days.
 - Lifecycle rule for `backups/objects/`: expire after 60 days.
+- The backup script verifies both lifecycle rules and the Bucket Lock rule before uploading; if any gate is missing, it exits without writing a backup.
+- For an EU-jurisdiction bucket, the workflow queries Bucket Lock using the `eu` jurisdiction header.
 - Abort incomplete multipart uploads after 1 day, if multipart uploads are enabled.
 
 Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle expiration is a separate configuration. The longer 60-day blob lifecycle gives manifests up to 30 days to reference a blob and leaves a safety margin. Confirm Cloudflare's current pricing and feature availability before applying these settings.
