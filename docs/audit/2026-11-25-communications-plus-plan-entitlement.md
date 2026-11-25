@@ -50,25 +50,32 @@ This section supersedes the earlier safety statement about database access. The 
 ### QA
 
 - Supabase branch: `bethag-launch-qa`, project ref `jhuyhlzzydcgghrzeexn`, parent Production project `tctcgptrsmvgajqjgnev`.
-- Four relevant QA ledger records are retained:
+- Six actual QA ledger records are retained; no row was deleted or rewritten:
   - `20261125161407 / require_plus_plan_for_communications` — initial communications entitlement SQL.
-  - `20261125161639 / 20261125141500_require_plus_plan_for_communications` — revised application of the same logical communications correction.
+  - `20261125161639 / 20261125141500_require_plus_plan_for_communications` — revised application of the same logical correction.
   - `20261125162259 / communications_rpc_security_invoker` — public RPCs changed to SECURITY INVOKER with guarded private wrappers.
-  - `20261125164447 / 20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements` — server-managed workspace-plan trigger, applied as a required dependency after discovering that QA still allowed authenticated admins to self-upgrade.
-- The two communications applications and the SECURITY INVOKER follow-up are real PostgreSQL log executions. No ledger row was deleted or rewritten. QA ledger now contains 287 rows; latest version is `20261125164447`.
-- **Critical dependency found and corrected in QA:** before the final record above, the Free workspace admin could update `workspaces.plan` to Plus through the existing UPDATE grant and admin `FOR ALL` RLS policy. This was reproduced inside a transaction and rolled back. The communications plan trigger alone was therefore bypassable by self-upgrade.
-- The server-managed plan migration is already present on main at `supabase/rebuild/proposed-forward-migrations/20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements.sql`. It is now applied only to QA. Live catalog confirms `trg_workspace_plan_server_managed` is installed. Authenticated self-upgrade is rejected with `WORKSPACE_PLAN_SERVER_MANAGED`; `service_role` can change the plan. A rollback-only test verified both paths and confirmed the persistent workspace remains Free.
-- End-to-end QA transaction passed: Free admin could neither self-upgrade nor create a communication; after a temporary `service_role` plan change, the authenticated admin could create, publish and prepare recipients. The transaction rolled back; no workspace plan, communication or recipient data persisted, and no email was sent.
-- Rollback-only QA matrix also passed:
-  - Free: communication content edit and new communication insert denied.
-  - Plus, Professional and Portal: publication, recipient preparation and stale-queue recovery allowed.
-  - After downgrade to Free: content/recipient identity changes denied; unpublish and delivery-status finalization allowed.
-  - Collaborator permission `true` allowed recipient preparation; explicit `false` and absent permission denied.
-  - All synthetic users and business fixtures were rolled back.
-- Frontend alignment is now part of PR #473: Communications is server-managed, included from Plus upward, and cannot be unlocked through client-local add-on state. Its UI no longer advertises a standalone price until a server-owned billing entitlement exists. Creation, editing and email sending are gated by Plus; Portal publication remains gated by Portal.
-- QA `bethag-send-email` is ACTIVE at version 20. Retrieved deployed bundle matches the reviewed main-branch files byte-for-byte for `index.ts`, `communication-send-guards.js`, and `workspace-plan-entitlement.js`.
-- Both communications public RPCs are SECURITY INVOKER; direct authenticated EXECUTE on underlying private recipient implementations is revoked. Security Advisor: **0 lints**.
+  - `20261125164447 / 20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements` — server-managed workspace-plan trigger.
+  - `20261125165530 / require_server_portal_plan_for_resident_access` — Portal plan helper, resident access RLS and Portal management/registration guards.
+  - `20261125165536 / require_portal_plan_for_communication_publication` — database enforcement that Portal publication requires the Portal plan.
+- QA ledger has **289 rows**, latest version `20261125165536`. The QA execution order reflects incremental discovery; the eventual Production promotion order must follow dependencies: server-managed plan guard, Portal plan guard, Plus communications guard, then Portal-publication follow-up.
+- The authenticated Free workspace-admin self-upgrade bypass was reproduced before the plan guard. After application, authenticated plan changes are rejected with `WORKSPACE_PLAN_SERVER_MANAGED`; `service_role` can change the plan. The persistent QA workspace remains Free.
+- Rollback-only live QA matrix passed across all tiers:
+  - **Free:** cannot self-upgrade, create/edit/publish communications, or prepare recipients; delivery-status metadata finalization remains allowed.
+  - **Plus:** can create/edit communications, prepare recipients and recover stale delivery queues; cannot publish to the resident Portal or create resident Portal access.
+  - **Professional:** inherits Plus communication/send rights; cannot publish to the resident Portal or create resident Portal access.
+  - **Portal:** can publish and edit published communications and create resident Portal access.
+  - **Portal downgrade to Plus:** residents lose Portal read access; administrators retain read/deactivation rights; published communications can be unpublished; delivery-status metadata can still be finalized.
+  - **Free downgrade:** communication content changes remain blocked while delivery-status finalization remains allowed.
+  - All synthetic users, workspaces, condominiums, communications and recipients were rolled back. Follow-up counts show zero test workspaces/users persisted. Existing QA data remains one workspace and one Portal-access row.
+- Portal RLS/registration migration was exercised in QA. Existing Portal rows were not deleted; access is controlled by the server-owned plan.
+- Frontend alignment in PR #473: Communications is server-managed, included from Plus upward, cannot be unlocked through client-local add-on state, and no longer advertises a standalone €2.90/month purchase. Creation, editing and email sending are gated by Plus; Portal publication remains gated by Portal.
+- QA Edge Functions deployed and verified against reviewed source:
+  - `bethag-ai-document` **v16**, exact bundle match; server plan check requires Plus.
+  - `bethag-ai-condominium` **v19**, exact bundle match; server plan check requires Professional.
+  - `bethag-send-email` **v20**, exact bundle match; server plan check requires Plus before recipient preparation or Resend.
+- Both communications public RPCs are SECURITY INVOKER; direct authenticated EXECUTE on underlying private recipient implementations is revoked. Security Advisor after all QA migrations and deployments: **0 lints**.
 - `private` schema USAGE is denied to anon and granted to authenticated (required by the SECURITY INVOKER public wrappers). The SQL interface cannot read the project's Data API exposed-schema setting, so explicit confirmation that `private` is not exposed remains an open gate.
+- No real OpenAI request or Resend email was sent during these tests.
 
 ### Production
 
