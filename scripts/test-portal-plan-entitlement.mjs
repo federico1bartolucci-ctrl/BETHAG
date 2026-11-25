@@ -38,7 +38,7 @@ try {
     "CREATE TABLE public.workspace_members (workspace_id uuid NOT NULL REFERENCES public.workspaces(id), user_id uuid NOT NULL, role text NOT NULL, active boolean NOT NULL DEFAULT true, permissions jsonb NOT NULL DEFAULT '{}'::jsonb);\n" +
     "CREATE TABLE public.condominium_members (id uuid PRIMARY KEY, condominium_id uuid NOT NULL REFERENCES public.condominiums(id), user_id uuid, name text NOT NULL, email text NOT NULL, role text NOT NULL DEFAULT 'resident', active boolean NOT NULL DEFAULT true, legacy_id bigint, data jsonb NOT NULL DEFAULT '{}'::jsonb, updated_at timestamptz NOT NULL DEFAULT now());\n" +
     "CREATE TABLE public.portal_access (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid NOT NULL REFERENCES public.workspaces(id), condominium_id uuid NOT NULL REFERENCES public.condominiums(id), member_id uuid, legacy_id bigint, name text NOT NULL, email text NOT NULL, role text NOT NULL DEFAULT 'resident', apartment text, permissions jsonb NOT NULL DEFAULT '[]'::jsonb, active boolean NOT NULL DEFAULT true, user_id uuid, data jsonb NOT NULL DEFAULT '{}'::jsonb, updated_at timestamptz NOT NULL DEFAULT now());\n" +
-    "CREATE TABLE public.portal_registration_requests (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid, condominium_name text, status text NOT NULL DEFAULT 'pending');\n" +
+    "CREATE TABLE public.portal_registration_requests (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid, requested_user_id uuid, email text, full_name text, fiscal_code text, condominium_name text, status text NOT NULL DEFAULT 'pending', matched_member_id uuid, note text);\n" +
     "ALTER TABLE public.portal_access ENABLE ROW LEVEL SECURITY;\n" +
     "ALTER TABLE public.portal_registration_requests ENABLE ROW LEVEL SECURITY;\n" +
     "GRANT SELECT ON public.condominiums TO authenticated;\n" +
@@ -153,7 +153,7 @@ try {
   await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_registration_requests WHERE id = $1", [requestId]);
   assert.equal(rows.rows[0].count, 1, "Portal plan administrators must see registration requests.");
-  await db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, condominium_name, status) VALUES ($1, $2, $3, 'pending')", ["60000000-0000-0000-0000-000000000003", workspaceId, "Portal plan regression condominium"]);
+  await db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, requested_user_id, email, full_name, condominium_name, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')", ["60000000-0000-0000-0000-000000000003", workspaceId, adminId, "portal-request@example.test", "Portal Request", "Portal plan regression condominium"]);
   await db.query("INSERT INTO public.portal_access(workspace_id, condominium_id, member_id, legacy_id, name, email, role, permissions, active, user_id, data) VALUES ($1, $2, $3, 1004, 'Resident Four', 'resident-four@example.test', 'resident', '[]'::jsonb, true, NULL, '{}'::jsonb)", [workspaceId, condominiumId, memberFourId]);
   await db.exec("RESET ROLE");
 
@@ -167,7 +167,7 @@ try {
   assert.equal(rows.rows[0].count, 0, "A later downgrade must revoke resident visibility without deleting rows.");
   await db.exec("RESET ROLE");
   await assert.rejects(
-    () => db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, condominium_name, status) VALUES ($1, $2, $3, 'pending')", ["60000000-0000-0000-0000-000000000004", workspaceId, "Portal plan regression condominium"]),
+    () => db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, requested_user_id, email, full_name, condominium_name, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')", ["60000000-0000-0000-0000-000000000004", workspaceId, adminId, "portal-request-downgrade@example.test", "Portal Request Downgrade", "Portal plan regression condominium"]),
     /PORTAL_PLAN_REQUIRED/,
   );
 
