@@ -84,7 +84,7 @@ This remains the concrete outstanding Production correction. QA validation is co
 2. Reconcile communication recipient retry PRs #419/#421 before promotion: their draft migrations grant authenticated EXECUTE directly on the private recipient functions, so they must be applied before the final #473 revoke/SECURITY INVOKER hardening, or their grants must be removed. Never apply them after the final revoke without re-hardening.
 3. Build the reviewed Production migration package in dependency order: server-managed workspace-plan guard first; any approved recipient retry implementation changes next; communications entitlement guard and final SECURITY INVOKER/direct-EXECUTE revocation last. Preserve the canonical freeze and generate a new exact hash/fingerprint.
 4. Prepare the Production deployment package pinned to exact main SHA, migration hashes and Edge Function source/dependencies.
-4. Immediately before Production changes, recheck Data API exposed schemas and current provider backup in Dashboard; preserve physical-restore status as NOT TESTED.
+5. Immediately before Production changes, recheck Data API exposed schemas and current provider backup in Dashboard; preserve physical-restore status as NOT TESTED.
 6. Obtain explicit owner approval for this new candidate and the Production Edge Function deployment. The historical 2026-11-08 approval applies only to the already-present 19-migration scope and cannot authorize this new change.
 7. Deploy only the approved candidate and Edge Function; verify direct private RPC denial for authenticated, plan-gate behavior, function version/source, and read-only postflight.
 8. Only after those checks may APP-14 be reconsidered for PASS.
@@ -93,4 +93,4 @@ This remains the concrete outstanding Production correction. QA validation is co
 
 The 2026-11-25 Production inspection was read-only. It did not alter schema, data, ACLs, migration history, Edge Functions, email delivery or backup settings. QA plan and communication tests used rollback-only fixtures except for the explicitly applied forward-only QA migrations; the persistent QA workspace remains Free. No Production migration or Edge Function deployment has been performed.
 
-**Decision: APP-14 remains PARTIAL / Production NO-GO.** The original 19-migration ledger reconciliation is closed; the remaining concrete blocker is deployment and verification of the newly merged communications Plus entitlement correction, plus the operator-only Dashboard/backup checks and fresh approval.
+**Decision: APP-14 remains PARTIAL / Production NO-GO.** The original 19-migration ledger reconciliation is closed; the remaining concrete blocker is controlled promotion and verification of the communications Plus entitlement correction and its server-managed plan dependency, plus the operator-only Dashboard/backup checks and fresh approval.
