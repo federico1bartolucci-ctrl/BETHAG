@@ -9,7 +9,11 @@ const workflows = [
   ".github/workflows/qa-navigation.yml",
   ".github/workflows/qa-app05-07.yml",
   ".github/workflows/qa-app08-11.yml",
-  ".github/workflows/qa-authenticated-rls.yml"
+  ".github/workflows/qa-authenticated-rls.yml",
+  ".github/workflows/qa-app12.yml",
+  ".github/workflows/qa-current-auth-smoke.yml",
+  ".github/workflows/qa-secret-presence.yml",
+  ".github/workflows/qa-transfer.yml"
 ];
 
 for (const path of workflows) {
@@ -49,7 +53,7 @@ for (const path of workflows) {
 
   const verifyIndex = workflow.indexOf("- name: Verify requested SHA is the current trusted CAP head");
   const setupIndex = workflow.indexOf("- uses: actions/setup-node@v4");
-  const installIndex = workflow.indexOf("- name: Install dependencies");
+  const installIndex = workflow.indexOf("run: npm ci");
   const firstSecretIndex = workflow.search(/secrets\.BETHAG_QA_/);
   assert.ok(verifyIndex >= 0 && verifyIndex < setupIndex && verifyIndex < installIndex,
     path + ": trusted SHA validation must precede dependency installation.");
@@ -60,7 +64,9 @@ for (const path of workflows) {
 console.log(JSON.stringify({
   status: "PASS",
   build_workflow_shared_qa: "REMOVED",
-  authenticated_qa_workflows: workflows.length,
+  main_branch_shared_qa_workflows: workflows.length,
+  final_qa_guard: "SEPARATE_PR_436",
+  legacy_ops_branch: "OUT_OF_SCOPE_PENDING_SAFE_RETIREMENT",
   automatic_triggers: "DISABLED",
   dispatch_source: "MAIN_ONLY",
   target_sha: "CURRENT_TRUSTED_CAP_HEAD_ONLY",
