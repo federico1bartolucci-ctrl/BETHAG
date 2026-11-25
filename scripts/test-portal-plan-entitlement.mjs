@@ -117,6 +117,12 @@ try {
   await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_registration_requests WHERE id = $1", [requestId]);
   assert.equal(rows.rows[0].count, 1, "Managers retain visibility of pending requests for cleanup after downgrade.");
+  await db.exec("RESET ROLE");
+  await assert.rejects(
+    () => db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, requested_user_id, email, full_name, condominium_name, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')", ["60000000-0000-0000-0000-000000000002", workspaceId, adminId, "portal-request-free@example.test", "Portal Request Free", "Portal plan regression condominium"]),
+    /PORTAL_PLAN_REQUIRED/,
+  );
+  await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_access WHERE workspace_id = $1", [workspaceId]);
   assert.equal(rows.rows[0].count, 2, "Managers retain visibility of existing access rows after downgrade.");
 
@@ -153,7 +159,9 @@ try {
   await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_registration_requests WHERE id = $1", [requestId]);
   assert.equal(rows.rows[0].count, 1, "Portal plan administrators must see registration requests.");
+  await db.exec("RESET ROLE");
   await db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, requested_user_id, email, full_name, condominium_name, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')", ["60000000-0000-0000-0000-000000000003", workspaceId, adminId, "portal-request@example.test", "Portal Request", "Portal plan regression condominium"]);
+  await db.exec("SET ROLE authenticated");
   await db.query("INSERT INTO public.portal_access(workspace_id, condominium_id, member_id, legacy_id, name, email, role, permissions, active, user_id, data) VALUES ($1, $2, $3, 1004, 'Resident Four', 'resident-four@example.test', 'resident', '[]'::jsonb, true, NULL, '{}'::jsonb)", [workspaceId, condominiumId, memberFourId]);
   await db.exec("RESET ROLE");
 
