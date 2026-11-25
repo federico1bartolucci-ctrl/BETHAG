@@ -26,7 +26,9 @@ const ids = {
   foreignUnitInstallment: "10000000-0000-4000-8000-000000000003",
   foreignWorkspaceInstallment: "10000000-0000-4000-8000-000000000004",
   foreignLedger: "20000000-0000-4000-8000-000000000001",
+  foreignWorkspaceLedger: "20000000-0000-4000-8000-000000000002",
   foreignAllocation: "30000000-0000-4000-8000-000000000001",
+  foreignWorkspaceAllocation: "30000000-0000-4000-8000-000000000002",
   ownCarryover: "40000000-0000-4000-8000-000000000001",
   foreignCondominiumCarryover: "40000000-0000-4000-8000-000000000002",
   foreignWorkspaceCarryover: "40000000-0000-4000-8000-000000000003"
@@ -129,17 +131,21 @@ try {
       (id, workspace_id, condominium_id, member_id, unit_id, title, due_date, amount, paid_amount, status)
     VALUES
       ('${ids.ownInstallment}', '${ids.workspaceA}', '${ids.condominiumA}', '${ids.memberA}', '${ids.unitA}', 'Rata corretta', '2026-11-20', 100, 20, 'Parzialmente pagato'),
-      ('${ids.foreignMemberInstallment}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.memberA}', '${ids.unitB}', 'Rata altro condominio stesso membro', '2026-11-20', 200, 0, 'Da pagare'),
+      ('${ids.foreignMemberInstallment}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.memberA}', '${ids.unitB}', 'Rata altro condominio stesso membro', '2026-11-20', 200, 30, 'Parzialmente pagato'),
       ('${ids.foreignUnitInstallment}', '${ids.workspaceA}', '${ids.condominiumB}', NULL, '${ids.unitA}', 'Rata altro condominio stessa unità', '2026-11-20', 300, 0, 'Da pagare'),
       ('${ids.foreignWorkspaceInstallment}', '${ids.workspaceB}', '${ids.condominiumB}', '${ids.memberA}', '${ids.unitB}', 'Rata altro workspace', '2026-11-20', 400, 0, 'Da pagare');
 
     INSERT INTO public.condominium_ledger_entries
       (id, workspace_id, condominium_id, unit_id, expense_type, entry_date, deliberation_date, description, amount)
-    VALUES ('${ids.foreignLedger}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.unitB}', 'Straordinaria', '2026-11-01', '2026-11-01', 'Delibera altro condominio', 50);
+    VALUES
+      ('${ids.foreignLedger}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.unitB}', 'Straordinaria', '2026-11-01', '2026-11-01', 'Delibera altro condominio', 50),
+      ('${ids.foreignWorkspaceLedger}', '${ids.workspaceB}', '${ids.condominiumB}', '${ids.unitB}', 'Straordinaria', '2026-11-01', '2026-11-01', 'Delibera altro workspace', 60);
 
     INSERT INTO public.condominium_expense_allocations
       (id, workspace_id, condominium_id, ledger_entry_id, member_id, amount, paid_amount, due_date, status)
-    VALUES ('${ids.foreignAllocation}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.foreignLedger}', '${ids.memberA}', 50, 0, '2026-12-01', 'Da pagare');
+    VALUES
+      ('${ids.foreignAllocation}', '${ids.workspaceA}', '${ids.condominiumB}', '${ids.foreignLedger}', '${ids.memberA}', 50, 0, '2026-12-01', 'Da pagare'),
+      ('${ids.foreignWorkspaceAllocation}', '${ids.workspaceB}', '${ids.condominiumB}', '${ids.foreignWorkspaceLedger}', '${ids.memberA}', 60, 0, '2026-12-01', 'Da pagare');
 
     INSERT INTO public.condominium_fiscal_carryovers
       (id, workspace_id, condominium_id, unit_id, member_id, balance, kind, status)
@@ -174,8 +180,10 @@ try {
   const before = beforeResult.rows[0].preview;
   assert.equal(before.installments_before.length, 3,
     "Legacy function must reproduce cross-condominium installments linked by member_id/unit_id.");
-  assert.equal(Number(before.outstanding_before), 580,
+  assert.equal(Number(before.outstanding_before), 550,
     "Legacy function must reproduce the inflated cross-condominium outstanding amount.");
+  assert.equal(Number(before.paid_before), 50, "Legacy function must include paid amounts from the other condominium.");
+  assert.equal(Number(before.outstanding_total), 550, "Legacy total must include the other condominium outstanding balance.");
   assert.equal(before.extraordinary_deliberated_before_due_after.length, 1,
     "Legacy function must reproduce the cross-condominium extraordinary allocation.");
   assert.equal(before.unit_unassigned_carryovers.length, 2,
@@ -184,6 +192,27 @@ try {
     "Workspace RLS must continue hiding rows from a workspace the caller cannot access.");
   assert.equal(before.unit_unassigned_carryovers.some(row => row.id === ids.foreignWorkspaceCarryover), false,
     "Workspace RLS must continue hiding carryovers from a workspace the caller cannot access.");
+
+  await db.exec("RESET ROLE");
+  await db.exec(`
+    CREATE OR REPLACE FUNCTION private.can_access_workspace_module(p_workspace_id uuid, p_module text)
+    RETURNS boolean LANGUAGE sql STABLE
+    AS $ SELECT p_workspace_id IN ('${ids.workspaceA}'::uuid, '${ids.workspaceB}'::uuid) $;
+    SET ROLE authenticated;
+  `);
+  const bothWorkspacesResult = await db.query(
+    "SELECT public.preview_condominium_member_transfer($1::uuid, $2::uuid, $3::date) AS preview",
+    [ids.unitA, ids.memberA, "2026-11-25"]
+  );
+  const bothWorkspaces = bothWorkspacesResult.rows[0].preview;
+  assert.equal(bothWorkspaces.installments_before.length, 4,
+    "Legacy function must reproduce cross-workspace installments when the caller can access both workspaces.");
+  assert.equal(Number(bothWorkspaces.outstanding_before), 950,
+    "Legacy function must reproduce the cross-workspace inflated outstanding amount.");
+  assert.equal(bothWorkspaces.extraordinary_deliberated_before_due_after.length, 2,
+    "Legacy function must reproduce extraordinary allocations from both other condominiums/workspaces.");
+  assert.equal(bothWorkspaces.unit_unassigned_carryovers.length, 3,
+    "Legacy function must reproduce carryovers from both other condominiums/workspaces.");
 
   await db.exec("RESET ROLE");
   await db.exec(migrationSql);
@@ -198,6 +227,8 @@ try {
     "Corrected function must include only installments in the selected workspace and condominium.");
   assert.equal(Number(after.outstanding_before), 80,
     "Corrected outstanding amount must exclude another condominium's installments.");
+  assert.equal(Number(after.paid_before), 20, "Corrected paid-before total must exclude other condominium/workspace rows.");
+  assert.equal(Number(after.outstanding_total), 80, "Corrected outstanding total must exclude other condominium/workspace rows.");
   assert.equal(after.extraordinary_deliberated_before_due_after.length, 0,
     "Corrected function must exclude another condominium's extraordinary allocations.");
   assert.deepEqual(after.unit_unassigned_carryovers.map(row => row.id), [ids.ownCarryover],
@@ -213,7 +244,8 @@ try {
       inflated_outstanding_before: Number(before.outstanding_before),
       foreign_extraordinary_allocations: before.extraordinary_deliberated_before_due_after.length,
       foreign_unit_carryovers: before.unit_unassigned_carryovers.length - 1,
-      foreign_workspace_rows_hidden_by_rls: true
+      foreign_workspace_rows_hidden_by_rls: true,
+      both_workspaces_accessible: { installments: bothWorkspaces.installments_before.length, outstanding: Number(bothWorkspaces.outstanding_before), extraordinary_allocations: bothWorkspaces.extraordinary_deliberated_before_due_after.length, carryovers: bothWorkspaces.unit_unassigned_carryovers.length }
     },
     corrected_preview: {
       selected_installments: after.installments_before.length,
