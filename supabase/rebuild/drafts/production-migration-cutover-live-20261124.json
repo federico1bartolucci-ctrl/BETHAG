@@ -478,9 +478,9 @@
     "final_acceptance": "ACCEPTED — APP-01..APP-15 PASS on exact source SHA 7d8469ada095dfabca3824b7e610bc076faaa429."
   },
   "production_readonly_recheck": {
-    "checked_at_utc": "2026-11-24T23:48:57.016286Z",
+    "checked_at_utc": "2026-11-25T01:02:57.000Z",
     "project_status": "ACTIVE_HEALTHY",
-    "postgres_version": "17.6",
+    "postgres_version": "17.6.1",
     "ledger": {
       "rows": 267,
       "head_version": "20261105050000",
@@ -490,64 +490,18 @@
     },
     "effective_acl": {
       "postgres_global_function_default": "{=X/postgres,postgres=X/postgres}",
-      "explicit_global_pg_default_acl_rows": 0,
-      "interpretation": "Built-in implicit PostgreSQL default still grants EXECUTE to PUBLIC; no explicit global pg_default_acl row. Effective ACL read with acldefault fallback.",
-      "public_schema_function_default": "{postgres=X/postgres}",
+      "global_public_execute": true,
+      "global_application_execute_count": 0,
       "storage_schema_function_default": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-      "current_public_functions": 130,
       "current_public_functions_with_public_execute": 0
     },
     "security_advisor": {
       "security_lints": 0
     },
-    "data_api_exposure": {
-      "status": "RECONFIRMED_NAME_LEVEL_PRODUCTION_2026-11-25",
-      "production_dashboard_evidence": {
-        "observed_date": "2026-11-25",
-        "observed_local_time_window": "01:21-01:22 CET",
-        "environment": "Production",
-        "project": "BETHAG",
-        "branch": "main",
-        "exposed_schema_count": "2/3",
-        "exposed_schemas": [
-          "graphql_public",
-          "public"
-        ],
-        "private_exposed": false,
-        "exposed_tables": "0/48",
-        "exposed_functions": "0/173",
-        "automatic_new_table_exposure": false,
-        "extra_search_path": [
-          "public",
-          "extensions"
-        ],
-        "max_rows": 1000,
-        "pool_size": "automatic",
-        "evidence": "Owner-provided Supabase Dashboard screenshots in this conversation: first and second captures show Data API settings and exposure counts; third capture expands the Exposed schemas selector and visibly marks graphql_public and public as selected while private is unselected."
-      },
-      "prior_production_name_evidence": {
-        "verified_date": "2026-11-08",
-        "exposed_schemas": [
-          "graphql_public",
-          "public"
-        ],
-        "private_exposed": false,
-        "supabase_functions_present_in_exposed_schema_choices": false
-      },
-      "separate_qa_evidence": {
-        "observed_date": "2026-11-24",
-        "branch": "bethag-launch-qa",
-        "exposed_schemas": [
-          "graphql_public",
-          "public"
-        ],
-        "private_exposed": false,
-        "note": "QA evidence is retained separately and is not used as Production evidence."
-      },
-      "reason": "The owner-provided Production Dashboard screenshots dated 2026-11-25 now visibly show both the 2/3 count and the selected schema names. The names are directly evidenced on Production; QA evidence is not substituted.",
-      "gate_disposition": "Production Data API name-level evidence is current and satisfies the 24-hour freshness requirement at capture time. This closes only the Data API evidence gate; all other cutover gates remain independently enforced."
+    "health_advisor": {
+      "health_lints": 0
     },
-    "scope": "Fresh read-only Production verification only. No DDL, migration, ledger or application-data writes."
+    "scope": "Fresh read-only verification using Supabase project metadata, migration ledger, catalog SELECTs and Security/Health Advisors. No DDL, DML, migration, ledger, application-data or configuration writes."
   },
   "owner_authorization": {
     "status": "EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL",
@@ -577,6 +531,19 @@
       "recompute and verify release fingerprint from exact final source",
       "current exact-SHA Build, Baseline Safety, PostgreSQL 17 rehearsal and APP-01..APP-15 QA",
       "new explicit owner approval tied to exact source SHA, fingerprint, SQL blob hash, Production project and future UTC window"
-    ]
+    ],
+    "latest_read_only_preflight": {
+      "checked_at_utc": "2026-11-25T01:02:57.000Z",
+      "result": "PASS_READ_ONLY",
+      "ledger_rows": 267,
+      "head": "20261105050000",
+      "exact_267_pair_match": true,
+      "acl_defect_still_present": true,
+      "storage_schema_grants_preserved": true,
+      "current_public_functions_with_public_execute": 0,
+      "security_lints": 0,
+      "health_lints": 0,
+      "note": "Confirms the captured baseline is still current. This is not the final immediate preflight for a future apply and does not authorize Production execution."
+    }
   }
 }
