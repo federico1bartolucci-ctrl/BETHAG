@@ -59,7 +59,7 @@ try{
  fixture.approval_scope="NONE";
  fixture.production_apply_authorized=false;
  fixture.owner_authorization={...(fixture.owner_authorization||{}),status:"EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL",current_authorization:false};
- await writeFile(join(worktree,manifestPath),JSON.stringify(fixture,null,2)+"\\n");
+ await writeFile(join(worktree,manifestPath),JSON.stringify(fixture,null,2)+"\n");
  execFileSync("git",["-C",worktree,"add",manifestPath],{stdio:"pipe"});
  execFileSync("git",["-C",worktree,"-c","user.name=BETHAG Test","-c","user.email=bethag-test@example.invalid","commit","-m","test fixture: restore fail-closed manifest"],{stdio:"pipe"});
  const fixtureSha=execFileSync("git",["-C",worktree,"rev-parse","HEAD"],{encoding:"utf8"}).trim();
