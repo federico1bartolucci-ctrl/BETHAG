@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -152,6 +153,14 @@ Deno.serve(async (req: Request) => {
       (membership.role === "collaborator" && Array.isArray(membership.permissions) && membership.permissions.includes("condomini"));
     if (!allowed) return responseJson({ error: "Non disponi dell'autorizzazione per la creazione dei condomini." }, 403);
     if (Deno.env.get("BETHAG_AI_ENABLED") !== "true") return responseJson({ error: "Funzioni AI temporaneamente disattivate durante la fase di progettazione.", code: "AI_DISABLED" }, 503);
+    const planAccess = await checkWorkspacePlanEntitlement(supabase, workspaceId, "professional");
+    if (!planAccess.allowed) return responseJson({
+      error: planAccess.code === "WORKSPACE_PLAN_REQUIRED"
+        ? "La creazione automatica del condominio con AI richiede il piano Professional."
+        : "Impossibile verificare il piano del workspace. Riprova più tardi.",
+      code: planAccess.code,
+      requiredPlan: "professional",
+    }, planAccess.status);
     if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY." }, 503);
 
     const content = [{
