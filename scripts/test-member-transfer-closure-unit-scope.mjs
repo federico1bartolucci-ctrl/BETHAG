@@ -6,6 +6,20 @@ const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functio
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261125064000_scope_member_transfer_closure_financial_positions_to_unit.sql";
 const scopeMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125073000_validate_member_transfer_outgoing_member_scope.sql";
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const auditEvidence = await readFile(
+  "docs/audit/2026-11-25-member-transfer-outgoing-member-scope.md",
+  "utf8"
+);
+assert.match(
+  auditEvidence,
+  /069b98db19be3e865425bff162058693cbe5eee2/,
+  "Audit documentation must record the exact code/test commit that passed CI."
+);
+assert.match(
+  auditEvidence,
+  /45582718332/,
+  "Audit documentation must record the exact GitHub Actions run."
+);
 assert.match(
   packageJson.scripts.test,
   /test-member-transfer-closure-unit-scope\.mjs/,
