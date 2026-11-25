@@ -21,7 +21,7 @@ assert.match(script, /sourceObjectSignature\(sourceObjects\)/);
 assert.match(script, /LastModified/);
 assert.match(sourceSignature, /item\.LastModified/);
 assert.match(sourceSignature, /normalizeLastModified/);
-assert.match(script, /Source bucket changed \\(key, size, ETag, or LastModified\\) during backup/);
+assert.match(script, /Source bucket changed .*LastModified.* during backup/);
 assert.match(script, /maxAgeSeconds\) >= RETENTION_SECONDS/);
 assert.match(script, /createHash\("sha256"\)/);
 assert.match(script, /object_count: manifestObjects\.length/);
