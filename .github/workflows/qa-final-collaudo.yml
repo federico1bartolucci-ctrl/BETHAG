@@ -1,15 +1,14 @@
 name: BETHAG final QA collaudo APP-01..APP-15
 
+permissions:
+  contents: read
+
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       target_ref:
         description: "Exact CAP commit SHA to test"
         required: true
-        default: "be8fd54a61bb13e9f0c8cea0799e4821e7950520"
         type: string
 
 concurrency:
@@ -18,22 +17,31 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout requested CAP revision
+      - name: Checkout trusted CAP branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_ref || github.sha }}
+          ref: cap-consolidation-20261123
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Verify checked-out revision
-        if: github.event_name == 'workflow_dispatch'
+      - name: Verify requested SHA is the current trusted CAP head
         env:
           EXPECTED_SHA: ${{ inputs.target_ref }}
         run: |
-          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if ! [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "target_ref must be a full 40-character lowercase commit SHA"
+            exit 1
+          fi
+          TRUSTED_SHA="$(git rev-parse HEAD)"
           echo "Requested SHA: $EXPECTED_SHA"
+          echo "Trusted CAP head: $TRUSTED_SHA"
+          test "$EXPECTED_SHA" = "$TRUSTED_SHA"
+          git checkout --detach "$EXPECTED_SHA"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
           echo "Checked-out SHA: $ACTUAL_SHA"
           test "$ACTUAL_SHA" = "$EXPECTED_SHA"
 
