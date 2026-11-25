@@ -18,6 +18,11 @@ const migrationPath = "supabase/rebuild/drafts/20261125040000_scope_member_trans
 const unitAllocationPreviewMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125090002_include_unit_unassigned_allocations_in_transfer_preview.sql";
 const migrationSql = await readFile(migrationPath, "utf8");
 const unitAllocationPreviewMigrationSql = await readFile(unitAllocationPreviewMigrationPath, "utf8");
+const transferPanelSource = await readFile("src/MemberTransferPanel.tsx", "utf8");
+assert.match(transferPanelSource, /unit_unassigned_allocations/,
+  "Transfer UI must aggregate and render unit-unassigned expense allocations.");
+assert.match(transferPanelSource, /Spese dell’unità non attribuite/,
+  "Transfer UI must label unit-unassigned expense allocations in preview and snapshot.");
 assert.ok(migrationSql.includes("CREATE OR REPLACE FUNCTION public.preview_condominium_member_transfer("));
 
 const ids = {
