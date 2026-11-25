@@ -68,7 +68,7 @@ assert.equal(manifest.clean_install?.migration_file_count,28,
 assert.equal(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS",
   "Separate PostgreSQL 17 rehearsal of the draft candidate is required.");
 assert.match(runner,/approvedDocumentationPaths/);
-assert.match(runner,/production-migration-cutover-live-20261124\\.md/);
+assert.ok(runner.includes("production-migration-cutover-live-20261124.md"));
 assert.match(runner,/reviewed runbook may change after the approved source SHA/);
 assert.match(runner,/candidatePath=join\(root,"supabase\/rebuild\/drafts",candidate\)/,
   "Production runner must read the candidate from the non-deployable drafts directory.");
