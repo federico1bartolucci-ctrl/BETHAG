@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
+const sourceSignature = await readFile("scripts/storage-backup-source-signature.mjs", "utf8");
 const workflow = await readFile(".github/workflows/storage-backup-r2.yml", "utf8");
 const runbook = await readFile("docs/STORAGE_BACKUP_R2.md", "utf8");
 
@@ -16,6 +17,10 @@ assert.match(script, /hasSnapshotsExpiry/);
 assert.match(script, /hasBlobsExpiry/);
 assert.match(script, /existingBlobObjects = await listAll/);
 assert.match(script, /sourceObjectsAfter = await listAll/);
+assert.match(script, /sourceObjectSignature\(sourceObjects\)/);
+assert.match(script, /LastModified/);
+assert.match(sourceSignature, /item\.LastModified/);
+assert.match(sourceSignature, /normalizeLastModified/);
 assert.match(script, /Source bucket changed during backup/);
 assert.match(script, /maxAgeSeconds\) >= RETENTION_SECONDS/);
 assert.match(script, /createHash\("sha256"\)/);
@@ -39,6 +44,8 @@ assert.doesNotMatch(workflow, /supabase db reset|supabase migration|apply_migrat
 
 assert.match(runbook, /30 days/);
 assert.match(runbook, /25 days/);
+assert.match(runbook, /LastModified/);
+assert.match(runbook, /metadata-only/);
 assert.match(runbook, /QA changes, or Production application changes/);
 assert.match(runbook, /does not create a bucket/);
 
