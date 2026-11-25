@@ -207,7 +207,9 @@ Deno.serve(async (req: Request) => {
     if (memberUpdateError) throw memberUpdateError;
     if (!linkedMember?.length) {
       return json({
-        error: "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
+        error: invited
+          ? "Il profilo condòmino è stato rimosso o modificato durante l'invito. L'invito e-mail potrebbe essere già stato inviato, ma nessun accesso al portale è stato creato. Verifica l'anagrafica prima di riprovare."
+          : "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
         invitationSent: invited,
       }, 409);
     }
