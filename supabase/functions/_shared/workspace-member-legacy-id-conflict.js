@@ -1,5 +1,5 @@
 export const WORKSPACE_MEMBER_LEGACY_ID_UNIQUE_INDEX =
-  "workspace_members_workspace_legacy_id_uidx";
+  "workspace_members_workspace_legacy_unique";
 
 export function isWorkspaceMemberLegacyIdConflict(error) {
   if (String(error?.code || "") !== "23505") return false;
@@ -13,7 +13,8 @@ export function isWorkspaceMemberLegacyIdConflict(error) {
 
 /**
  * Remove an Auth invitation or a profile created for a request that lost the
- * unique legacy-identity race. Existing users/profiles are never deleted.
+ * existing workspace legacy-identity unique-index race. Existing users and
+ * profiles are never deleted.
  */
 export async function cleanupCollaboratorInviteLegacyConflict(
   adminClient,
