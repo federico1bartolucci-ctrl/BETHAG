@@ -52,18 +52,39 @@ try{
  assert.equal(Number(installmentState.amount),90);assert.equal(Number(installmentState.paid_amount),0);assert.equal(installmentState.status,"Da pagare");
  console.log(JSON.stringify({suite:"BETHAG_QA_APP08_11_TRANSFER",target:"jhuyhlzzydcgghrzeexn",status:"PASS",checks:["preview generated for active outgoing owner","resident denied transfer confirmation","administrator confirmed transfer using real RPC","outgoing owner remained active but In chiusura before closure","accounting snapshot readable","closure check returned zero open balance","official close RPC archived outgoing owner and closed transfer","€90 unpaid installment blocked closure without partial state changes"],financial_blocker_case:"PASS"},null,2));
 }finally{
- if(ids.blockedTransfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.blockedTransfer);
- if(ids.blockedInstallment) await cleanup.from("condominium_installments").delete().eq("id",ids.blockedInstallment);
- if(ids.fiscalYear) await cleanup.from("condominium_fiscal_years").delete().eq("id",ids.fiscalYear);
- if(ids.owner2) await cleanup.from("condominium_members").delete().eq("id",ids.owner2);
- if(ids.unit2) await cleanup.from("condominium_units").delete().eq("id",ids.unit2);
- if(ids.transfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.transfer);
- if(ids.openTransfer) await cleanup.from("condominium_member_transfers").delete().eq("id",ids.openTransfer);
- if(ids.openInstallment) await cleanup.from("condominium_installments").delete().eq("id",ids.openInstallment);
- if(ids.openMember) await cleanup.from("condominium_members").delete().eq("id",ids.openMember);
- if(ids.old) await cleanup.from("condominium_members").delete().eq("id",ids.old);
- if(ids.unit) await cleanup.from("condominium_units").delete().eq("id",ids.unit);
- if(ids.condo) await cleanup.from("condominiums").delete().eq("id",ids.condo);
+ const remove = async (table, column, value) => {
+  const result = await cleanup.from(table).delete().eq(column, value);
+  assert.ifError(result.error, "QA cleanup failed for " + table + "." + column + "=" + value);
+  const remaining = await cleanup.from(table).select("id").eq(column, value);
+  assert.ifError(remaining.error, "QA cleanup verification failed for " + table);
+  assert.equal(remaining.data.length, 0, "QA cleanup left rows in " + table);
+ };
+ if(ids.blockedTransfer) await remove("condominium_member_transfers","id",ids.blockedTransfer);
+ if(ids.blockedInstallment) {
+  await remove("condominium_payment_movements","installment_id",ids.blockedInstallment);
+  await remove("condominium_installments","id",ids.blockedInstallment);
+ }
+ if(ids.fiscalYear) await remove("condominium_fiscal_years","id",ids.fiscalYear);
+ const removeUnitAndAllGeneratedMembers = async (unitId, label) => {
+  if (!unitId) return;
+  // Transfer-confirmation RPCs create incoming members not returned as tracked IDs.
+  const unitMembers = await cleanup.from("condominium_members").select("id").eq("unit_id",unitId);
+  assert.ifError(unitMembers.error, "QA cleanup could not enumerate members for " + label);
+  for (const member of unitMembers.data) {
+   await remove("condominium_members","id",member.id);
+  }
+  await remove("condominium_units","id",unitId);
+ };
+ if(ids.unit2) await removeUnitAndAllGeneratedMembers(ids.unit2,"financial blocker unit");
+ if(ids.transfer) await remove("condominium_member_transfers","id",ids.transfer);
+ if(ids.openTransfer) await remove("condominium_member_transfers","id",ids.openTransfer);
+ if(ids.openInstallment) {
+  await remove("condominium_payment_movements","installment_id",ids.openInstallment);
+  await remove("condominium_installments","id",ids.openInstallment);
+ }
+ if(ids.openMember) await remove("condominium_members","id",ids.openMember);
+ if(ids.unit) await removeUnitAndAllGeneratedMembers(ids.unit,"primary transfer unit");
+ if(ids.condo) await remove("condominiums","id",ids.condo);
  await resident.auth.signOut();await admin.auth.signOut();
 }
 // QA verification rerun 2026-11-02

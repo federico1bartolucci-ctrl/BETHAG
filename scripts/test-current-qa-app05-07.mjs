@@ -39,14 +39,7 @@ try{
  const paidState=await db.from("condominium_installments").select("paid_amount,status").eq("id",installmentId).single();assert.ifError(paidState.error);assert.equal(Number(paidState.data.paid_amount),125.5);assert.equal(paidState.data.status,"Pagato");
  const fixtureName="BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE";
  let fixture=await db.from("condominiums").select("id").eq("workspace_id",w.data.id).eq("name",fixtureName).order("created_at",{ascending:true}).limit(1).maybeSingle();assert.ifError(fixture.error);
- if(!fixture.data){
-  const fc=await db.from("condominiums").insert({workspace_id:w.data.id,name:fixtureName,address:"Via QA esercizio chiuso",city:"Imola",data:{bethag_qa_fixture:"APP07 closed fiscal year guard"}}).select("id").single();assert.ifError(fc.error);
-  const fu=await db.from("condominium_units").insert({workspace_id:w.data.id,condominium_id:fc.data.id,unit_code:"APP07-CLOSED-01",data:{unitType:"Abitazione",active:true}}).select("id").single();assert.ifError(fu.error);
-  const ff=await db.from("condominium_fiscal_years").insert({workspace_id:w.data.id,condominium_id:fc.data.id,name:"APP07 esercizio chiuso",start_date:"2026-01-01",end_date:"2026-12-31",status:"Aperto",opening_balance:0}).select("id").single();assert.ifError(ff.error);
-  const fe=await db.from("condominium_ledger_entries").insert({workspace_id:w.data.id,condominium_id:fc.data.id,fiscal_year_id:ff.data.id,entry_date:"2026-11-02",direction:"Uscita",category:"QA",description:"APP07 closed guard fixture",amount:50,payment_status:"Da pagare"}).select("id").single();assert.ifError(fe.error);
-  const fcClose=await db.rpc("close_fiscal_year_and_generate_carryovers",{p_workspace_id:w.data.id,p_condominium_id:fc.data.id,p_source_fiscal_year_id:ff.data.id});assert.ifError(fcClose.error);
-  fixture={data:{id:fc.data.id}};
- }
+ assert.ok(fixture.data, "APP-07 pre-existing closed-year fixture is missing; refusing to create persistent QA data");
  const closedYear=await db.from("condominium_fiscal_years").select("id").eq("condominium_id",fixture.data.id).eq("status","Chiuso").order("created_at",{ascending:false}).limit(1).single();assert.ifError(closedYear.error);
  const closedEntry=await db.from("condominium_ledger_entries").select("id,amount").eq("condominium_id",fixture.data.id).eq("fiscal_year_id",closedYear.data.id).limit(1).single();assert.ifError(closedEntry.error);
  const blocked=await db.from("condominium_ledger_entries").update({amount:Number(closedEntry.data.amount)+0.5}).eq("id",closedEntry.data.id);

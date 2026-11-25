@@ -257,6 +257,7 @@ async function main() {
       || path === "supabase/rebuild/production-read-only-preflight-20261108.md"
       || path === "scripts/apply-reviewed-production-migrations.mjs"
       || path === "scripts/verify-release-readiness.mjs"
+      || path === "scripts/print-release-fingerprint.mjs"
       || path === "scripts/lib/release-readiness-utils.mjs"
       || path === "scripts/test-release-readiness-utils.mjs"
       || path === "scripts/test-canonical-cutover-runner.mjs"

@@ -144,9 +144,9 @@ const blockedCode = await new Promise((resolve, reject) => {
 });
 assert.notEqual(blockedCode, 0, "Production apply must fail closed without exact written cutover approval.");
 assert.match(blockedErr + blockedOut,
-  /BETHAG_APPROVED_SOURCE_COMMIT_SHA|BETHAG_APPROVED_RELEASE_FINGERPRINT|release fingerprint|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|baseline_safety did not test the pinned QA SHA|QA provenance fallback: squash merge accepted only after exact allowlisted tree-delta and frozen-manifest checks|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
-  "Production apply must stop at the explicit approval gate before any database connection.");
-console.log("PASS: pending cutover approval cannot pass the Production apply gate; runner stopped before any database connection.");
+  /APP-12 provider delivery is not PASS in the pinned QA evidence|BETHAG_APPROVED_SOURCE_COMMIT_SHA|BETHAG_APPROVED_RELEASE_FINGERPRINT|release fingerprint|frozen migration sequence, live ledger, hashes or postflight contract changed after QA|BETHAG_PRODUCTION_RESIDUAL_RISK_RECONFIRMED=YES|frozen manifest is still pending final cutover approval|BETHAG_CUTOVER_APPROVAL_NOT_RECORDED|baseline_safety did not test the pinned QA SHA|QA provenance fallback: squash merge accepted only after exact allowlisted tree-delta and frozen-manifest checks|application, migration, workflow or other non-documentation files changed after the tested QA SHA/,
+  "Production apply must stop at a release gate before any database connection.");
+console.log("PASS: incomplete release evidence cannot pass the Production apply gate; runner stopped before any database connection.");
 
 
 console.log("Applying existing canonical Production head (already included in frozen 248-row ledger) to clean local schema...");

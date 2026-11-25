@@ -5,7 +5,17 @@ import { releaseFingerprint } from "./lib/release-readiness-utils.mjs";
 const root = process.cwd();
 const readJson = async (path) => JSON.parse(await readFile(join(root, path), "utf8"));
 const manifest = await readJson("supabase/rebuild/production-migration-cutover-freeze-20261105.json");
-const sourceCommitSha = manifest.user_authorization?.approved_commit_sha;
+const qaEvidence = await readJson("supabase/rebuild/qa-final-collaudo-20261105.json");
+const sourceCommitSha = qaEvidence.reviewed_head_sha;
+if (!/^[0-9a-f]{40}$/.test(sourceCommitSha ?? "")) {
+  throw new Error("A full QA-tested source commit SHA is required in the pinned QA evidence.");
+}
+for (const workflow of ["final_qa_collaudo", "build", "baseline_safety"]) {
+  const run = qaEvidence.workflow_runs?.[workflow];
+  if (!run || run.conclusion !== "success" || run.head_sha !== sourceCommitSha) {
+    throw new Error(`Pinned QA evidence is not exact-head SUCCESS for ${workflow}.`);
+  }
+}
 const criticalPaths = [
   "scripts/apply-reviewed-production-migrations.mjs",
   "scripts/verify-canonical-cutover-runner.mjs",
