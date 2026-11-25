@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
@@ -59,6 +59,22 @@ async function assertBucketLock(accountId, bucketName, token) {
   return jurisdiction;
 }
 
+async function getLifecycleRules(accountId, bucketName, token, jurisdiction) {
+  const url = "https://api.cloudflare.com/client/v4/accounts/" +
+    encodeURIComponent(accountId) + "/r2/buckets/" + encodeURIComponent(bucketName) + "/lifecycle";
+  const headers = { Authorization: "Bearer " + token, Accept: "application/json" };
+  if (jurisdiction !== "default") headers["cf-r2-jurisdiction"] = jurisdiction;
+  const response = await fetch(url, { headers });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success !== true) {
+    const apiMessage = payload?.errors?.map((item) => item.message).filter(Boolean).join("; ");
+    throw new Error("Cannot read R2 lifecycle rules through Cloudflare API (HTTP " +
+      response.status + (apiMessage ? ": " + apiMessage : "") +
+      "). Check the Cloudflare token's R2 bucket-configuration read permission.");
+  }
+  return payload.result?.rules || [];
+}
+
 async function listAll(client, bucket, prefix) {
   const objects = [];
   let continuationToken;
@@ -95,24 +111,28 @@ async function main() {
   });
   const destination = new S3Client({
     endpoint: "https://" + accountId + (jurisdiction === "default" ? "" : "." + jurisdiction) + ".r2.cloudflarestorage.com",
-    region: "auto", forcePathStyle: true,
+    // Use the AWS SDK's virtual-hosted addressing for R2. Path-style is retained only for Supabase's S3 endpoint.
+    region: "auto",
     credentials: { accessKeyId: destinationAccessKey, secretAccessKey: destinationSecret }
   });
 
   currentStage = "R2 destination bucket access";
   await destination.send(new HeadBucketCommand({ Bucket: destinationBucket }));
   currentStage = "R2 lifecycle configuration";
-  const lifecycle = await destination.send(new GetBucketLifecycleConfigurationCommand({ Bucket: destinationBucket }));
-  const lifecycleRules = lifecycle.Rules || [];
+  // Lifecycle is bucket configuration, not object access. Read it with the dedicated
+  // Cloudflare configuration token rather than the bucket-scoped S3 object token.
+  const lifecycleRules = await getLifecycleRules(accountId, destinationBucket, cloudflareReadToken, jurisdiction);
   const hasSnapshotsExpiry = lifecycleRules.some((rule) =>
-    rule.Status === "Enabled" &&
-    rule.Filter?.Prefix === DESTINATION_PREFIX + "snapshots/" &&
-    Number(rule.Expiration?.Days) >= 31
+    rule.enabled === true &&
+    rule.conditions?.prefix === DESTINATION_PREFIX + "snapshots/" &&
+    rule.deleteObjectsTransition?.condition?.type === "Age" &&
+    Number(rule.deleteObjectsTransition.condition.maxAge) >= 31 * 24 * 60 * 60
   );
   const hasBlobsExpiry = lifecycleRules.some((rule) =>
-    rule.Status === "Enabled" &&
-    rule.Filter?.Prefix === DESTINATION_PREFIX + "objects/" &&
-    Number(rule.Expiration?.Days) >= 60
+    rule.enabled === true &&
+    rule.conditions?.prefix === DESTINATION_PREFIX + "objects/" &&
+    rule.deleteObjectsTransition?.condition?.type === "Age" &&
+    Number(rule.deleteObjectsTransition.condition.maxAge) >= 60 * 24 * 60 * 60
   );
   if (!hasSnapshotsExpiry || !hasBlobsExpiry) {
     throw new Error("R2 lifecycle gate failed: require snapshots expiration >=31 days and objects expiration >=60 days. No backup was written.");
@@ -246,7 +266,20 @@ async function main() {
 }
 
 main().catch((error) => {
-  const details = [error?.name, error?.Code || error?.code, error?.$metadata?.httpStatusCode ? "HTTP " + error.$metadata.httpStatusCode : null, error?.message || String(error)].filter(Boolean).join(" | ");
+  const metadata = error?.$metadata || {};
+  const responseHeaders = error?.$response?.headers || {};
+  const safeHeaders = ["cf-ray", "x-amz-request-id", "x-amz-id-2", "server", "date"]
+    .map((name) => responseHeaders[name] ? name + "=" + responseHeaders[name] : null).filter(Boolean);
+  const details = [
+    error?.name,
+    error?.Code || error?.code,
+    metadata.httpStatusCode ? "HTTP " + metadata.httpStatusCode : null,
+    metadata.requestId ? "requestId=" + metadata.requestId : null,
+    metadata.extendedRequestId ? "extendedRequestId=" + metadata.extendedRequestId : null,
+    metadata.attempts ? "attempts=" + metadata.attempts : null,
+    safeHeaders.join(" "),
+    error?.message || String(error)
+  ].filter(Boolean).join(" | ");
   console.error("BETHAG Storage backup failed at [" + currentStage + "]:", details);
   process.exitCode = 1;
 });
