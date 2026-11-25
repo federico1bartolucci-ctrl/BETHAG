@@ -1,7 +1,7 @@
 {
   "artifact": "BETHAG Production ACL cutover proposal — live-ledger refresh 2026-11-24",
   "captured_date": "2026-11-24",
-  "status": "APPROVED_FOR_PRODUCTION_CUTOVER",
+  "status": "DRAFT_NOT_APPROVED",
   "reviewed_source_commit": "7d8469ada095dfabca3824b7e610bc076faaa429",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/postgres-global-function-default-acl-20261124",
@@ -259,7 +259,7 @@
   "critical_execution_constraint": {
     "observed": "Production live ledger verified read-only at 267 rows/head 20261105050000 on 2026-11-24. QA has 283 rows and distinct history. The previous 248-row freeze is historical only.",
     "rule": "Preserve all 267 Production rows; add only the single proposed migration after all gates. QA must not be reset or mutated to force parity.",
-    "status": "OWNER_APPROVED_FOR_SINGLE_FORWARD_ONLY_PRODUCTION_MIGRATION_267_TO_268"
+    "status": "NOT_AUTHORIZED_APPROVAL_WINDOW_EXPIRED"
   },
   "no_go_gates": [
     "Production ledger differs from 267 rows/head 20261105050000 at final preflight.",
@@ -396,10 +396,10 @@
     "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
   ],
   "review_disposition": {
-    "status": "INTERNAL_SELF_REVIEW_PASS_WITH_DISCLOSED_CONFLICT_OWNER_APPROVAL_RECEIVED",
+    "status": "INTERNAL_SELF_REVIEW_PASS_WITH_DISCLOSED_CONFLICT_OWNER_APPROVAL_PENDING",
     "independent_review_recorded": false,
     "internal_review_recorded": true,
-    "owner_approval_required": false,
+    "owner_approval_required": true,
     "internal_review": {
       "review_type": "INTERNAL_SELF_REVIEW",
       "status": "PASS_WITH_DISCLOSED_CONFLICT",
@@ -431,11 +431,11 @@
         "No new owner approval exists; Production apply remains unauthorized."
       ]
     },
-    "limitation": "No external reviewer is available. The internal review was performed by the same ChatGPT-assisted implementation agent that prepared the change; it is not independent and is explicitly disclosed as such. The runner permits this disclosed internal review but still requires separate explicit owner approval bound to the exact source SHA, release fingerprint, migration hash, Production project and UTC execution window."
+    "limitation": "Internal self-review only; not independent. Historical owner approval window expired. A new explicit owner approval is required for any future Production execution."
   },
   "proposal_created_at_utc": "2026-11-24",
-  "approval_scope": "LIVE_LEDGER_ACL_267_TO_268",
-  "production_apply_authorized": true,
+  "approval_scope": "NONE",
+  "production_apply_authorized": false,
   "production_runner": {
     "status": "IMPLEMENTED_FAIL_CLOSED_NOT_EXECUTED",
     "file": "scripts/apply-live-ledger-acl-production.mjs",
@@ -454,7 +454,8 @@
     "negative_path_test": "PASS — no approval means blocked before Production connection",
     "production_apply": "NOT EXECUTED",
     "production_authorized": false,
-    "technical_review_requirement": "INTERNAL_SELF_REVIEW_WITH_DISCLOSED_CONFLICT; NOT_INDEPENDENT; exact source SHA required"
+    "technical_review_requirement": "INTERNAL_SELF_REVIEW_WITH_DISCLOSED_CONFLICT; NOT_INDEPENDENT; exact source SHA required",
+    "current_authorization_status": "BLOCKED_EXPIRED_WINDOW"
   },
   "qa_execution_disposition": {
     "status": "PASS_APP_01_APP_15_EXACT_SOURCE_SHA",
@@ -549,67 +550,34 @@
     "scope": "Fresh read-only Production verification only. No DDL, migration, ledger or application-data writes."
   },
   "owner_authorization": {
-    "status": "RECEIVED",
+    "status": "EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL",
     "approved_by": "Project owner (user)",
-    "approval_reference": "Explicit owner authorization in ChatGPT conversation on 2026-11-25: confirms residual physical-backup-restore risk and authorizes the 01:40–03:30 CET cutover window.",
-    "approved_commit_sha": "7d8469ada095dfabca3824b7e610bc076faaa429",
-    "approved_release_fingerprint": "6ed3f624736cd3107bcb635ca8af605ec523d9c7ba2520b883bc31103a706dd5",
-    "approved_target_project_ref": "tctcgptrsmvgajqjgnev",
-    "approved_migration_hashes": [
+    "historical_approval_reference": "Explicit owner authorization in ChatGPT conversation on 2026-11-25 for the 01:40–03:30 CET window; this window has expired and is not valid for a later execution.",
+    "historical_approved_commit_sha": "7d8469ada095dfabca3824b7e610bc076faaa429",
+    "historical_approved_release_fingerprint": "6ed3f624736cd3107bcb635ca8af605ec523d9c7ba2520b883bc31103a706dd5",
+    "historical_approved_target_project_ref": "tctcgptrsmvgajqjgnev",
+    "historical_approved_migration_hashes": [
       {
         "file": "20261124234000_revoke_postgres_global_public_function_execute.sql",
         "git_blob_sha": "499ea493e828243309ee2f4bb9c3242d2fbeb862"
       }
     ],
-    "technical_review": {
-      "review_type": "INTERNAL_SELF_REVIEW",
-      "status": "PASS_WITH_DISCLOSED_CONFLICT",
-      "independent": false,
-      "conflict_disclosed": true,
-      "reviewed_commit_sha": "7d8469ada095dfabca3824b7e610bc076faaa429",
-      "reviewer": "ChatGPT (same implementation agent; not independent)",
-      "evidence_reference": "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json#review_disposition.internal_review",
-      "scope": [
-        "candidate migration and PostgreSQL default-privilege semantics",
-        "Production preflight and postflight invariants",
-        "forward-only Production runner, exact 267-pair ledger guard, transaction, advisory lock, TLS and approval gates",
-        "internal self-review gate: explicit non-independence disclosure, exact SHA binding, and separate owner approval",
-        "local-only PostgreSQL 17 rehearsal and ACL regression tests",
-        "exact-source Build, Baseline Safety, PostgreSQL 17, browser smoke and APP-01..APP-15 evidence",
-        "Production Data API schema-name evidence supplied by owner on 2026-11-25"
-      ],
-      "findings": [
-        "No blocking defect identified in the reviewed scope.",
-        "Existing function ACLs and Supabase-managed role defaults are not modified by the candidate.",
-        "Intentional storage schema-specific EXECUTE defaults are guarded before and after the proposed transaction.",
-        "Production runner fails closed without exact owner approval and validates historical ledger preservation.",
-        "The former independent-review gate was replaced with an explicit INTERNAL_SELF_REVIEW gate: conflict disclosure is mandatory, review and QA evidence must bind to the exact owner-approved source SHA, and owner approval remains a separate requirement.",
-        "Automated source-binding and runner tests, Build, Baseline Safety, PostgreSQL 17 rehearsal and APP-01..APP-15 all passed on the reviewed source SHA."
-      ],
-      "limitations": [
-        "This review is not independent: the same ChatGPT-assisted implementation agent contributed to the implementation and performed the review.",
-        "Provider-managed physical restore remains untested; the project owner previously accepted this residual risk on 2026-10-27, and the runner requires it to be explicitly reconfirmed in the final owner authorization.",
-        "No new owner approval exists; Production apply remains unauthorized."
-      ]
-    },
-    "ci_tested_commit_sha": "7d8469ada095dfabca3824b7e610bc076faaa429",
-    "ci_build_status": "success",
-    "ci_build_run_reference": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45517874845",
-    "ci_baseline_safety_status": "success",
-    "ci_baseline_safety_run_reference": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45517874844",
-    "postgres17_rehearsal_status": "PASS",
-    "postgres17_rehearsal_evidence_reference": "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json#rehearsal_evidence",
-    "qa_final_workflow_status": "success",
-    "qa_final_workflow_evidence_reference": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45517874853",
-    "qa_app_01_to_15_status": "PASS",
-    "qa_tested_commit_sha": "7d8469ada095dfabca3824b7e610bc076faaa429",
-    "qa_evidence_reference": "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json#qa",
-    "data_api_exposure_verified": true,
-    "data_api_exposure_evidence_reference": "Owner-provided Production Supabase Dashboard screenshots in this conversation, 2026-11-25 approximately 01:21–01:22 CET.",
-    "data_api_exposure_verified_at_utc": "2026-11-25T00:22:00Z",
-    "residual_backup_risk_reconfirmed": true,
-    "residual_backup_risk_evidence_reference": "Explicit owner reconfirmation in ChatGPT conversation on 2026-11-25; physical provider restore remains untested, local logical-dump restore verified, paid Restore to a New Project declined.",
-    "approved_window_start_utc": "2026-11-25T00:40:00Z",
-    "approved_window_end_utc": "2026-11-25T02:30:00Z"
+    "historical_window_start_utc": "2026-11-25T00:40:00Z",
+    "historical_window_end_utc": "2026-11-25T02:30:00Z",
+    "current_authorization": false,
+    "note": "Historical approval retained for audit only. No current Production execution is authorized; a new approval must bind the final source SHA, release fingerprint, migration hash, target project and a future UTC window."
+  },
+  "current_disposition": {
+    "updated_at_utc": "2026-11-25T00:00:00Z",
+    "status": "DRAFT_NOT_APPROVED",
+    "reason": "The previously recorded 2026-11-25 01:40–03:30 CET approval window has expired. The manifest is returned to fail-closed draft state; historical approval details are retained only for audit.",
+    "production_apply_authorized": false,
+    "production_runner": "NOT_EXECUTED",
+    "required_before_future_apply": [
+      "fresh read-only Production ledger and ACL preflight",
+      "recompute and verify release fingerprint from exact final source",
+      "current exact-SHA Build, Baseline Safety, PostgreSQL 17 rehearsal and APP-01..APP-15 QA",
+      "new explicit owner approval tied to exact source SHA, fingerprint, SQL blob hash, Production project and future UTC window"
+    ]
   }
 }
