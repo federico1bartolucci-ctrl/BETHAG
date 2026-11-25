@@ -166,19 +166,49 @@ REVOKE ALL ON FUNCTION private.upsert_portal_access_for_member(uuid, uuid, text,
 FROM PUBLIC, anon, authenticated, service_role;
 
 DROP POLICY IF EXISTS "authorized managers manage portal access" ON public.portal_access;
-CREATE POLICY "authorized managers manage portal access"
+DROP POLICY IF EXISTS "authorized managers read portal access" ON public.portal_access;
+DROP POLICY IF EXISTS "authorized managers insert portal access" ON public.portal_access;
+DROP POLICY IF EXISTS "authorized managers update portal access" ON public.portal_access;
+DROP POLICY IF EXISTS "authorized managers delete portal access" ON public.portal_access;
+
+-- Managers retain visibility and cleanup rights after a downgrade.
+CREATE POLICY "authorized managers read portal access"
 ON public.portal_access
 AS PERMISSIVE
-FOR ALL
+FOR SELECT
 TO authenticated
-USING (
-  private.can_manage_workspace_module(workspace_id, 'portale')
-  AND private.workspace_has_portal_plan(workspace_id)
-)
+USING (private.can_manage_workspace_module(workspace_id, 'portale'));
+
+-- Creating or activating resident access requires the server-managed Portal plan.
+CREATE POLICY "authorized managers insert portal access"
+ON public.portal_access
+AS PERMISSIVE
+FOR INSERT
+TO authenticated
 WITH CHECK (
   private.can_manage_workspace_module(workspace_id, 'portale')
   AND private.workspace_has_portal_plan(workspace_id)
 );
+
+-- On a downgraded workspace, managers may only deactivate existing access.
+CREATE POLICY "authorized managers update portal access"
+ON public.portal_access
+AS PERMISSIVE
+FOR UPDATE
+TO authenticated
+USING (private.can_manage_workspace_module(workspace_id, 'portale'))
+WITH CHECK (
+  private.can_manage_workspace_module(workspace_id, 'portale')
+  AND (private.workspace_has_portal_plan(workspace_id) OR active = false)
+);
+
+-- Deletion remains available so a manager can clean up stale portal records.
+CREATE POLICY "authorized managers delete portal access"
+ON public.portal_access
+AS PERMISSIVE
+FOR DELETE
+TO authenticated
+USING (private.can_manage_workspace_module(workspace_id, 'portale'));
 
 DROP POLICY IF EXISTS "residents read own portal access" ON public.portal_access;
 CREATE POLICY "residents read own portal access"
@@ -215,7 +245,6 @@ USING (
   (
     workspace_id IS NOT NULL
     AND private.can_manage_workspace_module(workspace_id, 'portale')
-    AND private.workspace_has_portal_plan(workspace_id)
   )
   OR (
     workspace_id IS NULL
@@ -226,7 +255,6 @@ USING (
       WHERE c.archived_at IS NULL
         AND lower(trim(c.name)) = lower(trim(portal_registration_requests.condominium_name))
         AND private.can_manage_workspace_module(c.workspace_id, 'portale')
-        AND private.workspace_has_portal_plan(c.workspace_id)
     )
   )
 );
