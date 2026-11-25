@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { linkResidentMemberIfUnchanged } from "../_shared/resident-invite-member-link.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -200,14 +201,9 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "id" });
     if (profileError) throw profileError;
 
-    const { data: linkedMember, error: memberUpdateError } = await adminClient
-      .from("condominium_members")
-      .update({ user_id: targetUserId })
-      .eq("id", member.id)
-      .eq("condominium_id", condominiumForMember.id)
-      .eq("legacy_id", legacyId)
-      .select("id");
-    if (memberUpdateError) throw memberUpdateError;
+    // Do not link an Auth user to a resident record that changed while the invitation was being prepared.
+    // The guarded UPDATE is atomic: stale email, role, unit, active state or user_id yields zero rows.
+    const linkedMember = await linkResidentMemberIfUnchanged(adminClient, member, targetUserId);
     if (!linkedMember?.length) {
       return json({
         error: invited
