@@ -1,22 +1,49 @@
 name: BETHAG authenticated QA RLS and storage acceptance
+permissions:
+  contents: read
+
 on:
-  push:
-    branches:
-      - ops/qa-secret-validation-20261102
-    paths:
-      - "scripts/test-current-qa-authenticated-rls.mjs"
-      - ".github/workflows/qa-authenticated-rls.yml"
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Exact current CAP commit SHA to test"
+        required: true
+        type: string
+
 concurrency:
   group: bethag-qa-shared-environment
   cancel-in-progress: false
 
 jobs:
   authenticated-rls:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout trusted CAP branch
+        uses: actions/checkout@v4
+        with:
+          ref: cap-consolidation-20261123
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify requested SHA is the current trusted CAP head
+        env:
+          EXPECTED_SHA: ${{ inputs.target_ref }}
+        run: |
+          if ! [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "target_ref must be a full 40-character lowercase commit SHA"
+            exit 1
+          fi
+          TRUSTED_SHA="$(git rev-parse HEAD)"
+          echo "Requested SHA: $EXPECTED_SHA"
+          echo "Trusted CAP head: $TRUSTED_SHA"
+          test "$EXPECTED_SHA" = "$TRUSTED_SHA"
+          git checkout --detach "$EXPECTED_SHA"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          echo "Checked-out SHA: $ACTUAL_SHA"
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -33,5 +60,3 @@ jobs:
         run: |
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo "QA publishable key secret missing"; exit 1; }
           node scripts/test-current-qa-authenticated-rls.mjs
-# QA verification trigger refreshed 2026-11-02
-# QA verification trigger refreshed 2026-11-02 (round 2)
