@@ -52,7 +52,7 @@ assert.ok(mainSource.slice(collaboratorGateStart, collaboratorGateEnd).includes(
 const adminGateStart = mainSource.indexOf("if (isAdministrator) {", mainSource.indexOf("const pageAddon"));
 const adminGateEnd = mainSource.indexOf("if (isCollaborator) {", adminGateStart);
 assert.ok(adminGateStart >= 0 && adminGateEnd > adminGateStart);
-assert.ok(mainSource.slice(adminGateStart, adminGateEnd).includes("hasEntitlement(\\n        subscription"));
+assert.match(mainSource.slice(adminGateStart, adminGateEnd), /hasEntitlement\(\s*subscription/);
 assert.ok(mainSource.includes("Admins may preview demo-plan pages"));
 assert.ok(mainSource.includes('getEntitlementSubscription("ai")'));
 assert.ok(mainSource.includes('getEntitlementSubscription("portale")'));
