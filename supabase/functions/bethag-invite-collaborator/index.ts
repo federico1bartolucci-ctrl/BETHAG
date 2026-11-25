@@ -1,5 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  cleanupCollaboratorInviteLegacyConflict,
+  isWorkspaceMemberLegacyIdConflict,
+} from "../_shared/workspace-member-legacy-id-conflict.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,17 +160,24 @@ Deno.serve(async (req: Request) => {
     if (existingProfileError) throw existingProfileError;
 
     const preservedRole = existingProfile?.role === "admin" ? "admin" : "collaborator";
+    const profilePayload = {
+      id: targetUserId,
+      full_name: name,
+      email,
+      role: preservedRole,
+      active: true,
+    };
+    let profileCreated = false;
 
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .upsert({
-        id: targetUserId,
-        full_name: name,
-        email,
-        role: preservedRole,
-        active: true,
-      }, { onConflict: "id" });
-    if (profileError) throw profileError;
+    // Keep an existing profile unchanged until the unique legacy identity has
+    // been claimed. A newly invited Auth user still needs a profile for the FK.
+    if (!existingProfile) {
+      const { error: profileInsertError } = await adminClient
+        .from("profiles")
+        .insert(profilePayload);
+      if (profileInsertError) throw profileInsertError;
+      profileCreated = true;
+    }
 
     const { error: upsertError } = await adminClient
       .from("workspace_members")
@@ -178,7 +189,39 @@ Deno.serve(async (req: Request) => {
         permissions,
         legacy_id: legacyId,
       }, { onConflict: "workspace_id,user_id" });
-    if (upsertError) throw upsertError;
+
+    if (upsertError) {
+      if (isWorkspaceMemberLegacyIdConflict(upsertError)) {
+        const cleanup = await cleanupCollaboratorInviteLegacyConflict(
+          adminClient,
+          targetUserId,
+          { invited, profileCreated },
+        );
+        console.error("Collaborator invitation lost a legacy identity race", {
+          workspaceId,
+          legacyId,
+          invitationSent: invited,
+          cleanupFailed: cleanup.failed,
+        });
+        return json({
+          error: cleanup.failed
+            ? "Il codice collaboratore è stato assegnato contemporaneamente a un altro account. La pulizia dell'invito non è riuscita: verifica l'account prima di riprovare."
+            : "Il codice collaboratore è già stato assegnato a un altro account. Nessun collegamento duplicato è stato creato; verifica l'anagrafica prima di riprovare.",
+          code: "COLLABORATOR_LEGACY_ID_ALREADY_ASSIGNED",
+          invitationSent: invited,
+          cleanupFailed: cleanup.failed,
+        }, 409);
+      }
+      throw upsertError;
+    }
+
+    if (existingProfile) {
+      const { error: profileUpdateError } = await adminClient
+        .from("profiles")
+        .update(profilePayload)
+        .eq("id", targetUserId);
+      if (profileUpdateError) throw profileUpdateError;
+    }
 
     return json({ success: true, userId: targetUserId, invited });
   } catch (error) {
