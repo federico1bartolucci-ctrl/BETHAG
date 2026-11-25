@@ -328,7 +328,7 @@ try {
     "Corrected result must retain Unit A and legacy unit-null member carryovers only.");
   assert.equal(Number(after.open_unit_carryovers), 5);
   assert.equal(Number(after.open_total), 177);
-  console.log("PASS corrected closure check: only selected-unit and legacy unit-null member obligations remain.");
+  console.log("PASS corrected closure check: selected-unit, legacy unit-null and unit-unassigned installments are included; other-unit obligations are excluded.");
 
   const ownershipShare = await call(ids.shareTransfer);
   assert.equal(Number(ownershipShare.open_total), 0,
