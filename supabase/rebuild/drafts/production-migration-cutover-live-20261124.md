@@ -118,3 +118,20 @@ I riferimenti sono registrati nel campo `rehearsal_evidence.exact_head_ci_eviden
 La verifica Data API è aggiornata dalla sezione “Rettifica evidenze Data API già fornite”: screenshot Production del 24 novembre riconferma 2/3 schemi esposti e le altre impostazioni visibili; i nomi Production restano documentati dalla schermata Production dell'8 novembre. La schermata QA del 24 novembre resta prova esclusivamente QA. Non si deve chiedere nuovamente all'owner materiale già fornito né trasferire evidenze tra ambienti.
 
 **Stato complessivo invariato:** manifest `DRAFT_NOT_APPROVED`; nessuna revisione tecnica indipendente registrata; nessuna approvazione owner; APP-01..APP-15 non accettati; runner Production non eseguito. Nessuna scrittura su Production o QA.
+
+
+## Evidenza Data API Production — conferma con nomi, 25 novembre 2026
+
+L'owner ha fornito tre schermate della Dashboard Supabase del progetto BETHAG, ramo `main`, acquisite il 25 novembre 2026 alle 01:21–01:22 CET. La terza schermata espande il selettore “Exposed schemas” e mostra i segni di selezione accanto a `graphql_public` e `public`; `private` è visibile ma non selezionato. Le prime due schermate mostrano i valori e le altre impostazioni.
+
+- Schemi esposti: `graphql_public`, `public` (2/3); `private` non esposto.
+- Tabelle esposte: 0/48.
+- Funzioni esposte: 0/173.
+- Automatically expose new tables: disattivato.
+- Extra search path: `public`, `extensions`.
+- Max rows: 1000.
+- Pool size: configurato automaticamente.
+
+Questa è evidenza diretta Production e sostituisce la precedente limitazione “count-only” del 24 novembre. La prova QA del 24 novembre resta separata e non viene utilizzata per dimostrare la configurazione Production.
+
+**Disposizione:** il gate di evidenza Data API Production con nomi degli schemi e freschezza entro 24 ore è soddisfatto al momento della cattura. Non sono state modificate impostazioni Supabase. Restano separati e obbligatori: riconferma del rischio backup, approvazione owner legata a SHA/fingerprint/hash/progetto/finestra, CI esatta sul commit finale e ogni altro controllo fail-closed del runner. Nessuna scrittura o migrazione Production è stata eseguita.
