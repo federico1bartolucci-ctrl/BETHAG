@@ -53,7 +53,7 @@ const adminGateStart = mainSource.indexOf("if (isAdministrator) {", mainSource.i
 const adminGateEnd = mainSource.indexOf("if (isCollaborator) {", adminGateStart);
 assert.ok(adminGateStart >= 0 && adminGateEnd > adminGateStart);
 assert.ok(mainSource.slice(adminGateStart, adminGateEnd).includes("hasEntitlement(\\n        subscription"));
-assert.ok(mainSource.includes("Admin may preview demo-plan pages"));
+assert.ok(mainSource.includes("Admins may preview demo-plan pages"));
 assert.ok(mainSource.includes('getEntitlementSubscription("ai")'));
 assert.ok(mainSource.includes('getEntitlementSubscription("portale")'));
 assert.ok(mainSource.includes("La prova struttura è solo un'anteprima"));
