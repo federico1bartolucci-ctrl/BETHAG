@@ -4,15 +4,6 @@ on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
-  push:
-    branches:
-      - feature/storage-backup-r2-20261125
-  pull_request:
-    paths:
-      - ".github/workflows/storage-backup-r2.yml"
-      - "scripts/backup-supabase-storage-to-r2.mjs"
-      - "scripts/test-storage-backup-r2-contract.mjs"
-      - "docs/STORAGE_BACKUP_R2.md"
 
 permissions:
   contents: read
@@ -22,20 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Verify backup script syntax
-        run: node --check scripts/backup-supabase-storage-to-r2.mjs
-      - name: Verify backup safety contract
-        run: node scripts/test-storage-backup-r2-contract.mjs
-
   backup:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.STORAGE_BACKUP_ENABLED == 'true'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.STORAGE_BACKUP_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: storage-backup-production
