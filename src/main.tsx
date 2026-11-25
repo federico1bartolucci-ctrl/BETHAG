@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -501,13 +502,6 @@ const PLAN_DESCRIPTIONS: Record<PlanId, string> = {
     "Automazioni, generazione documenti e gestione assemblee avanzata.",
   portal:
     "Professional con portale dedicato ai condomini.",
-};
-
-const PLAN_LEVEL: Record<PlanId, number> = {
-  free: 0,
-  plus: 1,
-  professional: 2,
-  portal: 3,
 };
 
 const ADDON_NAMES: Record<AddonId, string> = {
@@ -1276,21 +1270,6 @@ function fileSource(
     return "Audio";
 
   return "Manuale";
-}
-
-function hasFeature(
-  plan: PlanId,
-  required: PlanId
-) {
-  return PLAN_LEVEL[plan] >= PLAN_LEVEL[required];
-}
-
-function hasAddon(subscription: Subscription, addon: AddonId) {
-  return subscription.addons.includes(addon);
-}
-
-function hasEntitlement(subscription: Subscription, required: PlanId, addon?: AddonId) {
-  return hasFeature(subscription.plan, required) || Boolean(addon && hasAddon(subscription, addon));
 }
 
 function roleName(role: UserRole) {
@@ -2602,6 +2581,9 @@ function App() {
         p_condominium_name: registration.condominiumName || null,
       });
       if (completionError) {
+        if ((completionError.message || "").includes("PORTAL_PLAN_REQUIRED")) {
+          throw new Error("Il workspace non dispone di un piano BETHAG Portal registrato sul server. L'accesso al Portale non è disponibile.");
+        }
         if ((completionError.message || "").includes("PORTAL_MEMBER_CONDOMINIUM_MISMATCH")) {
           throw new Error("Il nominativo corrisponde a un profilo anagrafico associato a un condominio diverso da quello selezionato. Verifica il nome del condominio e riprova.");
         }
@@ -3083,7 +3065,9 @@ function App() {
     });
     if (error) {
       const message = error.message || "";
-      if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
+      if (message.includes("PORTAL_PLAN_REQUIRED")) {
+        alert("Il piano Portal non risulta assegnato al workspace. Completa l'attivazione prima di autorizzare i residenti.");
+      } else if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
         alert("L'e-mail del profilo anagrafico è diversa da quella verificata dell'account. Correggi prima l'e-mail nella scheda del condòmino, quindi ripeti l'autorizzazione.");
       } else if (message.includes("MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER")) {
         alert("La richiesta è vincolata al profilo anagrafico originariamente individuato. Verifica il profilo associato e riprova.");
@@ -3178,7 +3162,9 @@ function App() {
             console.error("BETHAG resident registration completion failed", registrationError);
             await supabase.auth.signOut();
             const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
-            if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NAME_REQUIRED")) {
+            if (registrationErrorMessage.includes("PORTAL_PLAN_REQUIRED")) {
+              alert("Il piano Portal non risulta assegnato al workspace. Contatta l'amministratore per completare l'attivazione.");
+            } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NAME_REQUIRED")) {
               alert("Indica il nome esatto del condominio: serve per indirizzare correttamente la richiesta all'amministratore.");
             } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NOT_FOUND")) {
               alert("Il condominio indicato non è stato trovato. Controlla il nome esatto oppure contatta l'amministratore.");
@@ -9333,8 +9319,8 @@ function Dashboard({
           <div>
             <strong>{PLAN_NAMES[subscription.plan]}</strong>
             <span>
-              {subscription.addons.length
-                ? subscription.addons.length + " add-on attivi"
+              {getClientUnlockedAddons(subscription).length
+                ? getClientUnlockedAddons(subscription).length + " add-on attivi"
                 : "Gestisci piano e moduli"}
             </span>
           </div>
@@ -13884,6 +13870,7 @@ function SubscriptionPage({
       alert("La gestione degli add-on è riservata all'Amministratore.");
       return;
     }
+    if (isServerManagedAddon(addon)) return;
     setSubscription((current) => ({
       ...current,
       addons: current.addons.includes(addon) ? current.addons : [...current.addons, addon],
@@ -13903,7 +13890,7 @@ function SubscriptionPage({
         </div>
         <div className="subscription-current-right">
           <Badge value={subscription.status} />
-          {subscription.addons.length > 0 && <span className="badge">{subscription.addons.length} sblocc{subscription.addons.length === 1 ? "o" : "hi"} singol{subscription.addons.length === 1 ? "o" : "i"}</span>}
+          {getClientUnlockedAddons(subscription).length > 0 && <span className="badge">{getClientUnlockedAddons(subscription).length} sblocc{getClientUnlockedAddons(subscription).length === 1 ? "o" : "hi"} singol{getClientUnlockedAddons(subscription).length === 1 ? "o" : "i"}</span>}
         </div>
       </section>
 
@@ -13934,7 +13921,11 @@ function SubscriptionPage({
         <div className="addon-grid">
           {addons.map((addon) => {
             const included = isIncluded(addon);
-            const unlocked = hasAddon(subscription, addon);
+            const serverManaged = isServerManagedAddon(addon);
+            const unlocked = !serverManaged && hasAddon(subscription, addon);
+            const serverManagedDescription = addon === "ai"
+              ? "Le funzioni AI sono autorizzate dal piano verificato dal server; l'attivazione singola non è disponibile."
+              : "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile.";
             return (
               <article className="addon-card" key={addon}>
                 <div className="addon-card-top">
@@ -13944,9 +13935,9 @@ function SubscriptionPage({
                   </div>
                   <strong>{ADDON_PRICES[addon]}</strong>
                 </div>
-                <p>{included ? "Incluso in " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "." : unlocked ? "Sbloccato singolarmente nel tuo workspace." : "Disponibile anche senza passare a " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "."}</p>
-                <button type="button" className={included || unlocked ? "secondary-button" : "primary-button"} disabled={included || unlocked} onClick={() => unlockAddon(addon)}>
-                  {included ? "✓ Incluso nel piano" : unlocked ? "✓ Sbloccato" : "Sblocca singolarmente"}
+                <p>{included ? "Incluso in " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "." : serverManaged ? serverManagedDescription : unlocked ? "Sbloccato singolarmente nel tuo workspace." : "Disponibile anche senza passare a " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + "."}</p>
+                <button type="button" className={included || unlocked || serverManaged ? "secondary-button" : "primary-button"} disabled={included || unlocked || serverManaged} onClick={() => unlockAddon(addon)}>
+                  {included ? "✓ Incluso nel piano" : serverManaged ? "Non disponibile singolarmente" : unlocked ? "✓ Sbloccato" : "Sblocca singolarmente"}
                 </button>
               </article>
             );
@@ -13959,9 +13950,9 @@ function SubscriptionPage({
         <p>
           Il piano stabilisce quali moduli sono inclusi. Gli add-on permettono
           di sbloccare singole funzionalità anche mantenendo il piano attuale.
-          In questa versione gli acquisti sono simulati localmente; pagamento,
-          fatturazione e controllo server-side degli entitlement verranno
-          collegati successivamente.
+          In questa versione gli add-on non collegati a un entitlement server-side restano simulati localmente.
+          AI e Portale sono autorizzati esclusivamente dal piano verificato dal server; l'attivazione
+          singola di queste funzioni non è disponibile finché non sarà integrata la fatturazione.
         </p>
       </div>
     </>
