@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
+import { addAiDocumentBlobSize, validateAiDocumentRequestFiles } from "../_shared/ai-document-request-limits.js";
 const corsHeaders={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const schema={type:"object",additionalProperties:false,properties:{documentType:{type:"string",enum:["Riparto spese","Fattura","Verbale","Convocazione","Regolamento","Altro"]},summary:{type:"string"},confidence:{type:"number"},expenseAmount:{type:"string"},supplier:{type:"string"},supplierVatNumber:{type:"string"},invoiceNumber:{type:"string"},documentDate:{type:"string"},workReference:{type:"string"},condominiumReferences:{type:"array",items:{type:"string"}},unitRows:{type:"array",items:{type:"object",additionalProperties:false,properties:{unitCode:{type:"string"},description:{type:"string"},amount:{type:"string"},millesimi:{type:"string"},owner:{type:"string"}},required:["unitCode","description","amount","millesimi","owner"]}},warnings:{type:"array",items:{type:"string"}}},required:["documentType","summary","confidence","expenseAmount","supplier","supplierVatNumber","invoiceNumber","documentDate","workReference","condominiumReferences","unitRows","warnings"]};
 const json=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,"Content-Type":"application/json"}});
@@ -24,14 +25,19 @@ if (!planAccess.allowed) return json({
   code: planAccess.code,
   requiredPlan: "plus",
 }, planAccess.status);
+const fileCountLimit = validateAiDocumentRequestFiles(files);
+if (!fileCountLimit.allowed) return json({ error: fileCountLimit.message, code: fileCountLimit.code }, fileCountLimit.status);
 if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
 const content:any[]=[{type:"input_text",text:"Analizza i documenti di amministrazione condominiale allegati per BETHAG. Estrai solo informazioni realmente presenti. Non inventare importi, nominativi, millesimi o riferimenti. Se un dato è incerto lascialo vuoto e inserisci una warning. I millesimi appartengono alle unità, mai alle persone. Per riparti conserva le righe rilevate; per fatture identifica fornitore, partita IVA se presente, numero fattura, importo, data e ogni riferimento a lavori/manutenzioni; per verbali e convocazioni identifica oggetto e riferimenti. L'output sarà sempre sottoposto a verifica dell'amministratore. Documenti: "+files.map((f:any)=>f.filename).join(", ")}];
 const openAIFileIds:string[]=[];
+let totalDownloadedBytes = 0;
 try{
 for(const f of files){
 const storagePath=String(f.storagePath??"");if(!storagePath)throw new Error("Percorso Storage mancante per "+String(f.filename??"documento")+".");if(!storagePath.startsWith(workspaceId+"/"))throw new Error("Percorso documento non valido.");
 const {data:blob,error}=await sb.storage.from("bethag-documents").download(storagePath);if(error||!blob)throw new Error("Impossibile leggere il documento memorizzato: "+(error?.message??"file non disponibile"));
-if(blob.size>50*1024*1024)throw new Error("Il documento "+String(f.filename??"documento")+" supera il limite tecnico di 50 MB per una singola analisi AI. Il file può comunque restare memorizzato in BETHAG; per l'analisi occorre suddividerlo o predisporre un'elaborazione dedicata.");
+const sizeCheck = addAiDocumentBlobSize(totalDownloadedBytes, blob.size);
+if (!sizeCheck.allowed) return json({ error: sizeCheck.message, code: sizeCheck.code }, sizeCheck.status);
+totalDownloadedBytes = sizeCheck.totalBytes;
 const mime=String(f.mimeType??blob.type??"application/octet-stream").toLowerCase();const purpose=mime.startsWith("image/")?"vision":"user_data";const form=new FormData();form.append("purpose",purpose);form.append("expires_after[anchor]","created_at");form.append("expires_after[seconds]","3600");form.append("file",new File([blob],String(f.filename??"documento"),{type:mime}));
 const upload=await fetch("https://api.openai.com/v1/files",{method:"POST",headers:{Authorization:"Bearer "+openai},body:form});const uploaded=await upload.json();if(!upload.ok||!uploaded?.id)throw new Error(uploaded?.error?.message??"Upload AI non riuscito.");openAIFileIds.push(String(uploaded.id));
 content.push(mime.startsWith("image/")?{type:"input_image",file_id:String(uploaded.id),detail:"high"}:{type:"input_file",file_id:String(uploaded.id),detail:"high"});
