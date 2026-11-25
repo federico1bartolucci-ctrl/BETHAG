@@ -37,7 +37,7 @@ Before the first scheduled run, create the R2 bucket manually and configure:
 - For an EU-jurisdiction bucket, the workflow queries Bucket Lock using the `eu` jurisdiction header.
 - Abort incomplete multipart uploads after 1 day, if multipart uploads are enabled.
 
-Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle expiration is a separate configuration. The longer 60-day blob lifecycle gives manifests up to 30 days to reference a blob and leaves a safety margin. Confirm Cloudflare's current pricing and feature availability before applying these settings.
+Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle expiration is a separate configuration. The longer 60-day blob lifecycle gives manifests up to 30 days to reference a blob and leaves a safety margin. R2's S3-compatible Object Lock API is not supported; this design uses Cloudflare's separate Bucket Lock configuration API and verifies the configured rule before each backup. Confirm Cloudflare's current pricing and feature availability before applying these settings.
 
 ## GitHub Environment secrets
 
@@ -59,7 +59,7 @@ Do not use Supabase `service_role` or publishable keys. Supabase S3 access keys 
 
 ## Cost control
 
-R2 charges depend on stored GB-month, operation classes, and the account's current free-tier allowance. The workflow itself does not create a bucket, enable billing, or purchase a plan. Estimate the cost from the actual object volume and expected 30-day snapshots before activation. Do not proceed if the expected recurring cost has not been approved.
+Published R2 Standard rates (checked 25 November 2026): $0.015/GB-month; Class A $4.50/million requests; Class B $0.36/million requests; internet egress is free. Monthly Standard free allowance: 10 GB-month, 1 million Class A requests, and 10 million Class B requests. These allowances are account-wide and may already be consumed by other R2 usage. Above the free allowance, each additional GB-month is about $0.015/month (for example, 100 GB total with the full 10 GB allowance unused is about $1.35/month for storage, before request charges). The current Supabase Production and QA inventory contains zero Storage objects, so the initial snapshot is expected to be a small manifest only and likely remain within the free allowance if the Cloudflare account has unused quota. This is not a guaranteed quote: check the Cloudflare account's actual usage and billing before activation. The workflow itself does not create a bucket, enable billing, or purchase a plan. Do not proceed if the expected recurring cost has not been approved.
 
 The current Production and QA inventory query returned zero objects in `bethag-documents`; this means the initial backup is expected to contain an empty manifest, but the workflow must still validate the source and destination when configured.
 
