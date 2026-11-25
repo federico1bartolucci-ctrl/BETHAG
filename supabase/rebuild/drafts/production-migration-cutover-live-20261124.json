@@ -2,7 +2,7 @@
   "artifact": "BETHAG Production ACL cutover proposal — live-ledger refresh 2026-11-24",
   "captured_date": "2026-11-24",
   "status": "DRAFT_NOT_APPROVED",
-  "reviewed_source_commit": "d020633b75b23413c46d0d64ecd4bf1d568565de",
+  "reviewed_source_commit": "618c459b7ae9efb2e2247791d7d71e85027ae508",
   "repository": "federico1bartolucci-ctrl/BETHAG",
   "branch": "fix/postgres-global-function-default-acl-20261124",
   "production_project_ref": "tctcgptrsmvgajqjgnev",
@@ -184,7 +184,7 @@
     "Implementare il runner Production dedicato 267→268, separato dal runner storico 248→267 e dal runner locale; applicazione transazionale, ledger storico confrontato integralmente prima e dopo, TLS obbligatorio, approvazione e finestra vincolate — implementato fail-closed, non eseguito.",
     "Eseguire clean-install canonica a 28 file, rehearsal PostgreSQL 17 separata della candidata in drafts, regressione ACL e rehearsal del runner 267→268 sul database isolato — PASS.",
     "QA shared environment: final authenticated APP-01..APP-15 collaudo on exact source SHA 86e2646f86a6b78a6f7dfbc610214ec045e425a3 — PASS; temporary Portal plan fixture restored; QA history not reset.",
-    "Ricalcolare il fingerprint sullo SHA sorgente definitivo e acquisire approvazione esplicita per SHA, fingerprint, hash, progetto e finestra; restano obbligatorie revisione tecnica indipendente, evidenza Data API Production recente con nomi schema, riconferma del rischio backup e approvazione del proprietario — nessuna approvazione presente.",
+    "Revisione tecnica interna sullo SHA esatto 618c459b7ae9efb2e2247791d7d71e85027ae508 completata con esito PASS e conflitto dichiarato: autore della revisione coincidente con l'agente di implementazione, quindi NON indipendente. Build, PostgreSQL 17, Baseline Safety e APP-01..APP-15 sullo stesso SHA PASS. Restano obbligatorie nuova evidenza name-level Data API Production entro 24 ore, riconferma del rischio backup e approvazione esplicita del proprietario legata a SHA, fingerprint, hash, progetto e finestra UTC — nessuna approvazione presente.",
     "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only. Nessuna esecuzione automatica o implicita."
   ],
   "expected_postflight": {
@@ -270,9 +270,9 @@
     "APP acceptance, Data API exposure, backup disposition or operator prerequisites are not freshly verified.",
     "No new explicit owner approval for exact final SHA, fingerprint and candidate hash exists."
   ],
-  "safety": "Production read-only verification 2026-11-24: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. PostgreSQL 17 clean-install, ACL regression, exact 267→268 local runner rehearsal, Build and Baseline Safety PASS on source SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36. QA ledger history was not migrated or reset. A concurrent workflow change accidentally started QA run 45507023362; synthetic test records were temporarily written and cleanup routines completed, the APP-07 persistent fixture was verified as pre-existing on 2026-11-02, no email was sent, and Portal plan fixture restoration returned RESTORE_NOT_REQUIRED. The partial QA run is not APP-01..APP-15 acceptance; current branch is excluded from shared QA workflow. No Production execution is authorized or performed. Final exact-source-SHA QA run 45514606280 on 86e2646f86a6b78a6f7dfbc610214ec045e425a3 passed APP-01..APP-15; Portal plan fixture restoration and QA preview teardown succeeded. Build/PostgreSQL 17 run 45514606499 and Baseline Safety run 45514606220 passed. Live Resend send probe remained excluded. Independent review, fresh Production name-level Data API evidence, and new owner approval remain outstanding; Production remains untouched.",
+  "safety": "Production read-only verification: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. Internal technical review of source SHA 618c459b7ae9efb2e2247791d7d71e85027ae508 completed with PASS_WITH_DISCLOSED_CONFLICT; reviewer is the same ChatGPT-assisted implementation agent, explicitly NOT independent. Exact-SHA Build #4698, PostgreSQL 17 bootstrap, Baseline Safety #1541 and final authenticated QA APP-01..APP-15 #1378 all SUCCESS. QA Portal plan fixture restored successfully and QA preview teardown succeeded. APP-12 live Resend send probe remained excluded; no live email sent. Production name-level Data API evidence within the runner's 24-hour window and new explicit owner approval remain outstanding. Production remains untouched.",
   "rehearsal_evidence": {
-    "status": "TECHNICAL_REHEARSAL_PASS_APPLICATION_ACCEPTANCE_PASS_PENDING_INDEPENDENT_REVIEW_AND_OWNER_APPROVAL",
+    "status": "TECHNICAL_REHEARSAL_AND_APP_ACCEPTANCE_PASS_PENDING_PRODUCTION_DATA_API_RECONFIRMATION_AND_OWNER_APPROVAL",
     "target": "isolated PostgreSQL 17 only",
     "historical_rows_assumption": 267,
     "proposed_canonical_rows": 1,
@@ -281,7 +281,7 @@
     "global_function_default_acl_regression": "PASS",
     "full_clean_install": "PASS",
     "guarded_runner": "PASS",
-    "qa_authenticated_collaudo": "PASS — APP-01..APP-15 final authenticated QA workflow completed successfully on exact source SHA 86e2646f86a6b78a6f7dfbc610214ec045e425a3; shared QA Portal plan fixture restored successfully; live Resend send probe remained excluded by authorization scope.",
+    "qa_authenticated_collaudo": "PASS — APP-01..APP-15 final authenticated QA workflow completed successfully on exact source SHA 618c459b7ae9efb2e2247791d7d71e85027ae508; QA Portal plan fixture restored successfully; QA preview teardown succeeded; live Resend send probe remained excluded by authorization scope.",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
     "production_execution_performed": false,
@@ -314,35 +314,38 @@
     "candidate_draft_rehearsal": "PASS",
     "candidate_draft_rehearsal_target": "isolated PostgreSQL 17; candidate read from supabase/rebuild/drafts; excluded from standard Supabase CLI migration inventory",
     "exact_head_ci_evidence": {
-      "tested_commit_sha": "86e2646f86a6b78a6f7dfbc610214ec045e425a3",
+      "tested_commit_sha": "618c459b7ae9efb2e2247791d7d71e85027ae508",
       "build": {
-        "run_id": 45514606499,
+        "run_id": 45516305844,
+        "run_number": 4698,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606499"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45516305844"
       },
       "postgres17": {
-        "run_id": 45514606499,
-        "job_id": 138870700335,
+        "run_id": 45516305844,
+        "job_id": 138876500542,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606499"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45516305844"
       },
       "baseline_safety": {
-        "run_id": 45514606220,
+        "run_id": 45516305814,
+        "run_number": 1541,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606220"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45516305814"
       },
       "final_qa": {
-        "run_id": 45514606280,
+        "run_id": 45516305768,
+        "run_number": 1378,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606280"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45516305768"
       },
       "browser_smoke": {
-        "run_id": 45514606499,
+        "run_id": 45516305844,
         "conclusion": "success",
         "step": "Run isolated public-login browser smoke test"
       },
       "authenticated_qa": {
-        "run_id": 45514606280,
+        "run_id": 45516305768,
         "conclusion": "success",
         "scope": "APP-01..APP-15; live Resend send probe explicitly excluded"
       }
@@ -399,10 +402,20 @@
     "Provider-managed physical backup restore remains unverified. User decision on 2026-10-27 accepted reliance on scheduled backup visibility and verified local logical-dump restore instead of the paid Restore to a New Project route. Preserve this residual risk; do not claim a physical restore test passed or create a paid recovery project."
   ],
   "review_disposition": {
-    "status": "DRAFT_PENDING_TECHNICAL_REVIEW",
+    "status": "INTERNAL_REVIEW_COMPLETE_WITH_DISCLOSED_CONFLICT_OWNER_APPROVAL_PENDING",
     "independent_review_recorded": false,
+    "internal_review_recorded": true,
     "owner_approval_required": true,
-    "limitation": "Adds one migration to current 267-row Production ledger. Does not inherit historical 19-migration authorization; not executable."
+    "internal_review": {
+      "review_type": "INTERNAL_SELF_REVIEW",
+      "status": "PASS_WITH_DISCLOSED_CONFLICT",
+      "independent": false,
+      "conflict_disclosed": true,
+      "reviewed_commit_sha": "618c459b7ae9efb2e2247791d7d71e85027ae508",
+      "reviewer": "ChatGPT (same implementation agent; not independent)",
+      "evidence_reference": "supabase/rebuild/drafts/internal-technical-review-live-ledger-acl.md"
+    },
+    "limitation": "No external reviewer is available. The internal review was performed by the same ChatGPT-assisted implementation agent that prepared the change; it is not an independent review and must never be represented as such. It does not replace the separate owner approval or any Production preflight gate."
   },
   "proposal_created_at_utc": "2026-11-24",
   "approval_scope": "NONE",
@@ -420,16 +433,17 @@
       "exact Production project/host/database validation and TLS-required PostgreSQL connection",
       "clean checkout; approved source SHA separated from approval-record commit; only manifest-only delta permitted",
       "SHA-256 release fingerprint includes runner, approval guard, candidate SQL, ledger snapshot, preflight and postflight",
-      "owner approval, independent technical review, exact-SHA Build/Baseline/PostgreSQL CI, APP-01..APP-15 PASS, fresh Data API evidence, backup-risk reconfirmation and UTC execution window required"
+      "documented internal technical review with explicit non-independence/conflict disclosure, exact-SHA Build/Baseline/PostgreSQL CI, APP-01..APP-15 PASS, fresh Production Data API name-level evidence, backup-risk reconfirmation and UTC execution window; separate explicit owner approval remains mandatory"
     ],
     "negative_path_test": "PASS — no approval means blocked before Production connection",
     "production_apply": "NOT EXECUTED",
-    "production_authorized": false
+    "production_authorized": false,
+    "technical_review_requirement": "INTERNAL_SELF_REVIEW_WITH_DISCLOSED_CONFLICT; NOT_INDEPENDENT; exact source SHA required"
   },
   "qa_execution_disposition": {
     "status": "PASS_APP_01_APP_15_EXACT_SOURCE_SHA",
-    "run_id": 45514606280,
-    "source_commit_sha": "86e2646f86a6b78a6f7dfbc610214ec045e425a3",
+    "run_id": 45516305768,
+    "source_commit_sha": "618c459b7ae9efb2e2247791d7d71e85027ae508",
     "conclusion": "success",
     "completed_suites": [
       "APP-01..04 and APP-13 real-auth RLS/Storage",

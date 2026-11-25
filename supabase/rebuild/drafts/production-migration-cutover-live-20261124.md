@@ -118,3 +118,19 @@ I riferimenti sono registrati nel campo `rehearsal_evidence.exact_head_ci_eviden
 La verifica Data API è aggiornata dalla sezione “Rettifica evidenze Data API già fornite”: screenshot Production del 24 novembre riconferma 2/3 schemi esposti e le altre impostazioni visibili; i nomi Production restano documentati dalla schermata Production dell'8 novembre. La schermata QA del 24 novembre resta prova esclusivamente QA. Non si deve chiedere nuovamente all'owner materiale già fornito né trasferire evidenze tra ambienti.
 
 **Stato complessivo invariato:** manifest `DRAFT_NOT_APPROVED`; nessuna revisione tecnica indipendente registrata; nessuna approvazione owner; APP-01..APP-15 non accettati; runner Production non eseguito. Nessuna scrittura su Production o QA.
+
+
+## Revisione tecnica interna con conflitto dichiarato — 25 novembre 2026
+
+La richiesta di una revisione esterna è stata rimossa perché il progetto non dispone di un revisore esterno. È stata adottata una modalità esplicita di **revisione tecnica interna non indipendente**, senza presentarla come equivalente a una review terza.
+
+- SHA sorgente esaminato: `618c459b7ae9efb2e2247791d7d71e85027ae508`.
+- Esito interno: **PASS_WITH_DISCLOSED_CONFLICT**.
+- Revisore: ChatGPT, lo stesso agente che ha contribuito all'implementazione; non indipendente.
+- Evidenza completa: `supabase/rebuild/drafts/internal-technical-review-live-ledger-acl.md`.
+- Guard e test aggiornati: accettano esclusivamente `INTERNAL_SELF_REVIEW`, `independent=false`, `conflict_disclosed=true`, esito dichiarato e SHA esatto; rifiutano qualsiasi falsa dichiarazione di indipendenza.
+- Build #4698, PostgreSQL 17, Baseline Safety #1541 e APP-01..APP-15 #1378: tutti **SUCCESS** sullo SHA indicato.
+
+Questa modalità sostituisce il requisito impossibile della revisione esterna, ma **non** sostituisce l'approvazione separata del proprietario. Restano aperti: evidenza Production name-level Data API aggiornata entro 24 ore, riconferma del rischio residuo di backup e approvazione owner vincolata a SHA, fingerprint, hash, progetto e finestra UTC.
+
+Il manifest rimane `DRAFT_NOT_APPROVED`, `approval_scope=NONE`, `production_apply_authorized=false`. Nessuna operazione Production è stata eseguita.
