@@ -50,15 +50,26 @@ This section supersedes the earlier safety statement about database access. The 
 ### QA
 
 - Supabase branch: `bethag-launch-qa`, project ref `jhuyhlzzydcgghrzeexn`, parent Production project `tctcgptrsmvgajqjgnev`.
-- The QA migration ledger currently contains these three feature-related rows:
-  - `20261125161407 / require_plus_plan_for_communications`
-  - `20261125161639 / 20261125141500_require_plus_plan_for_communications`
-  - `20261125162259 / communications_rpc_security_invoker`
-- The first two rows are duplicate-looking registrations for the initial entitlement intervention. They must remain visible as QA history until formally reconciled; do not delete ledger rows or replay either migration.
-- Live catalog inspection confirms both entitlement triggers exist; the public recipient RPCs are SECURITY INVOKER; the private Plus wrappers are SECURITY DEFINER with empty search paths; direct authenticated execution of the underlying unguarded private recipient functions is revoked.
-- Security Advisor returned zero lints after the latest QA state.
-- QA `bethag-send-email` is ACTIVE at version 20. The only current QA workspace fixture is Free; therefore a full live end-to-end Plus/Professional/Portal workflow matrix has not been demonstrated on QA.
-- Automated tests on the PR cover the entitlement matrix: Free, unknown and missing plans are denied; Plus, Professional and Portal are allowed. The PostgreSQL 17 regression covers the Free bypass reproduction, denial after the guard, Plus allowance and downgrade/status-finalization behavior.
+- Ledger history was reconciled against PostgreSQL statement logs, not guessed from names:
+  - `20261125161407 / require_plus_plan_for_communications` — initial entitlement SQL applied at 16:14:07 UTC.
+  - `20261125161639 / 20261125141500_require_plus_plan_for_communications` — second, revised application of the same logical entitlement candidate at 16:16:39 UTC. It still exposed the two public RPCs as SECURITY DEFINER.
+  - `20261125162259 / communications_rpc_security_invoker` — follow-up at 16:22:59 UTC that moved privileged implementations to private SECURITY DEFINER wrappers and made the public RPCs SECURITY INVOKER.
+- These are three real execution records, including two successive versions of the first logical intervention. They are not safe to delete or rewrite. The QA ledger is intentionally retained as-is; no migration was replayed during reconciliation.
+- Live PostgreSQL catalog checks:
+  - Both plan-entitlement triggers are present on `communications` and `communication_recipients`.
+  - Both public RPCs are SECURITY INVOKER; EXECUTE is granted to authenticated/service_role and denied to anon.
+  - The underlying private recipient implementations deny direct EXECUTE to authenticated and anon.
+  - The two guarded private wrappers and the plan helper are SECURITY DEFINER with empty search paths and EXECUTE granted to authenticated/service_role.
+  - `private` schema USAGE is denied to anon but granted to authenticated. The database-side `pgrst.db_schemas` setting is not exposed by the SQL interface, so the Data API exposed-schema list still requires confirmation in project API settings; do not claim this check closed yet.
+- Supabase Security Advisor returned **0 lints**.
+- QA `bethag-send-email` is ACTIVE at version 20. Retrieved deployed function bundle and compared contents byte-for-byte with the reviewed branch files: `index.ts`, `communication-send-guards.js`, and `workspace-plan-entitlement.js` all match exactly.
+- Rollback-only QA database matrix passed with no persisted fixtures:
+  - Existing Free workspace: communication content edit and new communication insert rejected.
+  - Plus, Professional and Portal: publication, recipient preparation and stale-recipient recovery succeeded.
+  - After downgrade of each paid fixture to Free: content edits and recipient identity changes rejected; unpublishing and delivery-status finalization remained allowed.
+  - Collaborator module permission `true` allowed recipient preparation; explicit `false` and absent permission were denied.
+  - All synthetic users, workspaces, condominiums, communications and recipients were rolled back. A follow-up count confirmed zero test workspaces remained.
+- No real Resend email was sent. Only the Free workspace exists as persistent QA business data; paid-plan fixtures were temporary transaction-scoped tests.
 
 ### Production
 
@@ -76,10 +87,7 @@ This section supersedes the earlier safety statement about database access. The 
 
 ## Remaining gates
 
-1. Reconcile the two duplicate-looking QA ledger rows without deleting or rewriting history.
-2. Confirm the private schema is not exposed through the Data API and retain the current function ACL boundary.
-3. Run QA authenticated end-to-end checks against appropriate Plus, Professional and Portal fixtures (or a rollback-safe fixture strategy), including downgrade and in-flight delivery behavior.
-4. Reconcile the deployed QA Edge Function version 20 with the exact reviewed source and deployment evidence.
-5. Update the canonical migration/deployment manifest only after the candidate is approved for promotion.
-6. Keep Production unchanged until a separate explicit release go/no-go decision.
-
+1. Confirm the Data API exposed-schema list explicitly excludes `private`; current SQL catalog checks establish ACLs but cannot read the project-level exposed-schema setting.
+2. Run/retain the GitHub CI checks against the latest PR head after this documentation update.
+3. Review the full PR dependency chain and integrate the communications correction only through the canonical release path; keep the candidate outside `supabase/migrations` until approved.
+4. Keep Production unchanged until a separate explicit release go/no-go decision.
