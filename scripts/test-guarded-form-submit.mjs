@@ -63,8 +63,9 @@ for (const [startMarker, endMarker, eventName] of guardedHandlers) {
   assert.ok(section.includes("runGuardedFormSubmit("), "Missing early native-submit guard in " + startMarker);
   assert.doesNotMatch(section, new RegExp(eventName + "\\.preventDefault\\(\\)"), "direct preventDefault must be centralized in " + startMarker);
 }
-const collaboratorSaveStart = source.indexOf("const save = async (e: React.FormEvent) => {");
-const collaboratorSaveEnd = source.indexOf("\\n    const name = form.name.trim();", collaboratorSaveStart);
+const collaboratorsPageStart = source.indexOf("function CollaboratorsPage({");
+const collaboratorSaveStart = source.indexOf("const save = async (e: React.FormEvent) => {", collaboratorsPageStart);
+const collaboratorSaveEnd = source.indexOf("\n    const name = form.name.trim();", collaboratorSaveStart);
 assert.ok(collaboratorSaveStart >= 0 && collaboratorSaveEnd > collaboratorSaveStart);
 const collaboratorSaveSection = source.slice(collaboratorSaveStart, collaboratorSaveEnd);
 assert.ok(collaboratorSaveSection.includes("runGuardedFormSubmit(e,"));
@@ -72,7 +73,7 @@ assert.ok(collaboratorSaveSection.indexOf("runGuardedFormSubmit(e,") < collabora
 
 const profileStart = source.indexOf("function ProfilePage(");
 const profileSaveStart = source.indexOf("const save = async (", profileStart);
-const profileSaveEnd = source.indexOf("\\n\\n    if (", profileSaveStart);
+const profileSaveEnd = source.indexOf("\n\n    if (", profileSaveStart);
 assert.ok(profileStart >= 0 && profileSaveStart > profileStart && profileSaveEnd > profileSaveStart);
 const profileSaveSection = source.slice(profileSaveStart, profileSaveEnd);
 assert.ok(profileSaveSection.includes("runGuardedFormSubmit(e,"));
