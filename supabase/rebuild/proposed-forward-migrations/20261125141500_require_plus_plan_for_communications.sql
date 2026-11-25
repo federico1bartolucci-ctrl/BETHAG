@@ -131,7 +131,7 @@ EXECUTE FUNCTION private.guard_communication_recipient_plan_entitlement();
 CREATE OR REPLACE FUNCTION public.prepare_communication_recipients(p_communication_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 DECLARE
@@ -164,8 +164,7 @@ BEGIN
 END;
 $function$;
 
-GRANT USAGE ON SCHEMA private TO authenticated;
-GRANT EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.prepare_communication_recipients(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.prepare_communication_recipients(uuid)
@@ -177,7 +176,7 @@ CREATE OR REPLACE FUNCTION public.reset_stale_communication_recipients(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 DECLARE
@@ -215,8 +214,7 @@ BEGIN
 END;
 $function$;
 
-GRANT USAGE ON SCHEMA private TO authenticated;
-GRANT EXECUTE ON FUNCTION private.reset_stale_communication_recipients(uuid, interval) TO authenticated;
+REVOKE EXECUTE ON FUNCTION private.reset_stale_communication_recipients(uuid, interval) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reset_stale_communication_recipients(uuid, interval) TO authenticated;
 
 COMMENT ON FUNCTION public.reset_stale_communication_recipients(uuid, interval)
