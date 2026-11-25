@@ -363,6 +363,22 @@ try {
   assert.equal(Number(after.open_total), 177);
   console.log("PASS corrected closure check: selected-unit, legacy unit-null and unit-unassigned installments are included; other-unit obligations are excluded.");
 
+  // Clear selected-unit obligations so the isolated outgoing-ID cases can reach
+  // the archival loop; Unit B obligations remain untouched and out of scope.
+  await db.exec(`
+    UPDATE public.condominium_installments
+      SET paid_amount = amount
+      WHERE (member_id = '${ids.memberA}' AND (unit_id IS NULL OR unit_id = '${ids.unitA}'))
+         OR (member_id IS NULL AND unit_id = '${ids.unitA}');
+    UPDATE public.condominium_expense_allocations
+      SET paid_amount = amount
+      WHERE member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}';
+    UPDATE public.condominium_fiscal_carryovers
+      SET balance = 0
+      WHERE (member_id = '${ids.memberA}' AND (unit_id IS NULL OR unit_id = '${ids.unitA}'))
+         OR (member_id IS NULL AND unit_id = '${ids.unitA}');
+  `);
+
   // The #452 close helper still trusted JSON member IDs when archiving records.
   // Reproduce cross-unit, cross-condominium, missing-ID and NULL-ID cases before
   // applying the new scope-validation migration.
