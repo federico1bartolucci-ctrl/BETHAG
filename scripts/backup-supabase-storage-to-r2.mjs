@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
@@ -120,6 +120,10 @@ async function main() {
     let blobKey;
     if (recent) {
       blobKey = recent.Key;
+      const head = await destination.send(new HeadObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
+        throw new Error("Existing R2 blob failed SHA-256/size metadata verification for " + blobKey);
+      }
       reused += 1;
     } else {
       blobKey = blobPrefix + snapshotId;
@@ -129,6 +133,10 @@ async function main() {
         ContentType: result.ContentType || "application/octet-stream",
         Metadata: { sha256 }
       }));
+      const head = await destination.send(new HeadObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
+        throw new Error("New R2 blob failed SHA-256/size metadata verification for " + blobKey);
+      }
       copied += 1;
     }
 
