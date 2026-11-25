@@ -10,6 +10,8 @@ assert.match(script, /SUPABASE_S3_ENDPOINT/);
 assert.match(script, /\/storage\/v1\/s3/);
 assert.match(script, /assertBucketLock/);
 assert.match(script, /GetBucketLifecycleConfigurationCommand/);
+assert.match(script, /HeadObjectCommand/);
+assert.match(script, /head\.Metadata\?\.sha256 !== sha256/);
 assert.match(script, /hasSnapshotsExpiry/);
 assert.match(script, /hasBlobsExpiry/);
 assert.match(script, /maxAgeSeconds\) >= RETENTION_SECONDS/);
