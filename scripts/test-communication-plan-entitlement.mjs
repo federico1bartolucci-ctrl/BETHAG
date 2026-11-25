@@ -91,6 +91,13 @@ assert.match(migration, /private\.workspace_has_plus_plan/);
 assert.match(migration, /COMMUNICATIONS_PLAN_REQUIRED/);
 assert.match(migration, /trg_guard_communications_plan_entitlement/);
 assert.match(migration, /trg_guard_communication_recipient_plan_entitlement/);
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.prepare_communication_recipients/);
+assert.match(migration, /RETURN private\.prepare_communication_recipients/);
+assert.match(migration, /RETURN private\.reset_stale_communication_recipients/);
+assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.prepare_communication_recipients/,
+  "The plan guard must not overwrite the independent recipient retry/idempotency implementation.");
+assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.reset_stale_communication_recipients/,
+  "The plan guard must delegate to the private stale-queue implementation.");
 
 console.log("PASS communication plan entitlement runtime matrix: Free/unknown/missing plans are denied; Plus, Professional and Portal are allowed.");
 console.log("PASS communication send fails closed on plan lookup errors.");
