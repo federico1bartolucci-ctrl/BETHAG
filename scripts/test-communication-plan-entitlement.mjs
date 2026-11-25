@@ -83,6 +83,8 @@ assert.ok(configGateIndex < prepareIndex, "Provider configuration must be checke
 assert.ok(gateIndex < prepareIndex, "Plan gate must run before recipient preparation.");
 assert.ok(gateIndex < resendIndex, "Plan gate must run before any Resend API request.");
 assert.match(edgeFunction, /communication\.workspace_id,\s*"plus"/);
+assert.doesNotMatch(edgeFunction, /isCommunicationPublished|communication\.published/,
+  "Email delivery must not require Portal publication; published is the separate Portal entitlement.");
 assert.match(edgeFunction, /planEntitlement\.status === 403/);
 assert.match(edgeFunction, /}, 503\)/);
 
