@@ -5915,6 +5915,8 @@ function App() {
     }
     if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
 
+    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
+
     if (!supabaseConfigured || !supabase) {
       alert("Il servizio e-mail BETHAG non è disponibile perché Supabase non è configurato.");
       return;
@@ -13932,7 +13934,7 @@ function SubscriptionPage({
               ? "Le funzioni AI richiedono un piano Professional o superiore verificato dal server; l'attivazione singola non è disponibile."
               : addon === "portale"
                 ? "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile."
-                : "Le Comunicazioni richiedono un piano Plus o superiore verificato dal server; l'attivazione singola non è disponibile finché non esiste un entitlement add-on verificabile.";
+                : "Le Comunicazioni sono comprese nel piano Plus e nei piani superiori; non sono attivabili come add-on separato.";
             return (
               <article className="addon-card" key={addon}>
                 <div className="addon-card-top">
@@ -13958,8 +13960,8 @@ function SubscriptionPage({
           Il piano stabilisce quali moduli sono inclusi. Gli add-on permettono
           di sbloccare singole funzionalità anche mantenendo il piano attuale.
           In questa versione gli add-on non collegati a un entitlement server-side restano simulati localmente.
-          AI e Portale sono autorizzati esclusivamente dal piano verificato dal server; l'attivazione
-          singola di queste funzioni non è disponibile finché non sarà integrata la fatturazione.
+          Comunicazioni, AI e Portale sono autorizzati esclusivamente dal piano verificato dal server;
+          non sono disponibili come add-on separati finché non sarà integrata la fatturazione.
         </p>
       </div>
     </>
