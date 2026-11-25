@@ -5,9 +5,11 @@ import { PGlite } from "@electric-sql/pglite";
 const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261125080000_validate_member_transfer_outgoing_ids_on_confirmation.sql";
 const unitAllocationMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125090001_include_unit_unassigned_allocations_in_transfer_confirmation.sql";
+const snapshotScopeMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125102000_scope_member_transfer_confirmation_snapshot_to_unit.sql";
 const baselineSql = await readFile(baselinePath, "utf8");
 const migrationSql = await readFile(migrationPath, "utf8");
 const unitAllocationMigrationSql = await readFile(unitAllocationMigrationPath, "utf8");
+const snapshotScopeMigrationSql = await readFile(snapshotScopeMigrationPath, "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 assert.match(packageJson.scripts.test, /test-member-transfer-confirm-outgoing-member-ids\.mjs/,
   "Outgoing-member confirmation regression must be wired into npm test.");
@@ -37,6 +39,20 @@ const ids = {
   memberValidB: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee06",
   memberEmpty: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee07",
   unitValidUnassignedAllocation: "30000000-0000-4000-8000-000000000001",
+  unitSnapshotBaseline: "cccccccc-cccc-4ccc-8ccc-cccccccccc07",
+  unitSnapshotFixed: "cccccccc-cccc-4ccc-8ccc-cccccccccc08",
+  memberSnapshotBaselineA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee08",
+  memberSnapshotBaselineB: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee09",
+  memberSnapshotFixedA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee10",
+  memberSnapshotFixedB: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeee11",
+  ledgerSnapshotBaselineSelected: "20000000-0000-4000-8000-000000000003",
+  ledgerSnapshotBaselineOther: "20000000-0000-4000-8000-000000000004",
+  ledgerSnapshotFixedSelected: "20000000-0000-4000-8000-000000000005",
+  ledgerSnapshotFixedOther: "20000000-0000-4000-8000-000000000006",
+  allocationSnapshotBaselineSelected: "30000000-0000-4000-8000-000000000002",
+  allocationSnapshotBaselineOther: "30000000-0000-4000-8000-000000000003",
+  allocationSnapshotFixedSelected: "30000000-0000-4000-8000-000000000004",
+  allocationSnapshotFixedOther: "30000000-0000-4000-8000-000000000005",
   missingId: "f1111111-1111-4111-8111-111111111111"
 };
 
@@ -92,6 +108,8 @@ try {
     );
     CREATE TABLE public.condominium_installments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id uuid NOT NULL,
+      condominium_id uuid NOT NULL,
       member_id uuid,
       unit_id uuid,
       due_date date,
@@ -115,12 +133,17 @@ try {
     );
     CREATE TABLE public.condominium_ledger_entries (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id uuid NOT NULL,
+      condominium_id uuid NOT NULL,
+      unit_id uuid,
       expense_type text,
       deliberation_date date,
       description text
     );
     CREATE TABLE public.condominium_fiscal_carryovers (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id uuid NOT NULL,
+      condominium_id uuid NOT NULL,
       unit_id uuid,
       member_id uuid,
       balance numeric NOT NULL DEFAULT 0,
@@ -154,7 +177,9 @@ try {
         ('${ids.unitMissingFixed}', '${ids.workspace}', '${ids.condominium}'),
         ('${ids.unitNullFixed}', '${ids.workspace}', '${ids.condominium}'),
         ('${ids.unitValid}', '${ids.workspace}', '${ids.condominium}'),
-        ('${ids.unitEmpty}', '${ids.workspace}', '${ids.condominium}');
+        ('${ids.unitEmpty}', '${ids.workspace}', '${ids.condominium}'),
+        ('${ids.unitSnapshotBaseline}', '${ids.workspace}', '${ids.condominium}'),
+        ('${ids.unitSnapshotFixed}', '${ids.workspace}', '${ids.condominium}');
     INSERT INTO public.condominium_members(id, condominium_id, unit_id, active, role, data, legacy_id)
       VALUES
         ('${ids.memberMissing}', '${ids.condominium}', '${ids.unitMissing}', true, 'resident',
@@ -170,7 +195,15 @@ try {
         ('${ids.memberValidB}', '${ids.condominium}', '${ids.unitValid}', true, 'resident',
           '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 106),
         ('${ids.memberEmpty}', '${ids.condominium}', '${ids.unitEmpty}', true, 'resident',
-          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 107);
+          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 107),
+        ('${ids.memberSnapshotBaselineA}', '${ids.condominium}', '${ids.unitSnapshotBaseline}', true, 'resident',
+          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 108),
+        ('${ids.memberSnapshotBaselineB}', '${ids.condominium}', '${ids.unitSnapshotBaseline}', true, 'resident',
+          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 109),
+        ('${ids.memberSnapshotFixedA}', '${ids.condominium}', '${ids.unitSnapshotFixed}', true, 'resident',
+          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 110),
+        ('${ids.memberSnapshotFixedB}', '${ids.condominium}', '${ids.unitSnapshotFixed}', true, 'resident',
+          '{"role":"Proprietario","current_owner":true,"position_status":"Attivo"}'::jsonb, 111);
   `);
 
   await db.exec(baselineFunction);
@@ -216,6 +249,88 @@ try {
       '${ids.unitValid}', NULL, 40, 10, '2026-12-01', 'Parzialmente pagato'
     );
   `);
+  await db.exec(`
+    INSERT INTO public.condominium_installments
+      (workspace_id, condominium_id, member_id, unit_id, due_date, amount, paid_amount, title, status)
+    VALUES
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotBaselineA}', '${ids.unitSnapshotBaseline}', '2026-11-10', 100, 25, 'Unit A before', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotBaselineA}', '${ids.unitEmpty}', '2026-11-10', 900, 450, 'Other unit before', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', NULL, '${ids.unitSnapshotBaseline}', '2026-11-10', 40, 10, 'Unit A unassigned', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotBaselineA}', NULL, '2026-11-10', 10, 2, 'Legacy unit-null', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotBaselineA}', '${ids.unitSnapshotBaseline}', '2026-12-10', 20, 5, 'Unit A future', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotBaselineA}', '${ids.unitEmpty}', '2026-12-10', 60, 0, 'Other unit future', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotFixedA}', '${ids.unitSnapshotFixed}', '2026-11-10', 100, 25, 'Unit A fixed before', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotFixedA}', '${ids.unitEmpty}', '2026-11-10', 900, 450, 'Other unit fixed before', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', NULL, '${ids.unitSnapshotFixed}', '2026-11-10', 40, 10, 'Unit A fixed unassigned', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotFixedA}', NULL, '2026-11-10', 10, 2, 'Legacy fixed unit-null', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotFixedA}', '${ids.unitSnapshotFixed}', '2026-12-10', 20, 5, 'Unit A fixed future', 'Aperta'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.memberSnapshotFixedA}', '${ids.unitEmpty}', '2026-12-10', 60, 0, 'Other unit fixed future', 'Aperta');
+
+    INSERT INTO public.condominium_ledger_entries
+      (id, workspace_id, condominium_id, unit_id, expense_type, deliberation_date, description)
+    VALUES
+      ('${ids.ledgerSnapshotBaselineSelected}', '${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotBaseline}', 'Straordinaria', '2026-11-01', 'Unit A deliberation'),
+      ('${ids.ledgerSnapshotBaselineOther}', '${ids.workspace}', '${ids.condominium}', '${ids.unitEmpty}', 'Straordinaria', '2026-11-01', 'Other unit deliberation'),
+      ('${ids.ledgerSnapshotFixedSelected}', '${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotFixed}', 'Straordinaria', '2026-11-01', 'Unit A fixed deliberation'),
+      ('${ids.ledgerSnapshotFixedOther}', '${ids.workspace}', '${ids.condominium}', '${ids.unitEmpty}', 'Straordinaria', '2026-11-01', 'Other unit fixed deliberation');
+
+    INSERT INTO public.condominium_expense_allocations
+      (id, workspace_id, condominium_id, ledger_entry_id, unit_id, member_id, due_date, amount, paid_amount, status)
+    VALUES
+      ('${ids.allocationSnapshotBaselineSelected}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineSelected}', '${ids.unitSnapshotBaseline}', '${ids.memberSnapshotBaselineA}', '2026-11-10', 25, 0, 'Aperta'),
+      ('${ids.allocationSnapshotBaselineOther}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineOther}', '${ids.unitEmpty}', '${ids.memberSnapshotBaselineA}', '2026-11-10', 75, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineSelected}', NULL, '${ids.memberSnapshotBaselineA}', '2026-11-10', 5, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineSelected}', NULL, '${ids.memberSnapshotBaselineA}', '2026-12-10', 7, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineSelected}', '${ids.unitSnapshotBaseline}', '${ids.memberSnapshotBaselineA}', '2026-12-10', 30, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotBaselineOther}', '${ids.unitEmpty}', '${ids.memberSnapshotBaselineA}', '2026-12-10', 70, 0, 'Aperta'),
+      ('${ids.allocationSnapshotFixedSelected}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedSelected}', '${ids.unitSnapshotFixed}', '${ids.memberSnapshotFixedA}', '2026-11-10', 25, 0, 'Aperta'),
+      ('${ids.allocationSnapshotFixedOther}', '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedOther}', '${ids.unitEmpty}', '${ids.memberSnapshotFixedA}', '2026-11-10', 75, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedSelected}', NULL, '${ids.memberSnapshotFixedA}', '2026-11-10', 5, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedSelected}', NULL, '${ids.memberSnapshotFixedA}', '2026-12-10', 7, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedSelected}', '${ids.unitSnapshotFixed}', '${ids.memberSnapshotFixedA}', '2026-12-10', 30, 0, 'Aperta'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.ledgerSnapshotFixedOther}', '${ids.unitEmpty}', '${ids.memberSnapshotFixedA}', '2026-12-10', 70, 0, 'Aperta');
+
+    INSERT INTO public.condominium_expense_allocations
+      (id, workspace_id, condominium_id, unit_id, member_id, amount, paid_amount, due_date, status)
+    VALUES
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotBaseline}', NULL, 40, 10, '2026-12-01', 'Parzialmente pagato'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotFixed}', NULL, 40, 10, '2026-12-01', 'Parzialmente pagato'),
+      (gen_random_uuid(), '${ids.workspace}', '${ids.condominium}', '${ids.unitEmpty}', NULL, 60, 0, '2026-12-01', 'Aperta');
+
+    INSERT INTO public.condominium_fiscal_carryovers
+      (workspace_id, condominium_id, unit_id, member_id, balance, kind, status)
+    VALUES
+      ('${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotBaseline}', NULL, 5, 'unit', 'open'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.unitEmpty}', NULL, 99, 'unit', 'open'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.unitSnapshotFixed}', NULL, 5, 'unit', 'open'),
+      ('${ids.workspace}', '${ids.condominium}', '${ids.unitEmpty}', NULL, 99, 'unit', 'open');
+  `);
+
+  const baselineSnapshotTransfer = await call(
+    ids.unitSnapshotBaseline,
+    ids.memberSnapshotBaselineA,
+    "2026-11-28",
+    payload([ids.memberSnapshotBaselineA, ids.memberSnapshotBaselineB])
+  );
+  const baselineSnapshotResult = await db.query(
+    "SELECT data->'accounting_snapshot' AS snapshot FROM public.condominium_member_transfers WHERE id=$1::uuid",
+    [baselineSnapshotTransfer.rows[0].transfer_id]
+  );
+  const baselineSnapshot = baselineSnapshotResult.rows[0].snapshot;
+  assert.equal(Number(baselineSnapshot.installments_due_before), 1050);
+  assert.equal(Number(baselineSnapshot.installments_paid_before), 487);
+  assert.equal(Number(baselineSnapshot.installments_residual), 563);
+  assert.equal(baselineSnapshot.installments_after.length, 2);
+  assert.equal(Number(baselineSnapshot.outstanding_total), 638);
+  assert.equal(Number(baselineSnapshot.outstanding_due_after), 75);
+  assert.equal(Number(baselineSnapshot.allocations_before), 30);
+  assert.equal(baselineSnapshot.extraordinary_deliberated_before_due_after.length, 3);
+  assert.equal(baselineSnapshot.unit_unassigned_allocations.length, 1);
+  assert.equal(Number(baselineSnapshot.unit_unassigned_allocations_outstanding), 30);
+  assert.equal(baselineSnapshot.unit_unassigned_carryovers.length, 1);
+  console.log("PASS baseline reproduction: confirmation snapshot includes Unit B member-linked obligations in a Unit A transfer.");
+
+  await db.exec(snapshotScopeMigrationSql);
   const beforeTransfers = await db.query(
     "SELECT count(*)::int AS count FROM public.condominium_member_transfers"
   );
@@ -252,6 +367,30 @@ try {
     "Rejected confirmation must not create transfer records.");
   assert.equal(afterMembers.rows[0].count, beforeMembers.rows[0].count,
     "Rejected confirmation must not create incoming members.");
+
+  const correctedSnapshotTransfer = await call(
+    ids.unitSnapshotFixed,
+    ids.memberSnapshotFixedA,
+    "2026-12-01",
+    payload([ids.memberSnapshotFixedA, ids.memberSnapshotFixedB])
+  );
+  const correctedSnapshotResult = await db.query(
+    "SELECT data->'accounting_snapshot' AS snapshot FROM public.condominium_member_transfers WHERE id=$1::uuid",
+    [correctedSnapshotTransfer.rows[0].transfer_id]
+  );
+  const correctedSnapshot = correctedSnapshotResult.rows[0].snapshot;
+  assert.equal(Number(correctedSnapshot.installments_due_before), 150);
+  assert.equal(Number(correctedSnapshot.installments_paid_before), 37);
+  assert.equal(Number(correctedSnapshot.installments_residual), 113);
+  assert.equal(correctedSnapshot.installments_after.length, 1);
+  assert.equal(Number(correctedSnapshot.outstanding_total), 128);
+  assert.equal(Number(correctedSnapshot.outstanding_due_after), 15);
+  assert.equal(Number(correctedSnapshot.allocations_before), 30);
+  assert.equal(correctedSnapshot.extraordinary_deliberated_before_due_after.length, 2);
+  assert.equal(correctedSnapshot.unit_unassigned_allocations.length, 1);
+  assert.equal(Number(correctedSnapshot.unit_unassigned_allocations_outstanding), 30);
+  assert.equal(correctedSnapshot.unit_unassigned_carryovers.length, 1);
+  console.log("PASS corrected confirmation snapshot: other-unit rows excluded; selected-unit and legacy unit-null rows preserved.");
 
   const valid = await call(
     ids.unitValid,
