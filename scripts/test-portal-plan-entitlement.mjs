@@ -153,6 +153,7 @@ try {
   await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_registration_requests WHERE id = $1", [requestId]);
   assert.equal(rows.rows[0].count, 1, "Portal plan administrators must see registration requests.");
+  await db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, condominium_name, status) VALUES ($1, $2, $3, 'pending')", ["60000000-0000-0000-0000-000000000003", workspaceId, "Portal plan regression condominium"]);
   await db.query("INSERT INTO public.portal_access(workspace_id, condominium_id, member_id, legacy_id, name, email, role, permissions, active, user_id, data) VALUES ($1, $2, $3, 1004, 'Resident Four', 'resident-four@example.test', 'resident', '[]'::jsonb, true, NULL, '{}'::jsonb)", [workspaceId, condominiumId, memberFourId]);
   await db.exec("RESET ROLE");
 
@@ -165,6 +166,10 @@ try {
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_access WHERE id = $1", [portalAccessId]);
   assert.equal(rows.rows[0].count, 0, "A later downgrade must revoke resident visibility without deleting rows.");
   await db.exec("RESET ROLE");
+  await assert.rejects(
+    () => db.query("INSERT INTO public.portal_registration_requests(id, workspace_id, condominium_name, status) VALUES ($1, $2, $3, 'pending')", ["60000000-0000-0000-0000-000000000004", workspaceId, "Portal plan regression condominium"]),
+    /PORTAL_PLAN_REQUIRED/,
+  );
 
   console.log("PASS Portal entitlement runtime regression: baseline bypass reproduced; Free plan blocks registration, management and resident reads; Portal plan restores them; downgrade revokes visibility.");
 } finally {
