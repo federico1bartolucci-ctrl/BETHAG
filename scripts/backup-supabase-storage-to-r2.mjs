@@ -19,12 +19,29 @@ function safeEndpoint(value, label) {
 }
 
 async function assertBucketLock(accountId, bucketName, token) {
-  const response = await fetch(
-    "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) +
-      "/r2/buckets/" + encodeURIComponent(bucketName) + "/lock",
-    { headers: { Authorization: "Bearer " + token, Accept: "application/json", "cf-r2-jurisdiction": process.env.R2_JURISDICTION || "default" } }
-  );
-  if (!response.ok) throw new Error("Cannot verify R2 Bucket Lock rules (HTTP " + response.status + ")");
+  const baseUrl = "https://api.cloudflare.com/client/v4/accounts/" +
+    encodeURIComponent(accountId) + "/r2/buckets/" + encodeURIComponent(bucketName);
+  const headers = { Authorization: "Bearer " + token, Accept: "application/json" };
+
+  // Read the bucket's authoritative jurisdiction; location labels such as EEUR are not jurisdiction values.
+  const bucketResponse = await fetch(baseUrl, { headers });
+  if (!bucketResponse.ok) {
+    throw new Error("Cannot read R2 bucket metadata (HTTP " + bucketResponse.status +
+      "). Check the Cloudflare API token's R2 read permission and bucket/account identifiers.");
+  }
+  const bucketPayload = await bucketResponse.json();
+  if (bucketPayload.success !== true || !bucketPayload.result?.jurisdiction) {
+    throw new Error("Cloudflare did not return the R2 bucket jurisdiction; refusing to guess it.");
+  }
+  const jurisdiction = bucketPayload.result.jurisdiction;
+  const lockHeaders = { ...headers };
+  if (jurisdiction !== "default") lockHeaders["cf-r2-jurisdiction"] = jurisdiction;
+
+  const response = await fetch(baseUrl + "/lock", { headers: lockHeaders });
+  if (!response.ok) {
+    throw new Error("Cannot verify R2 Bucket Lock rules for jurisdiction '" + jurisdiction +
+      "' (HTTP " + response.status + "). Check the Cloudflare API token's R2 read permission.");
+  }
   const payload = await response.json();
   if (payload.success !== true) throw new Error("Cloudflare did not confirm Bucket Lock configuration");
   const rules = payload.result?.rules || [];
