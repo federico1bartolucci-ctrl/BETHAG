@@ -45,7 +45,8 @@ const ids = {
   unitB: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   memberA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
   transfer: "f0000000-0000-4000-8000-000000000001",
-  shareTransfer: "f0000000-0000-4000-8000-000000000002"
+  shareTransfer: "f0000000-0000-4000-8000-000000000002",
+  emptyArrayTransfer: "f0000000-0000-4000-8000-000000000003"
 };
 
 const db = new PGlite();
@@ -170,7 +171,10 @@ try {
        jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.memberA}'))),
       ('${ids.shareTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
        '${ids.memberA}', 'Confermato',
-       jsonb_build_object('transfer_scope', 'ownership_share', 'outgoing_member_ids', jsonb_build_array('${ids.memberA}')));
+       jsonb_build_object('transfer_scope', 'ownership_share', 'outgoing_member_ids', jsonb_build_array('${ids.memberA}'))),
+      ('${ids.emptyArrayTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.memberA}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', '[]'::jsonb));
 
     -- Unit A: valid member-linked obligations that must remain in the closure check.
     INSERT INTO public.condominium_installments
@@ -228,6 +232,16 @@ try {
     return result.rows[0].result;
   };
 
+  const emptyArrayBefore = await call(ids.emptyArrayTransfer);
+  assert.equal(Number(emptyArrayBefore.open_installments), 0,
+    "Baseline must expose the empty-array bug: member-linked installments disappear when array_agg returns NULL.");
+  assert.equal(Number(emptyArrayBefore.open_allocations), 0);
+  assert.equal(Number(emptyArrayBefore.open_member_carryovers), 0);
+  assert.equal(Number(emptyArrayBefore.open_unit_carryovers), 5);
+  assert.equal(Number(emptyArrayBefore.open_total), 5,
+    "Baseline incorrectly reports only the unit-level carryover when outgoing_member_ids is empty.");
+  console.log("PASS baseline reproduction: empty outgoing_member_ids hides member-linked financial positions.");
+
   const before = await call(ids.transfer);
   assert.equal(Number(before.open_installments), 290,
     "Baseline must reproduce counting Unit B's installment in a Unit A transfer.");
@@ -253,6 +267,23 @@ try {
   console.log("PASS baseline close reproduction: the authoritative close helper also blocks Unit A because of Unit B obligations.");
 
   await db.exec(migrationSql);
+  const emptyArrayAfter = await call(ids.emptyArrayTransfer);
+  assert.equal(Number(emptyArrayAfter.open_installments), 90,
+    "Corrected function must fall back to the primary outgoing_member_id when the JSON array is empty.");
+  assert.equal(Number(emptyArrayAfter.open_allocations), 30);
+  assert.equal(Number(emptyArrayAfter.open_member_carryovers), 12);
+  assert.equal(Number(emptyArrayAfter.open_unit_carryovers), 5);
+  assert.equal(Number(emptyArrayAfter.open_total), 137);
+  let emptyArrayCloseError;
+  try {
+    await db.query("SELECT public.close_condominium_member_transfer($1::uuid)", [ids.emptyArrayTransfer]);
+  } catch (error) {
+    emptyArrayCloseError = error;
+  }
+  assert.ok(emptyArrayCloseError, "An empty outgoing_member_ids array must not bypass the financial closure guard.");
+  assert.match(String(emptyArrayCloseError.message), /TRANSFER_FINANCIAL_POSITIONS_OPEN/);
+  console.log("PASS corrected empty-array fallback: member balances are counted and closure is blocked.");
+
   const after = await call(ids.transfer);
   assert.equal(Number(after.open_installments), 90,
     "Corrected result must retain Unit A and legacy unit-null installments only.");
