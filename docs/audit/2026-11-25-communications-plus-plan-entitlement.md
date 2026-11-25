@@ -124,3 +124,7 @@ This section supersedes the earlier safety statement about database access. The 
 2. Keep the server-managed plan guard migration before the communications entitlement migration in the eventual Production promotion order; the former is a hard dependency, not an optional AI-only change.
 3. Reconcile PRs #419/#421 before final RPC hardening; their direct EXECUTE grants must not be applied after the #473 revocation. Review #418's overlapping main.tsx changes and preserve webhook tests from #439/#441.
 4. Keep Production unchanged until a separate explicit release go/no-go decision.
+
+## Follow-up UI submission guard
+
+The Communications form's Plus/Portal checks run from a React `onSubmit` handler. A denied module or plan guard must still call `preventDefault()` before returning; otherwise the browser can perform its native form GET/reload and discard the form state. The stacked UI follow-up is tracked separately in PR #476. It preserves the existing plan checks and does not change database entitlement behavior.
