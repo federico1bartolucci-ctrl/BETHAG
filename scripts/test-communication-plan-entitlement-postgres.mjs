@@ -420,29 +420,31 @@ $portal$;
 
 RESET ROLE;
 SET LOCAL ROLE service_role;
-UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
+UPDATE public.workspaces SET plan = 'plus' WHERE id = '${ids.workspace}'::uuid;
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 
 DO $downgrade$
 DECLARE
-  v_denied boolean;
+  v_denied boolean := false;
   v_rows integer;
 BEGIN
-  IF private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
-    RAISE EXCEPTION 'DOWNGRADED_PLAN_HELPER_RETURNED_TRUE';
+  IF NOT private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
+    RAISE EXCEPTION 'PLUS_DOWNGRADE_HELPER_RETURNED_FALSE';
+  END IF;
+  IF private.workspace_has_portal_plan('${ids.workspace}'::uuid) THEN
+    RAISE EXCEPTION 'PLUS_DOWNGRADE_PORTAL_HELPER_RETURNED_TRUE';
   END IF;
 
-  v_denied := false;
+  -- A Plus workspace may not edit an existing Portal-published communication.
   BEGIN
-    UPDATE public.communications
-    SET title = 'Blocked after downgrade'
+    UPDATE public.communications SET title = 'Blocked after Portal downgrade'
     WHERE id = '${ids.communication}'::uuid;
   EXCEPTION WHEN SQLSTATE '42501' THEN
-    IF SQLERRM <> 'COMMUNICATIONS_PLAN_REQUIRED' THEN RAISE; END IF;
+    IF SQLERRM <> 'PORTAL_PLAN_REQUIRED' THEN RAISE; END IF;
     v_denied := true;
   END;
-  IF NOT v_denied THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_CONTENT_UPDATE_NOT_BLOCKED'; END IF;
+  IF NOT v_denied THEN RAISE EXCEPTION 'PLUS_DOWNGRADE_PUBLISHED_CONTENT_EDIT_NOT_BLOCKED'; END IF;
 
   -- Delivery metadata may change while the Portal publication remains live.
   UPDATE public.communications
@@ -451,7 +453,7 @@ BEGIN
       data = jsonb_set(jsonb_set(data, '{emailStatus}', '"Errore"'::jsonb), '{emailPreparedAt}', to_jsonb(now()::text))
   WHERE id = '${ids.communication}'::uuid;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
-  IF v_rows <> 1 THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_STATUS_FINALIZATION_BLOCKED'; END IF;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'PLUS_DOWNGRADE_STATUS_FINALIZATION_BLOCKED'; END IF;
 
   -- Unpublishing and its mirrored UI-only JSON fields remain available after downgrade.
   UPDATE public.communications
@@ -459,9 +461,42 @@ BEGIN
       data = jsonb_set(jsonb_set(data, '{publishedToPortal}', 'false'::jsonb), '{status}', '"Bozza"'::jsonb)
   WHERE id = '${ids.communication}'::uuid;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
-  IF v_rows <> 1 THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_UNPUBLISH_BLOCKED'; END IF;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'PLUS_DOWNGRADE_UNPUBLISH_BLOCKED'; END IF;
 END
 $downgrade$;
+
+RESET ROLE;
+SET LOCAL ROLE service_role;
+UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+
+DO $free_downgrade$
+DECLARE
+  v_denied boolean := false;
+  v_rows integer;
+BEGIN
+  IF private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
+    RAISE EXCEPTION 'FREE_DOWNGRADE_HELPER_RETURNED_TRUE';
+  END IF;
+  BEGIN
+    UPDATE public.communications SET title = 'Free edit blocked'
+    WHERE id = '${ids.communication}'::uuid;
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM <> 'COMMUNICATIONS_PLAN_REQUIRED' THEN RAISE; END IF;
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'FREE_DOWNGRADE_CONTENT_EDIT_NOT_BLOCKED'; END IF;
+
+  UPDATE public.communications
+  SET email_status = 'Errore',
+      email_prepared_at = now(),
+      data = jsonb_set(jsonb_set(data, '{emailStatus}', '"Errore"'::jsonb), '{emailPreparedAt}', to_jsonb(now()::text))
+  WHERE id = '${ids.communication}'::uuid;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'FREE_DOWNGRADE_STATUS_FINALIZATION_BLOCKED'; END IF;
+END
+$free_downgrade$;
 
 RESET ROLE;
 ROLLBACK;
@@ -473,5 +508,6 @@ assert.match(output, /COMMUNICATIONS_PLUS_PLAN_POSTGRES_PASS/);
 console.log("PASS PostgreSQL 17: Free workspace cannot publish/create communications, prepare recipients, reset queued recipients or alter recipient identity.");
 console.log("PASS PostgreSQL 17: Plus and Professional can create/edit/send communications but cannot publish them to the resident Portal.");
 console.log("PASS PostgreSQL 17: Portal can publish and edit published communications.");
-console.log("PASS PostgreSQL 17: delivery-status JSON mirrors and unpublishing remain available after downgrade.");
+console.log("PASS PostgreSQL 17: Portal downgrade blocks further published-content edits but allows delivery finalization and unpublishing.");
+console.log("PASS PostgreSQL 17: Free downgrade blocks content edits while preserving delivery-status finalization.");
 console.log("PASS PostgreSQL 17: authenticated workspace admins cannot self-upgrade the server-managed plan.");
