@@ -122,13 +122,10 @@ try {
   await db.query("UPDATE public.portal_access SET active = false WHERE member_id = $1", [memberTwoId]);
   await db.query("DELETE FROM public.portal_access WHERE member_id = $1", [memberTwoId]);
 
-  let requestUpdateDenied = false;
-  try {
-    await db.query("UPDATE public.portal_registration_requests SET status = 'pending' WHERE id = $1", [requestId]);
-  } catch (error) {
-    requestUpdateDenied = /row-level security|permission denied/i.test(error.message);
-  }
-  assert.equal(requestUpdateDenied, true, "Free workspace managers must not update Portal requests.");
+  const deniedRequestUpdate = await db.query("UPDATE public.portal_registration_requests SET status = 'approved' WHERE id = $1 RETURNING status", [requestId]);
+  assert.equal(deniedRequestUpdate.rows.length, 0, "Free workspace managers must not update Portal requests.");
+  const unchangedRequest = await db.query("SELECT status FROM public.portal_registration_requests WHERE id = $1", [requestId]);
+  assert.equal(unchangedRequest.rows[0].status, "pending");
 
   let insertDenied = false;
   try {
