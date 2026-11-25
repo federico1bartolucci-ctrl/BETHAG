@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { sourceObjectSignature } from "./storage-backup-source-signature.mjs";
+import { readAndVerifyBlobBody } from "./storage-backup-blob-integrity.mjs";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -134,6 +135,8 @@ async function main() {
       if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
         throw new Error("Existing R2 blob failed SHA-256/size metadata verification for " + blobKey);
       }
+      const stored = await destination.send(new GetObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      await readAndVerifyBlobBody(stored.Body, sha256, bytes.length, blobKey);
       reused += 1;
     } else {
       blobKey = blobPrefix + snapshotId;
@@ -147,6 +150,8 @@ async function main() {
       if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
         throw new Error("New R2 blob failed SHA-256/size metadata verification for " + blobKey);
       }
+      const stored = await destination.send(new GetObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      await readAndVerifyBlobBody(stored.Body, sha256, bytes.length, blobKey);
       copied += 1;
       const group = blobsByHash.get(sha256) || [];
       group.push({ Key: blobKey, LastModified: new Date() });
