@@ -41,6 +41,7 @@ try {
     "CREATE TABLE public.portal_registration_requests (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid, condominium_name text, status text NOT NULL DEFAULT 'pending');\n" +
     "ALTER TABLE public.portal_access ENABLE ROW LEVEL SECURITY;\n" +
     "ALTER TABLE public.portal_registration_requests ENABLE ROW LEVEL SECURITY;\n" +
+    "GRANT SELECT ON public.condominiums TO authenticated;\n" +
     "GRANT SELECT, INSERT, UPDATE, DELETE ON public.portal_access TO authenticated;\n" +
     "GRANT SELECT, UPDATE ON public.portal_registration_requests TO authenticated;\n"
   );
