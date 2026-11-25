@@ -54,8 +54,20 @@ jobs:
         run: npm ci
       - name: Print exact live-ledger ACL approval fingerprint (read-only)
         env:
-          BETHAG_APPROVED_SOURCE_COMMIT_SHA: ${{ github.sha }}
-        run: node scripts/print-live-ledger-acl-release-fingerprint.mjs "$BETHAG_APPROVED_SOURCE_COMMIT_SHA"
+          BETHAG_APPROVED_SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          FINGERPRINT_WORKTREE="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$FINGERPRINT_WORKTREE" 2>/dev/null || true
+            rmdir "$FINGERPRINT_WORKTREE" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          git cat-file -e "$BETHAG_APPROVED_SOURCE_COMMIT_SHA^{commit}"
+          git worktree add --detach "$FINGERPRINT_WORKTREE" "$BETHAG_APPROVED_SOURCE_COMMIT_SHA"
+          (
+            cd "$FINGERPRINT_WORKTREE"
+            node scripts/print-live-ledger-acl-release-fingerprint.mjs "$BETHAG_APPROVED_SOURCE_COMMIT_SHA"
+          )
       - name: Export verified dependency lockfile for release evidence
         uses: actions/upload-artifact@v4
         with:
