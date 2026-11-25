@@ -43,6 +43,43 @@ The `bethag-send-email` Edge Function now checks the server-owned workspace plan
 - `npm test`: plan matrix, missing/unknown plans, query errors, Edge Function ordering before preparation/Resend, and candidate wiring.
 - `npm run test:clean-install`: real PostgreSQL 17 regression on the disposable loopback database. It reproduces the Free-plan baseline bypass before applying the candidate, then verifies Free denial, Plus allowance, downgrade behavior and status-finalization compatibility.
 
-## Safety
+## QA / Production execution record — 25 November 2026
 
-Cleanly rebased as a standalone candidate on the current main commit after PR #465 integrated the Portal entitlement and PR #461 integrated server-managed workspace plans. The candidate remains outside the deployable migration chain. No QA/Production database access or mutation, merge, deployment, reset, or manual workflow dispatch.
+This section supersedes the earlier safety statement about database access. The candidate was subsequently exercised in the dedicated QA branch.
+
+### QA
+
+- Supabase branch: `bethag-launch-qa`, project ref `jhuyhlzzydcgghrzeexn`, parent Production project `tctcgptrsmvgajqjgnev`.
+- The QA migration ledger currently contains these three feature-related rows:
+  - `20261125161407 / require_plus_plan_for_communications`
+  - `20261125161639 / 20261125141500_require_plus_plan_for_communications`
+  - `20261125162259 / communications_rpc_security_invoker`
+- The first two rows are duplicate-looking registrations for the initial entitlement intervention. They must remain visible as QA history until formally reconciled; do not delete ledger rows or replay either migration.
+- Live catalog inspection confirms both entitlement triggers exist; the public recipient RPCs are SECURITY INVOKER; the private Plus wrappers are SECURITY DEFINER with empty search paths; direct authenticated execution of the underlying unguarded private recipient functions is revoked.
+- Security Advisor returned zero lints after the latest QA state.
+- QA `bethag-send-email` is ACTIVE at version 20. The only current QA workspace fixture is Free; therefore a full live end-to-end Plus/Professional/Portal workflow matrix has not been demonstrated on QA.
+- Automated tests on the PR cover the entitlement matrix: Free, unknown and missing plans are denied; Plus, Professional and Portal are allowed. The PostgreSQL 17 regression covers the Free bypass reproduction, denial after the guard, Plus allowance and downgrade/status-finalization behavior.
+
+### Production
+
+- Production remains ACTIVE_HEALTHY on PostgreSQL 17.6.1.
+- Its ledger remains 267 rows, latest version `20261105050000`.
+- Production `bethag-send-email` remains version 15.
+- The communications entitlement migration and Edge Function update have **not** been applied to Production. No Production writes were made for this intervention.
+
+### CI evidence
+
+- PR head: `c4f3f5b6740bb28a6f2e00a4eb76b166185617c3`.
+- Build run [45652940372](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45652940372): SUCCESS, including all Edge Function type-checks, communication authorization/publication guards, PostgreSQL 17 bootstrap and clean-install rehearsals.
+- Baseline safety run [45652938868](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45652938868): SUCCESS.
+- PR remains Draft and unmerged. The candidate remains outside `supabase/migrations`; canonical Production history and manifests are unchanged.
+
+## Remaining gates
+
+1. Reconcile the two duplicate-looking QA ledger rows without deleting or rewriting history.
+2. Confirm the private schema is not exposed through the Data API and retain the current function ACL boundary.
+3. Run QA authenticated end-to-end checks against appropriate Plus, Professional and Portal fixtures (or a rollback-safe fixture strategy), including downgrade and in-flight delivery behavior.
+4. Reconcile the deployed QA Edge Function version 20 with the exact reviewed source and deployment evidence.
+5. Update the canonical migration/deployment manifest only after the candidate is approved for promotion.
+6. Keep Production unchanged until a separate explicit release go/no-go decision.
+
