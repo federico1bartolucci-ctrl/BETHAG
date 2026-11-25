@@ -5,6 +5,7 @@ const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
 const SOURCE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "bethag-documents";
 const DESTINATION_PREFIX = "backups/";
+let currentStage = "initialization";
 
 function required(name) {
   const value = process.env[name];
@@ -84,6 +85,7 @@ async function main() {
   const destinationSecret = required("R2_SECRET_ACCESS_KEY");
   const cloudflareReadToken = required("CLOUDFLARE_R2_READ_TOKEN");
 
+  currentStage = "Cloudflare bucket metadata and Bucket Lock preflight";
   await assertBucketLock(accountId, destinationBucket, cloudflareReadToken);
 
   const source = new S3Client({
@@ -96,7 +98,9 @@ async function main() {
     credentials: { accessKeyId: destinationAccessKey, secretAccessKey: destinationSecret }
   });
 
+  currentStage = "R2 destination bucket access";
   await destination.send(new HeadBucketCommand({ Bucket: destinationBucket }));
+  currentStage = "R2 lifecycle configuration";
   const lifecycle = await destination.send(new GetBucketLifecycleConfigurationCommand({ Bucket: destinationBucket }));
   const lifecycleRules = lifecycle.Rules || [];
   const hasSnapshotsExpiry = lifecycleRules.some((rule) =>
@@ -112,7 +116,9 @@ async function main() {
   if (!hasSnapshotsExpiry || !hasBlobsExpiry) {
     throw new Error("R2 lifecycle gate failed: require snapshots expiration >=31 days and objects expiration >=60 days. No backup was written.");
   }
+  currentStage = "Supabase Storage source listing";
   const sourceObjects = await listAll(source, SOURCE_BUCKET);
+  currentStage = "R2 existing blob inventory";
   const existingBlobObjects = await listAll(destination, destinationBucket, DESTINATION_PREFIX + "objects/");
   const blobsByHash = new Map();
   for (const item of existingBlobObjects) {
@@ -129,6 +135,7 @@ async function main() {
   let reused = 0;
 
   for (const listed of sourceObjects) {
+    currentStage = "Supabase object read / R2 blob write and verification";
     if (!listed.Key || listed.Key.endsWith("/")) continue;
     const result = await source.send(new GetObjectCommand({ Bucket: SOURCE_BUCKET, Key: listed.Key }));
     const bytes = Buffer.from(await result.Body.transformToByteArray());
@@ -186,6 +193,7 @@ async function main() {
     });
   }
 
+  currentStage = "Supabase source consistency recheck";
   const sourceObjectsAfter = await listAll(source, SOURCE_BUCKET);
   const sourceSignature = (items) => items
     .filter((item) => item.Key && !item.Key.endsWith("/"))
@@ -205,6 +213,7 @@ async function main() {
   };
   const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2) + "\n");
   const manifestKey = DESTINATION_PREFIX + "snapshots/" + snapshotId + ".json";
+  currentStage = "R2 snapshot manifest write";
   await destination.send(new PutObjectCommand({
     Bucket: destinationBucket, Key: manifestKey, Body: manifestBytes,
     ContentLength: manifestBytes.length, ContentType: "application/json",
@@ -214,6 +223,7 @@ async function main() {
     }
   }));
 
+  currentStage = "R2 manifest read-after-write verification";
   const verified = await destination.send(new GetObjectCommand({ Bucket: destinationBucket, Key: manifestKey }));
   const verifiedBytes = Buffer.from(await verified.Body.transformToByteArray());
   if (!verifiedBytes.equals(manifestBytes)) throw new Error("R2 manifest read-after-write verification failed");
@@ -235,6 +245,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("BETHAG Storage backup failed:", error?.message || String(error));
+  const details = [error?.name, error?.Code || error?.code, error?.$metadata?.httpStatusCode ? "HTTP " + error.$metadata.httpStatusCode : null, error?.message || String(error)].filter(Boolean).join(" | ");
+  console.error("BETHAG Storage backup failed at [" + currentStage + "]:", details);
   process.exitCode = 1;
 });

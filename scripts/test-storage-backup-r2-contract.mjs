@@ -9,6 +9,8 @@ assert.match(script, /SUPABASE_STORAGE_BUCKET \|\| "bethag-documents"/);
 assert.match(script, /SUPABASE_S3_ENDPOINT/);
 assert.match(script, /\/storage\/v1\/s3/);
 assert.match(script, /assertBucketLock/);
+assert.match(script, /currentStage = "R2 lifecycle configuration"/);
+assert.match(script, /failed at \[" \+ currentStage \+ "\]/);
 assert.match(script, /bucketPayload\.result\?\.jurisdiction/);
 assert.match(script, /cf-r2-jurisdiction.*jurisdiction/);
 assert.doesNotMatch(script, /process\.env\.R2_JURISDICTION/);
@@ -38,6 +40,7 @@ assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
 assert.match(workflow, /CLOUDFLARE_R2_READ_TOKEN/);
 assert.match(workflow, /SUPABASE_S3_SECRET_ACCESS_KEY/);
 assert.match(workflow, /R2_SECRET_ACCESS_KEY/);
+assert.doesNotMatch(workflow, /R2_JURISDICTION/);
 assert.doesNotMatch(workflow, /supabase db reset|supabase migration|apply_migration/i);
 
 assert.match(runbook, /30 days/);
