@@ -193,7 +193,7 @@ $ledger_post_guard$;`;
     delete env.DATABASE_URL;delete env.PGPASSWORD;
     tmpDir=await mkdtemp(join(tmpdir(),"bethag-live-production-cutover-"));
     const file=join(tmpDir,"forward-only.sql");await writeFile(file,transaction,{mode:0o600});
-    const child=spawn(process.env.BETHAG_PSQL_BIN||"psql",["-X","--no-psqlrc","-v","ON_ERROR_STOP=1","-f",file],{env,stdio:["ignore","pipe","pipe"]});
+    const child=spawn("psql",["-X","--no-psqlrc","-v","ON_ERROR_STOP=1","-f",file],{env,stdio:["ignore","pipe","pipe"]});
     let out="",err="";
     await new Promise((resolve,reject)=>{
       child.stdout.setEncoding("utf8").on("data",x=>out+=x);
