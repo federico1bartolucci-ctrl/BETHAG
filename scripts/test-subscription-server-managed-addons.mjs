@@ -64,7 +64,7 @@ assert.ok(mainSource.includes("Anteprima demo"));
 const profileStart = mainSource.indexOf("function ProfilePage(");
 const profileEnd = mainSource.indexOf("function Modal(", profileStart);
 assert.ok(profileStart >= 0 && profileEnd > profileStart);
-assert.match(mainSource.slice(profileStart, profileEnd), /PLAN_NAMES\\[\\s*serverPlan/);
+assert.match(mainSource.slice(profileStart, profileEnd), /PLAN_NAMES\[\s*serverPlan/);
 assert.match(mainSource.slice(profileStart, profileEnd), /Piano registrato/);
 assert.ok(mainSource.includes('hasFeature(isServerManagedAddon(addon) && serverPlanAvailable ? serverPlan : subscription.plan'));
 assert.ok(mainSource.includes("if (isServerManagedAddon(addon)) return;"));
