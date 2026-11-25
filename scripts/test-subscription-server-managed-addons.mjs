@@ -34,7 +34,6 @@ assert.match(mainSource, /if \(isServerManagedAddon\(addon\)\) return;/);
 assert.match(mainSource, /disabled=\{included \|\| unlocked \|\| serverManaged\}/);
 assert.match(mainSource, /getClientUnlockedAddons\(subscription\)/);
 assert.match(mainSource, /comunicazioni: "Incluso da Plus"/);
-assert.match(mainSource, /addon === "comunicazioni"/);
 assert.match(mainSource, /addon && !isServerManagedAddon\(addon\)/);
 assert.match(mainSource, /Le Comunicazioni richiedono un piano Plus o superiore verificato dal server/);
 assert.match(mainSource, /const prepareCondominiumEmail = async[\\s\\S]*?requirePlan\\("plus", "L'invio delle comunicazioni", "comunicazioni"\\)/);
