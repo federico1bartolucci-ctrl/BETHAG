@@ -199,7 +199,9 @@ try {
     INSERT INTO public.condominium_installments
       (id, workspace_id, condominium_id, unit_id, member_id, amount, paid_amount)
     VALUES
-      ('10000000-0000-4000-8000-000000000003', '${ids.workspace}', '${ids.condominium}', NULL, '${ids.memberA}', 10, 0);
+      ('10000000-0000-4000-8000-000000000003', '${ids.workspace}', '${ids.condominium}', NULL, '${ids.memberA}', 10, 0),
+      -- A unit-assigned installment without a member must still block transfer closure.
+      ('10000000-0000-4000-8000-000000000004', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}', NULL, 50, 10);
 
     INSERT INTO public.condominium_expense_allocations
       (id, workspace_id, condominium_id, ledger_entry_id, unit_id, member_id, amount, paid_amount)
@@ -284,12 +286,12 @@ try {
 
   await db.exec(migrationSql);
   const missingPrimaryAfter = await call(ids.missingPrimaryTransfer);
-  assert.equal(Number(missingPrimaryAfter.open_installments), 90,
+  assert.equal(Number(missingPrimaryAfter.open_installments), 130,
     "Corrected function must prepend the primary outgoing_member_id when a non-empty JSON array omits it.");
   assert.equal(Number(missingPrimaryAfter.open_allocations), 30);
   assert.equal(Number(missingPrimaryAfter.open_member_carryovers), 12);
   assert.equal(Number(missingPrimaryAfter.open_unit_carryovers), 5);
-  assert.equal(Number(missingPrimaryAfter.open_total), 137);
+  assert.equal(Number(missingPrimaryAfter.open_total), 177);
   let missingPrimaryCloseError;
   try {
     await db.query("SELECT public.close_condominium_member_transfer($1::uuid)", [ids.missingPrimaryTransfer]);
@@ -301,12 +303,12 @@ try {
   console.log("PASS corrected primary-member inclusion: the omitted primary member's balances are counted and closure is blocked.");
 
   const emptyArrayAfter = await call(ids.emptyArrayTransfer);
-  assert.equal(Number(emptyArrayAfter.open_installments), 90,
+  assert.equal(Number(emptyArrayAfter.open_installments), 130,
     "Corrected function must fall back to the primary outgoing_member_id when the JSON array is empty.");
   assert.equal(Number(emptyArrayAfter.open_allocations), 30);
   assert.equal(Number(emptyArrayAfter.open_member_carryovers), 12);
   assert.equal(Number(emptyArrayAfter.open_unit_carryovers), 5);
-  assert.equal(Number(emptyArrayAfter.open_total), 137);
+  assert.equal(Number(emptyArrayAfter.open_total), 177);
   let emptyArrayCloseError;
   try {
     await db.query("SELECT public.close_condominium_member_transfer($1::uuid)", [ids.emptyArrayTransfer]);
@@ -318,14 +320,14 @@ try {
   console.log("PASS corrected empty-array fallback: member balances are counted and closure is blocked.");
 
   const after = await call(ids.transfer);
-  assert.equal(Number(after.open_installments), 90,
-    "Corrected result must retain Unit A and legacy unit-null installments only.");
+  assert.equal(Number(after.open_installments), 130,
+    "Corrected result must retain Unit A, legacy unit-null and unit-assigned unallocated installments.");
   assert.equal(Number(after.open_allocations), 30,
     "Corrected result must retain Unit A and legacy unit-null allocations only.");
   assert.equal(Number(after.open_member_carryovers), 12,
     "Corrected result must retain Unit A and legacy unit-null member carryovers only.");
   assert.equal(Number(after.open_unit_carryovers), 5);
-  assert.equal(Number(after.open_total), 137);
+  assert.equal(Number(after.open_total), 177);
   console.log("PASS corrected closure check: only selected-unit and legacy unit-null member obligations remain.");
 
   const ownershipShare = await call(ids.shareTransfer);
@@ -342,8 +344,8 @@ try {
   await db.exec(`
     UPDATE public.condominium_installments
       SET paid_amount = amount
-      WHERE member_id = '${ids.memberA}'
-        AND (unit_id IS NULL OR unit_id = '${ids.unitA}');
+      WHERE (member_id = '${ids.memberA}' AND (unit_id IS NULL OR unit_id = '${ids.unitA}'))
+         OR (member_id IS NULL AND unit_id = '${ids.unitA}');
     UPDATE public.condominium_expense_allocations
       SET paid_amount = amount
       WHERE member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}';
