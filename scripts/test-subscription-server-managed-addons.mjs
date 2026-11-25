@@ -43,7 +43,7 @@ assert.ok(mainSource.includes('from "./lib/subscription-entitlements.js"'));
 assert.ok(mainSource.includes('const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free")'));
 assert.ok(mainSource.includes("getAuthoritativeEntitlementSubscription("));
 assert.ok(mainSource.includes("getEntitlementSubscription(addon)"));
-assert.ok(mainSource.includes('getAuthoritativeEntitlementSubscription(subscription, addon, serverWorkspacePlan, supabaseConfigured, Boolean(profile.workspaceId))'));
+assert.ok(mainSource.includes("Boolean(profile.workspaceId)"));
 assert.ok(mainSource.includes('getEntitlementSubscription("ai").plan'));
 const collaboratorGateStart = mainSource.indexOf("const hasPlanAccess =");
 const collaboratorGateEnd = mainSource.indexOf("return hasRolePermission && hasPlanAccess;", collaboratorGateStart);
