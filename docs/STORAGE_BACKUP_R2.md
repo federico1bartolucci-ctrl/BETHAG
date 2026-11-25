@@ -34,7 +34,7 @@ Before the first scheduled run, create the R2 bucket manually and configure:
 - Lifecycle rule for `backups/snapshots/`: expire after 31 days.
 - Lifecycle rule for `backups/objects/`: expire after 60 days.
 - The backup script verifies both lifecycle rules and the Bucket Lock rule before uploading; if any gate is missing, it exits without writing a backup.
-- The workflow first reads the bucket metadata and obtains the authoritative `jurisdiction` field. It then queries Bucket Lock with that exact jurisdiction header (omitting the header for `default`). Bucket location labels such as `EEUR` are not used as jurisdiction values.
+- The workflow first reads the bucket metadata and obtains the authoritative `jurisdiction` field. It then queries Bucket Lock with that exact jurisdiction header (omitting the header for `default`). Bucket location labels such as `EEUR` are not used as jurisdiction values. The same value selects the S3 endpoint: the standard account endpoint for `default`, or `https://<ACCOUNT_ID>.<jurisdiction>.r2.cloudflarestorage.com` for jurisdiction-scoped buckets (for example, `eu`).
 - Abort incomplete multipart uploads after 1 day, if multipart uploads are enabled.
 
 Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle expiration is a separate configuration. The longer 60-day blob lifecycle gives manifests up to 30 days to reference a blob and leaves a safety margin. R2's S3-compatible Object Lock API is not supported; this design uses Cloudflare's separate Bucket Lock configuration API and verifies the configured rule before each backup. Confirm Cloudflare's current pricing and feature availability before applying these settings.
