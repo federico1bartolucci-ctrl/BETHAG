@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/AccountingPage.tsx","utf8");
+assert.ok(source.includes("const loadRequestRef = useRef(0);"),"accounting loads track a request generation");
+assert.ok(source.includes("const requestId = ++loadRequestRef.current;"),"each accounting load gets a unique ID");
+assert.ok(source.includes("if (requestId !== loadRequestRef.current) return;"),"stale accounting results are discarded");
+assert.ok(source.includes("if (requestId === loadRequestRef.current) setError"),"stale load errors cannot overwrite current state");
+assert.ok(source.includes("if (requestId === loadRequestRef.current) setLoading(false);"),"stale load cannot clear loading state");
+assert.ok(source.includes("return () => { loadRequestRef.current += 1; };"),"selection effect cleanup invalidates old loads");
+console.log("Accounting load race regression checks passed");
