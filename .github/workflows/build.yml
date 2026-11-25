@@ -243,6 +243,12 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_transfer_rollback_test
           PGPASSWORD: postgres
+      - name: Reproduce and guard concurrent last-admin deletion on isolated PostgreSQL 17
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_last_admin_test && npm run test:admin-deletion-concurrency
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_last_admin_test
+          PGPASSWORD: postgres
+
 
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
