@@ -46,7 +46,7 @@ Create Environment `storage-backup-production` and add these secrets. Also add t
 | Secret | Value |
 | --- | --- |
 | `SUPABASE_S3_ENDPOINT` | `https://<production-project-ref>.supabase.co/storage/v1/s3` |
-| `SUPABASE_S3_REGION` | Production project's actual Supabase region |
+| `SUPABASE_S3_REGION` | `eu-central-1` (verified from Supabase Production project metadata) |
 | `SUPABASE_S3_ACCESS_KEY_ID` | Dedicated Supabase Storage S3 access key |
 | `SUPABASE_S3_SECRET_ACCESS_KEY` | Matching Supabase Storage S3 secret |
 | `R2_ACCOUNT_ID` | Cloudflare account ID |
