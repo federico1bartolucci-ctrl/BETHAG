@@ -21,6 +21,10 @@ for(const pattern of [/BETHAG_LIVE_LEDGER_PRODUCTION_APPLY/,/BETHAG_ALLOW_LIVE_L
  /approved_target_project_ref/,/EXCEPT SELECT version,name FROM supabase_migrations\.schema_migrations/,
  /pg_advisory_xact_lock/,/BEGIN;/,/COMMIT;/,/PGPASSFILE/,/delete env\.DATABASE_URL/,/delete env\.PGPASSWORD/])assert.match(runner,pattern);
 assert.match(runner,/assertLiveLedgerAclEvidenceMatchesSource/);
+assert.doesNotMatch(runner,/BETHAG_PSQL_BIN/,
+  "Production runner must not allow an environment override of the psql executable.");
+assert.match(runner,/spawn\("psql",/,
+  "Production runner must invoke the fixed psql executable.");
 assert.match(runner,/sslmode/);
 assert.match(runner,/Production PostgreSQL connections must require TLS/);
 assert.match(runner,/ci_tested_commit_sha/);
