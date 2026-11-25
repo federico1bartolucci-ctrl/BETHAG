@@ -4,7 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
-import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
+import { getAuthoritativeEntitlementSubscription, getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2346,13 +2346,24 @@ function App() {
         addons: Array.isArray(stored.addons) ? stored.addons : [],
       };
     });
+  const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free");
+  const getEntitlementSubscription = (addon?: AddonId) =>
+    getAuthoritativeEntitlementSubscription(
+      subscription,
+      addon,
+      serverWorkspacePlan,
+      supabaseConfigured,
+      Boolean(profile.workspaceId),
+    );
 
   useEffect(() => {
+    setServerWorkspacePlan("free");
     if (!supabaseConfigured || !profile.workspaceId) return;
     let cancelled = false;
     void getWorkspacePlan(profile.workspaceId)
       .then((plan) => {
         if (!cancelled && plan) {
+          setServerWorkspacePlan(plan);
           setSubscription((current) => current.plan === plan ? current : { ...current, plan });
         }
       })
@@ -6636,6 +6647,7 @@ function App() {
         if (workspaceSettingsError) throw workspaceSettingsError;
         const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
         if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setServerWorkspacePlan(persistedPlan as PlanId);
           setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
         }
 
@@ -6714,6 +6726,7 @@ function App() {
         if (workspaceSettingsError) throw workspaceSettingsError;
         const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
         if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
+          setServerWorkspacePlan(persistedPlan as PlanId);
           setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
         }
 
@@ -6996,7 +7009,7 @@ function App() {
     if (isAdministrator) {
       const addon = pageAddon[target];
       return !addon || hasEntitlement(
-        subscription,
+        getEntitlementSubscription(addon),
         ADDON_REQUIRED_PLAN[addon],
         addon
       );
@@ -7066,11 +7079,11 @@ function App() {
         isAdministrator &&
         addon
       ) {
-        const answer = confirm(
-          ADDON_NAMES[addon] +
-            " non è compreso nel tuo piano attuale. " +
-            "Puoi sbloccarlo singolarmente senza passare al piano superiore.\n\nVuoi aprire Piano e upgrade?"
-        );
+        const serverManaged = isServerManagedAddon(addon) && supabaseConfigured;
+        const message = serverManaged
+          ? ADDON_NAMES[addon] + " richiede " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + " registrato e verificato sul server. La prova struttura non attiva questa autorizzazione."
+          : ADDON_NAMES[addon] + " non è compreso nel tuo piano attuale. Puoi sbloccarlo singolarmente senza passare al piano superiore.";
+        const answer = confirm(message + "\n\nVuoi aprire Piano e upgrade?");
         if (answer) {
           setPage("abbonamento");
           setSearch("");
@@ -7264,13 +7277,16 @@ function App() {
     feature: string,
     addon?: AddonId
   ) => {
-    if (hasEntitlement(subscription, required, addon)) {
+    if (hasEntitlement(getEntitlementSubscription(addon), required, addon)) {
       return true;
     }
 
+    const serverManaged = Boolean(addon && isServerManagedAddon(addon) && supabaseConfigured);
     const addonText = addon && !isServerManagedAddon(addon)
       ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
-      : "";
+      : serverManaged
+        ? " La prova struttura è solo un'anteprima: non modifica il piano registrato sul server."
+        : "";
 
     const answer = confirm(
       feature + " richiede " + PLAN_NAMES[required] + "." + addonText +
@@ -7891,7 +7907,7 @@ function App() {
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
-              aiEnabled={hasEntitlement(subscription, "professional", "ai")}
+              aiEnabled={hasEntitlement(getEntitlementSubscription("ai"), "professional", "ai")}
               documents={documents.map((d) => ({ id: d.id, name: d.name, condominiumId: d.condominiumId, category: d.category, aiStatus: d.aiStatus, extractedData: d.extractedData, aiSummary: d.aiSummary }))}
             />
           )}
@@ -7928,7 +7944,7 @@ function App() {
               onPublication={
                 toggleDocumentPublication
               }
-              plan={subscription.plan}
+              plan={getEntitlementSubscription("ai").plan}
               isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("documenti"))}
             />
           )}
@@ -8130,10 +8146,10 @@ function App() {
                 communications
               }
               plan={
-                subscription.plan
+                getEntitlementSubscription("portale").plan
               }
               portalEnabled={hasEntitlement(
-                subscription,
+                getEntitlementSubscription("portale"),
                 "portal",
                 "portale"
               )}
@@ -8197,7 +8213,7 @@ function App() {
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
-              aiEnabled={hasEntitlement(subscription, "plus", "ai")}
+              aiEnabled={hasEntitlement(getEntitlementSubscription("ai"), "plus", "ai")}
               documents={documents.map((d) => ({
                 id: d.id,
                 name: d.name,
@@ -8243,7 +8259,7 @@ function App() {
             <SettingsPage
               sessionEmail={sessionEmail}
               workspaceId={profile.workspaceId}
-              plan={subscription.plan}
+              plan={getEntitlementSubscription("portale").plan}
               onNavigate={navigate}
               onLogout={logout}
             />
@@ -13960,6 +13976,7 @@ function SubscriptionPage({
           In questa versione gli add-on non collegati a un entitlement server-side restano simulati localmente.
           Comunicazioni, AI e Portale sono autorizzati esclusivamente dal piano verificato dal server;
           non sono disponibili come add-on separati finché non sarà integrata la fatturazione.
+          La funzione "Prova struttura" modifica solo l'anteprima locale e non cambia il piano registrato nel workspace.
         </p>
       </div>
     </>
