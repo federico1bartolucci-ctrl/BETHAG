@@ -78,6 +78,11 @@ assert.ok(mainSource.includes('portalEnabled={hasEntitlement(getEntitlementSubsc
 assertPlanGate(
   "const saveCommunication =",
   "const editCommunication =",
+  'requirePlan("plus", "La gestione delle comunicazioni", "comunicazioni")',
+);
+assertPlanGate(
+  "const saveCommunication =",
+  "const editCommunication =",
   'requirePlan("portal", "La pubblicazione delle comunicazioni nel portale", "portale")',
 );
 
@@ -87,7 +92,7 @@ function assertPlanGate(startMarker, endMarker, expectedCall) {
   assert.ok(start >= 0 && end > start, "Missing UI action section: " + startMarker);
   assert.ok(
     mainSource.slice(start, end).includes(expectedCall),
-    "Missing Plus entitlement gate in " + startMarker,
+    "Missing expected plan entitlement gate in " + startMarker,
   );
 }
 
