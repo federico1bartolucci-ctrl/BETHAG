@@ -24,9 +24,9 @@ assert.match(
 
 const linkIndex = edgeSource.indexOf("await linkResidentMemberIfUnchanged(adminClient, member, targetUserId)");
 const conflictIndex = edgeSource.indexOf("if (!linkedMember?.length)", linkIndex);
-const profileLookupIndex = edgeSource.indexOf('.from("profiles")\\n      .select("role")', linkIndex);
-const profileUpsertIndex = edgeSource.indexOf('.from("profiles")\\n      .upsert(', linkIndex);
-const portalUpsertIndex = edgeSource.indexOf('.from("portal_access")\\n      .upsert(', linkIndex);
+const profileLookupIndex = edgeSource.indexOf('.from("profiles")', linkIndex);
+const profileUpsertIndex = edgeSource.indexOf('.upsert(', profileLookupIndex);
+const portalUpsertIndex = edgeSource.indexOf('.from("portal_access")', profileUpsertIndex);
 assert.ok(linkIndex >= 0 && conflictIndex > linkIndex, "member snapshot must be checked first");
 assert.ok(profileLookupIndex > conflictIndex, "stale snapshots must not read or write the profile");
 assert.ok(profileUpsertIndex > profileLookupIndex, "profile upsert must follow the successful member link");
