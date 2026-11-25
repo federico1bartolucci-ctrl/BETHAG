@@ -46,8 +46,8 @@ BEGIN
 END;
 $before$;
 
-\i supabase/rebuild/drafts/20261124215000_revoke_postgres_global_public_function_execute.sql
-\i supabase/rebuild/drafts/20261124215000_revoke_postgres_global_public_function_execute.sql
+\i supabase/rebuild/drafts/20261124234000_revoke_postgres_global_public_function_execute.sql
+\i supabase/rebuild/drafts/20261124234000_revoke_postgres_global_public_function_execute.sql
 
 CREATE FUNCTION private.bethag_acl_after_probe() RETURNS integer
 LANGUAGE sql AS 'SELECT 1';
