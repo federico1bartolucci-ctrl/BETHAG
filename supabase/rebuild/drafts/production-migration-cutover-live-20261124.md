@@ -135,3 +135,20 @@ L'owner ha fornito tre schermate della Dashboard Supabase del progetto BETHAG, r
 Questa è evidenza diretta Production e sostituisce la precedente limitazione “count-only” del 24 novembre. La prova QA del 24 novembre resta separata e non viene utilizzata per dimostrare la configurazione Production.
 
 **Disposizione:** il gate di evidenza Data API Production con nomi degli schemi e freschezza entro 24 ore è soddisfatto al momento della cattura. Non sono state modificate impostazioni Supabase. Restano separati e obbligatori: riconferma del rischio backup, approvazione owner legata a SHA/fingerprint/hash/progetto/finestra, CI esatta sul commit finale e ogni altro controllo fail-closed del runner. Nessuna scrittura o migrazione Production è stata eseguita.
+
+
+## Disposizione operativa corrente — 25 novembre 2026, verifica PR #434
+
+Questa sezione è la fonte di stato corrente e prevale sulle note storiche precedenti quando riportano condizioni non più attuali.
+
+- PR #434 è aperta in stato **DRAFT**, branch `fix/postgres-global-function-default-acl-20261124`, head verificato `72d80105487842f06c2a5753444d26220c1c9bc9`.
+- Il manifest JSON sullo stesso head è `DRAFT_NOT_APPROVED`; `approval_scope=NONE`; `production_apply_authorized=false`; l'autorizzazione owner registrata in precedenza è **scaduta** e conservata solo come audit storico. Non esiste un'autorizzazione attuale.
+- La CI Build, Baseline Safety, PostgreSQL 17 bootstrap e QA APP-01..APP-15 ha concluso PASS sul commit precedente `dde6a4a58ec60293425913cc19d0a3d56e18edbf`. Questi risultati **non certificano** l'head `72d8010...`.
+- Per `72d8010...` la verifica GitHub ha restituito zero workflow run PR-triggered e zero commit status. Pertanto la CI exact-head è **NON VERIFICATA**, non PASS.
+- Nessun dispatch manuale è stato avviato: le azioni GitHub disponibili in questa sessione non espongono un'operazione di workflow dispatch. Non si altera la PR artificialmente per simulare un trigger.
+- Nessun runner Production è stato eseguito; nessuna migrazione, DDL, deploy, merge o scrittura su Production/QA è stata effettuata.
+- La review tecnica è interna e non indipendente; il conflitto d'interesse è dichiarato. Non esiste un revisore esterno disponibile.
+
+**Gate residui:** CI exact-head; eventuale review indipendente (se reperibile); nuova approvazione owner legata a SHA/fingerprint/hash/progetto/finestra UTC futura; preflight Production fresco; esecuzione del runner solo entro la nuova finestra autorizzata. La vecchia finestra 01:40–03:30 CET del 25 novembre è scaduta e non è riutilizzabile.
+
+**Decisione fail-closed:** mantenere la proposta draft e Production intatta. Nessuna promozione della candidata in `supabase/migrations` e nessuna esecuzione remota finché tutti i gate non risultano verificati sul medesimo exact-head.
