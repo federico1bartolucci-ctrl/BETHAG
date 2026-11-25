@@ -5,7 +5,7 @@ const PLAN_LEVELS = Object.freeze({
   portal: 3,
 });
 
-const SERVER_MANAGED_ADDONS = new Set(["ai", "portale"]);
+const SERVER_MANAGED_ADDONS = new Set(["ai", "portale", "comunicazioni"]);
 
 export function hasFeature(plan, required) {
   const planLevel = PLAN_LEVELS[plan];
