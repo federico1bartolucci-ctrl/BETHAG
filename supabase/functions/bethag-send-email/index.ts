@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
+import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,27 @@ Deno.serve(async (req: Request) => {
     if (!membership) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
     const canSend = canSendCommunication(membership.role, (membership as any).permissions);
     if (!canSend) return json({ error: "Non disponi dell'autorizzazione per inviare comunicazioni." }, 403);
+
+    // Communication delivery is a Plus feature. Read the authoritative workspace
+    // plan after membership authorization and before preparing recipients or
+    // making any external Resend request.
+    const planEntitlement = await checkWorkspacePlanEntitlement(
+      supabase,
+      communication.workspace_id,
+      "plus",
+    );
+    if (!planEntitlement.allowed) {
+      if (planEntitlement.status === 403) {
+        return json({
+          error: "Per inviare comunicazioni è necessario il piano BETHAG Plus o superiore.",
+          code: planEntitlement.code,
+        }, 403);
+      }
+      return json({
+        error: "Impossibile verificare il piano del workspace. Riprova più tardi.",
+        code: planEntitlement.code,
+      }, 503);
+    }
 
     const { data: condominium, error: condoError } = await supabase.from("condominiums")
       .select("id,archived_at").eq("id", communication.condominium_id)
