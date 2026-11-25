@@ -51,7 +51,7 @@ await assert.rejects(
 );
 
 assert.equal(
-  (script.match(/readAndVerifyBlobBody\\(/g) || []).length,
+  script.split("readAndVerifyBlobBody(").length - 1,
   2,
   "both reused and newly uploaded blobs must be read back and verified"
 );
