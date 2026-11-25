@@ -45,13 +45,13 @@ assert.equal(runGuardedFormSubmit({}, [() => true]), false, "missing preventDefa
 const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const guardedHandlers = [
   ["const saveDeadline =", "const saveDocument =", "event"],
-  ["const saveDocument =", "/* =======================================================\\n     SCADENZE", "event"],
-  ["const saveAssembly =", "/* =======================================================\\n     FORNITORI", "event"],
+  ["const saveDocument =", "/* =======================================================\n     SCADENZE", "event"],
+  ["const saveAssembly =", "/* =======================================================\n     FORNITORI", "event"],
   ["const saveSupplier =", "const saveActivity =", "event"],
   ["const saveActivity =", "const saveCondominiumWork =", "event"],
   ["const saveCondominiumWork =", "const editCondominiumWork =", "event"],
   ["const saveWorkProgress =", "const saveWorkProgressAndAccount =", "event"],
-  ["const saveWorkProgressAndAccount =", "/* =======================================================\\n     CONDOMINI - ANAGRAFICA", "event"],
+  ["const saveWorkProgressAndAccount =", "/* =======================================================\n     CONDOMINI - ANAGRAFICA", "event"],
   ["const saveCondominiumMember =", "const deleteCondominiumMember =", "event"],
   ["const saveCommunication =", "const editCommunication =", "event"],
 ];
@@ -63,16 +63,20 @@ for (const [startMarker, endMarker, eventName] of guardedHandlers) {
   assert.ok(section.includes("runGuardedFormSubmit("), "Missing early native-submit guard in " + startMarker);
   assert.doesNotMatch(section, new RegExp(eventName + "\\.preventDefault\\(\\)"), "direct preventDefault must be centralized in " + startMarker);
 }
-for (const [startMarker, endMarker] of [
-  ["const save = async (e: React.FormEvent) => {", "const cancel ="],
-  ["const save = async (", "const refreshProfile ="],
-]) {
-  const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start + startMarker.length);
-  if (start < 0) continue;
-  const section = source.slice(start, end > start ? end : start + 2000);
-  assert.ok(section.includes("runGuardedFormSubmit("), "administrator form must prevent native submit before its role guard");
-}
+const collaboratorSaveStart = source.indexOf("const save = async (e: React.FormEvent) => {");
+const collaboratorSaveEnd = source.indexOf("\\n    const name = form.name.trim();", collaboratorSaveStart);
+assert.ok(collaboratorSaveStart >= 0 && collaboratorSaveEnd > collaboratorSaveStart);
+const collaboratorSaveSection = source.slice(collaboratorSaveStart, collaboratorSaveEnd);
+assert.ok(collaboratorSaveSection.includes("runGuardedFormSubmit(e,"));
+assert.ok(collaboratorSaveSection.indexOf("runGuardedFormSubmit(e,") < collaboratorSaveSection.indexOf("if (!isAdministrator)"));
+
+const profileStart = source.indexOf("function ProfilePage(");
+const profileSaveStart = source.indexOf("const save = async (", profileStart);
+const profileSaveEnd = source.indexOf("\\n\\n    if (", profileSaveStart);
+assert.ok(profileStart >= 0 && profileSaveStart > profileStart && profileSaveEnd > profileSaveStart);
+const profileSaveSection = source.slice(profileSaveStart, profileSaveEnd);
+assert.ok(profileSaveSection.includes("runGuardedFormSubmit(e,"));
+assert.ok(profileSaveSection.indexOf("runGuardedFormSubmit(e,") < profileSaveSection.indexOf("if (!isAdministrator)"));
 
 console.log("PASS guarded form submission runtime: preventDefault runs before module/plan/administrator guards, including denied paths.");
 console.log("PASS guarded form integration: protected forms cannot fall through to native GET/reload when authorization is denied.");
