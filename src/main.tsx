@@ -6218,7 +6218,11 @@ function App() {
     item: Communication
   ) => {
     if (!requireModulePermission("comunicazioni", "La modifica delle comunicazioni")) return;
-    if (!requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")) return;
+    if (item.publishedToPortal) {
+      if (!requirePlan("portal", "La modifica di una comunicazione pubblicata nel Portale", "portale")) return;
+    } else if (!requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")) {
+      return;
+    }
     setSelectedCommunication(item);
     setCommunicationForm(item);
     openModal("communication");
@@ -6434,7 +6438,7 @@ function App() {
 
   const newCommunication = (condominiumId?: number) => {
     if (!requireModulePermission("comunicazioni", "La creazione delle comunicazioni")) return;
-    if (!requirePlan("plus", "La creazione delle comunicazioni", "comunicazioni")) return;
+    if (!requirePlan("portal", "La creazione di una comunicazione nel Portale", "portale")) return;
     setSelectedCommunication(null);
 
     setCommunicationForm({
@@ -8094,7 +8098,9 @@ function App() {
                 condominiumName
               }
               onNew={
-                newCommunication
+                hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")
+                  ? newCommunication
+                  : undefined
               }
               onEdit={
                 editCommunication
@@ -8103,8 +8109,11 @@ function App() {
                 deleteCommunication
               }
               onPublication={
-                toggleCommunicationPublication
+                hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")
+                  ? toggleCommunicationPublication
+                  : undefined
               }
+              portalEnabled={hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")}
               isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("comunicazioni"))}
             />
           )}
@@ -12416,6 +12425,7 @@ function CommunicationsPage({
   onEdit,
   onDelete,
   onPublication,
+  portalEnabled = false,
   isAdministrator = false,
 }: any) {
   const filtered =
@@ -12479,6 +12489,12 @@ function CommunicationsPage({
 
       </div>
 
+
+      {!portalEnabled && (
+        <div className="info-card">
+          <p>Il piano Plus include l'invio e-mail delle comunicazioni dalla scheda condominio. La creazione e pubblicazione di avvisi nel Portale richiede il piano Portal.</p>
+        </div>
+      )}
 
       <SearchBox
         value={search}
@@ -12553,27 +12569,31 @@ function CommunicationsPage({
               {isAdministrator && (
                 <div className="row-actions">
 
-                  <button
-                    className="secondary-button small"
-                    onClick={() =>
-                      onEdit(c)
-                    }
-                  >
-                    Modifica
-                  </button>
+                  {(!c.publishedToPortal || portalEnabled) && (
+                    <button
+                      className="secondary-button small"
+                      onClick={() =>
+                        onEdit(c)
+                      }
+                    >
+                      Modifica
+                    </button>
+                  )}
 
-                  <button
-                    className="secondary-button small"
-                    onClick={() =>
-                      onPublication(
-                        c.id
-                      )
-                    }
-                  >
-                    {c.publishedToPortal
-                      ? <><AppIcon name="lock" size={16} /> Ritira</>
-                      : <><AppIcon name="users" size={16} /> Pubblica</>}
-                  </button>
+                  {portalEnabled && (
+                    <button
+                      className="secondary-button small"
+                      onClick={() =>
+                        onPublication(
+                          c.id
+                        )
+                      }
+                    >
+                      {c.publishedToPortal
+                        ? <><AppIcon name="lock" size={16} /> Ritira</>
+                        : <><AppIcon name="users" size={16} /> Pubblica</>}
+                    </button>
+                  )}
 
                   <button
                     className="mini-danger"
