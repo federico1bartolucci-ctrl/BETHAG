@@ -45,7 +45,7 @@ assert.equal(runGuardedFormSubmit({}, [() => true]), false, "missing preventDefa
 const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const guardedHandlers = [
   ["const saveDeadline =", "const saveDocument =", "event"],
-  ["const saveDocument =", "/* =======================================================\n     SCADENZE", "event"],
+  ["const saveDocument =", "/* =======================================================\n     ASSEMBLEE", "event"],
   ["const saveAssembly =", "/* =======================================================\n     FORNITORI", "event"],
   ["const saveSupplier =", "const saveActivity =", "event"],
   ["const saveActivity =", "const saveCondominiumWork =", "event"],
