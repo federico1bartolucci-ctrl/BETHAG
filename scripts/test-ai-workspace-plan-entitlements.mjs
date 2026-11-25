@@ -129,3 +129,6 @@ console.log("PASS workspace plan entitlement runtime matrix: document AI require
 console.log("PASS unknown/missing plans and database errors fail closed.");
 console.log("PASS client-supplied plan/add-on fields cannot override the database plan.");
 console.log("PASS both AI Edge Functions enforce plan before Storage download and OpenAI upload.");
+
+await import("./test-subscription-server-managed-addons.mjs");
+await import("./test-portal-plan-entitlement.mjs");
