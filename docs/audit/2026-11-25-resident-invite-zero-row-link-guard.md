@@ -28,6 +28,10 @@ The existing isolated Deno test `scripts/test-edge-function-invite-positive.mjs`
 
 The Build workflow already runs this Deno test with mocked Auth/DB services; no real email or Supabase project is used.
 
+## CI notes
+
+The first Build run exposed a case-sensitive test assertion: the production message correctly used lowercase `nessun` after the conjunction, while the regression expected uppercase `Nessun`. The assertion was made case-insensitive. The final branch SHA must pass the complete Build and PostgreSQL jobs before this audit point is closed.
+
 ## Safety
 
 Draft-only branch. No QA/Production changes, merge, deploy, reset, or manual workflow dispatch.
