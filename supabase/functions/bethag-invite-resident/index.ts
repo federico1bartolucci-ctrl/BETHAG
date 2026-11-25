@@ -197,11 +197,20 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "id" });
     if (profileError) throw profileError;
 
-    const { error: memberUpdateError } = await adminClient
+    const { data: linkedMember, error: memberUpdateError } = await adminClient
       .from("condominium_members")
       .update({ user_id: targetUserId })
-      .eq("id", member.id);
+      .eq("id", member.id)
+      .eq("condominium_id", condominiumForMember.id)
+      .eq("legacy_id", legacyId)
+      .select("id");
     if (memberUpdateError) throw memberUpdateError;
+    if (!linkedMember?.length) {
+      return json({
+        error: "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
+        invitationSent: invited,
+      }, 409);
+    }
 
     const apartment =
       String(member.data?.apartment || "").trim() ||
