@@ -2582,7 +2582,7 @@ function App() {
       });
       if (completionError) {
         if ((completionError.message || "").includes("PORTAL_PLAN_REQUIRED")) {
-          throw new Error("Il workspace non dispone di un piano BETHAG Portal attivo. L'accesso al Portale non è disponibile.");
+          throw new Error("Il workspace non dispone di un piano BETHAG Portal registrato sul server. L'accesso al Portale non è disponibile.");
         }
         if ((completionError.message || "").includes("PORTAL_MEMBER_CONDOMINIUM_MISMATCH")) {
           throw new Error("Il nominativo corrisponde a un profilo anagrafico associato a un condominio diverso da quello selezionato. Verifica il nome del condominio e riprova.");
@@ -3066,7 +3066,7 @@ function App() {
     if (error) {
       const message = error.message || "";
       if (message.includes("PORTAL_PLAN_REQUIRED")) {
-        alert("Il workspace non dispone di un piano BETHAG Portal attivo. Attiva il piano Portal prima di autorizzare i residenti.");
+        alert("Il piano Portal non risulta assegnato al workspace. Completa l'attivazione prima di autorizzare i residenti.");
       } else if (message.includes("MEMBER_EMAIL_MUST_BE_CORRECTED_BEFORE_APPROVAL")) {
         alert("L'e-mail del profilo anagrafico è diversa da quella verificata dell'account. Correggi prima l'e-mail nella scheda del condòmino, quindi ripeti l'autorizzazione.");
       } else if (message.includes("MISMATCH_REQUEST_MUST_USE_ORIGINAL_MATCHED_MEMBER")) {
@@ -3163,7 +3163,7 @@ function App() {
             await supabase.auth.signOut();
             const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
             if (registrationErrorMessage.includes("PORTAL_PLAN_REQUIRED")) {
-              alert("Il workspace non dispone di un piano BETHAG Portal attivo. L'accesso al Portale non può essere completato; contatta l'amministratore.");
+              alert("Il piano Portal non risulta assegnato al workspace. Contatta l'amministratore per completare l'attivazione.");
             } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NAME_REQUIRED")) {
               alert("Indica il nome esatto del condominio: serve per indirizzare correttamente la richiesta all'amministratore.");
             } else if (registrationErrorMessage.includes("PORTAL_CONDOMINIUM_NOT_FOUND")) {
@@ -13925,7 +13925,7 @@ function SubscriptionPage({
             const unlocked = !serverManaged && hasAddon(subscription, addon);
             const serverManagedDescription = addon === "ai"
               ? "Le funzioni AI sono autorizzate dal piano verificato dal server; l'attivazione singola non è disponibile."
-              : "Il Portale richiede un piano Portal attivo e verificato dal server; l'attivazione singola non è disponibile.";
+              : "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile.";
             return (
               <article className="addon-card" key={addon}>
                 <div className="addon-card-top">
