@@ -568,7 +568,6 @@
     "note": "Historical approval retained for audit only. No current Production execution is authorized; a new approval must bind the final source SHA, release fingerprint, migration hash, target project and a future UTC window."
   },
   "current_disposition": {
-    "updated_at_utc": "2026-11-25T00:00:00Z",
     "status": "DRAFT_NOT_APPROVED",
     "reason": "The previously recorded 2026-11-25 01:40–03:30 CET approval window has expired. The manifest is returned to fail-closed draft state; historical approval details are retained only for audit.",
     "production_apply_authorized": false,
