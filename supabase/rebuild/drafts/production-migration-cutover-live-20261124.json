@@ -184,7 +184,7 @@
     "Implementare il runner Production dedicato 267→268, separato dal runner storico 248→267 e dal runner locale; applicazione transazionale, ledger storico confrontato integralmente prima e dopo, TLS obbligatorio, approvazione e finestra vincolate — implementato fail-closed, non eseguito.",
     "Eseguire clean-install canonica a 28 file, rehearsal PostgreSQL 17 separata della candidata in drafts, regressione ACL e rehearsal del runner 267→268 sul database isolato — PASS.",
     "QA shared environment: final authenticated APP-01..APP-15 collaudo on exact source SHA 86e2646f86a6b78a6f7dfbc610214ec045e425a3 — PASS; temporary Portal plan fixture restored; QA history not reset.",
-    "Revisione tecnica interna sullo SHA esatto 618c459b7ae9efb2e2247791d7d71e85027ae508 completata con esito PASS e conflitto dichiarato: autore della revisione coincidente con l'agente di implementazione, quindi NON indipendente. Build, PostgreSQL 17, Baseline Safety e APP-01..APP-15 sullo stesso SHA PASS. Restano obbligatorie nuova evidenza name-level Data API Production entro 24 ore, riconferma del rischio backup e approvazione esplicita del proprietario legata a SHA, fingerprint, hash, progetto e finestra UTC — nessuna approvazione presente.",
+    "Revisione tecnica interna sullo SHA esatto 618c459b7ae9efb2e2247791d7d71e85027ae508 completata con esito PASS e conflitto dichiarato: autore della revisione coincidente con l'agente di implementazione, quindi NON indipendente. Build, PostgreSQL 17, Baseline Safety e APP-01..APP-15 sullo stesso SHA PASS. Evidenza name-level Data API Production acquisita il 25 novembre 2026: graphql_public e public esposti, private non esposto; gate Data API soddisfatto. Restano obbligatorie riconferma del rischio backup e approvazione esplicita del proprietario legata a SHA, fingerprint, hash, progetto e finestra UTC — nessuna approvazione presente.",
     "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only. Nessuna esecuzione automatica o implicita."
   ],
   "expected_postflight": {
@@ -270,7 +270,7 @@
     "APP acceptance, Data API exposure, backup disposition or operator prerequisites are not freshly verified.",
     "No new explicit owner approval for exact final SHA, fingerprint and candidate hash exists."
   ],
-  "safety": "Production read-only verification: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. Internal technical review of source SHA 618c459b7ae9efb2e2247791d7d71e85027ae508 completed with PASS_WITH_DISCLOSED_CONFLICT; reviewer is the same ChatGPT-assisted implementation agent, explicitly NOT independent. Exact-SHA Build #4698, PostgreSQL 17 bootstrap, Baseline Safety #1541 and final authenticated QA APP-01..APP-15 #1378 all SUCCESS. QA Portal plan fixture restored successfully and QA preview teardown succeeded. APP-12 live Resend send probe remained excluded; no live email sent. Production name-level Data API evidence within the runner's 24-hour window and new explicit owner approval remain outstanding. Production remains untouched.",
+  "safety": "Production read-only verification: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. Internal technical review of source SHA 618c459b7ae9efb2e2247791d7d71e85027ae508 completed with PASS_WITH_DISCLOSED_CONFLICT; reviewer is the same ChatGPT-assisted implementation agent, explicitly NOT independent. Exact-SHA Build #4698, PostgreSQL 17 bootstrap, Baseline Safety #1541 and final authenticated QA APP-01..APP-15 #1378 all SUCCESS. QA Portal plan fixture restored successfully and QA preview teardown succeeded. APP-12 live Resend send probe remained excluded; no live email sent. Production name-level Data API evidence within the runner's 24-hour window and new explicit owner approval remain outstanding. Production remains untouched. Owner-provided Production Data API Dashboard screenshots dated 2026-11-25 at approximately 01:21-01:22 CET confirm exposed schemas graphql_public and public (2/3); private is not exposed; tables 0/48; functions 0/173; automatic new-table exposure disabled; extra search path public, extensions; max rows 1000; pool size automatic. This closes the fresh name-level Data API evidence gate only.",
   "rehearsal_evidence": {
     "status": "TECHNICAL_REHEARSAL_AND_APP_ACCEPTANCE_PASS_PENDING_PRODUCTION_DATA_API_RECONFIRMATION_AND_OWNER_APPROVAL",
     "target": "isolated PostgreSQL 17 only",
@@ -503,13 +503,19 @@
       "security_lints": 0
     },
     "data_api_exposure": {
-      "status": "RECONFIRMED_COUNT_ONLY",
+      "status": "RECONFIRMED_NAME_LEVEL_PRODUCTION_2026-11-25",
       "production_dashboard_evidence": {
-        "observed_date": "2026-11-24",
-        "observed_at_utc": "2026-11-24T21:30:39Z",
+        "observed_date": "2026-11-25",
+        "observed_local_time_window": "01:21-01:22 CET",
         "environment": "Production",
+        "project": "BETHAG",
         "branch": "main",
         "exposed_schema_count": "2/3",
+        "exposed_schemas": [
+          "graphql_public",
+          "public"
+        ],
+        "private_exposed": false,
         "exposed_tables": "0/48",
         "exposed_functions": "0/173",
         "automatic_new_table_exposure": false,
@@ -518,7 +524,8 @@
           "extensions"
         ],
         "max_rows": 1000,
-        "limitation": "The Production screenshot shows the count and settings, but not the schema names."
+        "pool_size": "automatic",
+        "evidence": "Owner-provided Supabase Dashboard screenshots in this conversation: first and second captures show Data API settings and exposure counts; third capture expands the Exposed schemas selector and visibly marks graphql_public and public as selected while private is unselected."
       },
       "prior_production_name_evidence": {
         "verified_date": "2026-11-08",
@@ -537,10 +544,10 @@
           "public"
         ],
         "private_exposed": false,
-        "note": "QA evidence is recorded separately and is not substituted for Production evidence."
+        "note": "QA evidence is retained separately and is not used as Production evidence."
       },
-      "reason": "The owner-provided Production Dashboard screenshot from 2026-11-24 reconfirms the exposed-schema count and related Data API settings. It does not display the schema names. The exact Production names are present in the earlier 2026-11-08 Production screenshot; the 2026-11-24 QA screenshot independently shows the same names for QA. Do not claim the names were visibly rechecked on Production on 2026-11-24.",
-      "gate_disposition": "Dashboard check no longer missing; exact Production names are based on the 2026-11-08 Production capture and 2026-11-24 count-only Production reconfirmation. Keep final cutover preflight fail-closed if the approved runner requires a fresh name-level Production capture."
+      "reason": "The owner-provided Production Dashboard screenshots dated 2026-11-25 now visibly show both the 2/3 count and the selected schema names. The names are directly evidenced on Production; QA evidence is not substituted.",
+      "gate_disposition": "Production Data API name-level evidence is current and satisfies the 24-hour freshness requirement at capture time. This closes only the Data API evidence gate; all other cutover gates remain independently enforced."
     },
     "scope": "Fresh read-only Production verification only. No DDL, migration, ledger or application-data writes."
   }
