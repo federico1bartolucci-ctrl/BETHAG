@@ -76,6 +76,7 @@ async function runMissingMemberScenario() {
   const body = await response.json();
   assert.equal(response.status, 409, "a zero-row member link must not produce a successful portal invitation: " + JSON.stringify(body));
   assert.equal(body.invitationSent, true, "the response must disclose that Auth invitation had already been sent");
+  assert.match(body.error, /L'invito e-mail potrebbe essere già stato inviato/);
   assert.match(body.error, /Nessun accesso al portale è stato creato/);
   assert.equal(invitedEmail, "mario@example.test", "the test must exercise the race after Auth invitation");
   assert.equal(portalPayload, undefined, "zero-row member linking must stop before portal_access upsert");
