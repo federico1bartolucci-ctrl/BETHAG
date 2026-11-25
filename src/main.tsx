@@ -13923,8 +13923,9 @@ function SubscriptionPage({
 
       <section className="pricing-grid">
         {plans.map((plan) => (
-          <article className={`pricing-card ${subscription.plan === plan.id ? "current" : ""}`} key={plan.id}>
-            {subscription.plan === plan.id && <div className="current-plan">Piano attuale</div>}
+          <article className={`pricing-card ${serverPlan === plan.id ? "current" : subscription.plan === plan.id ? "preview" : ""}`} key={plan.id}>
+            {serverPlan === plan.id && <div className="current-plan">Piano server attivo</div>}
+            {subscription.status === "Demo" && subscription.plan === plan.id && serverPlan !== plan.id && <div className="current-plan">Anteprima demo</div>}
             <div className="pricing-icon">{plan.id === "free" ? "🆓" : plan.id === "plus" ? <AppIcon name="sparkles" size={20} /> : plan.id === "professional" ? "🚀" : "👥"}</div>
             <h2>{plan.title}</h2>
             <p>{plan.description}</p>
