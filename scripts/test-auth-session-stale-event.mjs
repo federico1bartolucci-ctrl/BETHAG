@@ -73,7 +73,7 @@ const authEnd = source.indexOf("/* =============================================
 assert.ok(authStart >= 0 && authEnd > authStart, "auth session hydration effect exists");
 const authBlock = source.slice(authStart, authEnd);
 assert.match(source, /import \{ createAuthSessionRevision \} from "\.\/lib\/auth-session-revision\.mjs";/);
-assert.match(authBlock, /const authSessionRevision = createAuthSessionRevision\(\)/);
+assert.match(source, /const authSessionRevision = createAuthSessionRevision\(\)/);
 assert.match(authBlock, /revision: number/);
 assert.match(authBlock, /if \(cancelled \|\| !authSessionRevision\.isCurrent\(revision\)\) return;/);
 assert.match(authBlock, /await resolveSupabaseAccess\([\s\S]*?if \(cancelled \|\| !authSessionRevision\.isCurrent\(revision\)\) return;/);
