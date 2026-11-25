@@ -12,6 +12,7 @@ import { join, resolve } from "node:path";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { assertLiveLedgerAclEvidenceMatchesSource } from "./lib/live-ledger-acl-approval-guard.mjs";
+import { computeLiveLedgerAclReleaseFingerprint } from "./lib/live-ledger-acl-release-fingerprint.mjs";
 
 const root=resolve(fileURLToPath(new URL("..",import.meta.url)));
 const projectRef="tctcgptrsmvgajqjgnev";
@@ -22,7 +23,6 @@ const candidatePath=join(root,"supabase/rebuild/drafts",candidate);
 const preflightPath=join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql");
 const postflightPath=join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql");
 const blobSha=s=>{const t=s.replace(/\r\n/g,"\n"),b=Buffer.from(t);return createHash("sha1").update(Buffer.concat([Buffer.from("blob "+b.length+"\0"),b])).digest("hex");};
-const fingerprintSha=s=>createHash("sha256").update(s).digest("hex");
 const lit=s=>"'"+String(s).replaceAll("'","''")+"'";
 const passEscape=s=>String(s??"").replaceAll("\\","\\\\").replaceAll(":","\\:");
 
@@ -83,13 +83,7 @@ async function main(){
   exact(manifest.rehearsal_evidence?.guarded_runner,"PASS","STOP: exact 267-to-268 local guarded-runner rehearsal is not PASS in the reviewed manifest.");
   exact(manifest.rehearsal_evidence?.global_function_default_acl_regression,"PASS","STOP: global function ACL regression is not PASS in the reviewed manifest.");
 
-  const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/rebuild/drafts/"+candidate,
-    "supabase/rebuild/drafts/production-ledger-live-20261124.json",
-    "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
-    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
-  const pieces=[];
-  for(const path of paths.sort()) pieces.push(path+"\0"+(await readFile(join(root,path),"utf8")).replace(/\r\n/g,"\n")+"\0");
-  const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+approvedSource+"\0"+pieces.join(""));
+  const { fingerprint } = await computeLiveLedgerAclReleaseFingerprint({ root, sourceCommitSha: approvedSource });
   const approval=manifest.owner_authorization;
   exact(approval?.status,"RECEIVED","STOP: explicit owner authorization record is missing.");
   exact(approval?.approved_commit_sha,approvedSource,"STOP: approval does not bind this exact owner-approved source SHA.");
