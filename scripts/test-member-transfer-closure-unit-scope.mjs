@@ -22,6 +22,8 @@ function extractPublicFunction(name) {
 }
 const installmentScopeTrigger = extractPublicFunction("validate_condominium_installment_scope");
 const allocationScopeTrigger = extractPublicFunction("validate_condominium_expense_allocation_scope");
+const checkPublicRpc = extractPublicFunction("check_condominium_member_transfer_closure");
+const closePublicRpc = extractPublicFunction("close_condominium_member_transfer");
 const migrationSql = await readFile(migrationPath, "utf8");
 const marker = "CREATE OR REPLACE FUNCTION private.check_condominium_member_transfer_closure(";
 const start = baselineSql.indexOf(marker);
@@ -204,9 +206,11 @@ try {
 
   await db.exec(baselineFunction);
   await db.exec(baselineCloseFunction);
+  await db.exec(checkPublicRpc);
+  await db.exec(closePublicRpc);
   const call = async (transferId) => {
     const result = await db.query(
-      "SELECT private.check_condominium_member_transfer_closure($1::uuid) AS result",
+      "SELECT public.check_condominium_member_transfer_closure($1::uuid) AS result",
       [transferId]
     );
     return result.rows[0].result;
@@ -226,7 +230,7 @@ try {
   let baselineCloseError;
   try {
     await db.query(
-      "SELECT private.close_condominium_member_transfer($1::uuid)",
+      "SELECT public.close_condominium_member_transfer($1::uuid)",
       [ids.transfer]
     );
   } catch (error) {
@@ -280,7 +284,7 @@ try {
   assert.equal(Number(ready.open_total), 0,
     "After clearing Unit A obligations, Unit B obligations must not prevent closure.");
   const closed = await db.query(
-    "SELECT private.close_condominium_member_transfer($1::uuid) AS closed",
+    "SELECT public.close_condominium_member_transfer($1::uuid) AS closed",
     [ids.transfer]
   );
   assert.equal(closed.rows[0].closed, true);
