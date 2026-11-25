@@ -30,8 +30,9 @@ Candidate migration:
 
 - Adds `private.workspace_has_plus_plan(uuid)`, accepting only Plus, Professional and Portal.
 - Requires Plus-or-higher for communication creation, publication/content changes and recipient identity/creation.
-- Guards the SECURITY DEFINER recipient-preparation RPC.
-- Guards the public recipient-preparation and stale-recipient-reset RPCs, delegating to the existing private implementations rather than replacing them.
+- Guards recipient preparation and stale-queue recovery through SECURITY DEFINER functions in the unexposed private schema.
+- Keeps public RPC endpoints SECURITY INVOKER; they delegate to the guarded private wrappers, avoiding public SECURITY DEFINER exposure while preserving authenticated RPC access.
+- Revokes direct authenticated execution of the underlying private recipient-preparation and stale-queue implementations.
 - Keeps delivery-status/provider-field finalization and unpublishing available after downgrade, so in-flight sends and provider webhooks can complete without losing their ledger updates.
 - Keeps the candidate outside `supabase/migrations`; canonical history and Production manifests are unchanged.
 
