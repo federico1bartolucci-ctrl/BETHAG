@@ -27,6 +27,8 @@ const email = `plan-guard-${userId}@example.test`;
 const sql = `
 BEGIN;
 INSERT INTO auth.users (id, email) VALUES ('${userId}', '${email}');
+INSERT INTO public.profiles (id, full_name, email, role, active)
+VALUES ('${userId}', 'Plan Guard Regression Admin', '${email}', 'admin', true);
 INSERT INTO public.workspaces (id, name, plan) VALUES ('${workspaceId}', 'Plan guard regression', 'free');
 INSERT INTO public.workspace_members (workspace_id, user_id, role, active, permissions)
 VALUES ('${workspaceId}', '${userId}', 'admin', true, '{}'::jsonb);
