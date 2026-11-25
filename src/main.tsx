@@ -3157,18 +3157,11 @@ function App() {
 
     const applySupabaseSession = async (
       session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null,
-      revision: number,
-      source: "initialization" | "event" = "event"
+      revision: number
     ) => {
       if (cancelled || !authSessionRevision.isCurrent(revision)) return;
 
       if (!session?.user) {
-        // Ignore an early INITIAL_SESSION null event until the explicit
-        // getSession() hydration has completed. On refresh Safari/Supabase can
-        // briefly emit the event before the persisted session is available.
-        if (source === "event" && !authInitializationComplete) return;
-
-
         setSessionRole(null);
         setSessionEmail("");
         setServerCollaboratorPermissions([]);
@@ -3272,12 +3265,12 @@ function App() {
       const revision = authSessionRevision.begin();
       try {
         const { data } = await supabase.auth.getSession();
-        await applySupabaseSession(data.session, revision, "initialization");
+        await applySupabaseSession(data.session, revision);
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       } catch (error) {
         console.error("BETHAG auth session initialization failed", error);
-        await applySupabaseSession(null, revision, "initialization");
+        await applySupabaseSession(null, revision);
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       }
@@ -3285,12 +3278,12 @@ function App() {
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Ignore the transient initial null event without invalidating getSession().
-      if (!session?.user && !authInitializationComplete) return;
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore only the initial empty snapshot; a real SIGNED_OUT must invalidate pending hydration.
+      if (event === "INITIAL_SESSION" && !session?.user && !authInitializationComplete) return;
       const revision = authSessionRevision.begin();
       window.setTimeout(() => {
-        void applySupabaseSession(session, revision, "event");
+        void applySupabaseSession(session, revision);
       }, 0);
     });
 
