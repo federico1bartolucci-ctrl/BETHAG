@@ -50,26 +50,25 @@ This section supersedes the earlier safety statement about database access. The 
 ### QA
 
 - Supabase branch: `bethag-launch-qa`, project ref `jhuyhlzzydcgghrzeexn`, parent Production project `tctcgptrsmvgajqjgnev`.
-- Ledger history was reconciled against PostgreSQL statement logs, not guessed from names:
-  - `20261125161407 / require_plus_plan_for_communications` — initial entitlement SQL applied at 16:14:07 UTC.
-  - `20261125161639 / 20261125141500_require_plus_plan_for_communications` — second, revised application of the same logical entitlement candidate at 16:16:39 UTC. It still exposed the two public RPCs as SECURITY DEFINER.
-  - `20261125162259 / communications_rpc_security_invoker` — follow-up at 16:22:59 UTC that moved privileged implementations to private SECURITY DEFINER wrappers and made the public RPCs SECURITY INVOKER.
-- These are three real execution records, including two successive versions of the first logical intervention. They are not safe to delete or rewrite. The QA ledger is intentionally retained as-is; no migration was replayed during reconciliation.
-- Live PostgreSQL catalog checks:
-  - Both plan-entitlement triggers are present on `communications` and `communication_recipients`.
-  - Both public RPCs are SECURITY INVOKER; EXECUTE is granted to authenticated/service_role and denied to anon.
-  - The underlying private recipient implementations deny direct EXECUTE to authenticated and anon.
-  - The two guarded private wrappers and the plan helper are SECURITY DEFINER with empty search paths and EXECUTE granted to authenticated/service_role.
-  - `private` schema USAGE is denied to anon but granted to authenticated. The database-side `pgrst.db_schemas` setting is not exposed by the SQL interface, so the Data API exposed-schema list still requires confirmation in project API settings; do not claim this check closed yet.
-- Supabase Security Advisor returned **0 lints**.
-- QA `bethag-send-email` is ACTIVE at version 20. Retrieved deployed function bundle and compared contents byte-for-byte with the reviewed branch files: `index.ts`, `communication-send-guards.js`, and `workspace-plan-entitlement.js` all match exactly.
-- Rollback-only QA database matrix passed with no persisted fixtures:
-  - Existing Free workspace: communication content edit and new communication insert rejected.
-  - Plus, Professional and Portal: publication, recipient preparation and stale-recipient recovery succeeded.
-  - After downgrade of each paid fixture to Free: content edits and recipient identity changes rejected; unpublishing and delivery-status finalization remained allowed.
-  - Collaborator module permission `true` allowed recipient preparation; explicit `false` and absent permission were denied.
-  - All synthetic users, workspaces, condominiums, communications and recipients were rolled back. A follow-up count confirmed zero test workspaces remained.
-- No real Resend email was sent. Only the Free workspace exists as persistent QA business data; paid-plan fixtures were temporary transaction-scoped tests.
+- Four relevant QA ledger records are retained:
+  - `20261125161407 / require_plus_plan_for_communications` — initial communications entitlement SQL.
+  - `20261125161639 / 20261125141500_require_plus_plan_for_communications` — revised application of the same logical communications correction.
+  - `20261125162259 / communications_rpc_security_invoker` — public RPCs changed to SECURITY INVOKER with guarded private wrappers.
+  - `20261125164447 / 20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements` — server-managed workspace-plan trigger, applied as a required dependency after discovering that QA still allowed authenticated admins to self-upgrade.
+- The two communications applications and the SECURITY INVOKER follow-up are real PostgreSQL log executions. No ledger row was deleted or rewritten. QA ledger now contains 287 rows; latest version is `20261125164447`.
+- **Critical dependency found and corrected in QA:** before the final record above, the Free workspace admin could update `workspaces.plan` to Plus through the existing UPDATE grant and admin `FOR ALL` RLS policy. This was reproduced inside a transaction and rolled back. The communications plan trigger alone was therefore bypassable by self-upgrade.
+- The server-managed plan migration is already present on main at `supabase/rebuild/proposed-forward-migrations/20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements.sql`. It is now applied only to QA. Live catalog confirms `trg_workspace_plan_server_managed` is installed. Authenticated self-upgrade is rejected with `WORKSPACE_PLAN_SERVER_MANAGED`; `service_role` can change the plan. A rollback-only test verified both paths and confirmed the persistent workspace remains Free.
+- End-to-end QA transaction passed: Free admin could neither self-upgrade nor create a communication; after a temporary `service_role` plan change, the authenticated admin could create, publish and prepare recipients. The transaction rolled back; no workspace plan, communication or recipient data persisted, and no email was sent.
+- Rollback-only QA matrix also passed:
+  - Free: communication content edit and new communication insert denied.
+  - Plus, Professional and Portal: publication, recipient preparation and stale-queue recovery allowed.
+  - After downgrade to Free: content/recipient identity changes denied; unpublish and delivery-status finalization allowed.
+  - Collaborator permission `true` allowed recipient preparation; explicit `false` and absent permission denied.
+  - All synthetic users and business fixtures were rolled back.
+- Frontend alignment is now part of PR #473: Communications is server-managed, included from Plus upward, and cannot be unlocked through client-local add-on state. Its UI no longer advertises a standalone price until a server-owned billing entitlement exists. Creation, editing and email sending are gated by Plus; Portal publication remains gated by Portal.
+- QA `bethag-send-email` is ACTIVE at version 20. Retrieved deployed bundle matches the reviewed main-branch files byte-for-byte for `index.ts`, `communication-send-guards.js`, and `workspace-plan-entitlement.js`.
+- Both communications public RPCs are SECURITY INVOKER; direct authenticated EXECUTE on underlying private recipient implementations is revoked. Security Advisor: **0 lints**.
+- `private` schema USAGE is denied to anon and granted to authenticated (required by the SECURITY INVOKER public wrappers). The SQL interface cannot read the project's Data API exposed-schema setting, so explicit confirmation that `private` is not exposed remains an open gate.
 
 ### Production
 
@@ -105,7 +104,7 @@ This section supersedes the earlier safety statement about database access. The 
 
 ## Remaining gates
 
-1. Confirm the Data API exposed-schema list explicitly excludes `private`; current SQL catalog checks establish ACLs but cannot read the project-level exposed-schema setting.
-2. Confirm Build + PostgreSQL 17 run 45656759533 completes SUCCESS on the current code head; rerun after this documentation-only commit if needed.
-3. Review the full PR dependency chain and integrate the communications correction only through the canonical release path; keep the candidate outside `supabase/migrations` until approved.
+1. Confirm Data API exposed schemas explicitly exclude `private`.
+2. Keep the server-managed plan guard migration before the communications entitlement migration in the eventual Production promotion order; the former is a hard dependency, not an optional AI-only change.
+3. Review the full PR dependency chain and canonical migration promotion path.
 4. Keep Production unchanged until a separate explicit release go/no-go decision.
