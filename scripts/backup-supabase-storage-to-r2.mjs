@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { sourceObjectSignature } from "./storage-backup-source-signature.mjs";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand, GetBucketLifecycleConfigurationCommand } from "@aws-sdk/client-s3";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -170,12 +171,8 @@ async function main() {
   }
 
   const sourceObjectsAfter = await listAll(source, SOURCE_BUCKET);
-  const sourceSignature = (items) => items
-    .filter((item) => item.Key && !item.Key.endsWith("/"))
-    .map((item) => [item.Key, item.Size, item.ETag || null])
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  if (JSON.stringify(sourceSignature(sourceObjects)) !== JSON.stringify(sourceSignature(sourceObjectsAfter))) {
-    throw new Error("Source bucket changed during backup; no snapshot manifest was written. Retry on the next scheduled run.");
+  if (sourceObjectSignature(sourceObjects) !== sourceObjectSignature(sourceObjectsAfter)) {
+    throw new Error("Source bucket changed (key, size, ETag, or LastModified) during backup; no snapshot manifest was written. Retry on the next scheduled run.");
   }
 
   const manifest = {
