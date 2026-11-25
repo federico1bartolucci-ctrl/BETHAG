@@ -97,6 +97,12 @@ assert.match(migration, /trg_guard_communication_recipient_plan_entitlement/);
 assert.match(migration, /CREATE OR REPLACE FUNCTION public\.prepare_communication_recipients/);
 assert.match(migration, /RETURN private\.prepare_communication_recipients/);
 assert.match(migration, /RETURN private\.reset_stale_communication_recipients/);
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.prepare_communication_recipients[\s\S]*?SECURITY DEFINER/);
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.reset_stale_communication_recipients[\s\S]*?SECURITY DEFINER/);
+assert.match(migration, /REVOKE EXECUTE ON FUNCTION private\.prepare_communication_recipients\(uuid\) FROM PUBLIC, anon, authenticated/);
+assert.match(migration, /REVOKE EXECUTE ON FUNCTION private\.reset_stale_communication_recipients\(uuid, interval\) FROM PUBLIC, anon, authenticated/);
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.prepare_communication_recipients\(uuid\) TO authenticated/);
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.reset_stale_communication_recipients\(uuid, interval\) TO authenticated/);
 assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.prepare_communication_recipients/,
   "The plan guard must not overwrite the independent recipient retry/idempotency implementation.");
 assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION private\.reset_stale_communication_recipients/,
