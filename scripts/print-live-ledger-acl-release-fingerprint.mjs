@@ -11,10 +11,10 @@ const checkedOutSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "ut
 assert.equal(checkedOutSha, sourceCommitSha,
   "Fingerprint must be calculated from a clean checkout of the exact source SHA to be approved.");
 const dirty = execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim();
-const unexpectedDirty = dirty.split("\n").filter(Boolean).filter((entry) =>
+const unexpectedDirty = dirty.split(/\r?\n/).filter(Boolean).filter((entry) =>
   entry !== "?? node_modules/" && entry !== "?? package-lock.json");
 assert.equal(unexpectedDirty.length, 0,
-  "Fingerprint calculation requires a clean Git worktree; generated node_modules/package-lock artifacts are ignored.");
+  "Fingerprint calculation requires a clean Git worktree; unexpected changes: " + JSON.stringify(unexpectedDirty));
 
 const result = await computeLiveLedgerAclReleaseFingerprint({
   root: resolve("."),
