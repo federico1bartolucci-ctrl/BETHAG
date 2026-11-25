@@ -5,7 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 const baselineSql = await readFile("supabase/migrations/20261017000003_bethag_baseline_functions.sql", "utf8");
 const marker = "CREATE OR REPLACE FUNCTION public.preview_condominium_member_transfer(";
 const baselineStart = baselineSql.indexOf(marker);
-const baselineEnd = baselineSql.indexOf("\\n;\\n", baselineStart) + 3;
+const baselineEnd = baselineSql.indexOf("\n;\n", baselineStart) + 3;
 assert.ok(baselineStart >= 0 && baselineEnd > baselineStart, "The exact baseline preview function must be present.");
 const baselineFunction = baselineSql.slice(baselineStart, baselineEnd);
 
