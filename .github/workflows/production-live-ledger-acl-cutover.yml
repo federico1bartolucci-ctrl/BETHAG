@@ -1,0 +1,80 @@
+name: BETHAG Production live-ledger ACL cutover
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit_sha:
+        description: "Exact manifest-only approval commit to execute"
+        required: true
+        type: string
+      approved_source_commit_sha:
+        description: "Exact QA-tested source SHA bound to owner approval"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bethag-production-live-ledger-acl-cutover
+  cancel-in-progress: false
+
+jobs:
+  apply-live-ledger-acl:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    environment:
+      name: bethag-production-cutover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate exact approved commit and switch to it
+        env:
+          EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit_sha }}
+          APPROVED_SOURCE_SHA: ${{ inputs.approved_source_commit_sha }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$EXPECTED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "expected_commit_sha must be a full lowercase 40-character SHA"
+            exit 1
+          fi
+          if ! [[ "$APPROVED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "approved_source_commit_sha must be a full lowercase 40-character SHA"
+            exit 1
+          fi
+          test "$GITHUB_REF" = "refs/heads/main"
+          git fetch --no-tags origin "$EXPECTED_COMMIT_SHA"
+          git cat-file -e "$EXPECTED_COMMIT_SHA^{commit}"
+          git checkout --detach "$EXPECTED_COMMIT_SHA"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          echo "Requested execution SHA: $EXPECTED_COMMIT_SHA"
+          echo "Checked-out execution SHA: $ACTUAL_SHA"
+          test "$ACTUAL_SHA" = "$EXPECTED_COMMIT_SHA"
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Execute the fail-closed 267-to-268 Production runner
+        env:
+          BETHAG_LIVE_LEDGER_PRODUCTION_APPLY: "YES"
+          BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION: "YES"
+          BETHAG_PRODUCTION_PROJECT_REF: "tctcgptrsmvgajqjgnev"
+          BETHAG_EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit_sha }}
+          BETHAG_APPROVED_SOURCE_COMMIT_SHA: ${{ inputs.approved_source_commit_sha }}
+          DATABASE_URL: ${{ secrets.BETHAG_PRODUCTION_DATABASE_URL }}
+        run: node scripts/apply-live-ledger-acl-production.mjs
