@@ -90,8 +90,10 @@ function assertPlanGate(startMarker, endMarker, expectedCall) {
   const start = mainSource.indexOf(startMarker);
   const end = mainSource.indexOf(endMarker, start + startMarker.length);
   assert.ok(start >= 0 && end > start, "Missing UI action section: " + startMarker);
+  const normalizedSection = mainSource.slice(start, end).replace(/\s+/g, " ");
+  const normalizedCall = expectedCall.replace(/\s+/g, " ");
   assert.ok(
-    mainSource.slice(start, end).includes(expectedCall),
+    normalizedSection.includes(normalizedCall),
     "Missing expected plan entitlement gate in " + startMarker,
   );
 }
