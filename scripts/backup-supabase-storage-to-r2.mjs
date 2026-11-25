@@ -96,6 +96,15 @@ async function main() {
     throw new Error("R2 lifecycle gate failed: require snapshots expiration >=31 days and objects expiration >=60 days. No backup was written.");
   }
   const sourceObjects = await listAll(source, SOURCE_BUCKET);
+  const existingBlobObjects = await listAll(destination, destinationBucket, DESTINATION_PREFIX + "objects/");
+  const blobsByHash = new Map();
+  for (const item of existingBlobObjects) {
+    const match = item.Key?.match(/^backups\/objects\/([a-f0-9]{64})\//);
+    if (!match) continue;
+    const group = blobsByHash.get(match[1]) || [];
+    group.push(item);
+    blobsByHash.set(match[1], group);
+  }
   const snapshotId = new Date().toISOString().replace(/[-:.]/g, "").replace("T", "-").replace("Z", "Z");
   const now = Date.now();
   const manifestObjects = [];
@@ -111,7 +120,7 @@ async function main() {
     }
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const blobPrefix = DESTINATION_PREFIX + "objects/" + sha256 + "/";
-    const candidates = await listAll(destination, destinationBucket, blobPrefix);
+    const candidates = blobsByHash.get(sha256) || [];
     const recent = candidates
       .filter((item) => item.Key && item.LastModified &&
         now - new Date(item.LastModified).getTime() < BLOB_REFRESH_SECONDS)
@@ -138,6 +147,9 @@ async function main() {
         throw new Error("New R2 blob failed SHA-256/size metadata verification for " + blobKey);
       }
       copied += 1;
+      const group = blobsByHash.get(sha256) || [];
+      group.push({ Key: blobKey, LastModified: new Date() });
+      blobsByHash.set(sha256, group);
     }
 
     manifestObjects.push({
@@ -155,6 +167,15 @@ async function main() {
       expires: result.Expires?.toISOString?.() || null,
       metadata: result.Metadata || {}
     });
+  }
+
+  const sourceObjectsAfter = await listAll(source, SOURCE_BUCKET);
+  const sourceSignature = (items) => items
+    .filter((item) => item.Key && !item.Key.endsWith("/"))
+    .map((item) => [item.Key, item.Size, item.ETag || null])
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  if (JSON.stringify(sourceSignature(sourceObjects)) !== JSON.stringify(sourceSignature(sourceObjectsAfter))) {
+    throw new Error("Source bucket changed during backup; no snapshot manifest was written. Retry on the next scheduled run.");
   }
 
   const manifest = {
