@@ -523,9 +523,9 @@ const ADDON_PRICES: Record<AddonId, string> = {
   assemblee: "4,90 €/mese",
   fornitori: "1,90 €/mese",
   attivita: "1,90 €/mese",
-  comunicazioni: "2,90 €/mese",
-  ai: "5,90 €/mese",
-  portale: "6,90 €/mese",
+  comunicazioni: "Incluso da Plus",
+  ai: "Incluso da Professional",
+  portale: "Incluso da Portal",
 };
 
 const ADDON_REQUIRED_PLAN: Record<AddonId, PlanId> = {
@@ -7263,7 +7263,7 @@ function App() {
       return true;
     }
 
-    const addonText = addon
+    const addonText = addon && !isServerManagedAddon(addon)
       ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
       : "";
 
@@ -13924,8 +13924,10 @@ function SubscriptionPage({
             const serverManaged = isServerManagedAddon(addon);
             const unlocked = !serverManaged && hasAddon(subscription, addon);
             const serverManagedDescription = addon === "ai"
-              ? "Le funzioni AI sono autorizzate dal piano verificato dal server; l'attivazione singola non è disponibile."
-              : "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile.";
+              ? "Le funzioni AI richiedono un piano Professional o superiore verificato dal server; l'attivazione singola non è disponibile."
+              : addon === "portale"
+                ? "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile."
+                : "Le Comunicazioni richiedono un piano Plus o superiore verificato dal server; l'attivazione singola non è disponibile finché non esiste un entitlement add-on verificabile.";
             return (
               <article className="addon-card" key={addon}>
                 <div className="addon-card-top">
