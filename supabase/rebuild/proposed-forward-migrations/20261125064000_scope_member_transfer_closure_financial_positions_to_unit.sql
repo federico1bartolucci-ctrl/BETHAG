@@ -12,6 +12,7 @@ declare
   v_workspace uuid;
   v_condominium uuid;
   v_unit uuid;
+  v_primary_outgoing_id uuid;
   v_outgoing_ids uuid[];
   v_status text;
   v_scope text;
@@ -29,6 +30,7 @@ begin
          t.unit_id,
          t.status,
          coalesce(t.data->>'transfer_scope', 'whole_property'),
+         t.outgoing_member_id,
          case
            when jsonb_typeof(t.data->'outgoing_member_ids') = 'array'
              then coalesce(
@@ -37,12 +39,21 @@ begin
            )
            else array[t.outgoing_member_id]
          end
-    into v_workspace, v_condominium, v_unit, v_status, v_scope, v_outgoing_ids
+    into v_workspace, v_condominium, v_unit, v_status, v_scope, v_primary_outgoing_id, v_outgoing_ids
   from public.condominium_member_transfers t
   where t.id = p_transfer_id;
 
   if v_workspace is null then
     raise exception 'TRANSFER_NOT_FOUND';
+  end if;
+
+  if v_primary_outgoing_id is null then
+    raise exception 'TRANSFER_OUTGOING_MEMBER_REQUIRED';
+  end if;
+  if v_outgoing_ids is null then
+    v_outgoing_ids := array[v_primary_outgoing_id];
+  elsif not (v_primary_outgoing_id = any(v_outgoing_ids)) then
+    v_outgoing_ids := array_prepend(v_primary_outgoing_id, v_outgoing_ids);
   end if;
 
   if not private.can_manage_workspace_module(v_workspace, 'condomini') then
@@ -130,20 +141,23 @@ CREATE OR REPLACE FUNCTION private.close_condominium_member_transfer(p_transfer_
  SET search_path TO ''
 AS $function$
 declare
-  v_workspace uuid; v_condominium uuid; v_unit uuid; v_outgoing_ids uuid[]; v_transfer_status text; v_scope text;
+  v_workspace uuid; v_condominium uuid; v_unit uuid; v_primary_outgoing_id uuid; v_outgoing_ids uuid[]; v_transfer_status text; v_scope text;
   v_open_installments numeric; v_open_allocations numeric; v_open_carryovers numeric; v_open_unit_carryovers numeric; v_outgoing_id uuid; v_out_data jsonb;
 begin
   if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
-  select t.workspace_id,t.condominium_id,t.unit_id,t.status,coalesce(t.data->>'transfer_scope','whole_property'),
+  select t.workspace_id,t.condominium_id,t.unit_id,t.status,coalesce(t.data->>'transfer_scope','whole_property'),t.outgoing_member_id,
          case when jsonb_typeof(t.data->'outgoing_member_ids')='array'
               then coalesce(
              (select array_agg(value::uuid) from jsonb_array_elements_text(t.data->'outgoing_member_ids')),
              array[t.outgoing_member_id]
            )
               else array[t.outgoing_member_id] end
-    into v_workspace,v_condominium,v_unit,v_transfer_status,v_scope,v_outgoing_ids
+    into v_workspace,v_condominium,v_unit,v_transfer_status,v_scope,v_primary_outgoing_id,v_outgoing_ids
   from public.condominium_member_transfers t where t.id=p_transfer_id for update;
   if v_workspace is null or not private.can_manage_workspace_module(v_workspace,'condomini') then raise exception 'FORBIDDEN'; end if;
+  if v_primary_outgoing_id is null then raise exception 'TRANSFER_OUTGOING_MEMBER_REQUIRED'; end if;
+  if v_outgoing_ids is null then v_outgoing_ids:=array[v_primary_outgoing_id];
+  elsif not (v_primary_outgoing_id=any(v_outgoing_ids)) then v_outgoing_ids:=array_prepend(v_primary_outgoing_id,v_outgoing_ids); end if;
   if v_transfer_status<>'Confermato' then raise exception 'TRANSFER_NOT_OPEN'; end if;
   if v_scope='ownership_share' then raise exception 'TRANSFER_QUOTA_NOT_CLOSABLE'; end if;
   select coalesce(sum(i.amount-i.paid_amount),0) into v_open_installments from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and i.member_id=any(v_outgoing_ids) and (i.unit_id is null or i.unit_id=v_unit) and i.amount-i.paid_amount>0.005;
