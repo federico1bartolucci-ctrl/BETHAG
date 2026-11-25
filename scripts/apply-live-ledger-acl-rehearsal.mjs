@@ -25,8 +25,12 @@ const snapshot = JSON.parse(await readFile(join(root,"supabase/rebuild/drafts/pr
 const item = manifest.sequence?.[0];
 const preflight = await readFile(join(root,"supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql"),"utf8");
 const postflight = await readFile(join(root,"supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"),"utf8");
-assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
-assert.equal(manifest.production_apply_authorized,false);
+const manifestApproved = manifest.status === "APPROVED_FOR_PRODUCTION_CUTOVER";
+assert.ok(manifestApproved || manifest.status === "DRAFT_NOT_APPROVED", "Unsupported live-ledger proposal status.");
+assert.equal(manifest.production_apply_authorized, manifestApproved,
+  "Manifest authorization flag must match its explicit approval status.");
+assert.equal(manifest.approval_scope, manifestApproved ? "LIVE_LEDGER_ACL_267_TO_268" : "NONE",
+  "Manifest approval scope must match its explicit approval status.");
 assert.equal(snapshot.count,267);
 assert.equal(snapshot.migrations.length,267);
 assert.equal(snapshot.head.version,"20261105050000");
