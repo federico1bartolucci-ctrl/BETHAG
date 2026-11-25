@@ -37,11 +37,20 @@ assert.match(mainSource, /comunicazioni: "Incluso da Plus"/);
 assert.match(mainSource, /addon && !isServerManagedAddon\(addon\)/);
 assert.match(mainSource, /Le Comunicazioni sono comprese nel piano Plus e nei piani superiori/);
 assert.match(mainSource, /requirePlan\("plus", "L\x27invio delle comunicazioni", "comunicazioni"\)/);
-assert.match(mainSource, /const prepareCondominiumEmail = async[\s\S]*?requirePlan\\("plus", "L'invio delle comunicazioni", "comunicazioni"\\)/);
-assert.match(mainSource, /const saveCommunication = [\s\S]*?requirePlan\\("plus", "La gestione delle comunicazioni", "comunicazioni"\\)/);
-assert.match(mainSource, /const editCommunication = [\s\S]*?requirePlan\\("plus", "La modifica delle comunicazioni", "comunicazioni"\\)/);
-assert.match(mainSource, /const newCommunication = [\s\S]*?requirePlan\\("plus", "La creazione delle comunicazioni", "comunicazioni"\\)/);
-assert.match(mainSource, /const openCondominiumEmailComposer = [\s\S]*?requirePlan\\("plus", "L'invio delle comunicazioni", "comunicazioni"\\)/);
+const gatedEntryPoints = [
+  ["const prepareCondominiumEmail = async", 'requirePlan("plus", "L\'invio delle comunicazioni", "comunicazioni")'],
+  ["const saveCommunication =", 'requirePlan("plus", "La gestione delle comunicazioni", "comunicazioni")'],
+  ["const editCommunication =", 'requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")'],
+  ["const newCommunication =", 'requirePlan("plus", "La creazione delle comunicazioni", "comunicazioni")'],
+  ["const openCondominiumEmailComposer =", 'requirePlan("plus", "L\'invio delle comunicazioni", "comunicazioni")'],
+];
+for (const [entryPoint, gate] of gatedEntryPoints) {
+  const start = mainSource.indexOf(entryPoint);
+  assert.notEqual(start, -1, entryPoint + " must exist");
+  const next = mainSource.indexOf("\n  const ", start + entryPoint.length);
+  const block = mainSource.slice(start, next === -1 ? undefined : next);
+  assert.ok(block.includes(gate), entryPoint + " must enforce the Plus entitlement");
+}
 
 console.log("PASS UI entitlement runtime: local AI, Portal and Communications add-ons cannot unlock server-managed features.");
 console.log("PASS Plus, Professional and Portal plans include Communications; Free cannot unlock it with client-local add-on state.");
