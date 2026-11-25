@@ -95,12 +95,13 @@ This section supersedes the earlier safety statement about database access. The 
 
 ### Latest CI
 
-- Final reviewed head: `b2acddb245a7421d16df599fd0ed4e641ea43f5f`.
-- Baseline Safety run [45657042267](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657042267): **SUCCESS**.
-- Build + PostgreSQL 17 run [45657042126](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657042126): **SUCCESS**.
-- Both runs validate the final PR head, including the cross-plan UI entitlement regression assertions, migration-baseline/ACL safety, clean PostgreSQL 17 bootstrap, Vite build and browser smoke.
-- Earlier intermediate attempts failed because the new regression script's source-boundary assertion was too broad; the test was narrowed to explicit function boundaries and the final head passed both workflows.
-- The latest CI test now covers the Free/Plus UI gate and prevents local-only Communications add-on activation.
+- Code head containing all application and regression-test changes: `bb6c390fb7170d105fa7d7e8fd20d2082890da24`.
+- Final audit/documentation head before this CI record: `ad8896d653988578473634cc1a802fd9a137fe05`.
+- Build + PostgreSQL 17 run [45657730999](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657730999): **SUCCESS**.
+- Baseline Safety run [45657731067](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657731067): **SUCCESS**.
+- Verified Edge Function type-check, communication authorization/publication guards, migration baseline/ACL safety, clean PostgreSQL 17 bootstrap, 28-migration clean-install rehearsal, 19-migration canonical rehearsal, Vite build and isolated browser smoke.
+- The successful baseline job also runs `npm test`, including the server-managed Communications add-on and Plus action-gate regression assertions.
+- Earlier intermediate attempts exposed test-assertion mistakes; those assertions were corrected and the final code head passed all checks.
 
 ## Remaining gates
 
