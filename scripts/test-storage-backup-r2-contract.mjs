@@ -42,4 +42,13 @@ assert.match(runbook, /25 days/);
 assert.match(runbook, /QA changes, or Production application changes/);
 assert.match(runbook, /does not create a bucket/);
 
+
+const backupJobGate = workflow.match(/^    if: (.+)$/m)?.[1] || "";
+assert.match(backupJobGate, /github\.event_name == 'schedule'/);
+assert.match(backupJobGate, /github\.ref == 'refs\/heads\/main'/);
+assert.match(backupJobGate, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
+assert.doesNotMatch(workflow, /^        if: vars\.STORAGE_BACKUP_ENABLED/m);
+assert.match(runbook, /repository-level Actions variable `STORAGE_BACKUP_ENABLED`/);
+assert.doesNotMatch(runbook, /Environment variable `STORAGE_BACKUP_ENABLED`/);
+
 console.log("PASS: BETHAG Storage backup safety contract");
