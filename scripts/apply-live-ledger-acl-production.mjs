@@ -56,12 +56,8 @@ async function main(){
   execFileSync("git",["cat-file","-e",approvedSource+"^{commit}"],{cwd:root,stdio:"ignore"});
   execFileSync("git",["merge-base","--is-ancestor",approvedSource,expected],{cwd:root,stdio:"ignore"});
   const postApprovalChanges=execFileSync("git",["diff","--name-only",approvedSource+".."+expected],{cwd:root,encoding:"utf8"}).trim().split("\n").filter(Boolean);
-  const approvedDocumentationPaths = new Set([
-    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json",
-    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.md"
-  ]);
-  assert.ok(postApprovalChanges.every(path=>approvedDocumentationPaths.has(path)),
-    "STOP: only the owner-approval manifest and its reviewed runbook may change after the approved source SHA.");
+  assert.ok(postApprovalChanges.every(path=>path==="supabase/rebuild/drafts/production-migration-cutover-live-20261124.json"),
+    "STOP: only the explicit owner-approval manifest may change after the approved source SHA.");
 
   const [manifest,snapshot,sql,preflight,postflight]=await Promise.all([
     readFile(manifestPath,"utf8").then(JSON.parse),readFile(snapshotPath,"utf8").then(JSON.parse),
@@ -90,8 +86,7 @@ async function main(){
   const paths=["scripts/apply-live-ledger-acl-production.mjs","scripts/lib/live-ledger-acl-approval-guard.mjs","supabase/rebuild/drafts/"+candidate,
     "supabase/rebuild/drafts/production-ledger-live-20261124.json",
     "supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql",
-    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql",
-    "supabase/rebuild/drafts/production-migration-cutover-live-20261124.md"];
+    "supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql"];
   const pieces=[];
   for(const path of paths.sort()) pieces.push(path+"\0"+(await readFile(join(root,path),"utf8")).replace(/\r\n/g,"\n")+"\0");
   const fingerprint=fingerprintSha("BETHAG-LIVE-LEDGER-ACL-267-TO-268\0"+approvedSource+"\0"+pieces.join(""));
@@ -101,12 +96,9 @@ async function main(){
   exact(approval?.approved_release_fingerprint,fingerprint,"STOP: approval does not bind this exact release fingerprint.");
   exact(approval?.approved_target_project_ref,projectRef,"STOP: approval does not bind the exact Production project.");
   assert.ok(approval?.approved_by&&approval?.approval_reference,"STOP: approval must identify approver and evidence reference.");
-  exact(approval?.technical_review?.status,"PASS_WITH_DISCLOSED_CONFLICT","STOP: internal technical review must pass with its non-independence disclosed.");
-  exact(approval?.technical_review?.review_type,"INTERNAL_SELF_REVIEW","STOP: review must be classified as an internal self-review.");
-  exact(approval?.technical_review?.independent,false,"STOP: internal review must not be represented as independent.");
-  exact(approval?.technical_review?.conflict_disclosed,true,"STOP: non-independent review limitation must be disclosed.");
-  assert.ok(approval?.technical_review?.reviewer&&approval?.technical_review?.evidence_reference,
-    "STOP: internal technical review must identify its author and evidence.");
+  exact(approval?.independent_technical_review?.status,"PASS","STOP: independent technical review is not recorded as PASS.");
+  assert.ok(approval?.independent_technical_review?.reviewer&&approval?.independent_technical_review?.evidence_reference,
+    "STOP: independent technical review must identify reviewer and evidence.");
   exact(approval?.ci_tested_commit_sha,approvedSource,"STOP: Build/Baseline/PostgreSQL CI evidence must cover the exact approved source SHA.");
   exact(approval?.ci_build_status,"success","STOP: Build CI is not SUCCESS.");
   assert.ok(approval?.ci_build_run_reference,"STOP: Build CI run reference is missing.");
@@ -127,6 +119,8 @@ async function main(){
     "STOP: Production Data API exposure evidence must be timestamped within the last 24 hours.");
   exact(approval?.residual_backup_risk_reconfirmed,true,"STOP: residual physical-restore risk has not been explicitly reconfirmed.");
   assert.ok(approval?.residual_backup_risk_evidence_reference,"STOP: residual backup-risk reconfirmation evidence is missing.");
+  assert.notEqual(approval?.independent_technical_review?.reviewer,approval?.approved_by,
+    "STOP: independent technical reviewer must be distinct from the owner approver.");
   assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
   assert.match(approval?.approved_window_start_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window start must be an explicit UTC timestamp.");
   assert.match(approval?.approved_window_end_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window end must be an explicit UTC timestamp.");

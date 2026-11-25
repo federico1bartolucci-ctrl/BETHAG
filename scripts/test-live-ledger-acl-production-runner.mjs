@@ -37,12 +37,6 @@ assert.match(runner,/exactLedgerPostGuard/);
 assert.match(runner,/historical version\/name pairs changed during the transaction/);
 assert.match(approvalGuard,/qa_tested_commit_sha/);
 assert.match(approvalGuard,/reviewed_commit_sha/);
-assert.match(approvalGuard,/technical_review/);
-assert.match(approvalGuard,/conflict_disclosed/);
-assert.match(runner,/PASS_WITH_DISCLOSED_CONFLICT/);
-assert.match(runner,/INTERNAL_SELF_REVIEW/);
-assert.match(runner,/conflict_disclosed/);
-assert.doesNotMatch(runner,/independent_technical_review/);
 assert.doesNotMatch(runner,/\bapply_migration\s*\(/i);
 assert.doesNotMatch(runner,/\b(?:DELETE|UPDATE)\s+FROM\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner,/DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);
@@ -67,9 +61,6 @@ assert.equal(manifest.clean_install?.migration_file_count,28,
   "Canonical Supabase CLI inventory must remain at 28 while the live proposal is unapproved.");
 assert.equal(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS",
   "Separate PostgreSQL 17 rehearsal of the draft candidate is required.");
-assert.match(runner,/approvedDocumentationPaths/);
-assert.ok(runner.includes("production-migration-cutover-live-20261124.md"));
-assert.match(runner,/reviewed runbook may change after the approved source SHA/);
 assert.match(runner,/candidatePath=join\(root,"supabase\/rebuild\/drafts",candidate\)/,
   "Production runner must read the candidate from the non-deployable drafts directory.");
 assert.doesNotMatch(runner,/candidatePath=join\(root,"supabase\/migrations",candidate\)/,
