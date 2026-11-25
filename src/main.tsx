@@ -8274,9 +8274,6 @@ function App() {
               setProfile={
                 setProfile
               }
-              subscription={
-                subscription
-              }
               serverPlan={serverWorkspacePlan}
               portalMembers={
                 portalMembers
@@ -14646,7 +14643,6 @@ function DeleteAccountCard() {
 function ProfilePage({
   profile,
   setProfile,
-  subscription,
   serverPlan,
   portalMembers,
   isAdministrator = false,
