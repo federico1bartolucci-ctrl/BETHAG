@@ -120,7 +120,7 @@ await assert.rejects(
 
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
-assert.match(script, /import \{ listAllStorageObjects \} from "\.\/storage-backup-list-all\.mjs"/);
+assert.ok(script.includes('import { listAllStorageObjects } from "./storage-backup-list-all.mjs";'));
 assert.equal((script.match(/listAllStorageObjects\(/g) || []).length, 3,
   "source, destination and source-recheck inventories must all use the fail-closed paginator");
 assert.ok(packageJson.scripts.test.includes("test-storage-backup-list-pagination.mjs"),
