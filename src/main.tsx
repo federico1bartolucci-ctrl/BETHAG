@@ -8241,6 +8241,7 @@ function App() {
               setSubscription={
                 setSubscription
               }
+              serverPlan={serverWorkspacePlan}
               isAdministrator={isAdministrator}
             />
           )}
@@ -13863,10 +13864,12 @@ function HelpPage({
 function SubscriptionPage({
   subscription,
   setSubscription,
+  serverPlan,
   isAdministrator = false,
 }: {
   subscription: Subscription;
   setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
+  serverPlan: PlanId;
   isAdministrator?: boolean;
 }) {
   const plans = [
@@ -13898,18 +13901,21 @@ function SubscriptionPage({
     }));
   };
 
-  const isIncluded = (addon: AddonId) => hasFeature(subscription.plan, ADDON_REQUIRED_PLAN[addon]);
+  const isIncluded = (addon: AddonId) =>
+    hasFeature(isServerManagedAddon(addon) ? serverPlan : subscription.plan, ADDON_REQUIRED_PLAN[addon]);
 
   return (
     <>
       <PageHeader eyebrow="Modello di servizio" title="Piano e upgrade" />
       <section className="subscription-current">
         <div>
-          <span className="eyebrow">Piano attuale</span>
+          <span className="eyebrow">{subscription.status === "Demo" ? "Anteprima struttura" : "Piano selezionato"}</span>
           <h2>{PLAN_NAMES[subscription.plan]}</h2>
           <p>{PLAN_DESCRIPTIONS[subscription.plan]}</p>
         </div>
         <div className="subscription-current-right">
+          <span className="eyebrow">Piano registrato sul server</span>
+          <strong>{PLAN_NAMES[serverPlan]}</strong>
           <Badge value={subscription.status} />
           {getClientUnlockedAddons(subscription).length > 0 && <span className="badge">{getClientUnlockedAddons(subscription).length} sblocc{getClientUnlockedAddons(subscription).length === 1 ? "o" : "hi"} singol{getClientUnlockedAddons(subscription).length === 1 ? "o" : "i"}</span>}
         </div>
@@ -13924,7 +13930,9 @@ function SubscriptionPage({
             <p>{plan.description}</p>
             <ul>{plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul>
             <button className={subscription.plan === plan.id ? "secondary-button" : "primary-button"} onClick={() => activateDemo(plan.id)}>
-              {subscription.plan === plan.id ? "Piano attivo" : "Prova struttura"}
+              {subscription.plan === plan.id
+                ? serverPlan === plan.id ? "Piano server attivo" : "Anteprima attiva"
+                : "Prova struttura"}
             </button>
           </article>
         ))}
