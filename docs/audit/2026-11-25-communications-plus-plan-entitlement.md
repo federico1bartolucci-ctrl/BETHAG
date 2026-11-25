@@ -69,7 +69,7 @@ This section supersedes the earlier safety statement about database access. The 
 
 ### CI evidence
 
-- PR head: `c4f3f5b6740bb28a6f2e00a4eb76b166185617c3`.
+- Code-validation head: `c4f3f5b6740bb28a6f2e00a4eb76b166185617c3`. The subsequent commit `b39897eed5927bf99b0554efa72765d029c72835` changes audit documentation only.
 - Build run [45652940372](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45652940372): SUCCESS, including all Edge Function type-checks, communication authorization/publication guards, PostgreSQL 17 bootstrap and clean-install rehearsals.
 - Baseline safety run [45652938868](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45652938868): SUCCESS.
 - PR remains Draft and unmerged. The candidate remains outside `supabase/migrations`; canonical Production history and manifests are unchanged.
