@@ -2,24 +2,25 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const workflow = await readFile(".github/workflows/qa-final-collaudo.yml", "utf8");
+const lines = workflow.split(/\r?\n/).map(line => line.trim());
 
-assert.doesNotMatch(workflow, /^  pull_request:/m,
+assert.ok(!lines.includes("pull_request:"),
   "Authenticated final QA must not run automatically on pull requests.");
-assert.match(workflow, /^  workflow_dispatch:/m,
+assert.ok(lines.includes("workflow_dispatch:"),
   "Final QA must remain explicitly dispatchable when separately authorized.");
-assert.match(workflow, /^      target_ref:/m,
+assert.ok(lines.includes("target_ref:"),
   "Manual Final QA must require an exact target SHA.");
-assert.match(workflow, /^        required: true$/m,
+assert.ok(lines.includes("required: true"),
   "Manual Final QA target SHA must be required.");
-assert.doesNotMatch(workflow, /^        default:/m,
+assert.ok(!lines.some(line => line.startsWith("default:")),
   "Manual Final QA must not silently select a stale default SHA.");
-assert.match(workflow, /^    if: github\\.event_name == 'workflow_dispatch'$/m,
+assert.ok(workflow.includes("if: github.event_name == 'workflow_dispatch'"),
   "The Final QA job must be gated to explicit manual dispatch.");
-assert.match(workflow, /^          ref: \\$\\{\\{ inputs\\.target_ref \\}\\}$/m,
+assert.ok(workflow.includes("ref: ${{ inputs.target_ref }}"),
   "Final QA must check out the exact operator-supplied SHA.");
-assert.match(workflow, /test "\\$ACTUAL_SHA" = "\\$EXPECTED_SHA"/,
+assert.ok(workflow.includes('test "$ACTUAL_SHA" = "$EXPECTED_SHA"'),
   "Final QA must verify the checked-out SHA before running authenticated tests.");
-assert.doesNotMatch(workflow, /github\\.head_ref/,
+assert.ok(!workflow.includes("github.head_ref"),
   "A pull-request branch name must not activate the shared QA workflow.");
 
 console.log(JSON.stringify({
