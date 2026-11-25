@@ -413,7 +413,26 @@
       "conflict_disclosed": true,
       "reviewed_commit_sha": "618c459b7ae9efb2e2247791d7d71e85027ae508",
       "reviewer": "ChatGPT (same implementation agent; not independent)",
-      "evidence_reference": "supabase/rebuild/drafts/internal-technical-review-live-ledger-acl.md"
+      "evidence_reference": "supabase/rebuild/drafts/production-migration-cutover-live-20261124.json#review_disposition.internal_review",
+      "scope": [
+        "candidate migration and PostgreSQL default-privilege semantics",
+        "Production preflight and postflight invariants",
+        "forward-only Production runner, exact 267-pair ledger guard, transaction, advisory lock, TLS and approval gates",
+        "local-only PostgreSQL 17 rehearsal and ACL regression tests",
+        "exact-source QA and CI evidence"
+      ],
+      "findings": [
+        "No blocking defect identified in the reviewed scope.",
+        "Existing function ACLs and Supabase-managed role defaults are not modified by the candidate.",
+        "Intentional storage schema-specific EXECUTE defaults are guarded before and after the proposed transaction.",
+        "Production runner fails closed without exact owner approval and validates historical ledger preservation."
+      ],
+      "limitations": [
+        "This review is not independent: the same ChatGPT-assisted implementation agent contributed to the implementation and performed the review.",
+        "Production Data API schema-name evidence is not fresh enough for the runner's 24-hour gate.",
+        "Provider-managed physical restore remains untested; the residual risk was previously accepted and must be reconfirmed.",
+        "No new owner approval exists; Production apply remains unauthorized."
+      ]
     },
     "limitation": "No external reviewer is available. The internal review was performed by the same ChatGPT-assisted implementation agent that prepared the change; it is not an independent review and must never be represented as such. It does not replace the separate owner approval or any Production preflight gate."
   },
