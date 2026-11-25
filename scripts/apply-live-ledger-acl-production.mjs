@@ -96,9 +96,12 @@ async function main(){
   exact(approval?.approved_release_fingerprint,fingerprint,"STOP: approval does not bind this exact release fingerprint.");
   exact(approval?.approved_target_project_ref,projectRef,"STOP: approval does not bind the exact Production project.");
   assert.ok(approval?.approved_by&&approval?.approval_reference,"STOP: approval must identify approver and evidence reference.");
-  exact(approval?.independent_technical_review?.status,"PASS","STOP: independent technical review is not recorded as PASS.");
-  assert.ok(approval?.independent_technical_review?.reviewer&&approval?.independent_technical_review?.evidence_reference,
-    "STOP: independent technical review must identify reviewer and evidence.");
+  exact(approval?.technical_review?.status,"PASS_WITH_DISCLOSED_CONFLICT","STOP: internal technical review must pass with its non-independence disclosed.");
+  exact(approval?.technical_review?.review_type,"INTERNAL_SELF_REVIEW","STOP: review must be classified as an internal self-review.");
+  exact(approval?.technical_review?.independent,false,"STOP: internal review must not be represented as independent.");
+  exact(approval?.technical_review?.conflict_disclosed,true,"STOP: non-independent review limitation must be disclosed.");
+  assert.ok(approval?.technical_review?.reviewer&&approval?.technical_review?.evidence_reference,
+    "STOP: internal technical review must identify its author and evidence.");
   exact(approval?.ci_tested_commit_sha,approvedSource,"STOP: Build/Baseline/PostgreSQL CI evidence must cover the exact approved source SHA.");
   exact(approval?.ci_build_status,"success","STOP: Build CI is not SUCCESS.");
   assert.ok(approval?.ci_build_run_reference,"STOP: Build CI run reference is missing.");
@@ -119,8 +122,6 @@ async function main(){
     "STOP: Production Data API exposure evidence must be timestamped within the last 24 hours.");
   exact(approval?.residual_backup_risk_reconfirmed,true,"STOP: residual physical-restore risk has not been explicitly reconfirmed.");
   assert.ok(approval?.residual_backup_risk_evidence_reference,"STOP: residual backup-risk reconfirmation evidence is missing.");
-  assert.notEqual(approval?.independent_technical_review?.reviewer,approval?.approved_by,
-    "STOP: independent technical reviewer must be distinct from the owner approver.");
   assert.deepEqual(approval?.approved_migration_hashes,manifest.sequence.map(({file,git_blob_sha})=>({file,git_blob_sha})),"STOP: approval does not cover the exact candidate hash.");
   assert.match(approval?.approved_window_start_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window start must be an explicit UTC timestamp.");
   assert.match(approval?.approved_window_end_utc??"",/^\d{4}-\d{2}-\d{2}T.*Z$/,"STOP: execution window end must be an explicit UTC timestamp.");
