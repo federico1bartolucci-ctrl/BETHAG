@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
-const workflow = await readFile(".github/workflows/build.yml", "utf8");
+const workflow = await readFile(".github/workflows/storage-backup-r2.yml", "utf8");
 const runbook = await readFile("docs/STORAGE_BACKUP_R2.md", "utf8");
 
 assert.match(script, /SUPABASE_STORAGE_BUCKET \|\| "bethag-documents"/);
@@ -25,7 +25,7 @@ assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand|PutBucketP
 assert.match(workflow, /cron: "0 \*\/6 \* \* \*"/);
 assert.match(workflow, /environment: storage-backup-production/);
 assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
-assert.match(workflow, /storage-backup-r2:\n    permissions:\n      contents: read/);
+assert.match(workflow, /permissions:\n  contents: read/);
 assert.match(workflow, /github\.event_name == 'schedule'/);
 assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
 assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
