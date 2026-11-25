@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  getAuthoritativeEntitlementSubscription,
   getClientUnlockedAddons,
   hasEntitlement,
   isServerManagedAddon,
@@ -28,8 +29,23 @@ assert.equal(hasEntitlement({ plan: "portal", addons: [] }, "plus", "comunicazio
 assert.equal(hasEntitlement({ plan: "professional", addons: ["portale"] }, "portal", "portale"), false);
 assert.equal(hasEntitlement({ plan: "portal", addons: [] }, "portal", "portale"), true);
 
+const demoPortal = { plan: "portal", status: "Demo", renewalDate: "", addons: [] };
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "comunicazioni", "free", true, true).plan, "free");
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "ai", "professional", true, true).plan, "professional");
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "portale", "portal", true, true).plan, "portal");
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "ai", "portal", true, false).plan, "free");
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "ai", "invalid", true, true).plan, "free");
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "documenti", "free", true, true), demoPortal);
+assert.equal(getAuthoritativeEntitlementSubscription(demoPortal, "ai", "free", false, true), demoPortal);
+
 const mainSource = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 assert.ok(mainSource.includes('from "./lib/subscription-entitlements.js"'));
+assert.ok(mainSource.includes('const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free")'));
+assert.ok(mainSource.includes("getAuthoritativeEntitlementSubscription("));
+assert.ok(mainSource.includes("getEntitlementSubscription(addon)"));
+assert.ok(mainSource.includes('getEntitlementSubscription("ai")'));
+assert.ok(mainSource.includes('getEntitlementSubscription("portale")'));
+assert.ok(mainSource.includes("La prova struttura è solo un'anteprima"));
 assert.ok(mainSource.includes("if (isServerManagedAddon(addon)) return;"));
 assert.ok(mainSource.includes("disabled={included || unlocked || serverManaged}"));
 assert.ok(mainSource.includes("getClientUnlockedAddons(subscription)"));
@@ -76,4 +92,5 @@ assertPlanGate(
 console.log("PASS UI entitlement runtime: local AI, Portal and Communications add-ons cannot unlock server-managed features.");
 console.log("PASS Plus, Professional and Portal plans include Communications; Free cannot unlock it with client-local add-on state.");
 console.log("PASS subscription UI disables single activation and does not advertise a standalone price for server-managed entitlements.");
+console.log("PASS demo/local plan previews cannot unlock AI, Communications or Portal when Supabase is configured; the database plan is authoritative.");
 console.log("PASS communication creation, editing and email sending are gated in the UI by Plus-or-higher entitlement.");
