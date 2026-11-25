@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const runner=await readFile("scripts/apply-live-ledger-acl-production.mjs","utf8");
@@ -10,9 +10,6 @@ const manifest=JSON.parse(await readFile("supabase/rebuild/drafts/production-mig
 const snapshot=JSON.parse(await readFile("supabase/rebuild/drafts/production-ledger-live-20261124.json","utf8"));
 const preflight=await readFile("supabase/rebuild/drafts/production-cutover-preflight-live-20261124.sql","utf8");
 const postflight=await readFile("supabase/rebuild/drafts/production-cutover-postflight-live-20261124.sql","utf8");
-assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
-assert.equal(manifest.approval_scope,"NONE");
-assert.equal(manifest.production_apply_authorized,false);
 assert.equal(snapshot.count,267);
 assert.equal(snapshot.migrations.length,267);
 assert.equal(snapshot.head.version,"20261105050000");
@@ -52,15 +49,25 @@ assert.doesNotMatch(runner,/independent_technical_review/);
 assert.doesNotMatch(runner,/\bapply_migration\s*\(/i);
 assert.doesNotMatch(runner,/\b(?:DELETE|UPDATE)\s+FROM\s+supabase_migrations\.schema_migrations/i);
 assert.doesNotMatch(runner,/DROP\s+TABLE\s+supabase_migrations\.schema_migrations/i);
-const sha=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+const sourceSha=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim();
+const manifestPath="supabase/rebuild/drafts/production-migration-cutover-live-20261124.json";
 const worktree=await mkdtemp(join(tmpdir(),"bethag-live-ledger-runner-gate-"));
 try{
- execFileSync("git",["worktree","add","--detach",worktree,sha],{stdio:"pipe"});
+ execFileSync("git",["worktree","add","--detach",worktree,sourceSha],{stdio:"pipe"});
+ const fixture=JSON.parse(await readFile(join(worktree,manifestPath),"utf8"));
+ fixture.status="DRAFT_NOT_APPROVED";
+ fixture.approval_scope="NONE";
+ fixture.production_apply_authorized=false;
+ fixture.owner_authorization={...(fixture.owner_authorization||{}),status:"EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL",current_authorization:false};
+ await writeFile(join(worktree,manifestPath),JSON.stringify(fixture,null,2)+"\\n");
+ execFileSync("git",["-C",worktree,"add",manifestPath],{stdio:"pipe"});
+ execFileSync("git",["-C",worktree,"-c","user.name=BETHAG Test","-c","user.email=bethag-test@example.invalid","commit","-m","test fixture: restore fail-closed manifest"],{stdio:"pipe"});
+ const fixtureSha=execFileSync("git",["-C",worktree,"rev-parse","HEAD"],{encoding:"utf8"}).trim();
  const result=spawnSync(process.execPath,["scripts/apply-live-ledger-acl-production.mjs"],{cwd:worktree,encoding:"utf8",timeout:10000,env:{
   ...process.env,DATABASE_URL:"postgresql://postgres@db.tctcgptrsmvgajqjgnev.supabase.co:5432/postgres",
   BETHAG_LIVE_LEDGER_PRODUCTION_APPLY:"YES",BETHAG_ALLOW_LIVE_LEDGER_PRODUCTION:"YES",
-  BETHAG_PRODUCTION_PROJECT_REF:"tctcgptrsmvgajqjgnev",BETHAG_EXPECTED_COMMIT_SHA:sha,
-  BETHAG_APPROVED_SOURCE_COMMIT_SHA:sha}});
+  BETHAG_PRODUCTION_PROJECT_REF:"tctcgptrsmvgajqjgnev",BETHAG_EXPECTED_COMMIT_SHA:fixtureSha,
+  BETHAG_APPROVED_SOURCE_COMMIT_SHA:fixtureSha}});
  assert.notEqual(result.status,0);
  assert.match(result.stderr,/not explicitly approved for Production cutover/);
  assert.doesNotMatch(result.stderr,/ECONNREFUSED|ENOTFOUND|timeout expired|could not translate host name/i);
@@ -70,7 +77,7 @@ try{
 }
 
 assert.equal(manifest.clean_install?.migration_file_count,28,
-  "Canonical Supabase CLI inventory must remain at 28 while the live proposal is unapproved.");
+  "Canonical Supabase CLI inventory must remain at 28 even after the live proposal is approved.");
 assert.equal(manifest.rehearsal_evidence?.candidate_draft_rehearsal,"PASS",
   "Separate PostgreSQL 17 rehearsal of the draft candidate is required.");
 assert.match(runner,/candidatePath=join\(root,"supabase\/rebuild\/drafts",candidate\)/,
