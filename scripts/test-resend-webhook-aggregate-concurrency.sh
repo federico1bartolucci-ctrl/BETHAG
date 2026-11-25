@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "\${DATABASE_URL:?DATABASE_URL is required}"
+: "${DATABASE_URL:?DATABASE_URL is required}"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 legacy_migration="$repo_root/supabase/rebuild/proposed-forward-migrations/20261123090000_guard_resend_webhook_status_event_order.sql"
@@ -114,9 +114,9 @@ wait_for_lock_waiter() {
 run_race() {
   local label="$1"
   local expected="$2"
-  local lock_app="\${label}_parent_lock"
-  local first_app="\${label}_event_a"
-  local second_app="\${label}_event_b"
+  local lock_app="${label}_parent_lock"
+  local first_app="${label}_event_a"
+  local second_app="${label}_event_b"
   local lock_log="$tmp_dir/$label-lock.log"
   local first_log="$tmp_dir/$label-event-a.log"
   local second_log="$tmp_dir/$label-event-b.log"
