@@ -14,7 +14,7 @@ This is distinct from the open invitation PRs concerning Auth metadata persisten
 - Request the updated row representation with `.select("id")`.
 - Treat an empty returned row set as a conflict (HTTP 409).
 - Stop before creating `portal_access` when no member row was actually linked.
-- Include `invitationSent` in the conflict response because Auth invitation may already have been created before the concurrent deletion is detected.
+- Include `invitationSent` in the conflict response and disclose in the error message that the invitation email may already have been sent, because Auth invitation may already have been created before the concurrent deletion is detected.
 
 The change does not write to QA or Production and does not introduce a database migration.
 
