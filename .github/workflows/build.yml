@@ -225,6 +225,8 @@ jobs:
 
 
   storage-backup-r2:
+    permissions:
+      contents: read
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.STORAGE_BACKUP_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
