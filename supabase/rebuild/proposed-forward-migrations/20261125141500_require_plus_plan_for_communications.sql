@@ -128,6 +128,11 @@ BEFORE INSERT OR UPDATE ON public.communication_recipients
 FOR EACH ROW
 EXECUTE FUNCTION private.guard_communication_recipient_plan_entitlement();
 
+REVOKE ALL ON FUNCTION private.prepare_communication_recipients(uuid)
+FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.reset_stale_communication_recipients(uuid, interval)
+FROM PUBLIC, anon, authenticated;
+
 -- Keep public RPC endpoints SECURITY INVOKER. The guarded SECURITY DEFINER
 -- implementation lives in the unexposed private schema and performs all checks.
 CREATE OR REPLACE FUNCTION private.prepare_communication_recipients_plus(p_communication_id uuid)
