@@ -103,9 +103,17 @@ This section supersedes the earlier safety statement about database access. The 
 - The successful baseline job also runs `npm test`, including the server-managed Communications add-on and Plus action-gate regression assertions.
 - Earlier intermediate attempts exposed test-assertion mistakes; those assertions were corrected and the final code head passed all checks.
 
+## Cross-PR migration interaction
+
+- Open PR #419 and stacked PR #421 replace `private.prepare_communication_recipients` / `private.reset_stale_communication_recipients` in `supabase/rebuild/drafts`.
+- Their current draft SQL grants EXECUTE on those underlying SECURITY DEFINER functions directly to `authenticated`. PR #473's final migration intentionally revokes those grants and exposes only the guarded public SECURITY INVOKER wrappers.
+- Therefore, if #419/#421 are promoted, their function-replacement migrations must be applied **before** the final #473 communications ACL hardening, or their direct grants must be removed. Applying #419/#421 after #473 without re-hardening would reopen a direct RPC path around the Plus/module wrapper checks.
+- PR #418 is the base of #419 and also changes `src/main.tsx` for backup restore; #473 changes the same large application file in separate subscription/communications regions. Rebase/merge conflict review is required when those branches are integrated.
+- PRs #439/#441 concern Resend webhook concurrency/retry behavior and do not modify the communications entitlement RPCs directly, but their tests must be retained in the eventual integrated suite.
+
 ## Remaining gates
 
 1. Confirm Data API exposed schemas explicitly exclude `private`.
 2. Keep the server-managed plan guard migration before the communications entitlement migration in the eventual Production promotion order; the former is a hard dependency, not an optional AI-only change.
-3. Review the full PR dependency chain and canonical migration promotion path.
+3. Reconcile PRs #419/#421 before final RPC hardening; their direct EXECUTE grants must not be applied after the #473 revocation. Review #418's overlapping main.tsx changes and preserve webhook tests from #439/#441.
 4. Keep Production unchanged until a separate explicit release go/no-go decision.
