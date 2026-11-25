@@ -314,6 +314,7 @@ DO $plus$
 DECLARE
   v_result jsonb;
   v_rows integer;
+  v_denied boolean;
 BEGIN
   IF NOT private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
     RAISE EXCEPTION 'PLUS_PLAN_HELPER_RETURNED_FALSE';
