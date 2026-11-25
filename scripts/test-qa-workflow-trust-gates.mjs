@@ -65,7 +65,7 @@ console.log(JSON.stringify({
   status: "PASS",
   build_workflow_shared_qa: "REMOVED",
   main_branch_shared_qa_workflows: workflows.length,
-  final_qa_guard: "SEPARATE_PR_436",
+  final_qa_guard: "INCLUDED_IN_CONSOLIDATED_PR_459",
   legacy_ops_branch: "OUT_OF_SCOPE_PENDING_SAFE_RETIREMENT",
   automatic_triggers: "DISABLED",
   dispatch_source: "MAIN_ONLY",
