@@ -152,6 +152,28 @@ DECLARE
   v_result jsonb;
   v_count integer;
 BEGIN
+  -- Private SECURITY DEFINER implementations must not be callable directly by
+  -- authenticated clients; only public SECURITY DEFINER wrappers may delegate.
+  IF has_function_privilege('authenticated', 'private.prepare_communication_recipients(uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'private.reset_stale_communication_recipients(uuid, interval)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'AUTHENTICATED_PRIVATE_RECIPIENT_RPC_EXECUTE_MUST_BE_REVOKED';
+  END IF;
+
+  v_denied := false;
+  BEGIN
+    PERFORM private.prepare_communication_recipients('${ids.communication}'::uuid);
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'DIRECT_PRIVATE_PREPARE_RPC_BYPASS'; END IF;
+
+  v_denied := false;
+  BEGIN
+    PERFORM private.reset_stale_communication_recipients('${ids.communication}'::uuid, interval '15 minutes');
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN RAISE EXCEPTION 'DIRECT_PRIVATE_RESET_RPC_BYPASS'; END IF;
   IF private.workspace_has_plus_plan('${ids.workspace}'::uuid) THEN
     RAISE EXCEPTION 'FREE_PLAN_HELPER_RETURNED_TRUE';
   END IF;
