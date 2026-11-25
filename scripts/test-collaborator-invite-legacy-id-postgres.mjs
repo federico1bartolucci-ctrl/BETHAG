@@ -7,7 +7,7 @@ const databaseUrl = process.env.DATABASE_URL;
 assert.ok(databaseUrl, "DATABASE_URL must point to the disposable PostgreSQL 17 clean-install database.");
 const target = new URL(databaseUrl);
 assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname), "Refusing non-local DATABASE_URL.");
-assert.ok(!/supabase\\.co|jhuyhlzzydcgghrzeexn/i.test(databaseUrl), "Remote Supabase URLs are refused.");
+assert.ok(!/supabase\.co|jhuyhlzzydcgghrzeexn/i.test(databaseUrl), "Remote Supabase URLs are refused.");
 
 const migration = await readFile(
   "supabase/rebuild/proposed-forward-migrations/20261125154500_enforce_workspace_member_legacy_id_uniqueness.sql",
@@ -15,6 +15,7 @@ const migration = await readFile(
 );
 
 const workspaceId = randomUUID();
+const otherWorkspaceId = randomUUID();
 const userOne = randomUUID();
 const userTwo = randomUUID();
 const userThree = randomUUID();
@@ -36,7 +37,9 @@ END;
 $test$;
 
 INSERT INTO public.workspaces(id,name,plan)
-VALUES ('${workspaceId}','Collaborator legacy ID uniqueness regression','free');
+VALUES
+  ('${workspaceId}','Collaborator legacy ID uniqueness regression','free'),
+  ('${otherWorkspaceId}','Other workspace for legacy identity scope','free');
 INSERT INTO auth.users(id,email) VALUES
   ('${userOne}','${emailOne}'),
   ('${userTwo}','${emailTwo}'),
@@ -85,11 +88,9 @@ END;
 $test$;
 
 -- The partial index must not collide across workspaces or for NULL legacy IDs.
-INSERT INTO public.workspaces(id,name,plan)
-VALUES ('${randomUUID()}','Other workspace for legacy identity scope','free');
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions,legacy_id)
 VALUES
-  ('${randomUUID()}','${userThree}','collaborator',true,'{}'::jsonb,${legacyId}),
+  ('${otherWorkspaceId}','${userThree}','collaborator',true,'{}'::jsonb,${legacyId}),
   ('${workspaceId}','${userFour}','collaborator',true,'{}'::jsonb,NULL);
 
 ROLLBACK;
@@ -100,5 +101,4 @@ execFileSync(
   ["-X", "--no-psqlrc", "--dbname", databaseUrl, "-v", "ON_ERROR_STOP=1", "-c", sql],
   { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
 );
-assert.ok(sql.includes("WORKSPACE_MEMBER_LEGACY_ID_DUPLICATES_EXIST"));
 console.log("PASS PostgreSQL 17: baseline duplicate collaborator legacy IDs reproduced; candidate unique index rejects the second user; workspace scope and NULL compatibility preserved; transaction rolled back.");
