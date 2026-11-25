@@ -1,6 +1,6 @@
 # BETHAG Storage backup — Cloudflare R2
 
-Status: **implementation prepared; external service not activated; first backup NOT RUN**.
+Status: **Cloudflare resources and GitHub Environment configured; first backup attempts failed at R2 S3 authentication; first successful snapshot pending**.
 
 ## Safety boundary
 
@@ -33,7 +33,7 @@ Before the first scheduled run, create the R2 bucket manually and configure:
 - Bucket Lock rule: prefix `backups/`, type `Age`, at least 2,592,000 seconds.
 - Lifecycle rule for `backups/snapshots/`: expire after 31 days.
 - Lifecycle rule for `backups/objects/`: expire after 60 days.
-- The backup script verifies both lifecycle rules and the Bucket Lock rule before uploading; if any gate is missing, it exits without writing a backup.
+- The backup script verifies both lifecycle rules and the Bucket Lock rule through the dedicated Cloudflare read token before uploading; if any gate is missing, it exits without writing a backup.
 - The workflow first reads the bucket metadata and obtains the authoritative `jurisdiction` field. It then queries Bucket Lock with that exact jurisdiction header (omitting the header for `default`). Bucket location labels such as `EEUR` are not used as jurisdiction values. The same value selects the S3 endpoint: the standard account endpoint for `default`, or `https://<ACCOUNT_ID>.<jurisdiction>.r2.cloudflarestorage.com` for jurisdiction-scoped buckets (for example, `eu`).
 - Abort incomplete multipart uploads after 1 day, if multipart uploads are enabled.
 
@@ -69,11 +69,11 @@ To restore, select a manifest by timestamp, download each referenced blob, verif
 
 ## Operational status
 
-- Repository implementation: pending PR review and CI.
-- Cloudflare bucket/account: not created by this change.
-- Bucket Lock and lifecycle: not configured.
-- GitHub Environment/secrets: not configured.
-- Activation gate: Environment variable `STORAGE_BACKUP_ENABLED` must be set to `true` after cost approval; otherwise the backup job is skipped.
-- First backup: NOT RUN.
-- Restore drill: NOT RUN.
+- Repository implementation: PR #490 under review; merge only after CI passes.
+- Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
+- Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
+- GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
+- First backup: attempted on 26 November 2026; failed at R2 S3 bucket access with HTTP 403. No successful snapshot or manifest has been confirmed.
+- Restore utility and isolated restore drill: NOT RUN.
+- Production and QA data/configuration: unchanged.
 - Production and QA data/configuration: unchanged.
