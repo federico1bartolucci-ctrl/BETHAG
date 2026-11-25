@@ -7034,7 +7034,7 @@ function App() {
       const hasPlanAccess =
         !addon ||
         hasEntitlement(
-          subscription,
+          getEntitlementSubscription(addon),
           ADDON_REQUIRED_PLAN[addon],
           addon
         );
@@ -8115,7 +8115,7 @@ function App() {
                 assemblies
               }
               plan={
-                subscription.plan
+                getEntitlementSubscription("ai").plan
               }
               onNavigate={
                 navigate
