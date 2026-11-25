@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Webhook } from "npm:svix";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { resendWebhookErrorResponse } from "../_shared/resend-webhook-error-status.js";
+import { resendWebhookErrorResponse, resendWebhookEventResponse } from "../_shared/resend-webhook-error-status.js";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
       p_event_at:eventAt,
     });
     if (error) throw error;
-    return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
+    return resendWebhookEventResponse(result, headers);
   } catch (error) {
     console.error("BETHAG resend-webhook processing error", error);
     // HTTP 5xx makes transient RPC/database failures retryable by the provider.
