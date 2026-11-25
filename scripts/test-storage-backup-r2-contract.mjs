@@ -24,7 +24,7 @@ assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand|PutBucketP
 
 assert.match(workflow, /cron: "0 \*\/6 \* \* \*"/);
 assert.match(workflow, /environment: storage-backup-production/);
-assert.match(workflow, /vars\\.STORAGE_BACKUP_ENABLED == 'true'/);
+assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
 assert.match(workflow, /permissions:\n  contents: read/);
 assert.match(workflow, /github\.event_name != 'pull_request'/);
 assert.match(workflow, /CLOUDFLARE_R2_READ_TOKEN/);
