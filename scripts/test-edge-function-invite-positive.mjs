@@ -6,6 +6,7 @@ let handler;
 let memberRole = "Proprietario";
 let portalPayload;
 let invitedEmail;
+let memberUpdateRows = [{ id: "member-uuid" }];
 
 Deno.env.set("SUPABASE_URL", "https://mock.supabase.test");
 Deno.env.set("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_mock");
@@ -26,7 +27,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.pathname === "/rest/v1/condominium_members" && method === "GET") return json({ id: "member-uuid", condominium_id: "condo-uuid", user_id: null, name: "Mario Rossi", email: "mario@example.test", role: "resident", active: true, permissions: [], data: { apartment: "12", role: memberRole }, legacy_id: 12, unit_id: "unit-uuid" });
   if (url.pathname === "/rest/v1/profiles" && method === "GET") return json({ role: "resident" });
   if (url.pathname === "/rest/v1/profiles" && method === "POST") return json({}, 201);
-  if (url.pathname === "/rest/v1/condominium_members" && method === "PATCH") return new Response(null, { status: 204 });
+  if (url.pathname === "/rest/v1/condominium_members" && method === "PATCH") return json(memberUpdateRows, 200);
   if (url.pathname === "/rest/v1/portal_access" && method === "POST") {
     portalPayload = JSON.parse(String(init.body ?? "null"));
     return json({}, 201);
@@ -44,6 +45,7 @@ assert.equal(typeof handler, "function", "Edge Function handler was not captured
 
 async function runScenario(role, expectedPermissions) {
   memberRole = role;
+  memberUpdateRows = [{ id: "member-uuid" }];
   portalPayload = undefined;
   invitedEmail = undefined;
   const response = await handler(new Request("https://mock.supabase.test/functions/v1/bethag-invite-resident", {
@@ -61,8 +63,28 @@ async function runScenario(role, expectedPermissions) {
   assert.equal(portalPayload.workspace_id, "workspace-test");
 }
 
+async function runMissingMemberScenario() {
+  memberRole = "Proprietario";
+  memberUpdateRows = [];
+  portalPayload = undefined;
+  invitedEmail = undefined;
+  const response = await handler(new Request("https://mock.supabase.test/functions/v1/bethag-invite-resident", {
+    method: "POST",
+    headers: { Authorization: "Bearer mock-user-jwt", "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: "workspace-test", condominiumId: 77, legacyId: 12 }),
+  }));
+  const body = await response.json();
+  assert.equal(response.status, 409, "a zero-row member link must not produce a successful portal invitation: " + JSON.stringify(body));
+  assert.equal(body.invitationSent, true, "the response must disclose that Auth invitation had already been sent");
+  assert.match(body.error, /Nessun accesso al portale è stato creato/);
+  assert.equal(invitedEmail, "mario@example.test", "the test must exercise the race after Auth invitation");
+  assert.equal(portalPayload, undefined, "zero-row member linking must stop before portal_access upsert");
+  memberUpdateRows = [{ id: "member-uuid" }];
+}
+
 async function runRejectedScenario(role) {
   memberRole = role;
+  memberUpdateRows = [{ id: "member-uuid" }];
   portalPayload = undefined;
   invitedEmail = undefined;
   const response = await handler(new Request("https://mock.supabase.test/functions/v1/bethag-invite-resident", {
@@ -83,6 +105,8 @@ try {
   console.log("PASS: positive tenant invitation and restricted portal permissions");
   await runRejectedScenario("resident");
   console.log("PASS: unknown qualification rejected before invitation and portal writes");
+  await runMissingMemberScenario();
+  console.log("PASS: zero-row resident link fails closed before portal access upsert");
 } finally {
   globalThis.fetch = originalFetch;
 }
