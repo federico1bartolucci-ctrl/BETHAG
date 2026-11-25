@@ -396,17 +396,27 @@ try {
       assert.equal(unexpectedState.rows[0].active, false,
         "Baseline must reproduce archiving a member outside the selected unit/condominium: " + item.label);
     }
-    await db.exec(
+    await db.query(
       "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
       [ids.scopeTestMember]
     );
     if (item.unexpectedMember) {
-      await db.exec(
+      await db.query(
         "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
         [item.unexpectedMember]
       );
     }
   }
+  await db.exec(`
+    UPDATE public.condominium_member_transfers
+    SET status = 'Confermato', closed_at = NULL, closed_by = NULL
+    WHERE id IN (
+      '${ids.otherUnitScopeTransfer}',
+      '${ids.foreignScopeTransfer}',
+      '${ids.missingMemberScopeTransfer}',
+      '${ids.nullMemberScopeTransfer}'
+    );
+  `);
   console.log("PASS baseline reproduction: transfer closure archived other-unit/cross-condominium members and accepted missing/NULL outgoing IDs.");
 
   const ownershipShare = await call(ids.shareTransfer);
