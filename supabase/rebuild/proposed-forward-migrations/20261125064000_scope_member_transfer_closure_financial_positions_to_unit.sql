@@ -82,8 +82,10 @@ begin
   from public.condominium_installments i
   where i.workspace_id = v_workspace
     and i.condominium_id = v_condominium
-    and i.member_id = any(v_outgoing_ids)
-    and (i.unit_id is null or i.unit_id = v_unit)
+    and (
+      (i.member_id = any(v_outgoing_ids) and (i.unit_id is null or i.unit_id = v_unit))
+      or (i.member_id is null and i.unit_id = v_unit)
+    )
     and coalesce(i.amount - i.paid_amount, 0) > 0.005;
 
   select coalesce(sum(a.amount - a.paid_amount), 0)
@@ -160,7 +162,7 @@ begin
   elsif not (v_primary_outgoing_id=any(v_outgoing_ids)) then v_outgoing_ids:=array_prepend(v_primary_outgoing_id,v_outgoing_ids); end if;
   if v_transfer_status<>'Confermato' then raise exception 'TRANSFER_NOT_OPEN'; end if;
   if v_scope='ownership_share' then raise exception 'TRANSFER_QUOTA_NOT_CLOSABLE'; end if;
-  select coalesce(sum(i.amount-i.paid_amount),0) into v_open_installments from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and i.member_id=any(v_outgoing_ids) and (i.unit_id is null or i.unit_id=v_unit) and i.amount-i.paid_amount>0.005;
+  select coalesce(sum(i.amount-i.paid_amount),0) into v_open_installments from public.condominium_installments i where i.workspace_id=v_workspace and i.condominium_id=v_condominium and ((i.member_id=any(v_outgoing_ids) and (i.unit_id is null or i.unit_id=v_unit)) or (i.member_id is null and i.unit_id=v_unit)) and i.amount-i.paid_amount>0.005;
   select coalesce(sum(a.amount-a.paid_amount),0) into v_open_allocations from public.condominium_expense_allocations a where a.workspace_id=v_workspace and a.condominium_id=v_condominium and a.member_id=any(v_outgoing_ids) and (a.unit_id is null or a.unit_id=v_unit) and a.amount-a.paid_amount>0.005;
   select coalesce(sum(abs(c.balance)),0) into v_open_carryovers from public.condominium_fiscal_carryovers c where c.workspace_id=v_workspace and c.condominium_id=v_condominium and c.member_id=any(v_outgoing_ids) and (c.unit_id is null or c.unit_id=v_unit) and abs(c.balance)>0.005;
   select coalesce(sum(abs(c.balance)),0) into v_open_unit_carryovers from public.condominium_fiscal_carryovers c
