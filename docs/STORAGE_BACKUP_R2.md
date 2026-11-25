@@ -41,7 +41,7 @@ Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle exp
 
 ## GitHub Environment secrets
 
-Create Environment `storage-backup-production` and add these secrets:
+Create Environment `storage-backup-production` and add these secrets. Also add the Environment variable `STORAGE_BACKUP_ENABLED=true` only after the bucket, retention/lifecycle rules, secrets, and recurring cost have been reviewed and explicitly approved. Until that variable is set, scheduled and manual backup jobs are skipped.
 
 | Secret | Value |
 | --- | --- |
@@ -73,6 +73,7 @@ To restore, select a manifest by timestamp, download each referenced blob, verif
 - Cloudflare bucket/account: not created by this change.
 - Bucket Lock and lifecycle: not configured.
 - GitHub Environment/secrets: not configured.
+- Activation gate: Environment variable `STORAGE_BACKUP_ENABLED` must be set to `true` after cost approval; otherwise the backup job is skipped.
 - First backup: NOT RUN.
 - Restore drill: NOT RUN.
 - Production and QA data/configuration: unchanged.
