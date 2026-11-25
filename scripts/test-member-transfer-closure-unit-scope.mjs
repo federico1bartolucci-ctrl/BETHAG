@@ -4,6 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const migrationPath = "supabase/rebuild/proposed-forward-migrations/20261125064000_scope_member_transfer_closure_financial_positions_to_unit.sql";
+const scopeMigrationPath = "supabase/rebuild/proposed-forward-migrations/20261125073000_validate_member_transfer_outgoing_member_scope.sql";
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 assert.match(
   packageJson.scripts.test,
@@ -25,6 +26,7 @@ const allocationScopeTrigger = extractPublicFunction("validate_condominium_expen
 const checkPublicRpc = extractPublicFunction("check_condominium_member_transfer_closure");
 const closePublicRpc = extractPublicFunction("close_condominium_member_transfer");
 const migrationSql = await readFile(migrationPath, "utf8");
+const scopeMigrationSql = await readFile(scopeMigrationPath, "utf8");
 const marker = "CREATE OR REPLACE FUNCTION private.check_condominium_member_transfer_closure(";
 const start = baselineSql.indexOf(marker);
 const endMarker = "$function$" + String.fromCharCode(10) + ";";
@@ -41,14 +43,24 @@ const baselineCloseFunction = baselineSql.slice(closeStart, closeEnd + endMarker
 const ids = {
   workspace: "11111111-1111-4111-8111-111111111111",
   condominium: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  foreignWorkspace: "22222222-2222-4222-8222-222222222222",
+  foreignCondominium: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   unitA: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   unitB: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   memberA: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
   otherMember: "f1111111-1111-4111-8111-111111111111",
+  scopeTestMember: "f2222222-2222-4222-8222-222222222222",
+  otherUnitMember: "f3333333-3333-4333-8333-333333333333",
+  foreignMember: "f4444444-4444-4444-8444-444444444444",
+  missingMember: "f5555555-5555-4555-8555-555555555555",
   transfer: "f0000000-0000-4000-8000-000000000001",
   shareTransfer: "f0000000-0000-4000-8000-000000000002",
   emptyArrayTransfer: "f0000000-0000-4000-8000-000000000003",
-  missingPrimaryTransfer: "f0000000-0000-4000-8000-000000000004"
+  missingPrimaryTransfer: "f0000000-0000-4000-8000-000000000004",
+  otherUnitScopeTransfer: "f0000000-0000-4000-8000-000000000005",
+  foreignScopeTransfer: "f0000000-0000-4000-8000-000000000006",
+  missingMemberScopeTransfer: "f0000000-0000-4000-8000-000000000007",
+  nullMemberScopeTransfer: "f0000000-0000-4000-8000-000000000008"
 };
 
 const db = new PGlite();
@@ -75,6 +87,7 @@ try {
     CREATE TABLE public.condominium_members (
       id uuid PRIMARY KEY,
       condominium_id uuid NOT NULL,
+      unit_id uuid,
       active boolean NOT NULL,
       updated_at timestamptz,
       data jsonb NOT NULL DEFAULT '{}'::jsonb
@@ -143,15 +156,23 @@ try {
     );
 
     INSERT INTO public.condominiums(id, workspace_id)
-      VALUES ('${ids.condominium}', '${ids.workspace}');
+      VALUES
+        ('${ids.condominium}', '${ids.workspace}'),
+        ('${ids.foreignCondominium}', '${ids.foreignWorkspace}');
     INSERT INTO public.condominium_units(id, workspace_id, condominium_id) VALUES
       ('${ids.unitA}', '${ids.workspace}', '${ids.condominium}'),
       ('${ids.unitB}', '${ids.workspace}', '${ids.condominium}');
-    INSERT INTO public.condominium_members(id, condominium_id, active, updated_at, data)
+    INSERT INTO public.condominium_members(id, condominium_id, unit_id, active, updated_at, data)
       VALUES
-        ('${ids.memberA}', '${ids.condominium}', true, now(),
+        ('${ids.memberA}', '${ids.condominium}', '${ids.unitA}', true, now(),
           '{"position_status":"Attivo","current_owner":true}'::jsonb),
-        ('${ids.otherMember}', '${ids.condominium}', true, now(),
+        ('${ids.otherMember}', '${ids.condominium}', '${ids.unitA}', true, now(),
+          '{"position_status":"Attivo","current_owner":true}'::jsonb),
+        ('${ids.scopeTestMember}', '${ids.condominium}', '${ids.unitA}', true, now(),
+          '{"position_status":"Attivo","current_owner":true}'::jsonb),
+        ('${ids.otherUnitMember}', '${ids.condominium}', '${ids.unitB}', true, now(),
+          '{"position_status":"Attivo","current_owner":true}'::jsonb),
+        ('${ids.foreignMember}', '${ids.foreignCondominium}', NULL, true, now(),
           '{"position_status":"Attivo","current_owner":true}'::jsonb);
     INSERT INTO public.condominium_ledger_entries(id, workspace_id, condominium_id, direction)
       VALUES ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', 'Uscita');
@@ -182,7 +203,19 @@ try {
        jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', '[]'::jsonb)),
       ('${ids.missingPrimaryTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
        '${ids.memberA}', 'Confermato',
-       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.otherMember}')));
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.otherMember}'))),
+      ('${ids.otherUnitScopeTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.scopeTestMember}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.scopeTestMember}', '${ids.otherUnitMember}'))),
+      ('${ids.foreignScopeTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.scopeTestMember}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.scopeTestMember}', '${ids.foreignMember}'))),
+      ('${ids.missingMemberScopeTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.scopeTestMember}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.scopeTestMember}', '${ids.missingMember}'))),
+      ('${ids.nullMemberScopeTransfer}', '${ids.workspace}', '${ids.condominium}', '${ids.unitA}',
+       '${ids.scopeTestMember}', 'Confermato',
+       jsonb_build_object('transfer_scope', 'whole_property', 'outgoing_member_ids', jsonb_build_array('${ids.scopeTestMember}', null)));
 
     -- Unit A: valid member-linked obligations that must remain in the closure check.
     INSERT INTO public.condominium_installments
@@ -330,6 +363,52 @@ try {
   assert.equal(Number(after.open_total), 177);
   console.log("PASS corrected closure check: selected-unit, legacy unit-null and unit-unassigned installments are included; other-unit obligations are excluded.");
 
+  // The #452 close helper still trusted JSON member IDs when archiving records.
+  // Reproduce cross-unit, cross-condominium, missing-ID and NULL-ID cases before
+  // applying the new scope-validation migration.
+  const baselineScopeCases = [
+    { id: ids.otherUnitScopeTransfer, unexpectedMember: ids.otherUnitMember, label: "another unit in the same condominium" },
+    { id: ids.foreignScopeTransfer, unexpectedMember: ids.foreignMember, label: "another condominium/workspace" },
+    { id: ids.missingMemberScopeTransfer, unexpectedMember: null, label: "a non-existent member ID" },
+    { id: ids.nullMemberScopeTransfer, unexpectedMember: null, label: "a NULL member ID" }
+  ];
+  for (const item of baselineScopeCases) {
+    const baselineScopeCheck = await call(item.id);
+    assert.equal(Number(baselineScopeCheck.open_total), 0,
+      "Baseline must not find financial balances for the isolated scope-test members: " + item.label);
+    const baselineScopeClose = await db.query(
+      "SELECT public.close_condominium_member_transfer($1::uuid) AS closed",
+      [item.id]
+    );
+    assert.equal(baselineScopeClose.rows[0].closed, true,
+      "Baseline close helper must reproduce accepting " + item.label + ".");
+    const primaryState = await db.query(
+      "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
+      [ids.scopeTestMember]
+    );
+    assert.equal(primaryState.rows[0].active, false,
+      "Baseline must archive the primary member for " + item.label + ".");
+    if (item.unexpectedMember) {
+      const unexpectedState = await db.query(
+        "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
+        [item.unexpectedMember]
+      );
+      assert.equal(unexpectedState.rows[0].active, false,
+        "Baseline must reproduce archiving a member outside the selected unit/condominium: " + item.label);
+    }
+    await db.exec(
+      "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
+      [ids.scopeTestMember]
+    );
+    if (item.unexpectedMember) {
+      await db.exec(
+        "UPDATE public.condominium_members SET active = true WHERE id = $1::uuid",
+        [item.unexpectedMember]
+      );
+    }
+  }
+  console.log("PASS baseline reproduction: transfer closure archived other-unit/cross-condominium members and accepted missing/NULL outgoing IDs.");
+
   const ownershipShare = await call(ids.shareTransfer);
   assert.equal(Number(ownershipShare.open_total), 0,
     "Ownership-share transfers must retain their existing zero-closure behavior.");
@@ -338,6 +417,58 @@ try {
   assert.equal(Number(ownershipShare.open_member_carryovers), 0);
   assert.equal(Number(ownershipShare.open_unit_carryovers), 0);
   console.log("PASS ownership-share compatibility: no closure balances are introduced.");
+
+  await db.exec(scopeMigrationSql);
+  const correctedScopeCases = [
+    { id: ids.otherUnitScopeTransfer, label: "member assigned to another unit" },
+    { id: ids.foreignScopeTransfer, label: "member belonging to another condominium/workspace" },
+    { id: ids.missingMemberScopeTransfer, label: "non-existent member ID" },
+    { id: ids.nullMemberScopeTransfer, label: "NULL member ID" }
+  ];
+  for (const item of correctedScopeCases) {
+    let checkError;
+    try {
+      await call(item.id);
+    } catch (error) {
+      checkError = error;
+    }
+    assert.ok(checkError, "Closure check must reject " + item.label + ".");
+    assert.match(String(checkError.message), /TRANSFER_OUTGOING_MEMBER_SCOPE_MISMATCH/);
+
+    let closeError;
+    try {
+      await db.query(
+        "SELECT public.close_condominium_member_transfer($1::uuid)",
+        [item.id]
+      );
+    } catch (error) {
+      closeError = error;
+    }
+    assert.ok(closeError, "Authoritative close must reject " + item.label + ".");
+    assert.match(String(closeError.message), /TRANSFER_OUTGOING_MEMBER_SCOPE_MISMATCH/);
+
+    const transferState = await db.query(
+      "SELECT status, closed_at, closed_by FROM public.condominium_member_transfers WHERE id = $1::uuid",
+      [item.id]
+    );
+    assert.equal(transferState.rows[0].status, "Confermato",
+      "Rejected scope mismatch must leave transfer status unchanged: " + item.label);
+    assert.equal(transferState.rows[0].closed_at, null,
+      "Rejected scope mismatch must not set closed_at: " + item.label);
+    const primaryState = await db.query(
+      "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
+      [ids.scopeTestMember]
+    );
+    assert.equal(primaryState.rows[0].active, true,
+      "Rejected scope mismatch must not archive the primary member: " + item.label);
+  }
+  const outOfScopeState = await db.query(
+    "SELECT id, active FROM public.condominium_members WHERE id = ANY($1::uuid[])",
+    [[ids.otherUnitMember, ids.foreignMember]]
+  );
+  assert.ok(outOfScopeState.rows.every(row => row.active === true),
+    "Rejected transfers must not archive any out-of-scope member.");
+  console.log("PASS corrected outgoing-member scope: check and close reject other-unit, cross-condominium, missing and NULL IDs without changing members or transfer state.");
 
   // Clear only Unit A and legacy unit-null member obligations. Unit B remains
   // unpaid; the corrected close operation must ignore those other-unit rows.
