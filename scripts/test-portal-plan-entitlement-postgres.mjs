@@ -22,6 +22,8 @@ const workspaceId = randomUUID();
 const condominiumId = randomUUID();
 const adminId = randomUUID();
 const residentId = randomUUID();
+const requestUserId = randomUUID();
+const requestUserEmail = "portal-request-" + requestUserId + "@example.invalid";
 const memberOneId = randomUUID();
 const memberTwoId = randomUUID();
 const memberThreeId = randomUUID();
@@ -42,8 +44,8 @@ function psql(sql) {
 const fixture = [
   "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email text;",
   "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;",
-  "INSERT INTO auth.users(id,email,email_confirmed_at) VALUES ('" + adminId + "','" + adminEmail + "',now()), ('" + residentId + "','" + residentEmail + "',now());",
-  "INSERT INTO public.profiles(id,full_name,email,role,active) VALUES ('" + adminId + "','Portal Regression Admin','" + adminEmail + "','admin',true), ('" + residentId + "','Portal Regression Resident','" + residentEmail + "','resident',true);",
+  "INSERT INTO auth.users(id,email,email_confirmed_at) VALUES ('" + adminId + "','" + adminEmail + "',now()), ('" + residentId + "','" + residentEmail + "',now()), ('" + requestUserId + "','" + requestUserEmail + "',now());",
+  "INSERT INTO public.profiles(id,full_name,email,role,active) VALUES ('" + adminId + "','Portal Regression Admin','" + adminEmail + "','admin',true), ('" + residentId + "','Portal Regression Resident','" + residentEmail + "','resident',true), ('" + requestUserId + "','Portal Registration Request User','" + requestUserEmail + "','resident',true);",
   "INSERT INTO public.workspaces(id,name,plan) VALUES ('" + workspaceId + "','Portal entitlement PostgreSQL regression','free');",
   "INSERT INTO public.condominiums(id,workspace_id,name) VALUES ('" + condominiumId + "','" + workspaceId + "','Portal entitlement PostgreSQL condominium');",
   "INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions) VALUES ('" + workspaceId + "','" + adminId + "','admin',true,'{}'::jsonb);",
@@ -81,7 +83,7 @@ const sql = [
   "DO $blocked$ DECLARE v_count integer; v_rows integer; v_denied boolean:=false; BEGIN SELECT count(*) INTO v_count FROM public.portal_registration_requests WHERE id='" + requestId + "'::uuid; IF v_count<>1 THEN RAISE EXCEPTION 'FREE_PLAN_ADMIN_CANNOT_SEE_PENDING_REQUEST_FOR_CLEANUP'; END IF; SELECT count(*) INTO v_count FROM public.portal_access WHERE workspace_id='" + workspaceId + "'::uuid; IF v_count<>2 THEN RAISE EXCEPTION 'FREE_PLAN_ADMIN_CANNOT_SEE_EXISTING_PORTAL_ROWS'; END IF; UPDATE public.portal_access SET active=false WHERE member_id='" + memberTwoId + "'::uuid; DELETE FROM public.portal_access WHERE member_id='" + memberTwoId + "'::uuid; UPDATE public.portal_registration_requests SET status='approved' WHERE id='" + requestId + "'::uuid; GET DIAGNOSTICS v_rows = ROW_COUNT; IF v_rows<>0 THEN RAISE EXCEPTION 'FREE_PLAN_ADMIN_REQUEST_UPDATE_NOT_BLOCKED'; END IF; BEGIN INSERT INTO public.portal_access(workspace_id,condominium_id,member_id,legacy_id,name,email,role,permissions,active,data) VALUES ('" + workspaceId + "'::uuid,'" + condominiumId + "'::uuid,'" + memberFourId + "'::uuid,91004,'Portal Regression Resident Four','resident-four-" + memberFourId + "@example.invalid','resident','[]'::jsonb,true,'{}'::jsonb); EXCEPTION WHEN insufficient_privilege THEN v_denied:=true; END; IF NOT v_denied THEN RAISE EXCEPTION 'FREE_PLAN_ADMIN_INSERT_NOT_BLOCKED'; END IF; END $blocked$;",
   "RESET ROLE;",
   "UPDATE public.workspaces SET plan='portal' WHERE id='" + workspaceId + "'::uuid;",
-  "INSERT INTO public.portal_registration_requests(id,workspace_id,condominium_name,status) VALUES ('" + randomUUID() + "'::uuid,'" + workspaceId + "'::uuid,'Portal entitlement PostgreSQL condominium','pending');",
+  "INSERT INTO public.portal_registration_requests(id,workspace_id,requested_user_id,email,full_name,condominium_name,status) VALUES ('" + randomUUID() + "'::uuid,'" + workspaceId + "'::uuid,'" + requestUserId + "'::uuid,'" + requestUserEmail + "','Portal Registration Request User','Portal entitlement PostgreSQL condominium','pending');",
   "SELECT set_config('request.jwt.claim.sub','" + residentId + "',true);",
   "DO $allowed$ DECLARE v_allowed boolean; BEGIN SELECT private.can_access_resident_condominium_module('" + condominiumId + "'::uuid,'documenti') INTO v_allowed; IF NOT v_allowed THEN RAISE EXCEPTION 'PORTAL_PLAN_RESIDENT_MODULE_ACCESS_NOT_RESTORED'; END IF; END $allowed$;",
   "SET LOCAL ROLE authenticated;",
@@ -94,7 +96,7 @@ const sql = [
   "RESET ROLE;",
   "SELECT private.upsert_portal_access_for_member('" + workspaceId + "'::uuid,'" + memberThreeId + "'::uuid,'resident-three-" + memberThreeId + "@example.invalid','[]'::jsonb);",
   "UPDATE public.workspaces SET plan='free' WHERE id='" + workspaceId + "'::uuid;",
-  "DO $downgrade_request$ DECLARE v_rejected boolean:=false; BEGIN BEGIN INSERT INTO public.portal_registration_requests(workspace_id,condominium_name,status) VALUES ('" + workspaceId + "'::uuid,'Portal entitlement PostgreSQL condominium','pending'); EXCEPTION WHEN OTHERS THEN IF SQLERRM='PORTAL_PLAN_REQUIRED' THEN v_rejected:=true; ELSE RAISE; END IF; END; IF NOT v_rejected THEN RAISE EXCEPTION 'FREE_PLAN_REGISTRATION_REQUEST_INSERT_NOT_BLOCKED'; END IF; END $downgrade_request$;",
+  "DO $downgrade_request$ DECLARE v_rejected boolean:=false; BEGIN BEGIN INSERT INTO public.portal_registration_requests(workspace_id,requested_user_id,email,full_name,condominium_name,status) VALUES ('" + workspaceId + "'::uuid,'" + requestUserId + "'::uuid,'" + requestUserEmail + "','Portal Registration Request User','Portal entitlement PostgreSQL condominium','pending'); EXCEPTION WHEN OTHERS THEN IF SQLERRM='PORTAL_PLAN_REQUIRED' THEN v_rejected:=true; ELSE RAISE; END IF; END; IF NOT v_rejected THEN RAISE EXCEPTION 'FREE_PLAN_REGISTRATION_REQUEST_INSERT_NOT_BLOCKED'; END IF; END $downgrade_request$;",
   "SELECT set_config('request.jwt.claim.sub','" + residentId + "',true);",
   "SET LOCAL ROLE authenticated;",
   "DO $downgrade$ DECLARE v_count integer; BEGIN SELECT count(*) INTO v_count FROM public.portal_access WHERE id='" + portalAccessId + "'::uuid; IF v_count<>0 THEN RAISE EXCEPTION 'PORTAL_DOWNGRADE_DID_NOT_REVOKE_RESIDENT_VISIBILITY'; END IF; END $downgrade$;",
