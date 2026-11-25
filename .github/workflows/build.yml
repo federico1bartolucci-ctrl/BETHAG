@@ -52,6 +52,10 @@ jobs:
 
       - name: Install dependencies from the committed lockfile
         run: npm ci
+      - name: Print exact live-ledger ACL approval fingerprint (read-only)
+        env:
+          BETHAG_APPROVED_SOURCE_COMMIT_SHA: ${{ github.sha }}
+        run: node scripts/print-live-ledger-acl-release-fingerprint.mjs "$BETHAG_APPROVED_SOURCE_COMMIT_SHA"
       - name: Export verified dependency lockfile for release evidence
         uses: actions/upload-artifact@v4
         with:
