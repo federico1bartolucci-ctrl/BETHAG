@@ -21,7 +21,9 @@ assert.match(script, /getLifecycleRules\(accountId, destinationBucket, cloudflar
 assert.match(script, /deleteObjectsTransition\?\.condition\?\.type === "Age"/);
 assert.match(script, /31 \* 24 \* 60 \* 60/);
 assert.match(script, /60 \* 24 \* 60 \* 60/);
-assert.match(script, /region: "auto",[\s\S]*?forcePathStyle is retained only for Supabase/);
+assert.match(script, /Use the AWS SDK.s virtual-hosted addressing for R2/);
+assert.match(script, /endpoint: sourceEndpoint, region: sourceRegion, forcePathStyle: true/);
+assert.doesNotMatch(script, /endpoint: "https:\/\/" \+ accountId[\s\S]{0,400}forcePathStyle: true/);
 assert.match(script, /safeHeaders/);
 assert.match(script, /HeadObjectCommand/);
 assert.match(script, /head\.Metadata\?\.sha256 !== sha256/);
