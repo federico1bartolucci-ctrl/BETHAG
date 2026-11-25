@@ -1,4 +1,5 @@
 import { withSupabase } from "npm:@supabase/server@^1";
+import { createDeleteAccountFailureResponse } from "../_shared/delete-account-error-response.js";
 
 export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
@@ -85,7 +86,38 @@ export default {
 
     const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
     if (deleteError) {
-      return Response.json({ error: deleteError.message }, { status: 500 });
+      // GoTrue may return a generic "Database error deleting user" for a
+      // PostgreSQL trigger rejection. Re-read the caller's current memberships
+      // after the failed, atomic Auth deletion so a concurrent last-admin guard
+      // failure can be reported as a conflict without misclassifying unrelated
+      // Auth/database deletion failures.
+      let lastActiveWorkspaceAdmin = false;
+      const { data: currentAdminMemberships, error: currentMembershipError } = await ctx.supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .eq("active", true);
+
+      if (!currentMembershipError) {
+        for (const membership of currentAdminMemberships ?? []) {
+          const { count, error: currentCountError } = await ctx.supabase
+            .from("workspace_members")
+            .select("user_id", { count: "exact", head: true })
+            .eq("workspace_id", membership.workspace_id)
+            .eq("role", "admin")
+            .eq("active", true);
+
+          if (!currentCountError && count === 1) {
+            lastActiveWorkspaceAdmin = true;
+            break;
+          }
+        }
+      }
+
+      return createDeleteAccountFailureResponse(deleteError, {
+        lastActiveWorkspaceAdmin,
+      });
     }
 
     return Response.json({ success: true });
