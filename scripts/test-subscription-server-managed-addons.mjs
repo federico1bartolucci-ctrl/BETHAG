@@ -73,6 +73,13 @@ assert.ok(mainSource.includes("getClientUnlockedAddons(subscription)"));
 assert.ok(mainSource.includes('comunicazioni: "Incluso da Plus"'));
 assert.ok(mainSource.includes("addon && !isServerManagedAddon(addon)"));
 assert.ok(mainSource.includes("Le Comunicazioni sono comprese nel piano Plus e nei piani superiori"));
+assert.ok(mainSource.includes("Il piano Plus include l'invio e-mail delle comunicazioni dalla scheda condominio."));
+assert.ok(mainSource.includes('portalEnabled={hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")}'));
+assertPlanGate(
+  "const saveCommunication =",
+  "const editCommunication =",
+  'requirePlan("portal", "La pubblicazione delle comunicazioni nel portale", "portale")',
+);
 
 function assertPlanGate(startMarker, endMarker, expectedCall) {
   const start = mainSource.indexOf(startMarker);
@@ -97,12 +104,17 @@ assertPlanGate(
 assertPlanGate(
   "const editCommunication =",
   "const deleteCommunication =",
+  'requirePlan("portal", "La modifica di una comunicazione pubblicata nel Portale", "portale")',
+);
+assertPlanGate(
+  "const editCommunication =",
+  "const deleteCommunication =",
   'requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")',
 );
 assertPlanGate(
   "const newCommunication =",
   "const openCondominiumEmailComposer =",
-  'requirePlan("plus", "La creazione delle comunicazioni", "comunicazioni")',
+  'requirePlan("portal", "La creazione di una comunicazione nel Portale", "portale")',
 );
 assertPlanGate(
   "const openCondominiumEmailComposer =",
