@@ -1,4 +1,7 @@
 function normalizeLastModified(value, key) {
+  if (value === null || value === undefined) {
+    throw new Error("Source object listing omitted a valid LastModified timestamp for " + JSON.stringify(key));
+  }
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) {
     throw new Error("Source object listing omitted a valid LastModified timestamp for " + JSON.stringify(key));
@@ -14,6 +17,9 @@ export function sourceObjectSignature(items) {
   const signature = items
     .filter((item) => typeof item?.Key === "string" && item.Key.length > 0 && !item.Key.endsWith("/"))
     .map((item) => {
+      if (item.Size === null || item.Size === undefined) {
+        throw new Error("Source object listing omitted a valid size for " + JSON.stringify(item.Key));
+      }
       const size = Number(item.Size);
       if (!Number.isSafeInteger(size) || size < 0) {
         throw new Error("Source object listing omitted a valid size for " + JSON.stringify(item.Key));
