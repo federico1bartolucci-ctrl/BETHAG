@@ -30,6 +30,12 @@ const end = baselineSql.indexOf(endMarker, start);
 assert.ok(start >= 0 && end > start, "Exact baseline transfer-closure function must be present.");
 const baselineFunction = baselineSql.slice(start, end + endMarker.length);
 
+const closeMarker = "CREATE OR REPLACE FUNCTION private.close_condominium_member_transfer(";
+const closeStart = baselineSql.indexOf(closeMarker);
+const closeEnd = baselineSql.indexOf(endMarker, closeStart);
+assert.ok(closeStart >= 0 && closeEnd > closeStart, "Exact baseline close function must be present.");
+const baselineCloseFunction = baselineSql.slice(closeStart, closeEnd + endMarker.length);
+
 const ids = {
   workspace: "11111111-1111-4111-8111-111111111111",
   condominium: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -63,7 +69,10 @@ try {
     );
     CREATE TABLE public.condominium_members (
       id uuid PRIMARY KEY,
-      condominium_id uuid NOT NULL
+      condominium_id uuid NOT NULL,
+      active boolean NOT NULL,
+      updated_at timestamptz,
+      data jsonb NOT NULL DEFAULT '{}'::jsonb
     );
     CREATE TABLE public.condominium_fiscal_years (
       id uuid PRIMARY KEY,
@@ -89,7 +98,10 @@ try {
       unit_id uuid NOT NULL,
       outgoing_member_id uuid NOT NULL,
       status text NOT NULL,
-      data jsonb NOT NULL DEFAULT '{}'::jsonb
+      data jsonb NOT NULL DEFAULT '{}'::jsonb,
+      closed_at timestamptz,
+      closed_by uuid,
+      updated_at timestamptz
     );
     CREATE TABLE public.condominium_installments (
       id uuid PRIMARY KEY,
@@ -130,8 +142,9 @@ try {
     INSERT INTO public.condominium_units(id, workspace_id, condominium_id) VALUES
       ('${ids.unitA}', '${ids.workspace}', '${ids.condominium}'),
       ('${ids.unitB}', '${ids.workspace}', '${ids.condominium}');
-    INSERT INTO public.condominium_members(id, condominium_id)
-      VALUES ('${ids.memberA}', '${ids.condominium}');
+    INSERT INTO public.condominium_members(id, condominium_id, active, updated_at, data)
+      VALUES ('${ids.memberA}', '${ids.condominium}', true, now(),
+        '{"position_status":"Attivo","current_owner":true}'::jsonb);
     INSERT INTO public.condominium_ledger_entries(id, workspace_id, condominium_id, direction)
       VALUES ('20000000-0000-4000-8000-000000000001', '${ids.workspace}', '${ids.condominium}', 'Uscita');
 
@@ -190,6 +203,7 @@ try {
   `);
 
   await db.exec(baselineFunction);
+  await db.exec(baselineCloseFunction);
   const call = async (transferId) => {
     const result = await db.query(
       "SELECT private.check_condominium_member_transfer_closure($1::uuid) AS result",
@@ -208,6 +222,19 @@ try {
   assert.equal(Number(before.open_unit_carryovers), 5);
   assert.equal(Number(before.open_total), 477);
   console.log("PASS baseline reproduction: Unit B obligations inflate the Unit A transfer-closure totals.");
+
+  let baselineCloseError;
+  try {
+    await db.query(
+      "SELECT private.close_condominium_member_transfer($1::uuid)",
+      [ids.transfer]
+    );
+  } catch (error) {
+    baselineCloseError = error;
+  }
+  assert.ok(baselineCloseError, "Baseline close operation must reject the transfer because it counts Unit B obligations.");
+  assert.match(String(baselineCloseError.message), /TRANSFER_FINANCIAL_POSITIONS_OPEN/);
+  console.log("PASS baseline close reproduction: the authoritative close helper also blocks Unit A because of Unit B obligations.");
 
   await db.exec(migrationSql);
   const after = await call(ids.transfer);
@@ -229,6 +256,45 @@ try {
   assert.equal(Number(ownershipShare.open_member_carryovers), 0);
   assert.equal(Number(ownershipShare.open_unit_carryovers), 0);
   console.log("PASS ownership-share compatibility: no closure balances are introduced.");
+
+  // Clear only Unit A and legacy unit-null member obligations. Unit B remains
+  // unpaid; the corrected close operation must ignore those other-unit rows.
+  await db.exec(`
+    UPDATE public.condominium_installments
+      SET paid_amount = amount
+      WHERE member_id = '${ids.memberA}'
+        AND (unit_id IS NULL OR unit_id = '${ids.unitA}');
+    UPDATE public.condominium_expense_allocations
+      SET paid_amount = amount
+      WHERE member_id = '${ids.memberA}' AND unit_id = '${ids.unitA}';
+    UPDATE public.condominium_fiscal_carryovers
+      SET balance = 0
+      WHERE member_id = '${ids.memberA}'
+        AND (unit_id IS NULL OR unit_id = '${ids.unitA}');
+    UPDATE public.condominium_fiscal_carryovers
+      SET balance = 0
+      WHERE member_id IS NULL AND unit_id = '${ids.unitA}';
+  `);
+
+  const ready = await call(ids.transfer);
+  assert.equal(Number(ready.open_total), 0,
+    "After clearing Unit A obligations, Unit B obligations must not prevent closure.");
+  const closed = await db.query(
+    "SELECT private.close_condominium_member_transfer($1::uuid) AS closed",
+    [ids.transfer]
+  );
+  assert.equal(closed.rows[0].closed, true);
+  const transferState = await db.query(
+    "SELECT status FROM public.condominium_member_transfers WHERE id = $1::uuid",
+    [ids.transfer]
+  );
+  const memberState = await db.query(
+    "SELECT active FROM public.condominium_members WHERE id = $1::uuid",
+    [ids.memberA]
+  );
+  assert.equal(transferState.rows[0].status, "Chiuso");
+  assert.equal(memberState.rows[0].active, false);
+  console.log("PASS corrected close operation: Unit A closes while Unit B balances remain open.");
 } finally {
   await db.close();
 }
