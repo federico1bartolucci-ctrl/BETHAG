@@ -36,7 +36,7 @@ assert.doesNotMatch(workflow, /supabase db reset|supabase migration|apply_migrat
 
 assert.match(runbook, /30 days/);
 assert.match(runbook, /25 days/);
-assert.match(runbook, /No Production or QA writes/);
+assert.match(runbook, /QA changes, or Production application changes/);
 assert.match(runbook, /does not create a bucket/);
 
 console.log("PASS: BETHAG Storage backup safety contract");
