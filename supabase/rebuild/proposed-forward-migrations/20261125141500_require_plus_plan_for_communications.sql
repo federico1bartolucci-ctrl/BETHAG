@@ -128,7 +128,9 @@ BEFORE INSERT OR UPDATE ON public.communication_recipients
 FOR EACH ROW
 EXECUTE FUNCTION private.guard_communication_recipient_plan_entitlement();
 
-CREATE OR REPLACE FUNCTION public.prepare_communication_recipients(p_communication_id uuid)
+-- Keep public RPC endpoints SECURITY INVOKER. The guarded SECURITY DEFINER
+-- implementation lives in the unexposed private schema and performs all checks.
+CREATE OR REPLACE FUNCTION private.prepare_communication_recipients_plus(p_communication_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -137,41 +139,26 @@ AS $function$
 DECLARE
   v_workspace_id uuid;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'Autenticazione richiesta';
-  END IF;
-
-  SELECT workspace_id
-  INTO v_workspace_id
-  FROM public.communications
-  WHERE id = p_communication_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Comunicazione non trovata';
-  END IF;
-
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
+  SELECT workspace_id INTO v_workspace_id
+  FROM public.communications WHERE id = p_communication_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Comunicazione non trovata'; END IF;
   IF NOT private.can_manage_workspace_module(v_workspace_id, 'comunicazioni') THEN
     RAISE EXCEPTION 'Autorizzazione gestione Comunicazioni richiesta';
   END IF;
-
   IF NOT private.workspace_has_plus_plan(v_workspace_id) THEN
     RAISE EXCEPTION 'COMMUNICATIONS_PLAN_REQUIRED';
   END IF;
-
-  -- Delegate to the private implementation without replacing it. This keeps
-  -- independent recipient-retry/idempotency hardening composable.
   RETURN private.prepare_communication_recipients(p_communication_id);
 END;
 $function$;
 
-GRANT USAGE ON SCHEMA private TO authenticated;
-REVOKE EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.prepare_communication_recipients(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION private.prepare_communication_recipients_plus(uuid)
+FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.prepare_communication_recipients_plus(uuid)
+TO authenticated, service_role;
 
-COMMENT ON FUNCTION public.prepare_communication_recipients(uuid)
-IS 'Authorizes recipient preparation only for server-managed Plus-or-higher workspaces, then delegates to the private implementation.';
-
-CREATE OR REPLACE FUNCTION public.reset_stale_communication_recipients(
+CREATE OR REPLACE FUNCTION private.reset_stale_communication_recipients_plus(
   p_communication_id uuid,
   p_age interval DEFAULT '00:15:00'::interval
 )
@@ -183,40 +170,66 @@ AS $function$
 DECLARE
   v_workspace_id uuid;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'Autenticazione richiesta';
-  END IF;
-
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Autenticazione richiesta'; END IF;
   IF p_age IS NULL OR p_age < interval '5 minutes' THEN
     RAISE EXCEPTION 'Intervallo di recupero troppo breve';
   END IF;
-
-  SELECT workspace_id
-  INTO v_workspace_id
+  SELECT workspace_id INTO v_workspace_id
   FROM public.communications
-  WHERE id = p_communication_id
-    AND condominium_id IS NOT NULL;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Comunicazione non trovata';
-  END IF;
-
+  WHERE id = p_communication_id AND condominium_id IS NOT NULL;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Comunicazione non trovata'; END IF;
   IF NOT private.can_manage_workspace_module(v_workspace_id, 'comunicazioni') THEN
     RAISE EXCEPTION 'Permessi insufficienti';
   END IF;
-
   IF NOT private.workspace_has_plus_plan(v_workspace_id) THEN
     RAISE EXCEPTION 'COMMUNICATIONS_PLAN_REQUIRED';
   END IF;
-
-  -- Delegate to the private implementation so its provider/idempotency safeguards
-  -- remain intact when the independent retry-hardening candidate is integrated.
   RETURN private.reset_stale_communication_recipients(p_communication_id, p_age);
 END;
 $function$;
 
-REVOKE EXECUTE ON FUNCTION private.reset_stale_communication_recipients(uuid, interval) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.reset_stale_communication_recipients(uuid, interval) TO authenticated;
+REVOKE ALL ON FUNCTION private.reset_stale_communication_recipients_plus(uuid, interval)
+FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.reset_stale_communication_recipients_plus(uuid, interval)
+TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.prepare_communication_recipients(p_communication_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+BEGIN
+  RETURN private.prepare_communication_recipients_plus(p_communication_id);
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.prepare_communication_recipients(uuid)
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.prepare_communication_recipients(uuid)
+TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.prepare_communication_recipients(uuid)
+IS 'SECURITY INVOKER RPC endpoint delegating to an unexposed guarded implementation that enforces Plus-or-higher entitlement.';
+
+CREATE OR REPLACE FUNCTION public.reset_stale_communication_recipients(
+  p_communication_id uuid,
+  p_age interval DEFAULT '00:15:00'::interval
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+BEGIN
+  RETURN private.reset_stale_communication_recipients_plus(p_communication_id, p_age);
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.reset_stale_communication_recipients(uuid, interval)
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.reset_stale_communication_recipients(uuid, interval)
+TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.reset_stale_communication_recipients(uuid, interval)
-IS 'Authorizes stale-recipient recovery only for server-managed Plus-or-higher workspaces, then delegates to the private implementation.';
+IS 'SECURITY INVOKER RPC endpoint delegating to an unexposed guarded implementation that enforces Plus-or-higher entitlement.';
