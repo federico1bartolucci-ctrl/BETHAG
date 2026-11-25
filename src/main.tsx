@@ -2766,6 +2766,7 @@ function App() {
       try {
         // MFA è opzionale: un errore del controllo MFA non deve impedire
         // l'accesso standard con e-mail e password.
+        let mfaChosenForLogin = false;
         try {
           if (supabase.auth.mfa) {
             const { data: aalData } =
@@ -2782,6 +2783,7 @@ function App() {
                 );
 
                 if (useMfa) {
+                  mfaChosenForLogin = true;
                   const { data: challenge, error: challengeError } =
                     await supabase.auth.mfa.challenge({ factorId: factor.id });
                   if (challengeError) throw challengeError;
@@ -2789,24 +2791,33 @@ function App() {
                   const code = window.prompt(
                     "Inserisci il codice generato dall'app autenticatrice."
                   );
+                  if (!code?.trim()) {
+                    throw new Error("Verifica a due fattori annullata. Accesso non completato.");
+                  }
 
-                  if (code?.trim()) {
-                    const { error: verifyError } = await supabase.auth.mfa.verify({
-                      factorId: factor.id,
-                      challengeId: challenge.id,
-                      code: code.trim(),
-                    });
+                  const { error: verifyError } = await supabase.auth.mfa.verify({
+                    factorId: factor.id,
+                    challengeId: challenge.id,
+                    code: code.trim(),
+                  });
 
-                    if (verifyError) {
-                      throw new Error("Codice di autenticazione a due fattori non valido.");
-                    }
+                  if (verifyError) {
+                    throw new Error("Codice di autenticazione a due fattori non valido.");
                   }
                 }
               }
             }
           }
         } catch (mfaError) {
-          console.warn("BETHAG MFA non disponibile durante il login; accesso standard mantenuto.", mfaError);
+          if (mfaChosenForLogin) {
+            await supabase.auth.signOut();
+            throw new Error(
+              mfaError instanceof Error
+                ? mfaError.message
+                : "Verifica a due fattori non riuscita. Accesso non completato."
+            );
+          }
+          console.warn("BETHAG MFA non disponibile prima della scelta dell'utente; accesso standard mantenuto.", mfaError);
         }
 
         const access = await resolveSupabaseAccess(
