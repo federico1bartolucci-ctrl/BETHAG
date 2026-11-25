@@ -13,6 +13,9 @@ const postflight=await readFile("supabase/rebuild/drafts/production-cutover-post
 assert.equal(manifest.status,"DRAFT_NOT_APPROVED");
 assert.equal(manifest.approval_scope,"NONE");
 assert.equal(manifest.production_apply_authorized,false);
+assert.equal(manifest.owner_authorization?.status,"EXPIRED_WINDOW_REQUIRES_NEW_APPROVAL");
+assert.equal(manifest.owner_authorization?.current_authorization,false);
+assert.equal(manifest.current_disposition?.production_apply_authorized,false);
 assert.equal(snapshot.count,267);
 assert.equal(snapshot.migrations.length,267);
 assert.equal(snapshot.head.version,"20261105050000");
