@@ -115,7 +115,20 @@ try {
   await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [adminId]);
   await db.exec("SET ROLE authenticated");
   rows = await db.query("SELECT count(*)::int AS count FROM public.portal_registration_requests WHERE id = $1", [requestId]);
-  assert.equal(rows.rows[0].count, 0, "Free workspace administrators must not see Portal registration requests.");
+  assert.equal(rows.rows[0].count, 1, "Managers retain visibility of pending requests for cleanup after downgrade.");
+  rows = await db.query("SELECT count(*)::int AS count FROM public.portal_access WHERE workspace_id = $1", [workspaceId]);
+  assert.equal(rows.rows[0].count, 2, "Managers retain visibility of existing access rows after downgrade.");
+
+  await db.query("UPDATE public.portal_access SET active = false WHERE member_id = $1", [memberTwoId]);
+  await db.query("DELETE FROM public.portal_access WHERE member_id = $1", [memberTwoId]);
+
+  let requestUpdateDenied = false;
+  try {
+    await db.query("UPDATE public.portal_registration_requests SET status = 'pending' WHERE id = $1", [requestId]);
+  } catch (error) {
+    requestUpdateDenied = /row-level security|permission denied/i.test(error.message);
+  }
+  assert.equal(requestUpdateDenied, true, "Free workspace managers must not update Portal requests.");
 
   let insertDenied = false;
   try {
