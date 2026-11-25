@@ -29,20 +29,24 @@ The subscription `addons` array is currently local client state, not an authorit
 - Installed trigger `trg_workspace_plan_server_managed` on `public.workspaces`.
 - Reproduced the authenticated workspace-admin self-upgrade before application. After application, the same role is rejected with `WORKSPACE_PLAN_SERVER_MANAGED`.
 - Verified `service_role` can still change the server-owned plan.
-- Both update paths were tested in a rollback-only transaction; the persistent QA workspace remains Free.
-- This migration is a hard prerequisite for any feature whose server authorization trusts `workspaces.plan`, including AI, Portal and Communications. Apply it before their respective plan-entitlement guards in the eventual Production promotion order.
-- QA Security Advisor remains at zero lints.
+- Both update paths were tested in rollback-only transactions; the persistent QA workspace remains Free.
+- Deployed and verified QA Edge Functions against the reviewed branch source:
+  - `bethag-ai-document` v16: exact source match; server-side plan check requires Plus.
+  - `bethag-ai-condominium` v19: exact source match; server-side plan check requires Professional.
+- The Portal and Communications guards depend on this trigger; the eventual Production promotion order must apply the server-managed plan guard before Portal and Communications entitlement migrations.
+- QA Security Advisor after all related QA migrations and Edge Function deployments: **0 lints**.
 
 ## Production
 
-- No Production migration or write was performed.
+- No Production migration, Edge Function deployment or data write was performed.
 - Production ledger remains 267 rows, latest `20261105050000`.
+- Production AI Edge Function versions were not changed.
 - This candidate remains outside `supabase/migrations` pending the controlled release process.
 
 ## Safety
 
 - The PostgreSQL 17 regression requires a loopback-only `DATABASE_URL` and rolls back its fixtures.
-- The QA validation used explicit transactions and verified the persistent plan remained unchanged.
-- Production was not accessed for this intervention.
-- No merge, Production deployment, reset or manual final-QA dispatch was performed.
+- QA validation used explicit transactions; the synthetic workspace, users and communication fixtures were rolled back. The persistent QA workspace remains Free.
+- QA Edge Function deployment changed only the two AI functions on the QA branch; no external OpenAI request was made.
+- Production was not modified. No merge, Production deployment, reset or manual final-QA dispatch was performed.
 - Final QA remains a separate release gate.
