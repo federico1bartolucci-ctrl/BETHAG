@@ -183,8 +183,8 @@
     "Creare e verificare preflight/postflight per la singola migrazione: 267/head 20261105050000 → 268/head 20261124234000; verificare ACL globale, owner, schema public e grant storage — PASS nel rehearsal locale.",
     "Implementare il runner Production dedicato 267→268, separato dal runner storico 248→267 e dal runner locale; applicazione transazionale, ledger storico confrontato integralmente prima e dopo, TLS obbligatorio, approvazione e finestra vincolate — implementato fail-closed, non eseguito.",
     "Eseguire clean-install canonica a 28 file, rehearsal PostgreSQL 17 separata della candidata in drafts, regressione ACL e rehearsal del runner 267→268 sul database isolato — PASS.",
-    "QA mantiene il ledger storico distinto (283 righe); nessuna migrazione o reset QA. Un run QA parziale è stato interrotto dopo APP-12/webhook; le fixture temporanee sono state ripulite, ma il run non è accettazione APP-01..APP-15. Il branch resta escluso dal workflow QA condiviso.",
-    "Ricalcolare il fingerprint sullo SHA sorgente definitivo e acquisire approvazione esplicita per SHA, fingerprint, hash, progetto e finestra; servono revisione indipendente, APP-01..APP-15 PASS, CI esatta, verifica Data API recente e riconferma del rischio backup — nessuna approvazione presente.",
+    "QA shared environment: final authenticated APP-01..APP-15 collaudo on exact source SHA 86e2646f86a6b78a6f7dfbc610214ec045e425a3 — PASS; temporary Portal plan fixture restored; QA history not reset.",
+    "Ricalcolare il fingerprint sullo SHA sorgente definitivo e acquisire approvazione esplicita per SHA, fingerprint, hash, progetto e finestra; restano obbligatorie revisione tecnica indipendente, evidenza Data API Production recente con nomi schema, riconferma del rischio backup e approvazione del proprietario — nessuna approvazione presente.",
     "Solo dopo tutte le verifiche e un'autorizzazione separata valutare cutover Production forward-only. Nessuna esecuzione automatica o implicita."
   ],
   "expected_postflight": {
@@ -270,9 +270,9 @@
     "APP acceptance, Data API exposure, backup disposition or operator prerequisites are not freshly verified.",
     "No new explicit owner approval for exact final SHA, fingerprint and candidate hash exists."
   ],
-  "safety": "Production read-only verification 2026-11-24: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. PostgreSQL 17 clean-install, ACL regression, exact 267→268 local runner rehearsal, Build and Baseline Safety PASS on source SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36. QA ledger history was not migrated or reset. A concurrent workflow change accidentally started QA run 45507023362; synthetic test records were temporarily written and cleanup routines completed, the APP-07 persistent fixture was verified as pre-existing on 2026-11-02, no email was sent, and Portal plan fixture restoration returned RESTORE_NOT_REQUIRED. The partial QA run is not APP-01..APP-15 acceptance; current branch is excluded from shared QA workflow. No Production execution is authorized or performed.",
+  "safety": "Production read-only verification 2026-11-24: ledger 267 rows/head 20261105050000; all 267 pairs pinned; candidate absent. No Production writes, migrations, deploys or merges. PostgreSQL 17 clean-install, ACL regression, exact 267→268 local runner rehearsal, Build and Baseline Safety PASS on source SHA 6ec0d273f61180000bad64051e95a5d1af6a3e36. QA ledger history was not migrated or reset. A concurrent workflow change accidentally started QA run 45507023362; synthetic test records were temporarily written and cleanup routines completed, the APP-07 persistent fixture was verified as pre-existing on 2026-11-02, no email was sent, and Portal plan fixture restoration returned RESTORE_NOT_REQUIRED. The partial QA run is not APP-01..APP-15 acceptance; current branch is excluded from shared QA workflow. No Production execution is authorized or performed. Final exact-source-SHA QA run 45514606280 on 86e2646f86a6b78a6f7dfbc610214ec045e425a3 passed APP-01..APP-15; Portal plan fixture restoration and QA preview teardown succeeded. Build/PostgreSQL 17 run 45514606499 and Baseline Safety run 45514606220 passed. Live Resend send probe remained excluded. Independent review, fresh Production name-level Data API evidence, and new owner approval remain outstanding; Production remains untouched.",
   "rehearsal_evidence": {
-    "status": "TECHNICAL_REHEARSAL_PASS_APPLICATION_ACCEPTANCE_PENDING",
+    "status": "TECHNICAL_REHEARSAL_PASS_APPLICATION_ACCEPTANCE_PASS_PENDING_INDEPENDENT_REVIEW_AND_OWNER_APPROVAL",
     "target": "isolated PostgreSQL 17 only",
     "historical_rows_assumption": 267,
     "proposed_canonical_rows": 1,
@@ -281,7 +281,7 @@
     "global_function_default_acl_regression": "PASS",
     "full_clean_install": "PASS",
     "guarded_runner": "PASS",
-    "qa_authenticated_collaudo": "NOT ACCEPTED — final APP-01..APP-15 workflow skipped; see qa_execution_disposition",
+    "qa_authenticated_collaudo": "PASS — APP-01..APP-15 final authenticated QA workflow completed successfully on exact source SHA 86e2646f86a6b78a6f7dfbc610214ec045e425a3; shared QA Portal plan fixture restored successfully; live Resend send probe remained excluded by authorization scope.",
     "production_ddl_or_ledger_mutations": false,
     "production_execution_authorized": false,
     "production_execution_performed": false,
@@ -314,40 +314,38 @@
     "candidate_draft_rehearsal": "PASS",
     "candidate_draft_rehearsal_target": "isolated PostgreSQL 17; candidate read from supabase/rebuild/drafts; excluded from standard Supabase CLI migration inventory",
     "exact_head_ci_evidence": {
-      "tested_commit_sha": "cb8b3b110349add442711a4e864a58ee35c6bc9e",
+      "tested_commit_sha": "86e2646f86a6b78a6f7dfbc610214ec045e425a3",
       "build": {
-        "run_id": 45513584521,
+        "run_id": 45514606499,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584521"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606499"
       },
       "postgres17": {
-        "run_id": 45513584521,
+        "run_id": 45514606499,
+        "job_id": 138870700335,
         "conclusion": "success",
-        "job": "postgres-bootstrap",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584521"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606499"
       },
       "baseline_safety": {
-        "run_id": 45513584439,
+        "run_id": 45514606220,
         "conclusion": "success",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584439"
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606220"
       },
       "final_qa": {
-        "run_id": 45513584487,
-        "conclusion": "skipped",
-        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45513584487"
+        "run_id": 45514606280,
+        "conclusion": "success",
+        "url": "https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45514606280"
       },
       "browser_smoke": {
-        "run_id": 45513584521,
+        "run_id": 45514606499,
         "conclusion": "success",
         "step": "Run isolated public-login browser smoke test"
       },
-      "authenticated_qa_in_build": {
-        "run_id": 45513584521,
-        "authentication": "skipped",
-        "edit_archive": "skipped",
-        "reason": "Workflow conditions exclude this branch; no QA write performed."
-      },
-      "interpretation": "Exact-head technical CI PASS for Build, PostgreSQL 17, Baseline Safety and isolated public-login browser smoke. APP-01..APP-15 final acceptance remains NOT PASS because dedicated workflow was SKIPPED."
+      "authenticated_qa": {
+        "run_id": 45514606280,
+        "conclusion": "success",
+        "scope": "APP-01..APP-15; live Resend send probe explicitly excluded"
+      }
     }
   },
   "clean_install": {
@@ -429,26 +427,24 @@
     "production_authorized": false
   },
   "qa_execution_disposition": {
-    "status": "PARTIAL_RUN_CLEANUP_COMPLETED_NOT_ACCEPTED_AS_FINAL_QA",
-    "run_id": 45507023362,
-    "source_commit_sha": "10e44f0fce0a508670d18beefd77f06a96bd2b0f",
-    "conclusion": "cancelled after APP-12 and signed webhook test outputs; APP-15 and browser workflows skipped",
+    "status": "PASS_APP_01_APP_15_EXACT_SOURCE_SHA",
+    "run_id": 45514606280,
+    "source_commit_sha": "86e2646f86a6b78a6f7dfbc610214ec045e425a3",
+    "conclusion": "success",
     "completed_suites": [
       "APP-01..04 and APP-13 real-auth RLS/Storage",
       "APP-05..07 condominium/accounting/closed-period guard",
-      "APP-08..11 transfer invariants",
-      "APP-09 carryover blockers",
-      "APP-12 communication publication/recipient preparation",
-      "signed Resend webhook synthetic event verification"
+      "APP-08..11 transfer, unpaid-position and rollback invariants",
+      "APP-09 member and unit carryover blockers",
+      "APP-12 publication, recipient preparation and signed webhook events",
+      "Authenticated Edge Functions acceptance (invitations, deletion guards and AI)",
+      "APP-05/06/08/11/12 authenticated browser UI workflows",
+      "APP-15 role navigation and session persistence"
     ],
-    "cleanup": "temporary fixture cleanup code completed before suite PASS output; no live email sent",
-    "persistent_app07_fixture": {
-      "name": "BETHAG_QA_APP07_CLOSED_GUARD_FIXTURE",
-      "created_at_utc": "2026-11-02T04:12:46.316843Z",
-      "disposition": "pre-existing; not created by this run"
-    },
-    "portal_plan_fixture": "RESTORE_NOT_REQUIRED; prepare step did not run",
-    "final_acceptance": "NOT ACCEPTED — APP-01..APP-15 final workflow remains skipped on the current branch"
+    "excluded_scope": "APP-12 provider live-send probe excluded by authorization scope; no live email sent.",
+    "portal_plan_fixture": "PREPARED_AND_RESTORED_SUCCESSFULLY; restore step completed with success.",
+    "qa_preview": "STOPPED_SUCCESSFULLY",
+    "final_acceptance": "ACCEPTED — APP-01..APP-15 PASS on exact source SHA."
   },
   "production_readonly_recheck": {
     "checked_at_utc": "2026-11-24T23:48:57.016286Z",
