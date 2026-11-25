@@ -208,6 +208,18 @@ try {
   await db.exec(baselineCloseFunction);
   await db.exec(checkPublicRpc);
   await db.exec(closePublicRpc);
+  // Match the later hardening migration: the exposed RPC is SECURITY INVOKER,
+  // while the private implementation remains SECURITY DEFINER.
+  await db.exec("ALTER FUNCTION public.close_condominium_member_transfer(uuid) SECURITY INVOKER;");
+  const security = await db.query(`
+    SELECT
+      (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'close_condominium_member_transfer') AS public_is_definer,
+      (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'private' AND p.proname = 'close_condominium_member_transfer') AS private_is_definer
+  `);
+  assert.equal(security.rows[0].public_is_definer, false);
+  assert.equal(security.rows[0].private_is_definer, true);
   const call = async (transferId) => {
     const result = await db.query(
       "SELECT public.check_condominium_member_transfer_closure($1::uuid) AS result",
