@@ -31,6 +31,10 @@ const ids = {
 const email = "communication-plan-" + ids.admin + "@example.invalid";
 const memberEmail = "resident-" + ids.member + "@example.invalid";
 
+// Supabase grants authenticated access to auth.uid(); the isolated clean-install
+// bootstrap creates auth.uid() but does not model the managed auth-schema USAGE grant.
+psql(["-c", "GRANT USAGE ON SCHEMA auth TO authenticated;"]);
+
 const fixtureSql = `
 INSERT INTO auth.users (id, email) VALUES ('${ids.admin}', '${email}');
 INSERT INTO public.profiles (id, full_name, email, role, active)
