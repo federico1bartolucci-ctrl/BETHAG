@@ -94,9 +94,17 @@ try {
   assert.equal(orphanAfterCleanup.rows[0].auth_count, 0);
   assert.equal(orphanAfterCleanup.rows[0].profile_count, 0);
 
+  await db.exec(`
+    INSERT INTO auth_users(id,email) VALUES
+      ('00000000-0000-0000-0000-000000000013','three@example.invalid'),
+      ('00000000-0000-0000-0000-000000000014','four@example.invalid');
+    INSERT INTO profiles(id,full_name,email,role) VALUES
+      ('00000000-0000-0000-0000-000000000013','Three','three@example.invalid','collaborator'),
+      ('00000000-0000-0000-0000-000000000014','Four','four@example.invalid','collaborator');
+  `);
   await db.query(
     "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',7001)",
-    ["00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000011"],
+    ["00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000013"],
   );
   await db.query(
     "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',NULL),($1,$3,'collaborator',NULL)",
