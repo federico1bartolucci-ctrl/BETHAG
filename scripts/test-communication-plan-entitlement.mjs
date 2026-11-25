@@ -75,8 +75,11 @@ const edgeFunction = await readFile(
 );
 const gateIndex = edgeFunction.indexOf("checkWorkspacePlanEntitlement(");
 const prepareIndex = edgeFunction.indexOf('supabase.rpc("prepare_communication_recipients"');
+const configGateIndex = edgeFunction.indexOf('if (!resendApiKey || !fromEmail)');
 const resendIndex = edgeFunction.indexOf('fetch("https://api.resend.com/emails"');
 assert.ok(gateIndex >= 0, "Email Edge Function must enforce the server-owned workspace plan.");
+assert.ok(gateIndex < configGateIndex, "Plan entitlement must be checked before revealing provider configuration.");
+assert.ok(configGateIndex < prepareIndex, "Provider configuration must be checked before recipient preparation.");
 assert.ok(gateIndex < prepareIndex, "Plan gate must run before recipient preparation.");
 assert.ok(gateIndex < resendIndex, "Plan gate must run before any Resend API request.");
 assert.match(edgeFunction, /communication\.workspace_id,\s*"plus"/);
