@@ -18,6 +18,8 @@ function psql(args, input) {
 
 const migration = "supabase/rebuild/proposed-forward-migrations/20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements.sql";
 psql(["-f", migration]);
+// Match the Supabase service_role attribute in the disposable local database.
+psql(["-c", "ALTER ROLE service_role BYPASSRLS;"]);
 
 const workspaceId = randomUUID();
 const userId = randomUUID();
