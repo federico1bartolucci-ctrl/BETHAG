@@ -22,6 +22,17 @@ assert.match(
   "a stale snapshot must follow the existing zero-row conflict response",
 );
 
+const linkIndex = edgeSource.indexOf("await linkResidentMemberIfUnchanged(adminClient, member, targetUserId)");
+const conflictIndex = edgeSource.indexOf("if (!linkedMember?.length)", linkIndex);
+const profileLookupIndex = edgeSource.indexOf('.from("profiles")\\n      .select("role")', linkIndex);
+const profileUpsertIndex = edgeSource.indexOf('.from("profiles")\\n      .upsert(', linkIndex);
+const portalUpsertIndex = edgeSource.indexOf('.from("portal_access")\\n      .upsert(', linkIndex);
+assert.ok(linkIndex >= 0 && conflictIndex > linkIndex, "member snapshot must be checked first");
+assert.ok(profileLookupIndex > conflictIndex, "stale snapshots must not read or write the profile");
+assert.ok(profileUpsertIndex > profileLookupIndex, "profile upsert must follow the successful member link");
+assert.ok(portalUpsertIndex > profileUpsertIndex, "portal access must follow the profile upsert");
+
+
 const snapshot = {
   id: "member-1",
   condominium_id: "condo-1",

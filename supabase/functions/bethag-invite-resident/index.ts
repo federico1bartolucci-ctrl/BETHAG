@@ -180,6 +180,18 @@ Deno.serve(async (req: Request) => {
 
     if (!targetUserId) return json({ error: "Impossibile determinare l'utente condòmino." }, 500);
 
+    // Do not link an Auth user to a resident record that changed while the invitation was being prepared.
+    // The guarded UPDATE is atomic: stale email, role, unit, active state or user_id yields zero rows.
+    const linkedMember = await linkResidentMemberIfUnchanged(adminClient, member, targetUserId);
+    if (!linkedMember?.length) {
+      return json({
+        error: invited
+          ? "Il profilo condòmino è stato rimosso o modificato durante l'invito. L'invito e-mail potrebbe essere già stato inviato, ma nessun accesso al portale è stato creato. Verifica l'anagrafica prima di riprovare."
+          : "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
+        invitationSent: invited,
+      }, 409);
+    }
+
     const { data: existingProfile, error: existingProfileError } = await adminClient
       .from("profiles")
       .select("role")
@@ -200,18 +212,6 @@ Deno.serve(async (req: Request) => {
         active: true,
       }, { onConflict: "id" });
     if (profileError) throw profileError;
-
-    // Do not link an Auth user to a resident record that changed while the invitation was being prepared.
-    // The guarded UPDATE is atomic: stale email, role, unit, active state or user_id yields zero rows.
-    const linkedMember = await linkResidentMemberIfUnchanged(adminClient, member, targetUserId);
-    if (!linkedMember?.length) {
-      return json({
-        error: invited
-          ? "Il profilo condòmino è stato rimosso o modificato durante l'invito. L'invito e-mail potrebbe essere già stato inviato, ma nessun accesso al portale è stato creato. Verifica l'anagrafica prima di riprovare."
-          : "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
-        invitationSent: invited,
-      }, 409);
-    }
 
     const apartment =
       String(member.data?.apartment || "").trim() ||
