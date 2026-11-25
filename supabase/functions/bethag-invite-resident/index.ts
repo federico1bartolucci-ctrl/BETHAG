@@ -43,6 +43,13 @@ const tenantPortalPermissions = [
   "regolamento",
 ];
 
+function parsePositiveSafeInteger(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^\\d+$/.test(value.trim())) return null;
+  const parsed = typeof value === "string" ? Number(value.trim()) : value;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
@@ -75,11 +82,12 @@ Deno.serve(async (req: Request) => {
     if (userError || !userData.user) return json({ error: "Utente non autenticato." }, 401);
 
     const body = await req.json();
-    const workspaceId = String(body.workspaceId || "");
-    const legacyId = Number(body.legacyId || 0);
+    const workspaceId = typeof body?.workspaceId === "string" ? body.workspaceId.trim() : "";
+    const legacyId = parsePositiveSafeInteger(body?.legacyId);
+    const condominiumLegacyId = parsePositiveSafeInteger(body?.condominiumId);
 
-    if (!workspaceId || !legacyId) {
-      return json({ error: "Dati condòmino incompleti." }, 400);
+    if (!workspaceId || legacyId === null || condominiumLegacyId === null) {
+      return json({ error: "Workspace, condominio e identificativo condòmino devono essere validi interi positivi." }, 400);
     }
 
     const { data: membership, error: membershipError } = await userClient
@@ -93,11 +101,6 @@ Deno.serve(async (req: Request) => {
 
     if (membershipError) throw membershipError;
     if (!membership) return json({ error: "Operazione riservata all'Amministratore del workspace." }, 403);
-
-    const condominiumLegacyId = Number(body.condominiumId || 0);
-    if (!condominiumLegacyId) {
-      return json({ error: "Condominio del condòmino non specificato." }, 400);
-    }
 
     const { data: condominiumForMember, error: condominiumLookupError } = await adminClient
       .from("condominiums")
