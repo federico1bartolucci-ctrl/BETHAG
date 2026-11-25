@@ -101,8 +101,8 @@ assert.match(migration, /CREATE OR REPLACE FUNCTION private\.prepare_communicati
 assert.match(migration, /CREATE OR REPLACE FUNCTION private\.reset_stale_communication_recipients_plus[\s\S]*?SECURITY DEFINER/);
 assert.match(migration, /CREATE OR REPLACE FUNCTION public\.prepare_communication_recipients[\s\S]*?SECURITY INVOKER/);
 assert.match(migration, /CREATE OR REPLACE FUNCTION public\.reset_stale_communication_recipients[\s\S]*?SECURITY INVOKER/);
-assert.match(migration, /REVOKE EXECUTE ON FUNCTION private\.prepare_communication_recipients\(uuid\) FROM PUBLIC, anon, authenticated/);
-assert.match(migration, /REVOKE EXECUTE ON FUNCTION private\.reset_stale_communication_recipients\(uuid, interval\) FROM PUBLIC, anon, authenticated/);
+assert.match(migration, /REVOKE ALL ON FUNCTION private\.prepare_communication_recipients\(uuid\)\s+FROM PUBLIC, anon, authenticated/);
+assert.match(migration, /REVOKE ALL ON FUNCTION private\.reset_stale_communication_recipients\(uuid, interval\)\s+FROM PUBLIC, anon, authenticated/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION private\.prepare_communication_recipients_plus\(uuid\)\s+TO authenticated, service_role/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION private\.reset_stale_communication_recipients_plus\(uuid, interval\)\s+TO authenticated, service_role/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.prepare_communication_recipients\(uuid\)\s+TO authenticated, service_role/);
