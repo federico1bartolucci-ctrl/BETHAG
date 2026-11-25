@@ -25,8 +25,6 @@ const ids = {
   member: randomUUID(),
   communication: randomUUID(),
   recipient: randomUUID(),
-  secondCommunication: randomUUID(),
-  secondRecipient: randomUUID(),
 };
 const email = "communication-plan-" + ids.admin + "@example.invalid";
 const memberEmail = "resident-" + ids.member + "@example.invalid";
@@ -61,25 +59,6 @@ VALUES (
 );
 `;
 
-const guardedFixtureSql = fixtureSql.replace(
-  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'free');`,
-  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'plus');`,
-) + `
-INSERT INTO public.communication_recipients (
-  id, communication_id, workspace_id, condominium_id, member_id, user_id,
-  email, name, recipient_role, status, queued_at
-)
-VALUES (
-  '${ids.recipient}', '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
-  '${ids.member}', NULL, '${memberEmail}', 'Communication Regression Resident',
-  'resident', 'queued', now() - interval '20 minutes'
-);
-UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
-`;
-
-const baselineSql = `
-BEGIN;
-${fixtureSql}
 const baselineSql = `
 BEGIN;
 ${fixtureSql}
@@ -137,15 +116,32 @@ SELECT 'COMMUNICATIONS_FREE_PLAN_BASELINE_BYPASS_REPRODUCED';
 `;
 const baselineOutput = psql(["-c", baselineSql]);
 assert.match(baselineOutput, /COMMUNICATIONS_FREE_PLAN_BASELINE_BYPASS_REPRODUCED/);
-console.log("PASS baseline reproduction: a Free workspace admin can publish a communication, prepare recipients and reset queued delivery rows.");
+console.log("PASS baseline reproduction: a Free workspace admin can publish a communication, prepare recipients and reset stale queued delivery rows.");
 
 const migration = "supabase/rebuild/proposed-forward-migrations/20261125141500_require_plus_plan_for_communications.sql";
 psql(["-f", migration]);
 
+// The candidate blocks inserts for Free workspaces. Seed the existing communication
+// and queued recipient while the fixture is Plus, then downgrade through postgres.
+const guardedFixtureSql = fixtureSql.replace(
+  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'free');`,
+  `VALUES ('${ids.workspace}', 'Communication plan entitlement regression', 'plus');`,
+) + `
+INSERT INTO public.communication_recipients (
+  id, communication_id, workspace_id, condominium_id, member_id, user_id,
+  email, name, recipient_role, status, queued_at
+)
+VALUES (
+  '${ids.recipient}', '${ids.communication}', '${ids.workspace}', '${ids.condominium}',
+  '${ids.member}', NULL, '${memberEmail}', 'Communication Regression Resident',
+  'resident', 'queued', now() - interval '20 minutes'
+);
+UPDATE public.workspaces SET plan = 'free' WHERE id = '${ids.workspace}'::uuid;
+`;
+
 const guardedSql = `
 BEGIN;
 ${guardedFixtureSql}
-/* recipient fixture is inserted while the workspace is Plus, then the workspace is downgraded */
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '${ids.admin}', true);
 
@@ -235,7 +231,7 @@ BEGIN
   END;
   IF NOT v_denied THEN RAISE EXCEPTION 'FREE_PLAN_STALE_RECIPIENT_RESET_NOT_BLOCKED'; END IF;
 
-  -- Delivery bookkeeping must remain possible after downgrade/in-flight sends.
+  -- Delivery bookkeeping remains writable by the existing in-flight path.
   UPDATE public.communications
   SET email_status = 'Errore', email_prepared_at = now()
   WHERE id = '${ids.communication}'::uuid;
@@ -320,7 +316,7 @@ BEGIN
   END;
   IF NOT v_denied THEN RAISE EXCEPTION 'DOWNGRADED_PLAN_CONTENT_UPDATE_NOT_BLOCKED'; END IF;
 
-  -- Unpublishing and delivery status finalization remain available for cleanup.
+  -- Unpublishing and delivery-status finalization remain available after downgrade.
   UPDATE public.communications
   SET published = false, email_status = 'Errore'
   WHERE id = '${ids.communication}'::uuid;
