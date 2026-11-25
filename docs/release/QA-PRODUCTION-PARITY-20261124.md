@@ -310,3 +310,11 @@ Commit fix: `66d79c6e463ccddbaf691bbd4fc0e6ae5173b973`. La CI sul nuovo head dev
 La CI sul commit `76cbdb7eb56cec639425a527d0ca5e70680bb54e` ha superato `chronological-candidate-chain`, `work-progress-payment-allocation` e `work-delete-sal-guard`. Il job supporting regressions ha poi individuato lo stesso timestamp obsoleto in un secondo harness: `scripts/work-details-reference-audit-regression.sql` includeva `20261124240000_audit_work_details_and_references.sql`; aggiornato a `20261124233100_audit_work_details_and_references.sql`.
 
 Commit fix: `40ee47740f4c7c11aef7073abdf4afd92883c7ba`. La nuova CI sul nuovo head deve confermare il superamento integrale. Punto 1 resta RIAPERTO. Nessuna modifica QA/Production.
+
+
+## Allineamento candidato ACL globale — 25 novembre 2026
+
+- La regressione ACL contabile utilizza ora la stessa candidata forward-only verificata nella PR #434: `supabase/rebuild/drafts/20261124234000_revoke_postgres_global_public_function_execute.sql` (Git blob SHA `499ea493e828243309ee2f4bb9c3242d2fbeb862`).
+- La copia draft precedente `20261124215000_revoke_postgres_global_public_function_execute.sql` è stata rimossa dal ramo integrato per evitare due payload diversi con la stessa finalità.
+- Il test `scripts/private-function-default-acl-repair-regression.sql` esegue due volte la candidata unica e verifica nuove funzioni private/public, preservazione dei grant schema-specifici storage, ACL delle funzioni preesistenti e default `supabase_admin`.
+- La candidata resta esclusivamente in `supabase/rebuild/drafts`, fuori da `supabase/migrations`; nessuna migrazione Production è stata applicata e il runner dedicato resta non eseguito.
