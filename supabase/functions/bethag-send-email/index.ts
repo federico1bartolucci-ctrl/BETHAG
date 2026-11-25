@@ -25,7 +25,6 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = publishableKeys ? JSON.parse(publishableKeys)["default"] : (Deno.env.get("SUPABASE_ANON_KEY") ?? "");
     const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
     const fromEmail = Deno.env.get("BETHAG_FROM_EMAIL") ?? "";
-    if (!resendApiKey || !fromEmail) return json({ error: "Servizio e-mail non configurato." }, 503);
 
     const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -74,6 +73,9 @@ Deno.serve(async (req: Request) => {
         code: planEntitlement.code,
       }, 503);
     }
+
+    // Do not expose provider configuration to workspaces that are not entitled to send.
+    if (!resendApiKey || !fromEmail) return json({ error: "Servizio e-mail non configurato." }, 503);
 
     const { data: condominium, error: condoError } = await supabase.from("condominiums")
       .select("id,archived_at").eq("id", communication.condominium_id)
