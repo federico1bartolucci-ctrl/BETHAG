@@ -41,7 +41,7 @@ Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle exp
 
 ## GitHub Environment secrets
 
-Create Environment `storage-backup-production` and add these secrets. Also add the Environment variable `STORAGE_BACKUP_ENABLED=true` only after the bucket, retention/lifecycle rules, secrets, and recurring cost have been reviewed and explicitly approved. Until that variable is set, scheduled and manual backup jobs are skipped.
+Create Environment `storage-backup-production` and add the secrets listed below. Keep the activation switch separate from the protected Environment: add the **repository-level Actions variable** `STORAGE_BACKUP_ENABLED=true` under Settings → Secrets and variables → Actions → Variables only after the bucket, retention/lifecycle rules, credentials, and recurring cost have been reviewed and explicitly approved. Do not store this switch as an Environment variable. The workflow evaluates the repository-level variable in the job condition before the job references `storage-backup-production`; when it is absent or not exactly `true`, the job is skipped before Environment protection rules or approval are entered. The Environment remains responsible for protecting and supplying backup credentials only.
 
 | Secret | Value |
 | --- | --- |
@@ -73,7 +73,7 @@ To restore, select a manifest by timestamp, download each referenced blob, verif
 - Cloudflare bucket/account: not created by this change.
 - Bucket Lock and lifecycle: not configured.
 - GitHub Environment/secrets: not configured.
-- Activation gate: Environment variable `STORAGE_BACKUP_ENABLED` must be set to `true` after cost approval; otherwise the backup job is skipped.
+- Activation gate: repository-level Actions variable `STORAGE_BACKUP_ENABLED` must be set to `true` after cost approval; otherwise the job is skipped before entering the protected Environment.
 - First backup: NOT RUN.
 - Restore drill: NOT RUN.
 - Production and QA data/configuration: unchanged.
