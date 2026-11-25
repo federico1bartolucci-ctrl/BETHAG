@@ -1,0 +1,80 @@
+# APP-14 — Production release recertification status
+
+**Updated:** 2026-11-25  
+**Current main candidate:** `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`  
+**Release fingerprint:** `48b093b22bea647fdd6a99388909415c377a8e8080cf14ab19a1419eb48eeed4`  
+**Production project:** `tctcgptrsmvgajqjgnev`  
+**Disposition:** **PARTIAL / NO-GO — historical 19-migration cutover is already present; new communications entitlement correction is not deployed**
+
+## 1. Exact candidate and QA evidence
+
+- PR #466 (server-side Plus entitlement for Communications) is merged. Current main is `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`.
+- Final authenticated QA workflow [45644127205](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45644127205): **SUCCESS**, exact current main SHA. The workflow's SHA trust gate passed; all steps completed successfully.
+- APP-01..04 and APP-13 real-auth RLS/storage checks: PASS.
+- APP-05..07 condominium, accounting and closed-period checks: PASS.
+- APP-08..11 transfer, unpaid-position, rollback and carryover checks: PASS.
+- APP-12 communication recipient preparation and signed webhook checks: PASS.
+- Authenticated browser APP-05/06/08/11/12 flows: PASS, no page errors.
+- APP-15 navigation and real Auth/session persistence: PASS for admin, collaborator and resident.
+- Reversible QA Portal-plan fixture was restored; workflow explicitly reported `restoredPlan: free`.
+- Live Resend send probe was intentionally SKIPPED. No real email was sent.
+- Fingerprint from the exact workflow checkout: `48b093b22bea647fdd6a99388909415c377a8e8080cf14ab19a1419eb48eeed4`; source SHA emitted by the fingerprint script: `5d96342209be77e189012dec754bc764999e64e2`.
+
+## 2. Fresh read-only Production evidence — 2026-11-25
+
+Supabase connector reached Production project `tctcgptrsmvgajqjgnev` using database role `postgres`:
+- Project status: `ACTIVE_HEALTHY`; PostgreSQL 17.6.1.
+- Live migration ledger: **267 rows**, sorted head `20261105050000`.
+- Compared all live version/name pairs against the frozen 248-row historical snapshot plus the 19 approved canonical increments: **267/267 exact; no missing or unexpected pairs**.
+- Compared all 19 approved SQL Git blob hashes against current `main`: **19/19 exact**.
+- Executed `supabase/rebuild/production-cutover-postflight-20261105.sql` read-only: completed without exception. Its 47-table, ACL/default-ACL, RLS, routine, ledger, portal registration and transfer invariants passed.
+- The apparent 48th public relation in a broad relation count is the `condominium_fund_availability` view; the postflight correctly distinguishes it from the 47 base tables. This is not a table-count drift.
+- No Production schema, data, ACL or migration-ledger writes were made during these checks.
+
+**Important:** the previous 19-migration cutover is already reflected in Production. Do not reapply those 19 migrations and do not replay or rewrite the historical ledger.
+
+## 3. Remaining Production blocker discovered
+
+PR #466's communications plan-entitlement correction is merged in application source, but its database candidate is deliberately still outside the canonical migration directory:
+
+`supabase/rebuild/proposed-forward-migrations/20261125141500_require_plus_plan_for_communications.sql`
+
+- Current Production still grants authenticated EXECUTE directly on `private.prepare_communication_recipients(uuid)` and `private.reset_stale_communication_recipients(uuid, interval)`. The candidate migration revokes these direct grants and adds server-side Plus-or-higher enforcement for communication content/publication and recipient identity/preparation.
+- Production Edge Function `bethag-send-email` is currently deployed at version **15**. Its deployed source does **not** perform the workspace-plan entitlement check before recipient preparation/Resend.
+- Current `main` source includes `checkWorkspacePlanEntitlement` before recipient preparation and external Resend calls. It has not yet been deployed to Production.
+- The isolated PostgreSQL 17 regression and unit tests for this candidate passed in PR #466 CI, but this is not evidence that the candidate has been applied to Production.
+- Therefore APP-12 functional QA on the current main does not close the Production plan-entitlement deployment gap.
+
+This is the concrete outstanding release correction. It requires a reviewed forward migration and a controlled deployment of the updated Edge Function, followed by verification. No candidate SQL was applied and no Edge Function was deployed during this recertification.
+
+## 4. APP-14 gate matrix
+
+| Gate | Current disposition | Evidence / remaining action |
+|---|---|---|
+| Exact-main build and final authenticated QA | PASS | Run [45644127205](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45644127205), exact SHA |
+| 19 canonical migrations / historical ledger | PASS | 267 exact pairs; 19/19 blob hashes match |
+| Production read-only postflight | PASS | Reviewed SQL completed without exception |
+| Communications Plus entitlement DB correction | NOT DEPLOYED | Candidate SQL remains in proposed-forward-migrations; must be promoted/reviewed and applied under explicit scope |
+| `bethag-send-email` Production deployment | NOT DEPLOYED | Production v15 lacks plan check; current main source contains it |
+| Data API exposed-schema Dashboard check | NOT VERIFIED TODAY | Operator must confirm `supabase_functions` is not exposed |
+| Current provider backup visibility | NOT VERIFIED TODAY | Operator must verify a current identifiable backup before any Production DDL |
+| Provider-managed physical restore | NOT TESTED | Previously accepted residual risk; do not describe as tested |
+| Live Resend delivery | NOT TESTED | Intentionally excluded; requires separate authorization and controlled recipient |
+| New maintenance plan / operator / STOP recovery | PENDING | Required only if the reviewed candidate requires Production DDL/deployment window |
+| Final owner approval | PENDING FOR NEW CANDIDATE | Must bind exact SHA, candidate SQL hash, Edge Function source and Production project |
+
+## 5. Next execution sequence — no restart of completed work
+
+1. Promote the communications entitlement SQL candidate into a reviewed, uniquely versioned forward migration; retain its current hash and rerun PostgreSQL 17 clean-install/regression checks.
+2. Apply and verify the candidate on QA, then run focused authenticated checks proving Free is denied and Plus/Professional/Portal are allowed. Do not send real email.
+3. Prepare the Production deployment package pinned to exact main SHA, migration hash and Edge Function source/dependencies.
+4. Immediately before Production changes, recheck Data API exposed schemas and current provider backup in Dashboard; preserve physical-restore status as NOT TESTED.
+5. Obtain explicit owner approval for this new candidate and the Production Edge Function deployment. The historical 2026-11-08 approval applies only to the already-present 19-migration scope and cannot authorize this new change.
+6. Deploy only the approved candidate and Edge Function; verify direct private RPC denial for authenticated, plan-gate behavior, function version/source, and read-only postflight.
+7. Only after those checks may APP-14 be reconsidered for PASS.
+
+## 6. Safety record
+
+The 2026-11-25 Production inspection was read-only. It did not alter schema, data, ACLs, migration history, Edge Functions, email delivery or backup settings. QA final workflow restored its temporary plan fixture to `free`. No Production migration or Edge Function deployment has been performed.
+
+**Decision: APP-14 remains PARTIAL / Production NO-GO.** The original 19-migration ledger reconciliation is closed; the remaining concrete blocker is deployment and verification of the newly merged communications Plus entitlement correction, plus the operator-only Dashboard/backup checks and fresh approval.
