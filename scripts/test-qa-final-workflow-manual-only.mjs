@@ -24,7 +24,7 @@ assert.match(workflow, /^          persist-credentials: false$/m,
 assert.match(workflow, /^          if ! \[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]; then$/m,
   "The requested target must be a full lowercase 40-character SHA.");
 assert.match(workflow, /TRUSTED_SHA="\$\(git rev-parse HEAD\)"/,
-  "The workflow must capture the current trusted CAP branch head.");
+  "The workflow must capture the current trusted main branch head.");
 assert.match(workflow, /test "\$EXPECTED_SHA" = "\$TRUSTED_SHA"/,
   "The requested SHA must equal the current trusted main head.");
 assert.match(workflow, /git checkout --detach "\$EXPECTED_SHA"/,
@@ -34,7 +34,7 @@ assert.match(workflow, /test "\$ACTUAL_SHA" = "\$EXPECTED_SHA"/,
 assert.doesNotMatch(workflow, /github\.head_ref|inputs\.target_ref \|\| github\.sha/,
   "No PR branch or implicit SHA fallback may activate Final QA.");
 
-const verifyIndex = workflow.indexOf("- name: Verify requested SHA is the current trusted CAP head");
+const verifyIndex = workflow.indexOf("- name: Verify requested SHA is the current trusted main head");
 const setupIndex = workflow.indexOf("- name: Setup Node");
 const installIndex = workflow.indexOf("- name: Install dependencies");
 const firstQaSecretIndex = workflow.indexOf("BETHAG_QA_SERVICE_ROLE_KEY");
