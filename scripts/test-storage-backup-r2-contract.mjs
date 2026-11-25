@@ -9,7 +9,7 @@ assert.match(script, /SUPABASE_STORAGE_BUCKET \|\| "bethag-documents"/);
 assert.match(script, /SUPABASE_S3_ENDPOINT/);
 assert.match(script, /\/storage\/v1\/s3/);
 assert.match(script, /assertBucketLock/);
-assert.match(script, /import \\{ listAllStorageObjects \\} from "\\.\\/storage-backup-list-all\\.mjs"/);
+assert.ok(script.includes('import { listAllStorageObjects } from "./storage-backup-list-all.mjs";'));
 assert.match(script, /currentStage = "R2 lifecycle configuration"/);
 assert.match(script, /failed at \[" \+ currentStage \+ "\]/);
 assert.match(script, /bucketPayload\.result\?\.jurisdiction/);
