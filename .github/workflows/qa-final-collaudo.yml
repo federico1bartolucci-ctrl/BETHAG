@@ -2,7 +2,7 @@ name: BETHAG final QA collaudo APP-01..APP-15
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
     branches: ["main"]
   workflow_dispatch:
     inputs:
