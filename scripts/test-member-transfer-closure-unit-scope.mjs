@@ -15,9 +15,10 @@ const baselineSql = await readFile(baselinePath, "utf8");
 function extractPublicFunction(name) {
   const marker = "CREATE OR REPLACE FUNCTION public." + name + "(";
   const start = baselineSql.indexOf(marker);
-  const end = baselineSql.indexOf("\\n;\\n", start) + 3;
+  const endMarker = "$function$" + String.fromCharCode(10) + ";";
+  const end = baselineSql.indexOf(endMarker, start);
   assert.ok(start >= 0 && end > start, "Exact baseline scope trigger must be present: " + name);
-  return baselineSql.slice(start, end);
+  return baselineSql.slice(start, end + endMarker.length);
 }
 const installmentScopeTrigger = extractPublicFunction("validate_condominium_installment_scope");
 const allocationScopeTrigger = extractPublicFunction("validate_condominium_expense_allocation_scope");
