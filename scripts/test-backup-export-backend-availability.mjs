@@ -34,7 +34,7 @@ assert.ok(availabilityCheck >= 0, "export must check backend availability");
 assert.ok(backendRead > availabilityCheck, "backend availability must be checked before the first backend read");
 assert.match(
   exportHandler,
-  /if \(backendAvailabilityError\)\s*\{\s*errors\.__backend = backendAvailabilityError;\s*\}\s*else\s*\{/,
+  /if \(backendAvailabilityError\)\s*\{\s*errors\.__backend = backendAvailabilityError;\s*\}\s*else if \(supabase && profile\.workspaceId\)\s*\{/,
   "an unavailable backend must be recorded in backendReadErrors instead of silently skipping every table",
 );
 assert.match(exportHandler, /backendReadErrors: errors/, "the availability warning must be stored in the exported backup");
