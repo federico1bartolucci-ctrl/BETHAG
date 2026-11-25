@@ -31,7 +31,10 @@ begin
          coalesce(t.data->>'transfer_scope', 'whole_property'),
          case
            when jsonb_typeof(t.data->'outgoing_member_ids') = 'array'
-             then (select array_agg(value::uuid) from jsonb_array_elements_text(t.data->'outgoing_member_ids'))
+             then coalesce(
+             (select array_agg(value::uuid) from jsonb_array_elements_text(t.data->'outgoing_member_ids')),
+             array[t.outgoing_member_id]
+           )
            else array[t.outgoing_member_id]
          end
     into v_workspace, v_condominium, v_unit, v_status, v_scope, v_outgoing_ids
@@ -133,7 +136,10 @@ begin
   if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
   select t.workspace_id,t.condominium_id,t.unit_id,t.status,coalesce(t.data->>'transfer_scope','whole_property'),
          case when jsonb_typeof(t.data->'outgoing_member_ids')='array'
-              then (select array_agg(value::uuid) from jsonb_array_elements_text(t.data->'outgoing_member_ids'))
+              then coalesce(
+             (select array_agg(value::uuid) from jsonb_array_elements_text(t.data->'outgoing_member_ids')),
+             array[t.outgoing_member_id]
+           )
               else array[t.outgoing_member_id] end
     into v_workspace,v_condominium,v_unit,v_transfer_status,v_scope,v_outgoing_ids
   from public.condominium_member_transfers t where t.id=p_transfer_id for update;
