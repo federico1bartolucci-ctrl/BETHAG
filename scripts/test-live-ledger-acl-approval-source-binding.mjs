@@ -33,7 +33,7 @@ assert.throws(() => assertLiveLedgerAclEvidenceMatchesSource({
 assert.throws(() => assertLiveLedgerAclEvidenceMatchesSource({
   ...validApproval,
   technical_review: { ...validApproval.technical_review, conflict_disclosed: false },
-}, approvedSourceSha), /non-independence limitation must be explicitly disclosed/,
+}, approvedSourceSha), /non-independent review limitation must be explicitly disclosed/,
 "An undisclosed conflict must be rejected.");
 
 assert.throws(() => assertLiveLedgerAclEvidenceMatchesSource({
