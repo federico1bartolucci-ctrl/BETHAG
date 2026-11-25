@@ -153,7 +153,7 @@ DECLARE
   v_count integer;
 BEGIN
   -- Private SECURITY DEFINER implementations must not be callable directly by
-  -- authenticated clients; only public SECURITY DEFINER wrappers may delegate.
+  -- authenticated clients; public SECURITY INVOKER wrappers delegate to guarded private SECURITY DEFINER functions.
   IF has_function_privilege('authenticated', 'private.prepare_communication_recipients(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'private.reset_stale_communication_recipients(uuid, interval)', 'EXECUTE') THEN
     RAISE EXCEPTION 'AUTHENTICATED_PRIVATE_RECIPIENT_RPC_EXECUTE_MUST_BE_REVOKED';
