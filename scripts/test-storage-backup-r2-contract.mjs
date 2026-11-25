@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
 const sourceSignature = await readFile("scripts/storage-backup-source-signature.mjs", "utf8");
+const blobIntegrity = await readFile("scripts/storage-backup-blob-integrity.mjs", "utf8");
 const workflow = await readFile(".github/workflows/storage-backup-r2.yml", "utf8");
 const runbook = await readFile("docs/STORAGE_BACKUP_R2.md", "utf8");
 
@@ -13,6 +14,9 @@ assert.match(script, /assertBucketLock/);
 assert.match(script, /GetBucketLifecycleConfigurationCommand/);
 assert.match(script, /HeadObjectCommand/);
 assert.match(script, /head\.Metadata\?\.sha256 !== sha256/);
+assert.match(script, /readAndVerifyBlobBody/);
+assert.equal(script.split("readAndVerifyBlobBody(").length - 1, 2);
+assert.match(blobIntegrity, /actualSha256 !== expectedSha256/);
 assert.match(script, /hasSnapshotsExpiry/);
 assert.match(script, /hasBlobsExpiry/);
 assert.match(script, /existingBlobObjects = await listAll/);
