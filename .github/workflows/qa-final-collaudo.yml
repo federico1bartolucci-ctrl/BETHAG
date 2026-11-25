@@ -1,15 +1,11 @@
 name: BETHAG final QA collaudo APP-01..APP-15
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       target_ref:
         description: "Exact CAP commit SHA to test"
         required: true
-        default: "be8fd54a61bb13e9f0c8cea0799e4821e7950520"
         type: string
 
 concurrency:
@@ -18,26 +14,23 @@ concurrency:
 
 jobs:
   final-qa-collaudo:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/qa-view-acl-parity-20261105' || github.head_ref == 'fix/edge-functions-phase1' || github.head_ref == 'diagnostics/condominium-units-aurora' || github.head_ref == 'cap-consolidation-20261123'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout requested CAP revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_ref || github.sha }}
+          ref: ${{ inputs.target_ref }}
 
       - name: Verify checked-out revision
+        if: github.event_name == 'workflow_dispatch'
         env:
-          EXPECTED_SHA: ${{ inputs.target_ref || github.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_SHA: ${{ inputs.target_ref }}
         run: |
           ACTUAL_SHA="$(git rev-parse HEAD)"
-          echo "Expected checkout SHA: $EXPECTED_SHA"
-          echo "Actual checkout SHA: $ACTUAL_SHA"
-          if [ -n "$PR_HEAD_SHA" ]; then
-            echo "Pull request head SHA: $PR_HEAD_SHA"
-          fi
+          echo "Requested SHA: $EXPECTED_SHA"
+          echo "Checked-out SHA: $ACTUAL_SHA"
           test "$ACTUAL_SHA" = "$EXPECTED_SHA"
 
       - name: Setup Node
