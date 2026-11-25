@@ -56,6 +56,7 @@ async function assertBucketLock(accountId, bucketName, token) {
     throw new Error("R2 retention gate failed: enable an active Bucket Lock rule for prefix '" +
       DESTINATION_PREFIX + "' with at least 30 days (2592000 seconds). No backup was written.");
   }
+  return jurisdiction;
 }
 
 async function listAll(client, bucket, prefix) {
@@ -86,14 +87,14 @@ async function main() {
   const cloudflareReadToken = required("CLOUDFLARE_R2_READ_TOKEN");
 
   currentStage = "Cloudflare bucket metadata and Bucket Lock preflight";
-  await assertBucketLock(accountId, destinationBucket, cloudflareReadToken);
+  const jurisdiction = await assertBucketLock(accountId, destinationBucket, cloudflareReadToken);
 
   const source = new S3Client({
     endpoint: sourceEndpoint, region: sourceRegion, forcePathStyle: true,
     credentials: { accessKeyId: sourceAccessKey, secretAccessKey: sourceSecret }
   });
   const destination = new S3Client({
-    endpoint: "https://" + accountId + ".r2.cloudflarestorage.com",
+    endpoint: "https://" + accountId + (jurisdiction === "default" ? "" : "." + jurisdiction) + ".r2.cloudflarestorage.com",
     region: "auto", forcePathStyle: true,
     credentials: { accessKeyId: destinationAccessKey, secretAccessKey: destinationSecret }
   });

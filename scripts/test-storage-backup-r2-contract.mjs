@@ -13,6 +13,8 @@ assert.match(script, /currentStage = "R2 lifecycle configuration"/);
 assert.match(script, /failed at \[" \+ currentStage \+ "\]/);
 assert.match(script, /bucketPayload\.result\?\.jurisdiction/);
 assert.match(script, /cf-r2-jurisdiction.*jurisdiction/);
+assert.match(script, /return jurisdiction/);
+assert.match(script, /jurisdiction === "default" \? "" : "\." \+ jurisdiction/);
 assert.doesNotMatch(script, /process\.env\.R2_JURISDICTION/);
 assert.match(script, /GetBucketLifecycleConfigurationCommand/);
 assert.match(script, /HeadObjectCommand/);
