@@ -96,9 +96,11 @@ This section supersedes the earlier safety statement about database access. The 
 
 ### Latest CI
 
-- Latest head at time of this record: `bb6c390fb7170d105fa7d7e8fd20d2082890da24`.
-- Baseline Safety run [45656759542](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45656759542): **SUCCESS**, including migration-baseline and ACL safety plus clean bootstrap.
-- Build + PostgreSQL 17 run [45656759533](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45656759533): still running at the time of documentation; do not treat it as passed until the workflow reports SUCCESS.
+- Final reviewed head: `b2acddb245a7421d16df599fd0ed4e641ea43f5f`.
+- Baseline Safety run [45657042267](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657042267): **SUCCESS**.
+- Build + PostgreSQL 17 run [45657042126](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45657042126): **SUCCESS**.
+- Both runs validate the final PR head, including the cross-plan UI entitlement regression assertions, migration-baseline/ACL safety, clean PostgreSQL 17 bootstrap, Vite build and browser smoke.
+- Earlier intermediate attempts failed because the new regression script's source-boundary assertion was too broad; the test was narrowed to explicit function boundaries and the final head passed both workflows.
 - The latest CI test now covers the Free/Plus UI gate and prevents local-only Communications add-on activation.
 
 ## Remaining gates
