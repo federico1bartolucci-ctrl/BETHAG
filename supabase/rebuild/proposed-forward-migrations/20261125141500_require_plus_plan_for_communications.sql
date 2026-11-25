@@ -164,6 +164,7 @@ BEGIN
 END;
 $function$;
 
+GRANT USAGE ON SCHEMA private TO authenticated;
 REVOKE EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.prepare_communication_recipients(uuid) TO authenticated;
 
