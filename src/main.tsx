@@ -5915,8 +5915,6 @@ function App() {
     }
     if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
 
-    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
-
     if (!supabaseConfigured || !supabase) {
       alert("Il servizio e-mail BETHAG non è disponibile perché Supabase non è configurato.");
       return;
