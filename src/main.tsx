@@ -11,6 +11,7 @@ import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationInta
 import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupCommunicationRecipientsRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
+import { getBackupBackendExportAvailabilityError } from "./lib/backupExportBackendAvailability.mjs";
 import { getBackupRestoreBackendAvailability } from "./lib/backupRestoreBackendAvailability.mjs";
 import { commitBackupFrontendStateAfterBackendRestore } from "./lib/backupRestoreFrontendCommit.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
@@ -3636,7 +3637,10 @@ function App() {
     const tableNames = WORKSPACE_BACKUP_EXPORT_TABLES;
     const backend: Record<string, unknown> = {};
     const errors: Record<string, string> = {};
-    if (supabase && profile.workspaceId) {
+    const backendAvailabilityError = getBackupBackendExportAvailabilityError(Boolean(supabase), profile.workspaceId);
+    if (backendAvailabilityError) {
+      errors.__backend = backendAvailabilityError;
+    } else if (supabase && profile.workspaceId) {
       try {
         backend.condominiums = await loadPaginatedWorkspaceRows(supabase, profile.workspaceId, "condominiums", "id", null);
       } catch (e: any) {
@@ -3698,7 +3702,7 @@ function App() {
     a.remove();
     URL.revokeObjectURL(url);
     if (Object.keys(errors).length) {
-      alert("Backup esportato. Alcune tabelle non sono state lette e sono state indicate nel campo backendReadErrors.");
+      alert("Backup esportato ma incompleto: alcuni dati backend non sono stati esportati. Consulta il campo backendReadErrors nel file per i dettagli.");
     } else {
       alert("Backup BETHAG esportato correttamente.");
     }
