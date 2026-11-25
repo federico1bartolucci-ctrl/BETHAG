@@ -276,3 +276,46 @@ WITH CHECK (
   AND private.can_manage_workspace_module(workspace_id, 'portale')
   AND private.workspace_has_portal_plan(workspace_id)
 );
+
+
+-- Do not accept new resident registration requests for a workspace without Portal.
+-- The zz-prefix ensures this guard runs after any existing BEFORE INSERT normalization trigger.
+CREATE OR REPLACE FUNCTION private.require_portal_plan_for_registration_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_has_plan boolean := false;
+BEGIN
+  IF NEW.workspace_id IS NOT NULL THEN
+    v_has_plan := private.workspace_has_portal_plan(NEW.workspace_id);
+  ELSE
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.condominiums c
+      WHERE c.archived_at IS NULL
+        AND lower(trim(c.name)) = lower(trim(coalesce(NEW.condominium_name, '')))
+        AND private.workspace_has_portal_plan(c.workspace_id)
+    )
+    INTO v_has_plan;
+  END IF;
+
+  IF NOT coalesce(v_has_plan, false) THEN
+    RAISE EXCEPTION 'PORTAL_PLAN_REQUIRED';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION private.require_portal_plan_for_registration_request()
+FROM PUBLIC, anon, authenticated, service_role;
+
+DROP TRIGGER IF EXISTS zzzz_portal_registration_requests_plan_guard
+ON public.portal_registration_requests;
+CREATE TRIGGER zzzz_portal_registration_requests_plan_guard
+BEFORE INSERT ON public.portal_registration_requests
+FOR EACH ROW
+EXECUTE FUNCTION private.require_portal_plan_for_registration_request();
