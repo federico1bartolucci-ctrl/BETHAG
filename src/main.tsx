@@ -7008,8 +7008,10 @@ function App() {
   const canAccessPage = (target: Page) => {
     if (isAdministrator) {
       const addon = pageAddon[target];
+      // Admins may preview demo-plan pages, but every server-backed action
+      // still checks the authoritative workspace plan in requirePlan().
       return !addon || hasEntitlement(
-        getEntitlementSubscription(addon),
+        subscription,
         ADDON_REQUIRED_PLAN[addon],
         addon
       );
