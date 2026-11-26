@@ -5,7 +5,7 @@ const PLAN_LEVELS = Object.freeze({
   portal: 3,
 });
 
-const SERVER_MANAGED_ADDONS = new Set(["ai", "portale"]);
+const SERVER_MANAGED_ADDONS = new Set(["ai", "portale", "comunicazioni"]);
 
 export function hasFeature(plan, required) {
   const planLevel = PLAN_LEVELS[plan];
@@ -21,6 +21,25 @@ export function hasAddon(subscription, addon) {
 
 export function isServerManagedAddon(addon) {
   return SERVER_MANAGED_ADDONS.has(addon);
+}
+
+export function getAuthoritativeEntitlementSubscription(
+  subscription,
+  addon,
+  serverPlan,
+  backendEnabled,
+  workspaceAvailable,
+) {
+  if (!addon || !isServerManagedAddon(addon) || !backendEnabled) {
+    return subscription;
+  }
+
+  const validPlans = new Set(["free", "plus", "professional", "portal"]);
+  const authoritativePlan = workspaceAvailable && validPlans.has(serverPlan)
+    ? serverPlan
+    : "free";
+
+  return { ...subscription, plan: authoritativePlan };
 }
 
 export function getClientUnlockedAddons(subscription) {
