@@ -15,11 +15,11 @@ const firstConfirmation = handler.indexOf("window.confirm(");
 const firstFrontendMutation = handler.indexOf('apply("condominiums"');
 const firstLocalStorageWrite = handler.indexOf("localStorage.setItem(");
 const firstBackendWrite = handler.indexOf("supabase.from(table)");
-assert.ok(availabilityGuard >= 0, "restore handler must call the Supabase availability guard");
-assert.ok(firstConfirmation > availabilityGuard, "availability guard must run before user confirmation");
-assert.ok(firstFrontendMutation > availabilityGuard, "availability guard must run before React state mutation");
-assert.ok(firstLocalStorageWrite > availabilityGuard, "availability guard must run before localStorage mutation");
-assert.ok(firstBackendWrite > availabilityGuard, "availability guard must run before backend writes");
+assert.ok(availabilityGuard >= 0, "restore handler must call the backend payload guard");
+assert.ok(firstConfirmation > availabilityGuard, "backend payload guard must run before user confirmation");
+assert.ok(firstFrontendMutation > availabilityGuard, "backend payload guard must run before React state mutation");
+assert.ok(firstLocalStorageWrite > availabilityGuard, "backend payload guard must run before localStorage mutation");
+assert.ok(firstBackendWrite > availabilityGuard, "backend payload guard must run before backend writes");
 assert.match(handler, /if \(backendAvailability\.blockReason\)\s*\{\s*alert\(backendAvailability\.blockReason\);\s*return;/);
 assert.match(handler, /else if \(backendAvailability\.localOnlyNotice\)/,
   "a valid local-only restore must not be reported as a complete backend restore");
@@ -79,12 +79,57 @@ assert.equal(localOnly.blockReason, "");
 assert.match(localOnly.localOnlyNotice, /soltanto lo stato locale/i);
 assert.deepEqual(localOnly.tables, []);
 
-const malformedBackendPayload = getBackupRestoreBackendAvailability(
+const malformedTablePayload = getBackupRestoreBackendAvailability(
   { backend: { communications: { id: "not-an-array" } } },
   false,
   restorableTables
 );
-assert.match(malformedBackendPayload.blockReason, /communications/i);
+assert.match(malformedTablePayload.blockReason, /communications/i);
+
+const malformedTableWithSupabase = getBackupRestoreBackendAvailability(
+  { backend: { documents: { id: "not-an-array" } } },
+  true,
+  restorableTables
+);
+assert.match(malformedTableWithSupabase.blockReason, /documents/i,
+  "malformed table payloads must be blocked even when Supabase is configured");
+
+const malformedRowWithSupabase = getBackupRestoreBackendAvailability(
+  { backend: { documents: [{ id: "document-1" }, null] } },
+  true,
+  restorableTables
+);
+assert.match(malformedRowWithSupabase.blockReason, /documents/i,
+  "non-object rows must be blocked before the restore loop can silently skip them");
+
+for (const malformedBackup of [
+  { format: "BETHAG_WORKSPACE_BACKUP", version: 1 },
+  { backend: null },
+  { backend: "corrupted" },
+  { backend: [] },
+]) {
+  for (const supabaseAvailable of [false, true]) {
+    const result = getBackupRestoreBackendAvailability(
+      malformedBackup,
+      supabaseAvailable,
+      restorableTables
+    );
+    assert.match(result.blockReason, /sezione backend.*assente o non valida/i,
+      "missing or non-object backend roots must be blocked regardless of Supabase availability");
+    assert.equal(result.localOnlyNotice, "");
+  }
+}
+
+// Reproduce the old configured-backend false-success path: malformed root/table
+// values were normalized to empty arrays by the restore loop and produced no error.
+const legacyMalformedRootRows = Array.isArray("corrupted"?.documents)
+  ? "corrupted".documents
+  : [];
+const legacyMalformedTableRows = Array.isArray({ id: "not-an-array" })
+  ? { id: "not-an-array" }
+  : [];
+assert.deepEqual(legacyMalformedRootRows, []);
+assert.deepEqual(legacyMalformedTableRows, []);
 
 const emptyBackup = getBackupRestoreBackendAvailability(
   { backend: { condominiums: [], communications: [] } },
@@ -94,4 +139,4 @@ const emptyBackup = getBackupRestoreBackendAvailability(
 assert.equal(emptyBackup.blockReason, "");
 assert.match(emptyBackup.localOnlyNotice, /non erano presenti record backend ripristinabili/i);
 
-console.log("Workspace backup restore Supabase-availability runtime regression: PASS");
+console.log("Workspace backup restore backend-payload integrity runtime regression: PASS");
