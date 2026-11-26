@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { formatBackupReadErrors } from "../src/lib/backupRestoreSourceErrors.mjs";
+
+const source = await readFile("src/main.tsx", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const start = source.indexOf("const restoreWorkspaceBackup = async (file: File) => {");
+const end = source.indexOf("const exportWorkspaceBackup = async () => {", start);
+assert.ok(start >= 0 && end > start, "workspace restore function must exist");
+const restoreFn = source.slice(start, end);
+assert.match(restoreFn, /formatBackupReadErrors\\(backup\\.backendReadErrors\\)/);
+assert.match(restoreFn, /sourceReadWarning/);
+assert.match(restoreFn, /if \\(errors\\.length \\|\\| sourceReadErrorSummary\\)/);
+assert.match(restoreFn, /Il backup sorgente era incompleto/);
+assert.match(restoreFn, /Ripristino completato parzialmente/);
+assert.ok(packageJson.scripts.test.includes("test-backup-restore-source-errors.mjs"));
+assert.equal(formatBackupReadErrors({ condominium_ledger_entries: "timeout", documents: "permission denied" }), "condominium_ledger_entries: timeout | documents: permission denied");
+assert.equal(formatBackupReadErrors({}), "");
+assert.equal(formatBackupReadErrors(null), "");
+assert.equal(formatBackupReadErrors(["invalid"]), "");
+assert.equal(formatBackupReadErrors({ ignored: " ", alsoIgnored: null }), "");
+console.log("Backup restore incomplete-source regression checks passed.");
