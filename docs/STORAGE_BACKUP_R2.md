@@ -71,7 +71,7 @@ Safety properties:
 - Dry-run is the only non-writing mode. The command requires an explicit --dry-run or --apply choice.
 - The manifest must be under backups/snapshots/ and match bethag-storage-backup/v1.
 - Every referenced blob is downloaded from R2 and its byte length and SHA-256 are verified before any target write.
-- The target bucket must be explicitly supplied, must differ from the R2 backup bucket, and must contain zero objects. The preflight probes one object and counts folder-marker keys ending in `/` as existing objects; malformed or truncated listing responses fail closed. Existing objects cause an abort; the utility never deletes or overwrites.
+- The target bucket must be explicitly supplied, must differ from the R2 backup bucket, and must be empty. Existing objects cause an abort; the utility never deletes or overwrites.
 - --apply additionally requires RESTORE_CONFIRM_TARGET to equal the exact target bucket name.
 - The target uses a separate set of SUPABASE_RESTORE_S3_* credentials and endpoint. Its Supabase project host must differ from the original source project's host; the original bethag-documents bucket is explicitly forbidden.
 - The tool does not create buckets, alter policies, restore database rows, or change Production/QA configuration.
@@ -99,6 +99,3 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 - Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
 - Non-empty isolated restore drill: NOT RUN; requires a separately provisioned recovery project and four dedicated SUPABASE_RESTORE_S3_* secrets.
 - Production and QA data/configuration: unchanged.
-
-
-The restore preflight uses a one-object `ListObjectsV2` probe rather than filtering folder-marker keys. S3 folder markers are objects too: even a bucket containing only `empty-folder/` is not considered empty. A malformed or truncated listing response also aborts the restore.
