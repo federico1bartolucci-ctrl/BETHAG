@@ -51,12 +51,11 @@ assert.deepEqual(invalidPlan, { applied: false, reason: "invalid-plan" });
 assert.equal(subscription.plan, "free");
 
 const mainSource = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
-assert.match(mainSource, /applyWorkspacePlanSnapshot/);
-assert.match(mainSource, /isCurrent:\\s*\\(\\)\\s*=>\\s*!cancelled/);
-assert.equal((mainSource.match(/applyWorkspacePlanSnapshot\\(/g) ?? []).length, 3);
-assert.doesNotMatch(
-  mainSource,
-  /setSubscription\\(\\(current\\) => \\(\\{ \\.\\.\\.current, plan: persistedPlan as PlanId \\}\\)\\)/,
+assert.ok(mainSource.includes("applyWorkspacePlanSnapshot"));
+assert.ok(mainSource.includes("isCurrent: () => !cancelled"));
+assert.equal(mainSource.split("applyWorkspacePlanSnapshot(").length - 1, 3);
+assert.ok(
+  !mainSource.includes("plan: persistedPlan as PlanId"),
   "workspace refresh paths must not update the cached plan outside the cancellation-aware helper",
 );
 
