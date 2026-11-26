@@ -7,6 +7,7 @@ import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase
 import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
+import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
 import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
@@ -17188,6 +17189,11 @@ type CondominiumInsurancePolicy = {
 
 function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condominiumId: number; isAdministrator: boolean }) {
   const [policies, setPolicies] = useState<CondominiumInsurancePolicy[]>([]);
+  const [policiesCondominiumId, setPoliciesCondominiumId] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadErrorCondominiumId, setLoadErrorCondominiumId] = useState<number | null>(null);
+  const visiblePolicies = selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId });
+  const visibleLoadError = loadErrorCondominiumId === condominiumId ? loadError : null;
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const emptyForm = {
@@ -17206,18 +17212,16 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
     const request = loadGuardRef.current.begin();
     const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === condominiumId;
     if (clearForCondominiumChange) setPolicies([]);
-    if (!supabase || !supabaseConfigured) {
-      if (isCurrent()) setLoading(false);
-      return;
+    if (isCurrent()) {
+      setLoading(true);
+      setLoadError(null);
+      setLoadErrorCondominiumId(null);
     }
-    if (isCurrent()) setLoading(true);
     try {
+      if (!supabase || !supabaseConfigured) throw new Error("Servizio polizze assicurative non disponibile.");
       const workspaceId = await getActiveWorkspaceId();
       if (!isCurrent()) return;
-      if (!workspaceId) {
-        setPolicies([]);
-        return;
-      }
+      if (!workspaceId) throw new Error("Workspace attivo non disponibile.");
       const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
         .select("id")
@@ -17226,10 +17230,7 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         .maybeSingle();
       if (!isCurrent()) return;
       if (condominiumError) throw condominiumError;
-      if (!condominium?.id) {
-        setPolicies([]);
-        return;
-      }
+      if (!condominium?.id) throw new Error("Impossibile individuare il condominio.");
       const { data, error } = await supabase
         .from("condominium_insurance_policies")
         .select("*")
@@ -17238,9 +17239,20 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         .order("end_date", { ascending: true });
       if (!isCurrent()) return;
       if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("Risposta polizze non valida.");
       setPolicies((data || []) as CondominiumInsurancePolicy[]);
+      setPoliciesCondominiumId(condominiumId);
     } catch (error) {
-      if (isCurrent()) console.error("BETHAG insurance load error", error);
+      const applied = applyInsurancePoliciesLoadFailure({
+        error,
+        isCurrent,
+        requestedCondominiumId: condominiumId,
+        setPolicies,
+        setPoliciesCondominiumId,
+        setLoadError,
+        setLoadErrorCondominiumId,
+      });
+      if (applied) console.error("BETHAG insurance load error", error);
     } finally {
       if (isCurrent()) setLoading(false);
     }
@@ -17406,11 +17418,11 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
         </div>
       )}
 
-      {loading ? <p>Caricamento polizze…</p> : policies.length === 0 ? (
+      {loading ? <p>Caricamento polizze…</p> : visibleLoadError ? <p role="alert" style={{ color: "#b91c1c", margin: 0 }}>{visibleLoadError}</p> : visiblePolicies.length === 0 ? (
         <Empty text="Nessuna polizza assicurativa registrata." />
       ) : (
         <div className="related-list">
-          {policies.map(policy => {
+          {visiblePolicies.map(policy => {
             const expired = policy.end_date && new Date(policy.end_date + "T23:59:59") < new Date();
             const daysToExpiry = policy.end_date ? Math.ceil((new Date(policy.end_date + "T23:59:59").getTime() - Date.now()) / 86400000) : null;
             const warning = !expired && daysToExpiry !== null && daysToExpiry <= 30;
