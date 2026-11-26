@@ -21,6 +21,9 @@ export async function assertRestoreTargetEmpty(client, bucket, ListObjectsV2Comm
     throw new Error("Restore target listing returned malformed metadata; refusing to assume the bucket is empty");
   }
 
+  if (page.Contents === undefined && page.KeyCount === undefined) {
+    throw new Error("Restore target listing omitted both Contents and KeyCount; refusing to assume the bucket is empty");
+  }
   const contents = page.Contents ?? [];
   if (!Array.isArray(contents) || contents.length > 1) {
     throw new Error("Restore target listing returned malformed object contents; refusing to assume the bucket is empty");
