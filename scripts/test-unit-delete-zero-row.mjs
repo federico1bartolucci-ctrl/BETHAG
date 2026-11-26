@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const source = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
+const start = source.indexOf("export async function deleteCondominiumUnit(");
+const end = source.indexOf("export async function deleteCondominiumMember(", start);
+assert.ok(start >= 0 && end > start, "unit delete helper boundaries exist");
+const helper = source.slice(start, end);
+
+assert.match(helper, /\.from\("condominium_units"\)[\s\S]*\.delete\(\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("condominium_id", condominium\.id\)[\s\S]*\.eq\("id", unitId\)[\s\S]*\.select\("id"\)/,
+  "deletion must remain scoped to the active workspace, condominium and unit and return deleted IDs");
+assert.match(helper, /if \(error\) throw error;/,
+  "backend deletion errors must propagate");
+assert.match(helper, /if \(!data\?\.length\) throw new Error\("Unità non trovata o già eliminata\."\);/,
+  "zero-row deletion must fail closed instead of reporting success");
+console.log("Condominium unit zero-row delete regression passed.");
