@@ -17,6 +17,7 @@ function extractFunction(prefix) {
 const syncSql = extractFunction("CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments()");
 const registerSql = extractFunction("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment(");
 
+
 for (const [name, sql] of [["payment trigger", syncSql], ["manual payment RPC", registerSql]]) {
   const lock = sql.indexOf("pg_advisory_xact_lock");
   const rowLock = sql.toLowerCase().indexOf("for update");
@@ -58,6 +59,15 @@ const allocation2 = "ffffffff-ffff-4fff-8fff-ffffffff0002";
 const allocation3 = "ffffffff-ffff-4fff-8fff-ffffffff0003";
 const allocation4 = "ffffffff-ffff-4fff-8fff-ffffffff0004";
 const allocation5 = "ffffffff-ffff-4fff-8fff-ffffffff0005";
+const ledgerDuplicateTrigger = "55555555-5555-4555-8555-555555555551";
+const ledgerDuplicateRpc = "55555555-5555-4555-8555-555555555552";
+const installment5 = "dddddddd-dddd-4ddd-8ddd-dddddddd0005";
+const installment6 = "dddddddd-dddd-4ddd-8ddd-dddddddd0006";
+const payment8 = "eeeeeeee-eeee-4eee-8eee-eeeeeeee0008";
+const allocation6 = "ffffffff-ffff-4fff-8fff-ffffffff0006";
+const allocation7 = "ffffffff-ffff-4fff-8fff-ffffffff0007";
+const allocation8 = "ffffffff-ffff-4fff-8fff-ffffffff0008";
+const allocation9 = "ffffffff-ffff-4fff-8fff-ffffffff0009";
 
 async function checkInstallments(ledger, expectedPaid, expectedStatuses) {
   const result = await db.query(
@@ -88,15 +98,20 @@ async function reversePayment(id) {
 try {
   await db.exec([
     "CREATE SCHEMA private;",
+    "CREATE TABLE public.condominiums (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, archived_at timestamptz);",
+    "CREATE TABLE public.condominium_fiscal_years (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, status text NOT NULL, start_date date, end_date date);",
+    "CREATE OR REPLACE FUNCTION private.can_manage_workspace_module(p_workspace_id uuid, p_module text) RETURNS boolean LANGUAGE sql STABLE AS 'SELECT true';",
     "CREATE TABLE public.condominium_members (id uuid PRIMARY KEY, condominium_id uuid NOT NULL, unit_id uuid, user_id uuid, email text, active boolean NOT NULL, data jsonb NOT NULL DEFAULT '{}'::jsonb);",
-    "CREATE TABLE public.condominium_installments (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, amount numeric NOT NULL, due_date date NOT NULL, unit_id uuid, member_id uuid, paid_amount numeric NOT NULL DEFAULT 0, status text NOT NULL DEFAULT 'Da pagare', ledger_entry_id uuid);",
-    "CREATE TABLE public.condominium_payment_movements (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, installment_id uuid NOT NULL, payment_date date NOT NULL, amount numeric NOT NULL, method text NOT NULL DEFAULT 'Bonifico', reference text DEFAULT '', notes text DEFAULT '');",
+    "CREATE TABLE public.condominium_installments (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, amount numeric NOT NULL, due_date date NOT NULL, unit_id uuid, member_id uuid, fiscal_year_id uuid, paid_amount numeric NOT NULL DEFAULT 0, status text NOT NULL DEFAULT 'Da pagare', ledger_entry_id uuid);",
+    "CREATE TABLE public.condominium_payment_movements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, installment_id uuid NOT NULL, payment_date date NOT NULL, amount numeric NOT NULL, method text NOT NULL DEFAULT 'Bonifico', reference text DEFAULT '', notes text DEFAULT '');",
     "CREATE TABLE public.condominium_expense_allocations (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, ledger_entry_id uuid NOT NULL, unit_id uuid, member_id uuid, amount numeric NOT NULL, paid_amount numeric NOT NULL DEFAULT 0, status text NOT NULL DEFAULT 'Da pagare');",
   ].join("\n"));
   await db.exec(syncSql);
+  await db.exec(registerSql);
   await db.exec(
     "CREATE TRIGGER trg_sync_installment_from_payments AFTER INSERT OR UPDATE OR DELETE ON public.condominium_payment_movements FOR EACH ROW EXECUTE FUNCTION public.sync_condominium_installment_from_payments();",
   );
+  await db.query("INSERT INTO public.condominiums(id,workspace_id,archived_at) VALUES($1,$2,NULL)", [condominium, workspace]);
 
   await db.query(
     "INSERT INTO public.condominium_members(id,condominium_id,unit_id,user_id,email,active,data) VALUES($1,$2,null,null,$3,true,'{\"role\":\"Proprietario\"}'::jsonb),($4,$2,$5,null,$3,true,'{\"role\":\"Proprietario\"}'::jsonb),($6,$2,$7,null,$3,true,'{\"role\":\"Proprietario\"}'::jsonb),($8,$2,$9,null,$3,true,'{\"role\":\"Proprietario\"}'::jsonb),($10,$2,$5,null,'other-owner@example.test',true,'{\"role\":\"Proprietario\"}'::jsonb)",
@@ -111,6 +126,18 @@ try {
   await db.query(
     "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,member_id,amount) VALUES($1,$2,$3,$4,$5,null,50),($6,$2,$3,$4,$7,null,30),($8,$2,$3,$4,$9,null,20),($10,$2,$3,$11,$5,$12,100),($13,$2,$3,$11,$5,$14,40)",
     [allocation1, workspace, condominium, ledgerUnified, unitA, allocation2, unitB, allocation3, unitC, allocation4, ledgerUnit, memberA, allocation5, memberD],
+  );
+
+
+  // Multiple allocation rows for the same non-unified unit/member must receive
+  // the cumulative payment sequentially, not each receive the full same total.
+  await db.query(
+    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,amount,due_date,unit_id,member_id,ledger_entry_id) VALUES($1,$2,$3,100,'2099-12-31',$4,$5,$6),($7,$2,$3,100,'2099-12-31',$4,$5,$8)",
+    [installment5, workspace, condominium, unitA, memberA, ledgerDuplicateTrigger, installment6, ledgerDuplicateRpc],
+  );
+  await db.query(
+    "INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_id,ledger_entry_id,unit_id,member_id,amount) VALUES($1,$2,$3,$4,$5,$6,60),($7,$2,$3,$4,$5,$6,40),($8,$2,$3,$9,$5,$6,60),($10,$2,$3,$9,$5,$6,40)",
+    [allocation6, workspace, condominium, ledgerDuplicateTrigger, unitA, memberA, allocation7, allocation8, ledgerDuplicateRpc, allocation9],
   );
 
   // Unified-owner case: payments are split over two installments sharing one ledger entry.
@@ -151,6 +178,34 @@ try {
   await reversePayment(payment5);
   await checkInstallments(ledgerUnit, [0, 0], ["Da pagare", "Da pagare"]);
   await checkAllocations(ledgerUnit, [0, 0], ["Da pagare", "Da pagare"]);
+
+
+  // Trigger-only path: two rows for the same unit/member, partial payment 70.
+  await addPayment(payment8, installment5, 70, 8);
+  await checkInstallments(ledgerDuplicateTrigger, [70], ["Parzialmente pagato"]);
+  await checkAllocations(ledgerDuplicateTrigger, [60, 10], ["Pagato", "Parzialmente pagato"]);
+  await reversePayment(payment8);
+  await checkInstallments(ledgerDuplicateTrigger, [0], ["Da pagare"]);
+  await checkAllocations(ledgerDuplicateTrigger, [0, 0], ["Da pagare", "Da pagare"]);
+
+  // Manual RPC path must produce the same sequential allocation distribution.
+  const rpcPayment = await db.query(
+    "SELECT private.register_condominium_installment_payment($1,$2,$3,$4,$5)::numeric AS paid",
+    [workspace, condominium, installment6, "2026-11-09", 70],
+  );
+  assert.equal(Number(rpcPayment.rows[0].paid), 70);
+  await checkInstallments(ledgerDuplicateRpc, [70], ["Parzialmente pagato"]);
+  await checkAllocations(ledgerDuplicateRpc, [60, 10], ["Pagato", "Parzialmente pagato"]);
+  const rpcMovement = await db.query(
+    "SELECT id FROM public.condominium_payment_movements WHERE installment_id=$1",
+    [installment6],
+  );
+  assert.equal(rpcMovement.rows.length, 1);
+  await reversePayment(rpcMovement.rows[0].id);
+  await checkInstallments(ledgerDuplicateRpc, [0], ["Da pagare"]);
+  await checkAllocations(ledgerDuplicateRpc, [0, 0], ["Da pagare", "Da pagare"]);
+
+  console.log("PASS: duplicate unit/member allocations receive cumulative payments sequentially in both trigger and RPC paths.");
 
   console.log("PASS: cumulative allocation paid totals across multiple installments");
   console.log("PASS: payment reversals recalculate all allocations and clear stale tail amounts");
