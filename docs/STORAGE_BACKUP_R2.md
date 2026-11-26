@@ -19,7 +19,7 @@ The script:
 1. Reads the Supabase bucket through its S3-compatible endpoint.
 2. Requires a Cloudflare API read token and verifies an enabled R2 Bucket Lock rule for prefix `backups/` with at least 2,592,000 seconds (30 days) of retention. If this gate is absent, it fails before writing any object.
 3. Downloads each source object, computes SHA-256, and checks the downloaded byte count against the source listing.
-4. Stores content-addressed blobs under `backups/objects/<sha256>/<generation>`. A recent copy is reused; a new generation is uploaded after 25 days so objects referenced by retained snapshots are renewed before the 30-day retention window expires.
+4. Stores content-addressed blobs under `backups/objects/<sha256>/<generation>`. A recent copy is reused; a new generation is uploaded after 25 days so objects referenced by retained snapshots are renewed before the 30-day retention window expires. After either reuse or upload, the script reads the blob body back from R2 and recomputes its SHA-256 and byte length; matching user metadata and `Content-Length` alone are not accepted as proof of byte integrity.
 5. Writes a timestamped JSON manifest under `backups/snapshots/`, preserving original object keys, sizes, hashes, timestamps, content headers and user metadata.
 6. Reads the manifest back from R2 and compares the bytes to verify the write.
 

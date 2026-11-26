@@ -27,12 +27,16 @@ assert.match(script, /endpoint: sourceEndpoint, region: sourceRegion, forcePathS
 assert.doesNotMatch(script, /endpoint: "https:\/\/" \+ accountId[\s\S]{0,400}forcePathStyle: true/);
 assert.match(script, /safeHeaders/);
 assert.match(script, /HeadObjectCommand/);
+assert.match(script, /readAndVerifyBlobBody/);
+assert.equal(script.split("readAndVerifyBlobBody(").length - 1, 2);
+assert.match(script, /sourceObjectSignature\(sourceObjects\)/);
+assert.match(script, /LastModified/);
 assert.match(script, /head\.Metadata\?\.sha256 !== sha256/);
 assert.match(script, /hasSnapshotsExpiry/);
 assert.match(script, /hasBlobsExpiry/);
 assert.match(script, /existingBlobObjects = await listAllStorageObjects/);
 assert.match(script, /sourceObjectsAfter = await listAllStorageObjects/);
-assert.match(script, /Source bucket changed during backup/);
+assert.match(script, /Source bucket changed .*LastModified.* during backup/);
 assert.match(script, /maxAgeSeconds\) >= RETENTION_SECONDS/);
 assert.match(script, /createHash\("sha256"\)/);
 assert.match(script, /object_count: manifestObjects\.length/);
