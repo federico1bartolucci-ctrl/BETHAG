@@ -32,7 +32,7 @@ assert.deepEqual(noMatchCalls, [{ page: 1, perPage: 1000 }, { page: 2, perPage: 
 console.log("PASS: lookup stops on the first short page when the email is absent.");
 
 await assert.rejects(
-  findAuthUserByEmail({ auth: { admin: { async listUsers() { return { data: null, error: { message: "Auth unavailable" } }; } } } }, "x@example.invalid"),
+  findAuthUserByEmail({ auth: { admin: { async listUsers() { return { data: null, error: new Error("Auth unavailable") }; } } } }, "x@example.invalid"),
   /Auth unavailable/,
 );
 await assert.rejects(
