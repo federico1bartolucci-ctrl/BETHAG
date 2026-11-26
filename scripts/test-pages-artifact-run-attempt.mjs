@@ -13,4 +13,14 @@ const artifactName = "github-pages-${{ github.run_attempt }}";
 assert.ok(uploadStep.includes("name: " + artifactName), "upload must use a run-attempt-specific artifact name");
 assert.ok(deployStep.includes("artifact_name: " + artifactName), "deploy must select the artifact for the same run attempt");
 assert.ok(!workflow.includes("do not couple the artifact identity to run_id/run_attempt"), "obsolete default-artifact comment must be removed");
-console.log("GitHub Pages artifact attempt-isolation regression passed.");
+
+const waitStart = workflow.indexOf("name: Wait for Pages artifact metadata");
+const waitEnd = workflow.indexOf("name: Deploy to GitHub Pages", waitStart);
+assert.ok(waitStart >= 0 && waitEnd > waitStart, "artifact visibility polling must run after upload and before deployment");
+const waitStep = workflow.slice(waitStart, waitEnd);
+assert.ok(waitStep.includes("actions/runs/$GITHUB_RUN_ID/artifacts"), "polling must query this workflow run's artifact metadata");
+assert.ok(waitStep.includes("ARTIFACT_NAME: github-pages-${{ github.run_attempt }}"), "polling must target the current attempt's unique artifact");
+assert.ok(waitStep.includes("sleep 5") && waitStep.includes("seq 1 12"), "metadata propagation must be retried for up to 60 seconds");
+assert.ok(waitStep.includes("GH_TOKEN: ${{ github.token }}"), "metadata polling must use the workflow token");
+
+console.log("GitHub Pages artifact attempt-isolation and metadata-readiness regressions passed.");

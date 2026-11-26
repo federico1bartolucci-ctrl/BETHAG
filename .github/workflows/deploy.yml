@@ -49,6 +49,26 @@ jobs:
         with:
           name: github-pages-${{ github.run_attempt }}
           path: ./dist
+      - name: Wait for Pages artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          for attempt in $(seq 1 12); do
+            count=$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
+              | jq --arg name "$ARTIFACT_NAME" '[.artifacts[] | select(.name == $name and .expired == false)] | length')
+            if [ "$count" -eq 1 ]; then
+              echo "Pages artifact metadata is visible."
+              exit 0
+            fi
+            echo "Waiting for Pages artifact metadata ($attempt/12; found $count)."
+            sleep 5
+          done
+          echo "Pages artifact metadata did not become visible within 60 seconds." >&2
+          exit 1
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
