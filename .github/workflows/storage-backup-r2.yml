@@ -21,29 +21,22 @@ concurrency:
 
 jobs:
   backup:
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.STORAGE_BACKUP_ENABLED == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: storage-backup-production
     steps:
-      - name: Check backup activation gate
-        if: vars.STORAGE_BACKUP_ENABLED != 'true'
-        run: echo "Storage backup disabled; set STORAGE_BACKUP_ENABLED=true in this Environment after cost approval."
       - uses: actions/checkout@v4
-        if: vars.STORAGE_BACKUP_ENABLED == 'true'
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
-        if: vars.STORAGE_BACKUP_ENABLED == 'true'
         with:
           node-version: 24
       - name: Install isolated AWS S3 client
-        if: vars.STORAGE_BACKUP_ENABLED == 'true'
         run: npm install --no-save --package-lock=false @aws-sdk/client-s3@3.800.0
       - name: Validate backup credentials
-        if: vars.STORAGE_BACKUP_ENABLED == 'true'
         env:
           SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
           SUPABASE_S3_REGION: ${{ secrets.SUPABASE_S3_REGION }}
@@ -63,7 +56,6 @@ jobs:
             console.log("All required secret names are present; values are not printed.");
           '
       - name: Back up Supabase Storage to immutable R2 snapshots
-        if: vars.STORAGE_BACKUP_ENABLED == 'true'
         env:
           SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
           SUPABASE_S3_REGION: ${{ secrets.SUPABASE_S3_REGION }}
