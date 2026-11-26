@@ -17,26 +17,35 @@ function psql(sql) {
     maxBuffer: 10 * 1024 * 1024,
   }).trim();
 }
-function psqlAsync(sql) {
-  return new Promise((resolve, reject) => {
+function psqlAsync(sql, readyMarker = null) {
+  let resolveReady;
+  const ready = new Promise((resolve) => { resolveReady = resolve; });
+  const done = new Promise((resolve, reject) => {
     const child = spawn("psql", ["-X", "--no-psqlrc", "--dbname", databaseUrl, "-v", "ON_ERROR_STOP=1"], {
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
+    child.stdout.setEncoding("utf8").on("data", (chunk) => {
+      stdout += chunk;
+      if (readyMarker && stdout.includes(readyMarker)) resolveReady();
+    });
     child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => code === 0 ? resolve(stdout.trim()) : reject(new Error(`psql exited ${code}: ${stderr || stdout}`)));
+    child.on("error", (error) => { resolveReady(); reject(error); });
+    child.on("close", (code) => {
+      resolveReady();
+      code === 0 ? resolve(stdout.trim()) : reject(new Error(`psql exited ${code}: ${stderr || stdout}`));
+    });
     child.stdin.end(sql);
   });
+  return { ready, done };
 }
 async function runTwoTransactions(firstSql, secondSql) {
-  const first = psqlAsync(firstSql);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  const first = psqlAsync(firstSql, "BETHAG_LOCK_HELD");
+  await first.ready;
   const second = psqlAsync(secondSql);
-  await Promise.all([first, second]);
+  await Promise.all([first.done, second.done]);
 }
 function jsonQuery(sql) {
   const raw = psql(sql);
@@ -126,6 +135,7 @@ INSERT INTO public.condominium_expense_allocations(id,workspace_id,condominium_i
 
 const rpcCallA = `BEGIN;
 SELECT private.register_condominium_installment_payment('${workspace}','${condominium}','${rpcInstallmentA}','2026-11-26',50,'Bonifico','','');
+SELECT 'BETHAG_LOCK_HELD';
 SELECT pg_sleep(1);
 COMMIT;`;
 const rpcCallB = `BEGIN;
@@ -141,6 +151,7 @@ assert.deepEqual(rpcInstallments, [50, 50], "Concurrent manual RPC payments must
 const triggerInsertA = `BEGIN;
 INSERT INTO public.condominium_payment_movements(id,workspace_id,condominium_id,installment_id,payment_date,amount)
 VALUES('${triggerPaymentA}','${workspace}','${condominium}','${triggerInstallmentA}','2026-11-26',50);
+SELECT 'BETHAG_LOCK_HELD';
 SELECT pg_sleep(1);
 COMMIT;`;
 const triggerInsertB = `BEGIN;
