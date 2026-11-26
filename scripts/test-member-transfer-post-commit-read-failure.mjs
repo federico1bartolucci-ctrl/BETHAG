@@ -43,6 +43,15 @@ const transferReadFailure = createCommittedMemberTransferOutcome({
 assert.equal(transferReadFailure.committed, true);
 assert.equal(transferReadFailure.reconciliationReason, "transfer_record_lookup_failed");
 
+const missingTransferId = createCommittedMemberTransferOutcome({
+  transferId: null,
+  transferRecord: null,
+  incoming: null,
+});
+assert.equal(missingTransferId.committed, false);
+assert.equal(missingTransferId.reconciliationRequired, true);
+assert.equal(missingTransferId.reconciliationReason, "transfer_id_missing");
+
 const missingRecord = createCommittedMemberTransferOutcome({
   transferId,
   transferRecord: null,
@@ -87,7 +96,7 @@ assert.equal(success.reconciliationReason, null);
 // transfer row, and stop the UI from retrying after an already-committed RPC.
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const backendStart = backend.indexOf("export async function confirmCondominiumMemberTransfer(");
-const backendEnd = backend.indexOf("\nexport async function ", backendStart + 30);
+const backendEnd = backend.indexOf("export async function ", backendStart + 30);
 assert.ok(backendStart >= 0 && backendEnd > backendStart);
 const backendFn = backend.slice(backendStart, backendEnd);
 assert.ok(backendFn.includes('from("condominium_member_transfers")'));
