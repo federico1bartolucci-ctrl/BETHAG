@@ -105,7 +105,7 @@ async function main() {
   const metadataUrl = "https://api.cloudflare.com/client/v4/accounts/" +
     encodeURIComponent(accountId) + "/r2/buckets/" + encodeURIComponent(sourceBucket);
   const metadataResponse = await fetch(metadataUrl, {
-    headers: { Authorization: "Bearer " + cloudflareToken, Accept: "application/json }
+    headers: { Authorization: "Bearer " + cloudflareToken, Accept: "application/json" }
   });
   const metadata = await metadataResponse.json().catch(() => null);
   if (!metadataResponse.ok || metadata?.success !== true || !metadata.result?.jurisdiction) {
