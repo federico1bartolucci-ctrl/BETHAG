@@ -71,13 +71,18 @@ test("delete-account rechecks current admin memberships after Auth deletion fail
   );
   assert.match(
     failureBranch,
-    /from\(["']workspace_members["']\)/,
-    "The failure branch must re-read current workspace memberships.",
+    /hasLastActiveWorkspaceAdmin\(ctx\.supabaseAdmin,\s*userId\)/,
+    "The failure branch must re-evaluate the invariant with the service-role SQL snapshot RPC.",
   );
   assert.match(
-    failureBranch,
-    /eq\(["']role["'],\s*["']admin["']\)[\s\S]*eq\(["']active["'],\s*true\)/,
-    "The recheck must count only active administrator memberships.",
+    handler,
+    /hasLastActiveWorkspaceAdmin\(ctx\.supabaseAdmin,\s*userId\)/,
+    "The pre-delete and post-failure checks must use the single-statement SQL RPC.",
+  );
+  assert.doesNotMatch(
+    handler,
+    /from\(["']workspace_members["']\)/,
+    "The Edge Function must not use a paginated client-side workspace membership scan.",
   );
   assert.match(
     failureBranch,
