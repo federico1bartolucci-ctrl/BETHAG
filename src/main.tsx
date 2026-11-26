@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
@@ -1968,6 +1969,7 @@ function bethagIsNumericField(meta: string, input: HTMLInputElement): boolean {
 
 function bethagInstallGlobalFieldRules() {
   const timers = new WeakMap<HTMLInputElement, number>();
+  const capLookupSequence = new WeakMap<HTMLInputElement, number>();
 
   const normalize = (input: HTMLInputElement | HTMLTextAreaElement) => {
     const meta = bethagFieldMeta(input);
@@ -2016,31 +2018,44 @@ function bethagInstallGlobalFieldRules() {
     }
     if (isCap) { input.maxLength = 5; input.inputMode = "numeric"; }
 
-    if (numeric) input.inputMode = "decimal";
+    if (numeric && !isCap) input.inputMode = "decimal";
 
     if (value !== input.value) bethagSetNativeInputValue(input, value);
 
-    if (isCap && value.length === 5) {
+    if (isCap) {
+      const lookupSequence = (capLookupSequence.get(input) || 0) + 1;
+      capLookupSequence.set(input, lookupSequence);
       const previous = timers.get(input);
       if (previous) window.clearTimeout(previous);
-      const timer = window.setTimeout(async () => {
-        try {
-          const response = await fetch("https://api.zippopotam.us/IT/" + encodeURIComponent(value));
-          if (!response.ok) return;
-          const data = await response.json();
-          const place = Array.isArray(data.places) ? data.places[0] : null;
-          if (!place) return;
-          const scope = input.closest("form") || input.closest(".modal") || input.closest(".modal-content") || document.body;
-          const fields = Array.from(scope.querySelectorAll<HTMLInputElement>("input, textarea"));
-          const city = fields.find((el) => /(comune|città|citta|city)/i.test(bethagFieldMeta(el)));
-          const province = fields.find((el) => /(provincia|province)/i.test(bethagFieldMeta(el)));
-          if (city && place["place name"]) bethagSetNativeInputValue(city, bethagSentenceCase(String(place["place name"])));
-          if (province && place["state abbreviation"]) bethagSetNativeInputValue(province, String(place["state abbreviation"]).toLocaleUpperCase("it-IT").slice(0, 2));
-        } catch {
-          // Il CAP resta comunque utilizzabile anche se il servizio di lookup non risponde.
-        }
-      }, 250);
-      timers.set(input, timer);
+      if (value.length === 5) {
+        const scope = input.closest("form") || input.closest(".modal") || input.closest(".modal-content") || document.body;
+        const fields = Array.from(scope.querySelectorAll<HTMLInputElement>("input, textarea"));
+        const city = fields.find((el) => /(comune|città|citta|city)/i.test(bethagFieldMeta(el)));
+        const province = fields.find((el) => /(provincia|province)/i.test(bethagFieldMeta(el)));
+        const cityValueAtRequest = city?.value;
+        const provinceValueAtRequest = province?.value;
+        const requestedCap = value;
+        const timer = window.setTimeout(async () => {
+          try {
+            await applyCapLookupResponse({
+              input,
+              city,
+              province,
+              requestedCap,
+              cityValueAtRequest,
+              provinceValueAtRequest,
+              lookupSequence,
+              getCurrentLookupSequence: () => capLookupSequence.get(input),
+              fetcher: fetch,
+              setNativeInputValue: bethagSetNativeInputValue,
+              sentenceCase: bethagSentenceCase,
+            });
+          } catch {
+            // Il CAP resta comunque utilizzabile anche se il servizio di lookup non risponde.
+          }
+        }, 250);
+        timers.set(input, timer);
+      }
     }
   };
 
