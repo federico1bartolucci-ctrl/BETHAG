@@ -64,10 +64,10 @@ function createTargetClient({
       }
       if (command instanceof PutObjectCommand) {
         putCount += 1;
-        putKeys.push(input.Key);
         if (failPutAt !== null && putCount === failPutAt) {
           throw new Error("simulated connection loss during target write");
         }
+        putKeys.push(input.Key);
         let bytes = Buffer.from(input.Body);
         if (corruptPutKey === input.Key) {
           bytes = Buffer.from(bytes);
