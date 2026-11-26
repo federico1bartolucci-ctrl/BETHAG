@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { sourceObjectSignature } from "./storage-backup-source-signature.mjs";
 import { readAndVerifyBlobBody } from "./storage-backup-blob-integrity.mjs";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { listAllStorageObjects } from "./storage-backup-list-all.mjs";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
@@ -9,6 +10,15 @@ const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
 const SOURCE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "bethag-documents";
 const DESTINATION_PREFIX = "backups/";
 let currentStage = "initialization";
+
+function createS3RequestHandler() {
+  // Explicit long timeouts avoid SDK-version default changes truncating large Storage object transfers.
+  return new NodeHttpHandler({
+    connectionTimeout: 10_000,
+    requestTimeout: 30 * 60 * 1000,
+    socketTimeout: 30 * 60 * 1000,
+  });
+}
 
 function required(name) {
   const value = process.env[name];
@@ -97,13 +107,15 @@ async function main() {
 
   const source = new S3Client({
     endpoint: sourceEndpoint, region: sourceRegion, forcePathStyle: true,
-    credentials: { accessKeyId: sourceAccessKey, secretAccessKey: sourceSecret }
+    credentials: { accessKeyId: sourceAccessKey, secretAccessKey: sourceSecret },
+    requestHandler: createS3RequestHandler(),
   });
   const destination = new S3Client({
     endpoint: "https://" + accountId + (jurisdiction === "default" ? "" : "." + jurisdiction) + ".r2.cloudflarestorage.com",
     // Use the AWS SDK's virtual-hosted addressing for R2. Path-style is retained only for Supabase's S3 endpoint.
     region: "auto",
-    credentials: { accessKeyId: destinationAccessKey, secretAccessKey: destinationSecret }
+    credentials: { accessKeyId: destinationAccessKey, secretAccessKey: destinationSecret },
+    requestHandler: createS3RequestHandler(),
   });
 
   currentStage = "R2 destination bucket access";
