@@ -18,6 +18,22 @@ assert.throws(
   "invalid desired IDs must fail before any write",
 );
 
+// If reading the current set fails, no write operation may begin.
+{
+  const events = [];
+  const readError = new Error("current links unavailable");
+  await assert.rejects(
+    reconcileWorkDocumentLinks({
+      loadCurrentIds: async () => { events.push("load"); throw readError; },
+      desiredIds: [2, 3],
+      insertLinks: async () => { events.push("insert"); },
+      deleteLinks: async () => { events.push("delete"); },
+    }),
+    readError,
+  );
+  assert.deepEqual(events, ["load"], "a failed read must stop before insert or delete");
+}
+
 // If inserting a new link fails, no existing link is deleted.
 {
   const existing = new Set([1, 2]);
