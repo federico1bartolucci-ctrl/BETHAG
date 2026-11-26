@@ -37,6 +37,8 @@ assert.match(migration, /data->>'idempotencyKey'[\s\S]*return v_existing\.paymen
   "a retry with the same request key must return the existing ledger movement");
 assert.match(migration, /Chiave idempotenza già utilizzata per una richiesta diversa/,
   "reusing a key for a different payment payload must fail closed");
+assert.match(src, /getPendingSalPaymentRequest\(getBrowserSessionStorage\(\),workspaceId,p\.id\)/,
+  "reopening a payment form must restore an unresolved request payload");
 assert.match(src, /getSalPaymentIdempotencyKey\(\{storage:getBrowserSessionStorage\(\)/,
   "partial-payment form must recover a payload-bound key across reload/retry");
 assert.match(src, /clearSalPaymentIdempotencyKey\(getBrowserSessionStorage\(\)/,
