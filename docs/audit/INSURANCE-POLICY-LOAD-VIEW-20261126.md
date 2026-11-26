@@ -20,3 +20,7 @@ A deterministic runtime test verifies immediate scope hiding, current failure cl
 ## Safety
 
 No Supabase calls are made by the regression. No QA/Production access or writes, migrations, resets, deployments or paid services.
+
+## Verification note
+
+The latest-request predicate intentionally uses the condominium ID captured by the request closure; this preserves the shared stale-load regression contract while the helper independently rejects stale failures.
