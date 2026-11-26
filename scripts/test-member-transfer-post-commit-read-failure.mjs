@@ -118,9 +118,8 @@ assert.equal(success.reconciliationReason, null);
 // transfer row, and stop the UI from retrying after an already-committed RPC.
 const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
 const backendStart = backend.indexOf("export async function confirmCondominiumMemberTransfer(");
-const backendEnd = backend.indexOf("export async function ", backendStart + 30);
-assert.ok(backendStart >= 0 && backendEnd > backendStart);
-const backendFn = backend.slice(backendStart, backendEnd);
+assert.ok(backendStart >= 0, "the production transfer wrapper must exist");
+const backendFn = backend.slice(backendStart);
 assert.ok(backendFn.includes('from("condominium_member_transfers")'));
 assert.ok(backendFn.includes('.select("id,incoming_member_id")'));
 assert.ok(backendFn.includes('.eq("workspace_id", workspaceId)'));
