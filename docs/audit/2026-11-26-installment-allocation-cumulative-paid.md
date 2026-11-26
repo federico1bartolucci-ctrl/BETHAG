@@ -36,3 +36,12 @@ The PGlite regression is wired into `npm test`. A separate PostgreSQL 17 CI rehe
 ## Promotion gates
 
 Before promotion from draft to a canonical migration, review the SQL against the current Production function definitions and ACLs, rehearse it on isolated PostgreSQL 17 with concurrent payments across different installments of the same ledger entry, and verify the complete allocation/payment invariants. No QA or Production application is authorized by this audit PR.
+
+
+## Follow-up audit — duplicate unit/member allocation rows
+
+A second defect was reproduced in the non-unified payment path. The trigger and manual registration RPC previously copied the same cumulative paid total into every allocation row matching one unit/member pair. Because the schema has no unique constraint on (workspace, condominium, ledger entry, unit, member), multiple rows can exist for that pair.
+
+Reproduction: two rows of 60 and 40 for the same owner/unit, with a cumulative payment of 70. The previous logic wrote 60 and 40 (100 total paid) instead of 60 and 10 (70 total paid).
+
+The forward draft now distributes the cumulative amount in stable ID order in both the payment trigger and manual RPC, and continues through the remaining rows so reversals clear stale tail amounts. The runtime regression exercises both paths, including reversal back to zero.
