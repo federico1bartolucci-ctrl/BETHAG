@@ -43,7 +43,7 @@ Bucket Lock is a minimum retention guard, not a deletion schedule. Lifecycle exp
 
 ## GitHub Environment secrets
 
-Create Environment `storage-backup-production` and add these secrets. Also add the Environment variable `STORAGE_BACKUP_ENABLED=true` only after the bucket, retention/lifecycle rules, secrets, and recurring cost have been reviewed and explicitly approved. Until that variable is set, scheduled and manual backup jobs are skipped.
+Create Environment `storage-backup-production` and add these secrets. Keep the activation switch separate from the protected Environment: add the **repository-level Actions variable** `STORAGE_BACKUP_ENABLED=true` under Settings → Secrets and variables → Actions → Variables only after the bucket, retention/lifecycle rules, credentials, and recurring cost have been reviewed and explicitly approved. Do not store this switch as an Environment variable. The workflow evaluates the repository-level variable in the job condition before the job references `storage-backup-production`; when it is absent or not exactly `true`, the job is skipped before Environment protection rules or approval are entered. The Environment remains responsible for protecting and supplying backup credentials only.
 
 | Secret | Value |
 | --- | --- |
@@ -107,7 +107,7 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 - The successful 26 November empty snapshot was produced by the pre-pagination main version. No backup was executed from this candidate.
 - Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
-- GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
+- GitHub Environment `storage-backup-production`: configured with nine required secrets. Verify that `STORAGE_BACKUP_ENABLED=true` is configured as a repository-level Actions variable, not only as an Environment variable, before relying on scheduled backups.
 - First successful backup: 26 November 2026; manifest write/read verification passed. `source_object_count=0`, `blobs_uploaded=0`, `blobs_reused=0` because the source bucket was empty.
 - Guarded restore utility: dry-run default, source-blob SHA-256/size verification, empty-target first apply, verified same-manifest resume, read-after-write checks, exact final key inventory, and explicit confirmation gate for writes.
 - Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
