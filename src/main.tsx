@@ -5,6 +5,7 @@ import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
 import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
@@ -17177,35 +17178,61 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
   };
   const [form, setForm] = useState(emptyForm);
 
-  const loadPolicies = async () => {
-    if (!supabase || !supabaseConfigured) return;
-    setLoading(true);
+  const loadGuardRef = useRef(createLatestRequestGuard());
+  const currentCondominiumIdRef = useRef(condominiumId);
+  currentCondominiumIdRef.current = condominiumId;
+
+  const loadPolicies = async (clearForCondominiumChange = false) => {
+    if (currentCondominiumIdRef.current !== condominiumId) return;
+    const request = loadGuardRef.current.begin();
+    const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === condominiumId;
+    if (clearForCondominiumChange) setPolicies([]);
+    if (!supabase || !supabaseConfigured) {
+      if (isCurrent()) setLoading(false);
+      return;
+    }
+    if (isCurrent()) setLoading(true);
     try {
       const workspaceId = await getActiveWorkspaceId();
-      if (!workspaceId) return;
-      const { data: condominium } = await supabase
+      if (!isCurrent()) return;
+      if (!workspaceId) {
+        setPolicies([]);
+        return;
+      }
+      const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
         .select("id")
         .eq("workspace_id", workspaceId)
         .eq("legacy_id", condominiumId)
         .maybeSingle();
-      if (!condominium?.id) return;
+      if (!isCurrent()) return;
+      if (condominiumError) throw condominiumError;
+      if (!condominium?.id) {
+        setPolicies([]);
+        return;
+      }
       const { data, error } = await supabase
         .from("condominium_insurance_policies")
         .select("*")
         .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
+      if (!isCurrent()) return;
       if (error) throw error;
       setPolicies((data || []) as CondominiumInsurancePolicy[]);
     } catch (error) {
-      console.error("BETHAG insurance load error", error);
+      if (isCurrent()) console.error("BETHAG insurance load error", error);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
-  useEffect(() => { void loadPolicies(); }, [condominiumId]);
+  useEffect(() => {
+    setEditing(null);
+    setForm(emptyForm);
+    void loadPolicies(true);
+    return () => loadGuardRef.current.invalidate();
+  }, [condominiumId]);
 
   const resetForm = () => {
     setEditing(null);
