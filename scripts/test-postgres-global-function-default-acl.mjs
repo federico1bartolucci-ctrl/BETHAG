@@ -17,7 +17,7 @@ assert.match(regression, /LEGACY DEFECT REPRODUCED|Expected PostgreSQL built-in 
 assert.match(regression, /\\i supabase\/rebuild\/drafts\/20261124234000_revoke_postgres_global_public_function_execute\.sql[\s\S]*\\i supabase\/rebuild\/drafts\/20261124234000_revoke_postgres_global_public_function_execute\.sql/,
   "The isolated PostgreSQL regression must apply the proposal twice to prove idempotency.");
 assert.match(regression, /Intentional storage schema-specific grants were not preserved/);
-assert.match(regression, /supabase_admin defaults changed|supabase_admin defaults changed/);
+assert.match(regression, /Supabase-managed supabase_admin defaults changed/);
 assert.match(regression, /ROLLBACK;/, "The isolated regression must roll back all test data and ACL changes.");
 
 const url = process.env.DATABASE_URL;
