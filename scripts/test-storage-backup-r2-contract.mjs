@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 const script = await readFile("scripts/backup-supabase-storage-to-r2.mjs", "utf8");
 const workflow = await readFile(".github/workflows/storage-backup-r2.yml", "utf8");
 const runbook = await readFile("docs/STORAGE_BACKUP_R2.md", "utf8");
+const sdkAudit = await readFile("scripts/audit-r2-sdk-dependencies.mjs", "utf8");
 
 assert.match(script, /SUPABASE_STORAGE_BUCKET \|\| "bethag-documents"/);
 assert.match(script, /SUPABASE_S3_ENDPOINT/);
@@ -23,6 +24,13 @@ assert.match(script, /deleteObjectsTransition\?\.condition\?\.type === "Age"/);
 assert.match(script, /31 \* 24 \* 60 \* 60/);
 assert.match(script, /60 \* 24 \* 60 \* 60/);
 assert.match(script, /Use the AWS SDK.s virtual-hosted addressing for R2/);
+assert.ok(script.includes('import { NodeHttpHandler } from "@smithy/node-http-handler";'));
+assert.ok(script.includes("function createS3RequestHandler()"));
+assert.ok(script.includes("connectionTimeout: 10_000"));
+assert.ok(script.includes("requestTimeout: 30 * 60 * 1000"));
+assert.ok(script.includes("socketTimeout: 30 * 60 * 1000"));
+assert.equal(script.split("requestHandler: createS3RequestHandler()").length - 1, 2);
+
 assert.match(script, /endpoint: sourceEndpoint, region: sourceRegion, forcePathStyle: true/);
 assert.doesNotMatch(script, /endpoint: "https:\/\/" \+ accountId[\s\S]{0,400}forcePathStyle: true/);
 assert.match(script, /safeHeaders/);
@@ -48,6 +56,13 @@ assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand|PutBucketP
 assert.match(workflow, /cron: "0 \*\/6 \* \* \*"/);
 assert.match(workflow, /environment: storage-backup-production/);
 assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
+assert.ok(workflow.includes("@aws-sdk/client-s3@3.1178.0"));
+assert.ok(!workflow.includes("@aws-sdk/client-s3@3.800.0"));
+assert.ok(workflow.includes("node scripts/audit-r2-sdk-dependencies.mjs"));
+assert.ok(sdkAudit.includes('const SDK_VERSION = "3.1178.0"'));
+assert.ok(sdkAudit.includes('runNpm(["audit", "--json"])'));
+assert.ok(sdkAudit.includes('item.severity === "high" || item.severity === "critical"'));
+
 assert.match(workflow, /permissions:\n  contents: read/);
 assert.match(workflow, /github\.event_name == 'schedule'/);
 assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
