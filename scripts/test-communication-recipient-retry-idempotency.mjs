@@ -27,11 +27,10 @@ const [schemaSql, indexSql, functionSql, securitySql, grantSql, accessSql, retry
   readFile(`supabase/rebuild/drafts/${retryMigrationName}`, "utf8"),
 ]);
 assert.match(retrySql, /GRANT USAGE ON SCHEMA private TO authenticated;/, "The draft must grant private schema usage to authenticated.");
-assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\.prepare_communication_recipients\(uuid\) TO authenticated;/);
-assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\.reset_stale_communication_recipients\(uuid, interval\) TO authenticated;/);
-assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\.prepare_communication_recipients\(uuid\) FROM PUBLIC, anon;/);
-assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\.reset_stale_communication_recipients\(uuid, interval\) FROM PUBLIC, anon;/);
-
+assert.ok(retrySql.includes("GRANT EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) TO authenticated;"));
+assert.ok(retrySql.includes("GRANT EXECUTE ON FUNCTION private.reset_stale_communication_recipients(uuid, interval) TO authenticated;"));
+assert.ok(retrySql.includes("REVOKE EXECUTE ON FUNCTION private.prepare_communication_recipients(uuid) FROM PUBLIC, anon;"));
+assert.ok(retrySql.includes("REVOKE EXECUTE ON FUNCTION private.reset_stale_communication_recipients(uuid, interval) FROM PUBLIC, anon;"));
 
 const prepareStart = retrySql.indexOf("CREATE OR REPLACE FUNCTION private.prepare_communication_recipients");
 const resetStart = retrySql.indexOf("CREATE OR REPLACE FUNCTION private.reset_stale_communication_recipients");
@@ -42,7 +41,10 @@ const resetSql = retrySql.slice(resetStart, grantsStart);
 assert.doesNotMatch(prepareSql, /DELETE\s+FROM\s+public\.communication_recipients/i, "Preparation must not delete pending rows and regenerate recipient UUIDs.");
 assert.match(prepareSql, /UPDATE public\.communication_recipients r\s+SET status = 'pending'[\s\S]*WHERE r\.communication_id = p_communication_id[\s\S]*AND r\.status = 'failed'/i);
 assert.match(prepareSql, /ON CONFLICT \(communication_id, LOWER\(BTRIM\(email\)\)\) DO UPDATE/i);
-assert.doesNotMatch(prepareSql.slice(prepareSql.indexOf("ON CONFLICT"), prepareSql.indexOf("SELECT COUNT")), /\b(?:id|status)\s*=/i, "The conflict update must not replace recipient identity or delivery state.");
+const conflictStart = prepareSql.indexOf("ON CONFLICT");
+const conflictEnd = prepareSql.indexOf("\n\n  SELECT\n    COUNT(*) FILTER", conflictStart);
+assert.ok(conflictStart >= 0 && conflictEnd > conflictStart, "The recipient conflict-update clause must be isolated for its invariant check.");
+assert.doesNotMatch(prepareSql.slice(conflictStart, conflictEnd), /\b(?:id|status)\s*=/i, "The conflict update must not replace recipient identity or delivery state.");
 assert.match(prepareSql, /status = 'skipped'[\s\S]*provider_event_id/i);
 assert.match(resetSql, /status = 'skipped'[\s\S]*Invio interrotto con esito provider non verificabile/i);
 assert.match(resetSql, /provider_message_id/i);
@@ -280,6 +282,63 @@ try {
   assert.equal(acceptedQueued.rows[0].status, "sent");
   assert.equal(acceptedQueued.rows[0].provider_message_id, "re_queued_123");
   assert.equal(acceptedQueued.rows[0].queued_at, null);
+
+
+  // Keep only the intended active member in this condominium so the
+  // completed communication fixture has no newly eligible recipients.
+  await db.query("UPDATE public.condominium_members SET active=false WHERE id=$1", [acceptedMemberId]);
+  await db.query("UPDATE public.condominium_members SET active=false WHERE id=$1", [ambiguousMemberId]);
+
+  // Re-preparing a communication whose recipients were already delivered must
+  // not downgrade its aggregate email status to "no_recipients".
+  const completedCommunicationId = "99999999-9999-4999-8999-999999999999";
+  const completedRecipientId = "aaaaaaaa-1111-4111-8111-111111111111";
+  const completedAt = "2026-11-24T12:00:00.000Z";
+  await db.query(
+    "INSERT INTO public.communications(id,workspace_id,condominium_id,title,body,published,email_status,email_prepared_at) VALUES ($1,$2,$3,'Already sent','Body',true,'Inviata',$4)",
+    [completedCommunicationId, workspaceId, condominiumId, completedAt],
+  );
+  await db.query(
+    `INSERT INTO public.communication_recipients
+      (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,provider_message_id,sent_at)
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario','owner','sent','re_completed_123',$6)`,
+    [completedRecipientId, completedCommunicationId, workspaceId, condominiumId, activeMemberId, completedAt],
+  );
+  const completedPrepare = await db.query(
+    "SELECT private.prepare_communication_recipients($1) AS result",
+    [completedCommunicationId],
+  );
+  const completedState = await db.query(
+    "SELECT email_status,email_prepared_at FROM public.communications WHERE id=$1",
+    [completedCommunicationId],
+  );
+  assert.equal(completedPrepare.rows[0].result.recipient_count, 0);
+  assert.equal(completedState.rows[0].email_status, "Inviata",
+    "Re-preparing an already-sent communication must preserve its aggregate delivery status.");
+  assert.equal(new Date(completedState.rows[0].email_prepared_at).toISOString(), completedAt,
+    "Re-preparing an already-sent communication must not erase its prior preparation timestamp.");
+
+  const inFlightCommunicationId = "99999999-9999-4999-8999-999999999998";
+  const inFlightRecipientId = "aaaaaaaa-1111-4111-8111-111111111112";
+  await db.query(
+    "INSERT INTO public.communications(id,workspace_id,condominium_id,title,body,published,email_status,email_prepared_at) VALUES ($1,$2,$3,'Send in progress','Body',true,'prepared',$4)",
+    [inFlightCommunicationId, workspaceId, condominiumId, completedAt],
+  );
+  await db.query(
+    `INSERT INTO public.communication_recipients
+      (id,communication_id,workspace_id,condominium_id,member_id,email,name,recipient_role,status,queued_at)
+     VALUES ($1,$2,$3,$4,$5,'mario@example.it','Mario','owner','queued',now())`,
+    [inFlightRecipientId, inFlightCommunicationId, workspaceId, condominiumId, activeMemberId],
+  );
+  await db.query("SELECT private.prepare_communication_recipients($1)", [inFlightCommunicationId]);
+  const inFlightState = await db.query(
+    "SELECT email_status,email_prepared_at FROM public.communications WHERE id=$1",
+    [inFlightCommunicationId],
+  );
+  assert.equal(inFlightState.rows[0].email_status, "prepared",
+    "A concurrent queued recipient must not make an in-flight communication appear empty.");
+  assert.equal(new Date(inFlightState.rows[0].email_prepared_at).toISOString(), completedAt,
+    "A concurrent queued recipient must retain the current preparation timestamp.");
 
   console.log("Communication recipient retry idempotency PostgreSQL runtime regression: PASS");
 } finally {
