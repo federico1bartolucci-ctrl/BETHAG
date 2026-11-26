@@ -61,8 +61,8 @@ try {
     IMMUTABLE
     AS $
       SELECT CASE
-        WHEN p_salt LIKE 'salt:%' THEN 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8') FROM 1 FOR 72), 'hex')
-        WHEN p_salt = 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8') FROM 1 FOR 72), 'hex') THEN p_salt
+        WHEN p_salt LIKE 'salt:%' THEN 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8'), 1, 72), 'hex')
+        WHEN p_salt = 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8'), 1, 72), 'hex') THEN p_salt
         ELSE 'invalid-hash'
       END
     $;
