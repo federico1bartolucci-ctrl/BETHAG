@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { sourceObjectSignature } from "./storage-backup-source-signature.mjs";
+import { readAndVerifyBlobBody } from "./storage-backup-blob-integrity.mjs";
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { listAllStorageObjects } from "./storage-backup-list-all.mjs";
 
@@ -168,6 +170,8 @@ async function main() {
       if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
         throw new Error("Existing R2 blob failed SHA-256/size metadata verification for " + blobKey);
       }
+      const stored = await destination.send(new GetObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      await readAndVerifyBlobBody(stored.Body, sha256, bytes.length, blobKey);
       reused += 1;
     } else {
       blobKey = blobPrefix + snapshotId;
@@ -181,6 +185,8 @@ async function main() {
       if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== bytes.length) {
         throw new Error("New R2 blob failed SHA-256/size metadata verification for " + blobKey);
       }
+      const stored = await destination.send(new GetObjectCommand({ Bucket: destinationBucket, Key: blobKey }));
+      await readAndVerifyBlobBody(stored.Body, sha256, bytes.length, blobKey);
       copied += 1;
       const group = blobsByHash.get(sha256) || [];
       group.push({ Key: blobKey, LastModified: new Date() });
@@ -206,12 +212,8 @@ async function main() {
 
   currentStage = "Supabase source consistency recheck";
   const sourceObjectsAfter = await listAllStorageObjects(source, SOURCE_BUCKET, undefined, ListObjectsV2Command);
-  const sourceSignature = (items) => items
-    .filter((item) => item.Key && !item.Key.endsWith("/"))
-    .map((item) => [item.Key, item.Size, item.ETag || null])
-    .sort((a, b) => a[0].localeCompare(b[0]));
-  if (JSON.stringify(sourceSignature(sourceObjects)) !== JSON.stringify(sourceSignature(sourceObjectsAfter))) {
-    throw new Error("Source bucket changed during backup; no snapshot manifest was written. Retry on the next scheduled run.");
+  if (sourceObjectSignature(sourceObjects) !== sourceObjectSignature(sourceObjectsAfter)) {
+    throw new Error("Source bucket changed (key, size, ETag, or LastModified) during backup; no snapshot manifest was written. Retry on the next scheduled run.");
   }
 
   const manifest = {
