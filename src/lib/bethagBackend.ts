@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
 
@@ -1508,25 +1509,7 @@ export function syncBackendState(
 }
 
 function parseBethagAmount(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const raw = String(value ?? "").trim();
-  if (!raw) return 0;
-  const cleaned = raw.replace(/[^0-9,.-]/g, "");
-  if (!cleaned) return 0;
-  const lastComma = cleaned.lastIndexOf(",");
-  const lastDot = cleaned.lastIndexOf(".");
-  let normalized = cleaned;
-  if (lastComma >= 0 && lastDot >= 0) {
-    normalized = lastComma > lastDot
-      ? cleaned.replace(/\./g, "").replace(",", ".")
-      : cleaned.replace(/,/g, "");
-  } else if (lastComma >= 0) {
-    normalized = cleaned.replace(/\./g, "").replace(",", ".");
-  } else if ((cleaned.match(/\./g) ?? []).length > 1) {
-    normalized = cleaned.replace(/\./g, "");
-  }
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseInvoiceAmount(value);
 }
 
 function parseBethagDate(value: unknown): string {
