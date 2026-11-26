@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadBucketCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { listAllStorageObjects } from "./storage-backup-list-all.mjs";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const BLOB_REFRESH_SECONDS = 25 * 24 * 60 * 60;
@@ -75,19 +76,6 @@ async function getLifecycleRules(accountId, bucketName, token, jurisdiction) {
   return payload.result?.rules || [];
 }
 
-async function listAll(client, bucket, prefix) {
-  const objects = [];
-  let continuationToken;
-  do {
-    const page = await client.send(new ListObjectsV2Command({
-      Bucket: bucket, Prefix: prefix, ContinuationToken: continuationToken
-    }));
-    objects.push(...(page.Contents || []));
-    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (continuationToken);
-  return objects;
-}
-
 async function main() {
   const sourceEndpoint = safeEndpoint(required("SUPABASE_S3_ENDPOINT"), "SUPABASE_S3_ENDPOINT");
   if (!sourceEndpoint.endsWith("/storage/v1/s3")) {
@@ -120,7 +108,7 @@ async function main() {
   // Bucket-scoped Object Read & Write tokens explicitly allow object listing.
   // Use ListObjectsV2 as the access probe instead of HeadBucket, which is a
   // bucket-level operation and can be rejected by a bucket-scoped token.
-  const existingBlobObjects = await listAll(destination, destinationBucket, DESTINATION_PREFIX + "objects/");
+  const existingBlobObjects = await listAllStorageObjects(destination, destinationBucket, DESTINATION_PREFIX + "objects/", ListObjectsV2Command);
   currentStage = "R2 lifecycle configuration";
   // Lifecycle is bucket configuration, not object access. Read it with the dedicated
   // Cloudflare configuration token rather than the bucket-scoped S3 object token.
@@ -141,7 +129,7 @@ async function main() {
     throw new Error("R2 lifecycle gate failed: require snapshots expiration >=31 days and objects expiration >=60 days. No backup was written.");
   }
   currentStage = "Supabase Storage source listing";
-  const sourceObjects = await listAll(source, SOURCE_BUCKET);
+  const sourceObjects = await listAllStorageObjects(source, SOURCE_BUCKET, undefined, ListObjectsV2Command);
   currentStage = "R2 existing blob inventory indexing";
   const blobsByHash = new Map();
   for (const item of existingBlobObjects) {
@@ -217,7 +205,7 @@ async function main() {
   }
 
   currentStage = "Supabase source consistency recheck";
-  const sourceObjectsAfter = await listAll(source, SOURCE_BUCKET);
+  const sourceObjectsAfter = await listAllStorageObjects(source, SOURCE_BUCKET, undefined, ListObjectsV2Command);
   const sourceSignature = (items) => items
     .filter((item) => item.Key && !item.Key.endsWith("/"))
     .map((item) => [item.Key, item.Size, item.ETag || null])
