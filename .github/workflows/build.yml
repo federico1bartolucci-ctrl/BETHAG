@@ -212,6 +212,14 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_last_admin_test
           PGPASSWORD: postgres
 
+      - name: Verify real bcrypt and concurrent personal-code lockout on isolated PostgreSQL 17
+        run: npm run test:personal-security-code-lockout-postgres
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
         env:
