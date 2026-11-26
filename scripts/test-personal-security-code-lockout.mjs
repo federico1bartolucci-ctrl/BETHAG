@@ -59,13 +59,13 @@ try {
     RETURNS text
     LANGUAGE sql
     IMMUTABLE
-    AS $$
+    AS $
       SELECT CASE
-        WHEN p_salt LIKE 'salt:%' THEN 'hash:' || p_password
-        WHEN p_salt = 'hash:' || p_password THEN p_salt
+        WHEN p_salt LIKE 'salt:%' THEN 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8') FROM 1 FOR 72), 'hex')
+        WHEN p_salt = 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8') FROM 1 FOR 72), 'hex') THEN p_salt
         ELSE 'invalid-hash'
       END
-    $$;
+    $;
 
     CREATE TABLE public.user_security_settings (
       user_id uuid PRIMARY KEY,
@@ -155,6 +155,10 @@ try {
     () => change("original-code", "short", true),
     /nuovo codice personale deve contenere/,
   );
+  await assert.rejects(
+    () => change("original-code", "😀".repeat(20), true),
+    /72 byte/,
+  );
   snapshot = await state();
   assert.equal(snapshot.personal_code_failed_attempts, 0);
 
@@ -186,6 +190,27 @@ try {
     ["re-enabled-code"],
   );
   assert.equal(await verify("re-enabled-code"), true);
+
+  // Existing bcrypt hashes may have been created from a 6–32 character code
+  // whose UTF-8 representation exceeded bcrypt's 72-byte input limit. Keep the
+  // historical bcrypt truncation behavior for verification; only new codes
+  // are rejected above 72 bytes.
+  const legacyUserId = "10000000-0000-4000-8000-000000000002";
+  const legacyCode = "😀".repeat(20);
+  await db.query(
+    "INSERT INTO public.user_security_settings (user_id, personal_code_hash, personal_code_enabled, personal_code_failed_attempts, personal_code_locked_until) VALUES ($1, extensions.crypt($2, 'salt:legacy'), true, 0, NULL)",
+    [legacyUserId, legacyCode],
+  );
+  await db.query(
+    "SELECT set_config('request.jwt.claim.sub', $1, false)",
+    [legacyUserId],
+  );
+  assert.equal(await verify(legacyCode), true,
+    "A legacy bcrypt code with more than 72 UTF-8 bytes remains verifiable.");
+  await db.query(
+    "SELECT set_config('request.jwt.claim.sub', $1, false)",
+    [userId],
+  );
 
   // The RPC is available to authenticated users but not anon.
   const acl = await db.query(
