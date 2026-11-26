@@ -22,7 +22,7 @@ function validateManifestObjects(manifestObjects) {
   const expected = new Map();
   for (const item of manifestObjects) {
     if (!item || typeof item.key !== "string" || item.key.length === 0 ||
-        item.key.startsWith("/") || item.key.includes("\\") ||
+        item.key.startsWith("/") || item.key.endsWith("/") || item.key.includes("\\") ||
         !/^[a-f0-9]{64}$/.test(item.sha256) ||
         !Number.isSafeInteger(item.size) || item.size < 0) {
       throw new Error("Restore manifest contains an invalid object entry");
