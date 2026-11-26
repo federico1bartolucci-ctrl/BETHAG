@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { findAuthUserByEmail } from "../_shared/auth-user-directory.js";
+import { linkResidentMemberIfUnchanged } from "../_shared/resident-invite-member-link.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,6 +180,17 @@ Deno.serve(async (req: Request) => {
 
     if (!targetUserId) return json({ error: "Impossibile determinare l'utente condòmino." }, 500);
 
+    // Link only if the resident still matches the snapshot used for invitation and portal permissions.
+    const linkedMember = await linkResidentMemberIfUnchanged(adminClient, member, targetUserId);
+    if (!linkedMember?.length) {
+      return json({
+        error: invited
+          ? "Il profilo condòmino è stato rimosso o modificato durante l'invito. L'invito e-mail potrebbe essere già stato inviato, ma nessun accesso al portale è stato creato. Verifica l'anagrafica prima di riprovare."
+          : "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
+        invitationSent: invited,
+      }, 409);
+    }
+
     const { data: existingProfile, error: existingProfileError } = await adminClient
       .from("profiles")
       .select("role")
@@ -199,23 +211,6 @@ Deno.serve(async (req: Request) => {
         active: true,
       }, { onConflict: "id" });
     if (profileError) throw profileError;
-
-    const { data: linkedMember, error: memberUpdateError } = await adminClient
-      .from("condominium_members")
-      .update({ user_id: targetUserId })
-      .eq("id", member.id)
-      .eq("condominium_id", condominiumForMember.id)
-      .eq("legacy_id", legacyId)
-      .select("id");
-    if (memberUpdateError) throw memberUpdateError;
-    if (!linkedMember?.length) {
-      return json({
-        error: invited
-          ? "Il profilo condòmino è stato rimosso o modificato durante l'invito. L'invito e-mail potrebbe essere già stato inviato, ma nessun accesso al portale è stato creato. Verifica l'anagrafica prima di riprovare."
-          : "Il profilo condòmino è stato rimosso o modificato durante l'invito. Nessun accesso al portale è stato creato.",
-        invitationSent: invited,
-      }, 409);
-    }
 
     const apartment =
       String(member.data?.apartment || "").trim() ||
