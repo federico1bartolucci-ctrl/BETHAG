@@ -8,6 +8,7 @@ import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadP
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
+import { applyWorkspacePlanSnapshot } from "./lib/workspace-plan-snapshot.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
   analyzeWorkspaceStoredDocumentsWithAI, storeCondominiumDocuments, claimFirstWorkspaceAdmin, confirmCondominiumCreationIntake, createCondominiumCreationIntake, deleteCondominium as deleteCondominiumBackend, deleteCondominiumMember as deleteCondominiumMemberBackend, deleteCondominiumUnit as deleteCondominiumUnitBackend, deletePortalMember as deletePortalMemberBackend, deleteCondominiumWork as deleteCondominiumWorkBackend, saveCondominiumWorkProgress as saveCondominiumWorkProgressBackend, syncCondominiumWorkDocuments as syncCondominiumWorkDocumentsBackend, recordCondominiumWorkEvent as recordCondominiumWorkEventBackend, reconcileCondominiumWork as reconcileCondominiumWorkBackend, confirmCondominiumInvoice as confirmCondominiumInvoiceBackend, deleteWorkspaceRecord as deleteWorkspaceRecordBackend, saveCondominiumMember as saveCondominiumMemberBackend, confirmCondominiumMemberTransfer as confirmCondominiumMemberTransferBackend, previewCondominiumMemberTransfer as previewCondominiumMemberTransferBackend, getMemberTransferAccountingSnapshot as getMemberTransferAccountingSnapshotBackend, closeCondominiumMemberTransfer as closeCondominiumMemberTransferBackend, saveCondominiumUnit as saveCondominiumUnitBackend, getActiveWorkspaceId, getWorkspacePlan, loadBackendState, archiveCondominium as archiveCondominiumBackend, restoreCondominium as restoreCondominiumBackend, saveCondominium as saveCondominiumBackend, syncBackendState, updateCondominiumRequestStatus } from "./lib/bethagBackend";
@@ -2353,15 +2354,13 @@ function App() {
   useEffect(() => {
     if (!supabaseConfigured || !profile.workspaceId) return;
     let cancelled = false;
-    void getWorkspacePlan(profile.workspaceId)
-      .then((plan) => {
-        if (!cancelled && plan) {
-          setSubscription((current) => current.plan === plan ? current : { ...current, plan });
-        }
-      })
-      .catch((error) => {
-        console.warn("Impossibile caricare il piano del workspace:", error);
-      });
+    void applyWorkspacePlanSnapshot({
+      loadPlan: () => getWorkspacePlan(profile.workspaceId),
+      isCurrent: () => !cancelled,
+      setSubscription,
+    }).catch((error) => {
+      console.warn("Impossibile caricare il piano del workspace:", error);
+    });
     return () => {
       cancelled = true;
     };
@@ -6678,16 +6677,20 @@ function App() {
 
         if (!workspaceId || cancelled) return;
 
-        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
-          .from("workspaces")
-          .select("plan")
-          .eq("id", workspaceId)
-          .maybeSingle();
-        if (workspaceSettingsError) throw workspaceSettingsError;
-        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
-        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
-          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
-        }
+        await applyWorkspacePlanSnapshot({
+          loadPlan: async () => {
+            const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+              .from("workspaces")
+              .select("plan")
+              .eq("id", workspaceId)
+              .maybeSingle();
+            if (workspaceSettingsError) throw workspaceSettingsError;
+            return workspaceSettings?.plan;
+          },
+          isCurrent: () => !cancelled,
+          setSubscription,
+        });
+        if (cancelled) return;
 
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
@@ -6756,16 +6759,20 @@ function App() {
     let cancelled = false;
     const refreshBackendState = async () => {
       try {
-        const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
-          .from("workspaces")
-          .select("plan")
-          .eq("id", profile.workspaceId)
-          .maybeSingle();
-        if (workspaceSettingsError) throw workspaceSettingsError;
-        const persistedPlan = String(workspaceSettings?.plan ?? "").toLowerCase();
-        if (["free", "plus", "professional", "portal"].includes(persistedPlan)) {
-          setSubscription((current) => ({ ...current, plan: persistedPlan as PlanId }));
-        }
+        await applyWorkspacePlanSnapshot({
+          loadPlan: async () => {
+            const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
+              .from("workspaces")
+              .select("plan")
+              .eq("id", profile.workspaceId)
+              .maybeSingle();
+            if (workspaceSettingsError) throw workspaceSettingsError;
+            return workspaceSettings?.plan;
+          },
+          isCurrent: () => !cancelled,
+          setSubscription,
+        });
+        if (cancelled) return;
 
         const backend = await loadBackendState(profile.workspaceId);
         if (cancelled) return;
