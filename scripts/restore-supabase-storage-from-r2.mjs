@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import {
   S3Client, GetObjectCommand, ListObjectsV2Command, PutObjectCommand
 } from "@aws-sdk/client-s3";
-import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
+import {
+  inspectExistingRestoreTarget,
+  restoreMissingObjects,
+  assertRestoreTargetComplete,
+} from "./storage-restore-target-inventory.mjs";
 
 const SOURCE_PREFIX = "backups/snapshots/";
 const OBJECT_PREFIX = "backups/objects/";
@@ -30,6 +34,9 @@ function endpoint(value, label) {
 }
 
 async function bodyBytes(body) {
+  if (!body || typeof body.transformToByteArray !== "function") {
+    throw new Error("Storage object response did not contain a readable body");
+  }
   return Buffer.from(await body.transformToByteArray());
 }
 
@@ -144,37 +151,54 @@ async function main() {
       verified.push({ item, bytes });
     }
 
+    let restoreStats = { written: 0, resumed: 0, targetWasEmpty: null };
     if (apply) {
-      stage = "Supabase restore target preflight";
-      await assertRestoreTargetEmpty(supabase, targetBucket, ListObjectsV2Command);
-      for (const { item, bytes } of verified) {
-        stage = "Supabase object restore write";
-        await supabase.send(new PutObjectCommand({
-          Bucket: targetBucket,
-          Key: item.key,
-          Body: bytes,
-          ContentLength: item.size,
-          ContentType: item.content_type || "application/octet-stream",
-          ...(item.cache_control ? { CacheControl: item.cache_control } : {}),
-          ...(item.content_disposition ? { ContentDisposition: item.content_disposition } : {}),
-          ...(item.content_encoding ? { ContentEncoding: item.content_encoding } : {}),
-          ...(item.content_language ? { ContentLanguage: item.content_language } : {}),
-          ...(item.expires ? { Expires: new Date(item.expires) } : {}),
-          ...(item.metadata && Object.keys(item.metadata).length ? { Metadata: item.metadata } : {})
-        }));
-      }
+      stage = "Supabase restore target inventory and partial-restore verification";
+      const { existingKeys } = await inspectExistingRestoreTarget({
+        client: supabase,
+        bucket: targetBucket,
+        ListObjectsV2Command,
+        GetObjectCommand,
+        manifestObjects: manifest.objects,
+        readBodyBytes: bodyBytes,
+      });
+      const targetWasEmpty = existingKeys.size === 0;
+
+      stage = "Supabase missing object restore writes and read-after-write verification";
+      const writeStats = await restoreMissingObjects({
+        client: supabase,
+        bucket: targetBucket,
+        verifiedObjects: verified,
+        existingKeys,
+        PutObjectCommand,
+        GetObjectCommand,
+        readBodyBytes: bodyBytes,
+      });
+
+      stage = "Supabase restore completion inventory verification";
+      await assertRestoreTargetComplete({
+        client: supabase,
+        bucket: targetBucket,
+        ListObjectsV2Command,
+        manifestObjects: manifest.objects,
+      });
+      restoreStats = { ...writeStats, targetWasEmpty };
     }
 
     console.log(JSON.stringify({
-      status: apply ? "RESTORE_WRITTEN" : "DRY_RUN_PASS",
+      status: apply ? "RESTORE_VERIFIED" : "DRY_RUN_PASS",
       snapshot_id: manifest.snapshot_id,
       manifest_key: manifestKey,
       source_object_count: manifest.objects.length,
       blobs_integrity_verified: verified.length,
       target_bucket: targetBucket,
-      writes_performed: apply ? verified.length : 0,
-      target_preflight: apply ? "EMPTY_TARGET_VERIFIED" : "NOT_RUN_DRY_RUN",
-      target_was_empty: apply ? true : null
+      writes_performed: apply ? restoreStats.written : 0,
+      objects_resumed: apply ? restoreStats.resumed : 0,
+      target_objects_verified: apply ? manifest.objects.length : 0,
+      target_preflight: apply
+        ? (restoreStats.targetWasEmpty ? "EMPTY_TARGET_VERIFIED" : "MATCHING_PARTIAL_RESTORE_VERIFIED")
+        : "NOT_RUN_DRY_RUN",
+      target_was_empty: apply ? restoreStats.targetWasEmpty : null
     }, null, 2));
   } finally {
     r2.destroy();

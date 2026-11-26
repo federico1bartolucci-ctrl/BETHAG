@@ -4,6 +4,7 @@ import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
 
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
 const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
+const targetInventory = await readFile("scripts/storage-restore-target-inventory.mjs", "utf8");
 assert.match(script, /bethag-storage-backup\/v1/);
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
@@ -11,23 +12,35 @@ assert.match(script, /RESTORE_CONFIRM_TARGET/);
 assert.match(script, /targetBucket === sourceBucket/);
 assert.match(script, /SUPABASE_RESTORE_S3_ENDPOINT/);
 assert.match(script, /const supabase = apply \? new S3Client/);
-assert.match(script, /target_preflight: apply \? "EMPTY_TARGET_VERIFIED" : "NOT_RUN_DRY_RUN"/);
+assert.match(script, /target_preflight: apply/);
+assert.match(script, /MATCHING_PARTIAL_RESTORE_VERIFIED/);
+assert.match(script, /RESTORE_VERIFIED/);
 assert.match(script, /supabase\?\.destroy\(\)/);
 assert.match(script, /SUPABASE_RESTORE_S3_ACCESS_KEY_ID/);
 assert.match(script, /separate Supabase project/);
 assert.match(script, /original Supabase Storage bucket/);
+assert.match(script, /inspectExistingRestoreTarget/);
+assert.match(script, /restoreMissingObjects/);
+assert.match(script, /assertRestoreTargetComplete/);
 assert.match(targetPreflight, /Restore target bucket is not empty/);
+assert.match(targetInventory, /NextContinuationToken/);
+assert.match(targetInventory, /repeated a continuation token/);
+assert.match(targetInventory, /truncated but omitted its continuation token/);
+assert.match(targetInventory, /duplicate object key/);
+assert.match(targetInventory, /unexpected object/);
+assert.match(targetInventory, /read-after-write SHA-256\/size verification/);
+assert.match(targetInventory, /item\.key\.endsWith\("\/"\)/);
+assert.match(script, /Bucket: sourceBucket/);
 assert.match(script, /Blob integrity verification failed/);
 assert.match(script, /createHash\("sha256"\)/);
 assert.match(script, /item\.blob_key\.slice\(OBJECT_PREFIX\.length\)\.split\("\/"\)\[0\] !== item\.sha256/);
-assert.match(script, /new PutObjectCommand/);
-assert.match(script, /writes_performed: apply \? verified\.length : 0/);
+assert.match(script, /PutObjectCommand/);
+assert.match(targetInventory, /new PutObjectCommand/);
+assert.match(script, /writes_performed: apply \? restoreStats\.written : 0/);
 assert.match(script, /if \(apply\)/);
-assert.match(script, /sourceBucket\);/);
 assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand/);
 
 console.log("PASS: BETHAG R2 Storage restore safety contract");
-
 
 class FakeListObjectsV2Command {
   constructor(input) {
@@ -68,7 +81,7 @@ for (const existingObject of [
   await assert.rejects(
     () => assertRestoreTargetEmpty(client, "recovery-bucket", FakeListObjectsV2Command),
     /Restore target bucket is not empty/,
-    "any object key, including a folder marker, must block restore",
+    "any object key, including a folder marker, must block an initial restore",
   );
 }
 
@@ -87,8 +100,7 @@ for (const malformedPage of [
   );
 }
 
-assert.match(script, /assertRestoreTargetEmpty\(supabase, targetBucket, ListObjectsV2Command\)/);
+assert.doesNotMatch(script, /assertRestoreTargetEmpty\(supabase, targetBucket/);
 assert.doesNotMatch(script, /return items\.filter\(\(item\) => item\.Key && !item\.Key\.endsWith\("\/"\)\)/);
 
-console.log("PASS: R2 restore target emptiness preflight counts folder-marker objects.");
-console.log("PASS: restore refuses malformed or truncated target listings instead of assuming emptiness.");
+console.log("PASS: R2 restore target folder markers remain non-empty and block unsafe restore.");
