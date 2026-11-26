@@ -1759,11 +1759,24 @@ function AccountingPage({
         amount: Number(budgetForm.amount),
         notes: budgetForm.notes
       };
-      const query = editingBudget
-        ? supabase.from("condominium_budgets").update(payload).eq("id", editingBudget.id).eq("workspace_id", workspaceId)
-        : supabase.from("condominium_budgets").insert(payload);
-      const { error: saveError } = await query;
-      if (saveError) throw saveError;
+      if (editingBudget) {
+        const { data: updatedBudget, error: saveError } = await supabase
+          .from("condominium_budgets")
+          .update(payload)
+          .eq("id", editingBudget.id)
+          .eq("workspace_id", workspaceId)
+          .select("id")
+          .maybeSingle();
+        if (saveError) throw saveError;
+        if (!updatedBudget) {
+          throw new Error("Il preventivo non è più disponibile o non appartiene al workspace corrente. Nessuna modifica confermata.");
+        }
+      } else {
+        const { error: saveError } = await supabase
+          .from("condominium_budgets")
+          .insert(payload);
+        if (saveError) throw saveError;
+      }
       setEditingBudget(null); setShowBudgetForm(false);
       setBudgetForm({ fiscal_year_id:"", category:"Manutenzione", description:"", amount:0, notes:"" });
       flash("Voce di preventivo salvata."); await load();
