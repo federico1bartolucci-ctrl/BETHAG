@@ -14,6 +14,9 @@ DECLARE
   v_manual_review integer := 0;
   v_step_count integer := 0;
   v_inactive_count integer := 0;
+  v_has_delivery boolean := false;
+  v_has_queued boolean := false;
+  v_has_failed boolean := false;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Autenticazione richiesta';
@@ -202,15 +205,32 @@ BEGIN
       recipient_role = EXCLUDED.recipient_role,
       updated_at = now();
 
-  SELECT COUNT(*)::integer
-  INTO v_count
+  SELECT
+    COUNT(*) FILTER (WHERE status = 'pending')::integer,
+    COALESCE(BOOL_OR(status IN ('sent', 'delivered')), false),
+    COALESCE(BOOL_OR(status = 'queued'), false),
+    COALESCE(BOOL_OR(status = 'failed'), false)
+  INTO v_count, v_has_delivery, v_has_queued, v_has_failed
   FROM public.communication_recipients
-  WHERE communication_id = p_communication_id
-    AND status = 'pending';
+  WHERE communication_id = p_communication_id;
 
+  -- A repeated preparation must not erase a completed delivery aggregate.
+  -- A queued row may belong to another concurrent sender; preserve its
+  -- current aggregate until that sender records the provider outcome.
   UPDATE public.communications
-  SET email_status = CASE WHEN v_count > 0 THEN 'prepared' ELSE 'no_recipients' END,
-      email_prepared_at = CASE WHEN v_count > 0 THEN now() ELSE NULL END,
+  SET email_status = CASE
+        WHEN v_count > 0 THEN 'prepared'
+        WHEN v_has_queued THEN email_status
+        WHEN v_has_delivery AND v_has_failed THEN 'Parzialmente inviata'
+        WHEN v_has_delivery THEN 'Inviata'
+        WHEN v_has_failed THEN 'Errore'
+        ELSE 'no_recipients'
+      END,
+      email_prepared_at = CASE
+        WHEN v_count > 0 THEN now()
+        WHEN v_has_queued OR v_has_delivery OR v_has_failed THEN email_prepared_at
+        ELSE NULL
+      END,
       updated_at = now()
   WHERE id = p_communication_id;
 
