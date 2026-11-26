@@ -31,7 +31,9 @@ export function createCommittedMemberTransferOutcome({
   }
 
   return {
-    committed: Boolean(normalizedTransferId),
+    // This helper is called only after the RPC returned without an error.
+    // A missing response ID affects reconciliation, not the commit outcome.
+    committed: true,
     transferId: normalizedTransferId,
     incoming: reconciliationReason ? null : incoming,
     reconciliationRequired: Boolean(reconciliationReason),
