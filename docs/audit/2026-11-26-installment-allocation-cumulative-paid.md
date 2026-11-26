@@ -31,7 +31,7 @@ It uses `CREATE OR REPLACE FUNCTION` for the two existing functions only. It doe
 - isolation from a different owner on the same unit;
 - advisory lock ordering and cumulative aggregation in both trigger and manual-payment RPC bodies.
 
-The test is wired into `npm test`.
+The PGlite regression is wired into `npm test`. A separate PostgreSQL 17 CI rehearsal applies the draft to a disposable local database and runs concurrent manual-RPC payments and direct trigger inserts against different installments sharing one ledger entry; it also verifies a trigger-driven reversal.
 
 ## Promotion gates
 
