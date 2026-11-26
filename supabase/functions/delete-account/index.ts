@@ -1,4 +1,6 @@
 import { withSupabase } from "npm:@supabase/server@^1";
+import { createDeleteAccountFailureResponse } from "../_shared/delete-account-error-response.js";
+import { hasLastActiveWorkspaceAdmin } from "../_shared/last-admin-precheck.js";
 
 export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
@@ -49,43 +51,42 @@ export default {
       }
     }
 
-    const { data: adminMemberships, error: membershipError } = await ctx.supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .eq("active", true);
-
-    if (membershipError) {
-      return Response.json({ error: membershipError.message }, { status: 500 });
+    let lastActiveWorkspaceAdmin;
+    try {
+      lastActiveWorkspaceAdmin = await hasLastActiveWorkspaceAdmin(ctx.supabaseAdmin, userId);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Impossibile verificare le appartenenze amministrative.";
+      return Response.json({ error: message }, { status: 500 });
     }
 
-    for (const membership of adminMemberships ?? []) {
-      const { count, error: countError } = await ctx.supabase
-        .from("workspace_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("workspace_id", membership.workspace_id)
-        .eq("role", "admin")
-        .eq("active", true);
-
-      if (countError) {
-        return Response.json({ error: countError.message }, { status: 500 });
-      }
-
-      if ((count ?? 0) <= 1) {
-        return Response.json(
-          {
-            error:
-              "Non puoi eliminare il profilo perché sei l'unico amministratore attivo di un workspace. Prima nomina un altro amministratore o trasferisci la gestione.",
-          },
-          { status: 409 }
-        );
-      }
+    if (lastActiveWorkspaceAdmin) {
+      return Response.json(
+        {
+          error:
+            "Non puoi eliminare il profilo perché sei l'unico amministratore attivo di un workspace. Prima nomina un altro amministratore o trasferisci la gestione.",
+        },
+        { status: 409 }
+      );
     }
 
     const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
     if (deleteError) {
-      return Response.json({ error: deleteError.message }, { status: 500 });
+      // GoTrue may return a generic database error when the authoritative
+      // workspace_members trigger rejects a concurrent last-admin removal.
+      // Re-evaluate with one fresh SQL statement snapshot for HTTP 409 mapping.
+      let lastActiveWorkspaceAdmin = false;
+      try {
+        lastActiveWorkspaceAdmin = await hasLastActiveWorkspaceAdmin(ctx.supabaseAdmin, userId);
+      } catch {
+        // Preserve the original Auth deletion error as HTTP 500 if the
+        // diagnostic snapshot cannot be established.
+      }
+
+      return createDeleteAccountFailureResponse(deleteError, {
+        lastActiveWorkspaceAdmin,
+      });
     }
 
     return Response.json({ success: true });
