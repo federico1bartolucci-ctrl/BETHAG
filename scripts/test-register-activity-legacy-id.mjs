@@ -103,3 +103,5 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 assert.ok(packageJson.scripts.test.includes("test-register-activity-legacy-id.mjs"));
 
 console.log("PASS: Register activity creation reproduces the PostgreSQL unique collision and retries only the workspace legacy-ID constraint.");
+
+await import("./test-work-closure-state-guard.mjs");
