@@ -100,7 +100,7 @@ try {
     "CREATE SCHEMA private;",
     "CREATE TABLE public.condominiums (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, archived_at timestamptz);",
     "CREATE TABLE public.condominium_fiscal_years (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, status text NOT NULL, start_date date, end_date date);",
-    "CREATE OR REPLACE FUNCTION private.can_manage_workspace_module(p_workspace_id uuid, p_module text) RETURNS boolean LANGUAGE sql STABLE AS $ SELECT true $;",
+    "CREATE OR REPLACE FUNCTION private.can_manage_workspace_module(p_workspace_id uuid, p_module text) RETURNS boolean LANGUAGE sql STABLE AS 'SELECT true';",
     "CREATE TABLE public.condominium_members (id uuid PRIMARY KEY, condominium_id uuid NOT NULL, unit_id uuid, user_id uuid, email text, active boolean NOT NULL, data jsonb NOT NULL DEFAULT '{}'::jsonb);",
     "CREATE TABLE public.condominium_installments (id uuid PRIMARY KEY, workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, amount numeric NOT NULL, due_date date NOT NULL, unit_id uuid, member_id uuid, fiscal_year_id uuid, paid_amount numeric NOT NULL DEFAULT 0, status text NOT NULL DEFAULT 'Da pagare', ledger_entry_id uuid);",
     "CREATE TABLE public.condominium_payment_movements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), workspace_id uuid NOT NULL, condominium_id uuid NOT NULL, installment_id uuid NOT NULL, payment_date date NOT NULL, amount numeric NOT NULL, method text NOT NULL DEFAULT 'Bonifico', reference text DEFAULT '', notes text DEFAULT '');",
