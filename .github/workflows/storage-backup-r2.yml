@@ -35,7 +35,9 @@ jobs:
         with:
           node-version: 24
       - name: Install isolated AWS S3 client
-        run: npm install --no-save --package-lock=false @aws-sdk/client-s3@3.800.0
+        run: npm install --no-save --package-lock=false @aws-sdk/client-s3@3.1178.0
+      - name: Audit isolated AWS S3 client dependency tree
+        run: node scripts/audit-r2-sdk-dependencies.mjs
       - name: Validate backup credentials
         env:
           SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
