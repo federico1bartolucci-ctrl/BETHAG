@@ -1,17 +1,24 @@
 # APP-14 — Production release recertification status
 
 **Updated:** 2026-11-25  
-**Current main candidate:** `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`  
-**Release fingerprint:** `48b093b22bea647fdd6a99388909415c377a8e8080cf14ab19a1419eb48eeed4`  
+**Exact QA checkout SHA for workflow 45644127205:** `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`  
+**QA checkout release fingerprint:** `48b093b22bea647fdd6a99388909415c377a8e8080cf14ab19a1419eb48eeed4`  
 **Production project:** `tctcgptrsmvgajqjgnev`  
 **Disposition:** **PARTIAL / NO-GO — historical 19-migration cutover is present; QA entitlement hardening is verified; Production promotion remains blocked**
+
+## Post-merge reconciliation — 26 November 2026
+
+- PR #531 (SAL payment race/ledger compensation) and PR #532 (collaborator invitation admin-role downgrade guard) were integrated sequentially before this documentation update.
+- Current `main` is `af3cc24e5f97fdec5d80b84fbc67dd62d38f1383`. PR #532 exact-head Build, PostgreSQL 17 bootstrap, Baseline Safety, and GitHub Pages deployment all completed successfully.
+- These application-level integrations do not alter the Production release disposition recorded above: APP-14 remains PARTIAL / NO-GO. No Production migrations or Edge Function deployments were performed by these merges.
+- The QA ledger count/latest version in the follow-up above reflects the final PR #473 record: 289 rows, latest `20261125165536`. The earlier 267-row Production ledger and historical 19-migration reconciliation remain separate and unchanged.
 
 ## Latest QA follow-up — 25 November 2026 (supersedes earlier QA gaps)
 
 The QA environment was subsequently used to validate the communications entitlement correction and its server-managed plan dependency. This does not change the Production disposition.
 
 - QA branch: `bethag-launch-qa`, project ref `jhuyhlzzydcgghrzeexn`.
-- QA ledger now has **287 rows**, latest `20261125164447`. Four retained records cover the two initial communications guard applications, the SECURITY INVOKER follow-up, and the server-managed workspace-plan guard. No ledger rows were deleted or rewritten.
+- QA ledger now has **289 rows**, latest `20261125165536`. Six retained records cover the two initial communications guard applications, the SECURITY INVOKER follow-up, and the server-managed workspace-plan guard. No ledger rows were deleted or rewritten.
 - A Free workspace administrator's ability to self-upgrade `workspaces.plan` was reproduced in a rollback-only transaction. The server-managed plan candidate was then applied to QA only as `20261125164447 / 20261125125000_server_manage_workspace_plan_and_guard_ai_entitlements`.
 - After application, authenticated self-upgrade is rejected with `WORKSPACE_PLAN_SERVER_MANAGED`; `service_role` can still update the plan. An end-to-end rollback-only test proved a Free admin cannot self-upgrade or create communications; a temporary service-role upgrade enabled create/publish/recipient preparation, then all changes were rolled back.
 - Plus, Professional and Portal communication flows passed publication, recipient preparation and stale-queue recovery checks. Downgrade-safe unpublishing/status finalization and collaborator permission true/false/absent were also verified. No real Resend email was sent.
@@ -23,7 +30,7 @@ The QA environment was subsequently used to validate the communications entitlem
 
 ## 1. Exact candidate and QA evidence
 
-- PR #466 (server-side Plus entitlement for Communications) is merged. Current main is `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`.
+- PR #466 (server-side Plus entitlement for Communications) is merged. The exact main checkout used by workflow 45644127205 was `5c096c4a0f48b4b4ec3eacf08787e1c36fae5dc5`.
 - Final authenticated QA workflow [45644127205](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/45644127205): **SUCCESS**, exact current main SHA. The workflow's SHA trust gate passed; all steps completed successfully.
 - APP-01..04 and APP-13 real-auth RLS/storage checks: PASS.
 - APP-05..07 condominium, accounting and closed-period checks: PASS.
