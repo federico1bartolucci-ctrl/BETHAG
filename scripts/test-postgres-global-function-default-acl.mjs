@@ -27,7 +27,7 @@ if (!url) {
   const target = new URL(url);
   assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname),
     "Only disposable loopback PostgreSQL may run the ACL proposal regression.");
-  assert.ok(!/supabase\\.co|tctcgptrsmvgajqjgnev|jhuyhlzzydcgghrzeexn/i.test(url),
+  assert.ok(!url.includes("supabase.co") && !url.includes("tctcgptrsmvgajqjgnev") && !url.includes("jhuyhlzzydcgghrzeexn"),
     "Remote Supabase/Production targets are forbidden.");
   execFileSync("psql", ["-X", "--no-psqlrc", "--dbname", url, "-v", "ON_ERROR_STOP=1", "-f", regressionPath], {
     stdio: "inherit",
