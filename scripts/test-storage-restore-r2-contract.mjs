@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
 
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
+const targetPreflight = await readFile("scripts/storage-restore-target-empty.mjs", "utf8");
 assert.match(script, /bethag-storage-backup\/v1/);
 assert.match(script, /--dry-run/);
 assert.match(script, /--apply/);
@@ -15,7 +16,7 @@ assert.match(script, /supabase\?\.destroy\(\)/);
 assert.match(script, /SUPABASE_RESTORE_S3_ACCESS_KEY_ID/);
 assert.match(script, /separate Supabase project/);
 assert.match(script, /original Supabase Storage bucket/);
-assert.match(script, /Restore target bucket is not empty/);
+assert.match(targetPreflight, /Restore target bucket is not empty/);
 assert.match(script, /Blob integrity verification failed/);
 assert.match(script, /createHash\("sha256"\)/);
 assert.match(script, /item\.blob_key\.slice\(OBJECT_PREFIX\.length\)\.split\("\/"\)\[0\] !== item\.sha256/);
