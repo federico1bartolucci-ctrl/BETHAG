@@ -78,14 +78,20 @@ try {
        'suppressed@example.it', 'queued', 'msg-suppressed', now()),
       ('00000000-0000-0000-0000-000000000009',
        '00000000-0000-0000-0000-000000000008',
-       'newfailed@example.it', 'queued', 'msg-failed-new', now());,
+       'newfailed@example.it', 'queued', 'msg-failed-new', now()),
       ('00000000-0000-0000-0000-000000000011',
        '00000000-0000-0000-0000-000000000010',
-       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now()),
-      ('00000000-0000-0000-0000-000000000013',
-       '00000000-0000-0000-0000-000000000012',
-       'alreadydelivered@example.it', 'delivered', 'msg-suppressed-after-delivery',
-       '2026-11-26T08:10:00Z');
+       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now());
+    INSERT INTO public.communication_recipients(
+      id, communication_id, email, status, provider_message_id, delivered_at,
+      event_type, provider_event_id, updated_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000013',
+      '00000000-0000-0000-0000-000000000012',
+      'alreadydelivered@example.it', 'delivered', 'msg-suppressed-after-delivery',
+      '2026-11-26T08:09:00Z', 'email.suppressed',
+      'evt-suppressed-after-delivery', '2026-11-26T08:10:00Z'
+    );
   `);
 
   // Run the actual baseline function first and prove that a delayed delivered event regresses a complaint.
