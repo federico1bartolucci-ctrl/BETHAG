@@ -26,6 +26,11 @@ const [schemaSql, indexSql, functionSql, securitySql, grantSql, accessSql, retry
   readFile(`${migrationDir}/${accessMigrationName}`, "utf8"),
   readFile(`supabase/rebuild/drafts/${retryMigrationName}`, "utf8"),
 ]);
+assert.match(retrySql, /GRANT USAGE ON SCHEMA private TO authenticated;/, "The draft must grant private schema usage to authenticated.");
+assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\\.prepare_communication_recipients\\(uuid\\) TO authenticated;/);
+assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\\.reset_stale_communication_recipients\\(uuid, interval\\) TO authenticated;/);
+assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\\.prepare_communication_recipients\\(uuid\\) FROM PUBLIC, anon;/);
+assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\\.reset_stale_communication_recipients\\(uuid, interval\\) FROM PUBLIC, anon;/);
 
 const prepareStart = retrySql.indexOf("CREATE OR REPLACE FUNCTION private.prepare_communication_recipients");
 const resetStart = retrySql.indexOf("CREATE OR REPLACE FUNCTION private.reset_stale_communication_recipients");
