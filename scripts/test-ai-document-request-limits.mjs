@@ -15,11 +15,13 @@ assert.equal(empty.code, "AI_DOCUMENTS_REQUIRED");
 
 const atFileLimit = validateAiDocumentRequestFiles(
   Array.from({ length: AI_DOCUMENT_MAX_FILES }, (_, index) => ({ storagePath: `workspace-a/${index}.pdf` })),
+  "workspace-a",
 );
 assert.equal(atFileLimit.allowed, true);
 
 const overFileLimit = validateAiDocumentRequestFiles(
   Array.from({ length: AI_DOCUMENT_MAX_FILES + 1 }, (_, index) => ({ storagePath: `workspace-a/${index}.pdf` })),
+  "workspace-a",
 );
 assert.equal(overFileLimit.allowed, false);
 assert.equal(overFileLimit.status, 413);
