@@ -7143,6 +7143,7 @@ function App() {
   };
 
   const canAccessPage = (target: Page) => {
+    // Admins may preview demo-plan pages; requirePlan still enforces server entitlements for writes.
     if (isAdministrator) {
       const addon = pageAddon[target];
       return !addon || hasEntitlement(
