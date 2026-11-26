@@ -38,8 +38,13 @@ assert.match(
 );
 assert.equal(
   source.split("const currentDate = refreshTransferDateIfUntouched();").length - 1,
-  3,
-  "unit selection, outgoing-member selection and whole-property selection must refresh the untouched date",
+  2,
+  "unit and outgoing-member selection must refresh the untouched date",
+);
+assert.match(
+  source,
+  /<label>Modalità trasferimento<select[\s\S]*?refreshTransferDateIfUntouched\(\);/,
+  "changing transfer scope must also refresh an untouched default date",
 );
 assert.match(source, /async function makePreview\(\) \{\s*const nextDate = refreshTransferDateIfUntouched\(\)/);
 assert.match(source, /function openConfirmation\(\) \{\s*const nextDate = refreshTransferDateIfUntouched\(\)/);
