@@ -18,6 +18,7 @@ const db=new PGlite();
 const workspace="11111111-1111-4111-8111-111111111111",condominium="22222222-2222-4222-8222-222222222222";
 const workA="33333333-3333-4333-8333-333333333333",progressA="44444444-4444-4444-8444-444444444444",progressB="55555555-5555-4555-8555-555555555555";
 const workB="66666666-6666-4666-8666-666666666666",progressC="77777777-7777-4777-8777-777777777777",progressD="88888888-8888-4888-8888-888888888888";
+const workC="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const oldPayment1="99999999-9999-4999-8999-999999999991",oldPayment2="99999999-9999-4999-8999-999999999992";
 const today=new Date().toISOString().slice(0,10),year=Number(today.slice(0,4)),yearStart=year+"-01-01",yearEnd=year+"-12-31",nextYearDate=(year+1)+"-01-01";
 const fiscalYearId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -32,9 +33,38 @@ try{
  await db.exec(validationFunction);await db.exec(summaryFunction);await db.exec(summaryTriggerFunction);
  await db.exec("CREATE TRIGGER validate_condominium_work_progress_accounting_links BEFORE INSERT OR UPDATE ON public.condominium_work_progress FOR EACH ROW EXECUTE FUNCTION public.validate_condominium_work_progress_accounting_links(); CREATE TRIGGER sync_condominium_work_financial_summary AFTER INSERT OR UPDATE ON public.condominium_work_progress FOR EACH ROW EXECUTE FUNCTION public.sync_condominium_work_financial_summary_trigger();");
  await db.query("INSERT INTO public.condominium_fiscal_years(id,workspace_id,condominium_id,start_date,end_date,status) VALUES($1,$2,$3,$4,$5,'Aperto')",[fiscalYearId,workspace,condominium,yearStart,yearEnd]);
- await db.query("INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title,approved_amount) VALUES($1,$2,$3,'Intervento A',200),($4,$2,$3,'Intervento B',100)",[workA,workspace,condominium,workB]);
+ await db.query("INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title,approved_amount) VALUES($1,$2,$3,'Intervento A',200),($4,$2,$3,'Intervento B',100),($5,$2,$3,'Intervento C',100)",[workA,workspace,condominium,workB,workC]);
  await db.query("INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES($1,$2,$3,$4,1,$5,'SAL 1',100,0),($6,$2,$3,$4,2,$5,'SAL 2',100,0)",[progressA,workspace,condominium,workA,today,progressB]);
  await db.query("INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES($1,$2,$3,$4,1,$5,'SAL 1',50,25),($6,$2,$3,$4,2,$5,'SAL 2',50,20)",[progressC,workspace,condominium,workB,today,progressD]);
+ // Atomic SAL creation: the RPC and trigger both serialize on the parent work.
+ const createRpc=(no,amount,percentage=10,title="SAL atomico")=>db.query(
+  "SELECT public.create_condominium_work_progress_atomic($1,$2,$3,$4,$5,$6,'Presentato',$7,$8,0,'') AS progress_id",
+  [workspace,condominium,workC,no,today,title,percentage,amount]
+ );
+ const createdProgress=(await createRpc(1,60,35,"SAL atomico 1")).rows[0].progress_id;
+ assert.ok(createdProgress,"atomic SAL creation must return the inserted ID");
+ assert.equal((await db.query("SELECT progress_percent FROM public.condominium_works WHERE id=$1",[workC])).rows[0].progress_percent,35);
+ await assert.rejects(()=>createRpc(2,50,10,"SAL atomico 2"),/totale dei SAL supera l'importo approvato/i);
+ assert.equal((await db.query("SELECT count(*)::int AS n FROM public.condominium_work_progress WHERE work_id=$1",[workC])).rows[0].n,1,
+  "over-budget SAL creation must not persist a partial row");
+ // Direct PostgREST-style inserts must hit the same trigger guard, not bypass the RPC cap.
+ await assert.rejects(()=>db.query(
+  "INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES(gen_random_uuid(),$1,$2,$3,3,$4,'SAL diretto',50,0)",
+  [workspace,condominium,workC,today]
+ ),/totale dei SAL supera l'importo approvato/i);
+ await assert.rejects(()=>db.query(
+  "INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES(gen_random_uuid(),'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',$2,$3,4,$4,'SAL fuori workspace',1,0)",
+  [workspace,condominium,workC,today]
+ ),/SAL non coerente con workspace e condominio/i);
+ // A failure after the SAL INSERT must roll back both the row and summary update.
+ await db.exec("CREATE FUNCTION public.test_fail_work_progress_summary_update() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN IF OLD.id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid AND NEW.progress_percent>35 THEN RAISE EXCEPTION 'forced work progress summary failure'; END IF; RETURN NEW; END; $function$; CREATE TRIGGER zzz_test_fail_work_progress_summary_update BEFORE UPDATE ON public.condominium_works FOR EACH ROW EXECUTE FUNCTION public.test_fail_work_progress_summary_update();");
+ await assert.rejects(()=>createRpc(5,10,10,"SAL rollback"),/forced work progress summary failure/i);
+ assert.equal((await db.query("SELECT count(*)::int AS n FROM public.condominium_work_progress WHERE work_id=$1",[workC])).rows[0].n,1,
+  "a failed parent summary update must roll back the inserted SAL");
+ assert.equal((await db.query("SELECT progress_percent FROM public.condominium_works WHERE id=$1",[workC])).rows[0].progress_percent,35);
+ await db.exec("DROP TRIGGER zzz_test_fail_work_progress_summary_update ON public.condominium_works; DROP FUNCTION public.test_fail_work_progress_summary_update();");
+ console.log("PASS atomic SAL creation: parent lock, cumulative cap, direct-insert trigger guard, scope validation and rollback.");
+
  // Reproduce the old two-request flow: insert ledger, then update cumulative SAL.
  await directPayment(oldPayment1,60,progressA);await db.query("UPDATE public.condominium_work_progress SET paid_amount=60,payment_entry_id=$1 WHERE id=$2",[oldPayment1,progressA]);
  await directPayment(oldPayment2,40,progressA);
