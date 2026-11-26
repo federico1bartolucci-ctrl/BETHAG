@@ -76,7 +76,7 @@ Safety properties:
 - The target uses a separate set of SUPABASE_RESTORE_S3_* credentials and endpoint. Its Supabase project host must differ from the original source project's host; the original bethag-documents bucket is explicitly forbidden.
 - The tool does not create buckets, alter policies, restore database rows, or change Production/QA configuration.
 
-Dry-run example (run in a protected environment with the existing backup secrets plus four dedicated SUPABASE_RESTORE_S3_* secrets for a separately provisioned recovery project):
+Dry-run example (requires only the existing R2 backup secrets; no Supabase recovery project or recovery credentials are contacted):
 
 node scripts/restore-supabase-storage-from-r2.mjs --dry-run --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
 
@@ -84,7 +84,7 @@ Guarded apply example, only after a separate recovery bucket has been created an
 
 RESTORE_CONFIRM_TARGET=<empty-recovery-bucket> node scripts/restore-supabase-storage-from-r2.mjs --apply --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
 
-Never use the original Production project, bethag-documents, or shared QA as the target for a restore drill. Configure SUPABASE_RESTORE_S3_ENDPOINT, SUPABASE_RESTORE_S3_REGION, SUPABASE_RESTORE_S3_ACCESS_KEY_ID, and SUPABASE_RESTORE_S3_SECRET_ACCESS_KEY only for a separately provisioned recovery project. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest/blob integrity and target preflight, not that an upload or application-level recovery has succeeded.
+Never use the original Production project, bethag-documents, or shared QA as the target for a restore drill. Configure SUPABASE_RESTORE_S3_ENDPOINT, SUPABASE_RESTORE_S3_REGION, SUPABASE_RESTORE_S3_ACCESS_KEY_ID, and SUPABASE_RESTORE_S3_SECRET_ACCESS_KEY only for a separately provisioned recovery project. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest structure and blob integrity only. It deliberately does not contact or verify the target bucket; target emptiness is checked only in --apply mode immediately before writes. A dry-run does not prove that an upload or application-level recovery has succeeded.
 
 The first successful snapshot on 26 November 2026 contains zero objects because the Production bucket bethag-documents was verified empty. Consequently, the current manifest can exercise validation and empty-target preflight only; it cannot demonstrate restoration of real file bytes. A representative non-empty isolated drill remains required before marking Storage disaster recovery fully tested.
 
@@ -96,5 +96,6 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 - GitHub Environment storage-backup-production: configured; nine required secrets and STORAGE_BACKUP_ENABLED=true are present.
 - First successful backup: 26 November 2026; manifest write/read verification passed. source_object_count=0, blobs_uploaded=0, blobs_reused=0 because the source bucket was empty.
 - Guarded restore utility: implemented with dry-run default, SHA-256/size verification, empty-target requirement, and explicit confirmation gate for writes.
-- Restore dry-run and non-empty isolated restore drill: NOT RUN.
+- Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
+- Non-empty isolated restore drill: NOT RUN; requires a separately provisioned recovery project and four dedicated SUPABASE_RESTORE_S3_* secrets.
 - Production and QA data/configuration: unchanged.

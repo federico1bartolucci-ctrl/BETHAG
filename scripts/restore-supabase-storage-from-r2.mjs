@@ -88,17 +88,20 @@ async function main() {
   const r2AccessKey = required("R2_ACCESS_KEY_ID");
   const r2Secret = required("R2_SECRET_ACCESS_KEY");
   const cloudflareToken = required("CLOUDFLARE_R2_READ_TOKEN");
-  const sourceSupabaseEndpoint = endpoint(required("SUPABASE_S3_ENDPOINT"), "SUPABASE_S3_ENDPOINT");
-  const recoveryEndpoint = endpoint(required("SUPABASE_RESTORE_S3_ENDPOINT"), "SUPABASE_RESTORE_S3_ENDPOINT");
-  if (!sourceSupabaseEndpoint.endsWith("/storage/v1/s3") ||
-      !recoveryEndpoint.endsWith("/storage/v1/s3")) {
-    throw new Error("Supabase S3 endpoints must end exactly with /storage/v1/s3");
-  }
-  if (new URL(sourceSupabaseEndpoint).host === new URL(recoveryEndpoint).host) {
-    throw new Error("Recovery endpoint must belong to a separate Supabase project; Production/QA restore is forbidden");
-  }
-  if (targetBucket === (process.env.SUPABASE_STORAGE_BUCKET || "bethag-documents")) {
-    throw new Error("Restore target must not be the original Supabase Storage bucket");
+  let recoveryEndpoint;
+  if (apply) {
+    const sourceSupabaseEndpoint = endpoint(required("SUPABASE_S3_ENDPOINT"), "SUPABASE_S3_ENDPOINT");
+    recoveryEndpoint = endpoint(required("SUPABASE_RESTORE_S3_ENDPOINT"), "SUPABASE_RESTORE_S3_ENDPOINT");
+    if (!sourceSupabaseEndpoint.endsWith("/storage/v1/s3") ||
+        !recoveryEndpoint.endsWith("/storage/v1/s3")) {
+      throw new Error("Supabase S3 endpoints must end exactly with /storage/v1/s3");
+    }
+    if (new URL(sourceSupabaseEndpoint).host === new URL(recoveryEndpoint).host) {
+      throw new Error("Recovery endpoint must belong to a separate Supabase project; Production/QA restore is forbidden");
+    }
+    if (targetBucket === (process.env.SUPABASE_STORAGE_BUCKET || "bethag-documents")) {
+      throw new Error("Restore target must not be the original Supabase Storage bucket");
+    }
   }
 
   stage = "R2 bucket jurisdiction lookup";
@@ -117,7 +120,7 @@ async function main() {
     region: "auto",
     credentials: { accessKeyId: r2AccessKey, secretAccessKey: r2Secret }
   });
-  const supabase = new S3Client({
+  const supabase = apply ? new S3Client({
     endpoint: recoveryEndpoint,
     region: required("SUPABASE_RESTORE_S3_REGION"),
     forcePathStyle: true,
@@ -125,7 +128,7 @@ async function main() {
       accessKeyId: required("SUPABASE_RESTORE_S3_ACCESS_KEY_ID"),
       secretAccessKey: required("SUPABASE_RESTORE_S3_SECRET_ACCESS_KEY")
     }
-  });
+  }) : undefined;
 
   try {
     const manifest = await readManifest(r2, sourceBucket, manifestKey);
@@ -153,13 +156,12 @@ async function main() {
       verified.push({ item, bytes });
     }
 
-    stage = "Supabase restore target preflight";
-    const existing = await listAll(supabase, targetBucket);
-    if (existing.length) {
-      throw new Error("Restore target bucket is not empty; refusing to overwrite or mix existing objects");
-    }
-
     if (apply) {
+      stage = "Supabase restore target preflight";
+      const existing = await listAll(supabase, targetBucket);
+      if (existing.length) {
+        throw new Error("Restore target bucket is not empty; refusing to overwrite or mix existing objects");
+      }
       for (const { item, bytes } of verified) {
         stage = "Supabase object restore write";
         await supabase.send(new PutObjectCommand({
@@ -186,11 +188,12 @@ async function main() {
       blobs_integrity_verified: verified.length,
       target_bucket: targetBucket,
       writes_performed: apply ? verified.length : 0,
-      target_was_empty: true
+      target_preflight: apply ? "EMPTY_TARGET_VERIFIED" : "NOT_RUN_DRY_RUN",
+      target_was_empty: apply ? true : null
     }, null, 2));
   } finally {
     r2.destroy();
-    supabase.destroy();
+    supabase?.destroy();
   }
 }
 
