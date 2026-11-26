@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { deleteInsurancePolicy, updateInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 
 type InsurancePolicy = {
   id: string;
@@ -70,13 +71,24 @@ export default function InsurancePoliciesSection({
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<InsurancePolicy | null>(null);
   const [form, setForm] = useState<Omit<InsurancePolicy, "id">>(emptyPolicy);
+  const loadGuardRef = useRef(createLatestRequestGuard());
+  const currentCondominiumIdRef = useRef(condominiumId);
+  currentCondominiumIdRef.current = condominiumId;
 
-  const load = async () => {
+  const load = async (clearForCondominiumChange = false) => {
+    if (currentCondominiumIdRef.current !== condominiumId) return;
+    const request = loadGuardRef.current.begin();
+    const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === condominiumId;
+    if (clearForCondominiumChange) {
+      setPolicies([]);
+      setWorkspaceId(null);
+      setDbCondominiumId(null);
+    }
     if (!supabaseConfigured || !supabase) {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
       return;
     }
-    setLoading(true);
+    if (isCurrent()) setLoading(true);
     setError("");
     try {
       const { data: condominium, error: condominiumError } = await supabase
@@ -84,10 +96,12 @@ export default function InsurancePoliciesSection({
         .select("id, workspace_id")
         .eq("legacy_id", condominiumId)
         .maybeSingle();
+      if (!isCurrent()) return;
       if (condominiumError) throw condominiumError;
       if (!condominium?.id) {
         setPolicies([]);
-        setLoading(false);
+        setWorkspaceId(null);
+        setDbCondominiumId(null);
         return;
       }
       setDbCondominiumId(condominium.id);
@@ -97,6 +111,7 @@ export default function InsurancePoliciesSection({
         .select("*")
         .eq("condominium_id", condominium.id)
         .order("end_date", { ascending: true });
+      if (!isCurrent()) return;
       if (policyError) throw policyError;
       setPolicies((data ?? []).map((row: any) => ({
         ...row,
@@ -106,14 +121,18 @@ export default function InsurancePoliciesSection({
         notes: row.notes || "",
       })));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
+      if (isCurrent()) setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
+    setOpenForm(false);
+    setEditing(null);
+    setForm(emptyPolicy);
+    void load(true);
+    return () => loadGuardRef.current.invalidate();
   }, [condominiumId]);
 
   const closeForm = () => {
