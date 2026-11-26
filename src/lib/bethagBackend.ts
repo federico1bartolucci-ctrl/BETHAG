@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -2734,27 +2735,57 @@ export async function confirmCondominiumMemberTransfer(
 
     if (transferError) throw transferError;
 
-    const { data: incomingRows, error: incomingError } = await supabase
-      .from("condominium_members")
-      .select("legacy_id,name,email,user_id,active,unit_id,data")
-      .eq("unit_id", unitId)
-      .eq("active", true)
-      .order("created_at", { ascending: false })
-      .limit(20);
+    const normalizedTransferId =
+      typeof transferId === "string" && transferId.trim() ? transferId.trim() : null;
+    let transferRecord: any = null;
+    let transferLookupError: unknown = null;
+    let incoming: any = null;
+    let incomingLookupError: unknown = null;
 
-    if (incomingError) throw incomingError;
+    if (normalizedTransferId) {
+      try {
+        const transferLookup = await supabase
+          .from("condominium_member_transfers")
+          .select("id,incoming_member_id")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", outgoing.condominium_id)
+          .eq("unit_id", unitId)
+          .eq("id", normalizedTransferId)
+          .maybeSingle();
 
-    const incoming = (incomingRows ?? []).find((row: any) => {
-      const role = String(row.data?.role ?? "").trim();
-      const currentOwner = row.data?.current_owner;
-      const status = String(row.data?.position_status ?? "Attivo").trim();
-      return role === "Proprietario" && currentOwner !== false && status !== "In chiusura";
-    }) ?? null;
+        transferRecord = transferLookup.data;
+        transferLookupError = transferLookup.error;
 
-    if (!incoming?.legacy_id) {
-      throw new Error("Subentro registrato, ma il nuovo proprietario non è stato restituito dal server.");
+        if (!transferLookup.error && transferRecord?.incoming_member_id) {
+          try {
+            const incomingLookup = await supabase
+              .from("condominium_members")
+              .select("id,legacy_id,name,email,user_id,active,unit_id,data")
+              .eq("id", transferRecord.incoming_member_id)
+              .eq("condominium_id", outgoing.condominium_id)
+              .eq("unit_id", unitId)
+              .eq("active", true)
+              .maybeSingle();
+
+            incoming = incomingLookup.data;
+            incomingLookupError = incomingLookup.error;
+          } catch (error) {
+            incomingLookupError = error;
+          }
+        }
+      } catch (error) {
+        transferLookupError = error;
+      }
     }
 
-    return { transferId: transferId as string, incoming };
+    // The RPC has already committed. A follow-up read failure must not be
+    // reported as a failed transfer, because retrying could create a duplicate.
+    return createCommittedMemberTransferOutcome({
+      transferId: normalizedTransferId,
+      transferRecord,
+      transferLookupError,
+      incoming,
+      incomingLookupError,
+    });
   });
 }
