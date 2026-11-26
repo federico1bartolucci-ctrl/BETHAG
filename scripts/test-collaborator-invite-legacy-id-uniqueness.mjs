@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import {
-  cleanupCollaboratorInviteLegacyConflict,
-  isWorkspaceMemberLegacyIdConflict,
-} from "../supabase/functions/_shared/workspace-member-legacy-id-conflict.js";
+import { buildCollaboratorInviteFailureState } from "../supabase/functions/_shared/collaborator-invite-failure-state.js";
+import { isWorkspaceMemberLegacyIdConflict } from "../supabase/functions/_shared/workspace-member-legacy-id-conflict.js";
 
 const indexSource = await readFile(
   "supabase/migrations/20261017000002_bethag_baseline_indexes_views.sql",
@@ -22,37 +20,15 @@ assert.match(
 
 const db = new PGlite();
 try {
-  await db.exec(`
-    CREATE TABLE auth_users(id uuid PRIMARY KEY, email text NOT NULL);
-    CREATE TABLE profiles(
-      id uuid PRIMARY KEY REFERENCES auth_users(id) ON DELETE CASCADE,
-      full_name text NOT NULL,
-      email text NOT NULL,
-      role text NOT NULL,
-      active boolean NOT NULL DEFAULT true
-    );
-    CREATE TABLE workspace_members(
-      workspace_id uuid NOT NULL,
-      user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-      role text NOT NULL,
-      legacy_id bigint,
-      PRIMARY KEY(workspace_id, user_id)
-    );
-    CREATE UNIQUE INDEX workspace_members_workspace_legacy_unique
-      ON workspace_members(workspace_id, legacy_id)
-      WHERE legacy_id IS NOT NULL;
-  `);
-
-  await db.exec(`
-    INSERT INTO auth_users(id,email) VALUES
-      ('00000000-0000-0000-0000-000000000011','one@example.invalid'),
-      ('00000000-0000-0000-0000-000000000012','two@example.invalid');
-    INSERT INTO profiles(id,full_name,email,role) VALUES
-      ('00000000-0000-0000-0000-000000000011','One','one@example.invalid','collaborator'),
-      ('00000000-0000-0000-0000-000000000012','Two','two@example.invalid','collaborator');
-    INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id)
-      VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','collaborator',7001);
-  `);
+  await db.exec([
+    "CREATE TABLE auth_users(id uuid PRIMARY KEY, email text NOT NULL);",
+    "CREATE TABLE profiles(id uuid PRIMARY KEY REFERENCES auth_users(id) ON DELETE CASCADE, full_name text NOT NULL, email text NOT NULL, role text NOT NULL, active boolean NOT NULL DEFAULT true);",
+    "CREATE TABLE workspace_members(workspace_id uuid NOT NULL, user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, role text NOT NULL, legacy_id bigint, PRIMARY KEY(workspace_id, user_id), CONSTRAINT reject_legacy_id_7002 CHECK (legacy_id <> 7002));",
+    "CREATE UNIQUE INDEX workspace_members_workspace_legacy_unique ON workspace_members(workspace_id, legacy_id) WHERE legacy_id IS NOT NULL;",
+    "INSERT INTO auth_users(id,email) VALUES ('00000000-0000-0000-0000-000000000011','one@example.invalid'), ('00000000-0000-0000-0000-000000000012','two@example.invalid'), ('00000000-0000-0000-0000-000000000013','three@example.invalid');",
+    "INSERT INTO profiles(id,full_name,email,role) VALUES ('00000000-0000-0000-0000-000000000011','One','one@example.invalid','collaborator'), ('00000000-0000-0000-0000-000000000012','Two','two@example.invalid','collaborator'), ('00000000-0000-0000-0000-000000000013','Three','three@example.invalid','collaborator');",
+    "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000011','collaborator',7001);",
+  ].join("\n"));
 
   await assert.rejects(
     db.query(
@@ -63,57 +39,84 @@ try {
       && String(error.message).includes("workspace_members_workspace_legacy_unique"),
     "the canonical index must reject a second user claiming the same workspace legacy ID",
   );
-
-  const orphanBeforeCleanup = await db.query(
-    "SELECT (SELECT count(*) FROM auth_users WHERE id = $1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id = $1)::integer AS profile_count",
+  const legacyConflictRows = await db.query(
+    "SELECT (SELECT count(*) FROM auth_users WHERE id=$1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id=$1)::integer AS profile_count",
     ["00000000-0000-0000-0000-000000000012"],
   );
-  assert.equal(orphanBeforeCleanup.rows[0].auth_count, 1);
-  assert.equal(orphanBeforeCleanup.rows[0].profile_count, 1);
-  console.log("PASS baseline reproduction: the existing unique index rejects the second membership after its Auth user/profile have already been created.");
+  assert.deepEqual(legacyConflictRows.rows[0], { auth_count: 1, profile_count: 1 });
+  const legacyConflictState = buildCollaboratorInviteFailureState({
+    failureStage: "workspace_member_upsert",
+    invited: true,
+    profileCreated: true,
+    workspaceMemberLinked: false,
+  });
+  assert.deepEqual(legacyConflictState, {
+    failureStage: "workspace_member_upsert",
+    invitationSent: true,
+    profileCreated: true,
+    workspaceMemberLinked: false,
+    requiresReconciliation: true,
+  });
+  console.log("PASS baseline reproduction: a legacy-ID conflict occurs after Auth invitation/profile creation; the global Auth identity is preserved and the partial state is explicitly marked for reconciliation.");
 
-  const cleanup = await cleanupCollaboratorInviteLegacyConflict(
-    {
-      auth: {
-        admin: {
-          async deleteUser(id) {
-            await db.query("DELETE FROM auth_users WHERE id = $1", [id]);
-            return { error: null };
-          },
-        },
-      },
-    },
-    "00000000-0000-0000-0000-000000000012",
-    { invited: true, profileCreated: false },
+  await assert.rejects(
+    db.query(
+      "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',7002)",
+      ["00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000013"],
+    ),
+    (error) => String(error.code) === "23514",
+    "a generic membership-write failure must be reproduced",
   );
-  assert.deepEqual(cleanup, { failed: false, action: "delete_auth_user" });
-  const orphanAfterCleanup = await db.query(
-    "SELECT (SELECT count(*) FROM auth_users WHERE id = $1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id = $1)::integer AS profile_count",
-    ["00000000-0000-0000-0000-000000000012"],
+  const genericFailureRows = await db.query(
+    "SELECT (SELECT count(*) FROM auth_users WHERE id=$1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id=$1)::integer AS profile_count",
+    ["00000000-0000-0000-0000-000000000013"],
   );
-  assert.equal(orphanAfterCleanup.rows[0].auth_count, 0);
-  assert.equal(orphanAfterCleanup.rows[0].profile_count, 0);
-
-  await db.exec(`
-    INSERT INTO auth_users(id,email) VALUES
-      ('00000000-0000-0000-0000-000000000013','three@example.invalid'),
-      ('00000000-0000-0000-0000-000000000014','four@example.invalid');
-    INSERT INTO profiles(id,full_name,email,role) VALUES
-      ('00000000-0000-0000-0000-000000000013','Three','three@example.invalid','collaborator'),
-      ('00000000-0000-0000-0000-000000000014','Four','four@example.invalid','collaborator');
-  `);
-  await db.query(
-    "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',7001)",
-    ["00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000013"],
-  );
-  await db.query(
-    "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',NULL),($1,$3,'collaborator',NULL)",
-    ["00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000013", "00000000-0000-0000-0000-000000000014"],
-  );
-  console.log("PASS cleanup and scope: losing invited Auth user/profile removed; same legacy ID in another workspace and NULL IDs remain valid.");
+  assert.deepEqual(genericFailureRows.rows[0], { auth_count: 1, profile_count: 1 });
+  const genericFailureState = buildCollaboratorInviteFailureState({
+    failureStage: "workspace_member_upsert",
+    invited: true,
+    profileCreated: true,
+    workspaceMemberLinked: false,
+  });
+  assert.deepEqual(genericFailureState, {
+    failureStage: "workspace_member_upsert",
+    invitationSent: true,
+    profileCreated: true,
+    workspaceMemberLinked: false,
+    requiresReconciliation: true,
+  });
+  console.log("PASS baseline reproduction: generic workspace_members failure leaves the Auth identity/profile present without a membership; response state explicitly requires reconciliation.");
 } finally {
   await db.close();
 }
+
+const linkedFailureState = buildCollaboratorInviteFailureState({
+  failureStage: "profile_update",
+  invited: false,
+  profileCreated: false,
+  workspaceMemberLinked: true,
+});
+assert.deepEqual(linkedFailureState, {
+  failureStage: "profile_update",
+  invitationSent: false,
+  profileCreated: false,
+  workspaceMemberLinked: true,
+  requiresReconciliation: true,
+});
+
+const noPartialState = buildCollaboratorInviteFailureState({
+  failureStage: "request",
+  invited: false,
+  profileCreated: false,
+  workspaceMemberLinked: false,
+});
+assert.deepEqual(noPartialState, {
+  failureStage: "request",
+  invitationSent: false,
+  profileCreated: false,
+  workspaceMemberLinked: false,
+  requiresReconciliation: false,
+});
 
 const duplicateError = {
   code: "23505",
@@ -124,29 +127,26 @@ assert.equal(isWorkspaceMemberLegacyIdConflict({
   code: "23505",
   message: 'duplicate key value violates unique constraint "workspace_members_pkey"',
 }), false);
-assert.equal(isWorkspaceMemberLegacyIdConflict({ code: "23503", message: "foreign key violation" }), false);
+assert.equal(isWorkspaceMemberLegacyIdConflict({ code: "23514", message: "check constraint violation" }), false);
 
-const cleanupCalls = [];
-const profileCleanup = await cleanupCollaboratorInviteLegacyConflict(
-  { from(table) { assert.equal(table, "profiles"); return { delete() { return { async eq(column, value) { cleanupCalls.push(["deleteProfile", column, value]); return { error: null }; } }; } }; } },
-  "auth-user-existing",
-  { invited: false, profileCreated: true },
-);
-assert.deepEqual(profileCleanup, { failed: false, action: "delete_created_profile" });
-assert.deepEqual(cleanupCalls, [["deleteProfile", "id", "auth-user-existing"]]);
-
-const noCleanup = await cleanupCollaboratorInviteLegacyConflict({}, "existing-user", {
-  invited: false,
-  profileCreated: false,
-});
-assert.deepEqual(noCleanup, { failed: false, action: "none" });
-
-assert.match(edgeSource, /isWorkspaceMemberLegacyIdConflict/);
-assert.match(edgeSource, /cleanupCollaboratorInviteLegacyConflict/);
+assert.match(edgeSource, /buildCollaboratorInviteFailureState/);
 assert.match(edgeSource, /COLLABORATOR_LEGACY_ID_ALREADY_ASSIGNED/);
-assert.match(edgeSource, /invitationSent: invited/);
-const conflictIndex = edgeSource.indexOf("isWorkspaceMemberLegacyIdConflict(upsertError)");
-const successIndex = edgeSource.indexOf("return json({ success: true, userId: targetUserId, invited })");
-assert.ok(conflictIndex >= 0 && successIndex > conflictIndex, "the unique conflict must be handled before success is returned");
+assert.match(edgeSource, /COLLABORATOR_INVITE_PARTIAL_FAILURE/);
+assert.match(edgeSource, /requiresReconciliation/);
+assert.match(edgeSource, /invitationSent: true|invitationSent/);
+assert.match(edgeSource, /L'invito e-mail potrebbe essere già stato inviato/);
 
-console.log("PASS collaborator invitation runtime: the existing canonical unique conflict maps to HTTP 409 and cleans up only the losing Auth/profile record.");
+const catchStart = edgeSource.lastIndexOf("} catch (error) {");
+assert.ok(catchStart >= 0, "generic catch must exist");
+const catchBlock = edgeSource.slice(catchStart);
+assert.match(catchBlock, /buildCollaboratorInviteFailureState/);
+assert.doesNotMatch(catchBlock, /deleteUser|\.delete\(/, "generic failure must not delete a global Auth user or profile");
+
+const conflictStart = edgeSource.indexOf("if (isWorkspaceMemberLegacyIdConflict(upsertError))");
+const successStart = edgeSource.indexOf("return json({ success: true, userId: targetUserId, invited })");
+assert.ok(conflictStart >= 0 && successStart > conflictStart, "the unique conflict must be handled before success is returned");
+const conflictBlock = edgeSource.slice(conflictStart, successStart);
+assert.match(conflictBlock, /buildCollaboratorInviteFailureState/);
+assert.doesNotMatch(conflictBlock, /deleteUser|\.delete\(/, "legacy conflict must not delete a potentially shared Auth identity");
+
+console.log("PASS collaborator invitation runtime: generic and unique failures preserve global Auth identities, expose partial state, and require reconciliation.");
