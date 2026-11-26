@@ -144,8 +144,11 @@ assert.ok(source.includes('.in("status",["Da programmare","Approvato","In corso"
 assert.ok(/\.select\("id"\)\s*\.maybeSingle\(\)/.test(source));
 assert.ok(source.includes('{canCloseWork(w.status)&&<button className="secondary-button small" onClick={()=>closeWork(w)}>Chiudi lavoro</button>}'));
 
+const activityTest = await readFile(new URL("./test-register-activity-legacy-id.mjs", import.meta.url), "utf8");
+assert.ok(activityTest.includes('await import("./test-work-closure-state-guard.mjs");'));
+
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-assert.ok(packageJson.scripts.test.includes("test-work-closure-state-guard.mjs"));
+assert.ok(packageJson.scripts.test.includes("test-register-activity-legacy-id.mjs"));
 
 console.log("PASS: cancelled work cannot be closed or relabelled as completed.");
 console.log("PASS: a zero-row concurrent state transition is detected and its history event is rolled back.");
