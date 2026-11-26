@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase";
 import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
+import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
 import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
 import { calculateRendicontoUnitBalances } from "./lib/accountingRendicontoUnitBalance.js";
 import { millesimalTableScopeMatchesUnit } from "./lib/millesimalTableScope.mjs";
@@ -563,11 +564,7 @@ function AccountingPage({
             .select("id, condominium_id, unit_code, building_code, data")
             .eq("workspace_id", workspaceId)
             .order("unit_code"),
-          supabase
-            .from("condominium_members")
-            .select("id, condominium_id, unit_id, active, name, email, data")
-            .eq("workspace_id", workspaceId)
-            .order("created_at"),
+          loadAccountingCondominiumMembers(supabase, workspaceId),
           supabase
             .from("condominium_millesimal_tables")
             .select("*")
@@ -612,6 +609,7 @@ function AccountingPage({
         taxResult,
         caseResult,
         allocationsResult,
+        allocationIntakesResult,
         unitsResult,
         membersResult,
         millesimalTablesResult,
@@ -1152,6 +1150,7 @@ function AccountingPage({
       const { data: unitMembers, error: unitMembersError } = await supabase
         .from("condominium_members")
         .select("id,unit_id,role,active,data")
+        .eq("workspace_id", workspaceId)
         .eq("condominium_id", dbCondominiumId)
         .eq("active", true)
         .in("unit_id", unitIds);
