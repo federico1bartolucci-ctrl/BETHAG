@@ -1,7 +1,7 @@
 # Audit — resumable R2 Storage restore after partial writes
 
 **Date:** 26 November 2026  
-**Scope:** isolated repository branch stacked on the R2 folder-marker target-preflight PR #505.
+**Scope:** repository branch reconstructed on current main, including the folder-marker target-preflight correction integrated by PR #511.
 
 ## Finding and reproduction
 
@@ -47,5 +47,5 @@ It covers:
 - No workflow dispatch or workflow-file changes.
 - No database migration changes.
 - No merge or deployment.
-- PR is stacked on #505 to preserve the folder-marker correction without duplicating it.
+- PR is based directly on current main; the folder-marker correction is already integrated by #511 and is preserved.
 - A real non-empty isolated restore drill remains pending; CI uses deterministic fake S3 clients only.

@@ -100,7 +100,7 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 
 ## Operational status
 
-- Repository implementation: restore-resume candidate stacked on the folder-marker preflight PR; merge only after exact-head CI passes.
+- Repository implementation: restore-resume candidate reconstructed on current main with the folder-marker preflight from PR #511; merge only after exact-head CI passes.
 - Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
 - GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
