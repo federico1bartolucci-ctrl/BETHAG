@@ -81,7 +81,7 @@ FROM PUBLIC, anon, authenticated, service_role;
 -- A retry with the same workspace-scoped key must return the original ledger movement.
 CREATE UNIQUE INDEX IF NOT EXISTS condominium_work_events_sal_payment_idempotency_uidx
 ON public.condominium_work_events(workspace_id, (data->>'idempotencyKey'))
-WHERE data ? 'idempotencyKey';
+WHERE data ? 'idempotencyKey' AND event_type='Pagamento SAL';
 
 DROP FUNCTION IF EXISTS public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text);
 DROP FUNCTION IF EXISTS public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text);
@@ -126,7 +126,8 @@ BEGIN
          data->>'source' as source
     into v_existing
   from public.condominium_work_events
-  where workspace_id=p_workspace_id and data->>'idempotencyKey'=p_idempotency_key
+  where workspace_id=p_workspace_id and event_type='Pagamento SAL'
+    and data->>'idempotencyKey'=p_idempotency_key
   for update;
   if found then
     if v_existing.work_id is distinct from p_work_id
@@ -216,7 +217,8 @@ BEGIN
          data->>'source' as source
     into v_existing
   from public.condominium_work_events
-  where workspace_id=p_workspace_id and data->>'idempotencyKey'=p_idempotency_key
+  where workspace_id=p_workspace_id and event_type='Pagamento SAL'
+    and data->>'idempotencyKey'=p_idempotency_key
   for update;
   if found then
     if v_existing.work_id is distinct from p_work_id
