@@ -413,7 +413,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           if (nextDate && unitId && outgoingId) void makePreviewFor(unitId, outgoingId, nextDate);
         }} required /></label>
         <label>Tipo trasferimento<select value={transferType} onChange={e=>setTransferType(e.target.value)}><option>Vendita</option><option>Acquisto</option><option>Donazione</option><option>Successione</option><option>Altro</option></select></label>        <label>Modalità trasferimento<select value={transferScope} onChange={e=>{
-          const currentDate = refreshTransferDateIfUntouched();
+          refreshTransferDateIfUntouched();
           const next = e.target.value as "whole_property" | "ownership_share";
           setTransferScope(next); setPreview(null); setSnapshot({}); setError("");
           if (next === "whole_property" && currentUnitOwners.length) setOutgoingId(currentUnitOwners[0].id);
