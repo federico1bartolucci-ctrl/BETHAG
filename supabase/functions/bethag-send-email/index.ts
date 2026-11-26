@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { canSendCommunication, isCommunicationPublished } from "../_shared/communication-send-guards.js";
+import { canSendCommunication } from "../_shared/communication-send-guards.js";
 import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
 
 const corsHeaders = {
@@ -37,12 +37,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: communication, error: commError } = await supabase.from("communications")
-      .select("id,workspace_id,condominium_id,title,body,email_status,published")
+      .select("id,workspace_id,condominium_id,title,body,email_status")
       .eq("legacy_id", legacyCommunicationId)
       .eq("workspace_id", payload.workspaceId).maybeSingle();
     if (commError) throw commError;
     if (!communication) return json({ error: "Comunicazione non trovata." }, 404);
-    if (!isCommunicationPublished(communication.published)) return json({ error: "La comunicazione deve essere pubblicata prima dell'invio e-mail." }, 409);
+    // Email delivery is a Plus feature; Portal publication is a separate Portal-only action.
     if (!communication.condominium_id) return json({ error: "La comunicazione non è associata a un condominio." }, 400);
 
     const { data: membership, error: membershipError } = await supabase.from("workspace_members")
