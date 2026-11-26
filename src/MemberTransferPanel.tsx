@@ -1,5 +1,5 @@
 // Pages deployment trigger: transfer confirmation flow verified in source.
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type UnitOption = { id: string; condominium_id: string; unit_code: string; building_code?: string | null; data: any };
@@ -49,6 +49,13 @@ function euro(value: unknown) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value || 0));
 }
 
+function localISODate(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function MemberTransferPanel({ workspaceId, condominiumId, units, members, isAdministrator, condominiums = [], selectedCondominiumId = "all", onCondominiumChange }: {
   workspaceId: string;
   condominiumId: string | null;
@@ -62,7 +69,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [unitId, setUnitId] = useState("");
   const [outgoingId, setOutgoingId] = useState("");
-  const [transferDate, setTransferDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
+  const [transferDate, setTransferDate] = useState(localISODate());
+  const transferDateEditedRef = useRef(false);
   const [transferType, setTransferType] = useState("Vendita");
   const [transferScope, setTransferScope] = useState<"whole_property" | "ownership_share">("whole_property");
   const [ownershipShare, setOwnershipShare] = useState("");
@@ -87,7 +95,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   const wholePropertyOutgoingIds = useMemo(() => currentUnitOwners.map(m => m.id), [currentUnitOwners]);
   const selectedUnit = scopedUnits.find(u => u.id === unitId);
   const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
-  const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === transferDate;
+  const currentTransferDate = transferDateEditedRef.current ? transferDate : localISODate();
+  const previewIsCurrent = !!preview && preview.unit_id === unitId && preview.outgoing_member_id === outgoingId && preview.transfer_date === currentTransferDate;
   const condominiumLabel = (id?: string | number | null) => {
     if (id == null) return "Condominio non disponibile";
     const match = condominiums.find(c => String(c.id) === String(id));
@@ -218,15 +227,35 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
     } finally { setBusy(false); }
   }
 
+  function refreshTransferDateIfUntouched() {
+    if (transferDateEditedRef.current) return transferDate;
+    const nextDate = localISODate();
+    if (nextDate !== transferDate) {
+      setTransferDate(nextDate);
+      setPreview(null);
+      setSnapshot({});
+    }
+    return nextDate;
+  }
+
+  function handleTransferDateFocus() {
+    const nextDate = refreshTransferDateIfUntouched();
+    if (unitId && outgoingId && preview?.transfer_date !== nextDate) {
+      void makePreviewFor(unitId, outgoingId, nextDate);
+    }
+  }
+
   async function makePreview() {
-    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate) {
+    const nextDate = refreshTransferDateIfUntouched();
+    if (!supabase || !condominiumId || !unitId || !outgoingId || !nextDate) {
       setError("Seleziona condominio, unità, cedente e data del trasferimento.");
       return;
     }
-    await makePreviewFor(unitId, outgoingId, transferDate);
+    await makePreviewFor(unitId, outgoingId, nextDate);
   }
   function openConfirmation() {
-    if (!unitId || !outgoingId || !transferDate || !incomingOwnersValid.length) {
+    const nextDate = refreshTransferDateIfUntouched();
+    if (!unitId || !outgoingId || !nextDate || !incomingOwnersValid.length) {
       setError("Inserisci almeno un nuovo proprietario.");
       return;
     }
@@ -253,8 +282,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       setError("Le quote dei nuovi comproprietari devono essere positive e la loro somma non può superare la quota trasferita.");
       return;
     }
-    if (!previewIsCurrent) {
+    if (!preview || preview.unit_id !== unitId || preview.outgoing_member_id !== outgoingId || preview.transfer_date !== nextDate) {
       setError("Aggiorna prima l'anteprima contabile.");
+      void makePreviewFor(unitId, outgoingId, nextDate);
       return;
     }
     setError("");
@@ -262,14 +292,19 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
   }
 
   async function confirmTransfer() {
-    if (!supabase || !condominiumId || !unitId || !outgoingId || !transferDate || !incomingOwnersValid.length) { setError("Inserisci almeno un nuovo proprietario."); return; }
+    const nextDate = refreshTransferDateIfUntouched();
+    if (!supabase || !condominiumId || !unitId || !outgoingId || !nextDate || !incomingOwnersValid.length) { setError("Inserisci almeno un nuovo proprietario."); return; }
     if (transferScope === "ownership_share") {
       const share = Number(ownershipShare);
       if (!Number.isFinite(share) || share <= 0 || share > 100) { setError("Indica una quota valida da trasferire, compresa tra 0,01% e 100%."); return; }
       if (!selectedOutgoingShare) { setError("Il proprietario selezionato non ha una quota di proprietà registrata. Inserisci prima la quota nella scheda anagrafica."); return; }
       if (share > selectedOutgoingShare + 0.0001) { setError("La quota da trasferire supera la quota attualmente posseduta dal cedente."); return; }
     } else if (!currentUnitOwners.length) { setError("Nessun proprietario attivo trovato per l'unità selezionata."); return; }
-    if (!previewIsCurrent) { setError("L'anteprima contabile non è aggiornata."); return; }
+    if (!preview || preview.unit_id !== unitId || preview.outgoing_member_id !== outgoingId || preview.transfer_date !== nextDate) {
+      setError("L'anteprima contabile non è aggiornata. Ricalcola l'anteprima prima di confermare.");
+      void makePreviewFor(unitId, outgoingId, nextDate);
+      return;
+    }
     for (const owner of incomingOwnersValid) { if (owner.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) { setError("Inserisci un indirizzo email valido per ciascun nuovo proprietario."); return; } }
     if (transferScope === "whole_property" && Math.abs(incomingOwnersTotalShare - 100) > 0.0001) { setError("Per il trasferimento dell'intera proprietà, le quote dei nuovi comproprietari devono sommare esattamente il 100%."); return; }
     if (transferScope === "ownership_share" && (incomingOwnersValid.some(o => !Number.isFinite(Number(o.share)) || Number(o.share) <= 0) || incomingOwnersTotalShare <= 0 || incomingOwnersTotalShare > Number(ownershipShare) + 0.0001)) { setError("Le quote dei nuovi comproprietari devono essere positive e la loro somma non può superare la quota trasferita."); return; }
@@ -278,7 +313,7 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       const { data, error: e } = await supabase.rpc("confirm_condominium_member_transfer", {
         p_unit_id: unitId, p_outgoing_member_id: outgoingId, p_incoming_name: incomingOwnersValid[0].name.trim(),
         p_incoming_email: incomingOwnersValid[0].email.trim().toLowerCase(), p_incoming_user_id: null,
-        p_transfer_date: transferDate, p_transfer_type: transferType, p_notes: notes.trim(), p_data: {
+        p_transfer_date: nextDate, p_transfer_type: transferType, p_notes: notes.trim(), p_data: {
           outgoing_name: memberName(scopedMembers.find(m => m.id === outgoingId)),
           outgoing_email: scopedMembers.find(m => m.id === outgoingId)?.email || null,
           incoming_name: incomingDisplayName,
@@ -296,6 +331,8 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
       // authoritative backend state without requiring a manual browser refresh.
       window.dispatchEvent(new Event("bethag-backend-refresh"));
       setShowConfirmation(false);
+      transferDateEditedRef.current = false;
+      setTransferDate(localISODate());
       setIncomingOwners([{ name: "", email: "", share: "100" }]); setNotes(""); setPreview(null);
       await loadRows();
       if (data) await loadSnapshot(String(data));
@@ -366,8 +403,9 @@ export default function MemberTransferPanel({ workspaceId, condominiumId, units,
           setSnapshot({});
           if (nextOutgoingId && unitId && transferDate) void makePreviewFor(unitId, nextOutgoingId, transferDate);
         }} disabled={!unitId}><option value="">Seleziona cedente</option>{unitMembers.map(m=><option key={m.id} value={m.id}>{memberName(m)}</option>)}</select>}</label>
-        <label>Data rogito / trasferimento<input type="date" value={transferDate} onChange={e=>{
+        <label>Data rogito / trasferimento<input type="date" value={transferDate} onFocus={handleTransferDateFocus} onChange={e=>{
           const nextDate = e.target.value;
+          transferDateEditedRef.current = true;
           setTransferDate(nextDate);
           setPreview(null);
           if (nextDate && unitId && outgoingId) void makePreviewFor(unitId, outgoingId, nextDate);
