@@ -4,6 +4,7 @@ import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 import { loadAccountingCondominiumMembers } from "./lib/accountingCondominiumMembers.mjs";
+import { loadAccountingUnitMembers } from "./lib/accountingMemberLookup.mjs";
 import { calculateLedgerExpensePaid } from "./lib/accountingExpensePaidSummary.js";
 import { calculateRendicontoUnitBalances } from "./lib/accountingRendicontoUnitBalance.js";
 import { millesimalTableScopeMatchesUnit } from "./lib/millesimalTableScope.mjs";
@@ -1147,16 +1148,21 @@ function AccountingPage({
     if(percentages.length!==installmentCount||percentages.some(v=>!Number.isFinite(v)||v<=0)||Math.abs(percentages.reduce((s,v)=>s+v,0)-100)>0.001){setError("Le percentuali delle rate devono essere positive e la loro somma deve essere 100%.");return;}
     if (allocationInstallmentForm.unifyByMember) {
       const unitIds = [...new Set(selectedAllocations.map(a => a.unit_id).filter(Boolean))];
-      const { data: unitMembers, error: unitMembersError } = await supabase
-        .from("condominium_members")
-        .select("id,unit_id,role,active,data")
-        .eq("workspace_id", workspaceId)
-        .eq("condominium_id", dbCondominiumId)
-        .eq("active", true)
-        .in("unit_id", unitIds);
-      if (unitMembersError) throw unitMembersError;
+      const unitMembersResult = await loadAccountingUnitMembers(() =>
+        supabase
+          .from("condominium_members")
+          .select("id,unit_id,role,active,data")
+          .eq("workspace_id", workspaceId)
+          .eq("condominium_id", dbCondominiumId)
+          .eq("active", true)
+          .in("unit_id", unitIds)
+      );
+      if (!unitMembersResult.ok) {
+        setError(unitMembersResult.error);
+        return;
+      }
       const byUnit = new Map<string, any[]>();
-      for (const member of unitMembers || []) {
+      for (const member of unitMembersResult.data) {
         const condominiumRole = String(member.data?.role || "").trim();
         if (condominiumRole !== "Proprietario") continue;
         const list = byUnit.get(member.unit_id) || [];
