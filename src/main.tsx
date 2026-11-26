@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { runGuardedFormSubmit } from "./lib/guarded-form-submit.js";
 import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
@@ -4299,8 +4300,9 @@ function App() {
   const saveDeadline = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("scadenze", "La gestione delle scadenze")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("scadenze", "La gestione delle scadenze"),
+    ])) return;
 
     if (
       !deadlineForm.title.trim() ||
@@ -4394,8 +4396,9 @@ function App() {
   const saveDocument = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("documenti", "La gestione dei documenti")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("documenti", "La gestione dei documenti"),
+    ])) return;
 
     if (!documentForm.name.trim()) {
       alert(
@@ -4743,8 +4746,9 @@ function App() {
   const saveAssembly = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("assemblee", "La gestione delle assemblee")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("assemblee", "La gestione delle assemblee"),
+    ])) return;
 
     if (
       !assemblyForm.title.trim() ||
@@ -5008,8 +5012,9 @@ function App() {
   const saveSupplier = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("fornitori", "La gestione dei fornitori")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("fornitori", "La gestione dei fornitori"),
+    ])) return;
 
     if (
       !supplierForm.name.trim() ||
@@ -5090,8 +5095,9 @@ function App() {
   const saveActivity = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("attivita", "La gestione delle attività")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("attivita", "La gestione delle attività"),
+    ])) return;
 
     if (!activityForm.title.trim()) {
       alert(
@@ -5133,8 +5139,9 @@ function App() {
   };
 
   const saveCondominiumWork = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!requireModulePermission("attivita", "La gestione dei lavori e delle manutenzioni")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("attivita", "La gestione dei lavori e delle manutenzioni"),
+    ])) return;
     if (!condominiumWorkForm.title.trim() || !condominiumWorkForm.condominiumId) { alert("Inserisci almeno condominio e titolo del lavoro."); return; }
     const normalized: CondominiumWork = { ...condominiumWorkForm, title: condominiumWorkForm.title.trim(), category: condominiumWorkForm.category.trim() || "Manutenzione", description: condominiumWorkForm.description.trim(), notes: condominiumWorkForm.notes.trim(), estimatedAmount: Math.max(0, Number(condominiumWorkForm.estimatedAmount) || 0), approvedAmount: Math.max(0, Number(condominiumWorkForm.approvedAmount) || 0), actualAmount: Math.max(0, Number(condominiumWorkForm.actualAmount) || 0), progressPercent: Math.max(0, Math.min(100, Number(condominiumWorkForm.progressPercent) || 0)), documentIds: Array.from(new Set(condominiumWorkForm.documentIds || [])) };
     const workId = selectedCondominiumWork?.id || normalized.id || crypto.randomUUID();
@@ -5185,8 +5192,9 @@ function App() {
   const editCondominiumWork = (item: CondominiumWork) => { if (!requireModulePermission("attivita", "La modifica di un lavoro")) return; setSelectedCondominiumWork(item); setCondominiumWorkForm(item); openModal("condominium-work"); };
   const newWorkProgress = (work: CondominiumWork) => { if (!requireModulePermission("attivita", "La gestione degli stati di avanzamento")) return; setSelectedWorkProgress(null); setWorkProgressForm({ ...emptyWorkProgress, workId: work.id, progressNo: 1, title: "SAL " + 1, percentage: work.progressPercent, amount: 0, paidAmount: 0 }); openModal("work-progress"); };
   const saveWorkProgress = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!requireModulePermission("attivita", "La registrazione dello stato di avanzamento")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("attivita", "La registrazione dello stato di avanzamento"),
+    ])) return;
     const f = workProgressForm;
     if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
     if (Number(f.paidAmount || 0) > Number(f.amount || 0) + 0.000001) { alert("L'importo pagato non può essere superiore all'importo del SAL."); return; }
@@ -5203,8 +5211,9 @@ function App() {
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile registrare il SAL."); }
   };
   const saveWorkProgressAndAccount = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!requireModulePermission("attivita", "La registrazione contabile del SAL")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("attivita", "La registrazione contabile del SAL"),
+    ])) return;
     const f = workProgressForm;
     if (!f.workId || !f.progressDate || !f.progressNo) { alert("Completa numero e data del SAL."); return; }
     if (Number(f.paidAmount || 0) > Number(f.amount || 0) + 0.000001) { alert("L'importo pagato non può essere superiore all'importo del SAL."); return; }
@@ -5291,8 +5300,9 @@ function App() {
      ======================================================= */
 
   const saveCondominiumMember = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("condomini", "La gestione dell'anagrafica dei condòmini"),
+    ])) return;
     if (!condominiumMemberForm.firstName.trim() || !condominiumMemberForm.lastName.trim() || !String(condominiumMemberForm.apartment ?? "").trim()) {
       alert("Inserisci nome, cognome e interno/appartamento del condòmino.");
       return;
@@ -6189,8 +6199,9 @@ function App() {
   const saveCommunication = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!requireModulePermission("comunicazioni", "La gestione delle comunicazioni")) return;
-    event.preventDefault();
+    if (!runGuardedFormSubmit(event, [
+      () => requireModulePermission("comunicazioni", "La gestione delle comunicazioni"),
+    ])) return;
 
     if (
       !communicationForm.title.trim() ||
@@ -14137,11 +14148,15 @@ function CollaboratorsPage({
     });
 
   const save = async (e: React.FormEvent) => {
-    if (!isAdministrator) {
-      alert("La gestione dei collaboratori è riservata all'Amministratore.");
-      return;
-    }
-    e.preventDefault();
+    if (!runGuardedFormSubmit(e, [
+      () => {
+        if (!isAdministrator) {
+          alert("La gestione dei collaboratori è riservata all'Amministratore.");
+          return false;
+        }
+        return true;
+      },
+    ])) return;
     const name = form.name.trim();
     const email = form.email.trim().toLowerCase();
     if (!name || !email) { alert("Inserisci nome e indirizzo email del collaboratore."); return; }
@@ -14736,11 +14751,15 @@ function ProfilePage({
   const save = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
-    if (!isAdministrator) {
-      alert("La modifica del profilo amministratore è riservata all'Amministratore.");
-      return;
-    }
-    e.preventDefault();
+    if (!runGuardedFormSubmit(e, [
+      () => {
+        if (!isAdministrator) {
+          alert("La modifica del profilo amministratore è riservata all'Amministratore.");
+          return false;
+        }
+        return true;
+      },
+    ])) return;
 
     if (
       profile.email &&
