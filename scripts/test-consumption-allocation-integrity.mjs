@@ -11,9 +11,10 @@ const baselineFunctions = await readFile(baselineFunctionsPath, "utf8");
 assert.ok(packageJson.scripts.test.includes("test-consumption-allocation-integrity.mjs"), "runtime regression must run under npm test");
 
 const baselineStart = baselineFunctions.indexOf("CREATE OR REPLACE FUNCTION public.generate_consumption_allocations(");
-const functionTerminator = "$function$;";
-const baselineEnd = baselineFunctions.indexOf(functionTerminator, baselineStart) + functionTerminator.length;
-assert.ok(baselineStart >= 0 && baselineEnd > baselineStart, "baseline function must be extractable");
+const functionOpening = baselineFunctions.indexOf("$function$", baselineStart);
+const functionClosing = baselineFunctions.indexOf("$function$", functionOpening + "$function$".length);
+const baselineEnd = baselineFunctions.indexOf(";", functionClosing) + 1;
+assert.ok(baselineStart >= 0 && functionOpening > baselineStart && functionClosing > functionOpening && baselineEnd > functionClosing, "baseline function must be extractable");
 const baselineFunction = baselineFunctions.slice(baselineStart, baselineEnd);
 
 const fiscalGuard = migration.indexOf("v_expense.fiscal_year_id is distinct from p_fiscal_year_id");
