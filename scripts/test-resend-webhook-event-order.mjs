@@ -79,13 +79,13 @@ try {
        '2026-11-26T08:00:00Z', 'evt-sent-before-failure'),
       ('00000000-0000-0000-0000-000000000007',
        '00000000-0000-0000-0000-000000000006',
-       'suppressed@example.it', 'queued', 'msg-suppressed', now()),
+       'suppressed@example.it', 'queued', 'msg-suppressed', now(), NULL, NULL),
       ('00000000-0000-0000-0000-000000000009',
        '00000000-0000-0000-0000-000000000008',
-       'newfailed@example.it', 'queued', 'msg-failed-new', now()),
+       'newfailed@example.it', 'queued', 'msg-failed-new', now(), NULL, NULL),
       ('00000000-0000-0000-0000-000000000011',
        '00000000-0000-0000-0000-000000000010',
-       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now());
+       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now(), NULL, NULL);
     INSERT INTO public.communication_recipients(
       id, communication_id, email, status, provider_message_id, delivered_at,
       event_type, provider_event_id, updated_at
