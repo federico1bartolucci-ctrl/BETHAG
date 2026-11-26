@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 const source = await readFile("supabase/functions/bethag-invite-collaborator/index.ts", "utf8");
 const lookupStart = source.indexOf('const { data: existing, error: existingError }');
 assert.ok(lookupStart >= 0, "existing membership lookup must exist");
-const lookupEnd = source.indexOf("let targetUserId", lookupStart);
+const lookupEnd = source.indexOf("targetUserId = existing?.user_id || null;", lookupStart);
 assert.ok(lookupEnd > lookupStart, "target user resolution must follow the membership guard");
 const lookup = source.slice(lookupStart, lookupEnd);
 assert.match(lookup, /\.select\("user_id, role"\)/, "existing workspace membership role must be loaded");
