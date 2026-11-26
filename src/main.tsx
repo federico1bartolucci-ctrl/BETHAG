@@ -14,7 +14,7 @@ import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadP
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { prepareBackupAdminProfileRestore } from "./lib/backupProfileRestoreScope.mjs";
-import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
+import { getAuthoritativeEntitlementSubscription, getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { applyWorkspacePlanSnapshot } from "./lib/workspace-plan-snapshot.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -534,9 +534,9 @@ const ADDON_PRICES: Record<AddonId, string> = {
   assemblee: "4,90 €/mese",
   fornitori: "1,90 €/mese",
   attivita: "1,90 €/mese",
-  comunicazioni: "2,90 €/mese",
-  ai: "5,90 €/mese",
-  portale: "6,90 €/mese",
+  comunicazioni: "Incluso da Plus",
+  ai: "Incluso da Professional",
+  portale: "Incluso da Portal",
 };
 
 const ADDON_REQUIRED_PLAN: Record<AddonId, PlanId> = {
@@ -2371,14 +2371,28 @@ function App() {
         addons: Array.isArray(stored.addons) ? stored.addons : [],
       };
     });
+  const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free");
+  const serverPlanAvailable = Boolean(supabaseConfigured && profile.workspaceId);
+  const displayedWorkspacePlan = serverPlanAvailable ? serverWorkspacePlan : subscription.plan;
+  const getEntitlementSubscription = (addon?: AddonId) =>
+    getAuthoritativeEntitlementSubscription(
+      subscription,
+      addon,
+      serverWorkspacePlan,
+      supabaseConfigured,
+      Boolean(profile.workspaceId),
+    );
 
   useEffect(() => {
+    setServerWorkspacePlan("free");
     if (!supabaseConfigured || !profile.workspaceId) return;
     let cancelled = false;
     void applyWorkspacePlanSnapshot({
       loadPlan: () => getWorkspacePlan(profile.workspaceId),
       isCurrent: () => !cancelled,
       setSubscription,
+    }).then((result) => {
+      if (!cancelled && result.applied) setServerWorkspacePlan(result.plan);
     }).catch((error) => {
       console.warn("Impossibile caricare il piano del workspace:", error);
     });
@@ -6020,6 +6034,8 @@ function App() {
       return;
     }
 
+    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
+
     if (!supabaseConfigured || !supabase) {
       alert("Il servizio e-mail BETHAG non è disponibile perché Supabase non è configurato.");
       return;
@@ -6202,6 +6218,7 @@ function App() {
   ) => {
     if (!runGuardedFormSubmit(event, [
       () => requireModulePermission("comunicazioni", "La gestione delle comunicazioni"),
+      () => requirePlan("plus", "La gestione delle comunicazioni", "comunicazioni"),
     ])) return;
 
     if (
@@ -6310,6 +6327,12 @@ function App() {
     item: Communication
   ) => {
     if (!requireModulePermission("comunicazioni", "La modifica delle comunicazioni")) return;
+    const publishedToPortal = item.publishedToPortal || item.status === "Pubblicata";
+    if (publishedToPortal) {
+      if (!requirePlan("portal", "La modifica di una comunicazione pubblicata nel Portale", "portale")) return;
+    } else if (!requirePlan("plus", "La modifica delle comunicazioni", "comunicazioni")) {
+      return;
+    }
     setSelectedCommunication(item);
     setCommunicationForm(item);
     openModal("communication");
@@ -6528,6 +6551,7 @@ function App() {
 
   const newCommunication = (condominiumId?: number) => {
     if (!requireModulePermission("comunicazioni", "La creazione delle comunicazioni")) return;
+    if (!requirePlan("portal", "La creazione di una comunicazione nel Portale", "portale")) return;
     setSelectedCommunication(null);
 
     setCommunicationForm({
@@ -6733,7 +6757,7 @@ function App() {
 
         if (!workspaceId || cancelled) return;
 
-        await applyWorkspacePlanSnapshot({
+        const planSnapshot = await applyWorkspacePlanSnapshot({
           loadPlan: async () => {
             const { data: workspaceSettings, error: workspaceSettingsError } = await supabase
               .from("workspaces")
@@ -6747,6 +6771,7 @@ function App() {
           setSubscription,
         });
         if (cancelled) return;
+        if (planSnapshot.applied) setServerWorkspacePlan(planSnapshot.plan);
 
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
@@ -7134,7 +7159,7 @@ function App() {
       const hasPlanAccess =
         !addon ||
         hasEntitlement(
-          subscription,
+          getEntitlementSubscription(addon),
           ADDON_REQUIRED_PLAN[addon],
           addon
         );
@@ -7179,11 +7204,11 @@ function App() {
         isAdministrator &&
         addon
       ) {
-        const answer = confirm(
-          ADDON_NAMES[addon] +
-            " non è compreso nel tuo piano attuale. " +
-            "Puoi sbloccarlo singolarmente senza passare al piano superiore.\n\nVuoi aprire Piano e upgrade?"
-        );
+        const serverManaged = isServerManagedAddon(addon) && supabaseConfigured;
+        const message = serverManaged
+          ? ADDON_NAMES[addon] + " richiede " + PLAN_NAMES[ADDON_REQUIRED_PLAN[addon]] + " registrato e verificato sul server. La prova struttura non attiva questa autorizzazione."
+          : ADDON_NAMES[addon] + " non è compreso nel tuo piano attuale. Puoi sbloccarlo singolarmente senza passare al piano superiore.";
+        const answer = confirm(message + "\n\nVuoi aprire Piano e upgrade?");
         if (answer) {
           setPage("abbonamento");
           setSearch("");
@@ -7377,13 +7402,16 @@ function App() {
     feature: string,
     addon?: AddonId
   ) => {
-    if (hasEntitlement(subscription, required, addon)) {
+    if (hasEntitlement(getEntitlementSubscription(addon), required, addon)) {
       return true;
     }
 
-    const addonText = addon
+    const serverManaged = Boolean(addon && isServerManagedAddon(addon) && supabaseConfigured);
+    const addonText = addon && !isServerManagedAddon(addon)
       ? " Oppure puoi sbloccare singolarmente \"" + ADDON_NAMES[addon] + "\" (" + ADDON_PRICES[addon] + ")."
-      : "";
+      : serverManaged
+        ? " La prova struttura è solo un'anteprima: non modifica il piano registrato sul server."
+        : "";
 
     const answer = confirm(
       feature + " richiede " + PLAN_NAMES[required] + "." + addonText +
@@ -8004,7 +8032,7 @@ function App() {
               workspaceId={profile.workspaceId}
               condominiums={condominiums.filter((c) => !c.archivedAt).map((c) => ({ id: c.id, name: c.name }))}
               isAdministrator={isAdministrator}
-              aiEnabled={hasEntitlement(subscription, "professional", "ai")}
+              aiEnabled={hasEntitlement(getEntitlementSubscription("ai"), "professional", "ai")}
               documents={documents.map((d) => ({ id: d.id, name: d.name, condominiumId: d.condominiumId, category: d.category, aiStatus: d.aiStatus, extractedData: d.extractedData, aiSummary: d.aiSummary }))}
             />
           )}
@@ -8041,7 +8069,7 @@ function App() {
               onPublication={
                 toggleDocumentPublication
               }
-              plan={subscription.plan}
+              plan={getEntitlementSubscription("ai").plan}
               isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("documenti"))}
             />
           )}
@@ -8187,7 +8215,9 @@ function App() {
                 condominiumName
               }
               onNew={
-                newCommunication
+                hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")
+                  ? newCommunication
+                  : undefined
               }
               onEdit={
                 editCommunication
@@ -8196,8 +8226,11 @@ function App() {
                 deleteCommunication
               }
               onPublication={
-                toggleCommunicationPublication
+                hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")
+                  ? toggleCommunicationPublication
+                  : undefined
               }
+              portalEnabled={hasEntitlement(getEntitlementSubscription("portale"), "portal", "portale")}
               isAdministrator={isAdministrator || (isCollaborator && collaboratorPermissions.includes("comunicazioni"))}
             />
           )}
@@ -8212,7 +8245,7 @@ function App() {
                 assemblies
               }
               plan={
-                subscription.plan
+                getEntitlementSubscription("ai").plan
               }
               onNavigate={
                 navigate
@@ -8243,10 +8276,10 @@ function App() {
                 communications
               }
               plan={
-                subscription.plan
+                getEntitlementSubscription("portale").plan
               }
               portalEnabled={hasEntitlement(
-                subscription,
+                getEntitlementSubscription("portale"),
                 "portal",
                 "portale"
               )}
@@ -8338,6 +8371,8 @@ function App() {
               setSubscription={
                 setSubscription
               }
+              serverPlan={displayedWorkspacePlan}
+              serverPlanAvailable={serverPlanAvailable}
               isAdministrator={isAdministrator}
             />
           )}
@@ -8356,7 +8391,7 @@ function App() {
             <SettingsPage
               sessionEmail={sessionEmail}
               workspaceId={profile.workspaceId}
-              plan={subscription.plan}
+              plan={getEntitlementSubscription("portale").plan}
               onNavigate={navigate}
               onLogout={logout}
             />
@@ -8370,9 +8405,8 @@ function App() {
               setProfile={
                 setProfile
               }
-              subscription={
-                subscription
-              }
+              serverPlan={displayedWorkspacePlan}
+              serverPlanAvailable={serverPlanAvailable}
               portalMembers={
                 portalMembers
               }
