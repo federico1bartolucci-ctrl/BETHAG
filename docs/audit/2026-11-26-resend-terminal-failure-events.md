@@ -17,6 +17,7 @@ The runtime regression executes the actual baseline SQL function first and repro
 - Include both events in the duplicate/stale event cursor and give them the same terminal priority as bounce/complaint events.
 - Store a specific event marker in `error_message`.
 - Repair legacy rows whose previous webhook processing recorded one of these events but left the recipient pending/queued/sent.
+- Replace any older status-event ID with the actual failed/suppressed provider event ID when repairing the cursor, so the cursor timestamp and event identity remain paired.
 - Recompute only affected parent communication aggregates after the repair.
 - Preserve rows already marked `delivered`; the repair never downgrades a delivered outcome.
 - Keep `email.delivery_delayed` informational because Resend treats it as a temporary delivery issue and may retry delivery.
@@ -29,6 +30,7 @@ Both the event-order and serialized-aggregate function definitions are kept alig
 
 - baseline reproduction for `email.failed` and `email.suppressed`;
 - migration repair of already-recorded events and parent aggregates;
+- replacement of a pre-existing `email.sent` cursor ID with the repaired terminal event ID;
 - new failed and suppressed events;
 - stale/equal-time success events cannot downgrade a terminal failure;
 - duplicate terminal events are ignored;
