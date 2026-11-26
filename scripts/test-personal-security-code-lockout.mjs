@@ -140,7 +140,29 @@ try {
   assert.equal(await verify("original-code"), false,
     "A correct code must not bypass an active lockout.");
 
-  // Expiry is deterministic in the test; the next correct attempt resets the counter.
+  // An expired lock starts a fresh five-attempt window, even when the first retry is wrong.
+  await db.query(
+    "UPDATE public.user_security_settings SET personal_code_locked_until = now() - interval '1 second' WHERE user_id = $1",
+    [userId],
+  );
+  assert.equal(await verify("wrong-code"), false);
+  snapshot = await state();
+  assert.equal(snapshot.personal_code_failed_attempts, 1,
+    "The first failed attempt after lockout expiry must start a fresh window at one.");
+  assert.equal(snapshot.personal_code_locked_until, null,
+    "An expired lock must not immediately re-lock after one wrong attempt.");
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    assert.equal(await verify("wrong-code"), false);
+  }
+  snapshot = await state();
+  assert.equal(snapshot.personal_code_failed_attempts, 5);
+  assert.equal(snapshot.currently_locked, true,
+    "A fresh window must lock again only after five new failed attempts.");
+  assert.equal(await verify("original-code"), false,
+    "A correct code must not bypass the renewed lockout.");
+
+  // A correct attempt after the second expiry succeeds and clears the counter.
   await db.query(
     "UPDATE public.user_security_settings SET personal_code_locked_until = now() - interval '1 second' WHERE user_id = $1",
     [userId],
