@@ -35,4 +35,4 @@ scripts/test-delete-account-last-admin-precheck.mjs:
 
 ## Safety
 
-This change updates the existing draft PR #497 branch. It does not create a duplicate PR, modify canonical migration history, touch QA or Production, execute Auth deletion, merge, deploy, reset, dispatch workflows, or modify workflow files.
+This consolidation updates the existing draft PR #497 stack on the current main commit, preserving the existing #442 and #447 dependencies. It keeps both migrations in proposed-forward-migrations and does not rewrite canonical migration history. The build workflow adds an isolated PostgreSQL 17 concurrency rehearsal; no QA or Production environment is accessed or modified, no Auth deletion is executed, and no deployment, reset, or manual workflow dispatch is performed.

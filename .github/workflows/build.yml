@@ -93,46 +93,8 @@ jobs:
       - name: Run isolated public-login browser smoke test
         run: node scripts/test-browser-public-smoke.mjs
 
-      - name: Certify real QA authentication and session persistence
-        if: github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
-        env:
-          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
-          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
-          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
-          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
-        run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-qa-auth-preview.log 2>&1 &
-          PREVIEW_PID=$!
-          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 60); do
-            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
-            sleep 1
-          done
-          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-qa-auth-preview.log; exit 1; }
-          node scripts/test-browser-current-qa-auth.mjs
 
-      - name: Run authenticated QA edit/archive diagnostic
-        # Full authenticated APP workflows are deferred to the dedicated final-collaudo workflow.
-        if: github.head_ref == 'ops/qa-secret-validation-20261102' || github.head_ref == 'qa/retest-archive-sync-v6-20261102' || github.head_ref == 'recovery/qa-ledger-reconciliation-20261104'
-        env:
-          BETHAG_QA_BASE_URL: http://127.0.0.1:4173/BETHAG/
-          BETHAG_QA_ADMIN_PASSWORD: ${{ secrets.BETHAG_QA_ADMIN_PASSWORD }}
-          BETHAG_QA_COLLABORATOR_PASSWORD: ${{ secrets.BETHAG_QA_COLLABORATOR_PASSWORD }}
-          BETHAG_QA_RESIDENT_PASSWORD: ${{ secrets.BETHAG_QA_RESIDENT_PASSWORD }}
-          BETHAG_QA_SERVICE_ROLE_KEY: ${{ secrets.BETHAG_QA_SERVICE_ROLE_KEY }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_b4Dlsr6NlQAlmfEBf_br1A_6l_8tbLj
-        run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/bethag-preview.log 2>&1 &
-          PREVIEW_PID=$!
-          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 60); do
-            if curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null; then break; fi
-            sleep 1
-          done
-          curl -fsS "$BETHAG_QA_BASE_URL" >/dev/null || { cat /tmp/bethag-preview.log; exit 1; }
-          node scripts/test-current-qa-browser-workflows.mjs
-          node scripts/test-current-qa-navigation.mjs
-          node scripts/test-browser-current-qa-auth.mjs
+      # Authenticated shared-QA tests are isolated in guarded manual workflows.
 
   postgres-bootstrap:
     runs-on: ubuntu-latest
@@ -243,12 +205,12 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_transfer_rollback_test
           PGPASSWORD: postgres
+
       - name: Reproduce and guard concurrent last-admin deletion on isolated PostgreSQL 17
         run: createdb --host=localhost --port=5432 --username=postgres bethag_last_admin_test && npm run test:admin-deletion-concurrency
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_last_admin_test
           PGPASSWORD: postgres
-
 
       - name: Test collaborator module permission enforcement with RLS
         run: node scripts/test-collaborator-module-permissions.mjs
