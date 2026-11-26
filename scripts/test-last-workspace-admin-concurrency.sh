@@ -152,3 +152,95 @@ if [[ "$guard_remaining" != "1" || "$guard_profiles" != "1" ]]; then
   exit 1
 fi
 echo "PASS: workspace row lock serialized concurrent Auth-delete cascades; the second last-admin deletion was rejected."
+
+# Rehearse the follow-up single-statement precheck migration on real PostgreSQL 17.
+# This script is already invoked by the existing postgres-bootstrap workflow;
+# no workflow file or dispatch is needed for this additional regression.
+precheck_migration="supabase/rebuild/proposed-forward-migrations/20261126052000_last_admin_precheck_single_statement.sql"
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+DO $roles$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role; END IF;
+END
+$roles$;
+SQL
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "$precheck_migration"
+
+precheck_user="20000000-0000-4000-8000-000000000021"
+coadmin_user="20000000-0000-4000-8000-000000000022"
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<SQL
+INSERT INTO public.profiles(id) VALUES
+  ('$precheck_user'),
+  ('$coadmin_user');
+
+INSERT INTO public.workspaces(id)
+SELECT md5('bethag-last-admin-precheck-' || i::text)::uuid
+FROM generate_series(1, 1205) AS i;
+
+INSERT INTO public.workspace_members(workspace_id,user_id,role,active)
+SELECT md5('bethag-last-admin-precheck-' || i::text)::uuid,
+       '$precheck_user'::uuid, 'admin', true
+FROM generate_series(1, 1205) AS i;
+
+-- The second administrator is present in 1,204 workspaces. The target user
+-- remains the sole active administrator in workspace 1,205.
+INSERT INTO public.workspace_members(workspace_id,user_id,role,active)
+SELECT md5('bethag-last-admin-precheck-' || i::text)::uuid,
+       '$coadmin_user'::uuid, 'admin', true
+FROM generate_series(1, 1204) AS i;
+SQL
+
+target_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "SELECT public.has_last_active_workspace_admin('$precheck_user'::uuid)")"
+coadmin_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "SELECT public.has_last_active_workspace_admin('$coadmin_user'::uuid)")"
+if [[ "$target_result" != "t" || "$coadmin_result" != "f" ]]; then
+  echo "Single-statement precheck returned unexpected results: target=$target_result coadmin=$coadmin_result"
+  exit 1
+fi
+
+acl_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 -c "
+  SELECT
+    has_function_privilege('service_role', 'public.has_last_active_workspace_admin(uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'public.has_last_active_workspace_admin(uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.has_last_active_workspace_admin(uuid)', 'EXECUTE')
+")"
+if [[ "$acl_result" != "t" ]]; then
+  echo "Single-statement precheck RPC grants are not service-role-only."
+  exit 1
+fi
+
+service_role_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 -c "
+  SET ROLE service_role;
+  SELECT public.has_last_active_workspace_admin('$precheck_user'::uuid);
+  RESET ROLE;
+" | tail -n 1)"
+if [[ "$service_role_result" != "t" ]]; then
+  echo "service_role could not execute the last-admin precheck RPC."
+  exit 1
+fi
+
+if psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c "
+  SET ROLE authenticated;
+  SELECT public.has_last_active_workspace_admin('$precheck_user'::uuid);
+" >/dev/null 2>&1; then
+  echo "authenticated unexpectedly executed the service-role-only last-admin precheck RPC."
+  exit 1
+fi
+
+function_security="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 -c "
+  SELECT prosecdef AND provolatile = 's'
+  FROM pg_proc
+  WHERE oid = 'public.has_last_active_workspace_admin(uuid)'::regprocedure
+")"
+if [[ "$function_security" != "t" ]]; then
+  echo "Last-admin precheck function is not STABLE SECURITY DEFINER."
+  exit 1
+fi
+
+echo "PASS: proposed single-statement last-admin precheck migration applied on isolated PostgreSQL 17."
+echo "PASS: 1,205-membership last-admin and co-admin results verified on PostgreSQL 17."
+echo "PASS: RPC execution is restricted to service_role on PostgreSQL 17."
+
