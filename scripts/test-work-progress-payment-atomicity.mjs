@@ -47,6 +47,10 @@ try{
  await assert.rejects(()=>createRpc(2,50,10,"SAL atomico 2"),/totale dei SAL supera l'importo approvato/i);
  assert.equal((await db.query("SELECT count(*)::int AS n FROM public.condominium_work_progress WHERE work_id=$1",[workC])).rows[0].n,1,
   "over-budget SAL creation must not persist a partial row");
+ await assert.rejects(()=>db.query("UPDATE public.condominium_work_progress SET amount=101 WHERE id=$1",[createdProgress]),
+  /totale dei SAL supera l'importo approvato/i);
+ assert.equal(Number((await progressRow(createdProgress)).amount),60,
+  "over-budget SAL updates must leave the original amount unchanged");
  // Direct PostgREST-style inserts must hit the same trigger guard, not bypass the RPC cap.
  await assert.rejects(()=>db.query(
   "INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES(gen_random_uuid(),$1,$2,$3,3,$4,'SAL diretto',50,0)",
