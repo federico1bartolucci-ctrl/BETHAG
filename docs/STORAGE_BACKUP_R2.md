@@ -73,9 +73,10 @@ Safety properties:
 - Every referenced blob is downloaded from R2 and its byte length and SHA-256 are verified before any target write.
 - The target bucket must be explicitly supplied, must differ from the R2 backup bucket, and must be empty. Existing objects cause an abort; the utility never deletes or overwrites.
 - --apply additionally requires RESTORE_CONFIRM_TARGET to equal the exact target bucket name.
+- The target uses a separate set of SUPABASE_RESTORE_S3_* credentials and endpoint. Its Supabase project host must differ from the original source project's host; the original bethag-documents bucket is explicitly forbidden.
 - The tool does not create buckets, alter policies, restore database rows, or change Production/QA configuration.
 
-Dry-run example (run in a protected environment with the nine backup secrets available):
+Dry-run example (run in a protected environment with the existing backup secrets plus four dedicated SUPABASE_RESTORE_S3_* secrets for a separately provisioned recovery project):
 
 node scripts/restore-supabase-storage-from-r2.mjs --dry-run --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
 
@@ -83,7 +84,7 @@ Guarded apply example, only after a separate recovery bucket has been created an
 
 RESTORE_CONFIRM_TARGET=<empty-recovery-bucket> node scripts/restore-supabase-storage-from-r2.mjs --apply --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
 
-Never use bethag-documents, Production, or shared QA as the target for a restore drill. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest/blob integrity and target preflight, not that an upload or application-level recovery has succeeded.
+Never use the original Production project, bethag-documents, or shared QA as the target for a restore drill. Configure SUPABASE_RESTORE_S3_ENDPOINT, SUPABASE_RESTORE_S3_REGION, SUPABASE_RESTORE_S3_ACCESS_KEY_ID, and SUPABASE_RESTORE_S3_SECRET_ACCESS_KEY only for a separately provisioned recovery project. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest/blob integrity and target preflight, not that an upload or application-level recovery has succeeded.
 
 The first successful snapshot on 26 November 2026 contains zero objects because the Production bucket bethag-documents was verified empty. Consequently, the current manifest can exercise validation and empty-target preflight only; it cannot demonstrate restoration of real file bytes. A representative non-empty isolated drill remains required before marking Storage disaster recovery fully tested.
 
