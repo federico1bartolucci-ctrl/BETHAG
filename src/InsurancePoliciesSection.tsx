@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { deleteInsurancePolicy, updateInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 
 type InsurancePolicy = {
@@ -65,6 +66,8 @@ export default function InsurancePoliciesSection({
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [dbCondominiumId, setDbCondominiumId] = useState<string | null>(null);
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
+  const [policiesCondominiumId, setPoliciesCondominiumId] = useState<number | null>(null);
+  const visiblePolicies = selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +117,7 @@ export default function InsurancePoliciesSection({
         .order("end_date", { ascending: true });
       if (!isCurrent()) return;
       if (policyError) throw policyError;
+      if (!Array.isArray(data)) throw new Error("Risposta polizze non valida.");
       setPolicies((data ?? []).map((row: any) => ({
         ...row,
         premium: row.premium === null ? null : Number(row.premium),
@@ -121,8 +125,19 @@ export default function InsurancePoliciesSection({
         active: row.active !== false,
         notes: row.notes || "",
       })));
+      setPoliciesCondominiumId(condominiumId);
     } catch (e) {
-      if (isCurrent()) setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
+      if (isCurrent()) {
+        applyInsurancePoliciesLoadFailure({
+          error: e,
+          isCurrent,
+          requestedCondominiumId: condominiumId,
+          setPolicies,
+          setPoliciesCondominiumId,
+          setLoadError: setError,
+          setLoadErrorCondominiumId: () => {},
+        });
+      }
     } finally {
       if (isCurrent()) setLoading(false);
     }
