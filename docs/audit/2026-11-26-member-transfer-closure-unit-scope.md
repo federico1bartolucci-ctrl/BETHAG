@@ -29,6 +29,6 @@ Il test riproduce i totali gonfiati della baseline con righe contabili del ceden
 
 La suite usa PGlite locale e non accede a database remoti.
 
-## Limiti
+## Limiti e rischio residuo
 
-Questa integrazione riguarda soltanto il controllo e la chiusura finanziaria del subentro. Non modifica la funzione di anteprima già integrata da #555, non applica migrazioni a QA/Production e non attiva procedure di cutover.
+Questa integrazione riguarda soltanto il perimetro per unità del controllo e della chiusura. Non aggiunge una serializzazione delle scritture contabili concorrenti: l'eventuale race tra verifica dei saldi e inserimento/aggiornamento di una nuova posizione resta da auditare prima di qualunque promozione. Non modifica la funzione di anteprima già integrata da #555, non applica migrazioni a QA/Production e non attiva procedure di cutover.
