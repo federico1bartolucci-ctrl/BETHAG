@@ -92,7 +92,7 @@ try {
   };
   const state = async () => {
     const result = await db.query(
-      "SELECT personal_code_enabled, personal_code_failed_attempts, personal_code_locked_until, personal_code_locked_until > now() AS currently_locked FROM public.user_security_settings WHERE user_id = $1",
+      "SELECT personal_code_enabled, personal_code_hash, personal_code_failed_attempts, personal_code_locked_until, personal_code_locked_until > now() AS currently_locked FROM public.user_security_settings WHERE user_id = $1",
       [userId],
     );
     return result.rows[0];
