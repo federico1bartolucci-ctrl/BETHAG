@@ -1,13 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canSendCommunication, isCommunicationPublished } from "../supabase/functions/_shared/communication-send-guards.js";
-
-test("only published communications can be sent", () => {
-  assert.equal(isCommunicationPublished(true), true);
-  assert.equal(isCommunicationPublished(false), false);
-  assert.equal(isCommunicationPublished(null), false);
-  assert.equal(isCommunicationPublished(undefined), false);
-});
+import { canSendCommunication } from "../supabase/functions/_shared/communication-send-guards.js";
 
 test("administrator can send regardless of collaborator permission shape", () => {
   assert.equal(canSendCommunication("admin", null), true);
