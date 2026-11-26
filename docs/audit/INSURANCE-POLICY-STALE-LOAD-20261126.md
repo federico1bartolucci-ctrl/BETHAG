@@ -23,7 +23,7 @@ A deterministic deferred-promise runtime test starts request A, starts request B
 
 ## Integration method
 
-The prior PR #603 was based on an older main SHA. Its focused change has been re-applied on a clean branch based directly on current main (`c95d33ec6745c628158bd2afa1bc08cedc91787a`); no historical stacked branch commits were carried forward.
+The prior PR #603 was based on an older main SHA. Its focused change has been re-applied on a clean branch based directly on current main (`4c69505c1338af04e21113b84abbb0d67cb4ac43`); no historical stacked branch commits were carried forward.
 
 ## Safety
 
