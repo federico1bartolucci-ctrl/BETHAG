@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 const shell = await readFile(new URL("./test-work-progress-sal-atomicity-postgres.sh", import.meta.url), "utf8");
 const workflow = await readFile(new URL("../.github/workflows/sal-atomicity-postgres.yml", import.meta.url), "utf8");
 
-assert.match(shell, /localhost\|\*127\.0\.0\.1\*\|\*::1\*/, "runtime regression must reject non-loopback database URLs");
+assert.match(shell, /\*localhost\*\|\*127\.0\.0\.1\*\|\*::1\*/, "runtime regression must reject non-loopback database URLs");
 assert.match(shell, /supabase\.co/, "runtime regression must reject Supabase endpoints");
 assert.match(shell, /SET ROLE authenticated/, "race must execute through the authenticated RPC grant");
 assert.match(shell, /FIRST_SAL_INSERT_HELD[\s\S]*pg_sleep\(3\)/, "first transaction must hold the parent lock while the second starts");
