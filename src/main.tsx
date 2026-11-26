@@ -14440,11 +14440,16 @@ function SecuritySettingsCard() {
     if (!code) return;
     setLoading(true);
     try {
-      const { data: valid, error: verifyError } = await supabase.rpc("verify_personal_security_code", { p_code: code });
-      if (verifyError) throw verifyError;
-      if (!valid) { alert("Codice personale non valido."); return; }
-      const { error } = await supabase.rpc("set_personal_security_code", { p_code: null, p_enabled: false });
+      const { data: changed, error } = await supabase.rpc("change_personal_security_code", {
+        p_current_code: code,
+        p_new_code: null,
+        p_enabled: false,
+      });
       if (error) throw error;
+      if (changed !== true) {
+        alert("Codice personale non valido o temporaneamente bloccato.");
+        return;
+      }
       setCodeEnabled(false);
     } catch (error) { alert(error instanceof Error ? error.message : "Impossibile disattivare il codice personale."); }
     finally { setLoading(false); }
