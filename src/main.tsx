@@ -11923,6 +11923,7 @@ function AssembliesPage({
   onGenerateMinutes,
   onConfirmMinutes,
   onPublication,
+  portalEnabled = false,
   isAdministrator = false,
 }: any) {
   const filtered =
@@ -12605,6 +12606,12 @@ function CommunicationsPage({
 
       </div>
 
+      {!portalEnabled && (
+        <div className="info-card">
+          <b>Comunicazioni via e-mail</b>
+          <p>Il piano Plus include l'invio e-mail delle comunicazioni dalla scheda condominio. La pubblicazione nel Portale e la gestione delle comunicazioni già pubblicate richiedono il piano Portal.</p>
+        </div>
+      )}
 
       <SearchBox
         value={search}
@@ -12679,27 +12686,25 @@ function CommunicationsPage({
               {isAdministrator && (
                 <div className="row-actions">
 
-                  <button
-                    className="secondary-button small"
-                    onClick={() =>
-                      onEdit(c)
-                    }
-                  >
-                    Modifica
-                  </button>
+                  {(!c.publishedToPortal || portalEnabled) && (
+                    <button
+                      className="secondary-button small"
+                      onClick={() => onEdit(c)}
+                    >
+                      Modifica
+                    </button>
+                  )}
 
-                  <button
-                    className="secondary-button small"
-                    onClick={() =>
-                      onPublication(
-                        c.id
-                      )
-                    }
-                  >
-                    {c.publishedToPortal
-                      ? <><AppIcon name="lock" size={16} /> Ritira</>
-                      : <><AppIcon name="users" size={16} /> Pubblica</>}
-                  </button>
+                  {portalEnabled && onPublication && (
+                    <button
+                      className="secondary-button small"
+                      onClick={() => onPublication(c.id)}
+                    >
+                      {c.publishedToPortal
+                        ? <><AppIcon name="lock" size={16} /> Ritira</>
+                        : <><AppIcon name="users" size={16} /> Pubblica</>}
+                    </button>
+                  )}
 
                   <button
                     className="mini-danger"
@@ -13994,10 +13999,14 @@ function HelpPage({
 function SubscriptionPage({
   subscription,
   setSubscription,
+  serverPlan,
+  serverPlanAvailable,
   isAdministrator = false,
 }: {
   subscription: Subscription;
   setSubscription: React.Dispatch<React.SetStateAction<Subscription>>;
+  serverPlan: PlanId;
+  serverPlanAvailable: boolean;
   isAdministrator?: boolean;
 }) {
   const plans = [
@@ -14029,16 +14038,22 @@ function SubscriptionPage({
     }));
   };
 
-  const isIncluded = (addon: AddonId) => hasFeature(subscription.plan, ADDON_REQUIRED_PLAN[addon]);
+  const isIncluded = (addon: AddonId) => hasFeature(
+    serverPlanAvailable && isServerManagedAddon(addon) ? serverPlan : subscription.plan,
+    ADDON_REQUIRED_PLAN[addon],
+  );
 
   return (
     <>
       <PageHeader eyebrow="Modello di servizio" title="Piano e upgrade" />
       <section className="subscription-current">
         <div>
-          <span className="eyebrow">Piano attuale</span>
-          <h2>{PLAN_NAMES[subscription.plan]}</h2>
-          <p>{PLAN_DESCRIPTIONS[subscription.plan]}</p>
+          <span className="eyebrow">{serverPlanAvailable ? "Piano registrato sul server" : "Anteprima demo"}</span>
+          <h2>{PLAN_NAMES[serverPlanAvailable ? serverPlan : subscription.plan]}</h2>
+          <p>{PLAN_DESCRIPTIONS[serverPlanAvailable ? serverPlan : subscription.plan]}</p>
+          {serverPlanAvailable && subscription.plan !== serverPlan && (
+            <p className="muted-text">La prova struttura è solo un'anteprima e non modifica il piano registrato sul server.</p>
+          )}
         </div>
         <div className="subscription-current-right">
           <Badge value={subscription.status} />
@@ -14075,9 +14090,11 @@ function SubscriptionPage({
             const included = isIncluded(addon);
             const serverManaged = isServerManagedAddon(addon);
             const unlocked = !serverManaged && hasAddon(subscription, addon);
-            const serverManagedDescription = addon === "ai"
-              ? "Le funzioni AI sono autorizzate dal piano verificato dal server; l'attivazione singola non è disponibile."
-              : "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile.";
+            const serverManagedDescription = addon === "comunicazioni"
+              ? "Le Comunicazioni sono comprese nel piano Plus e nei piani superiori; non sono acquistabili come add-on separato."
+              : addon === "ai"
+                ? "Le funzioni AI sono autorizzate dal piano verificato dal server; l'attivazione singola non è disponibile."
+                : "Il Portale richiede un piano Portal registrato e verificato dal server; l'attivazione singola non è disponibile.";
             return (
               <article className="addon-card" key={addon}>
                 <div className="addon-card-top">
@@ -14103,8 +14120,9 @@ function SubscriptionPage({
           Il piano stabilisce quali moduli sono inclusi. Gli add-on permettono
           di sbloccare singole funzionalità anche mantenendo il piano attuale.
           In questa versione gli add-on non collegati a un entitlement server-side restano simulati localmente.
-          AI e Portale sono autorizzati esclusivamente dal piano verificato dal server; l'attivazione
-          singola di queste funzioni non è disponibile finché non sarà integrata la fatturazione.
+          AI, Comunicazioni e Portale sono autorizzati esclusivamente dal piano verificato dal server; l'attivazione
+          singola di queste funzioni non è disponibile finché non sarà integrata la fatturazione. La prova struttura
+          non modifica il piano effettivo del workspace.
         </p>
       </div>
     </>
@@ -14773,7 +14791,8 @@ function DeleteAccountCard() {
 function ProfilePage({
   profile,
   setProfile,
-  subscription,
+  serverPlan,
+  serverPlanAvailable,
   portalMembers,
   isAdministrator = false,
   onExportBackup,
@@ -14872,12 +14891,11 @@ function ProfilePage({
           </span>
 
           <h2>
-            {
-              PLAN_NAMES[
-                subscription.plan
-              ]
-            }
+            {PLAN_NAMES[serverPlan]}
           </h2>
+          <small className="muted-text">
+            {serverPlanAvailable ? "Piano registrato sul server" : "Anteprima demo"}
+          </small>
 
         </div>
 
