@@ -19,7 +19,12 @@ export async function hasLastActiveWorkspaceAdmin(supabaseAdmin, userId) {
     { p_user_id: userId },
   );
 
-  if (error) throw error;
+  if (error) {
+    const message = typeof error.message === "string" && error.message.trim()
+      ? error.message
+      : "Last-admin precheck RPC failed.";
+    throw new Error(message);
+  }
   if (typeof data !== "boolean") {
     throw new Error("Last-admin precheck did not return a definitive boolean result.");
   }
