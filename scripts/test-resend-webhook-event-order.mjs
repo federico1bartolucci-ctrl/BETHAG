@@ -12,11 +12,11 @@ const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 assert.match(packageJson.scripts.test, /test-resend-webhook-event-order\.mjs/, "Runtime regression must be wired into npm test.");
 
 for (const [name, sql] of [["event-order migration", migration], ["aggregate migration", aggregateMigration]]) {
-  assert.match(sql, /'email\\.failed', 'email\\.suppressed'/,
+  assert.match(sql, /'email\.failed', 'email\.suppressed'/,
     name + " must classify Resend failed and suppressed events as delivery-state events.");
-  assert.match(sql, /WHEN 'email\\.failed' THEN 'failed'/,
+  assert.match(sql, /WHEN 'email\.failed' THEN 'failed'/,
     name + " must map email.failed to the terminal failed recipient state.");
-  assert.match(sql, /WHEN 'email\\.suppressed' THEN 'failed'/,
+  assert.match(sql, /WHEN 'email\.suppressed' THEN 'failed'/,
     name + " must map email.suppressed to the terminal failed recipient state.");
 }
 
@@ -64,7 +64,8 @@ try {
     INSERT INTO public.communications(id, email_status) VALUES
       ('00000000-0000-0000-0000-000000000004', 'In elaborazione'),
       ('00000000-0000-0000-0000-000000000006', 'In elaborazione'),
-      ('00000000-0000-0000-0000-000000000008', 'In elaborazione');
+      ('00000000-0000-0000-0000-000000000008', 'In elaborazione'),
+      ('00000000-0000-0000-0000-000000000010', 'In elaborazione');
     INSERT INTO public.communication_recipients(
       id, communication_id, email, status, provider_message_id, updated_at
     ) VALUES
@@ -76,7 +77,10 @@ try {
        'suppressed@example.it', 'queued', 'msg-suppressed', now()),
       ('00000000-0000-0000-0000-000000000009',
        '00000000-0000-0000-0000-000000000008',
-       'newfailed@example.it', 'queued', 'msg-failed-new', now());
+       'newfailed@example.it', 'queued', 'msg-failed-new', now());,
+      ('00000000-0000-0000-0000-000000000011',
+       '00000000-0000-0000-0000-000000000010',
+       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now());
   `);
 
   // Run the actual baseline function first and prove that a delayed delivered event regresses a complaint.
@@ -191,6 +195,11 @@ try {
   const newFailed = await apply("msg-failed-new", "evt-failed-new", "email.failed", "newfailed@example.it", "2026-11-26T08:20:00Z");
   assert.equal(newFailed.status, "updated");
   assert.equal((await recipient("00000000-0000-0000-0000-000000000009")).status, "failed");
+  const newSuppressed = await apply("msg-suppressed-new", "evt-suppressed-new", "email.suppressed", "newsuppressed@example.it", "2026-11-26T08:21:00Z");
+  assert.equal(newSuppressed.status, "updated");
+  const newSuppressedRecipient = await recipient("00000000-0000-0000-0000-000000000011");
+  assert.equal(newSuppressedRecipient.status, "failed");
+  assert.equal(newSuppressedRecipient.error_message, "email.suppressed");
   const staleSuccessAfterFailure = await apply("msg-failed-new", "evt-old-delivered-after-failed", "email.delivered", "newfailed@example.it", "2026-11-26T08:19:00Z");
   assert.deepEqual(staleSuccessAfterFailure, { status: "ignored", reason: "stale_status_event", current_status: "failed" });
   const equalTimeSuccessAfterFailure = await apply("msg-failed-new", "evt-equal-delivered-after-failed", "email.delivered", "newfailed@example.it", "2026-11-26T08:20:00Z");
@@ -261,7 +270,7 @@ try {
   );
   assert.equal(communication.rows[0].email_status, "Parzialmente inviata");
 
-  console.log("PASS proposed-forward SQL runtime: stale/duplicate status events ignored, informational events do not advance the status cursor, existing outcomes backfilled.");
+  console.log("PASS proposed-forward SQL runtime: email.failed/email.suppressed are terminal, legacy rows repaired, stale/duplicate events ignored, and delivery-delay/open events remain informational.");
 } finally {
   await db.close();
 }
