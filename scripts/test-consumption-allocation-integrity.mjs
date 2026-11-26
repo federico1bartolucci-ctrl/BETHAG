@@ -23,7 +23,7 @@ const deleteAllocations = migration.indexOf("delete from public.condominium_expe
 assert.ok(fiscalGuard >= 0 && fiscalGuard < deleteAllocations, "fiscal-year guard must precede allocation deletion");
 assert.ok(manualGuard >= 0 && manualGuard < deleteAllocations, "manual-allocation guard must precede allocation deletion");
 assert.match(migration, /CONSUMPTION_FISCAL_YEAR_MISMATCH/);
-assert.match(migration, /FOR UPDATE;/);
+assert.match(migration, /for update;/i);
 assert.match(migration, /SECURITY INVOKER/);
 assert.match(migration, /SET search_path TO ''/);
 
