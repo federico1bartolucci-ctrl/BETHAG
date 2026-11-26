@@ -10,6 +10,7 @@ on:
     paths:
       - ".github/workflows/storage-backup-r2.yml"
       - "scripts/backup-supabase-storage-to-r2.mjs"
+      - "scripts/storage-backup-list-all.mjs"
 
 permissions:
   contents: read
