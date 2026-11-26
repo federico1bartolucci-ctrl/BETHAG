@@ -212,6 +212,12 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_last_admin_test
           PGPASSWORD: postgres
 
+      - name: Rehearse cumulative installment allocation and concurrent payments on isolated PostgreSQL 17
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_installment_allocation_test && node scripts/test-postgres-installment-allocation-concurrency.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_installment_allocation_test
+          PGPASSWORD: postgres
+
       - name: Verify real bcrypt and concurrent personal-code lockout on isolated PostgreSQL 17
         run: npm run test:personal-security-code-lockout-postgres
         env:
