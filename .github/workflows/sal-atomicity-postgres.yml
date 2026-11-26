@@ -1,0 +1,52 @@
+name: SAL atomicity PostgreSQL 17
+
+on:
+  pull_request:
+    paths:
+      - "src/RegisterPage.tsx"
+      - "supabase/rebuild/proposed-forward-migrations/20261123050000_atomic_work_progress_payment_registration.sql"
+      - "scripts/test-work-progress-payment-atomicity.mjs"
+      - "scripts/test-sal-creation-guards.mjs"
+      - "scripts/test-work-progress-sal-atomicity-postgres.sh"
+      - "scripts/test-sal-postgres-concurrency-contract.mjs"
+      - ".github/workflows/sal-atomicity-postgres.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/RegisterPage.tsx"
+      - "supabase/rebuild/proposed-forward-migrations/20261123050000_atomic_work_progress_payment_registration.sql"
+      - "scripts/test-work-progress-payment-atomicity.mjs"
+      - "scripts/test-sal-creation-guards.mjs"
+      - "scripts/test-work-progress-sal-atomicity-postgres.sh"
+      - "scripts/test-sal-postgres-concurrency-contract.mjs"
+      - ".github/workflows/sal-atomicity-postgres.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-sal-atomicity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bethag_sal_atomicity_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bethag_sal_atomicity_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bethag_sal_atomicity_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Reproduce concurrent SAL creation and verify atomic rollback
+        run: bash scripts/test-work-progress-sal-atomicity-postgres.sh
