@@ -30,6 +30,8 @@ const firstLocalId = nextActivityLegacyId({ now: () => fixedNow, random: () => 0
 const secondLocalId = nextActivityLegacyId({ now: () => fixedNow, random: () => 0.25 });
 assert.notEqual(firstLocalId, secondLocalId, "same-tab creates must receive distinct monotonic IDs");
 assert.ok(Number.isSafeInteger(firstLocalId) && Number.isSafeInteger(secondLocalId));
+await db.query("INSERT INTO activities(workspace_id, legacy_id, title) VALUES ($1, $2, $3)", ["workspace-local", firstLocalId, "first local"]);
+await db.query("INSERT INTO activities(workspace_id, legacy_id, title) VALUES ($1, $2, $3)", ["workspace-local", secondLocalId, "second local"]);
 
 // Simulate another tab/device having claimed the next ID; the helper retries the exact constraint.
 const collisionNow = fixedNow + 1000;
