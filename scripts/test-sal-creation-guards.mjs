@@ -29,6 +29,20 @@ assert.match(src, /async function registerProgressPayment[\s\S]*rpc\("register_c
   "partial SAL payments must use the atomic payment RPC");
 assert.match(src, /async function recordProgressPayment[\s\S]*rpc\("record_condominium_work_progress_payment"/,
   "full SAL payments must use the atomic payment RPC");
+assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS condominium_work_events_sal_payment_idempotency_uidx/,
+  "payment event idempotency keys must be unique per workspace");
+assert.match(migration, /p_idempotency_key text/,
+  "both payment RPCs must require a request idempotency key");
+assert.match(migration, /data->>'idempotencyKey'[\s\S]*return v_existing\.payment_entry_id/,
+  "a retry with the same request key must return the existing ledger movement");
+assert.match(migration, /Chiave idempotenza già utilizzata per una richiesta diversa/,
+  "reusing a key for a different payment payload must fail closed");
+assert.match(src, /idempotency_key:crypto\.randomUUID\(\)/,
+  "partial-payment form must retain one key across retries");
+assert.match(src, /p_idempotency_key:idempotencyKey/,
+  "partial-payment RPC must receive the stable form key");
+assert.match(src, /p_idempotency_key:"sal-full-payment:"\+p\.id/,
+  "full-payment retries must use a stable per-SAL key");
 assert.match(fn, /approved_amount[\s\S]*v_total_amount[\s\S]*raise exception/, "approved amount guard must be enforced server-side");
 assert.match(fn, /p_status not in \('Presentato','Verificato','Approvato','Contestato'\)[\s\S]*Stato SAL non valido/, "paid or unsupported status must be rejected at database level");
 
