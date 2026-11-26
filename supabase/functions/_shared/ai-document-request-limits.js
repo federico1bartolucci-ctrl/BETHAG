@@ -2,7 +2,7 @@ export const AI_DOCUMENT_MAX_FILES = 20;
 export const AI_DOCUMENT_MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const AI_DOCUMENT_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 
-export function validateAiDocumentRequestFiles(files) {
+export function validateAiDocumentRequestFiles(files, workspaceId) {
   if (!Array.isArray(files) || files.length === 0) {
     return {
       allowed: false,
@@ -21,6 +21,20 @@ export function validateAiDocumentRequestFiles(files) {
     };
   }
 
+  if (
+    typeof workspaceId !== "string" ||
+    workspaceId.length === 0 ||
+    workspaceId.trim() !== workspaceId
+  ) {
+    return {
+      allowed: false,
+      status: 400,
+      code: "AI_DOCUMENT_WORKSPACE_INVALID",
+      message: "Workspace non valido per l'analisi dei documenti.",
+    };
+  }
+
+  const workspacePrefix = workspaceId + "/";
   const seenStoragePaths = new Set();
   for (const file of files) {
     if (!file || typeof file !== "object" || Array.isArray(file)) {
@@ -39,6 +53,15 @@ export function validateAiDocumentRequestFiles(files) {
         status: 400,
         code: "AI_DOCUMENT_STORAGE_PATH_INVALID",
         message: "Ogni documento deve indicare un percorso Storage valido.",
+      };
+    }
+
+    if (!storagePath.startsWith(workspacePrefix) || storagePath.length === workspacePrefix.length) {
+      return {
+        allowed: false,
+        status: 400,
+        code: "AI_DOCUMENT_STORAGE_PATH_OUT_OF_SCOPE",
+        message: "Ogni documento deve appartenere al workspace selezionato.",
       };
     }
 
