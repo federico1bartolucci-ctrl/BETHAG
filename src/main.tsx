@@ -9,6 +9,7 @@ import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
+import { prepareBackupAdminProfileRestore } from "./lib/backupProfileRestoreScope.mjs";
 import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { applyWorkspacePlanSnapshot } from "./lib/workspace-plan-snapshot.js";
 import { analyzeCondominiumDocumentsWithAI,
@@ -3329,6 +3330,11 @@ function App() {
         ? "ATTENZIONE: il backup sorgente è incompleto. Errori di esportazione: " + sourceReadErrorSummary + ".\\n\\n"
         : "";
       const state = backup.frontendState || {};
+      const profileRestore = prepareBackupAdminProfileRestore(state.profile, backup.workspaceId, profile);
+      if (!profileRestore.ok) {
+        alert(profileRestore.reason);
+        return;
+      }
       const counts = Object.entries(backup.backend || {}).reduce((sum: number, [, value]: any) => sum + (Array.isArray(value) ? value.length : 0), 0);
       const firstConfirm = window.confirm(
         "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\\n\\n" + sourceReadWarning + "Record backend inclusi: " + counts + ".\\n\\nVuoi procedere con il ripristino controllato?"
@@ -3353,7 +3359,7 @@ function App() {
       apply("portalMembers", setPortalMembers);
       apply("collaborators", setCollaborators);
       apply("subscription", setSubscription);
-      if (state.profile) setProfile(state.profile as AdminProfile);
+      if (profileRestore.profile) setProfile(profileRestore.profile as AdminProfile);
 
       Object.entries(state).forEach(([key, value]) => {
         const storageKey = (KEYS as Record<string,string>)[key];
@@ -3361,14 +3367,14 @@ function App() {
           localStorage.setItem(storageKey, JSON.stringify(value));
         }
       });
-      if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
+      if (profileRestore.profile) localStorage.setItem(KEYS.profile, JSON.stringify(profileRestore.profile));
 
       // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
       // escluse le chiavi di sessione/autenticazione. Questo completa il
       // ripristino delle preferenze e dello stato locale non duplicato nel
       // frontendState.
       if (backup.localStorageData && typeof backup.localStorageData === "object") {
-        const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
+        const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail, KEYS.profile]);
         const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
         restoreBackupLocalStorageData(
           backup.localStorageData,
