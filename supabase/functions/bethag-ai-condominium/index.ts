@@ -162,7 +162,7 @@ Deno.serve(async (req: Request) => {
       code: planAccess.code,
       requiredPlan: "professional",
     }, planAccess.status);
-    const fileCountLimit = validateAiDocumentRequestFiles(files);
+    const fileCountLimit = validateAiDocumentRequestFiles(files, workspaceId);
     if (!fileCountLimit.allowed) return responseJson({ error: fileCountLimit.message, code: fileCountLimit.code }, fileCountLimit.status);
     if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY." }, 503);
 
