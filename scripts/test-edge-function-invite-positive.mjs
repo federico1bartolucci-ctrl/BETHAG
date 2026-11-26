@@ -7,6 +7,7 @@ let memberRole = "Proprietario";
 let portalPayload;
 let invitedEmail;
 let memberUpdateRows = [{ id: "member-uuid" }];
+let membershipLookupCount = 0;
 
 Deno.env.set("SUPABASE_URL", "https://mock.supabase.test");
 Deno.env.set("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_mock");
@@ -22,7 +23,7 @@ globalThis.fetch = async (input, init = {}) => {
     return json({ id: "11111111-1111-4111-8111-111111111111", email: body.email, app_metadata: {}, user_metadata: {} });
   }
   if (url.pathname.startsWith("/auth/v1/admin/users/") && method === "PUT") return json({ id: url.pathname.split("/").pop() });
-  if (url.pathname === "/rest/v1/workspace_members" && method === "GET") return json({ workspace_id: "workspace-test", role: "admin", active: true });
+  if (url.pathname === "/rest/v1/workspace_members" && method === "GET") { membershipLookupCount++; return json({ workspace_id: "workspace-test", role: "admin", active: true }); }
   if (url.pathname === "/rest/v1/condominiums" && method === "GET") return json({ id: "condo-uuid", workspace_id: "workspace-test", legacy_id: 77, name: "Condominio test" });
   if (url.pathname === "/rest/v1/condominium_members" && method === "GET") return json({ id: "member-uuid", condominium_id: "condo-uuid", user_id: null, name: "Mario Rossi", email: "mario@example.test", role: "resident", active: true, permissions: [], data: { apartment: "12", role: memberRole }, legacy_id: 12, unit_id: "unit-uuid" });
   if (url.pathname === "/rest/v1/profiles" && method === "GET") return json({ role: "resident" });
@@ -61,6 +62,24 @@ async function runScenario(role, expectedPermissions) {
   assert.deepEqual(portalPayload.permissions, expectedPermissions, role + " portal permissions mismatch");
   assert.equal(portalPayload.role, "resident");
   assert.equal(portalPayload.workspace_id, "workspace-test");
+}
+
+async function runInvalidIdScenario(overrides, label) {
+  memberRole = "Proprietario";
+  memberUpdateRows = [{ id: "member-uuid" }];
+  membershipLookupCount = 0;
+  portalPayload = undefined;
+  invitedEmail = undefined;
+  const response = await handler(new Request("https://mock.supabase.test/functions/v1/bethag-invite-resident", {
+    method: "POST",
+    headers: { Authorization: "Bearer mock-user-jwt", "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: "workspace-test", condominiumId: 77, legacyId: 12, ...overrides }),
+  }));
+  const body = await response.json();
+  assert.equal(response.status, 400, label + " must be rejected as invalid input: " + JSON.stringify(body));
+  assert.equal(membershipLookupCount, 0, label + " must be rejected before workspace membership lookup");
+  assert.equal(invitedEmail, undefined, label + " must not send an Auth invitation");
+  assert.equal(portalPayload, undefined, label + " must not create portal access");
 }
 
 async function runMissingMemberScenario() {
@@ -108,6 +127,11 @@ try {
   console.log("PASS: unknown qualification rejected before invitation and portal writes");
   await runMissingMemberScenario();
   console.log("PASS: zero-row resident link fails closed before portal access upsert");
+  await runInvalidIdScenario({ legacyId: 12.5 }, "fractional member ID");
+  await runInvalidIdScenario({ legacyId: true }, "boolean member ID");
+  await runInvalidIdScenario({ condominiumId: "1e2" }, "scientific-notation condominium ID");
+  await runInvalidIdScenario({ condominiumId: 9007199254740992 }, "unsafe condominium ID");
+  console.log("PASS: malformed, fractional, coerced and unsafe resident invitation IDs rejected before database lookup");
 } finally {
   globalThis.fetch = originalFetch;
 }
