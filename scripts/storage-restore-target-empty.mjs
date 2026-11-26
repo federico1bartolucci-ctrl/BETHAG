@@ -25,6 +25,13 @@ export async function assertRestoreTargetEmpty(client, bucket, ListObjectsV2Comm
   if (!Array.isArray(contents) || contents.length > 1) {
     throw new Error("Restore target listing returned malformed object contents; refusing to assume the bucket is empty");
   }
+  if (
+    page.KeyCount !== undefined &&
+    (!Number.isSafeInteger(page.KeyCount) || page.KeyCount < 0 ||
+      page.KeyCount > 1 || page.KeyCount !== contents.length)
+  ) {
+    throw new Error("Restore target listing returned inconsistent KeyCount metadata; refusing to assume the bucket is empty");
+  }
   for (const item of contents) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
         typeof item.Key !== "string" || item.Key.length === 0) {
