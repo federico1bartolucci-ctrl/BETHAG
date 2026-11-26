@@ -445,34 +445,6 @@ begin
 
     else
       /*
-        Rata non unificata: la ripartizione viene riconciliata sulla coppia
-        unità + proprietario. Prima della correzione il solo unit_id poteva
-        attribuire lo stesso totale pagato a più proprietari della stessa unità.
-      */
-      for v_allocation in
-        select a.*
-        from public.condominium_expense_allocations a
-        where a.workspace_id=p_workspace_id
-          and a.condominium_id=p_condominium_id
-          and a.ledger_entry_id=v_installment.ledger_entry_id
-          and a.unit_id=v_installment.unit_id
-          and (
-            (v_installment.member_id is not null and a.member_id=v_installment.member_id)
-            or
-            (v_installment.member_id is null and a.member_id is null)
-          )
-        order by a.id
-        for update
-      loop
-        select least(
-          v_allocation.amount,
-          coalesce(sum(i.paid_amount),0)
-        )
-        into v_allocation_paid
-        from public.condominium_installments i
-        where i.workspace_id=p_works
-    else
-      /*
         Rata non unificata: distribuire il totale cumulativo tra tutte le
         righe della stessa unità e dello stesso proprietario, in ordine stabile.
         Copiare il totale su ogni riga sovrastimerebbe i pagamenti in presenza
@@ -514,3 +486,12 @@ begin
 
         v_remaining:=round(v_remaining-v_allocation_target,2);
       end loop;
+    end if;
+  end if;
+
+  return v_result_paid;
+end;
+$function$
+;
+
+COMMIT;
