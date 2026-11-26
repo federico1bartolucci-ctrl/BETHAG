@@ -70,7 +70,7 @@ const missingTransferId = createCommittedMemberTransferOutcome({
   transferRecord: null,
   incoming: null,
 });
-assert.equal(missingTransferId.committed, false);
+assert.equal(missingTransferId.committed, true, "a successful RPC is committed even when its response omitted the transfer ID");
 assert.equal(missingTransferId.reconciliationRequired, true);
 assert.equal(missingTransferId.reconciliationReason, "transfer_id_missing");
 
