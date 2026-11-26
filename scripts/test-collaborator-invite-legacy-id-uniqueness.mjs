@@ -144,7 +144,7 @@ assert.deepEqual(noCleanup, { failed: false, action: "none" });
 
 const genericFailureDb = new PGlite();
 try {
-  await genericFailureDb.exec(\`
+  await genericFailureDb.exec(`
     CREATE TABLE auth_users(id uuid PRIMARY KEY, email text NOT NULL);
     CREATE TABLE profiles(
       id uuid PRIMARY KEY REFERENCES auth_users(id) ON DELETE CASCADE,
@@ -165,7 +165,7 @@ try {
       VALUES ('00000000-0000-0000-0000-000000000022','orphan@example.invalid');
     INSERT INTO profiles(id,full_name,email,role)
       VALUES ('00000000-0000-0000-0000-000000000022','Orphan','orphan@example.invalid','collaborator');
-  \`);
+  `);
   await assert.rejects(
     genericFailureDb.query(
       "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',7002)",

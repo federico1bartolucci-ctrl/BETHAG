@@ -2,7 +2,7 @@
 
 ## Finding reproduced
 
-The collaborator invitation Edge Function sends an Auth invitation before creating the profile and \`workspace_members\` link. The pre-existing compensation ran only for the workspace legacy-ID unique-index conflict. A different database failure during profile creation or membership upsert reached the generic catch, which returned HTTP 500 without removing the newly invited Auth user or reporting that the invitation email had already been sent.
+The collaborator invitation Edge Function sends an Auth invitation before creating the profile and `workspace_members` link. The pre-existing compensation ran only for the workspace legacy-ID unique-index conflict. A different database failure during profile creation or membership upsert reached the generic catch, which returned HTTP 500 without removing the newly invited Auth user or reporting that the invitation email had already been sent.
 
 The runtime regression reproduces a generic PostgreSQL check-constraint failure after the Auth user and profile exist. Before compensation, both rows remain while the workspace membership is absent.
 
@@ -12,14 +12,14 @@ The runtime regression reproduces a generic PostgreSQL check-constraint failure 
 - On a failure before the membership is linked, remove only the Auth user invited by this request; its profile is removed by the Auth-user FK cascade.
 - If an existing Auth user had a profile created by this request, remove only that newly created profile.
 - Never delete an existing Auth user or a user whose workspace membership was already linked.
-- Report \`failureStage\`, \`invitationSent\`, \`workspaceMemberLinked\`, \`cleanupAttempted\`, \`cleanupFailed\` and \`invitationAccountRemoved\` in the failure response.
+- Report `failureStage`, `invitationSent`, `workspaceMemberLinked`, `cleanupAttempted`, `cleanupFailed` and `invitationAccountRemoved` in the failure response.
 - If the Auth invitation was sent but its user ID is unavailable, fail closed and report that compensation could not be completed.
 
 The existing legacy-ID conflict path uses the same compensation helper, retaining its HTTP 409 behavior.
 
 ## Regression
 
-The existing \`scripts/test-collaborator-invite-legacy-id-uniqueness.mjs\` is already part of \`npm test\`. It now additionally:
+The existing `scripts/test-collaborator-invite-legacy-id-uniqueness.mjs` is already part of `npm test`. It now additionally:
 
 - reproduces a non-unique membership-write failure after Auth/profile creation;
 - verifies the orphan Auth user and profile exist before compensation;
