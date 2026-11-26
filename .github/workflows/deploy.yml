@@ -47,10 +47,14 @@ jobs:
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: ./dist
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
-# Use the documented default artifact name (github-pages) for upload/deploy
-# compatibility; do not couple the artifact identity to run_id/run_attempt.
+# Use a distinct artifact name for each workflow attempt. A rerun leaves
+# artifacts from the previous attempt attached to the same run; deploy-pages
+# otherwise finds multiple "github-pages" artifacts and refuses deployment.
