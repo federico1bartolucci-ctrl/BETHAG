@@ -53,8 +53,8 @@ try{
   [workspace,condominium,workC,today]
  ),/totale dei SAL supera l'importo approvato/i);
  await assert.rejects(()=>db.query(
-  "INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES(gen_random_uuid(),'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',$2,$3,4,$4,'SAL fuori workspace',1,0)",
-  [workspace,condominium,workC,today]
+  "INSERT INTO public.condominium_work_progress(id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,amount,paid_amount) VALUES(gen_random_uuid(),'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',$1,$2,4,$3,'SAL fuori workspace',1,0)",
+  [condominium,workC,today]
  ),/SAL non coerente con workspace e condominio/i);
  // A failure after the SAL INSERT must roll back both the row and summary update.
  await db.exec("CREATE FUNCTION public.test_fail_work_progress_summary_update() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN IF OLD.id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid AND NEW.progress_percent>35 THEN RAISE EXCEPTION 'forced work progress summary failure'; END IF; RETURN NEW; END; $function$; CREATE TRIGGER zzz_test_fail_work_progress_summary_update BEFORE UPDATE ON public.condominium_works FOR EACH ROW EXECUTE FUNCTION public.test_fail_work_progress_summary_update();");
