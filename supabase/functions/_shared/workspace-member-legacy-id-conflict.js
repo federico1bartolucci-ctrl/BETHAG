@@ -12,15 +12,26 @@ export function isWorkspaceMemberLegacyIdConflict(error) {
 }
 
 /**
- * Remove an Auth invitation or a profile created for a request that lost the
- * existing workspace legacy-identity unique-index race. Existing users and
- * profiles are never deleted.
+ * Compensate a collaborator invitation that has not reached a linked
+ * workspace_members row. A newly invited Auth user is removed (which also
+ * cascades its newly created profile); an existing Auth user is never deleted.
+ * A profile created for an existing Auth user is removed only when it was
+ * created by this request. Once the membership is linked, no destructive
+ * compensation is attempted.
  */
-export async function cleanupCollaboratorInviteLegacyConflict(
+export async function cleanupUnlinkedCollaboratorInvite(
   adminClient,
   targetUserId,
-  { invited, profileCreated },
+  { invited, profileCreated, workspaceMemberLinked = false },
 ) {
+  if (workspaceMemberLinked) return { failed: false, action: "none" };
+
+  if (!targetUserId) {
+    if (invited) return { failed: true, action: "delete_auth_user_unavailable" };
+    if (profileCreated) return { failed: true, action: "delete_created_profile_unavailable" };
+    return { failed: false, action: "none" };
+  }
+
   try {
     if (invited) {
       const { error } = await adminClient.auth.admin.deleteUser(targetUserId);
@@ -40,4 +51,15 @@ export async function cleanupCollaboratorInviteLegacyConflict(
       action: invited ? "delete_auth_user" : profileCreated ? "delete_created_profile" : "none",
     };
   }
+}
+
+/**
+ * Backward-compatible name used by the existing unique-legacy-ID regression.
+ */
+export async function cleanupCollaboratorInviteLegacyConflict(
+  adminClient,
+  targetUserId,
+  state,
+) {
+  return cleanupUnlinkedCollaboratorInvite(adminClient, targetUserId, state);
 }

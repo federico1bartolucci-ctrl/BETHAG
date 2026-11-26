@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import {
   cleanupCollaboratorInviteLegacyConflict,
+  cleanupUnlinkedCollaboratorInvite,
   isWorkspaceMemberLegacyIdConflict,
 } from "../supabase/functions/_shared/workspace-member-legacy-id-conflict.js";
 
@@ -141,10 +142,103 @@ const noCleanup = await cleanupCollaboratorInviteLegacyConflict({}, "existing-us
 });
 assert.deepEqual(noCleanup, { failed: false, action: "none" });
 
+const genericFailureDb = new PGlite();
+try {
+  await genericFailureDb.exec(\`
+    CREATE TABLE auth_users(id uuid PRIMARY KEY, email text NOT NULL);
+    CREATE TABLE profiles(
+      id uuid PRIMARY KEY REFERENCES auth_users(id) ON DELETE CASCADE,
+      full_name text NOT NULL,
+      email text NOT NULL,
+      role text NOT NULL,
+      active boolean NOT NULL DEFAULT true
+    );
+    CREATE TABLE workspace_members(
+      workspace_id uuid NOT NULL,
+      user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      role text NOT NULL,
+      legacy_id bigint,
+      PRIMARY KEY(workspace_id, user_id),
+      CONSTRAINT reject_legacy_id_7002 CHECK (legacy_id <> 7002)
+    );
+    INSERT INTO auth_users(id,email)
+      VALUES ('00000000-0000-0000-0000-000000000022','orphan@example.invalid');
+    INSERT INTO profiles(id,full_name,email,role)
+      VALUES ('00000000-0000-0000-0000-000000000022','Orphan','orphan@example.invalid','collaborator');
+  \`);
+  await assert.rejects(
+    genericFailureDb.query(
+      "INSERT INTO workspace_members(workspace_id,user_id,role,legacy_id) VALUES ($1,$2,'collaborator',7002)",
+      ["00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000022"],
+    ),
+    (error) => String(error.code) === "23514",
+    "a non-unique workspace membership write failure must be reproduced",
+  );
+  const orphanBefore = await genericFailureDb.query(
+    "SELECT (SELECT count(*) FROM auth_users WHERE id=$1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id=$1)::integer AS profile_count",
+    ["00000000-0000-0000-0000-000000000022"],
+  );
+  assert.deepEqual(orphanBefore.rows[0], { auth_count: 1, profile_count: 1 });
+  console.log("PASS baseline reproduction: generic workspace_members failure leaves the newly invited Auth user and profile orphaned before compensation.");
+
+  const genericCleanup = await cleanupUnlinkedCollaboratorInvite(
+    {
+      auth: {
+        admin: {
+          async deleteUser(id) {
+            await genericFailureDb.query("DELETE FROM auth_users WHERE id=$1", [id]);
+            return { error: null };
+          },
+        },
+      },
+    },
+    "00000000-0000-0000-0000-000000000022",
+    { invited: true, profileCreated: true, workspaceMemberLinked: false },
+  );
+  assert.deepEqual(genericCleanup, { failed: false, action: "delete_auth_user" });
+  const orphanAfter = await genericFailureDb.query(
+    "SELECT (SELECT count(*) FROM auth_users WHERE id=$1)::integer AS auth_count, (SELECT count(*) FROM profiles WHERE id=$1)::integer AS profile_count",
+    ["00000000-0000-0000-0000-000000000022"],
+  );
+  assert.deepEqual(orphanAfter.rows[0], { auth_count: 0, profile_count: 0 });
+  console.log("PASS compensation: failed collaborator membership write removes only the newly invited Auth user and cascaded profile.");
+} finally {
+  await genericFailureDb.close();
+}
+
+const failedDelete = await cleanupUnlinkedCollaboratorInvite(
+  { auth: { admin: { async deleteUser() { return { error: new Error("Auth cleanup unavailable") }; } } } },
+  "new-auth-user",
+  { invited: true, profileCreated: true, workspaceMemberLinked: false },
+);
+assert.deepEqual(failedDelete, { failed: true, action: "delete_auth_user" });
+
+let linkedDeleteCalled = false;
+const linkedStateCleanup = await cleanupUnlinkedCollaboratorInvite(
+  { auth: { admin: { async deleteUser() { linkedDeleteCalled = true; return { error: null }; } } } },
+  "linked-auth-user",
+  { invited: true, profileCreated: true, workspaceMemberLinked: true },
+);
+assert.deepEqual(linkedStateCleanup, { failed: false, action: "none" });
+assert.equal(linkedDeleteCalled, false, "a linked workspace member must never be deleted by compensation");
+
+const missingIdCleanup = await cleanupUnlinkedCollaboratorInvite(
+  {},
+  null,
+  { invited: true, profileCreated: false, workspaceMemberLinked: false },
+);
+assert.deepEqual(missingIdCleanup, { failed: true, action: "delete_auth_user_unavailable" });
+
 assert.match(edgeSource, /isWorkspaceMemberLegacyIdConflict/);
-assert.match(edgeSource, /cleanupCollaboratorInviteLegacyConflict/);
+assert.match(edgeSource, /cleanupUnlinkedCollaboratorInvite/);
 assert.match(edgeSource, /COLLABORATOR_LEGACY_ID_ALREADY_ASSIGNED/);
 assert.match(edgeSource, /invitationSent: invited/);
+assert.match(edgeSource, /workspaceMemberLinked = true/);
+assert.match(edgeSource, /cleanupAttempted/);
+assert.match(edgeSource, /cleanupFailed/);
+assert.match(edgeSource, /invitationAccountRemoved/);
+assert.match(edgeSource, /failureStage/);
+assert.match(edgeSource, /if \(!workspaceMemberLinked && \(invited \|\| profileCreated\)\)/);
 const conflictIndex = edgeSource.indexOf("isWorkspaceMemberLegacyIdConflict(upsertError)");
 const successIndex = edgeSource.indexOf("return json({ success: true, userId: targetUserId, invited })");
 assert.ok(conflictIndex >= 0 && successIndex > conflictIndex, "the unique conflict must be handled before success is returned");
