@@ -4,6 +4,8 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
+import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
 import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3302,10 +3304,14 @@ function App() {
         alert("Il backup appartiene a un workspace diverso. Il ripristino è stato bloccato.");
         return;
       }
+      const sourceReadErrorSummary = formatBackupReadErrors(backup.backendReadErrors);
+      const sourceReadWarning = sourceReadErrorSummary
+        ? "ATTENZIONE: il backup sorgente è incompleto. Errori di esportazione: " + sourceReadErrorSummary + ".\\n\\n"
+        : "";
       const state = backup.frontendState || {};
       const counts = Object.entries(backup.backend || {}).reduce((sum: number, [, value]: any) => sum + (Array.isArray(value) ? value.length : 0), 0);
       const firstConfirm = window.confirm(
-        "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\\n\\nRecord backend inclusi: " + counts + ".\\n\\nVuoi procedere con il ripristino controllato?"
+        "Backup BETHAG del " + new Date(backup.generatedAt || Date.now()).toLocaleString("it-IT") + ".\\n\\n" + sourceReadWarning + "Record backend inclusi: " + counts + ".\\n\\nVuoi procedere con il ripristino controllato?"
       );
       if (!firstConfirm) return;
       if (!window.confirm("Conferma definitiva: i record presenti nel backup verranno aggiornati nel workspace corrente. I dati non presenti nel backup non verranno eliminati.")) return;
@@ -3404,8 +3410,14 @@ function App() {
           if (error) errors.push(table + ": " + error.message);
         }
       }
-      if (errors.length) {
-        alert("Ripristino completato parzialmente. Le tabelle non ripristinate sono state segnalate: " + errors.join(" | ") + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
+      if (errors.length || sourceReadErrorSummary) {
+        const restoreErrorSummary = errors.length
+          ? "Errori durante il ripristino: " + errors.join(" | ") + ". "
+          : "Le tabelle presenti nel backup sono state ripristinate. ";
+        const sourceErrorSummary = sourceReadErrorSummary
+          ? "Il backup sorgente era incompleto; alcune tabelle non sono state esportate: " + sourceReadErrorSummary + ". "
+          : "";
+        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
       } else {
         alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + (skippedSecurityRows.length ? " Le membership amministratore presenti nel file sono state ignorate per sicurezza." : ""));
       }
@@ -3435,9 +3447,9 @@ function App() {
     if (supabase && profile.workspaceId) {
       await Promise.all(tableNames.map(async (table) => {
         try {
-          const { data, error } = await supabase.from(table).select("*").eq("workspace_id", profile.workspaceId);
-          if (error) errors[table] = error.message;
-          else backend[table] = data || [];
+          const orderBy = table === "workspace_members" ? "user_id" : "id";
+          const rows = await loadPaginatedWorkspaceRows(supabase, profile.workspaceId, table, orderBy, null);
+          backend[table] = rows;
         } catch (e: any) {
           errors[table] = e?.message || "Errore di lettura";
         }
