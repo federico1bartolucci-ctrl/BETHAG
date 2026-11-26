@@ -77,7 +77,7 @@ const handler = source.slice(restoreStart, restoreEnd);
 
 const profilePreflight = handler.indexOf("prepareBackupAdminProfileRestore(");
 const firstConfirmation = handler.indexOf("window.confirm(");
-const backendRestore = handler.indexOf("const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;");
+const backendRestore = handler.indexOf("const restoreOrder = [");
 assert.ok(profilePreflight >= 0, "profile scope preflight must be wired into the restore handler");
 assert.ok(profilePreflight < firstConfirmation, "profile scope must be checked before user confirmation");
 assert.ok(profilePreflight < backendRestore, "profile scope must be checked before backend writes");
