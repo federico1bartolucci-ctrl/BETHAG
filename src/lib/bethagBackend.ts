@@ -2646,7 +2646,7 @@ export async function updateCondominiumRequestStatus(
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("condominium_requests")
       .update({
         title: request.category,
@@ -2656,9 +2656,11 @@ export async function updateCondominiumRequestStatus(
         updated_at: new Date().toISOString(),
       })
       .eq("workspace_id", workspaceId)
-      .eq("legacy_id", request.id);
+      .eq("legacy_id", request.id)
+      .select("id");
 
     if (error) throw error;
+    if (!data?.length) throw new Error("Richiesta non trovata o non più aggiornabile.");
   });
 }
 
