@@ -25,7 +25,7 @@ if (!planAccess.allowed) return json({
   code: planAccess.code,
   requiredPlan: "plus",
 }, planAccess.status);
-const fileCountLimit = validateAiDocumentRequestFiles(files);
+const fileCountLimit = validateAiDocumentRequestFiles(files, workspaceId);
 if (!fileCountLimit.allowed) return json({ error: fileCountLimit.message, code: fileCountLimit.code }, fileCountLimit.status);
 if(!openai)return json({error:"Servizio AI non configurato: manca OPENAI_API_KEY."},503);
 const content:any[]=[{type:"input_text",text:"Analizza i documenti di amministrazione condominiale allegati per BETHAG. Estrai solo informazioni realmente presenti. Non inventare importi, nominativi, millesimi o riferimenti. Se un dato è incerto lascialo vuoto e inserisci una warning. I millesimi appartengono alle unità, mai alle persone. Per riparti conserva le righe rilevate; per fatture identifica fornitore, partita IVA se presente, numero fattura, importo, data e ogni riferimento a lavori/manutenzioni; per verbali e convocazioni identifica oggetto e riferimenti. L'output sarà sempre sottoposto a verifica dell'amministratore. Documenti: "+files.map((f:any)=>f.filename).join(", ")}];
