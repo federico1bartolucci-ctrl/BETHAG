@@ -5669,6 +5669,19 @@ function App() {
         }
       );
 
+      if (result.reconciliationRequired || !result.incoming) {
+        window.dispatchEvent(new Event("bethag-backend-refresh"));
+        setMemberTransferForm(emptyMemberTransferForm);
+        setSelectedMemberTransferOutgoing(null);
+        closeModal();
+
+        const message = result.transferId
+          ? `Il server ha registrato il subentro (ID ${result.transferId}), ma non è stato possibile recuperare il nuovo proprietario per aggiornare la schermata. I dati verranno ricaricati. Non ripetere il subentro: verifica prima la scheda dell'unità e lo storico trasferimenti.`
+          : "Il server ha risposto positivamente ma non ha restituito l'identificativo del subentro. I dati verranno ricaricati. Non ripetere l'operazione finché non hai verificato la scheda dell'unità e lo storico trasferimenti.";
+        alert(message);
+        return;
+      }
+
       const incoming = result.incoming;
       const incomingData = incoming.data && typeof incoming.data === "object" ? incoming.data : {};
       const incomingMember: CondominiumMember = {
