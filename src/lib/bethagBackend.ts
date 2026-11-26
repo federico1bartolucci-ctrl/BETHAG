@@ -2056,14 +2056,16 @@ export async function deleteCondominiumUnit(
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("condominium_units")
       .delete()
       .eq("workspace_id", workspaceId)
       .eq("condominium_id", condominium.id)
-      .eq("id", unitId);
+      .eq("id", unitId)
+      .select("id");
 
     if (error) throw error;
+    if (!data?.length) throw new Error("Unità non trovata o già eliminata.");
   });
 }
 
