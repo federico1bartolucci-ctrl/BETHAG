@@ -78,9 +78,17 @@ $function$;
 REVOKE ALL ON FUNCTION public.validate_condominium_work_progress_accounting_links()
 FROM PUBLIC, anon, authenticated, service_role;
 
+-- A retry with the same workspace-scoped key must return the original ledger movement.
+CREATE UNIQUE INDEX IF NOT EXISTS condominium_work_events_sal_payment_idempotency_uidx
+ON public.condominium_work_events(workspace_id, (data->>'idempotencyKey'))
+WHERE data ? 'idempotencyKey';
+
+DROP FUNCTION IF EXISTS public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text);
+DROP FUNCTION IF EXISTS public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text);
+
 CREATE OR REPLACE FUNCTION public.register_condominium_work_progress_payment(
   p_workspace_id uuid,p_condominium_id uuid,p_work_id uuid,p_progress_id uuid,
-  p_entry_date date,p_amount numeric,p_notes text DEFAULT ''
+  p_entry_date date,p_amount numeric,p_idempotency_key text,p_notes text DEFAULT ''
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -89,13 +97,16 @@ SET search_path TO ''
 AS $function$
 DECLARE
   v_work record;v_progress record;v_fiscal_year_id uuid;v_total_sal numeric;
-  v_amount numeric;v_new_paid numeric;v_payment_entry_id uuid;v_updated integer;
+  v_amount numeric;v_new_paid numeric;v_payment_entry_id uuid;v_updated integer;v_existing record;
 BEGIN
   if p_workspace_id is null or p_condominium_id is null or p_work_id is null or p_progress_id is null then
     raise exception 'Workspace, condominio, lavoro e SAL sono obbligatori';
   end if;
   if p_entry_date is null then raise exception 'La data del pagamento è obbligatoria'; end if;
   if p_amount is null then raise exception 'L''importo del pagamento è obbligatorio'; end if;
+  if p_idempotency_key is null or pg_catalog.btrim(p_idempotency_key)='' or pg_catalog.length(p_idempotency_key)>128 then
+    raise exception 'Chiave idempotenza del pagamento non valida';
+  end if;
   v_amount:=pg_catalog.round(p_amount,2);
   if p_amount<>v_amount then raise exception 'L''importo del pagamento deve essere espresso in centesimi'; end if;
   if v_amount<=0 then raise exception 'Indica un importo di pagamento valido'; end if;
@@ -109,6 +120,25 @@ BEGIN
   where id=p_progress_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and work_id=p_work_id
   for update;
   if not found then raise exception 'SAL non trovato per l''intervento indicato'; end if;
+  select work_id,(data->>'progressId')::uuid as progress_id,
+         (data->>'paymentEntryId')::uuid as payment_entry_id,
+         (data->>'amount')::numeric as amount,(data->>'entryDate')::date as entry_date,
+         data->>'source' as source
+    into v_existing
+  from public.condominium_work_events
+  where workspace_id=p_workspace_id and data->>'idempotencyKey'=p_idempotency_key
+  for update;
+  if found then
+    if v_existing.work_id is distinct from p_work_id
+       or v_existing.progress_id is distinct from p_progress_id
+       or v_existing.amount is distinct from v_amount
+       or v_existing.entry_date is distinct from p_entry_date
+       or v_existing.source is distinct from 'SAL pagamento'
+       or v_existing.payment_entry_id is null then
+      raise exception 'Chiave idempotenza già utilizzata per una richiesta diversa';
+    end if;
+    return v_existing.payment_entry_id;
+  end if;
   if v_progress.ledger_entry_id is not null then raise exception 'SAL già contabilizzato; non è possibile aggiungere pagamenti parziali'; end if;
   select pg_catalog.round(coalesce(sum(amount),0)::numeric,2) into v_total_sal
   from public.condominium_work_progress
@@ -143,14 +173,15 @@ BEGIN
   insert into public.condominium_work_events(workspace_id,condominium_id,work_id,event_type,event_date,title,description,amount,data)
   values(p_workspace_id,p_condominium_id,p_work_id,'Pagamento SAL',p_entry_date,
     'Pagamento SAL '||v_progress.progress_no,'Pagamento parziale registrato in Contabilità.',v_amount,
-    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,'source','SAL pagamento'));
+    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,
+      'idempotencyKey',p_idempotency_key,'amount',v_amount,'entryDate',p_entry_date,'source','SAL pagamento'));
   return v_payment_entry_id;
 END;
 $function$;
 
 CREATE OR REPLACE FUNCTION public.record_condominium_work_progress_payment(
   p_workspace_id uuid,p_condominium_id uuid,p_work_id uuid,p_progress_id uuid,
-  p_entry_date date,p_notes text DEFAULT ''
+  p_entry_date date,p_idempotency_key text,p_notes text DEFAULT ''
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -159,12 +190,15 @@ SET search_path TO ''
 AS $function$
 DECLARE
   v_work record;v_progress record;v_fiscal_year_id uuid;v_total_sal numeric;
-  v_amount numeric;v_payment_entry_id uuid;v_updated integer;
+  v_amount numeric;v_payment_entry_id uuid;v_updated integer;v_existing record;
 BEGIN
   if p_workspace_id is null or p_condominium_id is null or p_work_id is null or p_progress_id is null then
     raise exception 'Workspace, condominio, lavoro e SAL sono obbligatori';
   end if;
   if p_entry_date is null then raise exception 'La data del pagamento è obbligatoria'; end if;
+  if p_idempotency_key is null or pg_catalog.btrim(p_idempotency_key)='' or pg_catalog.length(p_idempotency_key)>128 then
+    raise exception 'Chiave idempotenza del pagamento non valida';
+  end if;
   select id,title,supplier_id,approved_amount into v_work
   from public.condominium_works
   where id=p_work_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id
@@ -175,9 +209,28 @@ BEGIN
   where id=p_progress_id and workspace_id=p_workspace_id and condominium_id=p_condominium_id and work_id=p_work_id
   for update;
   if not found then raise exception 'SAL non trovato per l''intervento indicato'; end if;
+  v_amount:=pg_catalog.round(coalesce(v_progress.paid_amount,0),2);
+  select work_id,(data->>'progressId')::uuid as progress_id,
+         (data->>'paymentEntryId')::uuid as payment_entry_id,
+         (data->>'amount')::numeric as amount,(data->>'entryDate')::date as entry_date,
+         data->>'source' as source
+    into v_existing
+  from public.condominium_work_events
+  where workspace_id=p_workspace_id and data->>'idempotencyKey'=p_idempotency_key
+  for update;
+  if found then
+    if v_existing.work_id is distinct from p_work_id
+       or v_existing.progress_id is distinct from p_progress_id
+       or v_existing.amount is distinct from v_amount
+       or v_existing.entry_date is distinct from p_entry_date
+       or v_existing.source is distinct from 'SAL'
+       or v_existing.payment_entry_id is null then
+      raise exception 'Chiave idempotenza già utilizzata per una richiesta diversa';
+    end if;
+    return v_existing.payment_entry_id;
+  end if;
   if v_progress.ledger_entry_id is not null then raise exception 'Questo SAL è già contabilizzato'; end if;
   if v_progress.payment_entry_id is not null then raise exception 'SAL con pagamenti parziali: usare il flusso di pagamento parziale'; end if;
-  v_amount:=pg_catalog.round(coalesce(v_progress.paid_amount,0),2);
   if v_amount<=0 then raise exception 'Il SAL non contiene un importo pagato'; end if;
   if v_amount>v_progress.amount+0.005 then raise exception 'Il pagato del SAL supera l''importo del SAL'; end if;
   select pg_catalog.round(coalesce(sum(amount),0)::numeric,2) into v_total_sal
@@ -212,15 +265,16 @@ BEGIN
   insert into public.condominium_work_events(workspace_id,condominium_id,work_id,event_type,event_date,title,description,amount,data)
   values(p_workspace_id,p_condominium_id,p_work_id,'Pagamento SAL',p_entry_date,
     'Pagamento SAL '||v_progress.progress_no,'SAL contabilizzato e pagamento collegato alla Contabilità.',v_amount,
-    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,'source','SAL'));
+    pg_catalog.jsonb_build_object('progressId',p_progress_id,'paymentEntryId',v_payment_entry_id,
+      'idempotencyKey',p_idempotency_key,'amount',v_amount,'entryDate',p_entry_date,'source','SAL'));
   return v_payment_entry_id;
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text) TO authenticated, service_role;
-REVOKE ALL ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.register_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,numeric,text,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.record_condominium_work_progress_payment(uuid,uuid,uuid,uuid,date,text,text) TO authenticated, service_role;
 
 -- Atomically create a SAL and synchronize the work progress percentage.
 -- Locks the parent work so concurrent SAL creation cannot exceed approved totals.
