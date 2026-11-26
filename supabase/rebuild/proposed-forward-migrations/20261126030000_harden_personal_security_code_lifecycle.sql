@@ -157,7 +157,6 @@ BEGIN
   v_candidate := pg_catalog.btrim(p_code);
 
   IF pg_catalog.char_length(v_candidate) BETWEEN 6 AND 32
-     AND pg_catalog.octet_length(v_candidate) <= 72
      AND extensions.crypt(v_candidate, v_hash) = v_hash THEN
     UPDATE public.user_security_settings
     SET personal_code_failed_attempts = 0,
