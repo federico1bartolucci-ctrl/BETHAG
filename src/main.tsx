@@ -5953,9 +5953,14 @@ function App() {
       console.error("BETHAG request status persistence failed", error);
       setCondominiumRequests((current) =>
         current.map((request) =>
-          request.id === id ? currentRequest : request
+          request.id === id && request.status === status
+            ? { ...request, status: currentRequest.status }
+            : request
         )
       );
+      // Reconcile the final status from Supabase. This also resolves ambiguous
+      // network outcomes without overwriting concurrent request edits.
+      window.dispatchEvent(new Event("bethag-backend-refresh"));
       alert(
         error instanceof Error
           ? `Impossibile aggiornare la richiesta: ${error.message}`
