@@ -1,6 +1,6 @@
 # BETHAG Storage backup — Cloudflare R2
 
-Status: **Cloudflare resources and GitHub Environment configured; first backup attempts failed at R2 S3 authentication; first successful snapshot pending**.
+Status: **Storage backup workflow completed a successful manifest write/read verification on 26 November 2026. Source bucket inventory was empty (0 objects). Guarded restore utility added; isolated restore drill remains pending.**
 
 ## Safety boundary
 
@@ -63,17 +63,37 @@ Published R2 Standard rates (checked 25 November 2026): $0.015/GB-month; Class A
 
 The current Production and QA inventory query returned zero objects in `bethag-documents`; this means the initial backup is expected to contain an empty manifest, but the workflow must still validate the source and destination when configured.
 
-## Restore outline
+## Guarded restore utility
 
-To restore, select a manifest by timestamp, download each referenced blob, verify SHA-256 and size, then upload the bytes to the original object keys in a separately identified recovery Supabase project. Recreate or validate the bucket metadata and RLS policies separately. Never run a restore into Production or shared QA as part of routine backup validation. A future restore utility and isolated restore drill are required before marking Storage disaster recovery fully tested.
+scripts/restore-supabase-storage-from-r2.mjs implements a fail-closed restore flow.
+
+Safety properties:
+- Dry-run is the only non-writing mode. The command requires an explicit --dry-run or --apply choice.
+- The manifest must be under backups/snapshots/ and match bethag-storage-backup/v1.
+- Every referenced blob is downloaded from R2 and its byte length and SHA-256 are verified before any target write.
+- The target bucket must be explicitly supplied, must differ from the R2 backup bucket, and must be empty. Existing objects cause an abort; the utility never deletes or overwrites.
+- --apply additionally requires RESTORE_CONFIRM_TARGET to equal the exact target bucket name.
+- The tool does not create buckets, alter policies, restore database rows, or change Production/QA configuration.
+
+Dry-run example (run in a protected environment with the nine backup secrets available):
+
+node scripts/restore-supabase-storage-from-r2.mjs --dry-run --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
+
+Guarded apply example, only after a separate recovery bucket has been created and reviewed:
+
+RESTORE_CONFIRM_TARGET=<empty-recovery-bucket> node scripts/restore-supabase-storage-from-r2.mjs --apply --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
+
+Never use bethag-documents, Production, or shared QA as the target for a restore drill. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest/blob integrity and target preflight, not that an upload or application-level recovery has succeeded.
+
+The first successful snapshot on 26 November 2026 contains zero objects because the Production bucket bethag-documents was verified empty. Consequently, the current manifest can exercise validation and empty-target preflight only; it cannot demonstrate restoration of real file bytes. A representative non-empty isolated drill remains required before marking Storage disaster recovery fully tested.
 
 ## Operational status
 
-- Repository implementation: PR #490 under review; merge only after CI passes.
-- Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
+- Repository implementation: PR under review; merge only after CI passes.
+- Cloudflare bucket bethag-storage-backups: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
-- GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
-- First backup: attempted on 26 November 2026; failed at R2 S3 bucket access with HTTP 403. No successful snapshot or manifest has been confirmed.
-- Restore utility and isolated restore drill: NOT RUN.
-- Production and QA data/configuration: unchanged.
+- GitHub Environment storage-backup-production: configured; nine required secrets and STORAGE_BACKUP_ENABLED=true are present.
+- First successful backup: 26 November 2026; manifest write/read verification passed. source_object_count=0, blobs_uploaded=0, blobs_reused=0 because the source bucket was empty.
+- Guarded restore utility: implemented with dry-run default, SHA-256/size verification, empty-target requirement, and explicit confirmation gate for writes.
+- Restore dry-run and non-empty isolated restore drill: NOT RUN.
 - Production and QA data/configuration: unchanged.
