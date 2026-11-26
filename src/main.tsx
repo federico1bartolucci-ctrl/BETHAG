@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
 import { loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
+import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { getClientUnlockedAddons, hasAddon, hasEntitlement, hasFeature, isServerManagedAddon } from "./lib/subscription-entitlements.js";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3349,17 +3350,12 @@ function App() {
       // frontendState.
       if (backup.localStorageData && typeof backup.localStorageData === "object") {
         const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
-        Object.entries(backup.localStorageData as Record<string, unknown>).forEach(([storageKey, value]) => {
-          if (excludedRestoreKeys.has(storageKey) || value === undefined) return;
-          try {
-            localStorage.setItem(
-              storageKey,
-              typeof value === "string" ? value : JSON.stringify(value)
-            );
-          } catch {
-            // Una singola chiave locale non deve interrompere il ripristino complessivo.
-          }
-        });
+        const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
+        restoreBackupLocalStorageData(
+          backup.localStorageData,
+          allowedRestoreKeys,
+          localStorage
+        );
       }
 
       const restoreOrder = [
