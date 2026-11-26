@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { findAuthUserByEmail } from "../_shared/auth-user-directory.js";
 import {
   cleanupCollaboratorInviteLegacyConflict,
   isWorkspaceMemberLegacyIdConflict,
@@ -133,12 +134,7 @@ Deno.serve(async (req: Request) => {
       if (inviteError) {
         const message = inviteError.message || "";
         if (/already.*registered|already.*exists|duplicate/i.test(message)) {
-          const { data: users, error: usersError } =
-            await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          if (usersError) throw usersError;
-          const existingUser = users.users.find(
-            (candidate) => candidate.email?.trim().toLowerCase() === email
-          );
+          const existingUser = await findAuthUserByEmail(adminClient, email);
           if (!existingUser) throw inviteError;
           targetUserId = existingUser.id;
         } else {
