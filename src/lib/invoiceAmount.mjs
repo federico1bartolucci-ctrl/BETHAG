@@ -4,11 +4,11 @@ export function parseInvoiceAmount(value) {
   if (!raw) return 0;
 
   let amountText = raw;
-  const leadingCurrency = /^[€$£¥]\s*/.test(amountText);
-  const trailingCurrency = /\s*[€$£¥]$/.test(amountText);
+  const leadingCurrency = /^[€$£¥]\s*/.test(amountText) || /^EUR\s+/i.test(amountText);
+  const trailingCurrency = /\s*[€$£¥]$/.test(amountText) || /\s+EUR$/i.test(amountText);
   if (leadingCurrency && trailingCurrency) return 0;
-  if (leadingCurrency) amountText = amountText.replace(/^[€$£¥]\s*/, "");
-  else if (trailingCurrency) amountText = amountText.replace(/\s*[€$£¥]$/, "");
+  if (leadingCurrency) amountText = amountText.replace(/^(?:[€$£¥]\s*|EUR\s+)/i, "");
+  else if (trailingCurrency) amountText = amountText.replace(/(?:\s*[€$£¥]|\s+EUR)$/i, "");
   if (/[€$£¥\s]/.test(amountText)) return 0;
 
   const italianGrouped = /^-?[1-9]\d{0,2}(?:\.\d{3})+(?:,\d{1,2})?$/;
