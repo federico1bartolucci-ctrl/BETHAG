@@ -24,6 +24,7 @@ BEGIN
 END
 $roles$;
 DROP FUNCTION IF EXISTS public.test_pause_first_sal_insert() CASCADE;
+DROP FUNCTION IF EXISTS public.test_pause_first_sal_payment() CASCADE;
 
 DROP TABLE IF EXISTS public.condominium_work_events CASCADE;
 DROP TABLE IF EXISTS public.condominium_work_progress CASCADE;
