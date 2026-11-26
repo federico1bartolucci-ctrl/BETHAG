@@ -12,6 +12,7 @@ import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupComm
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
 import { getBackupRestoreBackendAvailability } from "./lib/backupRestoreBackendAvailability.mjs";
+import { commitBackupFrontendStateAfterBackendRestore } from "./lib/backupRestoreFrontendCommit.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3376,47 +3377,6 @@ function App() {
       if (!firstConfirm) return;
       if (!window.confirm("Conferma definitiva: i record presenti nel backup verranno aggiornati nel workspace corrente. I dati non presenti nel backup non verranno eliminati.")) return;
 
-      const apply = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T>>) => {
-        if (state[key] !== undefined) setter(state[key] as T);
-      };
-      apply("condominiums", setCondominiums);
-      apply("condominiumMembers", setCondominiumMembers);
-      apply("condominiumUnits", setCondominiumUnits);
-      apply("condominiumRequests", setCondominiumRequests);
-      apply("deadlines", setDeadlines);
-      apply("documents", setDocuments);
-      apply("assemblies", setAssemblies);
-      apply("suppliers", setSuppliers);
-      apply("activities", setActivities);
-      apply("condominiumWorks", setCondominiumWorks);
-      apply("communications", setCommunications);
-      apply("portalMembers", setPortalMembers);
-      apply("collaborators", setCollaborators);
-      apply("subscription", setSubscription);
-      if (state.profile) setProfile(state.profile as AdminProfile);
-
-      Object.entries(state).forEach(([key, value]) => {
-        const storageKey = (KEYS as Record<string,string>)[key];
-        if (storageKey && value !== undefined && key !== "profile") {
-          localStorage.setItem(storageKey, JSON.stringify(value));
-        }
-      });
-      if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
-
-      // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
-      // escluse le chiavi di sessione/autenticazione. Questo completa il
-      // ripristino delle preferenze e dello stato locale non duplicato nel
-      // frontendState.
-      if (backup.localStorageData && typeof backup.localStorageData === "object") {
-        const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
-        const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
-        restoreBackupLocalStorageData(
-          backup.localStorageData,
-          allowedRestoreKeys,
-          localStorage
-        );
-      }
-
       const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;
       const errors: string[] = [];
       const skippedSecurityRows: string[] = [];
@@ -3598,6 +3558,51 @@ function App() {
           }
         }
       }
+      const frontendCommit = commitBackupFrontendStateAfterBackendRestore(errors, () => {
+        const apply = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T>>) => {
+          if (state[key] !== undefined) setter(state[key] as T);
+        };
+        apply("condominiums", setCondominiums);
+        apply("condominiumMembers", setCondominiumMembers);
+        apply("condominiumUnits", setCondominiumUnits);
+        apply("condominiumRequests", setCondominiumRequests);
+        apply("deadlines", setDeadlines);
+        apply("documents", setDocuments);
+        apply("assemblies", setAssemblies);
+        apply("suppliers", setSuppliers);
+        apply("activities", setActivities);
+        apply("condominiumWorks", setCondominiumWorks);
+        apply("communications", setCommunications);
+        apply("portalMembers", setPortalMembers);
+        apply("collaborators", setCollaborators);
+        apply("subscription", setSubscription);
+        if (state.profile) setProfile(state.profile as AdminProfile);
+
+        Object.entries(state).forEach(([key, value]) => {
+          const storageKey = (KEYS as Record<string,string>)[key];
+          if (storageKey && value !== undefined && key !== "profile") {
+            localStorage.setItem(storageKey, JSON.stringify(value));
+          }
+        });
+        if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
+
+        // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
+        // escluse le chiavi di sessione/autenticazione. Questo completa il
+        // ripristino delle preferenze e dello stato locale non duplicato nel
+        // frontendState.
+        if (backup.localStorageData && typeof backup.localStorageData === "object") {
+          const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
+          const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
+          restoreBackupLocalStorageData(
+            backup.localStorageData,
+            allowedRestoreKeys,
+            localStorage
+          );
+        }
+      });
+      const frontendCommitNotice = frontendCommit.committed
+        ? ""
+        : " Lo stato React e localStorage del backup non è stato applicato perché una o più operazioni backend non sono state completate. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino.";
       const securitySkipSummary = skippedSecurityRows.length
         ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione."
         : "";
@@ -3611,7 +3616,7 @@ function App() {
         const sourceErrorSummary = sourceReadErrorSummary
           ? "Il backup sorgente era incompleto; alcune tabelle non sono state esportate: " + sourceReadErrorSummary + ". "
           : "";
-        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + securitySkipSummary + backendModeNotice);
+        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + securitySkipSummary + backendModeNotice + frontendCommitNotice);
       } else if (backendAvailability.localOnlyNotice) {
         alert(backendAvailability.localOnlyNotice + securitySkipSummary);
       } else {
