@@ -194,6 +194,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_function_sequence_acl_test
           PGPASSWORD: postgres
 
+      - name: Rehearse global postgres function EXECUTE default repair on isolated PostgreSQL 17
+        run: createdb --host=localhost --port=5432 --username=postgres bethag_global_function_acl_test && node scripts/test-postgres-global-function-default-acl.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_global_function_acl_test
+          PGPASSWORD: postgres
       - name: Rehearse forward-only workspace member profile column on isolated PostgreSQL
         run: createdb --host=localhost --port=5432 --username=postgres bethag_workspace_member_data_test && node scripts/test-postgres-workspace-member-data-column.mjs
         env:
