@@ -150,8 +150,13 @@ BEGIN
     RETURN false;
   END IF;
 
-  IF v_locked_until IS NOT NULL AND v_locked_until > pg_catalog.now() THEN
-    RETURN false;
+  IF v_locked_until IS NOT NULL THEN
+    IF v_locked_until > pg_catalog.now() THEN
+      RETURN false;
+    END IF;
+
+    -- An expired lock starts a fresh five-attempt window.
+    v_failed_attempts := 0;
   END IF;
 
   v_candidate := pg_catalog.btrim(p_code);
