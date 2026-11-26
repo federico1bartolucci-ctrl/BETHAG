@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -1765,7 +1766,7 @@ function AccountingPage({
       setError("Inserisci un importo di pagamento valido per la rata selezionata."); return;
     }
     if (!hasCentPrecision(paymentAmount)) { setError("L'importo del pagamento deve essere espresso in centesimi."); return; }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(paymentForm.payment_date) || !Number.isFinite(Date.parse(paymentForm.payment_date)) || new Date(paymentForm.payment_date).toISOString().slice(0,10)!==paymentForm.payment_date) { setError("Inserisci una data di pagamento valida."); return; }
+    if (!isValidISOCalendarDate(paymentForm.payment_date)) { setError("Inserisci una data di pagamento valida."); return; }
     const residual=Math.max(0,Number(paymentInstallment.amount || 0)-Number(paymentInstallment.paid_amount || 0));
     if(paymentAmount > residual + 0.005){
       setError("Il pagamento supera il residuo della rata di " + money(residual) + ". Registrare un importo non superiore al residuo; un'eventuale eccedenza va gestita separatamente come credito.");
