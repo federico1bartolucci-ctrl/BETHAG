@@ -123,6 +123,7 @@ try {
   );
   assert.equal(await verify("original-code"), true);
   assert.equal(await verify("attacker-reset"), false);
+  assert.equal(await verify("original-code"), true, "A successful verification resets the failed-attempt counter.");
 
   // Five failed attempts lock the verifier for 15 minutes.
   for (let attempt = 0; attempt < 4; attempt += 1) {
