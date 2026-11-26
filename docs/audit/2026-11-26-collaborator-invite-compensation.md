@@ -1,38 +1,40 @@
-# Collaborator invitation compensation — 26 November 2026
+# Collaborator invitation partial-state handling — 26 November 2026
 
 ## Finding reproduced
 
-The collaborator invitation Edge Function sends an Auth invitation before creating the profile and `workspace_members` link. The pre-existing compensation ran only for the workspace legacy-ID unique-index conflict. A different database failure during profile creation or membership upsert reached the generic catch, which returned HTTP 500 without removing the newly invited Auth user or reporting that the invitation email had already been sent.
+The collaborator invitation Edge Function sends an Auth invitation before creating the profile and workspace membership. A later profile or membership write can fail after the Auth email has been sent. The previous generic catch returned HTTP 500 without exposing whether the invitation was sent or whether the membership was linked.
 
-The runtime regression reproduces a generic PostgreSQL check-constraint failure after the Auth user and profile exist. Before compensation, both rows remain while the workspace membership is absent.
+The existing legacy-ID unique-conflict path also attempted to delete the newly invited Auth user and its cascaded profile.
+
+## Safety finding
+
+Auth users and `profiles` are global identities, while `workspace_members` is scoped by workspace. Deleting an Auth user from one failed workspace invitation can cascade its profile and memberships in other workspaces. The Edge Function cannot safely infer global ownership or serialize every other workspace-linking path before deleting that identity.
+
+The correction therefore does not perform destructive Auth/profile cleanup from either failure path. It reports the partial state and requires reconciliation. This deliberately prefers preserving a shared identity over deleting data that may belong to another workspace.
 
 ## Correction
 
-- Track the invitation, profile-creation and workspace-link stages outside the request's try block.
-- On a failure before the membership is linked, remove only the Auth user invited by this request; its profile is removed by the Auth-user FK cascade.
-- If an existing Auth user had a profile created by this request, remove only that newly created profile.
-- Never delete an existing Auth user or a user whose workspace membership was already linked.
-- Report `failureStage`, `invitationSent`, `workspaceMemberLinked`, `cleanupAttempted`, `cleanupFailed` and `invitationAccountRemoved` in the failure response.
-- If the Auth invitation was sent but its user ID is unavailable, fail closed and report that compensation could not be completed.
-
-The existing legacy-ID conflict path uses the same compensation helper, retaining its HTTP 409 behavior.
+- Track the invitation, profile creation and workspace-link stages.
+- Return `failureStage`, `invitationSent`, `profileCreated`, `workspaceMemberLinked` and `requiresReconciliation`.
+- Use stable error code `COLLABORATOR_INVITE_PARTIAL_FAILURE` for failures after partial side effects.
+- Preserve the existing HTTP 409 code for the workspace legacy-ID conflict and explicitly tell the administrator that the invitation email may already have been sent.
+- Do not delete Auth users or global profiles from these failure paths.
 
 ## Regression
 
-The existing `scripts/test-collaborator-invite-legacy-id-uniqueness.mjs` is already part of `npm test`. It now additionally:
+The existing `scripts/test-collaborator-invite-legacy-id-uniqueness.mjs` is already part of `npm test`. It now:
+- reproduces the canonical unique-index conflict after Auth/profile creation;
+- reproduces a separate non-unique PostgreSQL check-constraint failure after Auth/profile creation;
+- verifies both cases preserve the global Auth user and profile;
+- verifies the response state requires reconciliation;
+- verifies failures after a linked membership are also reported as partial;
+- verifies no-partial-side-effect failures do not request reconciliation;
+- verifies neither failure path contains destructive Auth/profile deletion.
 
-- reproduces a non-unique membership-write failure after Auth/profile creation;
-- verifies the orphan Auth user and profile exist before compensation;
-- verifies successful compensation removes the new Auth user and cascaded profile;
-- verifies cleanup errors are surfaced;
-- verifies no destructive cleanup occurs after the workspace membership is linked;
-- verifies a missing Auth user ID fails closed;
-- verifies the Edge Function wires compensation into the generic catch.
-
-The tests use PGlite and mocked Auth operations. No real invitation is sent.
+The tests use PGlite and pure runtime helpers. No real invitation is sent.
 
 ## Dependency and safety
 
-This PR is stacked on #579 because both changes touch the collaborator invitation Edge Function. The parent PR provides the modern Supabase secret-key transport fix.
+This PR is stacked on #579 because both changes touch the collaborator invitation Edge Function. PR #579 supplies the modern Supabase secret-key transport fix.
 
 No QA or Production access/writes, merge, deployment, reset or manual workflow dispatch.

@@ -1,10 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { findAuthUserByEmail } from "../_shared/auth-user-directory.js";
-import {
-  cleanupUnlinkedCollaboratorInvite,
-  isWorkspaceMemberLegacyIdConflict,
-} from "../_shared/workspace-member-legacy-id-conflict.js";
+import { isWorkspaceMemberLegacyIdConflict } from "../_shared/workspace-member-legacy-id-conflict.js";
+import { buildCollaboratorInviteFailureState } from "../_shared/collaborator-invite-failure-state.js";
 import { createSupabaseAdminClientOptions } from "../_shared/supabase-admin-client-options.js";
 
 const corsHeaders = {
@@ -34,8 +32,6 @@ function getNamedKey(jsonName: string, legacyName: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  let adminClient: ReturnType<typeof createClient<any>> | null = null;
-  let targetUserId: string | null = null;
   let invited = false;
   let profileCreated = false;
   let workspaceMemberLinked = false;
@@ -62,7 +58,7 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    adminClient = createClient(supabaseUrl, secretKey, createSupabaseAdminClientOptions(secretKey));
+    const adminClient = createClient(supabaseUrl, secretKey, createSupabaseAdminClientOptions(secretKey));
 
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return json({ error: "Utente non autenticato." }, 401);
@@ -123,7 +119,7 @@ Deno.serve(async (req: Request) => {
       }, 409);
     }
 
-    targetUserId = existing?.user_id || null;
+    let targetUserId = existing?.user_id || null;
 
     if (targetUserId) {
       const { data: existingUserData, error: existingUserError } =
@@ -203,27 +199,21 @@ Deno.serve(async (req: Request) => {
 
     if (upsertError) {
       if (isWorkspaceMemberLegacyIdConflict(upsertError)) {
-        const cleanup = await cleanupUnlinkedCollaboratorInvite(
-          adminClient,
-          targetUserId,
-          { invited, profileCreated, workspaceMemberLinked: false },
-        );
         console.error("Collaborator invitation lost a legacy identity race", {
           workspaceId,
           legacyId,
           invitationSent: invited,
-          cleanupFailed: cleanup.failed,
+          profileCreated,
         });
         return json({
-          error: cleanup.failed
-            ? "Il codice collaboratore è stato assegnato contemporaneamente a un altro account. La pulizia dell'invito non è riuscita: verifica l'account prima di riprovare."
-            : "Il codice collaboratore è già stato assegnato a un altro account. Nessun collegamento duplicato è stato creato; verifica l'anagrafica prima di riprovare.",
+          error: "Il codice collaboratore è già stato assegnato a un altro account. L'invito e-mail potrebbe essere già stato inviato; nessun collegamento duplicato è stato creato. Verifica l'account prima di riprovare.",
           code: "COLLABORATOR_LEGACY_ID_ALREADY_ASSIGNED",
-          invitationSent: invited,
-          workspaceMemberLinked: false,
-          cleanupAttempted: cleanup.action === "delete_auth_user" || cleanup.action === "delete_created_profile",
-          cleanupFailed: cleanup.failed,
-          invitationAccountRemoved: invited && cleanup.action === "delete_auth_user" && !cleanup.failed,
+          ...buildCollaboratorInviteFailureState({
+            failureStage,
+            invited,
+            profileCreated,
+            workspaceMemberLinked: false,
+          }),
         }, 409);
       }
       throw upsertError;
@@ -244,24 +234,18 @@ Deno.serve(async (req: Request) => {
     return json({ success: true, userId: targetUserId, invited });
   } catch (error) {
     console.error("bethag-invite-collaborator", error);
-    let cleanup = { failed: false, action: "none" };
-    if (!workspaceMemberLinked && (invited || profileCreated)) {
-      cleanup = adminClient
-        ? await cleanupUnlinkedCollaboratorInvite(adminClient, targetUserId, {
-            invited,
-            profileCreated,
-            workspaceMemberLinked,
-          })
-        : { failed: true, action: "admin_client_unavailable" };
-    }
+    const failureState = buildCollaboratorInviteFailureState({
+      failureStage,
+      invited,
+      profileCreated,
+      workspaceMemberLinked,
+    });
     return json({
       error: error instanceof Error ? error.message : "Invito collaboratore non riuscito.",
-      failureStage,
-      invitationSent: invited,
-      workspaceMemberLinked,
-      cleanupAttempted: cleanup.action === "delete_auth_user" || cleanup.action === "delete_created_profile",
-      cleanupFailed: cleanup.failed,
-      invitationAccountRemoved: invited && cleanup.action === "delete_auth_user" && !cleanup.failed,
+      code: failureState.requiresReconciliation
+        ? "COLLABORATOR_INVITE_PARTIAL_FAILURE"
+        : "COLLABORATOR_INVITE_FAILED",
+      ...failureState,
     }, 500);
   }
 });
