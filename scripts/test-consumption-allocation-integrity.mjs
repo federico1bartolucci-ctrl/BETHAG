@@ -38,7 +38,7 @@ const ids = {
 
 const db = new PGlite();
 try {
-  await db.exec(\`
+  await db.exec(`
     CREATE SCHEMA private;
     CREATE OR REPLACE FUNCTION private.can_manage_workspace_module(p_workspace_id uuid, p_module text)
     RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT true $$;
@@ -66,7 +66,7 @@ try {
       amount numeric(14,2) NOT NULL, paid_amount numeric(14,2) NOT NULL DEFAULT 0,
       due_date date, status text NOT NULL, notes text NOT NULL DEFAULT ''
     );
-  \`);
+  `);
 
   // Reproduce the defect with the original baseline function.
   await db.exec(baselineFunction);
