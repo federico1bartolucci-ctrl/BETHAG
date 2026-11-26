@@ -65,7 +65,8 @@ try {
       ('00000000-0000-0000-0000-000000000004', 'In elaborazione'),
       ('00000000-0000-0000-0000-000000000006', 'In elaborazione'),
       ('00000000-0000-0000-0000-000000000008', 'In elaborazione'),
-      ('00000000-0000-0000-0000-000000000010', 'In elaborazione');
+      ('00000000-0000-0000-0000-000000000010', 'In elaborazione'),
+      ('00000000-0000-0000-0000-000000000012', 'Consegnata');
     INSERT INTO public.communication_recipients(
       id, communication_id, email, status, provider_message_id, updated_at
     ) VALUES
@@ -80,7 +81,11 @@ try {
        'newfailed@example.it', 'queued', 'msg-failed-new', now());,
       ('00000000-0000-0000-0000-000000000011',
        '00000000-0000-0000-0000-000000000010',
-       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now());
+       'newsuppressed@example.it', 'queued', 'msg-suppressed-new', now()),
+      ('00000000-0000-0000-0000-000000000013',
+       '00000000-0000-0000-0000-000000000012',
+       'alreadydelivered@example.it', 'delivered', 'msg-suppressed-after-delivery',
+       '2026-11-26T08:10:00Z');
   `);
 
   // Run the actual baseline function first and prove that a delayed delivered event regresses a complaint.
@@ -189,6 +194,17 @@ try {
     "SELECT email_status FROM public.communications WHERE id = '00000000-0000-0000-0000-000000000006'",
   );
   assert.equal(repairedSuppressedAggregate.rows[0].email_status, "Errore");
+
+  // A previously delivered recipient must never be downgraded by repairing
+  // metadata left by a later/out-of-order suppressed event.
+  const preservedDelivered = await recipient("00000000-0000-0000-0000-000000000013");
+  assert.equal(preservedDelivered.status, "delivered");
+  assert.equal(preservedDelivered.provider_status_event_id, "evt-suppressed-after-delivery");
+  assert.equal(Date.parse(preservedDelivered.provider_status_event_at), Date.parse("2026-11-26T08:10:00Z"));
+  const preservedDeliveredAggregate = await db.query(
+    "SELECT email_status FROM public.communications WHERE id = '00000000-0000-0000-0000-000000000012'",
+  );
+  assert.equal(preservedDeliveredAggregate.rows[0].email_status, "Consegnata");
 
   // New terminal failure events must be applied, and later-arriving older or
   // equal-time success events must not downgrade the failed recipient.
