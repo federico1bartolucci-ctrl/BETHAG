@@ -181,6 +181,24 @@ const initialRows = makeRows();
   assert.ok(paged.calls.every((call) => call.selectOptions?.count === "exact"), "every page must request an exact remaining-row count");
 }
 
+// More than one page of NULL period_end values must use the ID-only cursor.
+{
+  const nullRows = Array.from({ length: 501 }, (_, index) => ({
+    id: id(index + 1),
+    workspace_id: workspaceId,
+    condominium_id: "condo-null",
+    fiscal_year_id: "fy-null",
+    service_type: "Acqua",
+    period_end: null,
+  }));
+  const nullPaged = makeClient(nullRows);
+  const result = await loadConsumptionReadings(nullPaged.client, workspaceId);
+  assert.equal(result.data.length, 501);
+  assert.equal(nullPaged.calls.length, 2);
+  assert.equal(nullPaged.calls[1].cursor.period_end, null, "NULL cursor must use the period_end IS NULL branch");
+  assert.equal(nullPaged.calls[1].cursor.id, id(2), "NULL cursor must continue with the UUID tie-break");
+}
+
 // A lower server row cap must not be mistaken for a complete short page.
 {
   const capped = makeClient(initialRows, { rowCap: 200 });
