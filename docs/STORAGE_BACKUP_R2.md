@@ -1,6 +1,6 @@
 # BETHAG Storage backup — Cloudflare R2
 
-Status: **Cloudflare resources and GitHub Environment configured; first backup attempts failed at R2 S3 authentication; first successful snapshot pending**.
+Status: **Storage backup workflow completed a successful manifest write/read verification on 26 November 2026. Source bucket inventory was empty (0 objects). Guarded restore utility added; isolated restore drill remains pending.**
 
 ## Safety boundary
 
@@ -13,16 +13,17 @@ Status: **Cloudflare resources and GitHub Environment configured; first backup a
 
 ## Backup design
 
-The workflow runs every six hours, can be manually dispatched from `main`, and is triggered after reviewed changes to the backup script, paginator helper, or workflow reach `main`. It is serialized and uses a protected GitHub Environment named `storage-backup-production`.
+The scheduled workflow runs every six hours and can also be manually dispatched from `main`. It is serialized and uses a protected GitHub Environment named `storage-backup-production`.
 
 The script:
 1. Reads the Supabase bucket through its S3-compatible endpoint.
-   - Enumerates every `ListObjectsV2` page with an explicit 1,000-object page size; missing, repeated or cyclic continuation tokens, malformed page metadata and duplicate keys abort the run rather than allowing a partial inventory.
 2. Requires a Cloudflare API read token and verifies an enabled R2 Bucket Lock rule for prefix `backups/` with at least 2,592,000 seconds (30 days) of retention. If this gate is absent, it fails before writing any object.
 3. Downloads each source object, computes SHA-256, and checks the downloaded byte count against the source listing.
 4. Stores content-addressed blobs under `backups/objects/<sha256>/<generation>`. A recent copy is reused; a new generation is uploaded after 25 days so objects referenced by retained snapshots are renewed before the 30-day retention window expires.
 5. Writes a timestamped JSON manifest under `backups/snapshots/`, preserving original object keys, sizes, hashes, timestamps, content headers and user metadata.
 6. Reads the manifest back from R2 and compares the bytes to verify the write.
+
+Every source, destination and source-consistency inventory uses the shared `scripts/storage-backup-list-all.mjs` paginator with an explicit 1,000-object page size. A truncated response without a valid continuation token, a missing or repeated/cyclic token, malformed page metadata or contents, or duplicate object keys aborts the run. A partial listing is never accepted as a complete snapshot. The workflow's reviewed-code path filter includes this helper, so helper-only changes trigger the backup validation workflow after integration.
 
 No source object is deleted or changed. The script does not call any delete API.
 
@@ -64,16 +65,40 @@ Published R2 Standard rates (checked 25 November 2026): $0.015/GB-month; Class A
 
 The current Production and QA inventory query returned zero objects in `bethag-documents`; this means the initial backup is expected to contain an empty manifest, but the workflow must still validate the source and destination when configured.
 
-## Restore outline
+## Guarded restore utility
 
-To restore, select a manifest by timestamp, download each referenced blob, verify SHA-256 and size, then upload the bytes to the original object keys in a separately identified recovery Supabase project. Recreate or validate the bucket metadata and RLS policies separately. Never run a restore into Production or shared QA as part of routine backup validation. A future restore utility and isolated restore drill are required before marking Storage disaster recovery fully tested.
+scripts/restore-supabase-storage-from-r2.mjs implements a fail-closed restore flow.
+
+Safety properties:
+- Dry-run is the only non-writing mode. The command requires an explicit --dry-run or --apply choice.
+- The manifest must be under backups/snapshots/ and match bethag-storage-backup/v1.
+- Every referenced blob is downloaded from R2 and its byte length and SHA-256 are verified before any target write.
+- The target bucket must be explicitly supplied, must differ from the R2 backup bucket, and must be empty. Existing objects cause an abort; the utility never deletes or overwrites.
+- --apply additionally requires RESTORE_CONFIRM_TARGET to equal the exact target bucket name.
+- The target uses a separate set of SUPABASE_RESTORE_S3_* credentials and endpoint. Its Supabase project host must differ from the original source project's host; the original bethag-documents bucket is explicitly forbidden.
+- The tool does not create buckets, alter policies, restore database rows, or change Production/QA configuration.
+
+Dry-run example (requires only the existing R2 backup secrets; no Supabase recovery project or recovery credentials are contacted):
+
+node scripts/restore-supabase-storage-from-r2.mjs --dry-run --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
+
+Guarded apply example, only after a separate recovery bucket has been created and reviewed:
+
+RESTORE_CONFIRM_TARGET=<empty-recovery-bucket> node scripts/restore-supabase-storage-from-r2.mjs --apply --manifest-key backups/snapshots/<snapshot-id>.json --target-bucket <empty-recovery-bucket>
+
+Never use the original Production project, bethag-documents, or shared QA as the target for a restore drill. Configure SUPABASE_RESTORE_S3_ENDPOINT, SUPABASE_RESTORE_S3_REGION, SUPABASE_RESTORE_S3_ACCESS_KEY_ID, and SUPABASE_RESTORE_S3_SECRET_ACCESS_KEY only for a separately provisioned recovery project. Recreate or validate bucket metadata and RLS policies separately. A successful dry-run proves manifest structure and blob integrity only. It deliberately does not contact or verify the target bucket; target emptiness is checked only in --apply mode immediately before writes. A dry-run does not prove that an upload or application-level recovery has succeeded.
+
+The first successful snapshot on 26 November 2026 contains zero objects because the Production bucket bethag-documents was verified empty. Consequently, the current manifest can exercise validation and empty-target preflight only; it cannot demonstrate restoration of real file bytes. A representative non-empty isolated drill remains required before marking Storage disaster recovery fully tested.
 
 ## Operational status
 
-- Repository implementation: R2 jurisdiction endpoint, S3 addressing and lifecycle preflight are merged; fail-closed inventory pagination is proposed in a separate draft. First successful snapshot remains pending.
-- Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
+- Repository implementation: fail-closed pagination is proposed in PR #495; the rebased current-main candidate must pass exact-head CI before integration.
+- The successful 26 November empty snapshot was produced by the pre-pagination main version. No backup was executed from the PR #495 branch.
+- Cloudflare bucket bethag-storage-backups: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
-- GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
-- First backup: attempted on 26 November 2026; failed at R2 S3 bucket access with HTTP 403. No successful snapshot or manifest has been confirmed.
-- Restore utility and isolated restore drill: NOT RUN.
+- GitHub Environment storage-backup-production: configured; nine required secrets and STORAGE_BACKUP_ENABLED=true are present.
+- First successful backup: 26 November 2026; manifest write/read verification passed. source_object_count=0, blobs_uploaded=0, blobs_reused=0 because the source bucket was empty.
+- Guarded restore utility: implemented with dry-run default, SHA-256/size verification, empty-target requirement, and explicit confirmation gate for writes.
+- Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
+- Non-empty isolated restore drill: NOT RUN; requires a separately provisioned recovery project and four dedicated SUPABASE_RESTORE_S3_* secrets.
 - Production and QA data/configuration: unchanged.
