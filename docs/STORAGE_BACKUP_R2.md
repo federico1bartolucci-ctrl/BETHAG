@@ -23,6 +23,8 @@ The script:
 5. Writes a timestamped JSON manifest under `backups/snapshots/`, preserving original object keys, sizes, hashes, timestamps, content headers and user metadata.
 6. Reads the manifest back from R2 and compares the bytes to verify the write.
 
+Every source, destination and source-consistency inventory uses the shared `scripts/storage-backup-list-all.mjs` paginator with an explicit 1,000-object page size. A truncated response without a valid continuation token, a missing or repeated/cyclic token, malformed page metadata or contents, or duplicate object keys aborts the run. A partial listing is never accepted as a complete snapshot. The workflow's reviewed-code path filter includes this helper, so helper-only changes trigger the backup validation workflow after integration.
+
 No source object is deleted or changed. The script does not call any delete API.
 
 ## Retention configuration required in Cloudflare
@@ -101,6 +103,8 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 ## Operational status
 
 - Repository implementation: restore-resume candidate reconstructed on current main with the folder-marker preflight from PR #511; merge only after exact-head CI passes.
+- Repository implementation: fail-closed pagination candidate reconstructed on current `main`; exact-head CI is required before integration.
+- The successful 26 November empty snapshot was produced by the pre-pagination main version. No backup was executed from this candidate.
 - Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
 - GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
