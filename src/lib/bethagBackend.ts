@@ -2420,16 +2420,18 @@ export async function cancelCondominiumCreationIntake(
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("condominium_creation_intakes")
       .update({
         status: "Annullato",
         updated_at: new Date().toISOString(),
       })
       .eq("workspace_id", workspaceId)
-      .eq("id", intakeId);
+      .eq("id", intakeId)
+      .select("id");
 
     if (error) throw error;
+    if (!data?.length) throw new Error("Pratica di creazione condominio non trovata o già annullata.");
   });
 }
 
