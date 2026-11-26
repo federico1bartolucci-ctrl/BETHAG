@@ -2372,7 +2372,11 @@ function App() {
       };
     });
   const [serverWorkspacePlan, setServerWorkspacePlan] = useState<PlanId>("free");
-  const serverPlanAvailable = Boolean(supabaseConfigured && profile.workspaceId);
+  const [serverWorkspacePlanId, setServerWorkspacePlanId] = useState<string | null>(null);
+  const workspaceAvailable = Boolean(profile.workspaceId);
+  const serverPlanAvailable = Boolean(
+    supabaseConfigured && workspaceAvailable && serverWorkspacePlanId === profile.workspaceId
+  );
   const displayedWorkspacePlan = serverPlanAvailable ? serverWorkspacePlan : subscription.plan;
   const getEntitlementSubscription = (addon?: AddonId) =>
     getAuthoritativeEntitlementSubscription(
@@ -2380,11 +2384,12 @@ function App() {
       addon,
       serverWorkspacePlan,
       supabaseConfigured,
-      Boolean(profile.workspaceId),
+      serverPlanAvailable,
     );
 
   useEffect(() => {
     setServerWorkspacePlan("free");
+    setServerWorkspacePlanId(null);
     if (!supabaseConfigured || !profile.workspaceId) return;
     let cancelled = false;
     void applyWorkspacePlanSnapshot({
@@ -2392,7 +2397,10 @@ function App() {
       isCurrent: () => !cancelled,
       setSubscription,
     }).then((result) => {
-      if (!cancelled && result.applied) setServerWorkspacePlan(result.plan);
+      if (!cancelled && result.applied) {
+        setServerWorkspacePlan(result.plan);
+        setServerWorkspacePlanId(profile.workspaceId);
+      }
     }).catch((error) => {
       console.warn("Impossibile caricare il piano del workspace:", error);
     });
@@ -6772,7 +6780,10 @@ function App() {
           setSubscription,
         });
         if (cancelled) return;
-        if (planSnapshot.applied) setServerWorkspacePlan(planSnapshot.plan);
+        if (planSnapshot.applied) {
+          setServerWorkspacePlan(planSnapshot.plan);
+          setServerWorkspacePlanId(workspaceId);
+        }
 
         const backend = await loadBackendState(workspaceId);
         if (cancelled) return;
