@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
 import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
 import { formatBackupReadErrors } from "./lib/backupRestoreSourceErrors.mjs";
@@ -3124,18 +3125,15 @@ function App() {
 
     let cancelled = false;
     let authInitializationComplete = false;
+    const authSessionRevision = createAuthSessionRevision();
 
     const applySupabaseSession = async (
       session: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } } | null,
-      source: "initialization" | "event" = "event"
+      revision: number
     ) => {
-      if (cancelled) return;
+      if (cancelled || !authSessionRevision.isCurrent(revision)) return;
 
       if (!session?.user) {
-        // Ignore an early INITIAL_SESSION null event until the explicit
-        // getSession() hydration has completed. On refresh Safari/Supabase can
-        // briefly emit the event before the persisted session is available.
-        if (source === "event" && !authInitializationComplete) return;
 
 
         setSessionRole(null);
@@ -3168,6 +3166,7 @@ function App() {
               p_fiscal_code: pendingRegistration.fiscalCode || null,
               p_condominium_name: pendingRegistration.condominiumName || null,
             });
+            if (cancelled || !authSessionRevision.isCurrent(revision)) return;
             if (completionError) throw completionError;
             sessionStorage.removeItem("bethag-pending-resident-registration");
             if (completion?.status === "pending") {
@@ -3176,6 +3175,7 @@ function App() {
               return;
             }
           } catch (registrationError) {
+            if (cancelled || !authSessionRevision.isCurrent(revision)) return;
             console.error("BETHAG resident registration completion failed", registrationError);
             await supabase.auth.signOut();
             const registrationErrorMessage = registrationError instanceof Error ? registrationError.message : "";
@@ -3197,7 +3197,8 @@ function App() {
           normalizedEmail
         );
 
-        if (!access || cancelled) {
+        if (cancelled || !authSessionRevision.isCurrent(revision)) return;
+        if (!access) {
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3221,7 +3222,7 @@ function App() {
         }));
       } catch (error) {
         console.error("BETHAG auth session hydration failed", error);
-        if (!cancelled) {
+        if (!cancelled && authSessionRevision.isCurrent(revision)) {
           setSessionRole(null);
           setSessionEmail("");
           setServerCollaboratorPermissions([]);
@@ -3237,14 +3238,15 @@ function App() {
 
 
     const initializeAuth = async () => {
+      const revision = authSessionRevision.begin();
       try {
         const { data } = await supabase.auth.getSession();
-        await applySupabaseSession(data.session, "initialization");
+        await applySupabaseSession(data.session, revision);
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       } catch (error) {
         console.error("BETHAG auth session initialization failed", error);
-        await applySupabaseSession(null, "initialization");
+        await applySupabaseSession(null, revision);
         authInitializationComplete = true;
         if (!cancelled) setAuthHydrated(true);
       }
@@ -3252,9 +3254,12 @@ function App() {
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore only the initial empty snapshot; a real SIGNED_OUT invalidates pending hydration.
+      if (event === "INITIAL_SESSION" && !session?.user && !authInitializationComplete) return;
+      const revision = authSessionRevision.begin();
       window.setTimeout(() => {
-        void applySupabaseSession(session, "event");
+        void applySupabaseSession(session, revision);
       }, 0);
     });
 
