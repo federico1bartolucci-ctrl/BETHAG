@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
 import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
@@ -1539,12 +1540,16 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
     const { data: work, error: workError } = await supabase.from("condominium_works").select("id,title,condominium_id,estimated_amount,approved_amount,actual_amount").eq("workspace_id", workspaceId).eq("id", workId).maybeSingle();
     if (workError) throw workError;
     if (!work) throw new Error("Lavoro non trovato.");
-    const { data: links, error: linksError } = await supabase.from("condominium_work_documents").select("document_id,title").eq("workspace_id", workspaceId).eq("work_id", workId);
-    if (linksError) throw linksError;
-    const documentLegacyIds = (links ?? []).map((x: any) => Number(x.document_id)).filter((id: number) => Number.isFinite(id));
-    const { data: docs, error: docsError } = documentLegacyIds.length ? await supabase.from("documents").select("id,legacy_id,title,category,data").eq("workspace_id", workspaceId).in("legacy_id", documentLegacyIds) : { data: [], error: null } as any;
-    if (docsError) throw docsError;
-    const invoices = (docs ?? []).map((doc: any) => {
+    const links = await loadCondominiumWorkReconciliationRows(supabase, "condominium_work_documents", workspaceId, {
+      workId, select: "document_id,title",
+    });
+    const documentLegacyIds = links.map((x: any) => Number(x.document_id)).filter((id: number) => Number.isFinite(id));
+    const docs = documentLegacyIds.length
+      ? await loadCondominiumWorkReconciliationRows(supabase, "documents", workspaceId, {
+          legacyIds: documentLegacyIds, select: "id,legacy_id,title,category,data",
+        })
+      : [];
+    const invoices = docs.map((doc: any) => {
       const d = extractBethagDocumentData(doc.data);
       const amount = parseBethagAmount(d.invoiceAmount ?? d.amount ?? d.totalAmount ?? d.importo ?? d.importoTotale ?? d.expenseAmount);
       const type = String(doc.category ?? "").toLowerCase() + " " + String(d.documentType ?? d.aiDocumentType ?? "").toLowerCase();
@@ -1552,14 +1557,18 @@ export async function reconcileCondominiumWork(workspaceId: string, workId: stri
       const isInvoice = type.includes("fattur") || confirmed;
       return isInvoice ? { id: doc.id, legacyId: doc.legacy_id, title: doc.title, amount } : null;
     }).filter(Boolean);
-    const { data: progress, error: progressError } = await supabase.from("condominium_work_progress").select("progress_no,title,amount,paid_amount,ledger_entry_id").eq("workspace_id", workspaceId).eq("work_id", workId).order("progress_no");
-    if (progressError) throw progressError;
-    const { data: ledger, error: ledgerError } = await supabase.from("condominium_ledger_entries").select("id,amount,payment_status,description,data,document_id").eq("workspace_id", workspaceId).eq("condominium_id", work.condominium_id).eq("direction", "Uscita");
-    if (ledgerError) throw ledgerError;
+    const progress = await loadCondominiumWorkReconciliationRows(supabase, "condominium_work_progress", workspaceId, {
+      workId, select: "progress_no,title,amount,paid_amount,ledger_entry_id",
+    });
+    progress.sort((a: any, b: any) => Number(a.progress_no || 0) - Number(b.progress_no || 0));
+    const ledger = await loadCondominiumWorkReconciliationRows(supabase, "condominium_ledger_entries", workspaceId, {
+      condominiumId: work.condominium_id, direction: "Uscita",
+      select: "id,amount,payment_status,description,data,document_id",
+    });
     const invoiceDocumentIds = new Set((docs ?? []).filter((doc: any) => (invoices as any[]).some((invoice: any) => invoice.id === doc.id)).map((doc: any) => doc.id));
-    const invoiceLedger = (ledger ?? []).filter((entry: any) => entry.document_id && invoiceDocumentIds.has(entry.document_id));
+    const invoiceLedger = ledger.filter((entry: any) => entry.document_id && invoiceDocumentIds.has(entry.document_id));
     const salLedger = (ledger ?? []).filter((entry: any) =>
-      (progress ?? []).some((p: any) => p.ledger_entry_id === entry.id) ||
+      progress.some((p: any) => p.ledger_entry_id === entry.id) ||
       (entry.data?.source === "condominium_work_progress" && entry.data?.workId === workId)
     );
     const linkedLedger = [...invoiceLedger, ...salLedger.filter((entry: any) => !invoiceLedger.some((invoiceEntry: any) => invoiceEntry.id === entry.id))];
