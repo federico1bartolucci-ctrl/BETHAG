@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { readdir } from "node:fs/promises";
 
 const baselinePath = "supabase/migrations/20261017000003_bethag_baseline_functions.sql";
 const migrationPath = "supabase/rebuild/drafts/20261125080000_validate_member_transfer_outgoing_ids_on_confirmation.sql";
