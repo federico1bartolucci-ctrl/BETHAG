@@ -9,7 +9,7 @@ Il codice personale è una protezione aggiuntiva per operazioni sensibili. Le re
 - Cambio e disattivazione richiedono il codice corrente tramite `change_personal_security_code`.
 - Verifica, cambio e disattivazione serializzano le operazioni sulla riga dell'utente con `SELECT ... FOR UPDATE`.
 - Cinque tentativi errati bloccano le verifiche per 15 minuti.
-- Durante il blocco anche il codice corretto viene respinto; dopo la scadenza un tentativo corretto azzera il contatore.
+- Durante il blocco anche il codice corretto viene respinto; alla scadenza il contatore riparte da zero e si apre una nuova finestra di cinque tentativi.
 - Un cambio riuscito azzera sempre il contatore e il blocco.
 - I codici restano memorizzati come hash pgcrypto; il codice in chiaro non viene persistito.
 
