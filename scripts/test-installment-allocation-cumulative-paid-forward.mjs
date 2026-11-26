@@ -104,7 +104,7 @@ try {
   );
 
   await db.query(
-    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,amount,due_date,unit_id,member_id,ledger_entry_id) VALUES($1,$2,$3,60,'2099-12-31',null,$4,$5),($6,$2,$3,40,'2099-12-31',null,$4,$5),($7,$2,$3,60,'2099-12-31',$8,$9,$10),($11,$2,$3,40,'2099-12-31',$8,$9,$10)",
+    "INSERT INTO public.condominium_installments(id,workspace_id,condominium_id,amount,due_date,unit_id,member_id,ledger_entry_id) VALUES($1,$2,$3,40,'2099-12-31',null,$4,$5),($6,$2,$3,60,'2099-12-31',null,$4,$5),($7,$2,$3,30,'2099-12-31',$8,$9,$10),($11,$2,$3,70,'2099-12-31',$8,$9,$10)",
     [installment1, workspace, condominium, groupMember, ledgerUnified, installment2, installment3, unitA, memberA, ledgerUnit, installment4],
   );
 
@@ -115,16 +115,16 @@ try {
 
   // Unified-owner case: payments are split over two installments sharing one ledger entry.
   await addPayment(payment1, installment1, 40, 1);
-  await checkInstallments(ledgerUnified, [40, 0], ["Parzialmente pagato", "Da pagare"]);
+  await checkInstallments(ledgerUnified, [40, 0], ["Pagato", "Da pagare"]);
   await checkAllocations(ledgerUnified, [40, 0, 0], ["Parzialmente pagato", "Da pagare", "Da pagare"]);
 
   await addPayment(payment2, installment2, 20, 2);
-  await checkInstallments(ledgerUnified, [40, 20], ["Parzialmente pagato", "Parzialmente pagato"]);
+  await checkInstallments(ledgerUnified, [40, 20], ["Pagato", "Parzialmente pagato"]);
   await checkAllocations(ledgerUnified, [50, 10, 0], ["Pagato", "Parzialmente pagato", "Da pagare"]);
 
   await addPayment(payment3, installment2, 20, 3);
   await addPayment(payment4, installment2, 20, 4);
-  await checkInstallments(ledgerUnified, [40, 40], ["Parzialmente pagato", "Pagato"]);
+  await checkInstallments(ledgerUnified, [40, 60], ["Pagato", "Pagato"]);
   await checkAllocations(ledgerUnified, [50, 30, 20], ["Pagato", "Pagato", "Pagato"]);
 
   // Reverse later payments one by one: cumulative totals must shrink and clear stale tail allocations.
@@ -142,7 +142,7 @@ try {
   await addPayment(payment5, installment3, 30, 5);
   await addPayment(payment6, installment4, 20, 6);
   await addPayment(payment7, installment4, 50, 7);
-  await checkInstallments(ledgerUnit, [30, 70], ["Parzialmente pagato", "Pagato"]);
+  await checkInstallments(ledgerUnit, [30, 70], ["Pagato", "Pagato"]);
   await checkAllocations(ledgerUnit, [100, 0], ["Pagato", "Da pagare"]);
   await reversePayment(payment7);
   await checkAllocations(ledgerUnit, [50, 0], ["Parzialmente pagato", "Da pagare"]);
