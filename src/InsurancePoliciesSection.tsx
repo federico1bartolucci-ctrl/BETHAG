@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { deleteInsurancePolicy, updateInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
+import { applyInsurancePoliciesLoadFailure, selectVisibleInsurancePolicies } from "./lib/insurancePolicyLoadState.mjs";
 import { createLatestRequestGuard } from "./lib/latestRequestGuard.mjs";
 
 type InsurancePolicy = {
@@ -65,6 +66,8 @@ export default function InsurancePoliciesSection({
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [dbCondominiumId, setDbCondominiumId] = useState<string | null>(null);
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
+  const [policiesCondominiumId, setPoliciesCondominiumId] = useState<number | null>(null);
+  const visiblePolicies = selectVisibleInsurancePolicies({ policies, policiesCondominiumId, condominiumId });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -85,13 +88,10 @@ export default function InsurancePoliciesSection({
       setWorkspaceId(null);
       setDbCondominiumId(null);
     }
-    if (!supabaseConfigured || !supabase) {
-      if (isCurrent()) setLoading(false);
-      return;
-    }
     if (isCurrent()) setLoading(true);
     setError("");
     try {
+      if (!supabaseConfigured || !supabase) throw new Error("Servizio polizze assicurative non disponibile.");
       const { data: condominium, error: condominiumError } = await supabase
         .from("condominiums")
         .select("id, workspace_id")
@@ -99,12 +99,7 @@ export default function InsurancePoliciesSection({
         .maybeSingle();
       if (!isCurrent()) return;
       if (condominiumError) throw condominiumError;
-      if (!condominium?.id) {
-        setPolicies([]);
-        setWorkspaceId(null);
-        setDbCondominiumId(null);
-        return;
-      }
+      if (!condominium?.id) throw new Error("Impossibile individuare il condominio.");
       setDbCondominiumId(condominium.id);
       setWorkspaceId(condominium.workspace_id);
       const { data, error: policyError } = await supabase
@@ -114,6 +109,7 @@ export default function InsurancePoliciesSection({
         .order("end_date", { ascending: true });
       if (!isCurrent()) return;
       if (policyError) throw policyError;
+      if (!Array.isArray(data)) throw new Error("Risposta polizze non valida.");
       setPolicies((data ?? []).map((row: any) => ({
         ...row,
         premium: row.premium === null ? null : Number(row.premium),
@@ -121,8 +117,19 @@ export default function InsurancePoliciesSection({
         active: row.active !== false,
         notes: row.notes || "",
       })));
+      setPoliciesCondominiumId(condominiumId);
     } catch (e) {
-      if (isCurrent()) setError(e instanceof Error ? e.message : "Impossibile caricare le polizze.");
+      if (isCurrent()) {
+        applyInsurancePoliciesLoadFailure({
+          error: e,
+          isCurrent,
+          requestedCondominiumId: condominiumId,
+          setPolicies,
+          setPoliciesCondominiumId,
+          setLoadError: setError,
+          setLoadErrorCondominiumId: () => {},
+        });
+      }
     } finally {
       if (isCurrent()) setLoading(false);
     }
@@ -210,10 +217,10 @@ export default function InsurancePoliciesSection({
   };
 
   const summary = useMemo(() => ({
-    active: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Attiva").length,
-    expiring: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "In scadenza").length,
-    expired: policies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Scaduta").length,
-  }), [policies]);
+    active: visiblePolicies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Attiva").length,
+    expiring: visiblePolicies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "In scadenza").length,
+    expired: visiblePolicies.filter((p) => effectiveStatus(p.end_date || "", p.active) === "Scaduta").length,
+  }), [visiblePolicies]);
 
   return (
     <section className="condominium-section-card insurance-section">
@@ -231,7 +238,7 @@ export default function InsurancePoliciesSection({
       </div>
 
       <div className="quick-stats insurance-stats">
-        <div className="quick-stat"><b>{policies.length}</b><span>Polizze</span></div>
+        <div className="quick-stat"><b>{visiblePolicies.length}</b><span>Polizze</span></div>
         <div className="quick-stat"><b>{summary.active}</b><span>Attive</span></div>
         <div className="quick-stat"><b>{summary.expiring}</b><span>In scadenza</span></div>
         <div className="quick-stat"><b>{summary.expired}</b><span>Scadute</span></div>
@@ -239,11 +246,11 @@ export default function InsurancePoliciesSection({
 
       {error && <div className="permission-box" style={{ marginBottom: 12 }}>{error}</div>}
       {!supabaseConfigured && <div className="permission-box">Configura Supabase per rendere persistenti le polizze.</div>}
-      {loading ? <div className="empty-state">Caricamento polizze…</div> : policies.length === 0 ? (
+      {loading ? <div className="empty-state">Caricamento polizze…</div> : error ? null : visiblePolicies.length === 0 ? (
         <div className="empty-state">Nessuna polizza assicurativa inserita.</div>
       ) : (
         <div className="related-list">
-          {policies.map((policy) => (
+          {visiblePolicies.map((policy) => (
             <article className="request-card" key={policy.id}>
               <div className="request-main">
                 <b>🛡️ {policy.company_name} · {policy.policy_number}</b>
