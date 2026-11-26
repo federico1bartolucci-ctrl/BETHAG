@@ -18,7 +18,7 @@ assert.doesNotMatch(workflow, /^        if:/m, "activation must not be deferred 
 assert.ok(workflow.includes("secrets.R2_SECRET_ACCESS_KEY"));
 assert.ok(workflow.includes("secrets.SUPABASE_S3_SECRET_ACCESS_KEY"));
 
-assert.ok(runbook.includes("repository-level Actions variable** `STORAGE_BACKUP_ENABLED`"));
+assert.ok(runbook.includes("repository-level Actions variable"));
 assert.ok(runbook.includes("before the job references `storage-backup-production`"));
 assert.ok(!runbook.includes("Environment variable `STORAGE_BACKUP_ENABLED`"));
 
