@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { deleteDocumentRecordBeforeStorage } from "./lib/document-delete-sequence.mjs";
 import AccountingPage from "./AccountingPage";
 import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
@@ -4420,16 +4421,29 @@ function App() {
     if (!confirm("Eliminare questo documento?")) return;
     try {
       const documentToDelete = documents.find((item) => item.id === id);
-      if (documentToDelete?.storagePath && supabaseConfigured) {
-        await deleteWorkspaceStoredFile(documentToDelete.storagePath);
-      }
-      if (supabaseConfigured && supabase && profile.workspaceId) {
-        await deleteWorkspaceRecordBackend(profile.workspaceId, "documents", id);
-      }
+      const deletion = await deleteDocumentRecordBeforeStorage({
+        deleteRecord: async () => {
+          if (supabaseConfigured) {
+            if (!supabase || !profile.workspaceId) {
+              throw new Error("Workspace non disponibile: eliminazione del documento interrotta.");
+            }
+            await deleteWorkspaceRecordBackend(profile.workspaceId, "documents", id);
+          }
+        },
+        deleteStoredFile: deleteWorkspaceStoredFile,
+        storagePath: supabaseConfigured ? documentToDelete?.storagePath ?? "" : "",
+      });
       setDocuments((current) => current.filter((item) => item.id !== id));
+      if (!deletion.storageDeleted) {
+        console.error("BETHAG document record deleted but Storage cleanup failed", {
+          storagePath: deletion.storagePath,
+          error: deletion.error,
+        });
+        alert(`Il documento è stato eliminato dal database, ma il file nello Storage non è stato rimosso.\\n\\nPercorso da recuperare: ${deletion.storagePath}`);
+      }
     } catch (error) {
       console.error("BETHAG document deletion failed", error);
-      alert(error instanceof Error ? "Il documento non è stato eliminato dal server.\n\n" + error.message : "Il documento non è stato eliminato dal server.");
+      alert(error instanceof Error ? "Il documento non è stato eliminato dal server.\\n\\n" + error.message : "Il documento non è stato eliminato dal server.");
     }
   };
 
