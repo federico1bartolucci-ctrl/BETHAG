@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/RegisterPage.tsx", "utf8");
+const start = source.indexOf("async function saveProgress(");
+assert.notEqual(start, -1, "saveProgress exists");
+const end = source.indexOf(" async function saveWorkExpense(", start);
+assert.notEqual(end, -1, "saveProgress boundary exists");
+const fn = source.slice(start, end);
+const insertAt = fn.indexOf(".from(\"condominium_work_progress\").insert(");
+assert.notEqual(insertAt, -1, "SAL insert exists");
+assert.ok(fn.indexOf("cumulativeAmount") >= 0, "cumulative SAL budget validation must exist");
+assert.ok(fn.indexOf("cumulativeAmount") < 0 || fn.indexOf("cumulativeAmount") < insertAt, "budget validation must precede insert");
+assert.ok(fn.indexOf("paidAmount>amount+0.005") < insertAt, "paid amount validation must precede insert");
+assert.ok(fn.indexOf("const {error:ue}") > insertAt, "work progress update error must be checked after insert");
+assert.ok(fn.indexOf("if(ue)throw ue") > insertAt, "progress update failure must be surfaced");
+console.log("PASS: SAL pre-insert validation and update error handling guards.");
