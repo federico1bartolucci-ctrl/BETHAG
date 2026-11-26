@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source=await readFile("src/RegisterPage.tsx","utf8");
+const start=source.indexOf("async function saveProgress");
+const end=source.indexOf("async function saveWorkExpense",start);
+assert.ok(start>=0&&end>start,"saveProgress function should be present");
+const fn=source.slice(start,end);
+const validation=fn.indexOf("if(approved>0&&cumulativeAmount>approved+0.005)throw new Error");
+const insert=fn.indexOf(".from(\"condominium_work_progress\").insert(");
+assert.ok(validation>=0,"Approved SAL cumulative guard must exist");
+assert.ok(insert>=0,"SAL insert must exist");
+assert.ok(validation<insert,"Cumulative approved-amount validation must run before inserting SAL");
+assert.match(fn,/const cumulativeAmount=current\.reduce\(\(s,x\)=>s\+Number\(x\.amount\|\|0\),0\)\+newAmount/);
+console.log(JSON.stringify({register_sal_over_approved_amount_rejected_before_insert:"PASS"},null,2));
