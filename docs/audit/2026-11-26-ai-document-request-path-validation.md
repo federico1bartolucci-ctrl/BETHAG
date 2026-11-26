@@ -25,3 +25,10 @@ The test is included in `npm test`.
 ## Safety
 
 Draft-only change based on current `main`. No AI provider calls, Storage reads/writes, QA or Production access, merge, deployment, reset or manual workflow dispatch.
+
+
+## Regressione aggiuntiva — preflight dell'intero batch per workspace
+
+Il controllo del prefisso Storage era eseguito nel ciclo, un documento alla volta. Un batch con un primo file valido e un secondo file appartenente a un altro workspace poteva quindi scaricare e caricare temporaneamente il primo file su OpenAI prima di respingere il secondo. Il blocco `finally` eliminava i file OpenAI già caricati, ma il trasferimento esterno era comunque avvenuto per una richiesta non valida.
+
+La validazione condivisa ora riceve anche il workspace selezionato e verifica **tutti** i percorsi prima di qualsiasi download Storage o upload OpenAI. I controlli nel ciclo restano come difesa aggiuntiva. La regressione riproduce l'ordine del vecchio flusso e verifica che un batch misto venga respinto in preflight con HTTP 400, senza avviare elaborazioni parziali. Il test resta incluso in `npm test`.
