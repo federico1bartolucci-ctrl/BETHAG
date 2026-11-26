@@ -94,7 +94,7 @@ function makeClient(initialRows, options = {}) {
           return query;
         },
         or(filter) {
-          const match = filter.match(/^period_end\\.lt\\.([^,]+),and\\(period_end\\.eq\\.([^,]+),id\\.lt\\.([^)]+)\\),period_end\\.is\\.null$/);
+          const match = filter.match(/^period_end\.lt\.([^,]+),and\(period_end\.eq\.([^,]+),id\.lt\.([^)]+)\),period_end\.is\.null$/);
           assert.ok(match, `unexpected keyset cursor: ${filter}`);
           assert.equal(match[1], match[2]);
           state.cursor = { period_end: match[1], id: match[3] };
@@ -230,14 +230,14 @@ const initialRows = makeRows();
 {
   const accounting = await readFile(new URL("../src/AccountingPage.tsx", import.meta.url), "utf8");
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
-  assert.match(accounting, /import \\{ loadConsumptionReadings \\} from ["']\\.\\/lib\\/consumptionReadingsPagination\\.mjs["']/);
+  assert.match(accounting, /import \{ loadConsumptionReadings \} from ["']\.\/lib\/consumptionReadingsPagination\.mjs["']/);
   const loadStart = accounting.indexOf("async function load()");
   const loadEnd = accounting.indexOf("  useEffect(", loadStart);
   assert.ok(loadStart >= 0 && loadEnd > loadStart, "AccountingPage load function must be detectable");
   const loadBody = accounting.slice(loadStart, loadEnd);
-  assert.match(loadBody, /loadConsumptionReadings\\(supabase, workspaceId\\)/);
-  assert.doesNotMatch(loadBody, /\\.from\\(["']condominium_consumption_readings["']\\)/);
-  assert.match(loadBody, /setConsumptionReadings\\(\\(consumptionReadingsResult\\.data \\?\\? \\[\\]\\)/);
+  assert.match(loadBody, /loadConsumptionReadings\(supabase, workspaceId\)/);
+  assert.doesNotMatch(loadBody, /\.from\(["']condominium_consumption_readings["']\)/);
+  assert.match(loadBody, /setConsumptionReadings\(\(consumptionReadingsResult\.data \?\? \[\]\)/);
   assert.ok(packageJson.scripts.test.includes("test-accounting-consumption-reading-pagination.mjs"), "runtime regression must run under npm test");
 }
 
