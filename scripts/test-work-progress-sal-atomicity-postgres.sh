@@ -109,6 +109,20 @@ VALUES ('33333333-3333-4333-8333-333333333333',
         '11111111-1111-4111-8111-111111111111',
         '22222222-2222-4222-8222-222222222222',
         'Intervento concorrente',100);
+CREATE FUNCTION public.test_pause_first_sal_insert()
+RETURNS trigger LANGUAGE plpgsql AS $function$
+BEGIN
+  IF NEW.title = 'Race SAL first' THEN
+    RAISE NOTICE 'FIRST_SAL_INSERT_HELD';
+    PERFORM pg_sleep(3);
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+CREATE TRIGGER aaa_test_pause_first_sal_insert
+BEFORE INSERT ON public.condominium_work_progress
+FOR EACH ROW
+EXECUTE FUNCTION public.test_pause_first_sal_insert();
 SQL
 
 first_log="$(mktemp)"
@@ -180,16 +194,3 @@ END
 $verify$;
 SQL
 
-psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
-CREATE FUNCTION public.test_pause_first_sal_insert()
-RETURNS trigger LANGUAGE plpgsql AS $function$
-BEGIN
-  IF NEW.title = 'Race SAL first' THEN
-    RAISE NOTICE 'FIRST_SAL_INSERT_HELD';
-    PERFORM pg_sleep(2);
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-SQL
-# The pause trigger is installed before the race in the next isolated pass.
