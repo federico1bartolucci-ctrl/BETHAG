@@ -5,12 +5,12 @@ import { loadPaginatedWorkspaceRows } from "../src/lib/paginatedWorkspaceRows.ts
 const source = await readFile("src/main.tsx", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const start = source.indexOf("const exportWorkspaceBackup = async () => {");
-const end = source.indexOf("/* =======================================================\\n     CONDOMINI", start);
+const end = source.indexOf("/* =======================================================\n     CONDOMINI", start);
 assert.ok(start >= 0 && end > start, "workspace backup export must exist");
 const exportFn = source.slice(start, end);
-assert.match(exportFn, /const orderBy = table === "workspace_members" \\? "user_id" : "id"/);
-assert.match(exportFn, /loadPaginatedWorkspaceRows\\(supabase, profile\\.workspaceId, table, orderBy, null\\)/);
-assert.doesNotMatch(exportFn, /\\.from\\(table\\)\\.select\\("\*"\\)\\.eq\("workspace_id", profile\\.workspaceId\)/);
+assert.ok(exportFn.includes('const orderBy = table === "workspace_members" ? "user_id" : "id"'));
+assert.ok(exportFn.includes("loadPaginatedWorkspaceRows(supabase, profile.workspaceId, table, orderBy, null)"));
+assert.ok(!exportFn.includes('.from(table).select("*").eq("workspace_id", profile.workspaceId)'));
 assert.ok(packageJson.scripts.test.includes("test-workspace-backup-pagination.mjs"));
 
 function mockClient(pages, errorOffset = null) {
