@@ -31,7 +31,7 @@ export function createCommittedMemberTransferOutcome({
   }
 
   return {
-    committed: true,
+    committed: Boolean(normalizedTransferId),
     transferId: normalizedTransferId,
     incoming: reconciliationReason ? null : incoming,
     reconciliationRequired: Boolean(reconciliationReason),
