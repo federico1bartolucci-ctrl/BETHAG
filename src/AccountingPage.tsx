@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { isValidISOCalendarDate } from "./lib/isoCalendarDate.mjs";
+import { prepareConsumptionCsvImport } from "./lib/consumptionCsv.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -798,7 +799,7 @@ function AccountingPage({
     if(accountingSettingsForm.accounting_start_date>accountingSettingsForm.accounting_end_date){setError("La data di inizio contabilità non può essere successiva alla data di fine.");return;}
     if(!Number.isInteger(count)||count<1||count>12){setError("Il numero di rate ordinarie deve essere compreso tra 1 e 12.");return;}
     if(dates.length&&dates.length!==count){setError("Le scadenze ordinarie devono corrispondere al numero di rate.");return;}
-    if(dates.some((d,i,a)=>!/^\\d{4}-\\d{2}-\\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
+    if(dates.some((d,i,a)=>!/^\d{4}-\d{2}-\d{2}$/.test(d)||(i>0&&d<=a[i-1]))){setError("Le scadenze devono essere valide, crescenti e non duplicate.");return;}
     if(dates.some(d=>d<accountingSettingsForm.accounting_start_date||d>accountingSettingsForm.accounting_end_date)){setError("Le scadenze ordinarie devono ricadere nell'esercizio configurato.");return;}
     setSaving(true);setError(""); try{const payload={workspace_id:workspaceId,condominium_id:dbCondominiumId,accounting_start_date:accountingSettingsForm.accounting_start_date,accounting_end_date:accountingSettingsForm.accounting_end_date,ordinary_installment_count:count,ordinary_due_dates:dates,extraordinary_mode:accountingSettingsForm.extraordinary_mode,extraordinary_allow_multi_year:accountingSettingsForm.extraordinary_allow_multi_year}; const {data,error}=await supabase.from("condominium_accounting_settings").upsert(payload,{onConflict:"workspace_id,condominium_id"}).select("*").single(); if(error)throw error; setAccountingSettings(data as AccountingSettings);flash("Impostazioni contabilità salvate.");await load();}catch(e:any){setError(e?.message||"Impossibile salvare le impostazioni.");}finally{setSaving(false);}
   }
@@ -810,7 +811,7 @@ function AccountingPage({
       return;
     }
     if (!supabase || !dbCondominiumId) return;
-    if (!yearForm.name.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.start_date) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
+    if (!yearForm.name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(yearForm.start_date) || !/^\d{4}-\d{2}-\d{2}$/.test(yearForm.end_date) || !Number.isFinite(Date.parse(yearForm.start_date)) || !Number.isFinite(Date.parse(yearForm.end_date))) {
       setError("Inserisci un nome e date di esercizio valide.");
       return;
     }
@@ -1169,7 +1170,7 @@ function AccountingPage({
     }
     const installmentCount = Math.max(1, Math.min(12, Math.floor(Number(allocationInstallmentForm.installment_count) || 0)));
     const dueDates = allocationInstallmentForm.due_dates.map(v => v.trim()).filter(Boolean);
-    if (dueDates.length !== installmentCount || dueDates.some((d, i, arr) => !/^\\d{4}-\\d{2}-\\d{2}$/.test(d) || (i > 0 && d < arr[i - 1]))) {
+    if (dueDates.length !== installmentCount || dueDates.some((d, i, arr) => !/^\d{4}-\d{2}-\d{2}$/.test(d) || (i > 0 && d < arr[i - 1]))) {
       setError("Indica esattamente una scadenza YYYY-MM-DD per ciascuna rata, in ordine cronologico.");
       return;
     }
@@ -1677,29 +1678,40 @@ function AccountingPage({
     } catch(e:any) { setError(e?.message||"Impossibile salvare il dato di consumo."); } finally { setSaving(false); }
   }
 
-  function parseCsvLine(line:string) {
-    const out:string[]=[]; let current=""; let quoted=false;
-    for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(quoted&&line[i+1]==='"'){current+='"';i++;}else quoted=!quoted;}else if(ch===';'&&!quoted){out.push(current.trim());current="";}else if(ch===','&&!quoted){out.push(current.trim());current="";}else current+=ch;} out.push(current.trim()); return out;
-  }
-
   async function importConsumptionCsv(event: React.ChangeEvent<HTMLInputElement>) {
     const file=event.target.files?.[0]; if(!file||!dbCondominiumId) return;
-    const text=await file.text(); const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-    if(lines.length<2){setError("Il CSV non contiene righe dati.");return;}
-    const headers=parseCsvLine(lines[0]).map(h=>h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""));
-    const find=(row:string[],names:string[])=>{const idx=headers.findIndex(h=>names.includes(h));return idx>=0?row[idx]||"":"";};
-    const rows:any[]=[];
-    for(const line of lines.slice(1)){
-      const row=parseCsvLine(line), unitCode=find(row,["unita","unita_immobiliare","unit_code","unita_codice"]).trim();
-      const unit=units.find(u=>u.condominium_id===dbCondominiumId&&u.unit_code.toLowerCase()===unitCode.toLowerCase()); if(!unit) continue;
-      const toNum=(v:string)=>{const s=v.trim();if(!s)return null;return s.includes(",")?Number(s.replace(/\\./g,"").replace(",", ".")):Number(s);};
-      const fiscal=find(row,["esercizio","fiscal_year_id"]).trim(); const fy=scopedYears.find(y=>y.id===fiscal||y.name.toLowerCase()===fiscal.toLowerCase()); if(!fy) continue;
-      const previous=toNum(find(row,["lettura_precedente","precedente"])), current=toNum(find(row,["lettura_attuale","attuale"]));
-      rows.push({workspace_id:workspaceId,condominium_id:dbCondominiumId,fiscal_year_id:fy.id,unit_id:unit.id,service_type:find(row,["servizio","service_type"]).trim()||"Riscaldamento",meter_code:find(row,["matricola","meter_code"]).trim(),period_start:find(row,["periodo_inizio","period_start"]).trim()||null,period_end:find(row,["periodo_fine","period_end"]).trim()||null,previous_reading:previous,current_reading:current,consumption:toNum(find(row,["consumo","consumption"]))??(previous!==null&&current!==null?Math.max(0,current-previous):null),kwh:toNum(find(row,["kwh"])),allocation_value:toNum(find(row,["valore_riparto","allocation_value","valore"])),charge_amount:toNum(find(row,["importo","charge_amount","quota"])),source:"Importazione CSV",notes:find(row,["note","notes"]),data:{}});
+    if(!supabase){setError("Servizio contabile non disponibile.");event.target.value="";return;}
+    let prepared:any;
+    try {
+      prepared = prepareConsumptionCsvImport(await file.text(), {
+        workspaceId,
+        condominiumId: dbCondominiumId,
+        units,
+        fiscalYears: scopedYears
+      });
+    } catch(e:any) {
+      setError(e?.message||"CSV non valido: impossibile leggere il file.");
+      event.target.value="";
+      return;
     }
-    if(!rows.length){setError("Nessuna riga CSV riconosciuta. Verifica il codice unità e l'esercizio.");return;}
+    if(prepared.errors.length){
+      setError("Importazione annullata: \n"+prepared.errors.slice(0,10).join("\n")+(prepared.errors.length>10?"\n... e altre "+(prepared.errors.length-10)+" righe non valide":""));
+      event.target.value="";
+      return;
+    }
+    if(!prepared.rows.length){setError("Nessuna riga CSV riconosciuta.");event.target.value="";return;}
     setSaving(true);setError("");
-    try{const {error:saveError}=await supabase.from("condominium_consumption_readings").upsert(rows,{onConflict:"workspace_id,condominium_id,fiscal_year_id,unit_id,service_type,meter_code,period_start,period_end"});if(saveError)throw saveError;flash("Importazione consumi completata: "+rows.length+" righe.");await load();}catch(e:any){setError(e?.message||"Impossibile importare il CSV.");}finally{setSaving(false);event.target.value="";}
+    try {
+      const {error:saveError}=await supabase.from("condominium_consumption_readings").upsert(prepared.rows,{onConflict:"workspace_id,condominium_id,fiscal_year_id,unit_id,service_type,meter_code,period_start,period_end"});
+      if(saveError)throw saveError;
+      flash("Importazione consumi completata: "+prepared.rows.length+" righe.");
+      await load();
+    } catch(e:any) {
+      setError(e?.message||"Impossibile importare il CSV.");
+    } finally {
+      setSaving(false);
+      event.target.value="";
+    }
   }
 
   async function generateConsumptionAllocation() {
