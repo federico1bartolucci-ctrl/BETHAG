@@ -29,7 +29,7 @@ SET status = CASE
       ELSE error_message
     END,
     provider_status_event_at = greatest(coalesce(provider_status_event_at, updated_at), updated_at),
-    provider_status_event_id = coalesce(provider_status_event_id, provider_event_id)
+    provider_status_event_id = provider_event_id
 WHERE event_type IN ('email.failed', 'email.suppressed')
   AND provider_event_id IS NOT NULL;
 
