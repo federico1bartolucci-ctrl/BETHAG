@@ -1,0 +1,83 @@
+name: BETHAG Storage restore integrity dry-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_key:
+        description: R2 snapshot manifest key
+        required: true
+        type: string
+      target_bucket:
+        description: Label only; dry-run does not contact or verify this bucket
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/storage-restore-validation.yml"
+      - "scripts/restore-supabase-storage-from-r2.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bethag-storage-restore-validation
+  cancel-in-progress: false
+
+jobs:
+  integrity-dry-run:
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: storage-backup-production
+    steps:
+      - name: Check backup activation gate
+        if: vars.STORAGE_BACKUP_ENABLED != 'true'
+        run: |
+          echo "Storage backup is disabled; integrity dry-run skipped."
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install isolated AWS S3 client
+        run: npm install --no-save --package-lock=false @aws-sdk/client-s3@3.800.0
+      - name: Validate R2-only credentials
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_R2_READ_TOKEN: ${{ secrets.CLOUDFLARE_R2_READ_TOKEN }}
+        run: |
+          node --input-type=module -e '
+            const required = ["R2_ACCOUNT_ID","R2_BUCKET","R2_ACCESS_KEY_ID","R2_SECRET_ACCESS_KEY","CLOUDFLARE_R2_READ_TOKEN"];
+            const missing = required.filter((name) => !process.env[name]);
+            if (missing.length) { console.error("Missing GitHub Environment secrets: " + missing.join(", ")); process.exit(1); }
+            console.log("R2 read credentials are present; values are not printed.");
+          '
+      - name: Verify snapshot manifest and every blob without Supabase access
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_R2_READ_TOKEN: ${{ secrets.CLOUDFLARE_R2_READ_TOKEN }}
+          INPUT_MANIFEST_KEY: ${{ inputs.manifest_key }}
+          INPUT_TARGET_BUCKET: ${{ inputs.target_bucket }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            MANIFEST_KEY="$INPUT_MANIFEST_KEY"
+            TARGET_BUCKET="$INPUT_TARGET_BUCKET"
+          else
+            MANIFEST_KEY="backups/snapshots/20261126-062355301Z.json"
+            TARGET_BUCKET="validation-only-not-a-real-bucket"
+          fi
+          test -n "$MANIFEST_KEY"
+          test -n "$TARGET_BUCKET"
+          node scripts/restore-supabase-storage-from-r2.mjs \
+            --dry-run \
+            --manifest-key "$MANIFEST_KEY" \
+            --target-bucket "$TARGET_BUCKET"
