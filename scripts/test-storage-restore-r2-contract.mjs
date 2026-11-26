@@ -82,7 +82,7 @@ for (const malformedPage of [
 ]) {
   await assert.rejects(
     () => assertRestoreTargetEmpty(fakeListingClient(malformedPage), "recovery-bucket", FakeListObjectsV2Command),
-    /not empty|malformed|valid key|inconsistent KeyCount/,
+    /not empty|malformed|valid key|inconsistent KeyCount|omitted both Contents and KeyCount/,
   );
 }
 
