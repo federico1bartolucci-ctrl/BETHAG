@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { findAuthUserByEmail } from "../_shared/auth-user-directory.js";
 import { linkResidentMemberIfUnchanged } from "../_shared/resident-invite-member-link.js";
+import { createSupabaseAdminClientOptions } from "../_shared/supabase-admin-client-options.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,9 +77,7 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const adminClient = createClient(supabaseUrl, secretKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const adminClient = createClient(supabaseUrl, secretKey, createSupabaseAdminClientOptions(secretKey));
 
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return json({ error: "Utente non autenticato." }, 401);

@@ -14,12 +14,16 @@ Deno.env.set("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_mock");
 Deno.env.set("SUPABASE_SECRET_KEY", "sb_secret_mock");
 
 globalThis.fetch = async (input, init = {}) => {
-  const url = new URL(typeof input === "string" ? input : input.url);
-  const method = String(init.method ?? "GET").toUpperCase();
+  // Supabase's custom fetch receives a standards-compliant Request after the
+  // modern secret-key Authorization header is removed.
+  const request = new Request(input, init);
+  const url = new URL(request.url);
+  const method = request.method.toUpperCase();
+  const requestBody = await request.clone().text();
   const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   if (url.pathname === "/auth/v1/user" && method === "GET") return json({ id: "qa-admin-id", email: "admin@example.test", role: "authenticated" });
   if (url.pathname === "/auth/v1/invite" && method === "POST") {
-    const body = JSON.parse(String(init.body ?? "{}")); invitedEmail = body.email;
+    const body = JSON.parse(requestBody || "{}"); invitedEmail = body.email;
     return json({ id: "11111111-1111-4111-8111-111111111111", email: body.email, app_metadata: {}, user_metadata: {} });
   }
   if (url.pathname.startsWith("/auth/v1/admin/users/") && method === "PUT") return json({ id: url.pathname.split("/").pop() });
@@ -30,7 +34,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.pathname === "/rest/v1/profiles" && method === "POST") return json({}, 201);
   if (url.pathname === "/rest/v1/condominium_members" && method === "PATCH") return json(memberUpdateRows, 200);
   if (url.pathname === "/rest/v1/portal_access" && method === "POST") {
-    portalPayload = JSON.parse(String(init.body ?? "null"));
+    portalPayload = JSON.parse(requestBody || "null");
     return json({}, 201);
   }
   throw new Error("Unexpected mocked Supabase request: " + method + " " + url.pathname + url.search);
