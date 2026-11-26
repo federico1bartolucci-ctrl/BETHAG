@@ -4,7 +4,9 @@ import { insertActivityWithUniqueLegacyId, nextActivityLegacyId } from "../src/l
 
 // The old code used Date.now() directly, so two creates in one millisecond collided.
 const fixedNow = 1_795_000_000_000;
-assert.equal(fixedNow, fixedNow, "the old Date.now() strategy produces the same legacy ID for same-millisecond creates");
+const oldFirstCreateId = fixedNow;
+const oldSecondCreateId = fixedNow;
+assert.equal(oldFirstCreateId, oldSecondCreateId, "the old Date.now() strategy produces the same legacy ID for same-millisecond creates");
 const firstLocalId = nextActivityLegacyId({ now: () => fixedNow, random: () => 0.25 });
 const secondLocalId = nextActivityLegacyId({ now: () => fixedNow, random: () => 0.25 });
 assert.notEqual(firstLocalId, secondLocalId, "same-tab creates must receive distinct monotonic IDs");
