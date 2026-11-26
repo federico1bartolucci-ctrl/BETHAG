@@ -1,6 +1,6 @@
 import { withSupabase } from "npm:@supabase/server@^1";
 import { createDeleteAccountFailureResponse } from "../_shared/delete-account-error-response.js";
-import { listActiveAdminMemberships } from "../_shared/active-admin-memberships.js";
+import { hasLastActiveWorkspaceAdmin } from "../_shared/last-admin-precheck.js";
 
 export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
@@ -51,69 +51,37 @@ export default {
       }
     }
 
-    let adminMemberships;
+    let lastActiveWorkspaceAdmin;
     try {
-      // Use the service-role client so RLS cannot hide an administrator
-      // membership from this account-deletion safety check.
-      adminMemberships = await listActiveAdminMemberships(ctx.supabaseAdmin, userId);
+      lastActiveWorkspaceAdmin = await hasLastActiveWorkspaceAdmin(ctx.supabaseAdmin, userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Impossibile verificare le appartenenze amministrative.";
+      const message = error instanceof Error
+        ? error.message
+        : "Impossibile verificare le appartenenze amministrative.";
       return Response.json({ error: message }, { status: 500 });
     }
 
-    for (const membership of adminMemberships) {
-      const { count, error: countError } = await ctx.supabaseAdmin
-        .from("workspace_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("workspace_id", membership.workspace_id)
-        .eq("role", "admin")
-        .eq("active", true);
-
-      if (countError) {
-        return Response.json({ error: countError.message }, { status: 500 });
-      }
-
-      if ((count ?? 0) <= 1) {
-        return Response.json(
-          {
-            error:
-              "Non puoi eliminare il profilo perché sei l'unico amministratore attivo di un workspace. Prima nomina un altro amministratore o trasferisci la gestione.",
-          },
-          { status: 409 }
-        );
-      }
+    if (lastActiveWorkspaceAdmin) {
+      return Response.json(
+        {
+          error:
+            "Non puoi eliminare il profilo perché sei l'unico amministratore attivo di un workspace. Prima nomina un altro amministratore o trasferisci la gestione.",
+        },
+        { status: 409 }
+      );
     }
 
     const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId, false);
     if (deleteError) {
-      // GoTrue may return a generic "Database error deleting user" for a
-      // PostgreSQL trigger rejection. Re-read the caller's current memberships
-      // after the failed, atomic Auth deletion so a concurrent last-admin guard
-      // failure can be reported as a conflict without misclassifying unrelated
-      // Auth/database deletion failures.
+      // GoTrue may return a generic database error when the authoritative
+      // workspace_members trigger rejects a concurrent last-admin removal.
+      // Re-evaluate with one fresh SQL statement snapshot for HTTP 409 mapping.
       let lastActiveWorkspaceAdmin = false;
-      let currentAdminMemberships = null;
       try {
-        currentAdminMemberships = await listActiveAdminMemberships(ctx.supabaseAdmin, userId);
+        lastActiveWorkspaceAdmin = await hasLastActiveWorkspaceAdmin(ctx.supabaseAdmin, userId);
       } catch {
-        // Preserve the original deletion error as HTTP 500 if the diagnostic
-        // membership snapshot cannot be established completely.
-      }
-
-      if (currentAdminMemberships !== null) {
-        for (const membership of currentAdminMemberships) {
-          const { count, error: currentCountError } = await ctx.supabaseAdmin
-            .from("workspace_members")
-            .select("user_id", { count: "exact", head: true })
-            .eq("workspace_id", membership.workspace_id)
-            .eq("role", "admin")
-            .eq("active", true);
-
-          if (!currentCountError && count === 1) {
-            lastActiveWorkspaceAdmin = true;
-            break;
-          }
-        }
+        // Preserve the original Auth deletion error as HTTP 500 if the
+        // diagnostic snapshot cannot be established.
       }
 
       return createDeleteAccountFailureResponse(deleteError, {
