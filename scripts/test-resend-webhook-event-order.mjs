@@ -119,6 +119,13 @@ try {
     ["queued", "email.failed"],
     ["queued", "email.suppressed"],
   ], "Baseline defect reproduced: terminal provider failures are stored only as metadata and leave recipients queued.");
+  const baselineTerminalAggregates = await db.query(
+    "SELECT id, email_status FROM public.communications WHERE id IN ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000006') ORDER BY id",
+  );
+  assert.deepEqual(baselineTerminalAggregates.rows.map((row) => row.email_status), [
+    "In elaborazione",
+    "In elaborazione",
+  ], "Baseline defect reproduced: parent communication aggregates remain in progress after terminal provider failures.");
   await db.exec(`
     UPDATE public.communication_recipients
     SET updated_at = CASE provider_message_id
@@ -217,11 +224,23 @@ try {
   const newFailed = await apply("msg-failed-new", "evt-failed-new", "email.failed", "newfailed@example.it", "2026-11-26T08:20:00Z");
   assert.equal(newFailed.status, "updated");
   assert.equal((await recipient("00000000-0000-0000-0000-000000000009")).status, "failed");
+  const newFailedAggregate = await db.query(
+    "SELECT email_status FROM public.communications WHERE id = '00000000-0000-0000-0000-000000000008'",
+  );
+  assert.equal(newFailedAggregate.rows[0].email_status, "Errore");
   const newSuppressed = await apply("msg-suppressed-new", "evt-suppressed-new", "email.suppressed", "newsuppressed@example.it", "2026-11-26T08:21:00Z");
   assert.equal(newSuppressed.status, "updated");
   const newSuppressedRecipient = await recipient("00000000-0000-0000-0000-000000000011");
   assert.equal(newSuppressedRecipient.status, "failed");
   assert.equal(newSuppressedRecipient.error_message, "email.suppressed");
+  const newSuppressedAggregate = await db.query(
+    "SELECT email_status FROM public.communications WHERE id = '00000000-0000-0000-0000-000000000010'",
+  );
+  assert.equal(newSuppressedAggregate.rows[0].email_status, "Errore");
+  const staleDeliveryAfterSuppression = await apply("msg-suppressed-new", "evt-old-delivered-after-suppressed", "email.delivered", "newsuppressed@example.it", "2026-11-26T08:20:00Z");
+  assert.deepEqual(staleDeliveryAfterSuppression, { status: "ignored", reason: "stale_status_event", current_status: "failed" });
+  const duplicateSuppressed = await apply("msg-suppressed-new", "evt-suppressed-new", "email.suppressed", "newsuppressed@example.it", "2026-11-26T08:21:00Z");
+  assert.deepEqual(duplicateSuppressed, { status: "ignored", reason: "duplicate_status_event", current_status: "failed" });
   const staleSuccessAfterFailure = await apply("msg-failed-new", "evt-old-delivered-after-failed", "email.delivered", "newfailed@example.it", "2026-11-26T08:19:00Z");
   assert.deepEqual(staleSuccessAfterFailure, { status: "ignored", reason: "stale_status_event", current_status: "failed" });
   const equalTimeSuccessAfterFailure = await apply("msg-failed-new", "evt-equal-delivered-after-failed", "email.delivered", "newfailed@example.it", "2026-11-26T08:20:00Z");
