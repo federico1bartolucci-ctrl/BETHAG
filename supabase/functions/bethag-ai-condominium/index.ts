@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { checkWorkspacePlanEntitlement } from "../_shared/workspace-plan-entitlement.js";
+import { addAiDocumentBlobSize, validateAiDocumentRequestFiles } from "../_shared/ai-document-request-limits.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,6 +162,8 @@ Deno.serve(async (req: Request) => {
       code: planAccess.code,
       requiredPlan: "professional",
     }, planAccess.status);
+    const fileCountLimit = validateAiDocumentRequestFiles(files);
+    if (!fileCountLimit.allowed) return responseJson({ error: fileCountLimit.message, code: fileCountLimit.code }, fileCountLimit.status);
     if (!openaiKey) return responseJson({ error: "Servizio AI non configurato: manca OPENAI_API_KEY." }, 503);
 
     const content = [{
@@ -182,6 +185,7 @@ Documenti: ${files.map((f: any) => f.filename).join(", ")}`
     }];
 
     const openAIFileIds: string[] = [];
+    let totalDownloadedBytes = 0;
     try {
     for (const file of files) {
       const filename = String(file.filename ?? "documento");
@@ -190,7 +194,9 @@ Documenti: ${files.map((f: any) => f.filename).join(", ")}`
       if (!storagePath.startsWith(workspaceId + "/")) throw new Error("Percorso documento non valido.");
       const { data: blob, error } = await supabase.storage.from("bethag-documents").download(storagePath);
       if (error || !blob) throw new Error("Impossibile leggere il documento memorizzato: " + (error?.message ?? "file non disponibile"));
-      if (blob.size > 50 * 1024 * 1024) throw new Error("Il documento " + filename + " supera il limite tecnico di 50 MB per una singola analisi AI. Il file può comunque restare memorizzato in BETHAG; per l'analisi occorre suddividerlo o predisporre un'elaborazione dedicata.");
+      const sizeCheck = addAiDocumentBlobSize(totalDownloadedBytes, blob.size);
+      if (!sizeCheck.allowed) return responseJson({ error: sizeCheck.message, code: sizeCheck.code }, sizeCheck.status);
+      totalDownloadedBytes = sizeCheck.totalBytes;
       const mime = String(file.mimeType ?? blob.type ?? "application/octet-stream").toLowerCase();
       const purpose = mime.startsWith("image/") ? "vision" : "user_data";
       const form = new FormData();
