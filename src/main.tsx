@@ -14050,10 +14050,7 @@ function SubscriptionPage({
     }));
   };
 
-  const isIncluded = (addon: AddonId) => hasFeature(
-    serverPlanAvailable && isServerManagedAddon(addon) ? serverPlan : subscription.plan,
-    ADDON_REQUIRED_PLAN[addon],
-  );
+  const isIncluded = (addon: AddonId) => hasFeature(isServerManagedAddon(addon) && serverPlanAvailable ? serverPlan : subscription.plan, ADDON_REQUIRED_PLAN[addon]);
 
   return (
     <>
