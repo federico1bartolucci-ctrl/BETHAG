@@ -74,7 +74,9 @@ for (const existingObject of [
 for (const malformedPage of [
   null,
   { Contents: [] },
+  { IsTruncated: false },
   { IsTruncated: true, Contents: [] },
+  { IsTruncated: false, Contents: [], KeyCount: 1 },
   { IsTruncated: false, Contents: "not-an-array" },
   { IsTruncated: false, Contents: [{}] },
 ]) {
