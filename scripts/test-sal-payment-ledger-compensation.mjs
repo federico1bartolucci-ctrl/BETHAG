@@ -14,6 +14,7 @@ assert.ok(registerPayment.includes("ledger-delete-failed"), "ledger deletion fai
 assert.ok(registerPayment.includes("rollback-incomplete"), "incomplete compensation must be surfaced");
 assert.ok(registerPayment.includes("progressUpdate.select(\"id\").maybeSingle()") && registerPayment.includes("eq(\"paid_amount\",Number(paymentProgress.paid_amount)"), "register payment must use optimistic concurrency for cumulative paid amount");
 assert.ok(recordPayment.includes("rollbackLedgerError"), "legacy payment pathway must compensate ledger when SAL link fails");
+assert.ok(recordPayment.includes('setError(e?.message||"Impossibile registrare il pagamento SAL.")'), "legacy payment pathway must surface the original and rollback errors");
 assert.ok(recordPayment.includes(".is(\"ledger_entry_id\",null).select(\"id\").maybeSingle()"), "legacy payment pathway must prevent concurrent duplicate SAL linking");
 assert.ok(registerPayment.includes(".delete().eq(\"id\",data.id).eq(\"workspace_id\",workspaceId).select(\"id\").maybeSingle()") && registerPayment.includes("!rollbackLedgerDeleted"), "register payment compensation must fail closed when ledger deletion affects zero rows");
 assert.ok(recordPayment.includes(".delete().eq(\"id\",data.id).eq(\"workspace_id\",workspaceId).select(\"id\").maybeSingle()") && recordPayment.includes("!rollbackLedgerDeleted"), "legacy payment compensation must fail closed when ledger deletion affects zero rows");
