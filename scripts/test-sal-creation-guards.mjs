@@ -37,8 +37,10 @@ assert.match(migration, /data->>'idempotencyKey'[\s\S]*return v_existing\.paymen
   "a retry with the same request key must return the existing ledger movement");
 assert.match(migration, /Chiave idempotenza già utilizzata per una richiesta diversa/,
   "reusing a key for a different payment payload must fail closed");
-assert.match(src, /idempotency_key:crypto\.randomUUID\(\)/,
-  "partial-payment form must retain one key across retries");
+assert.match(src, /getSalPaymentIdempotencyKey\(\{storage:getBrowserSessionStorage\(\)/,
+  "partial-payment form must recover a payload-bound key across reload/retry");
+assert.match(src, /clearSalPaymentIdempotencyKey\(getBrowserSessionStorage\(\)/,
+  "successful payment must clear the pending retry key");
 assert.match(src, /p_idempotency_key:idempotencyKey/,
   "partial-payment RPC must receive the stable form key");
 assert.match(src, /p_idempotency_key:"sal-full-payment:"\+p\.id/,
