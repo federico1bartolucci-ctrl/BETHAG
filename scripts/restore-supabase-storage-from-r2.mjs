@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   S3Client, GetObjectCommand, ListObjectsV2Command, PutObjectCommand
 } from "@aws-sdk/client-s3";
+import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
 
 const SOURCE_PREFIX = "backups/snapshots/";
 const OBJECT_PREFIX = "backups/objects/";
@@ -26,19 +27,6 @@ function endpoint(value, label) {
   const url = new URL(value);
   if (url.protocol !== "https:") throw new Error(label + " must use HTTPS");
   return url.toString().replace(/\/$/, "");
-}
-
-async function listAll(client, bucket) {
-  const items = [];
-  let continuationToken;
-  do {
-    const page = await client.send(new ListObjectsV2Command({
-      Bucket: bucket, ContinuationToken: continuationToken
-    }));
-    items.push(...(page.Contents || []));
-    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (continuationToken);
-  return items.filter((item) => item.Key && !item.Key.endsWith("/"));
 }
 
 async function bodyBytes(body) {
@@ -158,10 +146,7 @@ async function main() {
 
     if (apply) {
       stage = "Supabase restore target preflight";
-      const existing = await listAll(supabase, targetBucket);
-      if (existing.length) {
-        throw new Error("Restore target bucket is not empty; refusing to overwrite or mix existing objects");
-      }
+      await assertRestoreTargetEmpty(supabase, targetBucket, ListObjectsV2Command);
       for (const { item, bytes } of verified) {
         stage = "Supabase object restore write";
         await supabase.send(new PutObjectCommand({
