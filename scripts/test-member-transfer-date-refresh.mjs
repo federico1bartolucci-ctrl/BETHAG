@@ -29,6 +29,8 @@ assert.match(source, /const currentTransferDate = transferDateEditedRef\.current
 assert.match(source, /onFocus=\{handleTransferDateFocus\}/);
 assert.match(source, /transferDateEditedRef\.current = true;/, "manual date changes must be preserved");
 assert.match(source, /preview\.transfer_date !== nextDate/, "confirmation must reject a stale accounting preview");
+assert.match(source, /p_transfer_date: nextDate/, "the confirmed RPC must receive the same date used by the validated preview");
+assert.match(source, /async function confirmTransfer\(\) \{\s*const nextDate = refreshTransferDateIfUntouched\(\)/, "the final confirmation must refresh an untouched date immediately before the RPC");
 assert.match(
   source,
   /transferDateEditedRef\.current = false;\s*setTransferDate\(localISODate\(\)\)/,
