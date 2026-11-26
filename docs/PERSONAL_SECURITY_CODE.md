@@ -13,7 +13,7 @@ Il codice personale è una protezione aggiuntiva per operazioni sensibili. Le re
 - Un cambio riuscito azzera sempre il contatore e il blocco.
 - I codici restano memorizzati come hash pgcrypto; il codice in chiaro non viene persistito.
 
-Il limite è di 6–32 caratteri e massimo 72 byte, coerente con il limite di input di bcrypt. La migrazione è forward-only in `supabase/rebuild/proposed-forward-migrations/`; non modifica la catena canonica storica.
+Per i nuovi codici il limite è di 6–32 caratteri e massimo 72 byte, coerente con bcrypt. I codici legacy già memorizzati continuano a essere verificati con la semantica di troncamento bcrypt preesistente, così la migrazione non blocca codici Unicode già configurati. La migrazione è forward-only in `supabase/rebuild/proposed-forward-migrations/`; non modifica la catena canonica storica.
 
 ## Verifica
 
