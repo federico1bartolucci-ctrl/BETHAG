@@ -6582,6 +6582,7 @@ function App() {
       alert("Non disponi dell'autorizzazione per gestire le comunicazioni.");
       return;
     }
+    if (!requirePlan("plus", "L'invio delle comunicazioni", "comunicazioni")) return;
 
     setSelectedCommunication(null);
     setCommunicationForm({
