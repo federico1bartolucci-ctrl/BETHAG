@@ -114,7 +114,16 @@ INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title,approv
 VALUES ('33333333-3333-4333-8333-333333333333',
         '11111111-1111-4111-8111-111111111111',
         '22222222-2222-4222-8222-222222222222',
-        'Intervento concorrente',100);
+        'Intervento concorrente',100),
+       ('dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222',
+        'Intervento pagamento',100);
+INSERT INTO public.condominium_fiscal_years(id,workspace_id,condominium_id,start_date,end_date,status)
+VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222',
+        current_date - 365, current_date + 365, 'Aperto');
 CREATE FUNCTION public.test_pause_first_sal_insert()
 RETURNS trigger LANGUAGE plpgsql AS $function$
 BEGIN
@@ -202,5 +211,113 @@ BEGIN
   END IF;
 END
 $verify$;
+SQL
+
+# Verify concurrent retries of the same partial payment return one ledger movement.
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+INSERT INTO public.condominium_work_progress(
+  id,workspace_id,condominium_id,work_id,progress_no,progress_date,title,status,percentage,amount,paid_amount
+) VALUES (
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  '11111111-1111-4111-8111-111111111111',
+  '22222222-2222-4222-8222-222222222222',
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  1,current_date,'SAL pagamento concorrente','Presentato',40,100,0
+);
+CREATE FUNCTION public.test_pause_first_sal_payment()
+RETURNS trigger LANGUAGE plpgsql AS $function$
+BEGIN
+  IF NEW.category = 'Pagamento SAL' THEN
+    RAISE NOTICE 'FIRST_SAL_PAYMENT_HELD';
+    PERFORM pg_sleep(3);
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+CREATE TRIGGER aaa_test_pause_first_sal_payment
+BEFORE INSERT ON public.condominium_ledger_entries
+FOR EACH ROW
+EXECUTE FUNCTION public.test_pause_first_sal_payment();
+SQL
+
+payment_first_log="$(mktemp)"
+payment_second_log="$(mktemp)"
+trap 'rm -f "$first_log" "$second_log" "$payment_first_log" "$payment_second_log"' EXIT
+
+psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 >"$payment_first_log" 2>&1 <<'SQL' &
+SET ROLE authenticated;
+SELECT public.register_condominium_work_progress_payment(
+  '11111111-1111-4111-8111-111111111111',
+  '22222222-2222-4222-8222-222222222222',
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  current_date,40,'partial-race-key','concurrent retry test'
+);
+RESET ROLE;
+SQL
+payment_first_pid=$!
+
+for attempt in $(seq 1 100); do
+  if grep -q "FIRST_SAL_PAYMENT_HELD" "$payment_first_log"; then break; fi
+  if ! kill -0 "$payment_first_pid" 2>/dev/null; then
+    wait "$payment_first_pid" || true
+    cat "$payment_first_log"
+    echo "First partial-payment transaction exited before holding the work lock" >&2
+    exit 1
+  fi
+  sleep 0.05
+done
+if ! grep -q "FIRST_SAL_PAYMENT_HELD" "$payment_first_log"; then
+  kill "$payment_first_pid" 2>/dev/null || true
+  wait "$payment_first_pid" || true
+  cat "$payment_first_log"
+  echo "Did not observe the first partial-payment transaction holding the work lock" >&2
+  exit 1
+fi
+
+psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 >"$payment_second_log" 2>&1 <<'SQL' &
+SET ROLE authenticated;
+SELECT public.register_condominium_work_progress_payment(
+  '11111111-1111-4111-8111-111111111111',
+  '22222222-2222-4222-8222-222222222222',
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  current_date,40,'partial-race-key','concurrent retry test'
+);
+RESET ROLE;
+SQL
+payment_second_pid=$!
+wait "$payment_first_pid"
+wait "$payment_second_pid"
+
+payment_first_id="$(grep -Eo '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+ "$payment_first_log" | tail -n 1)"
+payment_second_id="$(grep -Eo '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+ "$payment_second_log" | tail -n 1)"
+if [ -z "$payment_first_id" ] || [ "$payment_first_id" != "$payment_second_id" ]; then
+  cat "$payment_first_log" "$payment_second_log"
+  echo "Concurrent retries did not return the same ledger movement" >&2
+  exit 1
+fi
+
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+DO $verify_payment$
+BEGIN
+  IF (SELECT count(*) FROM public.condominium_ledger_entries
+      WHERE data->>'idempotencyKey'='partial-race-key') <> 1 THEN
+    RAISE EXCEPTION 'Idempotent partial-payment retry created duplicate ledger rows';
+  END IF;
+  IF (SELECT paid_amount FROM public.condominium_work_progress
+      WHERE id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee') <> 40 THEN
+    RAISE EXCEPTION 'Idempotent partial-payment retry changed the paid amount more than once';
+  END IF;
+  IF (SELECT count(*) FROM public.condominium_work_events
+      WHERE data->>'idempotencyKey'='partial-race-key') <> 1 THEN
+    RAISE EXCEPTION 'Idempotent partial-payment retry created duplicate work events';
+  END IF;
+END
+$verify_payment$;
+DROP TRIGGER aaa_test_pause_first_sal_payment ON public.condominium_ledger_entries;
+DROP FUNCTION public.test_pause_first_sal_payment();
 SQL
 
