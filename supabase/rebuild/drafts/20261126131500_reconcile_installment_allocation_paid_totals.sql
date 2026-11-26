@@ -166,71 +166,44 @@ begin
       end loop;
     end if;
   else
-    update public.condominium_expense_allocations a
-    set paid_amount=least(
-          round(coalesce(a.amount,0)::numeric,2),
-          round(coalesce((
-            select sum(i.paid_amount)
-            from public.condominium_installments i
-            where i.workspace_id=v_workspace_id
-              and i.condominium_id=v_condominium_id
-              and i.ledger_entry_id=a.ledger_entry_id
-              and i.unit_id=a.unit_id
-              and (
-                (v_member_id is not null and i.member_id=v_member_id)
-                or
-                (v_member_id is null and i.member_id is null)
-              )
-          ),0)::numeric,2)
-        ),
-        status=case
-          when least(
-            round(coalesce(a.amount,0)::numeric,2),
-            round(coalesce((
-              select sum(i.paid_amount)
-              from public.condominium_installments i
-              where i.workspace_id=v_workspace_id
-                and i.condominium_id=v_condominium_id
-                and i.ledger_entry_id=a.ledger_entry_id
-                and i.unit_id=a.unit_id
-                and (
-                  (v_member_id is not null and i.member_id=v_member_id)
-                  or
-                  (v_member_id is null and i.member_id is null)
-                )
-            ),0)::numeric,2)
-          )>=a.amount-0.005 then 'Pagato'
-          when least(
-            round(coalesce(a.amount,0)::numeric,2),
-            round(coalesce((
-              select sum(i.paid_amount)
-              from public.condominium_installments i
-              where i.workspace_id=v_workspace_id
-                and i.condominium_id=v_condominium_id
-                and i.ledger_entry_id=a.ledger_entry_id
-                and i.unit_id=a.unit_id
-                and (
-                  (v_member_id is not null and i.member_id=v_member_id)
-                  or
-                  (v_member_id is null and i.member_id is null)
-                )
-            ),0)::numeric,2)
-          )>0 then 'Parzialmente pagato'
-          else 'Da pagare'
-        end
-    where a.workspace_id=v_workspace_id
-      and a.condominium_id=v_condominium_id
-      and a.unit_id=v_unit_id
-      and (
-        (v_member_id is not null and a.member_id=v_member_id)
-        or
-        (v_member_id is null and a.member_id is null)
-      )
-      and a.ledger_entry_id=(
-        select i.ledger_entry_id
-        from public.condominium_installments i
-        where i.id=v_installment_id
+    -- Distribute cumulative paid totals across every allocation row for this
+    -- exact unit/member pair; never copy the same total into duplicate rows.
+    select round(coalesce(sum(i.paid_amount),0)::numeric,2)
+      into v_remaining
+    from public.condominium_installments i
+    where i.workspace_id=v_workspace_id
+      and i.condominium_id=v_condominium_id
+      and i.ledger_entry_id=v_ledger_entry_id
+      and i.unit_id is not distinct from v_unit_id
+      and i.member_id is not distinct from v_member_id;
+
+    for v_allocation in
+      select a.*
+      from public.condominium_expense_allocations a
+      where a.workspace_id=v_workspace_id
+        and a.condominium_id=v_condominium_id
+        and a.ledger_entry_id=v_ledger_entry_id
+        and a.unit_id is not distinct from v_unit_id
+        and a.member_id is not distinct from v_member_id
+      order by a.id
+      for update
+    loop
+      v_target := least(
+        round(coalesce(v_allocation.amount,0)::numeric,2),
+        greatest(round(coalesce(v_remaining,0)::numeric,2),0)
       );
+
+      update public.condominium_expense_allocations
+      set paid_amount=v_target,
+          status=case
+            when v_target>=v_allocation.amount-0.005 then 'Pagato'
+            when v_target>0 then 'Parzialmente pagato'
+            else 'Da pagare'
+          end
+      where id=v_allocation.id;
+
+      v_remaining := round(v_remaining-v_target,2);
+    end loop;
   end if;
 
   return coalesce(new, old);
@@ -497,31 +470,47 @@ begin
         )
         into v_allocation_paid
         from public.condominium_installments i
-        where i.workspace_id=p_workspace_id
-          and i.condominium_id=p_condominium_id
-          and i.ledger_entry_id=v_installment.ledger_entry_id
-          and i.unit_id=v_allocation.unit_id
-          and (
-            (v_installment.member_id is not null and i.member_id=v_installment.member_id)
-            or
-            (v_installment.member_id is null and i.member_id is null)
-          );
+        where i.workspace_id=p_works
+    else
+      /*
+        Rata non unificata: distribuire il totale cumulativo tra tutte le
+        righe della stessa unità e dello stesso proprietario, in ordine stabile.
+        Copiare il totale su ogni riga sovrastimerebbe i pagamenti in presenza
+        di più ripartizioni per la stessa coppia unità/proprietario.
+      */
+      select round(coalesce(sum(i.paid_amount),0)::numeric,2)
+      into v_remaining
+      from public.condominium_installments i
+      where i.workspace_id=p_workspace_id
+        and i.condominium_id=p_condominium_id
+        and i.ledger_entry_id=v_installment.ledger_entry_id
+        and i.unit_id is not distinct from v_installment.unit_id
+        and i.member_id is not distinct from v_installment.member_id;
+
+      for v_allocation in
+        select a.*
+        from public.condominium_expense_allocations a
+        where a.workspace_id=p_workspace_id
+          and a.condominium_id=p_condominium_id
+          and a.ledger_entry_id=v_installment.ledger_entry_id
+          and a.unit_id is not distinct from v_installment.unit_id
+          and a.member_id is not distinct from v_installment.member_id
+        order by a.id
+        for update
+      loop
+        v_allocation_target:=least(
+          round(coalesce(v_allocation.amount,0)::numeric,2),
+          greatest(round(coalesce(v_remaining,0)::numeric,2),0)
+        );
 
         update public.condominium_expense_allocations
-        set paid_amount=coalesce(v_allocation_paid,0),
+        set paid_amount=v_allocation_target,
             status=case
-              when coalesce(v_allocation_paid,0)>=amount-0.005 then 'Pagato'
-              when coalesce(v_allocation_paid,0)>0 then 'Parzialmente pagato'
+              when v_allocation_target>=v_allocation.amount-0.005 then 'Pagato'
+              when v_allocation_target>0 then 'Parzialmente pagato'
               else 'Da pagare'
             end
         where id=v_allocation.id;
+
+        v_remaining:=round(v_remaining-v_allocation_target,2);
       end loop;
-    end if;
-  end if;
-
-  return v_result_paid;
-end;
-$function$
-;
-
-COMMIT;
