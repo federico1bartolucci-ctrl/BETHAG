@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Webhook } from "npm:svix";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { resendWebhookErrorResponse } from "../_shared/resend-webhook-error-status.js";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -22,8 +23,23 @@ Deno.serve(async (req: Request) => {
     if (!id || !timestamp || !signature) return new Response(JSON.stringify({error:"Firma webhook mancante."}), {status:401,headers});
 
     // Verify the exact raw bytes first, then parse those same bytes as JSON.
-    new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    try {
+      new Webhook(secret).verify(raw, {"svix-id":id,"svix-timestamp":timestamp,"svix-signature":signature});
+    } catch (error) {
+      console.error("Resend webhook signature verification failed", error);
+      return resendWebhookErrorResponse("signature", error, headers);
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      const value: unknown = JSON.parse(raw);
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return resendWebhookErrorResponse("payload", new Error("Invalid webhook payload shape"), headers);
+      }
+      parsed = value as Record<string, unknown>;
+    } catch (error) {
+      console.error("Resend webhook payload JSON invalid", error);
+      return resendWebhookErrorResponse("payload", error, headers);
+    }
     const data = parsed.data && typeof parsed.data === "object"
       ? parsed.data as Record<string, unknown>
       : {};
@@ -73,7 +89,8 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     return new Response(JSON.stringify(result ?? {status:"ok"}),{status:200,headers});
   } catch (error) {
-    console.error("BETHAG resend-webhook error",error);
-    return new Response(JSON.stringify({error:error instanceof Error ? error.message : "Evento non autorizzato."}),{status:401,headers});
+    console.error("BETHAG resend-webhook processing error", error);
+    // HTTP 5xx makes transient RPC/database failures retryable by the provider.
+    return resendWebhookErrorResponse("processing", error, headers);
   }
 });
