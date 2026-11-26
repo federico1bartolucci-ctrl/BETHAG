@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertRestoreTargetEmpty } from "./storage-restore-target-empty.mjs";
 
 const script = await readFile("scripts/restore-supabase-storage-from-r2.mjs", "utf8");
 assert.match(script, /bethag-storage-backup\/v1/);
@@ -25,3 +26,66 @@ assert.match(script, /sourceBucket\);/);
 assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand/);
 
 console.log("PASS: BETHAG R2 Storage restore safety contract");
+
+
+class FakeListObjectsV2Command {
+  constructor(input) {
+    this.input = input;
+  }
+}
+
+function fakeListingClient(page) {
+  const requests = [];
+  return {
+    requests,
+    async send(command) {
+      requests.push(command.input);
+      return page;
+    },
+  };
+}
+
+// Reproduce the previous bug: folder-marker keys were filtered out and the
+// restore target was incorrectly treated as empty.
+const legacyFolderMarkerInventory = [{ Key: "empty-folder/" }]
+  .filter((item) => item.Key && !item.Key.endsWith("/"));
+assert.deepEqual(legacyFolderMarkerInventory, [],
+  "the previous target listing incorrectly ignored an S3 folder-marker object");
+
+const emptyTargetClient = fakeListingClient({ IsTruncated: false, Contents: [] });
+assert.equal(
+  await assertRestoreTargetEmpty(emptyTargetClient, "recovery-bucket", FakeListObjectsV2Command),
+  true,
+);
+assert.deepEqual(emptyTargetClient.requests, [{ Bucket: "recovery-bucket", MaxKeys: 1 }]);
+
+for (const existingObject of [
+  { Key: "documents/invoice.pdf" },
+  { Key: "empty-folder/" },
+]) {
+  const client = fakeListingClient({ IsTruncated: false, Contents: [existingObject] });
+  await assert.rejects(
+    () => assertRestoreTargetEmpty(client, "recovery-bucket", FakeListObjectsV2Command),
+    /Restore target bucket is not empty/,
+    "any object key, including a folder marker, must block restore",
+  );
+}
+
+for (const malformedPage of [
+  null,
+  { Contents: [] },
+  { IsTruncated: true, Contents: [] },
+  { IsTruncated: false, Contents: "not-an-array" },
+  { IsTruncated: false, Contents: [{}] },
+]) {
+  await assert.rejects(
+    () => assertRestoreTargetEmpty(fakeListingClient(malformedPage), "recovery-bucket", FakeListObjectsV2Command),
+    /refusing to assume the bucket is empty|refusing to assume the bucket is empty|malformed|valid key/,
+  );
+}
+
+assert.match(script, /assertRestoreTargetEmpty\(supabase, targetBucket, ListObjectsV2Command\)/);
+assert.doesNotMatch(script, /return items\.filter\(\(item\) => item\.Key && !item\.Key\.endsWith\("\/"\)\)/);
+
+console.log("PASS: R2 restore target emptiness preflight counts folder-marker objects.");
+console.log("PASS: restore refuses malformed or truncated target listings instead of assuming emptiness.");
