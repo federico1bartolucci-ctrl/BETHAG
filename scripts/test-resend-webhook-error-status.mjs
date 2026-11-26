@@ -8,6 +8,7 @@ import {
 const source = await readFile(new URL("../supabase/functions/bethag-resend-webhook/index.ts", import.meta.url), "utf8");
 assert.match(source, /resendWebhookErrorResponse\("signature", error, headers\)/, "signature failures must use the tested 401 response helper");
 assert.match(source, /resendWebhookErrorResponse\("payload", error, headers\)/, "payload parse failures must use the tested 400 response helper");
+assert.match(source, /!value \|\| typeof value !== "object" \|\| Array\.isArray\(value\)/, "JSON null, primitives and arrays must be rejected as invalid webhook payload shapes");
 assert.match(source, /resendWebhookErrorResponse\("processing", error, headers\)/, "processing failures must use the tested retryable 500 response helper");
 
 const headers = { "Content-Type": "application/json" };
