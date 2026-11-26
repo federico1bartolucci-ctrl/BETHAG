@@ -29,13 +29,14 @@ assert.match(targetInventory, /truncated but omitted its continuation token/);
 assert.match(targetInventory, /duplicate object key/);
 assert.match(targetInventory, /unexpected object/);
 assert.match(targetInventory, /read-after-write SHA-256\/size verification/);
+assert.match(targetInventory, /item\.key\.endsWith\("\/"\)/);
+assert.match(script, /Bucket: sourceBucket/);
 assert.match(script, /Blob integrity verification failed/);
 assert.match(script, /createHash\("sha256"\)/);
 assert.match(script, /item\.blob_key\.slice\(OBJECT_PREFIX\.length\)\.split\("\/"\)\[0\] !== item\.sha256/);
 assert.match(script, /new PutObjectCommand/);
 assert.match(script, /writes_performed: apply \? restoreStats\.written : 0/);
 assert.match(script, /if \(apply\)/);
-assert.match(script, /sourceBucket\);/);
 assert.doesNotMatch(script, /DeleteObjectCommand|DeleteObjectsCommand/);
 
 console.log("PASS: BETHAG R2 Storage restore safety contract");
