@@ -14,6 +14,21 @@ const fnStart = migration.indexOf("CREATE OR REPLACE FUNCTION public.create_cond
 assert.ok(fnStart >= 0, "atomic SAL creation RPC must exist");
 const fn = migration.slice(fnStart);
 assert.match(fn, /from public\.condominium_works[\s\S]*for update/, "parent work row must be locked to serialize SAL creation");
+const triggerStart = migration.indexOf("CREATE OR REPLACE FUNCTION public.validate_condominium_work_progress_accounting_links(");
+const triggerEnd = migration.indexOf("REVOKE ALL ON FUNCTION public.validate_condominium_work_progress_accounting_links()", triggerStart);
+assert.ok(triggerStart >= 0 && triggerEnd > triggerStart, "accounting-link trigger function must exist");
+const triggerFn = migration.slice(triggerStart, triggerEnd);
+assert.match(triggerFn, /from public\.condominium_works[\s\S]*for update/, "direct SAL inserts and updates must lock the parent work");
+assert.match(triggerFn, /new\.workspace_id is distinct from w\.workspace_id[\s\S]*new\.condominium_id is distinct from w\.condominium_id/,
+  "trigger must reject SAL rows outside the work workspace/condominium");
+assert.match(triggerFn, /v_total_sal[\s\S]*approved_amount[\s\S]*raise exception/,
+  "database trigger must enforce cumulative SAL cap even for direct table writes");
+assert.match(migration, /REVOKE ALL ON FUNCTION public\.validate_condominium_work_progress_accounting_links\(\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/,
+  "trigger-only helper must not expose direct EXECUTE");
+assert.match(src, /async function registerProgressPayment[\s\S]*rpc\("register_condominium_work_progress_payment"/,
+  "partial SAL payments must use the atomic payment RPC");
+assert.match(src, /async function recordProgressPayment[\s\S]*rpc\("record_condominium_work_progress_payment"/,
+  "full SAL payments must use the atomic payment RPC");
 assert.match(fn, /approved_amount[\s\S]*v_total_amount[\s\S]*raise exception/, "approved amount guard must be enforced server-side");
 assert.match(fn, /p_status not in \('Presentato','Verificato','Approvato','Contestato'\)[\s\S]*Stato SAL non valido/, "paid or unsupported status must be rejected at database level");
 
