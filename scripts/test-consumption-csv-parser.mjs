@@ -6,10 +6,32 @@ const units = [{ id: "unit-1", condominium_id: "condo-1", unit_code: "A1" }];
 const fiscalYears = [{ id: "fy-2026", name: "2026" }];
 const header = "Unita;Esercizio;Lettura precedente;Lettura attuale;Consumo;Periodo inizio;Periodo fine;Note";
 
+function legacyParseCsvLine(line) {
+  const fields = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"') {
+      if (quoted && line[index + 1] === '"') { current += '"'; index += 1; }
+      else quoted = !quoted;
+    } else if ((character === ';' || character === ',') && !quoted) {
+      fields.push(current.trim());
+      current = "";
+    } else current += character;
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 const semicolonCsv = [
   header,
   "A1;2026;1.234,5;1.244,5;10,0;2026-01-01;2026-01-31;\"lettura; principale, verificata\"",
 ].join("\r\n");
+const legacyHeader = legacyParseCsvLine(header);
+const legacyDataRow = legacyParseCsvLine(semicolonCsv.split(/\r?\n/)[1]);
+assert.equal(legacyHeader.length, 8);
+assert.equal(legacyDataRow.length, 11, "The old parser must reproduce the decimal-comma column split.");
 const semicolonParsed = parseConsumptionCsv(semicolonCsv);
 assert.equal(semicolonParsed.delimiter, ";");
 assert.equal(semicolonParsed.rows[0].length, 8);
