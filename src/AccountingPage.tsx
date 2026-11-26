@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { loadConsumptionReadings } from "./lib/consumptionReadingsPagination.mjs";
 import MemberTransferPanel from "./MemberTransferPanel";
 
 type Condominium = {
@@ -645,11 +646,7 @@ function AccountingPage({
             .from("condominium_millesimal_values")
             .select("*")
             .eq("workspace_id", workspaceId),
-          supabase
-            .from("condominium_consumption_readings")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("period_end", { ascending:false }),
+          loadConsumptionReadings(supabase, workspaceId),
           supabase
             .from("condominium_allocation_rules")
             .select("*")
