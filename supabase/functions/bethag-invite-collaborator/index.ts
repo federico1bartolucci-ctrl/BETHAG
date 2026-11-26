@@ -102,12 +102,20 @@ Deno.serve(async (req: Request) => {
 
     const { data: existing, error: existingError } = await adminClient
       .from("workspace_members")
-      .select("user_id")
+      .select("user_id, role")
       .eq("workspace_id", workspaceId)
       .eq("legacy_id", legacyId)
       .maybeSingle();
 
     if (existingError) throw existingError;
+
+    // A collaborator invite must not rewrite an existing workspace administrator's role.
+    if (existing?.role === "admin") {
+      return json({
+        error: "L'account è già amministratore del workspace e non può essere convertito in collaboratore tramite invito.",
+        code: "COLLABORATOR_INVITE_ADMIN_DOWNGRADE_BLOCKED",
+      }, 409);
+    }
 
     let targetUserId = existing?.user_id || null;
     let invited = false;
