@@ -34,7 +34,7 @@ function getNamedKey(jsonName: string, legacyName: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  let adminClient: ReturnType<typeof createClient> | null = null;
+  let adminClient: ReturnType<typeof createClient<any>> | null = null;
   let targetUserId: string | null = null;
   let invited = false;
   let profileCreated = false;
