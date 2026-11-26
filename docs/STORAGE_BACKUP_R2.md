@@ -27,6 +27,10 @@ Every source, destination and source-consistency inventory uses the shared `scri
 
 No source object is deleted or changed. The script does not call any delete API.
 
+## Dependency security and transfer timeouts
+
+The workflow pins `@aws-sdk/client-s3@3.1178.0`. Build CI installs that exact SDK in a temporary isolated package tree, runs `npm audit --json`, and blocks high or critical advisories; the protected backup workflow repeats the same audit before credential validation or Storage access. Both S3 clients use an explicit `NodeHttpHandler` with a 10-second connection timeout and 30-minute request/socket timeouts, so SDK default timeout changes cannot silently truncate large Storage transfers. The isolated audit does not alter the repository lockfile.
+
 ## Retention configuration required in Cloudflare
 
 Before the first scheduled run, create the R2 bucket manually and configure:
