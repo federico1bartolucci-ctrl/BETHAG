@@ -5906,21 +5906,29 @@ function App() {
     if (!requireModulePermission("condomini", "L'eliminazione della segnalazione o richiesta")) return;
     if (!confirm("Eliminare questa segnalazione o richiesta?")) return;
 
-    const previousRequests = condominiumRequests;
-    setCondominiumRequests((current) => current.filter((request) => request.id !== id));
-
-    if (!supabaseConfigured || !supabase) return;
+    if (!supabaseConfigured || !supabase) {
+      setCondominiumRequests((current) => current.filter((request) => request.id !== id));
+      return;
+    }
+    if (!profile.workspaceId) {
+      alert("Workspace non disponibile: la richiesta non è stata eliminata.");
+      return;
+    }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("condominium_requests")
         .delete()
         .eq("workspace_id", profile.workspaceId)
-        .eq("legacy_id", id);
+        .eq("legacy_id", id)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("Richiesta non trovata o già eliminata.");
+      setCondominiumRequests((current) => current.filter((request) => request.id !== id));
     } catch (error) {
       console.error("BETHAG request deletion persistence failed", error);
-      setCondominiumRequests(previousRequests);
+      // Reconcile from the backend rather than restoring a stale list snapshot.
+      window.dispatchEvent(new Event("bethag-backend-refresh"));
       alert(
         error instanceof Error
           ? `Impossibile eliminare la richiesta: ${error.message}`
