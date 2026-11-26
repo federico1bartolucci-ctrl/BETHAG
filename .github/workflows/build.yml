@@ -61,7 +61,8 @@ jobs:
           retention-days: 1
       - name: Reject high-severity dependency vulnerabilities
         run: npm audit --audit-level=high
-
+      - name: Audit isolated Cloudflare R2 SDK dependency tree
+        run: node scripts/audit-r2-sdk-dependencies.mjs
 
       - name: Reject invalid or duplicate migration versions
         run: node scripts/check-unique-migration-versions.mjs
