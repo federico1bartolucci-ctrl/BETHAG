@@ -56,9 +56,11 @@ INSERT INTO public.profiles(id,full_name,email,role,active) VALUES
  ('10000000-0000-0000-0000-000000000012','Unique Duplicate Condo Resident','unique-duplicate-condo-resident@example.invalid','resident',true);
 
 INSERT INTO public.workspaces(id,name,plan)
-VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','free'),
- ('20000000-0000-0000-0000-000000000002','Second portal registration workspace','free'),
- ('20000000-0000-0000-0000-000000000003','Unrelated portal registration workspace','free');
+-- This fixture exercises Portal registration/approval, so its three workspaces
+-- must hold the Portal entitlement enforced by the forward candidate trigger.
+VALUES ('20000000-0000-0000-0000-000000000001','Portal registration migration test','portal'),
+ ('20000000-0000-0000-0000-000000000002','Second portal registration workspace','portal'),
+ ('20000000-0000-0000-0000-000000000003','Unrelated portal registration workspace','portal');
 
 INSERT INTO public.condominiums(id,workspace_id,name)
 VALUES
