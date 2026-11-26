@@ -21,6 +21,12 @@ const sendFunction = await readFile("supabase/functions/bethag-send-email/index.
 assert.match(sendFunction, /"Idempotency-Key":\s*`bethag-communication-recipient-\$\{recipient\.id\}`/,
   "The runtime provider idempotency key must continue to derive from the stable recipient UUID.");
 
+assert.match(retrySql, /GRANT USAGE ON SCHEMA private TO authenticated;/, "The draft must grant private schema usage only to the authenticated role.");
+assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\\.prepare_communication_recipients\\(uuid\\) TO authenticated;/);
+assert.match(retrySql, /GRANT EXECUTE ON FUNCTION private\\.reset_stale_communication_recipients\\(uuid, interval\\) TO authenticated;/);
+assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\\.prepare_communication_recipients\\(uuid\\) FROM PUBLIC, anon;/);
+assert.match(retrySql, /REVOKE EXECUTE ON FUNCTION private\\.reset_stale_communication_recipients\\(uuid, interval\\) FROM PUBLIC, anon;/);
+
 const [schemaSql, indexSql, functionSql, securitySql, grantSql, accessSql, retrySql] = await Promise.all([
   ...baselineNames.map((name) => readFile(`${migrationDir}/${name}`, "utf8")),
   readFile(`${migrationDir}/${accessMigrationName}`, "utf8"),
