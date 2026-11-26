@@ -47,7 +47,9 @@ try {
       complained_at timestamptz,
       updated_at timestamptz,
       event_type text,
-      provider_event_id text
+      provider_event_id text,
+      provider_status_event_at timestamptz,
+      provider_status_event_id text
     );
     CREATE UNIQUE INDEX communication_recipients_provider_event_uq
       ON public.communication_recipients(provider_event_id)
@@ -68,11 +70,13 @@ try {
       ('00000000-0000-0000-0000-000000000010', 'In elaborazione'),
       ('00000000-0000-0000-0000-000000000012', 'Consegnata');
     INSERT INTO public.communication_recipients(
-      id, communication_id, email, status, provider_message_id, updated_at
+      id, communication_id, email, status, provider_message_id, updated_at,
+      provider_status_event_at, provider_status_event_id
     ) VALUES
       ('00000000-0000-0000-0000-000000000005',
        '00000000-0000-0000-0000-000000000004',
-       'failed@example.it', 'queued', 'msg-failed', now()),
+       'failed@example.it', 'sent', 'msg-failed', now(),
+       '2026-11-26T08:00:00Z', 'evt-sent-before-failure'),
       ('00000000-0000-0000-0000-000000000007',
        '00000000-0000-0000-0000-000000000006',
        'suppressed@example.it', 'queued', 'msg-suppressed', now()),
@@ -116,16 +120,16 @@ try {
     "SELECT provider_message_id, status, event_type, provider_event_id FROM public.communication_recipients WHERE provider_message_id IN ('msg-failed', 'msg-suppressed') ORDER BY provider_message_id",
   );
   assert.deepEqual(baselineTerminalRows.rows.map((row) => [row.status, row.event_type]), [
-    ["queued", "email.failed"],
+    ["sent", "email.failed"],
     ["queued", "email.suppressed"],
-  ], "Baseline defect reproduced: terminal provider failures are stored only as metadata and leave recipients queued.");
+  ], "Baseline defect reproduced: terminal provider failures are stored only as metadata and leave recipients sent/queued.");
   const baselineTerminalAggregates = await db.query(
     "SELECT id, email_status FROM public.communications WHERE id IN ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000006') ORDER BY id",
   );
   assert.deepEqual(baselineTerminalAggregates.rows.map((row) => row.email_status), [
+    "Inviata",
     "In elaborazione",
-    "In elaborazione",
-  ], "Baseline defect reproduced: parent communication aggregates remain in progress after terminal provider failures.");
+  ], "Baseline defect reproduced: failed/suppressed metadata leaves the recipient and parent aggregate at their previous sent/in-progress state.");
   await db.exec(`
     UPDATE public.communication_recipients
     SET updated_at = CASE provider_message_id
@@ -159,7 +163,7 @@ try {
     UPDATE public.communication_recipients
     SET status = 'queued', error_message = NULL, sent_at = NULL, delivered_at = NULL,
         bounced_at = NULL, complained_at = NULL, updated_at = now(), event_type = NULL,
-        provider_event_id = NULL
+        provider_event_id = NULL, provider_status_event_at = NULL, provider_status_event_id = NULL
     WHERE id = '00000000-0000-0000-0000-000000000002';
     UPDATE public.communications
     SET email_status = 'In elaborazione', updated_at = now()
