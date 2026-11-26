@@ -33,6 +33,24 @@ export function getSalPaymentIdempotencyKey({
   }
 }
 
+export function getPendingSalPaymentRequest(storage, workspaceId, progressId) {
+  try {
+    const value = JSON.parse(storage.getItem(`bethag:sal-payment:${workspaceId}:${progressId}`) || "null");
+    if (
+      value &&
+      typeof value.key === "string" &&
+      typeof value.entryDate === "string" &&
+      Number.isFinite(Number(value.amount)) &&
+      typeof value.notes === "string"
+    ) {
+      return value;
+    }
+  } catch {
+    // Ignore unavailable or malformed session storage.
+  }
+  return null;
+}
+
 export function clearSalPaymentIdempotencyKey(storage, workspaceId, progressId) {
   try {
     storage.removeItem(`bethag:sal-payment:${workspaceId}:${progressId}`);
