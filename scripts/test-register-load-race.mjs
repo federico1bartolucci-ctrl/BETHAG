@@ -13,9 +13,22 @@ assert.ok(source.includes("if(requestId===loadRequestRef.current)setError("),"st
 assert.ok(source.includes("if(requestId===loadRequestRef.current)setLoading(false);"),"stale register load cannot change loading state");
 assert.ok(source.includes("return()=>{loadRequestRef.current+=1;}"),"effect cleanup invalidates outstanding loads");
 
-let applied=[];
-assert.equal(applyIfCurrentRequest(1,2,()=>applied.push("stale")),false,"older request is rejected after newer request starts");
-assert.deepEqual(applied,[],"stale resolution cannot change condominium scope");
-assert.equal(applyIfCurrentRequest(2,2,()=>applied.push("current")),true,"current request is accepted");
-assert.deepEqual(applied,["current"],"only the current resolution updates condominium scope");
-console.log("Register page load-race runtime regression: PASS");
+let currentRequestId=1;
+let dbId=null;
+let resolveOld, resolveNew;
+const oldResolution=new Promise(resolve=>{resolveOld=resolve;});
+const newResolution=new Promise(resolve=>{resolveNew=resolve;});
+const applyResolution=async(requestId,promise)=> {
+  const resolvedId=await promise;
+  applyIfCurrentRequest(requestId,currentRequestId,()=>{dbId=resolvedId;});
+};
+const oldLoad=applyResolution(1,oldResolution);
+currentRequestId=2;
+const newLoad=applyResolution(2,newResolution);
+resolveNew("condominium-current");
+await newLoad;
+assert.equal(dbId,"condominium-current","newer request applies its condominium ID");
+resolveOld("condominium-stale");
+await oldLoad;
+assert.equal(dbId,"condominium-current","late stale response cannot overwrite the current condominium ID");
+console.log("Register page load-race async regression: PASS");
