@@ -17,4 +17,4 @@ Per i nuovi codici il limite è di 6–32 caratteri e massimo 72 byte, coerente 
 
 ## Verifica
 
-La regressione `scripts/test-personal-security-code-lockout.mjs` usa PGlite e un sostituto deterministico di pgcrypto per testare il flusso di stato, il lockout, il cambio atomico, i permessi RPC e il collegamento dell'interfaccia. Non certifica l'implementazione bcrypt di produzione né sostituisce una prova autenticata Supabase.
+La regressione `scripts/test-personal-security-code-lockout.mjs` usa PGlite e un sostituto deterministico di pgcrypto per testare il flusso di stato, il lockout, il cambio atomico, i permessi RPC e il collegamento dell'interfaccia. La prova aggiuntiva `scripts/test-personal-security-code-lockout-postgres.sh` applica la migrazione a un database PostgreSQL 17 isolato con pgcrypto reale e verifica hash bcrypt, tentativi concorrenti, lockout, cambio/disattivazione atomici e limiti UTF-8 di 72 byte. Nessuna delle due prove sostituisce il collaudo autenticato sul progetto Supabase QA.
