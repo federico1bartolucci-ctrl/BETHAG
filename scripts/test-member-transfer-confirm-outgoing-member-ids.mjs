@@ -275,3 +275,6 @@ try {
 } finally {
   await db.close();
 }
+
+// Also run the client-side post-commit read-failure regression in npm test.
+await import("./test-member-transfer-post-commit-read-failure.mjs");
