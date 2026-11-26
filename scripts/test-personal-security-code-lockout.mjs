@@ -32,7 +32,7 @@ assert.doesNotMatch(disableHandler, /rpc\("verify_personal_security_code"|rpc\("
 
 const db = new PGlite();
 try {
-  await db.exec(\`
+  await db.exec(`
     CREATE SCHEMA auth;
     CREATE SCHEMA extensions;
     CREATE SCHEMA private;
@@ -73,7 +73,7 @@ try {
       personal_code_enabled boolean NOT NULL DEFAULT false,
       updated_at timestamptz NOT NULL DEFAULT now()
     );
-  \`);
+  `);
 
   await db.exec(migration);
 
