@@ -14,11 +14,33 @@ const incoming = {
 
 const readFailure = new Error("temporary PostgREST read failure");
 
-// Reproduce the old sequence: the RPC has already returned a committed ID,
-// but a later member lookup error is thrown as if the transfer had failed.
-await assert.rejects(async () => {
-  if (readFailure) throw readFailure;
-}, /temporary PostgREST read failure/);
+// Reproduce the old sequence with a successful/committing RPC followed
+// by a PostgREST lookup response containing an error.
+let legacyRpcCommitted = false;
+async function legacyConfirmAfterRpc(rpc, lookupIncoming) {
+  const committedTransferId = await rpc();
+  const { data: incomingRows, error: incomingError } = await lookupIncoming();
+  if (incomingError) throw incomingError;
+  const legacyIncoming = (incomingRows ?? []).find(row =>
+    row.data?.role === "Proprietario" && row.data?.current_owner !== false
+  ) ?? null;
+  if (!legacyIncoming?.legacy_id) {
+    throw new Error("Subentro registrato, ma il nuovo proprietario non è stato restituito dal server.");
+  }
+  return { transferId: committedTransferId, incoming: legacyIncoming };
+}
+await assert.rejects(
+  legacyConfirmAfterRpc(
+    async () => {
+      legacyRpcCommitted = true;
+      return transferId;
+    },
+    async () => ({ data: null, error: readFailure }),
+  ),
+  error => error === readFailure,
+);
+assert.equal(legacyRpcCommitted, true,
+  "The baseline must prove that the RPC completed before the follow-up read failed.");
 
 // The corrected outcome preserves the committed transfer ID and explicitly
 // requires refresh/reconciliation instead of inviting a duplicate retry.
