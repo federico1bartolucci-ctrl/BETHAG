@@ -5,6 +5,8 @@ import { parseInvoiceAmount } from "../src/lib/invoiceAmount.mjs";
 test("parses Italian and US grouped amounts, decimals and supported currency symbols", () => {
   assert.equal(parseInvoiceAmount("€ 1.234,56"), 1234.56);
   assert.equal(parseInvoiceAmount("1.234,56 €"), 1234.56);
+  assert.equal(parseInvoiceAmount("EUR 1.234,56"), 1234.56);
+  assert.equal(parseInvoiceAmount("1.234,56 EUR"), 1234.56);
   assert.equal(parseInvoiceAmount("$1,234.56"), 1234.56);
   assert.equal(parseInvoiceAmount("1,234.56"), 1234.56);
   assert.equal(parseInvoiceAmount("1234,5"), 1234.5);
