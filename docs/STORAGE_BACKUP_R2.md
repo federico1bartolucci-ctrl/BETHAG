@@ -107,7 +107,7 @@ The first successful snapshot on 26 November 2026 contains zero objects because 
 - The successful 26 November empty snapshot was produced by the pre-pagination main version. No backup was executed from this candidate.
 - Cloudflare bucket `bethag-storage-backups`: created, private, EU jurisdiction.
 - Bucket Lock and lifecycle: configured and read by the Cloudflare preflight; exact rules are checked at every run.
-- GitHub Environment `storage-backup-production`: configured; nine required secrets and `STORAGE_BACKUP_ENABLED=true` are present.
+- GitHub Environment `storage-backup-production`: configured with nine required secrets. Verify that `STORAGE_BACKUP_ENABLED=true` is configured as a repository-level Actions variable, not only as an Environment variable, before relying on scheduled backups.
 - First successful backup: 26 November 2026; manifest write/read verification passed. `source_object_count=0`, `blobs_uploaded=0`, `blobs_reused=0` because the source bucket was empty.
 - Guarded restore utility: dry-run default, source-blob SHA-256/size verification, empty-target first apply, verified same-manifest resume, read-after-write checks, exact final key inventory, and explicit confirmation gate for writes.
 - Restore dry-run: supported using only existing R2 backup credentials; it verifies manifest and blob integrity without contacting Supabase.
