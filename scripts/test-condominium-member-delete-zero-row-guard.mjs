@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const source = await readFile("src/lib/bethagBackend.ts", "utf8");
+const start = source.indexOf("export async function deleteCondominiumMember(");
+const end = source.indexOf("export async function storeWorkspaceDocuments(", start);
+assert.ok(start >= 0 && end > start, "member deletion function must exist");
+const fn = source.slice(start, end);
+assert.match(fn, /\.delete\(\)[\s\S]*\.select\("id"\)/, "member deletion must return affected IDs");
+assert.match(fn, /if \(error\) throw error;[\s\S]*if \(!?deletedMemberRows\?\.length\)/, "zero-row deletion must fail closed before owner cleanup");
+console.log("PASS condominium member deletion zero-row guard");
