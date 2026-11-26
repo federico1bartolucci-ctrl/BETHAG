@@ -4,6 +4,7 @@ import RegisterPage from "./RegisterPage";
 import InsurancePoliciesSection from "./InsurancePoliciesSection";
 import ReactDOM from "react-dom/client";
 import { supabase, supabaseConfigured, supabasePublicAuth } from "./lib/supabase";
+import { updateInsurancePolicy, deleteInsurancePolicy } from "./lib/insurancePolicyMutations.mjs";
 import { createAuthSessionRevision } from "./lib/auth-session-revision.mjs";
 import { applyCapLookupResponse } from "./lib/capLookup.mjs";
 import { filterCondominiumMembersToWorkspace, loadPaginatedRowsByInFilter, loadPaginatedWorkspaceRows } from "./lib/paginatedWorkspaceRows";
@@ -17252,12 +17253,27 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
       updated_at: new Date().toISOString(),
     };
     // "new" is the UI sentinel for insert mode, never a database UUID.
-    const result = editing && editing !== "new"
-      ? await supabase.from("condominium_insurance_policies").update(payload).eq("id", editing).eq("workspace_id", workspaceId)
-      : await supabase.from("condominium_insurance_policies").insert(payload);
-    if (result.error) {
-      alert("ERRORE");
-      return;
+    if (editing && editing !== "new") {
+      try {
+        await updateInsurancePolicy({
+          supabase,
+          policyId: editing,
+          workspaceId,
+          condominiumId: condominium.id,
+          payload,
+        });
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Polizza non aggiornata.");
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("condominium_insurance_policies")
+        .insert(payload);
+      if (insertError) {
+        alert(insertError.message);
+        return;
+      }
     }
     resetForm();
     await loadPolicies();
@@ -17283,11 +17299,30 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
   };
 
   const deletePolicy = async (policy: CondominiumInsurancePolicy) => {
-    if (!supabase || !window.confirm("Sei sicuro di voler cancellare questa polizza assicurativa?")) return;
+    if (!supabase || !supabaseConfigured || !window.confirm("Sei sicuro di voler cancellare questa polizza assicurativa?")) return;
     const workspaceId = await getActiveWorkspaceId();
     if (!workspaceId) return;
-    const { error } = await supabase.from("condominium_insurance_policies").delete().eq("id", policy.id).eq("workspace_id", workspaceId);
-    if (error) { alert(error.message); return; }
+    const { data: condominium, error: condominiumError } = await supabase
+      .from("condominiums")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("legacy_id", condominiumId)
+      .maybeSingle();
+    if (condominiumError || !condominium?.id) {
+      alert(condominiumError?.message || "Impossibile individuare il condominio.");
+      return;
+    }
+    try {
+      await deleteInsurancePolicy({
+        supabase,
+        policyId: policy.id,
+        workspaceId,
+        condominiumId: condominium.id,
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Polizza non eliminata.");
+      return;
+    }
     await loadPolicies();
   };
 
