@@ -141,7 +141,7 @@ const source = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url
 assert.ok(source.includes('import { canCloseWork, closeWorkWithHistory } from "./lib/workClosure.mjs";'));
 assert.ok(source.includes("if(!canCloseWork(w.status))"));
 assert.ok(source.includes('.in("status",["Da programmare","Approvato","In corso","Sospeso"])'));
-assert.ok(source.includes('.select("id").maybeSingle()'));
+assert.ok(/\\.select\\("id"\\)\\s*\\.maybeSingle\\(\\)/.test(source));
 assert.ok(source.includes('{canCloseWork(w.status)&&<button className="secondary-button small" onClick={()=>closeWork(w)}>Chiudi lavoro</button>}'));
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
