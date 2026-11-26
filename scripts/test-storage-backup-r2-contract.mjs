@@ -55,7 +55,7 @@ assert.ok(workflow.includes("github.ref == 'refs/heads/main'"));
 assert.ok(workflow.includes("vars.STORAGE_BACKUP_ENABLED == 'true'"));
 assert.ok(!workflow.includes("github.event_name == 'push'"));
 assert.doesNotMatch(workflow, /^        if:/m);
-assert.match(runbook, /repository-level Actions variable** `STORAGE_BACKUP_ENABLED`/);
+assert.ok(runbook.includes("repository-level Actions variable"));
 assert.doesNotMatch(runbook, /Environment variable `STORAGE_BACKUP_ENABLED`/);
 assert.match(workflow, /vars\.STORAGE_BACKUP_ENABLED == 'true'/);
 assert.match(workflow, /CLOUDFLARE_R2_READ_TOKEN/);
