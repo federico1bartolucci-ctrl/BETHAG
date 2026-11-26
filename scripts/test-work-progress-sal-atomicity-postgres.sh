@@ -23,6 +23,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role NOLOGIN; END IF;
 END
 $roles$;
+DROP FUNCTION IF EXISTS public.test_pause_first_sal_insert() CASCADE;
 
 DROP TABLE IF EXISTS public.condominium_work_events CASCADE;
 DROP TABLE IF EXISTS public.condominium_work_progress CASCADE;
@@ -104,6 +105,11 @@ BEFORE INSERT OR UPDATE ON public.condominium_work_progress
 FOR EACH ROW
 EXECUTE FUNCTION public.validate_condominium_work_progress_accounting_links();
 
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.condominium_works,
+  public.condominium_fiscal_years, public.condominium_ledger_entries,
+  public.condominium_work_progress, public.condominium_work_events TO authenticated;
+
 INSERT INTO public.condominium_works(id,workspace_id,condominium_id,title,approved_amount)
 VALUES ('33333333-3333-4333-8333-333333333333',
         '11111111-1111-4111-8111-111111111111',
@@ -130,12 +136,14 @@ second_log="$(mktemp)"
 trap 'rm -f "$first_log" "$second_log"' EXIT
 
 psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$first_log" 2>&1 <<'SQL' &
+SET ROLE authenticated;
 SELECT public.create_condominium_work_progress_atomic(
   '11111111-1111-4111-8111-111111111111',
   '22222222-2222-4222-8222-222222222222',
   '33333333-3333-4333-8333-333333333333',
   1, current_date, 'Race SAL first', 'Presentato', 40, 60, 0, ''
 );
+RESET ROLE;
 SQL
 first_pid=$!
 
@@ -158,12 +166,14 @@ if ! grep -q "FIRST_SAL_INSERT_HELD" "$first_log"; then
 fi
 
 if psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$second_log" 2>&1 <<'SQL'
+SET ROLE authenticated;
 SELECT public.create_condominium_work_progress_atomic(
   '11111111-1111-4111-8111-111111111111',
   '22222222-2222-4222-8222-222222222222',
   '33333333-3333-4333-8333-333333333333',
   2, current_date, 'Race SAL second', 'Presentato', 40, 60, 0, ''
 );
+RESET ROLE;
 SQL
 then
   wait "$first_pid"
