@@ -59,13 +59,13 @@ try {
     RETURNS text
     LANGUAGE sql
     IMMUTABLE
-    AS $
+    AS $crypt$
       SELECT CASE
         WHEN p_salt LIKE 'salt:%' THEN 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8'), 1, 72), 'hex')
         WHEN p_salt = 'hash:' || pg_catalog.encode(pg_catalog.substring(pg_catalog.convert_to(p_password, 'UTF8'), 1, 72), 'hex') THEN p_salt
         ELSE 'invalid-hash'
       END
-    $;
+    $crypt$;
 
     CREATE TABLE public.user_security_settings (
       user_id uuid PRIMARY KEY,
