@@ -17192,7 +17192,7 @@ function InsurancePoliciesSection({ condominiumId, isAdministrator }: { condomin
     const requestedCondominiumId = condominiumId;
     if (currentCondominiumIdRef.current !== requestedCondominiumId) return;
     const request = loadGuardRef.current.begin();
-    const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === requestedCondominiumId;
+    const isCurrent = () => request.isCurrent() && currentCondominiumIdRef.current === condominiumId;
     if (clearForCondominiumChange) setPolicies([]);
     if (isCurrent()) {
       setLoading(true);
