@@ -6,11 +6,29 @@ CREATE OR REPLACE FUNCTION public.validate_condominium_work_progress_accounting_
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-declare w record;l record;p record;v_linked_paid numeric;
+declare w record;l record;p record;v_linked_paid numeric;v_total_sal numeric;
 begin
-  select workspace_id,condominium_id,supplier_id into w
-  from public.condominium_works where id=new.work_id;
+  if tg_op = 'UPDATE' and new.work_id is distinct from old.work_id then
+    raise exception 'Non è consentito spostare un SAL tra interventi';
+  end if;
+  select workspace_id,condominium_id,supplier_id,approved_amount into w
+  from public.condominium_works where id=new.work_id
+  for update;
   if not found then raise exception 'Lavoro collegato al SAL non trovato'; end if;
+  if new.workspace_id is distinct from w.workspace_id
+     or new.condominium_id is distinct from w.condominium_id then
+    raise exception 'SAL non coerente con workspace e condominio del lavoro';
+  end if;
+  select pg_catalog.round(coalesce(sum(amount),0)::numeric,2) into v_total_sal
+  from public.condominium_work_progress
+  where workspace_id=w.workspace_id
+    and condominium_id=w.condominium_id
+    and work_id=new.work_id
+    and id is distinct from new.id;
+  if w.approved_amount>0
+     and v_total_sal + pg_catalog.round(coalesce(new.amount,0)::numeric,2) > w.approved_amount + 0.005 then
+    raise exception 'Il totale dei SAL supera l''importo approvato del lavoro';
+  end if;
   if new.ledger_entry_id is not null then
     select workspace_id,condominium_id,direction,supplier_id into l
     from public.condominium_ledger_entries where id=new.ledger_entry_id;
@@ -56,6 +74,9 @@ begin
   return new;
 end;
 $function$;
+
+REVOKE ALL ON FUNCTION public.validate_condominium_work_progress_accounting_links()
+FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.register_condominium_work_progress_payment(
   p_workspace_id uuid,p_condominium_id uuid,p_work_id uuid,p_progress_id uuid,
@@ -223,7 +244,7 @@ BEGIN
   end if;
   if p_progress_no is null or p_progress_no<1 then raise exception 'Numero SAL non valido'; end if;
   if p_progress_date is null then raise exception 'Data SAL obbligatoria'; end if;
-  if p_status not in ('Presentato','Verificato','Approvato','Contestato') then
+  if p_status is null or p_status not in ('Presentato','Verificato','Approvato','Contestato') then
     raise exception 'Stato SAL non valido: il pagamento deve essere registrato dalla procedura contabile';
   end if;
   v_amount:=pg_catalog.round(coalesce(p_amount,0)::numeric,2);
