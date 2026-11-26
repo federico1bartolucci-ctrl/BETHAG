@@ -11,6 +11,7 @@ import { prepareCreationIntakesForBackupRestore } from "./lib/backupCreationInta
 import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupCommunicationRecipientsRestore.mjs";
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
+import { getBackupRestoreBackendAvailability } from "./lib/backupRestoreBackendAvailability.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3324,6 +3325,15 @@ function App() {
         alert("Il backup appartiene a un workspace diverso. Il ripristino è stato bloccato.");
         return;
       }
+      const backendAvailability = getBackupRestoreBackendAvailability(
+        backup,
+        Boolean(supabase),
+        WORKSPACE_BACKUP_RESTORE_ORDER.filter((table) => !isBackupAuthorizationTable(table))
+      );
+      if (backendAvailability.blockReason) {
+        alert(backendAvailability.blockReason);
+        return;
+      }
       const recipientLedgerBlockReason = getCommunicationRecipientLedgerRestoreBlockReason(backup);
       if (recipientLedgerBlockReason) {
         alert(recipientLedgerBlockReason);
@@ -3588,6 +3598,12 @@ function App() {
           }
         }
       }
+      const securitySkipSummary = skippedSecurityRows.length
+        ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione."
+        : "";
+      const backendModeNotice = backendAvailability.localOnlyNotice
+        ? " " + backendAvailability.localOnlyNotice
+        : "";
       if (errors.length || sourceReadErrorSummary) {
         const restoreErrorSummary = errors.length
           ? "Errori durante il ripristino: " + errors.join(" | ") + ". "
@@ -3595,9 +3611,11 @@ function App() {
         const sourceErrorSummary = sourceReadErrorSummary
           ? "Il backup sorgente era incompleto; alcune tabelle non sono state esportate: " + sourceReadErrorSummary + ". "
           : "";
-        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + (skippedSecurityRows.length ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione." : ""));
+        alert("Ripristino completato parzialmente. " + restoreErrorSummary + sourceErrorSummary + securitySkipSummary + backendModeNotice);
+      } else if (backendAvailability.localOnlyNotice) {
+        alert(backendAvailability.localOnlyNotice + securitySkipSummary);
       } else {
-        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + (skippedSecurityRows.length ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione." : ""));
+        alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + securitySkipSummary);
       }
       window.location.reload();
     } catch (e: any) {
