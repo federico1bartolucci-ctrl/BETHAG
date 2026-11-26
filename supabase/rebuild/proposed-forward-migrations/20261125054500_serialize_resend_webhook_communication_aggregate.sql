@@ -63,7 +63,7 @@ BEGIN
 
   -- "email.sent" only changes delivery state while a recipient is queued.
   -- Opens/clicks and other informational events do not advance this cursor.
-  v_status_event := p_event_type IN ('email.sent', 'email.delivered', 'email.bounced', 'email.complained')
+  v_status_event := p_event_type IN ('email.sent', 'email.delivered', 'email.bounced', 'email.complained', 'email.failed', 'email.suppressed')
     AND (p_event_type <> 'email.sent' OR v_row.status = 'queued');
 
   IF v_status_event THEN
@@ -88,6 +88,8 @@ BEGIN
            END >= CASE p_event_type
              WHEN 'email.complained' THEN 3
              WHEN 'email.bounced' THEN 3
+             WHEN 'email.failed' THEN 3
+             WHEN 'email.suppressed' THEN 3
              WHEN 'email.delivered' THEN 2
              WHEN 'email.sent' THEN 1
              ELSE 0
@@ -106,6 +108,8 @@ BEGIN
     WHEN 'email.delivered' THEN 'delivered'
     WHEN 'email.bounced' THEN 'failed'
     WHEN 'email.complained' THEN 'failed'
+    WHEN 'email.failed' THEN 'failed'
+    WHEN 'email.suppressed' THEN 'failed'
     WHEN 'email.sent' THEN CASE WHEN v_row.status = 'queued' THEN 'sent' ELSE v_row.status END
     ELSE v_row.status
   END;
@@ -122,6 +126,8 @@ BEGIN
       error_message = CASE
         WHEN p_event_type = 'email.bounced' THEN 'email.bounced'
         WHEN p_event_type = 'email.complained' THEN 'email.complained'
+        WHEN p_event_type = 'email.failed' THEN 'email.failed'
+        WHEN p_event_type = 'email.suppressed' THEN 'email.suppressed'
         WHEN p_event_type = 'email.delivered' THEN NULL
         ELSE error_message
       END,
