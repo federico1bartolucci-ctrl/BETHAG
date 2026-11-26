@@ -16,7 +16,7 @@ function extractFunction(prefix) {
 
 const syncSql = extractFunction("CREATE OR REPLACE FUNCTION public.sync_condominium_installment_from_payments()");
 const registerSql = extractFunction("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment(");
-const registerSql = extractFunction("CREATE OR REPLACE FUNCTION private.register_condominium_installment_payment(");
+
 
 for (const [name, sql] of [["payment trigger", syncSql], ["manual payment RPC", registerSql]]) {
   const lock = sql.indexOf("pg_advisory_xact_lock");
