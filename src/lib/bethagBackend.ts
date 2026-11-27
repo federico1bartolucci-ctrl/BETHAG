@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { runWithTemporaryStorageCleanup } from "./temporaryStorageCleanup.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -2204,7 +2205,11 @@ export async function deleteWorkspaceStoredFile(path: string): Promise<void> {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!path) return;
   const { error } = await supabase.storage.from("bethag-documents").remove([path]);
-  if (error) throw new Error(`Impossibile eliminare il file memorizzato: ${error.message}`);
+  if (error && Number(error.status) !== 404) {
+    const cleanupError = new Error(`Impossibile eliminare il file memorizzato: ${error.message}`);
+    (cleanupError as any).status = error.status;
+    throw cleanupError;
+  }
 }
 
 export async function storeCondominiumDocuments(
@@ -2264,22 +2269,18 @@ export async function analyzeWorkspaceDocumentsWithAI(
   if (!workspaceId || !files.length) throw new Error("Workspace o documenti mancanti.");
 
   const stored = await storeWorkspaceDocuments(workspaceId, files);
-  try {
-    return await analyzeWorkspaceStoredDocumentsWithAI(
+  return runWithTemporaryStorageCleanup({
+    stored,
+    analyze: (items: any[]) => analyzeWorkspaceStoredDocumentsWithAI(
       workspaceId,
-      stored.map((item: any) => ({
+      items.map((item: any) => ({
         filename: item.name,
         storagePath: item.path,
         mimeType: item.type,
       }))
-    );
-  } finally {
-    await Promise.all(
-      stored.map((item: any) =>
-        deleteWorkspaceStoredFile(item.path).catch(() => undefined)
-      )
-    );
-  }
+    ),
+    removeFile: deleteWorkspaceStoredFile,
+  });
 }
 
 export async function analyzeCondominiumStoredDocumentsWithAI(
@@ -2305,22 +2306,18 @@ export async function analyzeCondominiumDocumentsWithAI(
   if (!files.length) throw new Error("Nessun documento selezionato.");
 
   const stored = await storeCondominiumDocuments(workspaceId, files);
-  try {
-    return await analyzeCondominiumStoredDocumentsWithAI(
+  return runWithTemporaryStorageCleanup({
+    stored,
+    analyze: (items: any[]) => analyzeCondominiumStoredDocumentsWithAI(
       workspaceId,
-      stored.map((item: any) => ({
+      items.map((item: any) => ({
         filename: item.name,
         storagePath: item.path,
         mimeType: item.type,
       }))
-    );
-  } finally {
-    await Promise.all(
-      stored.map((item: any) =>
-        deleteWorkspaceStoredFile(item.path).catch(() => undefined)
-      )
-    );
-  }
+    ),
+    removeFile: deleteWorkspaceStoredFile,
+  });
 }
 
 
