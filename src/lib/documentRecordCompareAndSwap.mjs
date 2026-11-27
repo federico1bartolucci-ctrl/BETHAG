@@ -52,10 +52,13 @@ export async function updateDocumentRecordIfStorageVersionMatches(
     update = update.eq("file_path", current.file_path);
   }
 
-  if (current.data === null || current.data === undefined) {
-    update = update.is("data", null);
-  } else {
-    update = update.eq("data", current.data);
+  if (current.file_path === null || current.file_path === undefined) {
+    const legacyStoragePath = current.data?.storagePath ?? null;
+    if (legacyStoragePath === null) {
+      update = update.is("data->>storagePath", null);
+    } else {
+      update = update.filter("data->>storagePath", "eq", legacyStoragePath);
+    }
   }
 
   const { data, error } = await update
