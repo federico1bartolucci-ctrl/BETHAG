@@ -1,31 +1,62 @@
-export async function cleanupTemporaryStorageFiles(paths, removeFile, maxAttempts = 2) {
-  if (!Array.isArray(paths) || typeof removeFile !== "function") {
+const DEFAULT_MAX_CONCURRENT_REMOVALS = 5;
+
+export async function cleanupTemporaryStorageFiles(
+  paths,
+  removeFile,
+  maxAttempts = 2,
+  maxConcurrency = DEFAULT_MAX_CONCURRENT_REMOVALS,
+) {
+  if (
+    !Array.isArray(paths) ||
+    typeof removeFile !== "function" ||
+    !Number.isInteger(maxAttempts) ||
+    maxAttempts < 1 ||
+    !Number.isInteger(maxConcurrency) ||
+    maxConcurrency < 1
+  ) {
     throw new TypeError("Contesto di pulizia Storage temporanea non valido.");
   }
 
   const uniquePaths = [...new Set(paths.filter((path) => typeof path === "string" && path.trim()))];
-  const results = await Promise.all(uniquePaths.map(async (path) => {
-    let lastError = null;
-    let attempts = 0;
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      attempts = attempt;
-      try {
-        await removeFile(path);
-        return { path, ok: true, attempts };
-      } catch (error) {
-        lastError = error;
-        const status = Number(error?.status);
-        const retryable = !Number.isInteger(status) || status >= 500 || status === 408 || status === 429;
-        if (!retryable || attempt === maxAttempts) break;
+  const results = new Array(uniquePaths.length);
+  let nextIndex = 0;
+
+  const workerCount = Math.min(maxConcurrency, uniquePaths.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < uniquePaths.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const path = uniquePaths[index];
+        let lastError = null;
+        let attempts = 0;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          attempts = attempt;
+          try {
+            await removeFile(path);
+            results[index] = { path, ok: true, attempts };
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+            const status = Number(error?.status);
+            const retryable = !Number.isInteger(status) || status >= 500 || status === 408 || status === 429;
+            if (!retryable || attempt === maxAttempts) break;
+          }
+        }
+
+        if (lastError) {
+          results[index] = {
+            path,
+            ok: false,
+            attempts,
+            error: lastError?.message || String(lastError || "Errore di pulizia Storage."),
+          };
+        }
       }
-    }
-    return {
-      path,
-      ok: false,
-      attempts,
-      error: lastError?.message || String(lastError || "Errore di pulizia Storage."),
-    };
-  }));
+    }),
+  );
 
   return {
     ok: results.every((result) => result.ok),
