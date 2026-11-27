@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseConsumptionCsv, prepareConsumptionCsvImport } from "../src/lib/consumptionCsv.mjs";
+import { parseBethagAmount } from "../src/lib/parseBethagAmount.mjs";
 
 const units = [{ id: "unit-1", condominium_id: "condo-1", unit_code: "A1" }];
 const fiscalYears = [{ id: "fy-2026", name: "2026" }];
@@ -90,6 +91,25 @@ const singleSeparator = prepareSingle(["A1", "2026", "1.234", "1.244", "0.010", 
 assert.equal(singleSeparator.errors.length, 0);
 assert.equal(singleSeparator.rows[0].previous_reading, 1.234);
 assert.equal(singleSeparator.rows[0].current_reading, 1.244);
+
+const malformedMixedLocaleAmounts = [
+  "12,34.56",
+  "1,23,456.78",
+  "1.23,45",
+  "12.34.567,89",
+  "1234,567.89",
+  "1,234.56.78",
+  "1.234,56,78",
+  "1,234.",
+];
+for (const value of malformedMixedLocaleAmounts) {
+  assert.ok(Number.isNaN(parseBethagAmount(value)), "malformed mixed-locale grouping must be rejected: " + value);
+}
+for (const value of malformedMixedLocaleAmounts) {
+  const rejected = prepareMixedLocale(["A1", "2026", value, "1,244.50", "10.00", "2,500.75"]);
+  assert.ok(rejected.errors.length > 0, "CSV import must reject malformed numeric grouping: " + value);
+  assert.equal(rejected.rows.length, 0, "malformed numeric grouping must not produce partial import rows");
+}
 
 const commaCsv = [
   "Unita,Esercizio,Lettura precedente,Lettura attuale,Consumo,Note",
