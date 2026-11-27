@@ -116,7 +116,7 @@ assert.ok(start >= 0 && end > start, "Register item save handler must exist and 
 const handler = source.slice(start, end);
 assert.match(handler, /updateRegisterItemWithinScope/, "Existing register item edits must use the scoped helper.");
 assert.match(handler, /editingItemScope\.selectedCondominium/, "Save must validate the original selected condominium.");
-assert.match(source, /setEditingItemScope\(\{workspaceId,condominiumId:x\.condominium_id,selectedCondominium:selected\}\)/, "Edit must capture original workspace, condominium and selected context.");
+assert.match(source, /setEditingItemScope\\(\\{id:x\\.id,workspaceId,condominiumId:x\\.condominium_id,selectedCondominium:selected\\}\\)/, "Edit must capture original workspace, condominium and selected context.");
 assert.match(source, /setEditingItemScope\(null\)/, "New, saved and cancelled forms must clear stale edit scope.");
 assert.ok(packageJson.scripts.test.includes("test-register-item-update-scope.mjs"), "Regression must be wired into npm test.");
 
