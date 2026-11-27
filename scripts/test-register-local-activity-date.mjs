@@ -7,7 +7,7 @@ assert.match(helper, /export function localISODateAfterDays\(days: number, date 
 assert.match(helper, /nextDate\.setDate\(nextDate\.getDate\(\) \+ days\)/);
 
 const register = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
-assert.match(register, /import \{ localISODateAfterDays \} from "\.\/lib\/local-date"/);
+assert.match(register, /import \{ localISODate, localISODateAfterDays \} from "\.\/lib\/local-date"/);
 assert.match(register, /expected_end_date\|\|localISODateAfterDays\(7\)/);
 assert.match(register, /expected_end_date\|\|w\.start_date\|\|localISODateAfterDays\(7\)/);
 assert.match(register, /expiry_date\|\|localISODateAfterDays\(7\)/);
