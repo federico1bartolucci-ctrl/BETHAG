@@ -11,8 +11,8 @@ function sameStoragePath(currentRow, expectedPath) {
   return currentPath === (expectedPath ?? null);
 }
 
-// Compare-and-swap the document row against the exact version observed by the editor.
-// The JSONB snapshot closes the read/update race even when file_path is NULL on legacy rows.
+// Compare-and-swap the document's Storage pointer against the version observed by the editor.
+// Legacy rows without file_path use the JSONB storagePath value as the concurrency token.
 export async function updateDocumentRecordIfStorageVersionMatches(
   client,
   row,
