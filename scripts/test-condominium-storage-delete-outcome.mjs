@@ -210,7 +210,7 @@ import {
   assert.match(backendBody, /\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/);
   assert.match(backendBody, /\.range\(offset,\s*offset\s*\+\s*pageSize\s*-\s*1\)/);
   assert.match(backendBody, /deleteCondominiumWithStorageCleanup/);
-  assert.match(backendBody, /deleteCondominiumWithStorageCleanup\\(\\{\\s*workspaceId,/);
+  assert.match(backendBody, /deleteCondominiumWithStorageCleanup\(\{\s*workspaceId,/);
   const workspacePathGuard = deletion.indexOf("const unscopedPaths = paths.filter");
   const databaseDelete = deletion.indexOf("await deleteDatabase()");
   assert.ok(workspacePathGuard >= 0 && databaseDelete > workspacePathGuard,
