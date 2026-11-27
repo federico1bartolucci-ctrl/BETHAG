@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { uploadFilesWithRollback } from "./documentStorageUpload.js";
+import { persistDocumentRecordWithVerification } from "./documentSaveFlow.mjs";
 import { parseInvoiceDate } from "./invoiceDate.mjs";
 import { resolveActiveWorkspaceId } from "./preferredWorkspaceResolution.mjs";
 import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
@@ -943,6 +944,48 @@ async function upsertRows(table: string, rows: any[], onConflict = "workspace_id
     onConflict,
   });
   if (error) throw error;
+}
+
+export async function saveWorkspaceDocumentRecord(workspaceId: string, item: any) {
+  if (!supabase) throw new Error("Supabase non configurato.");
+  if (!workspaceId || !item?.id || !item?.condominiumId) {
+    throw new Error("Workspace, documento o condominio non validi.");
+  }
+
+  const { data: condominium, error: condominiumError } = await supabase
+    .from("condominiums")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("legacy_id", item.condominiumId)
+    .maybeSingle();
+  if (condominiumError) throw condominiumError;
+  if (!condominium?.id) throw new Error("Condominio del documento non trovato sul server.");
+
+  const row = {
+    workspace_id: workspaceId,
+    legacy_id: item.id,
+    condominium_id: condominium.id,
+    title: item.name,
+    category: item.category,
+    status: item.publication,
+    file_path: item.storagePath ?? null,
+    data: item,
+  };
+
+  return persistDocumentRecordWithVerification({
+    document: row,
+    write: () => upsertRows("documents", [row]),
+    read: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("legacy_id,condominium_id,title,category,status,file_path,data")
+        .eq("workspace_id", workspaceId)
+        .eq("legacy_id", item.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 }
 
 export async function saveCondominiumUnit(workspaceId: string, item: any) {
