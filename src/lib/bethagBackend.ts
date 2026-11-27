@@ -4,6 +4,7 @@ import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 import { loadLinkedWorkLedgerRows } from "./workLedgerLinkLookup.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
+import { collectCondominiumStoragePaths, deleteCondominiumWithStorageCleanup } from "./condominiumStorageDeletion.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -1982,9 +1983,7 @@ export async function deleteCondominium(workspaceId: string, legacyId: number, s
   if (!supabase) throw new Error("Supabase non configurato.");
 
   return enqueueBackendSync(async () => {
-    // La RPC elimina i record in modo atomico. Gli oggetti Storage non possono
-    // essere cancellati da una funzione SQL, quindi ne raccogliamo prima i path
-    // e li rimuoviamo solo dopo il successo della transazione DB.
+    // Capture every Storage path before the atomic database deletion.
     const { data: condominium, error: condominiumError } = await supabase
       .from("condominiums")
       .select("id")
@@ -1995,43 +1994,32 @@ export async function deleteCondominium(workspaceId: string, legacyId: number, s
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) throw new Error("Condominio non trovato sul server.");
 
-    const { data: documents, error: documentsError } = await supabase
-      .from("documents")
-      .select("file_path")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id)
-      .not("file_path", "is", null);
+    const storagePaths = await collectCondominiumStoragePaths(async (offset, pageSize) => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("file_path")
+        .eq("workspace_id", workspaceId)
+        .eq("condominium_id", condominium.id)
+        .not("file_path", "is", null)
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
 
-    if (documentsError) throw documentsError;
-
-    const storagePaths = Array.from(
-      new Set(
-        (documents ?? [])
-          .map((row: any) => String(row.file_path ?? "").trim())
-          .filter(Boolean)
-      )
-    );
-
-    const { error } = await supabase.rpc("delete_condominium", {
-      p_workspace_id: workspaceId,
-      p_legacy_id: legacyId,
-      p_security_code: securityCode ?? null,
+      if (error) throw error;
+      return data ?? [];
     });
 
-    if (error) throw error;
-
-    if (storagePaths.length) {
-      const { error: storageError } = await supabase.storage
-        .from("bethag-documents")
-        .remove(storagePaths);
-
-      if (storageError) {
-        throw new Error(
-          "Il condominio è stato eliminato dal database, ma alcuni file Storage non sono stati rimossi: " +
-          storageError.message
-        );
-      }
-    }
+    return deleteCondominiumWithStorageCleanup({
+      deleteDatabase: async () => {
+        const { error } = await supabase.rpc("delete_condominium", {
+          p_workspace_id: workspaceId,
+          p_legacy_id: legacyId,
+          p_security_code: securityCode ?? null,
+        });
+        if (error) throw error;
+      },
+      storagePaths,
+      removeBatch: (paths) => supabase.storage.from("bethag-documents").remove(paths),
+    });
   });
 }
 
