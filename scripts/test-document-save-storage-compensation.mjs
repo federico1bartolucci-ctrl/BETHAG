@@ -178,4 +178,34 @@ assert.match(backendSource, /return enqueueBackendSync\(async \(\) => \{/);
 assert.match(backendSource, /persistDocumentRecordWithVerification\(/);
 assert.match(packageSource.scripts.test, /test-document-save-storage-compensation\.mjs/);
 
+{
+  const events = [];
+  await assert.rejects(
+    saveDocumentWithStorage({
+      document: baseDocument,
+      file,
+      uploadFiles: async () => { events.push("upload"); throw new Error("storage upload failed"); },
+      persistDocument: async () => { events.push("persist"); },
+      deleteStoredFile: async (path) => { events.push("delete:" + path); },
+    }),
+    /storage upload failed/,
+  );
+  assert.deepEqual(events, ["upload"], "metadata is not written when the upload helper fails");
+}
+
+{
+  const events = [];
+  await assert.rejects(
+    saveDocumentWithStorage({
+      document: baseDocument,
+      file,
+      uploadFiles: async () => { events.push("upload"); return [{ path: "new.pdf" }]; },
+      persistDocument: async () => { events.push("persist"); throw new Error("database rejected"); },
+      deleteStoredFile: async (path) => { events.push("delete:" + path); throw new Error("storage unavailable"); },
+    }),
+    (error) => error.message.includes("new.pdf") && error.message.includes("storage unavailable"),
+  );
+  assert.deepEqual(events, ["upload", "persist", "delete:new.pdf"]);
+}
+
 console.log("Document metadata persistence, ambiguous-write verification and Storage compensation regression checks passed");
