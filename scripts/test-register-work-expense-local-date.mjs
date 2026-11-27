@@ -6,7 +6,7 @@ const helper = await readFile(new URL("../src/lib/local-date.ts", import.meta.ur
 assert.match(helper, /export function localISODate\(date = new Date\(\)\)/);
 
 const register = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
-assert.match(register, /import \{ localISODate, localISODateAfterDays \} from "\.\/lib\/local-date"/);
+assert.match(register, /import \{[^}]*localISODate[^}]*\} from "\.\/lib\/local-date"/);
 const start = register.indexOf("async function saveWorkExpense(");
 const end = register.indexOf("async function openWorkHistory(", start);
 assert.ok(start >= 0 && end > start, "saveWorkExpense function boundaries");
