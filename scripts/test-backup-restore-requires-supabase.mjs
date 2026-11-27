@@ -20,8 +20,8 @@ assert.ok(firstConfirmation > availabilityGuard, "availability guard must run be
 assert.ok(firstFrontendMutation > availabilityGuard, "availability guard must run before React state mutation");
 assert.ok(firstLocalStorageWrite > availabilityGuard, "availability guard must run before localStorage mutation");
 assert.ok(firstBackendWrite > availabilityGuard, "availability guard must run before backend writes");
-assert.match(handler, /if \\(backendAvailability\\.blockReason\\)\\s*\\{\\s*alert\\(backendAvailability\\.blockReason\\);\\s*return;/);
-assert.match(handler, /else if \\(backendAvailability\\.localOnlyNotice\\)/,
+assert.match(handler, /if \(backendAvailability\.blockReason\)\s*\{\s*alert\(backendAvailability\.blockReason\);\s*return;/);
+assert.match(handler, /else if \(backendAvailability\.localOnlyNotice\)/,
   "a valid local-only restore must not be reported as a complete backend restore");
 assert.ok(packageJson.scripts.test.includes("test-backup-restore-requires-supabase.mjs"),
   "runtime regression must be wired into npm test");
