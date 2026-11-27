@@ -1880,7 +1880,7 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       .eq("id", id)
       .maybeSingle();
     if (workError) throw workError;
-    if (!work) return;
+    if (!work) throw new Error("Lavoro non trovato o già eliminato: nessuna eliminazione eseguita.");
 
     const progressRows = await loadCondominiumWorkDeletionRows(
       supabase,
@@ -1922,12 +1922,17 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       throw new Error("Il lavoro non può essere eliminato perché contiene una o più fatture collegate. Gestisci prima il collegamento e la relativa contabilizzazione per evitare di perdere la tracciabilità dell'intervento.");
     }
 
-    const { error } = await supabase
+    const { data: deletedWork, error: deleteError } = await supabase
       .from("condominium_works")
       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("id", id);
-    if (error) throw error;
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    if (deleteError) throw deleteError;
+    if (!deletedWork?.id || String(deletedWork.id) !== String(id)) {
+      throw new Error("Lavoro non trovato o già eliminato: nessuna eliminazione eseguita.");
+    }
   });
 }
 
