@@ -12,8 +12,8 @@ const accounting = await readFile(new URL("../src/AccountingPage.tsx", import.me
 assert.ok(accounting.includes('import { localISODate } from "./lib/local-date"'));
 assert.equal(
   accounting.split("payment_date:localISODate()").length - 1,
-  2,
-  "both initial and reset payment dates must use the local calendar",
+  3,
+  "initial, reset, and installment-open payment dates must use the local calendar",
 );
 assert.ok(accounting.includes("function createEmptyCaseForm(date = new Date())"), "new legal cases must use a fresh form factory");
 assert.ok(accounting.includes("useState(createEmptyCaseForm())"), "initial legal case state must use the factory");
