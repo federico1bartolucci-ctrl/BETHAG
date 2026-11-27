@@ -20,6 +20,10 @@ DELETE FROM public.condominium_members
 WHERE id IN ('$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid, '$OWNER_SYNC_TEST_MEMBER_B_ID'::uuid);
 DELETE FROM public.condominium_units
 WHERE id IN ('$OWNER_SYNC_TEST_UNIT_ID'::uuid, '$OWNER_SYNC_TEST_UNIT_B_ID'::uuid);
+DELETE FROM public.condominium_members
+WHERE id IN ('$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid, '$OWNER_SYNC_TEST_MEMBER_B_ID'::uuid);
+DELETE FROM public.workspace_members
+WHERE workspace_id='$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid AND user_id='$OWNER_SYNC_TEST_USER_ID'::uuid;
 DELETE FROM public.condominiums WHERE id='$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid;
 DELETE FROM public.workspaces WHERE id='$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid;
 DELETE FROM auth.users WHERE id='$OWNER_SYNC_TEST_USER_ID'::uuid;
@@ -198,15 +202,20 @@ if [[ "$both_present" != "t" ]]; then
 fi
 echo "PASS: both concurrent owners retained under the ordered unit-row lock."
 
-psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
-  -c "SELECT public.sync_condominium_member_owner_references(
-    '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid,
-    '$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid,
-    '$OWNER_SYNC_TEST_UNIT_ID'::uuid,
-    NULL,
-    $OWNER_SYNC_TEST_LEGACY_A::bigint,
-    false
-  )"
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$OWNER_SYNC_TEST_USER_ID';
+SELECT public.sync_condominium_member_owner_references(
+  '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid,
+  '$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid,
+  '$OWNER_SYNC_TEST_UNIT_ID'::uuid,
+  NULL,
+  $OWNER_SYNC_TEST_LEGACY_A::bigint,
+  false
+);
+COMMIT;
+SQL
 
 remaining="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
   -c "SELECT data->'ownerMemberIds' FROM public.condominium_units WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid")"
