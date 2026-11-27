@@ -85,7 +85,11 @@ assert.equal(cleanup.ok, true, "the retry must succeed after the SDK-stripped Re
 assert.equal(requests.length, 2, "the SDK must make one initial request and one delayed retry");
 assert.equal(requests[0].method, "DELETE");
 assert.deepEqual(requests[0].prefixes, [targetPath]);
-assert.deepEqual(waits, [500], "the actual SDK error path must preserve the 500 ms server delay");
+assert.equal(waits.length, 1);
+assert.ok(
+  waits[0] > 0 && waits[0] <= 500,
+  "the SDK error path must wait the remaining portion of the 500 ms server deadline",
+);
 assert.equal(sdkErrorShape.status, 429);
 assert.equal(sdkErrorShape.headers, undefined, "StorageApiError does not retain the Response headers");
 assert.equal(sdkErrorShape.retryAfter, undefined, "StorageApiError does not retain Retry-After itself");

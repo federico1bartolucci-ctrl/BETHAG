@@ -1,5 +1,4 @@
 const MAX_PENDING_PATHS = 512;
-const MAX_PENDING_PER_PATH = 4;
 const RETRY_AFTER_TTL_MS = 60_000;
 
 const pendingRetryAfterByPath = new Map();
@@ -51,13 +50,39 @@ async function getStorageRemovalPaths(input, init) {
   )];
 }
 
+function parseRetryAfterDeadline(value, now) {
+  if (value === undefined || value === null || value === "") return null;
+  const text = String(value).trim();
+  if (!text) return null;
+
+  if (/^\d+(?:\.\d+)?$/.test(text)) {
+    const seconds = Number(text);
+    return Number.isFinite(seconds) ? now + Math.max(0, seconds * 1000) : null;
+  }
+
+  const timestamp = Date.parse(text);
+  return Number.isFinite(timestamp) ? Math.max(now, timestamp) : null;
+}
+
 function recordRetryAfter(path, value) {
   const now = Date.now();
-  const queue = (pendingRetryAfterByPath.get(path) ?? [])
-    .filter((entry) => entry.expiresAt > now);
-  queue.push({ value, expiresAt: now + RETRY_AFTER_TTL_MS });
-  while (queue.length > MAX_PENDING_PER_PATH) queue.shift();
-  pendingRetryAfterByPath.set(path, queue);
+  const retryAt = parseRetryAfterDeadline(value, now);
+  if (retryAt === null) return;
+
+  const current = pendingRetryAfterByPath.get(path);
+  const currentRetryAt = current?.expiresAt > now ? current.retryAt : 0;
+  const strongestRetryAt = Math.max(currentRetryAt, retryAt);
+
+  // Retain the strongest outstanding deadline. Concurrent SDK error handlers
+  // can resolve out of fetch-response order, so a consumable FIFO can assign a
+  // shorter Retry-After to the request that actually received the longer one.
+  // Keep the entry until after the server deadline; otherwise a long
+  // Retry-After could expire from memory while it is still in force.
+  pendingRetryAfterByPath.delete(path);
+  pendingRetryAfterByPath.set(path, {
+    retryAt: strongestRetryAt,
+    expiresAt: Math.max(now + RETRY_AFTER_TTL_MS, strongestRetryAt + RETRY_AFTER_TTL_MS),
+  });
 
   while (pendingRetryAfterByPath.size > MAX_PENDING_PATHS) {
     const oldestPath = pendingRetryAfterByPath.keys().next().value;
@@ -93,32 +118,40 @@ export function createStorageRetryAfterFetch(fetchImpl) {
 }
 
 /**
- * Reads a Retry-After value from a Storage SDK error or from the response
- * metadata captured by createStorageRetryAfterFetch. The captured entry is
- * consumed even when the SDK error already exposes a header, preventing stale
- * metadata from being reused by a later request for the same path.
+ * Reads the strongest outstanding Retry-After instruction for a Storage path.
+ * The deadline is retained until it expires so concurrent errors for the same
+ * path cannot consume one another's metadata.
  */
 export function readStorageRetryAfter(error, path) {
-  const queue = pendingRetryAfterByPath.get(path) ?? [];
   const now = Date.now();
-  let captured = null;
-
-  while (queue.length) {
-    const entry = queue.shift();
-    if (entry.expiresAt > now) {
-      captured = entry.value;
-      break;
-    }
+  const captured = pendingRetryAfterByPath.get(path);
+  if (captured && captured.expiresAt <= now) {
+    pendingRetryAfterByPath.delete(path);
   }
 
-  if (queue.length) pendingRetryAfterByPath.set(path, queue);
-  else pendingRetryAfterByPath.delete(path);
+  const directValues = [
+    error?.retryAfter,
+    error?.headers?.get?.("retry-after"),
+    error?.headers?.get?.("Retry-After"),
+    error?.headers?.["retry-after"],
+    error?.headers?.["Retry-After"],
+    error?.context?.headers?.get?.("retry-after"),
+  ];
+  const directDeadlines = directValues
+    .map((value) => parseRetryAfterDeadline(value, now))
+    .filter((value) => value !== null);
 
-  return error?.retryAfter ??
-    error?.headers?.get?.("retry-after") ??
-    error?.headers?.get?.("Retry-After") ??
-    error?.headers?.["retry-after"] ??
-    error?.headers?.["Retry-After"] ??
-    error?.context?.headers?.get?.("retry-after") ??
-    captured;
+  const current = pendingRetryAfterByPath.get(path);
+  const deadlines = [
+    current && current.expiresAt > now ? current.retryAt : null,
+    ...directDeadlines,
+  ].filter((value) => value !== null);
+
+  if (!deadlines.length) return null;
+  const strongestRetryAt = Math.max(...deadlines);
+  if (strongestRetryAt <= now) {
+    pendingRetryAfterByPath.delete(path);
+    return "0";
+  }
+  return String((strongestRetryAt - now) / 1000);
 }
