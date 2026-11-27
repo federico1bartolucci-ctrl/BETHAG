@@ -208,6 +208,14 @@ const deleteWorkSection = backendSource.slice(deleteWorkStart, deleteWorkEnd);
 assert.match(backendSource, /import \{ loadLinkedWorkLedgerRows \} from "\.\/workLedgerLinkLookup\.mjs"/);
 assert.match(deleteWorkSection, /loadLinkedWorkLedgerRows\(supabase,\s*workspaceId,\s*id\)/);
 assert.doesNotMatch(deleteWorkSection, /\.contains\("data",\s*\{\s*workId:\s*id\s*\}\)/);
+assert.match(deleteWorkSection, /if \(!work\) throw new Error\("Lavoro non trovato o già eliminato: nessuna eliminazione eseguita\."\);/,
+  "a missing work must not be treated as a successful idempotent deletion");
+assert.match(deleteWorkSection, /\.delete\(\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("id", id\)[\s\S]*\.select\("id"\)[\s\S]*\.maybeSingle\(\)/,
+  "the final work DELETE must return the row actually deleted");
+assert.match(deleteWorkSection, /if \(deleteError\) throw deleteError;/,
+  "final DELETE errors must propagate");
+assert.match(deleteWorkSection, /if \(!deletedWork\?\.id \|\| String\(deletedWork\.id\) !== String\(id\)\)/,
+  "concurrent or RLS-hidden zero-row DELETE must fail closed");
 
 const registerPage = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
