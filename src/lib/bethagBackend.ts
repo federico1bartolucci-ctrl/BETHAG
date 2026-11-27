@@ -2000,10 +2000,9 @@ export async function deleteCondominium(workspaceId: string, legacyId: number, s
     const storagePaths = await collectCondominiumStoragePaths(async (offset, pageSize) => {
       const { data, error } = await supabase
         .from("documents")
-        .select("file_path")
+        .select("file_path,data")
         .eq("workspace_id", workspaceId)
         .eq("condominium_id", condominium.id)
-        .not("file_path", "is", null)
         .order("id", { ascending: true })
         .range(offset, offset + pageSize - 1);
 

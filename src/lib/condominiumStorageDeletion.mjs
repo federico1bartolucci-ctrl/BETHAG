@@ -1,5 +1,13 @@
 import { getUnconfirmedStorageRemovalPaths } from "./documentStorageUpload.js";
 
+function readOptionalDocumentStoragePath(value, fieldName) {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "string") {
+    throw new Error("Condominium document " + fieldName + " must be a string when present.");
+  }
+  return value.trim();
+}
+
 export async function collectCondominiumStoragePaths(fetchPage, pageSize = 1000) {
   if (typeof fetchPage !== "function") throw new TypeError("A document-page loader is required.");
   if (!Number.isInteger(pageSize) || pageSize < 1) throw new RangeError("Page size must be a positive integer.");
@@ -14,7 +22,14 @@ export async function collectCondominiumStoragePaths(fetchPage, pageSize = 1000)
 
   return Array.from(new Set(
     rows
-      .map((row) => String(row?.file_path ?? "").trim())
+      .map((row) => {
+        const filePath = readOptionalDocumentStoragePath(row?.file_path, "file_path");
+        const legacyPath = readOptionalDocumentStoragePath(row?.data?.storagePath, "data.storagePath");
+        if (filePath && legacyPath && filePath !== legacyPath) {
+          throw new Error("Condominium document has conflicting file_path and data.storagePath values; reconcile the document before deletion.");
+        }
+        return filePath || legacyPath;
+      })
       .filter(Boolean)
   ));
 }
