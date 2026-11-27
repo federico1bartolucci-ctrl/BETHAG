@@ -4489,6 +4489,7 @@ function App() {
         documentData = result.document;
         if (result.cleanupWarning) {
           console.warn("BETHAG previous document file cleanup incomplete", result.cleanupWarning);
+          alert(result.cleanupWarning);
         }
       } catch (error: any) {
         alert(error?.message || "Impossibile salvare il documento.");
