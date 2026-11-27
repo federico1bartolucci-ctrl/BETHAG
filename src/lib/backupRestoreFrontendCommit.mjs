@@ -71,7 +71,25 @@ export function commitBackupFrontendStateAfterBackendRestore(
     };
   }
 
-  commitFrontendState();
+  const frontendResult = commitFrontendState();
+  const failedLocalStorageWrites = Number.isFinite(frontendResult?.failedLocalStorageWrites)
+    ? Math.max(0, Math.trunc(frontendResult.failedLocalStorageWrites))
+    : 0;
+  const rollbackFailed = Number.isFinite(frontendResult?.rollbackFailed)
+    ? Math.max(0, Math.trunc(frontendResult.rollbackFailed))
+    : 0;
+
+  if (failedLocalStorageWrites > 0 || rollbackFailed > 0) {
+    return {
+      committed: false,
+      failedOperations: 0,
+      failedSourceReads: 0,
+      failedLocalStorageWrites,
+      rollbackFailed,
+      reason: "frontend_local_storage_incomplete",
+    };
+  }
+
   return {
     committed: true,
     failedOperations: 0,

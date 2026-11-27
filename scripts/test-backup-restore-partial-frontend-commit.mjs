@@ -13,7 +13,7 @@ const backendLoop = handler.indexOf("const restoreOrder = WORKSPACE_BACKUP_RESTO
 const sourceReadGate = handler.indexOf("getRestorableBackupSourceReadErrors(");
 const frontendCommit = handler.indexOf("commitBackupFrontendStateAfterBackendRestore(errors, () => {");
 const firstFrontendMutation = handler.indexOf('apply("condominiums", setCondominiums)');
-const firstLocalStorageWrite = handler.indexOf("localStorage.setItem(");
+const firstLocalStorageWrite = handler.indexOf("restoreBackupLocalStorageData(");
 assert.ok(backendLoop >= 0, "backend restore loop must exist");
 assert.ok(sourceReadGate > backendLoop && sourceReadGate < frontendCommit,
   "restorable source-read errors must be collected after backend restore and before frontend commit");

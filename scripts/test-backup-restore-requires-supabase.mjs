@@ -13,7 +13,7 @@ const handler = source.slice(restoreStart, restoreEnd);
 const availabilityGuard = handler.indexOf("getBackupRestoreBackendAvailability(");
 const firstConfirmation = handler.indexOf("window.confirm(");
 const firstFrontendMutation = handler.indexOf('apply("condominiums"');
-const firstLocalStorageWrite = handler.indexOf("localStorage.setItem(");
+const firstLocalStorageWrite = handler.indexOf("restoreBackupLocalStorageData(");
 const firstBackendWrite = handler.indexOf("supabase.from(table)");
 assert.ok(availabilityGuard >= 0, "restore handler must call the Supabase availability guard");
 assert.ok(firstConfirmation > availabilityGuard, "availability guard must run before user confirmation");
