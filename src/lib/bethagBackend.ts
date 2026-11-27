@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
 import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
+import { loadLinkedWorkLedgerRows } from "./workLedgerLinkLookup.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
 
 export type BackendState = Record<string, any[]>;
@@ -1889,14 +1890,7 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       { select: "id,progress_no,ledger_entry_id,payment_entry_id" }
     );
     const hasAccountingProgress = progressRows.some((row: any) => Boolean(row.ledger_entry_id) || Boolean(row.payment_entry_id));
-    const { data: linkedLedger, error: ledgerError } = await supabase
-      .from("condominium_ledger_entries")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("direction", "Uscita")
-      .contains("data", { workId: id })
-      .limit(1);
-    if (ledgerError) throw ledgerError;
+    const linkedLedger = await loadLinkedWorkLedgerRows(supabase, workspaceId, id);
 
     const linkedDocuments = await loadCondominiumWorkDeletionRows(
       supabase,
