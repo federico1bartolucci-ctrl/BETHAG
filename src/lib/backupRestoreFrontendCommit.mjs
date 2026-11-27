@@ -5,7 +5,7 @@
  * backup.
  *
  * Missing metadata is accepted for legacy backups. A present but malformed
- * error section fails closed because its completeness cannot be established.
+ * error section or malformed value for a restorable table fails closed.
  */
 export function getRestorableBackupSourceReadErrors(backendReadErrors, restorableTables) {
   if (!Array.isArray(restorableTables)) {
@@ -22,14 +22,16 @@ export function getRestorableBackupSourceReadErrors(backendReadErrors, restorabl
   const allowedTables = new Set(
     restorableTables.filter((table) => typeof table === "string" && table.trim())
   );
-  return Object.entries(backendReadErrors)
-    .filter(([table, message]) =>
-      allowedTables.has(table) &&
-      message !== undefined &&
-      message !== null &&
-      String(message).trim().length > 0
-    )
-    .map(([table, message]) => `${table}: ${String(message).trim()}`);
+  const failures = [];
+  for (const [table, message] of Object.entries(backendReadErrors)) {
+    if (!allowedTables.has(table)) continue;
+    if (typeof message !== "string" || message.trim().length === 0) {
+      failures.push(`${table}: formato errore non valido`);
+      continue;
+    }
+    failures.push(`${table}: ${message.trim()}`);
+  }
+  return failures;
 }
 
 /**

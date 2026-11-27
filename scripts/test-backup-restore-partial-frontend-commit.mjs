@@ -78,8 +78,7 @@ assert.equal(JSON.parse(storage.get("condominiums"))[0].id, "condo-old",
 // after a failed export page. The full frontend snapshot must not be committed.
 const sourceReadFailures = getRestorableBackupSourceReadErrors({
   documents: "timeout while exporting page 2",
-  portal_access: "authorization table is intentionally not restored",
-  condominium_members: " "
+  portal_access: "authorization table is intentionally not restored"
 }, ["documents", "condominium_members"]);
 assert.deepEqual(sourceReadFailures, ["documents: timeout while exporting page 2"]);
 let sourceCommitCalls = 0;
@@ -116,7 +115,38 @@ assert.equal(sourceCommitCalls, 1);
 // present malformed section fails closed.
 assert.deepEqual(getRestorableBackupSourceReadErrors(undefined, ["documents"]), []);
 assert.deepEqual(getRestorableBackupSourceReadErrors(null, ["documents"]), []);
-assert.deepEqual(getRestorableBackupSourceReadErrors({ documents: " " }, ["documents"]), []);
+// A malformed value on a restorable table must fail closed. In particular,
+// JSON.stringify preserves [] as a valid JSON value, while String([]) is empty;
+// the previous filter silently discarded it and allowed frontend commit.
+const malformedEntryVariants = [
+  ["empty array", JSON.parse(JSON.stringify({ documents: [] }))],
+  ["null", { documents: null }],
+  ["empty string", { documents: "" }],
+  ["whitespace string", { documents: " " }],
+  ["object", { documents: {} }],
+  ["number", { documents: 0 }],
+  ["boolean", { documents: false }],
+];
+for (const [label, metadata] of malformedEntryVariants) {
+  const malformedErrors = getRestorableBackupSourceReadErrors(metadata, ["documents"]);
+  assert.deepEqual(malformedErrors, ["documents: formato errore non valido"],
+    `malformed restorable-table metadata (${label}) must fail closed`);
+  let malformedCommitCalls = 0;
+  const malformedRestore = commitBackupFrontendStateAfterBackendRestore(
+    [],
+    () => { malformedCommitCalls += 1; },
+    malformedErrors
+  );
+  assert.equal(malformedRestore.committed, false,
+    `malformed restorable-table metadata (${label}) must block frontend commit`);
+  assert.equal(malformedRestore.reason, "source_backup_incomplete");
+  assert.equal(malformedCommitCalls, 0);
+}
+assert.deepEqual(
+  getRestorableBackupSourceReadErrors({ portal_access: [] }, ["documents"]),
+  [],
+  "malformed entries for intentionally excluded authorization tables must not block restore"
+);
 assert.deepEqual(getRestorableBackupSourceReadErrors("malformed", ["documents"]),
   ["backendReadErrors: formato non valido"]);
 assert.throws(
