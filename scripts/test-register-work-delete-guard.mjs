@@ -220,7 +220,7 @@ assert.match(registerPage, /import \{ deleteRegisterRecordSafely \} from "\.\/li
 assert.match(removeSection, /deleteRegisterRecordSafely/);
 assert.match(removeSection, /deleteWork:\s*deleteCondominiumWork/);
 assert.match(removeSection, /\.eq\("condominium_id",\s*condominiumId\)/);
-assert.match(removeSection, /\.select\("id"\)\.maybeSingle\(\)/);
+assert.match(removeSection, /\.select\("id"\)\s*\.maybeSingle\(\)/);
 assert.doesNotMatch(
   removeSection,
   /from\(table\)\.delete\(\)\.eq\("id",id\)\.eq\("workspace_id",workspaceId\);/,
