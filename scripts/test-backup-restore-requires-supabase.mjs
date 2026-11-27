@@ -86,6 +86,38 @@ const malformedBackendPayload = getBackupRestoreBackendAvailability(
 );
 assert.match(malformedBackendPayload.blockReason, /communications/i);
 
+// Reproduce the gap in the previous helper: with Supabase configured, the
+// restore loop converted this malformed table payload to [] and skipped it,
+// while the frontend snapshot could still be committed.
+const malformedConfiguredBackendPayload = getBackupRestoreBackendAvailability(
+  { backend: { communications: { id: "not-an-array" } } },
+  true,
+  restorableTables
+);
+assert.match(malformedConfiguredBackendPayload.blockReason, /payload non validi/i);
+assert.deepEqual(malformedConfiguredBackendPayload.tables, ["communications"]);
+
+const malformedBackendRoots = [
+  ["missing backend section", {}],
+  ["null backend section", { backend: null }],
+  ["string backend section", { backend: "invalid" }],
+  ["array backend section", { backend: [] }],
+  ["number backend section", { backend: 42 }],
+];
+for (const [label, malformedBackup] of malformedBackendRoots) {
+  for (const supabaseAvailable of [false, true]) {
+    const result = getBackupRestoreBackendAvailability(
+      malformedBackup,
+      supabaseAvailable,
+      restorableTables
+    );
+    assert.match(result.blockReason, /sezione backend.*assente o non valida/i,
+      `${label} must block regardless of Supabase availability`);
+    assert.equal(result.localOnlyNotice, "");
+    assert.deepEqual(result.tables, ["backend"]);
+  }
+}
+
 const emptyBackup = getBackupRestoreBackendAvailability(
   { backend: { condominiums: [], communications: [] } },
   false,
