@@ -78,7 +78,7 @@ import {
   const events = [];
   const paths = Array.from({ length: 1001 }, (_, index) => "workspace/file-" + index + ".pdf");
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => { events.push("database"); },
     storagePaths: paths,
     removeBatch: async (batch) => {
@@ -98,7 +98,7 @@ import {
 // A malformed successful-looking Storage response is treated as incomplete cleanup.
 {
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => {},
     storagePaths: ["workspace/a.pdf"],
     removeBatch: async () => ({ data: null, error: null }),
@@ -111,7 +111,7 @@ import {
 // An empty success-shaped response does not confirm deletion of a requested object.
 {
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => {},
     storagePaths: ["workspace/a.pdf"],
     removeBatch: async () => ({ data: [], error: null }),
@@ -125,7 +125,7 @@ import {
 // A partial success-shaped response reports only the paths not confirmed by Storage.
 {
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => {},
     storagePaths: ["workspace/a.pdf", "workspace/b.pdf", "workspace/c.pdf"],
     removeBatch: async () => ({
@@ -141,7 +141,7 @@ import {
 // A response containing an unrelated object path confirms none of the requested paths.
 {
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => {},
     storagePaths: ["workspace/a.pdf", "workspace/b.pdf"],
     removeBatch: async () => ({ data: [{ name: "workspace/other.pdf" }], error: null }),
@@ -162,6 +162,7 @@ import {
         "workspace-b/condominium-b/private.pdf",
         "workspace-a-evil/condominium-a/document.pdf",
         "workspace-a/../workspace-b/private.pdf",
+        "workspace-a/condominium-a\\secret.pdf",
         "workspace-a//malformed.pdf",
         "legacy/document.pdf",
       ],
@@ -179,7 +180,7 @@ import {
 {
   const events = [];
   const outcome = await deleteCondominiumWithStorageCleanup({
-      workspaceId: "workspace",
+    workspaceId: "workspace",
     deleteDatabase: async () => { events.push("database"); },
     storagePaths: [],
     removeBatch: async () => { events.push("storage"); return { data: [], error: null }; },
