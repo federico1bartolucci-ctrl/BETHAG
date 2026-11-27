@@ -19,7 +19,21 @@ export async function collectCondominiumStoragePaths(fetchPage, pageSize = 1000)
   ));
 }
 
+function belongsToWorkspaceStoragePath(path, workspaceId) {
+  const prefix = workspaceId + "/";
+  if (!path.startsWith(prefix)) return false;
+
+  const segments = path.slice(prefix.length).split("/");
+  return segments.length > 0 && segments.every((segment) =>
+    segment.length > 0 &&
+    segment !== "." &&
+    segment !== ".." &&
+    !segment.includes(String.fromCharCode(92))
+  );
+}
+
 export async function deleteCondominiumWithStorageCleanup({
+  workspaceId,
   deleteDatabase,
   storagePaths,
   removeBatch,
@@ -30,12 +44,27 @@ export async function deleteCondominiumWithStorageCleanup({
   if (!Array.isArray(storagePaths)) throw new TypeError("Storage paths must be an array.");
   if (!Number.isInteger(batchSize) || batchSize < 1) throw new RangeError("Batch size must be a positive integer.");
 
-  // The database RPC is authoritative. Never remove files if it fails.
-  await deleteDatabase();
+  const normalizedWorkspaceId = typeof workspaceId === "string" ? workspaceId.trim() : "";
+  if (!normalizedWorkspaceId || normalizedWorkspaceId.includes("/")) {
+    throw new TypeError("A valid workspace ID is required for condominium Storage cleanup.");
+  }
 
   const paths = Array.from(new Set(
     storagePaths.map((path) => String(path ?? "").trim()).filter(Boolean)
   ));
+  const unscopedPaths = paths.filter((path) => !belongsToWorkspaceStoragePath(path, normalizedWorkspaceId));
+  if (unscopedPaths.length) {
+    throw new Error(
+      "Condominium deletion aborted: " + unscopedPaths.length +
+      " Storage path(s) do not belong to workspace " + normalizedWorkspaceId +
+      ". Verify the document file_path values before retrying."
+    );
+  }
+
+  // The database RPC is authoritative. Never remove files if it fails.
+  // All paths are validated before the first destructive operation.
+  await deleteDatabase();
+
   const failedStoragePaths = [];
   const storageErrors = [];
 

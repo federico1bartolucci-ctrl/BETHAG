@@ -2012,6 +2012,7 @@ export async function deleteCondominium(workspaceId: string, legacyId: number, s
     });
 
     return deleteCondominiumWithStorageCleanup({
+      workspaceId,
       deleteDatabase: async () => {
         const { error } = await supabase.rpc("delete_condominium", {
           p_workspace_id: workspaceId,
