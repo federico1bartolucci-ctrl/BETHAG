@@ -7,6 +7,7 @@ import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 import { loadLinkedWorkLedgerRows } from "./workLedgerLinkLookup.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
+import { buildMemberOwnerReferenceSyncArgs, syncMemberOwnerReferences } from "./memberOwnerReferenceSync.mjs";
 import { collectCondominiumStoragePaths, deleteCondominiumWithStorageCleanup } from "./condominiumStorageDeletion.mjs";
 
 export type BackendState = Record<string, any[]>;
@@ -1152,55 +1153,17 @@ export async function saveCondominiumMember(
 
     if (error) throw error;
 
-    // L'elenco proprietari appartiene alle unità e non alle persone.
-    // Quando un condòmino viene trasferito, oppure cambia qualifica,
-    // riallineiamo ownerMemberIds sulle unità coinvolte senza mai riscrivere
-    // i millesimi: questi ultimi restano esclusivamente nei dati dell'unità.
-    const previousUnitId = previousMemberRow?.unit_id ?? null;
-    const affectedUnitIds = Array.from(
-      new Set([previousUnitId, unitId].filter(Boolean).map(String))
-    );
-
-    if (affectedUnitIds.length) {
-      const { data: affectedUnits, error: affectedUnitsError } = await supabase
-        .from("condominium_units")
-        .select("id, data")
-        .eq("condominium_id", condominium.id)
-        .in("id", affectedUnitIds);
-
-      if (affectedUnitsError) throw affectedUnitsError;
-
-      for (const unit of affectedUnits ?? []) {
-        const currentOwners = Array.isArray(unit.data?.ownerMemberIds)
-          ? unit.data.ownerMemberIds.map((id: any) => Number(id)).filter(Number.isFinite)
-          : [];
-        const withoutMember = currentOwners.filter((id: number) => id !== Number(item.id));
-        const isCurrentOwner = item.role === "Proprietario" &&
-          (item.currentOwner !== false) &&
-          (item.data?.current_owner !== false) &&
-          String(item.positionStatus ?? item.data?.position_status ?? "").trim() !== "In chiusura";
-        const shouldOwnThisUnit = String(unit.id) === String(unitId) && isCurrentOwner;
-        const nextOwners = shouldOwnThisUnit
-          ? Array.from(new Set([...withoutMember, Number(item.id)]))
-          : withoutMember;
-
-        if (JSON.stringify(currentOwners) !== JSON.stringify(nextOwners)) {
-          const { error: ownerSyncError } = await supabase
-            .from("condominium_units")
-            .update({
-              data: {
-                ...(unit.data ?? {}),
-                ownerMemberIds: nextOwners,
-              },
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", unit.id)
-            .eq("condominium_id", condominium.id);
-
-          if (ownerSyncError) throw ownerSyncError;
-        }
-      }
-    }
+    // Synchronize owner references with a row-locked database RPC. A browser-local
+    // promise queue cannot serialize writes made by another tab or administrator.
+    const ownerSyncArgs = buildMemberOwnerReferenceSyncArgs({
+      workspaceId,
+      condominiumId: condominium.id,
+      previousUnitId: previousMemberRow?.unit_id ?? null,
+      nextUnitId: unitId,
+      memberLegacyId: data.legacy_id ?? item.id,
+      member: item,
+    });
+    await syncMemberOwnerReferences(supabase, ownerSyncArgs);
 
     // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
     // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
@@ -2074,43 +2037,11 @@ export async function deleteCondominiumMember(
     if (condominiumError) throw condominiumError;
     if (!condominium?.id) return;
 
-    const { data: member, error: memberLookupError } = await supabase
-      .from("condominium_members")
-      .select("email, user_id, name, data, unit_id")
-      .eq("condominium_id", condominium.id)
-      .eq("legacy_id", legacyId)
-      .maybeSingle();
-
-    if (memberLookupError) throw memberLookupError;
-
-    // La cancellazione esplicita dell'anagrafica revoca anche l'accesso
-    // applicativo al Portale, ma non elimina mai l'utente da Supabase Auth.
-    if (member) {
-      let portalDelete = supabase
-        .from("portal_access")
-        .delete()
-        .eq("workspace_id", workspaceId)
-        .eq("condominium_id", condominium.id);
-
-      const memberEmail = String(member.email ?? "").trim().toLowerCase();
-      if (member.user_id) {
-        portalDelete = portalDelete.eq("user_id", member.user_id);
-      } else if (memberEmail) {
-        // L'e-mail può essere condivisa: abbiniamo anche identità e unità.
-        portalDelete = portalDelete
-          .ilike("email", memberEmail)
-          .eq("name", member.name ?? "")
-          .eq("apartment", String(member.data?.apartment ?? ""));
-      } else {
-        portalDelete = null as any;
-      }
-
-      if (portalDelete) {
-        const { error: portalError } = await portalDelete;
-        if (portalError) throw portalError;
-      }
-    }
-
+    // Keep member deletion as one database mutation. The BEFORE DELETE guard
+    // rejects members with financial history; AFTER DELETE triggers deactivate
+    // Portal access and remove the legacy owner reference in the same transaction.
+    // Do not duplicate trigger cleanup with a client-side JSONB read/modify/write:
+    // that stale write can overwrite a concurrent co-owner save.
     const { data: deletedMemberRows, error } = await supabase
       .from("condominium_members")
       .delete()
@@ -2120,47 +2051,10 @@ export async function deleteCondominiumMember(
 
     if (error) throw error;
     if (!deletedMemberRows?.length) {
-      throw new Error("Il condòmino non è stato eliminato: nessun record corrispondente trovato.");
-    }
-
-    // Dopo la cancellazione rimuoviamo l'ID del condòmino dagli ownerMemberIds
-    // di tutte le unità del medesimo condominio. I millesimi restano
-    // esclusivamente nell'oggetto unità e non vengono mai modificati.
-    const { data: condominiumUnits, error: unitsError } = await supabase
-      .from("condominium_units")
-      .select("id, data")
-      .eq("workspace_id", workspaceId)
-      .eq("condominium_id", condominium.id);
-
-    if (unitsError) throw unitsError;
-
-    for (const unit of condominiumUnits ?? []) {
-      const currentData =
-        unit.data && typeof unit.data === "object" ? unit.data : {};
-      const currentOwners = Array.isArray((currentData as any).ownerMemberIds)
-        ? (currentData as any).ownerMemberIds
-        : [];
-      const nextOwners = currentOwners.filter(
-        (ownerId: unknown) => String(ownerId) !== String(legacyId)
-      );
-
-      if (nextOwners.length !== currentOwners.length) {
-        const nextData = {
-          ...currentData,
-          ownerMemberIds: nextOwners,
-        };
-        const { error: unitUpdateError } = await supabase
-          .from("condominium_units")
-          .update({ data: nextData })
-          .eq("workspace_id", workspaceId)
-          .eq("condominium_id", condominium.id)
-          .eq("id", unit.id);
-        if (unitUpdateError) throw unitUpdateError;
-      }
+      throw new Error("Condòmino non trovato o già eliminato.");
     }
   });
 }
-
 
 export async function storeWorkspaceDocuments(
   workspaceId: string,
