@@ -10,7 +10,7 @@ assert.ok(start >= 0 && end > start, "workspace restore function must exist");
 const restoreFn = source.slice(start, end);
 assert.match(restoreFn, /formatBackupReadErrors\(backup\.backendReadErrors\)/, "restore must inspect source export errors");
 assert.match(restoreFn, /sourceReadWarning/, "restore confirmation must warn about an incomplete source backup");
-assert.match(restoreFn, /if \(errors\.length \|\| sourceReadErrorSummary\)/, "source export errors must prevent a complete-restoration status");
+assert.match(restoreFn, /if \(errors\.length \|\| sourceReadErrorSummary \|\| !frontendCommit\.committed\)/, "source export or restore-commit gate failures must prevent a complete-restoration status");
 assert.match(restoreFn, /Il backup sorgente era incompleto/, "partial restore must report export-time failures");
 assert.match(restoreFn, /Ripristino completato parzialmente/, "partial source backups must not receive the success message");
 assert.ok(packageJson.scripts.test.includes("test-backup-restore-source-errors.mjs"), "regression test must be wired to npm test");
