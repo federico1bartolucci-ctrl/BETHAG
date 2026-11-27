@@ -35,4 +35,4 @@ The test remains restricted to the disposable local \`bethag_clean_install_test\
 
 ## Current-main rebase evidence — 2026-11-27
 
-This proposal has been replayed onto current `main` at `ee726bd114b608cbd21508b1818f436733e214fc`. The rebased branch contains 9 commits ahead and 0 behind. The runtime regression remains in `npm test`; the PostgreSQL 17 concurrency rehearsal remains isolated to the disposable `bethag_clean_install_test` database. The proposed SQL is still outside the canonical migration ledger. Exact-head Build and Baseline Safety are required again after the rebase; no QA/Production access, merge, deployment, or reset is performed.
+This proposal has been replayed onto current `main` at `611a7cad98df4237cb0950cdf75d67a68f7b1d35`. The rebased branch contains 9 commits ahead and 0 behind. The runtime regression remains in `npm test`; the PostgreSQL 17 concurrency rehearsal remains isolated to the disposable `bethag_clean_install_test` database. The proposed SQL is still outside the canonical migration ledger. Exact-head Build and Baseline Safety are required again after the rebase; no QA/Production access, merge, deployment, or reset is performed.
