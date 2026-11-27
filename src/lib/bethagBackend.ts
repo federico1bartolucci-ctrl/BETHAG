@@ -7,6 +7,7 @@ import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
 import { loadLinkedWorkLedgerRows } from "./workLedgerLinkLookup.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
+import { buildMemberOwnerReferenceSyncArgs, syncMemberOwnerReferences } from "./memberOwnerReferenceSync.mjs";
 import { collectCondominiumStoragePaths, deleteCondominiumWithStorageCleanup } from "./condominiumStorageDeletion.mjs";
 
 export type BackendState = Record<string, any[]>;
@@ -1152,55 +1153,17 @@ export async function saveCondominiumMember(
 
     if (error) throw error;
 
-    // L'elenco proprietari appartiene alle unità e non alle persone.
-    // Quando un condòmino viene trasferito, oppure cambia qualifica,
-    // riallineiamo ownerMemberIds sulle unità coinvolte senza mai riscrivere
-    // i millesimi: questi ultimi restano esclusivamente nei dati dell'unità.
-    const previousUnitId = previousMemberRow?.unit_id ?? null;
-    const affectedUnitIds = Array.from(
-      new Set([previousUnitId, unitId].filter(Boolean).map(String))
-    );
-
-    if (affectedUnitIds.length) {
-      const { data: affectedUnits, error: affectedUnitsError } = await supabase
-        .from("condominium_units")
-        .select("id, data")
-        .eq("condominium_id", condominium.id)
-        .in("id", affectedUnitIds);
-
-      if (affectedUnitsError) throw affectedUnitsError;
-
-      for (const unit of affectedUnits ?? []) {
-        const currentOwners = Array.isArray(unit.data?.ownerMemberIds)
-          ? unit.data.ownerMemberIds.map((id: any) => Number(id)).filter(Number.isFinite)
-          : [];
-        const withoutMember = currentOwners.filter((id: number) => id !== Number(item.id));
-        const isCurrentOwner = item.role === "Proprietario" &&
-          (item.currentOwner !== false) &&
-          (item.data?.current_owner !== false) &&
-          String(item.positionStatus ?? item.data?.position_status ?? "").trim() !== "In chiusura";
-        const shouldOwnThisUnit = String(unit.id) === String(unitId) && isCurrentOwner;
-        const nextOwners = shouldOwnThisUnit
-          ? Array.from(new Set([...withoutMember, Number(item.id)]))
-          : withoutMember;
-
-        if (JSON.stringify(currentOwners) !== JSON.stringify(nextOwners)) {
-          const { error: ownerSyncError } = await supabase
-            .from("condominium_units")
-            .update({
-              data: {
-                ...(unit.data ?? {}),
-                ownerMemberIds: nextOwners,
-              },
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", unit.id)
-            .eq("condominium_id", condominium.id);
-
-          if (ownerSyncError) throw ownerSyncError;
-        }
-      }
-    }
+    // Synchronize owner references with a row-locked database RPC. A browser-local
+    // promise queue cannot serialize writes made by another tab or administrator.
+    const ownerSyncArgs = buildMemberOwnerReferenceSyncArgs({
+      workspaceId,
+      condominiumId: condominium.id,
+      previousUnitId: previousMemberRow?.unit_id ?? null,
+      nextUnitId: unitId,
+      memberLegacyId: data.legacy_id ?? item.id,
+      member: item,
+    });
+    await syncMemberOwnerReferences(supabase, ownerSyncArgs);
 
     // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
     // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
