@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { commitBackupFrontendStateAfterBackendRestore } from "../src/lib/backupRestoreFrontendCommit.mjs";
+import { commitBackupFrontendStateAfterBackendRestore, getRestorableBackupSourceReadErrors } from "../src/lib/backupRestoreFrontendCommit.mjs";
 
 const source = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -10,15 +10,23 @@ assert.ok(restoreStart >= 0 && restoreEnd > restoreStart, "workspace restore han
 const handler = source.slice(restoreStart, restoreEnd);
 
 const backendLoop = handler.indexOf("const restoreOrder = WORKSPACE_BACKUP_RESTORE_ORDER;");
+const sourceReadGate = handler.indexOf("getRestorableBackupSourceReadErrors(");
 const frontendCommit = handler.indexOf("commitBackupFrontendStateAfterBackendRestore(errors, () => {");
 const firstFrontendMutation = handler.indexOf('apply("condominiums", setCondominiums)');
 const firstLocalStorageWrite = handler.indexOf("localStorage.setItem(");
 assert.ok(backendLoop >= 0, "backend restore loop must exist");
+assert.ok(sourceReadGate > backendLoop && sourceReadGate < frontendCommit,
+  "restorable source-read errors must be collected after backend restore and before frontend commit");
+assert.match(handler, /WORKSPACE_BACKUP_RESTORE_ORDER\.filter\(\(table\) => !isBackupAuthorizationTable\(table\)\)/,
+  "only tables that the restore handler actually restores must gate frontend commit");
+assert.match(handler, /\}, restorableSourceReadErrors\);/,
+  "source-read failures must be passed to the frontend commit gate");
 assert.ok(frontendCommit > backendLoop, "frontend snapshot commit must occur after backend restore loop");
 assert.ok(firstFrontendMutation > frontendCommit, "React state must be applied only inside the deferred commit");
 assert.ok(firstLocalStorageWrite > frontendCommit, "localStorage must be written only inside the deferred commit");
 assert.match(handler, /frontendCommitNotice/);
 assert.match(handler, /database può contenere scritture parziali/i);
+assert.match(handler, /backup sorgente contiene errori di lettura nelle tabelle ripristinabili/i);
 assert.ok(packageJson.scripts.test.includes("test-backup-restore-partial-frontend-commit.mjs"),
   "runtime regression must be wired into npm test");
 
@@ -52,6 +60,7 @@ const partial = commitBackupFrontendStateAfterBackendRestore(backendErrors, () =
 assert.deepEqual(partial, {
   committed: false,
   failedOperations: 1,
+  failedSourceReads: 0,
   reason: "backend_restore_incomplete",
 });
 assert.equal(backendRows.get("condominiums")[0].name, "Restored",
@@ -62,13 +71,69 @@ assert.equal(frontendState.condominiums[0].id, "condo-old",
 assert.equal(JSON.parse(storage.get("condominiums"))[0].id, "condo-old",
   "localStorage must remain unchanged after a partial backend restore");
 
+// Reproduce the uncovered source-export failure: backend writes for the rows
+// present in the file can succeed even though a restorable table was omitted
+// after a failed export page. The full frontend snapshot must not be committed.
+const sourceReadFailures = getRestorableBackupSourceReadErrors({
+  documents: "timeout while exporting page 2",
+  portal_access: "authorization table is intentionally not restored",
+  condominium_members: " "
+}, ["documents", "condominium_members"]);
+assert.deepEqual(sourceReadFailures, ["documents: timeout while exporting page 2"]);
+let sourceCommitCalls = 0;
+const incompleteSource = commitBackupFrontendStateAfterBackendRestore(
+  [],
+  () => { sourceCommitCalls += 1; },
+  sourceReadFailures
+);
+assert.deepEqual(incompleteSource, {
+  committed: false,
+  failedOperations: 0,
+  failedSourceReads: 1,
+  reason: "source_backup_incomplete"
+});
+assert.equal(sourceCommitCalls, 0,
+  "frontend state must not be committed when a restorable source table failed to export");
+
+// Read failures in authorization/workflow tables are excluded because those
+// tables are deliberately not restored from a user-supplied backup.
+const excludedOnlySourceErrors = getRestorableBackupSourceReadErrors({
+  portal_access: "permission denied",
+  portal_registration_requests: "timeout"
+}, ["documents", "condominiums"]);
+assert.deepEqual(excludedOnlySourceErrors, []);
+const excludedOnlyRestore = commitBackupFrontendStateAfterBackendRestore(
+  [],
+  () => { sourceCommitCalls += 1; },
+  excludedOnlySourceErrors
+);
+assert.equal(excludedOnlyRestore.committed, true);
+assert.equal(sourceCommitCalls, 1);
+
+// Missing error metadata remains compatible with legacy backups, while a
+// present malformed section fails closed.
+assert.deepEqual(getRestorableBackupSourceReadErrors(undefined, ["documents"]), []);
+assert.deepEqual(getRestorableBackupSourceReadErrors(null, ["documents"]), []);
+assert.deepEqual(getRestorableBackupSourceReadErrors({ documents: " " }, ["documents"]), []);
+assert.deepEqual(getRestorableBackupSourceReadErrors("malformed", ["documents"]),
+  ["backendReadErrors: formato non valido"]);
+assert.throws(
+  () => getRestorableBackupSourceReadErrors({ documents: "timeout" }, null),
+  /restorableTables must be an array/
+);
+
 // A fully successful backend restore may commit the frontend snapshot.
 const complete = commitBackupFrontendStateAfterBackendRestore([], () => {
   frontendCommitCalls += 1;
   frontendState = { condominiums: [{ id: "condo-1", name: "Restored" }] };
   storage.set("condominiums", JSON.stringify(frontendState.condominiums));
 });
-assert.equal(complete.committed, true);
+assert.deepEqual(complete, {
+  committed: true,
+  failedOperations: 0,
+  failedSourceReads: 0,
+  reason: "backend_restore_complete",
+});
 assert.equal(frontendCommitCalls, 1);
 assert.equal(frontendState.condominiums[0].id, "condo-1");
 assert.equal(JSON.parse(storage.get("condominiums"))[0].id, "condo-1");
@@ -83,6 +148,10 @@ assert.equal(frontendCommitCalls, 2);
 assert.throws(
   () => commitBackupFrontendStateAfterBackendRestore(null, () => {}),
   /backendErrors must be an array/
+);
+assert.throws(
+  () => commitBackupFrontendStateAfterBackendRestore([], () => {}, null),
+  /sourceReadErrors must be an array/
 );
 
 console.log("Workspace backup partial-backend restore frontend-commit regression: PASS");

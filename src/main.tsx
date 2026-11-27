@@ -12,7 +12,7 @@ import { prepareCommunicationRecipientsForBackupRestore } from "./lib/backupComm
 import { WORKSPACE_BACKUP_EXPORT_TABLES, WORKSPACE_BACKUP_RESTORE_ORDER } from "./lib/workspaceBackupTables.mjs";
 import { formatBackupReadErrors, getCommunicationRecipientLedgerRestoreBlockReason } from "./lib/backupRestoreSourceErrors.mjs";
 import { getBackupRestoreBackendAvailability } from "./lib/backupRestoreBackendAvailability.mjs";
-import { commitBackupFrontendStateAfterBackendRestore } from "./lib/backupRestoreFrontendCommit.mjs";
+import { commitBackupFrontendStateAfterBackendRestore, getRestorableBackupSourceReadErrors } from "./lib/backupRestoreFrontendCommit.mjs";
 import { restoreBackupLocalStorageData } from "./lib/backupLocalStorageRestore.mjs";
 import { analyzeCondominiumDocumentsWithAI,
   analyzeCondominiumStoredDocumentsWithAI, storeWorkspaceDocuments, deleteWorkspaceStoredFile, analyzeWorkspaceDocumentsWithAI,
@@ -3558,6 +3558,10 @@ function App() {
           }
         }
       }
+      const restorableSourceReadErrors = getRestorableBackupSourceReadErrors(
+        backup.backendReadErrors,
+        WORKSPACE_BACKUP_RESTORE_ORDER.filter((table) => !isBackupAuthorizationTable(table))
+      );
       const frontendCommit = commitBackupFrontendStateAfterBackendRestore(errors, () => {
         const apply = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T>>) => {
           if (state[key] !== undefined) setter(state[key] as T);
@@ -3599,10 +3603,12 @@ function App() {
             localStorage
           );
         }
-      });
+      }, restorableSourceReadErrors);
       const frontendCommitNotice = frontendCommit.committed
         ? ""
-        : " Lo stato React e localStorage del backup non è stato applicato perché una o più operazioni backend non sono state completate. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino.";
+        : frontendCommit.reason === "source_backup_incomplete"
+          ? " Lo stato React e localStorage del backup non è stato applicato perché il backup sorgente contiene errori di lettura nelle tabelle ripristinabili. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino."
+          : " Lo stato React e localStorage del backup non è stato applicato perché una o più operazioni backend non sono state completate. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino.";
       const securitySkipSummary = skippedSecurityRows.length
         ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione."
         : "";
