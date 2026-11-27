@@ -8,6 +8,7 @@ set -euo pipefail
 : "${OWNER_SYNC_TEST_MEMBER_A_ID:?}"
 : "${OWNER_SYNC_TEST_MEMBER_B_ID:?}"
 : "${OWNER_SYNC_TEST_UNIT_B_ID:?}"
+: "${OWNER_SYNC_TEST_USER_ID:?}"
 : "${OWNER_SYNC_TEST_LEGACY_A:?}"
 : "${OWNER_SYNC_TEST_LEGACY_B:?}"
 
@@ -20,8 +21,6 @@ DELETE FROM public.condominium_members
 WHERE id IN ('$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid, '$OWNER_SYNC_TEST_MEMBER_B_ID'::uuid);
 DELETE FROM public.condominium_units
 WHERE id IN ('$OWNER_SYNC_TEST_UNIT_ID'::uuid, '$OWNER_SYNC_TEST_UNIT_B_ID'::uuid);
-DELETE FROM public.condominium_members
-WHERE id IN ('$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid, '$OWNER_SYNC_TEST_MEMBER_B_ID'::uuid);
 DELETE FROM public.workspace_members
 WHERE workspace_id='$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid AND user_id='$OWNER_SYNC_TEST_USER_ID'::uuid;
 DELETE FROM public.condominiums WHERE id='$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid;
