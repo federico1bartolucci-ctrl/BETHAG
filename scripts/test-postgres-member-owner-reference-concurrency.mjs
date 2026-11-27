@@ -22,11 +22,13 @@ assert.match(packageJson.scripts.test, /test-member-owner-reference-sync-runtime
 if (!databaseUrl) {
   console.log("SKIPPED: PostgreSQL 17 owner-reference concurrency execution requires the isolated CI DATABASE_URL.");
 } else {
-  const target = new URL(databaseUrl);
-  assert.ok(["localhost", "127.0.0.1", "::1"].includes(target.hostname),
-    "Refusing non-local DATABASE_URL; this regression may only touch disposable local PostgreSQL.");
-  assert.equal(target.pathname.replace(/^\//, ""), "bethag_clean_install_test",
-    "This regression may only modify the disposable clean-install database.");
+  const expectedDatabaseUrl = "postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test";
+  assert.equal(databaseUrl, expectedDatabaseUrl,
+    "Refusing any database other than the dedicated local bethag_clean_install_test PostgreSQL 17 database.");
+  assert.match(shell, /expected_database_url='postgresql:\/\/postgres:postgres@localhost:5432\/bethag_clean_install_test'/,
+    "The shell entry point must independently enforce the same database allowlist.");
+  assert.match(shell, /fixture IDs already exist/,
+    "The shell entry point must refuse fixture collisions before installing cleanup.");
   const workspaceId = "f1000000-0000-4000-8000-000000000001";
   const condominiumId = "f1000000-0000-4000-8000-000000000002";
   const unitId = "f1000000-0000-4000-8000-000000000003";

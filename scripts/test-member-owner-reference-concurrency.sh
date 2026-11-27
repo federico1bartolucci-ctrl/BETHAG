@@ -12,6 +12,49 @@ set -euo pipefail
 : "${OWNER_SYNC_TEST_LEGACY_A:?}"
 : "${OWNER_SYNC_TEST_LEGACY_B:?}"
 
+expected_database_url='postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test'
+if [[ "${DATABASE_URL:-}" != "$expected_database_url" ]]; then
+  echo "Refusing to run destructive owner-reference fixtures outside the dedicated local bethag_clean_install_test database." >&2
+  exit 64
+fi
+
+uuid_pattern='^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$'
+for variable in OWNER_SYNC_TEST_WORKSPACE_ID OWNER_SYNC_TEST_CONDOMINIUM_ID OWNER_SYNC_TEST_UNIT_ID OWNER_SYNC_TEST_MEMBER_A_ID OWNER_SYNC_TEST_MEMBER_B_ID OWNER_SYNC_TEST_UNIT_B_ID OWNER_SYNC_TEST_USER_ID; do
+  value="${!variable}"
+  if [[ ! "$value" =~ $uuid_pattern ]]; then
+    echo "Invalid UUID fixture in $variable; refusing to run." >&2
+    exit 64
+  fi
+done
+for variable in OWNER_SYNC_TEST_LEGACY_A OWNER_SYNC_TEST_LEGACY_B; do
+  value="${!variable}"
+  if [[ ! "$value" =~ ^[0-9]{1,19}$ ]]; then
+    echo "Invalid numeric fixture in $variable; refusing to run." >&2
+    exit 64
+  fi
+done
+if [[ "$OWNER_SYNC_TEST_LEGACY_A" == "$OWNER_SYNC_TEST_LEGACY_B" ]]; then
+  echo "Legacy-ID fixtures must be distinct; refusing to run." >&2
+  exit 64
+fi
+
+# Refuse pre-existing fixture collisions before installing any cleanup trap.
+collision_count="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 <<SQL
+SELECT
+  (SELECT count(*) FROM auth.users WHERE id = '$OWNER_SYNC_TEST_USER_ID'::uuid) +
+  (SELECT count(*) FROM public.profiles WHERE id = '$OWNER_SYNC_TEST_USER_ID'::uuid) +
+  (SELECT count(*) FROM public.workspaces WHERE id = '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid) +
+  (SELECT count(*) FROM public.workspace_members WHERE workspace_id = '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid AND user_id = '$OWNER_SYNC_TEST_USER_ID'::uuid) +
+  (SELECT count(*) FROM public.condominiums WHERE id = '$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid) +
+  (SELECT count(*) FROM public.condominium_units WHERE id IN ('$OWNER_SYNC_TEST_UNIT_ID'::uuid, '$OWNER_SYNC_TEST_UNIT_B_ID'::uuid)) +
+  (SELECT count(*) FROM public.condominium_members WHERE id IN ('$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid, '$OWNER_SYNC_TEST_MEMBER_B_ID'::uuid) OR legacy_id IN ($OWNER_SYNC_TEST_LEGACY_A, $OWNER_SYNC_TEST_LEGACY_B));
+SQL
+)"
+if [[ "$collision_count" != "0" ]]; then
+  echo "Owner-reference fixture IDs already exist; refusing to overwrite or clean them." >&2
+  exit 73
+fi
+
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 migration="$repo_root/supabase/rebuild/proposed-forward-migrations/20261127060000_atomic_condominium_member_owner_reference_sync.sql"
 tmp_dir="$(mktemp -d)"
