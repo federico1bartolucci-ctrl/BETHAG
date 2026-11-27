@@ -755,6 +755,7 @@ function AccountingPage({
     }
     setSaving(true);
     setError("");
+    let fiscalYearSaved = false;
     try {
       await persistFiscalYearRecord({
         supabase,
@@ -763,6 +764,7 @@ function AccountingPage({
         yearForm: { ...yearForm, opening_balance: openingBalance },
         existingYears: fiscalYears,
       });
+      fiscalYearSaved = true;
       setShowYearForm(false);
       setYearForm({
         name: "",
@@ -777,8 +779,9 @@ function AccountingPage({
     } catch (e: any) {
       if (e?.code === "FISCAL_YEAR_OVERLAP") {
         setError("Il periodo si sovrappone a un altro esercizio contabile del condominio.");
-      } else if (e?.fiscalYearSaved) {
-        setError("Esercizio salvato, ma il riporto delle partite non è riuscito: " + (e?.message || "errore non specificato") + ". Verifica i riporti prima di proseguire.");
+      } else if (e?.fiscalYearSaved || fiscalYearSaved) {
+        const failedStep = e?.fiscalYearSaved ? "il riporto delle partite" : "l'aggiornamento della vista";
+        setError("Esercizio salvato, ma " + failedStep + " non è riuscito: " + (e?.message || "errore non specificato") + ". Verifica i dati prima di proseguire.");
       } else {
         setError(e?.message || "Impossibile salvare l'esercizio.");
       }
