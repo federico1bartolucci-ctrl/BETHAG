@@ -43,6 +43,64 @@ import {
   assert.equal(paths.at(-1), "workspace/condo/file-1000.pdf");
 }
 
+// Legacy document rows can keep the Storage object path only in data.storagePath.
+{
+  const paths = await collectCondominiumStoragePaths(async () => [
+    { file_path: null, data: { storagePath: "workspace/condo/legacy.pdf" } },
+    { file_path: "", data: { storagePath: " workspace/condo/legacy-empty-column.pdf " } },
+    { file_path: "workspace/condo/current.pdf", data: { storagePath: "workspace/condo/current.pdf" } },
+    { file_path: null, data: { storagePath: "workspace/condo/current.pdf" } },
+    { file_path: null, data: {} },
+  ]);
+  assert.deepEqual(paths, [
+    "workspace/condo/legacy.pdf",
+    "workspace/condo/legacy-empty-column.pdf",
+    "workspace/condo/current.pdf",
+  ]);
+
+  const removed = [];
+  const outcome = await deleteCondominiumWithStorageCleanup({
+    workspaceId: "workspace",
+    deleteDatabase: async () => {},
+    storagePaths: paths,
+    removeBatch: async (batch) => {
+      removed.push(...batch);
+      return { data: batch.map((name) => ({ name })), error: null };
+    },
+  });
+  assert.equal(outcome.storageDeleted, true);
+  assert.deepEqual(removed, paths);
+}
+
+// Conflicting structured and legacy pointers must abort before either destructive operation.
+{
+  const events = [];
+  await assert.rejects(async () => {
+    const paths = await collectCondominiumStoragePaths(async () => [{
+      file_path: "workspace/condo/current.pdf",
+      data: { storagePath: "workspace/condo/older.pdf" },
+    }]);
+    return deleteCondominiumWithStorageCleanup({
+      workspaceId: "workspace",
+      deleteDatabase: async () => { events.push("database"); },
+      storagePaths: paths,
+      removeBatch: async () => { events.push("storage"); return { data: [], error: null }; },
+    });
+  }, /conflicting file_path and data\.storagePath/);
+  assert.deepEqual(events, []);
+}
+
+// A present but non-string legacy path is not silently discarded.
+{
+  await assert.rejects(
+    () => collectCondominiumStoragePaths(async () => [{
+      file_path: null,
+      data: { storagePath: { path: "workspace/condo/file.pdf" } },
+    }]),
+    /data\.storagePath must be a string/,
+  );
+}
+
 // A later-page read error must abort before the database RPC can delete anything.
 {
   const events = [];
@@ -208,8 +266,13 @@ import {
   const backendBody = backend.slice(start, end);
   assert.match(backend, /import\s*\{\s*collectCondominiumStoragePaths,\s*deleteCondominiumWithStorageCleanup\s*\}\s*from\s*["']\.\/condominiumStorageDeletion\.mjs["']/);
   assert.match(backendBody, /collectCondominiumStoragePaths/);
+  assert.match(backendBody, /\.select\("file_path,data"\)/);
+  assert.doesNotMatch(backendBody, /\.not\("file_path",\s*"is",\s*null\)/,
+    "legacy documents with null file_path must remain in the cleanup scan");
   assert.match(backendBody, /\.order\("id",\s*\{\s*ascending:\s*true\s*\}\)/);
   assert.match(backendBody, /\.range\(offset,\s*offset\s*\+\s*pageSize\s*-\s*1\)/);
+  assert.match(deletion, /row\?\.data\?\.storagePath/);
+  assert.match(deletion, /conflicting file_path and data\.storagePath/);
   assert.match(backendBody, /deleteCondominiumWithStorageCleanup/);
   assert.match(backendBody, /deleteCondominiumWithStorageCleanup\(\{\s*workspaceId,/);
   const workspacePathGuard = deletion.indexOf("const unscopedPaths = paths.filter");
