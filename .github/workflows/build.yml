@@ -262,16 +262,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_resend_aggregate_test
 
       - name: Reproduce concurrent condominium member owner-reference writes on isolated PostgreSQL 17
-        run: bash scripts/test-member-owner-reference-concurrency.sh
+        run: npm run test:member-owner-reference-concurrency
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bethag_clean_install_test
-          OWNER_SYNC_TEST_WORKSPACE_ID: "e4e4e4e4-4444-4444-8444-444444444444"
-          OWNER_SYNC_TEST_CONDOMINIUM_ID: "e5e5e5e5-5555-4555-8555-555555555555"
-          OWNER_SYNC_TEST_UNIT_ID: "e6e6e6e6-6666-4666-8666-666666666666"
-          OWNER_SYNC_TEST_MEMBER_A_ID: "e7e7e7e7-7777-4777-8777-777777777777"
-          OWNER_SYNC_TEST_MEMBER_B_ID: "e8e8e8e8-8888-4888-8888-888888888888"
-          OWNER_SYNC_TEST_UNIT_B_ID: "e9e9e9e9-9999-4999-8999-999999999999"
-          OWNER_SYNC_TEST_USER_ID: "eaeaeaea-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-          OWNER_SYNC_TEST_LEGACY_A: "900000000000000001"
-          OWNER_SYNC_TEST_LEGACY_B: "900000000000000002"
 
