@@ -4483,7 +4483,7 @@ function App() {
           previousDocument: selectedDocument,
           file: selectedDocumentFile,
           uploadFiles: (files) => storeWorkspaceDocuments(profile.workspaceId, files, documentForm.condominiumId),
-          persistDocument: (item) => saveWorkspaceDocumentRecord(profile.workspaceId, item),
+          persistDocument: (item, previousDocument) => saveWorkspaceDocumentRecord(profile.workspaceId, item, previousDocument),
           deleteStoredFile: deleteWorkspaceStoredFile,
         });
         documentData = result.document;
