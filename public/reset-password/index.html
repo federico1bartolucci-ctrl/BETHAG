@@ -30,6 +30,7 @@ button:disabled{opacity:.6}.error{margin-top:15px;padding:11px;border-radius:9px
 </div>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.1";
+import { establishRecoverySession } from "./recovery-session.js";
 const SUPABASE_URL="https://tctcgptrsmvgajqjgnev.supabase.co";
 const SUPABASE_KEY="sb_publishable_VTickP6SdwCWp-3oUNSleA_UuA307iJ";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:"pkce"}});
@@ -39,12 +40,10 @@ function showOk(t){message.className="ok";message.textContent=t}
 let ready=false;
 supabase.auth.onAuthStateChange((event,session)=>{if(event==="PASSWORD_RECOVERY"&&session){ready=true;form.hidden=false;intro.textContent="Inserisci la nuova password per completare il recupero."}});
 async function init(){
- const url=new URL(location.href),code=url.searchParams.get("code");
- if(code){const {error}=await supabase.auth.exchangeCodeForSession(code);if(error){showError("Il link di recupero non è più valido. Richiedi un nuovo link.");return}}
- const {data,error}=await supabase.auth.getSession();
- if(error){showError(error.message);return}
- if(data.session){ready=true;form.hidden=false;intro.textContent="Inserisci la nuova password per completare il recupero."}
- else if(!code&&!location.hash.includes("access_token"))showError("Link di recupero non valido o scaduto. Richiedi un nuovo link.");
+ const {session,error}=await establishRecoverySession(supabase,location.href);
+ if(error){showError(error.message||"Il link di recupero non è più valido. Richiedi un nuovo link.");return}
+ if(session){ready=true;form.hidden=false;intro.textContent="Inserisci la nuova password per completare il recupero."}
+ else showError("Link di recupero non valido o scaduto. Richiedi un nuovo link.");
 }
 await init();
 form.addEventListener("submit",async e=>{
