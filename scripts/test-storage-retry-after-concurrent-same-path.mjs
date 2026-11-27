@@ -102,4 +102,38 @@ assert.ok(
   "concurrent errors for the same object must honor the strongest outstanding server deadline",
 );
 
+// A long server deadline must remain available beyond the old fixed 60-second
+// metadata TTL. Otherwise a later cleanup retry could run before Retry-After.
+const originalNow = Date.now;
+let fakeNow = originalNow();
+const longPath = "workspace/temporary/long-retry-after.pdf";
+try {
+  Date.now = () => fakeNow;
+  const longRetryFetch = createStorageRetryAfterFetch(async () => new Response(
+    JSON.stringify({ message: "Too Many Requests", statusCode: "429" }),
+    {
+      status: 429,
+      headers: { "content-type": "application/json", "retry-after": "120" },
+    },
+  ));
+  await longRetryFetch(
+    "https://project.supabase.co/storage/v1/object/bethag-documents",
+    {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefixes: [longPath] }),
+    },
+  );
+
+  assert.equal(Number(readStorageRetryAfter(null, longPath)), 120);
+  fakeNow += 61_000;
+  assert.equal(
+    Math.round(Number(readStorageRetryAfter(null, longPath)) * 1000),
+    59_000,
+    "a 120-second Retry-After must still be enforced after 61 seconds",
+  );
+} finally {
+  Date.now = originalNow;
+}
+
 console.log("Storage concurrent same-path Retry-After association regression: PASS");
