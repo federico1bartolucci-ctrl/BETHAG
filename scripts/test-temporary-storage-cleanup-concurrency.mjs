@@ -144,7 +144,8 @@ const exhaustedBudget = await cleanupTemporaryStorageFiles(
 assert.equal(exhaustedBudget.ok, false);
 assert.equal(exhaustedBudget.failures[0].attempts, 1, "do not retry before a Retry-After longer than the cleanup budget");
 
-console.log("Temporary Storage bounded-concurrency and Retry-After backoff runtime regression: PASS");
 const backend = await readFile("src/lib/bethagBackend.ts", "utf8");
 assert.ok(backend.includes("const retryAfter = (error as any).retryAfter"), "Storage Retry-After metadata must survive the production delete wrapper");
 assert.ok(backend.includes("(cleanupError as any).retryAfter = retryAfter"), "the production cleanup error must expose Retry-After to the retry helper");
+
+console.log("Temporary Storage bounded-concurrency and Retry-After backoff runtime regression: PASS");
