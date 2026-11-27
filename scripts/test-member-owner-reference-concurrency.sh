@@ -227,3 +227,116 @@ if [[ "$remaining" != "[$OWNER_SYNC_TEST_LEGACY_B]" ]]; then
   exit 1
 fi
 echo "PASS: moving/removing one member preserves the other current owner."
+
+
+# Reproduce the legacy delete-vs-save race. The delete session reads [A],
+# while the atomic owner save adds B. The old client then writes its stale []
+# snapshot and incorrectly removes B.
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
+  -c "UPDATE public.condominium_units SET data=pg_catalog.jsonb_set(data,'{ownerMemberIds}',pg_catalog.jsonb_build_array($OWNER_SYNC_TEST_LEGACY_A::bigint),true) WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid"
+
+legacy_delete_log="$tmp_dir/legacy-delete.log"
+PGAPPNAME=owner_sync_legacy_delete psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$legacy_delete_log" 2>&1 <<SQL &
+BEGIN;
+SELECT data->'ownerMemberIds' FROM public.condominium_units WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid;
+\echo LEGACY_DELETE_READ
+SELECT pg_sleep(2);
+UPDATE public.condominium_units
+SET data=pg_catalog.jsonb_set(data, '{ownerMemberIds}', '[]'::jsonb, true),
+    updated_at=pg_catalog.now()
+WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid;
+COMMIT;
+SQL
+legacy_delete_pid=$!
+wait_for_marker "$legacy_delete_log" "LEGACY_DELETE_READ" "$legacy_delete_pid"
+
+legacy_add_log="$tmp_dir/legacy-add.log"
+PGAPPNAME=owner_sync_legacy_add psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$legacy_add_log" 2>&1 <<SQL &
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$OWNER_SYNC_TEST_USER_ID';
+SELECT public.sync_condominium_member_owner_references(
+  '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid,
+  '$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid,
+  NULL,
+  '$OWNER_SYNC_TEST_UNIT_ID'::uuid,
+  $OWNER_SYNC_TEST_LEGACY_B::bigint,
+  true
+);
+COMMIT;
+SQL
+legacy_add_pid=$!
+wait "$legacy_add_pid" || { cat "$legacy_add_log"; exit 1; }
+wait "$legacy_delete_pid" || { cat "$legacy_delete_log"; exit 1; }
+
+legacy_delete_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "SELECT data->'ownerMemberIds' FROM public.condominium_units WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid")"
+if [[ "$legacy_delete_result" != "[]" ]]; then
+  echo "Legacy delete lost-update reproduction did not match expected stale result: $legacy_delete_result"
+  exit 1
+fi
+echo "LEGACY DELETE RACE REPRODUCED: stale member deletion cleanup overwrote a concurrent co-owner save."
+
+# Re-run the same interleaving through the production member DELETE trigger
+# and the row-locked owner-sync RPC. Both wait on the same unit row, then
+# serialize without losing the surviving owner.
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
+  -c "UPDATE public.condominium_units SET data=pg_catalog.jsonb_set(data,'{ownerMemberIds}',pg_catalog.jsonb_build_array($OWNER_SYNC_TEST_LEGACY_A::bigint),true) WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid"
+
+delete_lock_log="$tmp_dir/delete-unit-lock.log"
+PGAPPNAME=owner_sync_delete_lock_holder psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$delete_lock_log" 2>&1 <<SQL &
+BEGIN;
+SELECT id FROM public.condominium_units WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid FOR UPDATE;
+\echo DELETE_UNIT_LOCK_HELD
+SELECT pg_sleep(5);
+COMMIT;
+SQL
+delete_lock_pid=$!
+wait_for_marker "$delete_lock_log" "DELETE_UNIT_LOCK_HELD" "$delete_lock_pid"
+
+trigger_delete_log="$tmp_dir/trigger-delete.log"
+PGAPPNAME=owner_sync_trigger_delete psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$trigger_delete_log" 2>&1 <<SQL &
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$OWNER_SYNC_TEST_USER_ID';
+DELETE FROM public.condominium_members
+WHERE id='$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid
+  AND condominium_id='$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid;
+COMMIT;
+SQL
+trigger_delete_pid=$!
+
+trigger_add_log="$tmp_dir/trigger-add.log"
+PGAPPNAME=owner_sync_trigger_add psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 >"$trigger_add_log" 2>&1 <<SQL &
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$OWNER_SYNC_TEST_USER_ID';
+SELECT public.sync_condominium_member_owner_references(
+  '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid,
+  '$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid,
+  NULL,
+  '$OWNER_SYNC_TEST_UNIT_ID'::uuid,
+  $OWNER_SYNC_TEST_LEGACY_B::bigint,
+  true
+);
+COMMIT;
+SQL
+trigger_add_pid=$!
+
+wait_for_lock_waiter "owner_sync_trigger_delete" "$trigger_delete_log" "$trigger_delete_pid"
+wait_for_lock_waiter "owner_sync_trigger_add" "$trigger_add_log" "$trigger_add_pid"
+wait "$delete_lock_pid"
+wait "$trigger_delete_pid" || { cat "$trigger_delete_log"; exit 1; }
+wait "$trigger_add_pid" || { cat "$trigger_add_log"; exit 1; }
+
+trigger_delete_result="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "SELECT data->'ownerMemberIds' FROM public.condominium_units WHERE id='$OWNER_SYNC_TEST_UNIT_ID'::uuid")"
+deleted_member_count="$(psql "$DATABASE_URL" -X -A -t -q -v ON_ERROR_STOP=1 \
+  -c "SELECT count(*) FROM public.condominium_members WHERE id='$OWNER_SYNC_TEST_MEMBER_A_ID'::uuid")"
+if [[ "$trigger_delete_result" != "[$OWNER_SYNC_TEST_LEGACY_B]" || "$deleted_member_count" != "0" ]]; then
+  echo "Trigger-based concurrent delete/save did not preserve the surviving owner: owners=$trigger_delete_result deleted_member_count=$deleted_member_count"
+  cat "$trigger_delete_log"
+  cat "$trigger_add_log"
+  exit 1
+fi
+echo "PASS: trigger-based member deletion and concurrent owner save preserve the surviving owner."
