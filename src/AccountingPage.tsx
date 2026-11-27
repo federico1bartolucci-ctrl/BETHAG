@@ -137,6 +137,17 @@ function createEmptyLedger(date = new Date()): Omit<LedgerEntry, "id" | "condomi
   };
 }
 
+function createEmptyCaseForm(date = new Date()) {
+  return {
+    title: "",
+    counterpart: "",
+    status: "Aperto",
+    opened_date: localISODate(date),
+    closed_date: "",
+    notes: "",
+  };
+}
+
 function hasCentPrecision(value: number) {
   return Number.isFinite(value) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 }
@@ -267,14 +278,7 @@ function AccountingPage({
     status: "Da verificare",
     notes: "",
   });
-  const [caseForm, setCaseForm] = useState({
-    title: "",
-    counterpart: "",
-    status: "Aperto",
-    opened_date: localISODate(),
-    closed_date: "",
-    notes: "",
-  });
+  const [caseForm, setCaseForm] = useState(createEmptyCaseForm());
 
   const selectedCondominium = useMemo(
     () => condominiums.find((c) => c.id === selectedCondominiumId) ?? null,
@@ -1007,6 +1011,7 @@ function AccountingPage({
         if (saveError) throw saveError;
       }
       setEditingCase(null);
+      setCaseForm(createEmptyCaseForm());
       setShowCaseForm(false);
       flash("Pratica legale salvata.");
       await load();
@@ -2248,7 +2253,7 @@ function AccountingPage({
         <section className="card">
           <div className="section-heading">
             <div><h2>Contenzioso</h2><p>Pratiche e procedimenti collegati al condominio.</p></div>
-            {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => { setEditingCase(null); setShowCaseForm(true); }}>+ Nuova pratica</button>}
+            {isAdministrator && dbCondominiumId && <button className="primary-button" onClick={() => { setEditingCase(null); setCaseForm(createEmptyCaseForm()); setShowCaseForm(true); }}>+ Nuova pratica</button>}
           </div>
           {scopedCases.length === 0 ? <p>Nessuna pratica registrata.</p> : scopedCases.map((item) => (
             <article className="row-card" key={item.id}>
@@ -2396,7 +2401,7 @@ function AccountingPage({
           <div className="form-grid"><label>Stato<input value={caseForm.status} onChange={(e) => setCaseForm({ ...caseForm, status: e.target.value })} /></label><label>Data apertura<input type="date" value={caseForm.opened_date} onChange={(e) => setCaseForm({ ...caseForm, opened_date: e.target.value })} /></label></div>
           <label>Data chiusura<input type="date" value={caseForm.closed_date} onChange={(e) => setCaseForm({ ...caseForm, closed_date: e.target.value })} /></label>
           <label>Note<textarea value={caseForm.notes} onChange={(e) => setCaseForm({ ...caseForm, notes: e.target.value })} /></label>
-          <div className="form-actions"><button type="button" className="secondary-button" onClick={() => setShowCaseForm(false)}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
+          <div className="form-actions"><button type="button" className="secondary-button" onClick={() => { setShowCaseForm(false); setEditingCase(null); setCaseForm(createEmptyCaseForm()); }}>Annulla</button><button className="primary-button" disabled={saving}>Salva</button></div>
         </form></div>
       )}
     </>
