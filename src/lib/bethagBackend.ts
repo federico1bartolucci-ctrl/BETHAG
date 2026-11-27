@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { resolveActiveWorkspaceId } from "./preferredWorkspaceResolution.mjs";
 import { loadExistingCondominiumUnits, requireCondominiumUnitRenameResult } from "./condominiumUnitGeneration.mjs";
 import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
 import { parseInvoiceAmount } from "./invoiceAmount.mjs";
@@ -23,17 +24,23 @@ export async function getActiveWorkspaceId(userId?: string | null, preferredWork
   }
   if (!activeUserId) return null;
 
-  if (preferredWorkspaceId) {
+  const hasPreferredWorkspace = preferredWorkspaceId !== undefined && preferredWorkspaceId !== null;
+  if (hasPreferredWorkspace) {
+    const requestedWorkspaceId = typeof preferredWorkspaceId === "string"
+      ? preferredWorkspaceId.trim()
+      : "";
+    if (!requestedWorkspaceId) return null;
+
     const { data: preferred, error: preferredError } = await supabase
       .from("workspace_members")
       .select("workspace_id")
       .eq("user_id", activeUserId)
-      .eq("workspace_id", preferredWorkspaceId)
+      .eq("workspace_id", requestedWorkspaceId)
       .eq("active", true)
       .maybeSingle();
 
     if (preferredError) throw preferredError;
-    if (preferred?.workspace_id) return preferred.workspace_id;
+    return resolveActiveWorkspaceId(preferredWorkspaceId, preferred, null);
   }
 
   const { data, error } = await supabase
@@ -46,7 +53,7 @@ export async function getActiveWorkspaceId(userId?: string | null, preferredWork
     .maybeSingle();
 
   if (error) throw error;
-  return data?.workspace_id ?? null;
+  return resolveActiveWorkspaceId(undefined, null, data);
 }
 
 export async function getWorkspacePlan(preferredWorkspaceId?: string | null): Promise<"free" | "plus" | "professional" | "portal" | null> {
