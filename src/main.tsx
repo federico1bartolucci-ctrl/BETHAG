@@ -7186,6 +7186,13 @@ function App() {
           )
         );
       }
+      const cleanupWarnings = Array.isArray(draft?.cleanupWarnings) ? draft.cleanupWarnings : [];
+      if (cleanupWarnings.length) {
+        alert(
+          "Analisi completata, ma alcuni file temporanei non sono stati rimossi. Verificare la pulizia Storage:\\n" +
+          cleanupWarnings.map((item: any) => item.path + ": " + item.error).join("\\n")
+        );
+      }
       setCondominiumAiDraft(draft);
       const intakeId = await createCondominiumCreationIntake(workspaceId, {
         source: "AI",
@@ -7209,7 +7216,7 @@ function App() {
         },
         structure: draft.structure ?? {},
         validationErrors: [],
-        warnings: draft.warnings ?? [],
+        warnings: [...(draft.warnings ?? []), ...cleanupWarnings.map((item: any) => `File temporaneo non rimosso: ${item.path} (${item.error})`)],
         notes: storageMode === "analysis"
           ? "Proposta estratta automaticamente senza memorizzazione permanente del file originale."
           : "Proposta estratta automaticamente e documento originale memorizzato.",
