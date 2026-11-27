@@ -3563,10 +3563,11 @@ function App() {
         WORKSPACE_BACKUP_RESTORE_ORDER.filter((table) => !isBackupAuthorizationTable(table))
       );
       const frontendCommit = commitBackupFrontendStateAfterBackendRestore(errors, () => {
-        const localStorageRestoreData: Record<string, unknown> = {};
+        const localStorageRestoreData: Record<string, unknown> = Object.create(null);
         Object.entries(state).forEach(([key, value]) => {
-          const storageKey = (KEYS as Record<string, string>)[key];
-          if (storageKey && value !== undefined && key !== "profile") {
+          const keysRecord = KEYS as Record<string, string>;
+          const storageKey = Object.hasOwn(keysRecord, key) ? keysRecord[key] : undefined;
+          if (typeof storageKey === "string" && storageKey && value !== undefined && key !== "profile")
             localStorageRestoreData[storageKey] = value;
           }
         });
