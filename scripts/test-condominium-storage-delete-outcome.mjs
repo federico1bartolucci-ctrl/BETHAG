@@ -180,8 +180,8 @@ import {
   assert.match(backendBody, /deleteCondominiumWithStorageCleanup/);
   assert.match(backendBody, /delete_condominium/);
   assert.match(upload, /export function getUnconfirmedStorageRemovalPaths/);
-  assert.match(deletion, /import\\s*\\{\\s*getUnconfirmedStorageRemovalPaths\\s*\\}\\s*from\\s*["']\\.\\/documentStorageUpload\\.js["']/);
-  assert.match(deletion, /getUnconfirmedStorageRemovalPaths\\(result\\?\\.data,\\s*batch\\)/);
+  assert.match(deletion, /import\s*\{\s*getUnconfirmedStorageRemovalPaths\s*\}\s*from\s*["']\.\/documentStorageUpload\.js["']/);
+  assert.match(deletion, /getUnconfirmedStorageRemovalPaths\(result\?\.data,\s*batch\)/);
   assert.match(main, /deletionOutcome\s*=\s*await deleteCondominiumBackend/);
   assert.match(main, /if\s*\(deletionOutcome\s*&&\s*!deletionOutcome\.storageDeleted\)/);
   assert.match(main, /setCondominiums\(\(current\)\s*=>\s*current\.filter/);
