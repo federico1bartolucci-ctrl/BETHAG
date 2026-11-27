@@ -110,10 +110,13 @@ await assert.rejects(
   /risultato valido/
 );
 
-const [backend, migration, packageJson] = await Promise.all([
+const [backend, migration, packageJson, baselineFunctions, baselineSecurity, concurrencyShell] = await Promise.all([
   readFile("src/lib/bethagBackend.ts", "utf8"),
   readFile("supabase/rebuild/proposed-forward-migrations/20261127060000_atomic_condominium_member_owner_reference_sync.sql", "utf8"),
   readFile("package.json", "utf8").then(JSON.parse),
+  readFile("supabase/migrations/20261017000003_bethag_baseline_functions.sql", "utf8"),
+  readFile("supabase/migrations/20261017000004_bethag_baseline_security.sql", "utf8"),
+  readFile("scripts/test-member-owner-reference-concurrency.sh", "utf8"),
 ]);
 assert.match(backend, /buildMemberOwnerReferenceSyncArgs/);
 assert.match(backend, /syncMemberOwnerReferences\(supabase, ownerSyncArgs\)/);
@@ -124,4 +127,20 @@ assert.match(migration, /REVOKE ALL ON FUNCTION/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION[\s\S]*TO authenticated/);
 assert.match(packageJson.scripts.test, /test-member-owner-reference-sync-runtime\.mjs/);
 
-console.log("PASS: member owner-reference sync arguments, fail-closed RPC handling, production wiring and SQL lock/ACL contract.");
+const deleteStart = backend.indexOf("export async function deleteCondominiumMember(");
+const deleteEnd = backend.indexOf("\n\nexport async function storeWorkspaceDocuments(", deleteStart);
+assert.notEqual(deleteStart, -1, "Member deletion backend function must exist");
+assert.notEqual(deleteEnd, -1, "Member deletion function boundary must be detectable");
+const deletion = backend.slice(deleteStart, deleteEnd);
+assert.match(deletion, /\.from\("condominium_members"\)\s*\.delete\(\)/);
+assert.match(deletion, /\.select\("id"\)/, "Deletion must verify affected rows");
+assert.match(deletion, /deletedMemberRows\?\.length/, "Zero-row deletion must fail closed");
+assert.doesNotMatch(deletion, /\.from\("portal_access"\)\s*\.delete\(/, "Portal access must not be revoked before the guarded member DELETE");
+assert.doesNotMatch(deletion, /\.from\("condominium_units"\)\s*\.update\(/, "Owner references must not be cleaned with a stale client-side JSONB write");
+assert.match(baselineFunctions, /CREATE OR REPLACE FUNCTION public\.clean_deleted_member_owner_references\(\)/);
+assert.match(baselineFunctions, /SECURITY DEFINER\s+SET search_path TO ''[\s\S]*old\.legacy_id::text/);
+assert.match(baselineSecurity, /CREATE TRIGGER trg_clean_deleted_member_owner_references AFTER DELETE ON "public"\."condominium_members"/);
+assert.match(concurrencyShell, /LEGACY DELETE RACE REPRODUCED/);
+assert.match(concurrencyShell, /PASS: trigger-based member deletion and concurrent owner save preserve the surviving owner/);
+
+console.log("PASS: owner-reference sync and trigger-atomic member deletion runtime contract.");
