@@ -4,6 +4,9 @@ import { uploadFilesWithRollback } from "../src/lib/documentStorageUpload.js";
 
 function createMockStorage({
   failAt = 0,
+  failStatus = 409,
+  failPersists = false,
+  initialObjects = [],
   throwAt = 0,
   removeError = null,
   malformedUploadAt = 0,
@@ -12,7 +15,7 @@ function createMockStorage({
   partialRemove = false,
 } = {}) {
   const calls = { uploads: [], removals: [] };
-  const objects = new Set();
+  const objects = new Set(initialObjects);
   let uploadCount = 0;
   const storage = {
     from(bucket) {
@@ -24,7 +27,13 @@ function createMockStorage({
             objects.add(path); // Simulate server commit followed by a lost response.
             throw new Error("network failure " + uploadCount);
           }
-          if (uploadCount === failAt) return { data: null, error: new Error("upload failure " + uploadCount) };
+          if (uploadCount === failAt) {
+            if (failPersists) objects.add(path);
+            const error = new Error(failStatus === null ? "fetch failed" : "upload failure " + uploadCount);
+            if (failStatus === null) error.name = "StorageUnknownError";
+            else error.status = failStatus;
+            return { data: null, error };
+          }
           if (uploadCount === malformedUploadAt) {
             objects.add(path); // The object exists although the response does not confirm it.
             return { data: null, error: null };
@@ -89,6 +98,44 @@ const files = [
   );
   assert.deepEqual(calls.removals, [{ bucket: "bethag-documents", paths: ["workspace/first.pdf"] }]);
   assert.equal(objects.size, 0);
+}
+
+// Supabase Storage SDK returns network failures as { data: null, error: StorageUnknownError },
+// not as rejected promises. The request may have committed before the response was lost.
+{
+  const { storage, calls, objects } = createMockStorage({ failAt: 2, failStatus: null, failPersists: true });
+  await assert.rejects(
+    uploadFilesWithRollback(storage, "bethag-documents", files, (file) => "workspace/" + file.name),
+    /fetch failed/
+  );
+  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf", "workspace/second.bin"]);
+  assert.equal(objects.size, 0);
+}
+
+// A 5xx response is ambiguous because the server may have stored the object before failing.
+{
+  const { storage, calls, objects } = createMockStorage({ failAt: 2, failStatus: 503, failPersists: true });
+  await assert.rejects(
+    uploadFilesWithRollback(storage, "bethag-documents", files, (file) => "workspace/" + file.name),
+    /upload failure 2/
+  );
+  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf", "workspace/second.bin"]);
+  assert.equal(objects.size, 0);
+}
+
+// A definitive 409 conflict must not delete a pre-existing object at the attempted path.
+{
+  const { storage, calls, objects } = createMockStorage({
+    failAt: 2,
+    failStatus: 409,
+    initialObjects: ["workspace/second.bin"],
+  });
+  await assert.rejects(
+    uploadFilesWithRollback(storage, "bethag-documents", files, (file) => "workspace/" + file.name),
+    /upload failure 2/
+  );
+  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf"]);
+  assert.deepEqual([...objects], ["workspace/second.bin"]);
 }
 
 // Successful uploads preserve metadata and do not run rollback.
