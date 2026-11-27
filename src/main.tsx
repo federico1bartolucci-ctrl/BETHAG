@@ -3570,7 +3570,6 @@ function App() {
           if (typeof storageKey === "string" && storageKey && value !== undefined && key !== "profile") {
             localStorageRestoreData[storageKey] = value;
           }
-          }
         });
         if (state.profile) localStorageRestoreData[KEYS.profile] = state.profile;
         if (backup.localStorageData && typeof backup.localStorageData === "object" && !Array.isArray(backup.localStorageData)) {
