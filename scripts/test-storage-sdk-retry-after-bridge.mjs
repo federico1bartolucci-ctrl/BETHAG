@@ -92,19 +92,21 @@ assert.equal(sdkErrorShape.retryAfter, undefined, "StorageApiError does not reta
 
 // The bridge must not associate unrelated buckets' Retry-After headers with
 // paths later passed to the BETHAG document cleanup helper.
-const otherPath = "workspace/other-bucket/temporary.pdf";
-const otherBucketFetch = createStorageRetryAfterFetch(async () => new Response(
-  JSON.stringify({ message: "Too Many Requests", statusCode: "429" }),
-  { status: 429, headers: { "content-type": "application/json", "retry-after": "2" } },
-));
-await otherBucketFetch(
-  "https://project.supabase.co/storage/v1/object/another-bucket",
-  {
-    method: "DELETE",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ prefixes: [otherPath] }),
-  },
-);
-assert.equal(readStorageRetryAfter(null, otherPath), null);
+for (const bucket of ["another-bucket", "bethag-documents-archive"]) {
+  const otherPath = "workspace/" + bucket + "/temporary.pdf";
+  const otherBucketFetch = createStorageRetryAfterFetch(async () => new Response(
+    JSON.stringify({ message: "Too Many Requests", statusCode: "429" }),
+    { status: 429, headers: { "content-type": "application/json", "retry-after": "2" } },
+  ));
+  await otherBucketFetch(
+    "https://project.supabase.co/storage/v1/object/" + bucket,
+    {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefixes: [otherPath] }),
+    },
+  );
+  assert.equal(readStorageRetryAfter(null, otherPath), null);
+}
 
 console.log("Storage SDK Retry-After bridge runtime regression: PASS");
