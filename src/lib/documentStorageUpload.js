@@ -1,5 +1,12 @@
 const STORAGE_REMOVE_BATCH_SIZE = 1000;
 
+function isDefinitiveStorageRejection(error) {
+  const status = Number(error?.status);
+  // A timeout may occur after the object store committed the upload. Treat it,
+  // 5xx responses, and transport errors without an HTTP status as ambiguous.
+  return Number.isInteger(status) && status >= 400 && status < 500 && status !== 408;
+}
+
 function missingRemovalPaths(data, batch) {
   if (!Array.isArray(data)) return [...batch];
   const confirmed = new Set(
