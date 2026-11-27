@@ -25,6 +25,8 @@ assert.ok(frontendCommit > backendLoop, "frontend snapshot commit must occur aft
 assert.ok(firstFrontendMutation > frontendCommit, "React state must be applied only inside the deferred commit");
 assert.ok(firstLocalStorageWrite > frontendCommit, "localStorage must be written only inside the deferred commit");
 assert.match(handler, /frontendCommitNotice/);
+assert.match(handler, /if \(errors\.length \|\| sourceReadErrorSummary \|\| !frontendCommit\.committed\)/,
+  "an incomplete source gate must route through the partial-restore alert even when the error summary is malformed");
 assert.match(handler, /database può contenere scritture parziali/i);
 assert.match(handler, /backup sorgente contiene errori di lettura nelle tabelle ripristinabili/i);
 assert.ok(packageJson.scripts.test.includes("test-backup-restore-partial-frontend-commit.mjs"),

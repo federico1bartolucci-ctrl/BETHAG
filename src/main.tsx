@@ -3615,7 +3615,7 @@ function App() {
       const backendModeNotice = backendAvailability.localOnlyNotice
         ? " " + backendAvailability.localOnlyNotice
         : "";
-      if (errors.length || sourceReadErrorSummary) {
+      if (errors.length || sourceReadErrorSummary || !frontendCommit.committed) {
         const restoreErrorSummary = errors.length
           ? "Errori durante il ripristino: " + errors.join(" | ") + ". "
           : "Le tabelle presenti nel backup sono state ripristinate. ";
