@@ -1,3 +1,5 @@
+import { getUnconfirmedStorageRemovalPaths } from "./documentStorageUpload.js";
+
 export async function collectCondominiumStoragePaths(fetchPage, pageSize = 1000) {
   if (typeof fetchPage !== "function") throw new TypeError("A document-page loader is required.");
   if (!Number.isInteger(pageSize) || pageSize < 1) throw new RangeError("Page size must be a positive integer.");
@@ -42,8 +44,12 @@ export async function deleteCondominiumWithStorageCleanup({
     try {
       const result = await removeBatch(batch);
       if (result?.error) throw result.error;
-      if (!Array.isArray(result?.data)) {
-        throw new Error("Storage cleanup returned a malformed response.");
+      const unconfirmedPaths = getUnconfirmedStorageRemovalPaths(result?.data, batch);
+      if (unconfirmedPaths.length) {
+        failedStoragePaths.push(...unconfirmedPaths);
+        storageErrors.push({
+          message: "Storage cleanup did not confirm removal of every requested path.",
+        });
       }
     } catch (error) {
       failedStoragePaths.push(...batch);

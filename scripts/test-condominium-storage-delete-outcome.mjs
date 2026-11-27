@@ -105,6 +105,45 @@ import {
   assert.deepEqual(outcome.failedStoragePaths, ["workspace/a.pdf"]);
 }
 
+// An empty success-shaped response does not confirm deletion of a requested object.
+{
+  const outcome = await deleteCondominiumWithStorageCleanup({
+    deleteDatabase: async () => {},
+    storagePaths: ["workspace/a.pdf"],
+    removeBatch: async () => ({ data: [], error: null }),
+  });
+  assert.equal(outcome.databaseDeleted, true);
+  assert.equal(outcome.storageDeleted, false);
+  assert.deepEqual(outcome.failedStoragePaths, ["workspace/a.pdf"]);
+  assert.match(outcome.storageErrors[0].message, /did not confirm removal/i);
+}
+
+// A partial success-shaped response reports only the paths not confirmed by Storage.
+{
+  const outcome = await deleteCondominiumWithStorageCleanup({
+    deleteDatabase: async () => {},
+    storagePaths: ["workspace/a.pdf", "workspace/b.pdf", "workspace/c.pdf"],
+    removeBatch: async () => ({
+      data: [{ name: "workspace/a.pdf" }, { name: "workspace/c.pdf" }],
+      error: null,
+    }),
+  });
+  assert.equal(outcome.databaseDeleted, true);
+  assert.equal(outcome.storageDeleted, false);
+  assert.deepEqual(outcome.failedStoragePaths, ["workspace/b.pdf"]);
+}
+
+// A response containing an unrelated object path confirms none of the requested paths.
+{
+  const outcome = await deleteCondominiumWithStorageCleanup({
+    deleteDatabase: async () => {},
+    storagePaths: ["workspace/a.pdf", "workspace/b.pdf"],
+    removeBatch: async () => ({ data: [{ name: "workspace/other.pdf" }], error: null }),
+  });
+  assert.equal(outcome.storageDeleted, false);
+  assert.deepEqual(outcome.failedStoragePaths, ["workspace/a.pdf", "workspace/b.pdf"]);
+}
+
 // Empty paths are a successful no-op after the database transaction.
 {
   const events = [];
@@ -126,6 +165,8 @@ import {
 // after the database RPC has committed.
 {
   const backend = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
+  const deletion = await readFile(new URL("../src/lib/condominiumStorageDeletion.mjs", import.meta.url), "utf8");
+  const upload = await readFile(new URL("../src/lib/documentStorageUpload.js", import.meta.url), "utf8");
   const main = await readFile(new URL("../src/main.tsx", import.meta.url), "utf8");
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   const start = backend.indexOf("export async function deleteCondominium(");
@@ -138,6 +179,9 @@ import {
   assert.match(backendBody, /\.range\(offset,\s*offset\s*\+\s*pageSize\s*-\s*1\)/);
   assert.match(backendBody, /deleteCondominiumWithStorageCleanup/);
   assert.match(backendBody, /delete_condominium/);
+  assert.match(upload, /export function getUnconfirmedStorageRemovalPaths/);
+  assert.match(deletion, /import\s*\{\s*getUnconfirmedStorageRemovalPaths\s*\}\s*from\s*["']\.\/documentStorageUpload\.js["']/);
+  assert.match(deletion, /getUnconfirmedStorageRemovalPaths\(result\?\.data,\s*batch\)/);
   assert.match(main, /deletionOutcome\s*=\s*await deleteCondominiumBackend/);
   assert.match(main, /if\s*\(deletionOutcome\s*&&\s*!deletionOutcome\.storageDeleted\)/);
   assert.match(main, /setCondominiums\(\(current\)\s*=>\s*current\.filter/);

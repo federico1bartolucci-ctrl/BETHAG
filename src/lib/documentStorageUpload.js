@@ -7,7 +7,7 @@ function isDefinitiveStorageRejection(error) {
   return Number.isInteger(status) && status >= 400 && status < 500 && status !== 408;
 }
 
-function missingRemovalPaths(data, batch) {
+export function getUnconfirmedStorageRemovalPaths(data, batch) {
   if (!Array.isArray(data)) return [...batch];
   const confirmed = new Set(
     data
@@ -77,7 +77,7 @@ export async function uploadFilesWithRollback(storage, bucketName, files, create
           rollbackFailures.push({ paths: batch, error: response.error });
           continue;
         }
-        const unconfirmed = missingRemovalPaths(response?.data, batch);
+        const unconfirmed = getUnconfirmedStorageRemovalPaths(response?.data, batch);
         if (unconfirmed.length) {
           rollbackFailures.push({
             paths: unconfirmed,
