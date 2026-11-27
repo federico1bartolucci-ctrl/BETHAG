@@ -7,7 +7,8 @@ assert.match(helper, /getFullYear\(\)/);
 assert.match(helper, /getMonth\(\)/);
 assert.match(helper, /getDate\(\)/);
 const executable = helper.replace("export function", "function")
-  + '\\nconsole.log(localISODate(new Date("2026-11-21T23:30:00.000Z")));';
+  + String.fromCharCode(10)
+  + 'console.log(localISODate(new Date("2026-11-21T23:30:00.000Z")));';
 const output = execFileSync(process.execPath, ["-e", executable], {
   env: { ...process.env, TZ: "Europe/Rome" },
   encoding: "utf8",
