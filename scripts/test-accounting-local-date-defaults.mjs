@@ -41,6 +41,8 @@ const executable = helper
   .replace("days: number", "days") + `
 function createEmptyLedger(date = new Date()) {${factoryBody}
 }
+function createEmptyCaseForm(date = new Date()) {${caseFactoryBody}
+}
 console.log(JSON.stringify({
   paymentDefault: localISODate(new Date("2026-11-24T23:30:00.000Z")),
   legalCaseDefault: createEmptyCaseForm(new Date("2026-03-28T23:30:00.000Z")).opened_date,
