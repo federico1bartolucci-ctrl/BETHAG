@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { loadCondominiumWorkReconciliationRows } from "./workReconciliationPagination.mjs";
 import { parseInvoiceAmount } from "./invoiceAmount.mjs";
 import { loadCondominiumWorkDeletionRows } from "./workDeletionGuardPagination.mjs";
+import { loadLinkedWorkLedgerRows } from "./workLedgerLinkLookup.mjs";
 import { createCommittedMemberTransferOutcome } from "./memberTransferPostCommitOutcome.mjs";
 
 export type BackendState = Record<string, any[]>;
@@ -1879,7 +1880,7 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       .eq("id", id)
       .maybeSingle();
     if (workError) throw workError;
-    if (!work) return;
+    if (!work) throw new Error("Lavoro non trovato o già eliminato: nessuna eliminazione eseguita.");
 
     const progressRows = await loadCondominiumWorkDeletionRows(
       supabase,
@@ -1889,14 +1890,7 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       { select: "id,progress_no,ledger_entry_id,payment_entry_id" }
     );
     const hasAccountingProgress = progressRows.some((row: any) => Boolean(row.ledger_entry_id) || Boolean(row.payment_entry_id));
-    const { data: linkedLedger, error: ledgerError } = await supabase
-      .from("condominium_ledger_entries")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("direction", "Uscita")
-      .contains("data", { workId: id })
-      .limit(1);
-    if (ledgerError) throw ledgerError;
+    const linkedLedger = await loadLinkedWorkLedgerRows(supabase, workspaceId, id);
 
     const linkedDocuments = await loadCondominiumWorkDeletionRows(
       supabase,
@@ -1928,12 +1922,17 @@ export async function deleteCondominiumWork(workspaceId: string, id: string) {
       throw new Error("Il lavoro non può essere eliminato perché contiene una o più fatture collegate. Gestisci prima il collegamento e la relativa contabilizzazione per evitare di perdere la tracciabilità dell'intervento.");
     }
 
-    const { error } = await supabase
+    const { data: deletedWork, error: deleteError } = await supabase
       .from("condominium_works")
       .delete()
       .eq("workspace_id", workspaceId)
-      .eq("id", id);
-    if (error) throw error;
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+    if (deleteError) throw deleteError;
+    if (!deletedWork?.id || String(deletedWork.id) !== String(id)) {
+      throw new Error("Lavoro non trovato o già eliminato: nessuna eliminazione eseguita.");
+    }
   });
 }
 

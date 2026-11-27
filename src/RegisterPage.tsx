@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { deleteCondominiumWork } from "./lib/bethagBackend";
+import { deleteRegisterRecordSafely } from "./lib/registerRecordDeletion.mjs";
 import { mapRegisterDocumentRows } from "./lib/registerDocumentRows.mjs";
 import { reconcileWorkDocumentLinks } from "./lib/workDocumentLinks.mjs";
 import { canCloseWork, closeWorkWithHistory } from "./lib/workClosure.mjs";
@@ -148,7 +150,35 @@ async function closeWork(w:Work){
   }
 }
 async function saveWork(e:React.FormEvent){e.preventDefault();if(!supabase||!dbId||!workForm.title.trim())return;setSaving(true);setError("");try{const payload={workspace_id:workspaceId,condominium_id:dbId,...workForm,supplier_id:workForm.supplier_id||null,register_item_id:workForm.register_item_id||null,fund_id:workForm.fund_id||null,start_date:workForm.start_date||null,expected_end_date:workForm.expected_end_date||null,actual_end_date:workForm.actual_end_date||null,estimated_amount:Number(workForm.estimated_amount)||0,approved_amount:Number(workForm.approved_amount)||0,actual_amount:Number(workForm.actual_amount)||0,title:workForm.title.trim()};let workId=editingWork; if(editingWork){const {error}=await supabase.from("condominium_works").update(payload).eq("id",editingWork).eq("workspace_id",workspaceId);if(error)throw error;}else{const {data,error}=await supabase.from("condominium_works").insert(payload).select("id").single();if(error)throw error;workId=data.id;} if(workId)await logWorkEvent({id:workId,condominium_id:dbId} as Work,editingWork?"Modifica":"Creazione",editingWork?"Intervento modificato":"Intervento creato",workForm.title.trim(),Number(workForm.actual_amount||workForm.approved_amount||workForm.estimated_amount||0));setEditingWork(null);setShowWorkForm(false);await auditWork(editingWork?"UPDATE":"CREATE",dbId,editingWork?"Intervento modificato":"Intervento creato",{title:payload.title},workId||undefined);await load();}catch(e:any){setError(e?.message||"Impossibile salvare il lavoro.");}finally{setSaving(false);}}
- async function createWorkActivity(w:Work){if(!supabase||!dbId)return;const title="Lavoro: "+w.title;const due=w.expected_end_date||w.start_date||new Date(Date.now()+7*86400000).toISOString().slice(0,10);const {error}=await insertActivityWithUniqueLegacyId({insert:row=>supabase.from("activities").insert(row),payload:{workspace_id:workspaceId,condominium_id:dbId,title,due_date:due,status:"Aperta",data:{title,condominiumId:selected,dueDate:due,priority:w.priority==="Alta"?"Alta":"Media",status:"Aperta",notes:"Attività generata dal lavoro: "+w.title}}});if(error){setError(error.message||"Impossibile creare l'attività del lavoro.");return;}alert("Attività creata.");}async function createActivity(item:RegisterItem){if(!supabase||!dbId)return;const title="Verifica: "+item.title;const due=item.expiry_date||new Date(Date.now()+7*86400000).toISOString().slice(0,10);const {error}=await insertActivityWithUniqueLegacyId({insert:row=>supabase.from("activities").insert(row),payload:{workspace_id:workspaceId,condominium_id:dbId,title,due_date:due,status:"Aperta",data:{title,condominiumId:selected,dueDate:due,priority:"Alta",status:"Aperta",notes:"Attività generata dal Registro e sicurezza: "+item.title}}});if(error){setError(error.message||"Impossibile creare l'attività di verifica.");return;}alert("Attività creata e collegata alla scadenza tecnica.");}async function remove(table:string,id:string,label:string){if(!supabase||!window.confirm("Sei sicuro di voler cancellare "+label+"?"))return;const {error}=await supabase.from(table).delete().eq("id",id).eq("workspace_id",workspaceId);if(error){setError("ERRORE");return;}await load();}
+ async function createWorkActivity(w:Work){if(!supabase||!dbId)return;const title="Lavoro: "+w.title;const due=w.expected_end_date||w.start_date||new Date(Date.now()+7*86400000).toISOString().slice(0,10);const {error}=await insertActivityWithUniqueLegacyId({insert:row=>supabase.from("activities").insert(row),payload:{workspace_id:workspaceId,condominium_id:dbId,title,due_date:due,status:"Aperta",data:{title,condominiumId:selected,dueDate:due,priority:w.priority==="Alta"?"Alta":"Media",status:"Aperta",notes:"Attività generata dal lavoro: "+w.title}}});if(error){setError(error.message||"Impossibile creare l'attività del lavoro.");return;}alert("Attività creata.");}async function createActivity(item:RegisterItem){if(!supabase||!dbId)return;const title="Verifica: "+item.title;const due=item.expiry_date||new Date(Date.now()+7*86400000).toISOString().slice(0,10);const {error}=await insertActivityWithUniqueLegacyId({insert:row=>supabase.from("activities").insert(row),payload:{workspace_id:workspaceId,condominium_id:dbId,title,due_date:due,status:"Aperta",data:{title,condominiumId:selected,dueDate:due,priority:"Alta",status:"Aperta",notes:"Attività generata dal Registro e sicurezza: "+item.title}}});if(error){setError(error.message||"Impossibile creare l'attività di verifica.");return;}alert("Attività creata e collegata alla scadenza tecnica.");}async function remove(table:"condominium_register_items"|"condominium_works"|"condominium_suppliers",id:string,label:string){
+  if(!supabase||!dbId||!window.confirm("Sei sicuro di voler cancellare "+label+"?"))return;
+  setSaving(true);
+  setError("");
+  try{
+    await deleteRegisterRecordSafely({
+      table,
+      id,
+      workspaceId,
+      condominiumId:dbId,
+      deleteWork:deleteCondominiumWork,
+      deleteScopedRecord:async({table:targetTable,id:targetId,workspaceId:targetWorkspaceId,condominiumId})=>{
+        const {data,error}=await supabase.from(targetTable)
+          .delete()
+          .eq("id",targetId)
+          .eq("workspace_id",targetWorkspaceId)
+          .eq("condominium_id",condominiumId)
+          .select("id")
+          .maybeSingle();
+        return {data,error};
+      },
+    });
+    await load();
+  }catch(e:any){
+    setError(e?.message||"Impossibile eliminare il record selezionato.");
+  }finally{
+    setSaving(false);
+  }
+}
  return <section className="page-section">
   <div className="page-header"><div><span className="eyebrow">Anagrafe tecnica e operativa</span><h1>Registro condominiale</h1><p>Sicurezza, impianti, scadenze tecniche, documenti operativi e fornitori collegati al condominio.</p></div></div>
   <div className="filter-bar"><label>Condominio<select value={String(selected)} onChange={e=>setSelected(e.target.value==="all"?"all":Number(e.target.value))}><option value="all">Seleziona condominio</option>{condominiums.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label></div>
