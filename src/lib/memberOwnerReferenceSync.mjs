@@ -2,7 +2,7 @@ export function buildMemberOwnerReferenceSaveArgs({ workspaceId, condominiumId, 
   const workspace = String(workspaceId ?? "").trim();
   const condominium = String(condominiumId ?? "").trim();
   const legacyId = String(member?.id ?? "").trim();
-  if (!workspace || !condominium || !/^\\d+$/.test(legacyId)) {
+  if (!workspace || !condominium || !/^\d+$/.test(legacyId)) {
     throw new Error("Contesto o identificativo del condòmino non valido per il salvataggio atomico.");
   }
   if (!row || typeof row !== "object" || !row.data || typeof row.data !== "object") {
