@@ -1,4 +1,3 @@
-const STORAGE_OBJECT_PATH = "/storage/v1/object/bethag-documents";
 const MAX_PENDING_PATHS = 512;
 const MAX_PENDING_PER_PATH = 4;
 const RETRY_AFTER_TTL_MS = 60_000;
@@ -33,7 +32,11 @@ async function getStorageRemovalPaths(input, init) {
   } catch {
     return [];
   }
-  if (!pathname.includes(STORAGE_OBJECT_PATH)) return [];
+  const storageObjectMarker = "/storage/v1/object/";
+  const markerIndex = pathname.lastIndexOf(storageObjectMarker);
+  if (markerIndex < 0) return [];
+  const bucket = pathname.slice(markerIndex + storageObjectMarker.length).split("/")[0];
+  if (bucket !== "bethag-documents") return [];
 
   let payload;
   try {
