@@ -112,6 +112,17 @@ const files = [
   assert.equal(objects.size, 0);
 }
 
+// HTTP 408 is a timeout response and must remain ambiguous even though it is a 4xx status.
+{
+  const { storage, calls, objects } = createMockStorage({ failAt: 2, failStatus: 408, failPersists: true });
+  await assert.rejects(
+    uploadFilesWithRollback(storage, "bethag-documents", files, (file) => "workspace/" + file.name),
+    /upload failure 2/
+  );
+  assert.deepEqual(calls.removals[0].paths, ["workspace/first.pdf", "workspace/second.bin"]);
+  assert.equal(objects.size, 0);
+}
+
 // A 5xx response is ambiguous because the server may have stored the object before failing.
 {
   const { storage, calls, objects } = createMockStorage({ failAt: 2, failStatus: 503, failPersists: true });
