@@ -32,3 +32,21 @@ Draft follow-up impilato sulla PR #654, head `3ec952b4dcbfbead8094a36f6bc02cea0a
 ## Sicurezza e limiti
 
 Nessun accesso o modifica a QA/Production. Nessun merge, deploy, reset o workflow dispatch manuale. La risposta Storage viene trattata in modo conservativo: un percorso non restituito è classificato come non confermato e richiede verifica, anche se potrebbe essere già assente dal bucket.
+
+## Verifica CI sullo SHA definitivo
+
+**Head:** `360609762dbddacef5db0796d1c14e0863d6b72b`
+
+**Workflow:** [BETHAG build #46056644911](https://github.com/federico1bartolucci-ctrl/BETHAG/actions/runs/46056644911) — **SUCCESS**.
+
+- Job `build`: **PASS**.
+- `npm test`: **PASS**; marker `Condominium storage deletion pagination and partial-outcome runtime regression: PASS`.
+- Baseline verification: **PASS**.
+- Security parity: **PASS**; confronto con snapshot Production read-only acquisito, senza connessione live o scritture.
+- Vite production build: **PASS**.
+- Chromium/public-login browser smoke: **PASS**; marker `BETHAG_PUBLIC_BROWSER_SMOKE_PASS`.
+- Job `postgres-bootstrap`: **PASS** su PostgreSQL 17.12, incluse le 28 migrazioni clean-install, le 19 migrazioni canoniche e le prove ACL/RLS/rollback.
+
+Final QA APP-01..APP-15: **SKIPPED / nessun check-run su questa PR impilata**. La Build non equivale a collaudo autenticato.
+
+La PR resta Draft e non integrata. Nessuna modifica a QA o Production; nessun merge, deploy, reset o dispatch manuale.
