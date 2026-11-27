@@ -23,6 +23,7 @@ DELETE FROM public.condominium_units
 WHERE id IN ('$OWNER_SYNC_TEST_UNIT_ID'::uuid, '$OWNER_SYNC_TEST_UNIT_B_ID'::uuid);
 DELETE FROM public.workspace_members
 WHERE workspace_id='$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid AND user_id='$OWNER_SYNC_TEST_USER_ID'::uuid;
+DELETE FROM public.profiles WHERE id='$OWNER_SYNC_TEST_USER_ID'::uuid;
 DELETE FROM public.condominiums WHERE id='$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid;
 DELETE FROM public.workspaces WHERE id='$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid;
 DELETE FROM auth.users WHERE id='$OWNER_SYNC_TEST_USER_ID'::uuid;
@@ -39,8 +40,11 @@ INSERT INTO auth.users(id) VALUES ('$OWNER_SYNC_TEST_USER_ID'::uuid) ON CONFLICT
 INSERT INTO public.workspaces(id, name, plan)
 VALUES ('$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid, 'owner sync concurrency fixture', 'free');
 
+INSERT INTO public.profiles(id,full_name,email,role,active)
+VALUES ('$OWNER_SYNC_TEST_USER_ID'::uuid, 'Owner Sync CI Collaborator', 'owner-sync-ci@example.invalid', 'collaborator', true);
+
 INSERT INTO public.workspace_members(workspace_id,user_id,role,active,permissions)
-VALUES ('$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid, '$OWNER_SYNC_TEST_USER_ID'::uuid, 'admin', true, '{}'::jsonb);
+VALUES ('$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid, '$OWNER_SYNC_TEST_USER_ID'::uuid, 'collaborator', true, '{"condomini":true}'::jsonb);
 
 INSERT INTO public.condominiums(id, workspace_id, name)
 VALUES ('$OWNER_SYNC_TEST_CONDOMINIUM_ID'::uuid, '$OWNER_SYNC_TEST_WORKSPACE_ID'::uuid, 'owner sync concurrency fixture');
