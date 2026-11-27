@@ -3563,6 +3563,33 @@ function App() {
         WORKSPACE_BACKUP_RESTORE_ORDER.filter((table) => !isBackupAuthorizationTable(table))
       );
       const frontendCommit = commitBackupFrontendStateAfterBackendRestore(errors, () => {
+        const localStorageRestoreData: Record<string, unknown> = {};
+        Object.entries(state).forEach(([key, value]) => {
+          const storageKey = (KEYS as Record<string, string>)[key];
+          if (storageKey && value !== undefined && key !== "profile") {
+            localStorageRestoreData[storageKey] = value;
+          }
+        });
+        if (state.profile) localStorageRestoreData[KEYS.profile] = state.profile;
+        if (backup.localStorageData && typeof backup.localStorageData === "object" && !Array.isArray(backup.localStorageData)) {
+          Object.assign(localStorageRestoreData, backup.localStorageData);
+        }
+
+        const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
+        const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
+        const localStorageRestoreResult = restoreBackupLocalStorageData(
+          localStorageRestoreData,
+          allowedRestoreKeys,
+          localStorage,
+          { rollbackOnFailure: true }
+        );
+        if (localStorageRestoreResult.failed > 0 || localStorageRestoreResult.rollbackFailed > 0) {
+          return {
+            failedLocalStorageWrites: localStorageRestoreResult.failed,
+            rollbackFailed: localStorageRestoreResult.rollbackFailed,
+          };
+        }
+
         const apply = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T>>) => {
           if (state[key] !== undefined) setter(state[key] as T);
         };
@@ -3581,34 +3608,19 @@ function App() {
         apply("collaborators", setCollaborators);
         apply("subscription", setSubscription);
         if (state.profile) setProfile(state.profile as AdminProfile);
-
-        Object.entries(state).forEach(([key, value]) => {
-          const storageKey = (KEYS as Record<string,string>)[key];
-          if (storageKey && value !== undefined && key !== "profile") {
-            localStorage.setItem(storageKey, JSON.stringify(value));
-          }
-        });
-        if (state.profile) localStorage.setItem(KEYS.profile, JSON.stringify(state.profile));
-
-        // Ripristina anche lo snapshot locale incluso nel backup, mantenendo
-        // escluse le chiavi di sessione/autenticazione. Questo completa il
-        // ripristino delle preferenze e dello stato locale non duplicato nel
-        // frontendState.
-        if (backup.localStorageData && typeof backup.localStorageData === "object") {
-          const excludedRestoreKeys = new Set([KEYS.session, KEYS.sessionEmail]);
-          const allowedRestoreKeys = Object.values(KEYS).filter((storageKey) => !excludedRestoreKeys.has(storageKey));
-          restoreBackupLocalStorageData(
-            backup.localStorageData,
-            allowedRestoreKeys,
-            localStorage
-          );
-        }
+        return { failedLocalStorageWrites: 0, rollbackFailed: 0 };
       }, restorableSourceReadErrors);
       const frontendCommitNotice = frontendCommit.committed
         ? ""
         : frontendCommit.reason === "source_backup_incomplete"
           ? " Lo stato React e localStorage del backup non è stato applicato perché il backup sorgente contiene errori di lettura nelle tabelle ripristinabili. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino."
-          : " Lo stato React e localStorage del backup non è stato applicato perché una o più operazioni backend non sono state completate. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino.";
+          : frontendCommit.reason === "frontend_local_storage_incomplete"
+            ? " Lo stato React e localStorage del backup non è stato applicato perché " + frontendCommit.failedLocalStorageWrites + " scritture localStorage sono fallite. " +
+              (frontendCommit.rollbackFailed > 0
+                ? "Il rollback locale non è riuscito per " + frontendCommit.rollbackFailed + " chiavi; la pagina non verrà ricaricata automaticamente. "
+                : "Le scritture localStorage eseguite in questa fase sono state annullate. ") +
+              "Il database può contenere scritture già completate: verifica e riconcilia i record prima di ripetere il ripristino."
+            : " Lo stato React e localStorage del backup non è stato applicato perché una o più operazioni backend non sono state completate. Il database può contenere scritture parziali: verifica e riconcilia i record prima di ripetere il ripristino.";
       const securitySkipSummary = skippedSecurityRows.length
         ? " Per sicurezza non sono stati ripristinati i record di autorizzazione/workflow indicati: " + skippedSecurityRows.join(", ") + "; ricrea o riapprova gli accessi tramite le procedure dell’applicazione."
         : "";
@@ -3628,6 +3640,7 @@ function App() {
       } else {
         alert("Ripristino BETHAG completato. I dati non presenti nel backup non sono stati eliminati." + securitySkipSummary);
       }
+      if (frontendCommit.reason === "frontend_local_storage_incomplete" && frontendCommit.rollbackFailed > 0) return;
       window.location.reload();
     } catch (e: any) {
       alert("Impossibile ripristinare il backup: " + (e?.message || "file non valido"));
