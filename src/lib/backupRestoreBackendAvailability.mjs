@@ -3,15 +3,24 @@ function isRecord(value) {
 }
 
 /**
- * Prevents a workspace restore from claiming success when Supabase is not
- * configured but the backup contains backend rows that the restore loop would
- * otherwise silently skip.
+ * Prevents a workspace restore from claiming success when the backup backend
+ * section is malformed, when a restorable table payload is not an array, or
+ * when Supabase is unavailable for a backup that contains backend rows.
  *
  * The caller must run this read-only decision before confirmation, React state
  * changes, localStorage writes, or backend restore writes.
  */
 export function getBackupRestoreBackendAvailability(backup, supabaseAvailable, restorableTables) {
-  const backend = isRecord(backup?.backend) ? backup.backend : {};
+  if (!isRecord(backup) || !isRecord(backup.backend)) {
+    return {
+      blockReason:
+        "Ripristino bloccato: la sezione backend del backup è assente o non valida. Nessun dato React, localStorage o backend è stato modificato. Seleziona un backup BETHAG integro e ripeti il ripristino.",
+      localOnlyNotice: "",
+      tables: ["backend"],
+    };
+  }
+
+  const backend = backup.backend;
   const tableNames = Array.isArray(restorableTables)
     ? [...new Set(restorableTables.filter((table) => typeof table === "string" && table.trim()))]
     : [];
@@ -23,19 +32,32 @@ export function getBackupRestoreBackendAvailability(backup, supabaseAvailable, r
     Object.hasOwn(backend, table) && !Array.isArray(backend[table])
   );
 
+  // A malformed payload is unsafe regardless of Supabase availability. With
+  // Supabase configured the restore loop would otherwise normalize it to []
+  // and silently skip the table before committing the frontend snapshot.
+  if (malformedTables.length) {
+    return {
+      blockReason:
+        "Ripristino bloccato: il backup contiene payload non validi per le tabelle backend (" +
+        malformedTables.join(", ") +
+        "). Nessun dato React, localStorage o backend è stato modificato. Rigenera o correggi il backup prima di procedere.",
+      localOnlyNotice: "",
+      tables: malformedTables,
+    };
+  }
+
   if (supabaseAvailable) {
     return { blockReason: "", localOnlyNotice: "", tables: populatedTables };
   }
 
-  if (populatedTables.length || malformedTables.length) {
-    const affectedTables = [...new Set([...populatedTables, ...malformedTables])];
+  if (populatedTables.length) {
     return {
       blockReason:
         "Ripristino bloccato: Supabase non è configurato, ma il backup contiene record backend da ripristinare (" +
-        affectedTables.join(", ") +
+        populatedTables.join(", ") +
         "). Nessun dato React, localStorage o backend è stato modificato. Configura o riattiva Supabase e ripeti il ripristino.",
       localOnlyNotice: "",
-      tables: affectedTables,
+      tables: populatedTables,
     };
   }
 
