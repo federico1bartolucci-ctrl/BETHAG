@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { runWithTemporaryStorageCleanup } from "./temporaryStorageCleanup.mjs";
+import { readStorageRetryAfter } from "./storageRetryAfterBridge.mjs";
 
 export type BackendState = Record<string, any[]>;
 
@@ -2205,19 +2206,16 @@ export async function deleteWorkspaceStoredFile(path: string): Promise<void> {
   if (!supabase) throw new Error("Supabase non configurato.");
   if (!path) return;
   const { error } = await supabase.storage.from("bethag-documents").remove([path]);
+  const retryAfter = error ? readStorageRetryAfter(error, path) : null;
   if (error && Number(error.status) !== 404) {
     const cleanupError = new Error(`Impossibile eliminare il file memorizzato: ${error.message}`);
     (cleanupError as any).status = error.status;
-    const retryAfter = (error as any).retryAfter ??
-      (error as any).headers?.get?.("retry-after") ??
-      (error as any).headers?.["retry-after"];
     if (retryAfter !== undefined && retryAfter !== null) {
       (cleanupError as any).retryAfter = retryAfter;
     }
     throw cleanupError;
   }
 }
-
 export async function storeCondominiumDocuments(
   workspaceId: string,
   files: File[]
