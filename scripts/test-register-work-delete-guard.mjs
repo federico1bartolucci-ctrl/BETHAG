@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { deleteRegisterRecordSafely } from "../src/lib/registerRecordDeletion.mjs";
+import { loadLinkedWorkLedgerRows } from "../src/lib/workLedgerLinkLookup.mjs";
 
 // Reproduce the previous RegisterPage behavior: a direct table delete bypassed
 // the backend guard even when the work had linked accounting records.
@@ -121,6 +122,84 @@ await assert.rejects(
   }),
   /Contesto del Registro incompleto/,
 );
+
+
+function ledgerClient(rowsByField, errorsByField = {}) {
+  const calls = [];
+  return {
+    calls,
+    client: {
+      from(table) {
+        assert.equal(table, "condominium_ledger_entries");
+        const state = { field: null };
+        const query = {
+          select(columns) { calls.push(["select", columns]); return query; },
+          eq(column, value) { calls.push(["eq", column, value]); return query; },
+          contains(column, value) {
+            assert.equal(column, "data");
+            state.field = Object.keys(value)[0];
+            calls.push(["contains", state.field, value[state.field]]);
+            return query;
+          },
+          limit(value) {
+            calls.push(["limit", value]);
+            return Promise.resolve({
+              data: rowsByField[state.field] ?? [],
+              error: errorsByField[state.field] ?? null,
+            });
+          },
+        };
+        return query;
+      },
+    },
+  };
+}
+
+const snakeCaseLedger = { id: "ledger-snake", data: { work_id: "work-snake" } };
+const snakeOnlyClient = ledgerClient({ workId: [], work_id: [snakeCaseLedger] });
+assert.equal(
+  snakeOnlyClient.calls.length,
+  0,
+  "The old camelCase-only lookup would not inspect the snake_case reference.",
+);
+const snakeRows = await loadLinkedWorkLedgerRows(snakeOnlyClient.client, "workspace-1", "work-snake");
+assert.deepEqual(snakeRows, [snakeCaseLedger]);
+assert.ok(snakeOnlyClient.calls.some(call => call[0] === "contains" && call[1] === "workId"));
+assert.ok(snakeOnlyClient.calls.some(call => call[0] === "contains" && call[1] === "work_id"));
+
+const camelCaseLedger = { id: "ledger-camel", data: { workId: "work-camel" } };
+const camelRows = await loadLinkedWorkLedgerRows(
+  ledgerClient({ workId: [camelCaseLedger], work_id: [] }).client,
+  "workspace-1",
+  "work-camel",
+);
+assert.deepEqual(camelRows, [camelCaseLedger]);
+
+const noLinkedRows = await loadLinkedWorkLedgerRows(
+  ledgerClient({ workId: [], work_id: [] }).client,
+  "workspace-1",
+  "work-empty",
+);
+assert.deepEqual(noLinkedRows, []);
+
+const ledgerLookupError = new Error("snake_case lookup failed");
+await assert.rejects(
+  () => loadLinkedWorkLedgerRows(
+    ledgerClient({ workId: [], work_id: [] }, { work_id: ledgerLookupError }).client,
+    "workspace-1",
+    "work-error",
+  ),
+  ledgerLookupError,
+);
+
+const backendSource = await readFile(new URL("../src/lib/bethagBackend.ts", import.meta.url), "utf8");
+const deleteWorkStart = backendSource.indexOf("export async function deleteCondominiumWork(");
+const deleteWorkEnd = backendSource.indexOf("\nexport async function ", deleteWorkStart + 1);
+assert.ok(deleteWorkStart >= 0 && deleteWorkEnd > deleteWorkStart, "deleteCondominiumWork must exist.");
+const deleteWorkSection = backendSource.slice(deleteWorkStart, deleteWorkEnd);
+assert.match(backendSource, /import \{ loadLinkedWorkLedgerRows \} from "\.\/workLedgerLinkLookup\.mjs"/);
+assert.match(deleteWorkSection, /loadLinkedWorkLedgerRows\(supabase,\s*workspaceId,\s*id\)/);
+assert.doesNotMatch(deleteWorkSection, /\.contains\("data",\s*\{\s*workId:\s*id\s*\}\)/);
 
 const registerPage = await readFile(new URL("../src/RegisterPage.tsx", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
