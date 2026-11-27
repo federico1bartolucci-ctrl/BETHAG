@@ -15,7 +15,12 @@ assert.equal(
   2,
   "both initial and reset payment dates must use the local calendar",
 );
-assert.ok(accounting.includes("opened_date: localISODate()"), "new legal cases must default to the local calendar date");
+const caseFactoryStart = accounting.indexOf("function createEmptyCaseForm(date = new Date())");
+const caseFactoryBodyStart = accounting.indexOf("{", caseFactoryStart);
+const caseFactoryBodyEnd = accounting.indexOf("\n}", caseFactoryBodyStart);
+assert.ok(caseFactoryStart >= 0 && caseFactoryBodyStart > caseFactoryStart && caseFactoryBodyEnd > caseFactoryBodyStart, "new legal cases must use a fresh form factory");
+const caseFactoryBody = accounting.slice(caseFactoryBodyStart + 1, caseFactoryBodyEnd);
+assert.ok(caseFactoryBody.includes("opened_date: localISODate(date)"), "new legal cases must default to the local calendar date");
 assert.ok(!accounting.includes("new Date().toISOString().slice(0,10)"));
 assert.ok(!accounting.includes("new Date().toISOString().slice(0, 10)"));
 
@@ -38,7 +43,7 @@ function createEmptyLedger(date = new Date()) {${factoryBody}
 }
 console.log(JSON.stringify({
   paymentDefault: localISODate(new Date("2026-11-24T23:30:00.000Z")),
-  legalCaseDefault: localISODate(new Date("2026-03-28T23:30:00.000Z")),
+  legalCaseDefault: createEmptyCaseForm(new Date("2026-03-28T23:30:00.000Z")).opened_date,
   ledgerFirstOpen: createEmptyLedger(new Date("2026-11-24T23:30:00.000Z")).entry_date,
   ledgerReopen: createEmptyLedger(new Date("2026-11-25T23:30:00.000Z")).entry_date,
 }));
