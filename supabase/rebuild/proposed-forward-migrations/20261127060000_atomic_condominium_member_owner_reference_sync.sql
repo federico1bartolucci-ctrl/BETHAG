@@ -201,7 +201,7 @@ CREATE OR REPLACE FUNCTION public.save_condominium_member_with_owner_sync(
   p_user_id uuid, p_name text, p_email text, p_role text, p_active boolean,
   p_permissions jsonb, p_data jsonb
 )
-RETURNS TABLE(id uuid, legacy_id bigint, unit_id uuid)
+RETURNS TABLE(member_id uuid, member_legacy_id bigint, member_unit_id uuid)
 LANGUAGE plpgsql SECURITY INVOKER SET search_path TO ''
 AS $function$
 DECLARE

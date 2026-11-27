@@ -1144,13 +1144,18 @@ export async function saveCondominiumMember(
     const atomicSaveArgs = buildMemberOwnerReferenceSaveArgs({
       workspaceId, condominiumId: condominium.id, unitId, member: item, row,
     });
-    const { data, error } = await supabase
+    const { data: atomicResult, error } = await supabase
       .rpc("save_condominium_member_with_owner_sync", atomicSaveArgs)
       .single();
     if (error) throw error;
-    if (!data?.id || data.legacy_id === null || data.legacy_id === undefined) {
+    if (!atomicResult?.member_id || atomicResult.member_legacy_id === null || atomicResult.member_legacy_id === undefined) {
       throw new Error("Il salvataggio atomico del condòmino non ha restituito un risultato valido.");
     }
+    const data = {
+      id: atomicResult.member_id,
+      legacy_id: atomicResult.member_legacy_id,
+      unit_id: atomicResult.member_unit_id,
+    };
 
     // Manteniamo allineato l'accesso al Portale quando l'anagrafica viene
     // modificata. L'aggiornamento usa l'e-mail precedente e, quando presente,
